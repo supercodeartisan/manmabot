@@ -1,0 +1,9 @@
+id: forgotten_island_dungeon
+name: "Forgotten Island"
+# From obstacle_tiles_raw map_70.png (1 px = 1 tile).
+raw_map: "70"
+origin_x: 32576
+origin_y: 32640
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

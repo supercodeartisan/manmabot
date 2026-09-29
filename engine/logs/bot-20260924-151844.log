@@ -1,0 +1,28 @@
+2026-09-24 15:18:44.383  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-24 15:18:44.387  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-151844.log
+2026-09-24 15:18:44.387  INFO   session     character=elf loot=all_items game_lang=ko map=mainland farms=['area_3', 'area_2', 'area_1'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-151844.log
+2026-09-24 15:18:45.164  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-24 15:18:48.355  INFO   nav         portal graph: 2586 components, 3190 ms
+2026-09-24 15:18:48.359  INFO   nav         farms=3 safe=0 home=None (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\home.yaml)
+2026-09-24 15:18:48.683  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-24 15:18:49.033  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-24 15:18:49.040  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-24 15:18:49.046  INFO   session     Inventory listen scanning in background (build inventory_listen.dll or place inv.json).
+2026-09-24 15:18:49.051  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-24 15:18:49.150  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-24 15:18:49.155  INFO   session     Unmapped hotbar icons: box1/f6:+0 화살 (2,179), box1/f7:아데나 (723), box1/f12:상쾌한 초록 물약
+2026-09-24 15:18:49.176  INFO   session     Loop ready · elf · ko · map=mainland · loot=all_items · farms=['area_3', 'area_2', 'area_1']
+2026-09-24 15:18:49.475  INFO   session     Entity shadow: vision=0 {} memory=4 {'monster': 3, 'npc': 1} paired=0 median=0.000 unleveled=207:兔子,208:兔子
+2026-09-24 15:18:49.503  INFO   session     Inventory listen ready (dll) · hp=6 arrows=2179 silver=5 depoison=0
+2026-09-24 15:18:49.528  INFO   decision    mode=farming behavior=combat action=attack target=2 reason='engage target' status=success
+2026-09-24 15:18:54.325  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-24 15:18:54.484  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-24 15:18:54.628  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'npc': 1, 'monster': 2} paired=0 median=0.000 unleveled=208:兔子,207:兔子
+2026-09-24 15:18:58.775  INFO   session     Paused — hotkey
+2026-09-24 15:19:03.394  INFO   session     Resume → Running
+2026-09-24 15:19:03.577  INFO   session     Entity shadow: vision=1 {'player': 1} memory=4 {'monster': 3, 'npc': 1} paired=0 median=0.000 unleveled=207:兔子,208:兔子
+2026-09-24 15:19:07.277  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success (repeat)
+2026-09-24 15:19:08.699  INFO   session     Entity shadow: vision=1 {'player': 1} memory=4 {'monster': 3, 'npc': 1} paired=0 median=0.000 unleveled=207:兔子,208:兔子
+2026-09-24 15:19:12.734  INFO   session     Paused — hotkey
+2026-09-24 15:19:54.206  INFO   session     Stop → Stopped
+2026-09-24 15:19:54.432  INFO   session     Bot worker exited

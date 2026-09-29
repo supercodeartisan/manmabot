@@ -1,0 +1,9 @@
+id: mage_quest_dungeon
+name: "Mage Quest Dungeon"
+# From obstacle_tiles_raw map_201.png (1 px = 1 tile).
+raw_map: "201"
+origin_x: 32704
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

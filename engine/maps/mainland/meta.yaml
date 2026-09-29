@@ -1,0 +1,13 @@
+# Mainland walkability pack (nav tiles relative to origin).
+# Terrain from obstacle_tiles_raw/map_4.png (Mainland Aden, 1 px = 1 tile).
+# Previous pack kept as nav_prev.png (origin 32502,32138 pixel_scale 4).
+id: mainland
+name: "Main Land"
+origin_x: 32448
+origin_y: 32128
+pixel_scale: 1
+terrain: nav.png
+default_region: mainland
+farms: farms.yaml
+safe: safe.yaml
+home: home.yaml

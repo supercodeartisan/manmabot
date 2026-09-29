@@ -1,0 +1,9 @@
+id: aden_inner_castle_dungeon
+name: "Aden Inner Castle"
+# From obstacle_tiles_raw map_300.png (1 px = 1 tile).
+raw_map: "300"
+origin_x: 32832
+origin_y: 32512
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

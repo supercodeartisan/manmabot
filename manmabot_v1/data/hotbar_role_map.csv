@@ -1,0 +1,139 @@
+﻿template,kr_name,zh_name,role
+items/물약/강화 초록 물약.png,강화 초록 물약,強化自我加速藥水,power_up
+items/물약/맑은 물약.png,맑은 물약,白色藥水,hp_potion
+items/물약/불투명 물약.png,불투명 물약,黑色藥水,
+items/물약/비취 물약.png,비취 물약,翡翠藥水,depoison
+items/물약/빨간 물약.png,빨간 물약,紅色藥水,hp_potion
+items/물약/체력 회복제.png,체력 회복제,體力回復劑,hp_potion
+items/물약/악마의 피.png,악마의 피,惡魔之血,power_up
+items/물약/에바의 축복.png,에바의 축복,伊娃的祝福,
+items/물약/엔트의 열매.png,엔트의 열매,安特的水果,hp_potion
+items/물약/엔트의 줄기.png,엔트의 줄기,安特的樹枝,
+items/물약/엘븐 와퍼.png,엘븐 와퍼,精靈餅乾,power_up
+items/물약/용기의 물약.png,용기의 물약,勇敢藥水,power_up
+items/물약/인어의 비늘.png,인어의 비늘,人魚之鱗,
+items/물약/주홍 물약.png,주홍 물약,橙色藥水,hp_potion
+items/물약/초록 물약.png,초록 물약,自我加速藥水,power_up
+items/물약/파란 물약.png,파란 물약,藍色藥水,mp_potion
+items/주문서/갑옷 마법 주문서.png,갑옷 마법 주문서,對盔甲施法的卷軸,
+items/주문서/귀환 주문서.png,귀환 주문서,返回卷軸,teleport
+items/주문서/말하는 두루마리.png,말하는 두루마리,說話的卷軸,talking_scroll
+items/주문서/말하는 두루마리.png,말하는 두루마리,说话卷轴,talking_scroll
+items/주문서/무기 마법 주문서.png,무기 마법 주문서,對武器施法的卷軸,
+items/주문서/변신 주문서.png,변신 주문서,變形卷軸,
+items/주문서/봉인 해제 주문서.png,봉인 해제 주문서,解除封印卷軸,
+items/주문서/부활 주문서.png,부활 주문서,復活卷軸,
+items/주문서/순간이동 주문서.png,순간이동 주문서,瞬間移動卷軸,teleport
+items/주문서/저주 풀기 주문서.png,저주 풀기 주문서,解除詛咒的卷軸,
+items/주문서/페어리의 날개.png,페어리의 날개,精靈羽翼,teleport
+items/주문서/확인 주문서.png,확인 주문서,鑑定卷軸,
+spells/10단계/미티어 스트라이크.png,미티어 스트라이크,流星雨,mage_attack
+spells/1단계/라이트.png,라이트,日光術,light
+spells/1단계/실드.png,실드,保護罩,armor_up
+spells/1단계/아이스 대거.png,아이스 대거,冰箭,mage_attack
+spells/1단계/에너지 볼트.png,에너지 볼트,光箭,mage_attack
+spells/1단계/윈드 커터.png,윈드 커터,風刃,mage_attack
+spells/1단계/텔레포트.png,텔레포트,傳送術,teleport
+spells/1단계/홀리 웨폰.png,홀리 웨폰,神聖武器,power_up
+spells/1단계/힐.png,힐,初級治癒術,heal
+spells/2단계/디크리즈 웨이트.png,디크리즈 웨이트,負重強化,
+spells/2단계/디텍션.png,디텍션,無所遁形術,
+spells/2단계/스탈락.png,스탈락,地獄之牙,mage_attack
+spells/2단계/인챈트 웨폰.png,인챈트 웨폰,擬似魔法武器,power_up
+spells/2단계/칠 터치.png,칠 터치,寒冷戰慄,mage_attack
+spells/2단계/커스포이즌.png,커스:포이즌,毒咒,mage_attack
+spells/2단계/큐어 포이즌.png,큐어 포이즌,解毒術,
+spells/2단계/파이어 애로우.png,파이어 애로우,火箭,mage_attack
+spells/3단계/라이트닝.png,라이트닝,極光雷電,mage_attack
+spells/3단계/블레스드 아머.png,블레스드 아머,鎧甲護持,armor_up
+spells/3단계/위크 엘리멘탈.png,위크 엘리멘탈,能量感測,
+spells/3단계/익스트라 힐.png,익스트라 힐,中級治癒術,heal
+spells/3단계/커스블라인드.png,커스:블라인드,闇盲咒術,
+spells/3단계/턴 언데드.png,턴 언데드,起死回生術,mage_attack
+spells/3단계/프로즌 클라우드.png,프로즌 클라우드,寒冰氣息,mage_attack
+spells/4단계/메디테이션.png,메디테이션,冥想術,
+spells/4단계/뱀파이어릭 터치.png,뱀파이어릭 터치,吸血鬼之吻,mage_attack
+spells/4단계/슬로우.png,슬로우,緩速術,
+spells/4단계/어스재일.png,어스재일,岩牢,mage_attack
+spells/4단계/웨폰 브레이크.png,웨폰 브레이크,壞物術,
+spells/4단계/인챈트 덱스터리티.png,인챈트 덱스터리티,通暢氣脈術,power_up
+spells/4단계/카운터 매직.png,카운터 매직,魔法屏障,armor_up
+spells/4단계/파이어볼.png,파이어볼,燃燒的火球,mage_attack
+spells/5단계/그레이터 힐.png,그레이터 힐,高級治癒術,heal
+spells/5단계/다크니스.png,다크니스,黑闇之影,
+spells/5단계/리무브 커스.png,리무브 커스,聖潔之光,
+spells/5단계/마나 드레인.png,마나 드레인,魔力奪取,
+spells/5단계/커스패럴라이즈.png,커스:패럴라이즈,木乃伊的詛咒,
+spells/5단계/콘 오브 콜드.png,콘 오브 콜드,冰錐,mage_attack
+spells/5단계/콜 라이트닝.png,콜 라이트닝,極道落雷,mage_attack
+spells/5단계/테이밍 몬스터.png,테이밍 몬스터,迷魅術,
+spells/6단계/블레스 웨폰.png,블레스 웨폰,祝福魔法武器,power_up
+spells/6단계/선 버스트.png,선 버스트,烈炎術,mage_attack
+spells/6단계/위크니스.png,위크니스,弱化術,
+spells/6단계/이럽션.png,이럽션,地裂術,mage_attack
+spells/6단계/인챈트 마이티.png,인챈트 마이티,體魄強健術,power_up
+spells/6단계/캔슬레이션.png,캔슬레이션,魔法相消術,
+spells/6단계/크리에이트 좀비.png,크리에이트 좀비,造屍術,
+spells/6단계/헤이스트.png,헤이스트,加速術,power_up
+spells/7단계/그레이터 헤이스트.png,그레이터 헤이스트,強力加速術,power_up
+spells/7단계/디지즈.png,디지즈,疾病術,
+spells/7단계/버서커스.png,버서커스,狂暴術,power_up
+spells/7단계/서먼 몬스터.png,서먼 몬스터,召喚術,
+spells/7단계/아이스 랜스.png,아이스 랜스,冰矛圍籬,mage_attack
+spells/7단계/토네이도.png,토네이도,龍捲風,mage_attack
+spells/7단계/홀리 워크.png,홀리 워크,神聖疾走,power_up
+spells/7단계/힐 올.png,힐 올,體力回復術,heal
+spells/8단계/리절렉션.png,리절렉션,返生術,
+spells/8단계/블리자드.png,블리자드,冰雪暴,mage_attack
+spells/8단계/사일런스.png,사일런스,魔法封印,
+spells/8단계/어스 퀘이크.png,어스 퀘이크,震裂術,mage_attack
+spells/8단계/인비지블리티.png,인비지블리티,隱身術,
+spells/8단계/풀 힐.png,풀 힐,全部治癒術,heal
+spells/9단계/라이트닝 스톰.png,라이트닝 스톰,雷霆風暴,mage_attack
+spells/9단계/매스 텔레포트.png,매스 텔레포트,集體傳送術,teleport
+spells/9단계/이뮨 투 함.png,이뮨 투 함,聖結界,armor_up
+spells/9단계/파이어 스톰.png,파이어 스톰,火風暴,mage_attack
+spells/9단계/포그 오브 슬리핑.png,포그 오브 슬리핑,沉睡之霧,
+spells/군주 전용 1단계/글로잉 오라.png,글로잉 오라,灼熱靈氣,power_up
+spells/군주 전용 1단계/런 클랜.png,런 클랜,援護盟友,teleport
+spells/군주 전용 1단계/브레이브 오라.png,브레이브 오라,勇敢靈氣,power_up
+spells/군주 전용 1단계/콜 클랜.png,콜 클랜,呼喚盟友,
+spells/군주 전용 1단계/트루 타겟.png,트루 타겟,精準目標,
+spells/기사 전용 1단계/리덕션 아머.png,리덕션 아머,增幅防禦,armor_up
+spells/기사 전용 1단계/바운스 어택.png,바운스 어택,尖刺盔甲,power_up
+spells/기사 전용 1단계/솔리드 캐리지.png,솔리드 캐리지,堅固防護,armor_up
+spells/기사 전용 1단계/쇼크 스턴.png,쇼크 스턴,衝擊之暈,
+spells/기사 전용/카운터 배리어.png,카운터 배리어,反擊屏障,armor_up
+spells/마법사/디케이 포션.png,디케이 포션,藥水霜化術,
+spells/마법사/어드밴스 스피릿.png,어드밴스 스피릿,靈魂昇華,power_up
+spells/요정 전용 1단계/레지스트 매직.png,레지스트 매직,魔法防禦,armor_up
+spells/요정 전용 1단계/바디 투 마인드.png,바디 투 마인드,心靈轉換,hp_to_mp
+spells/요정 전용 1단계/텔레포트 투 마더.png,텔레포트 투 마더,世界樹的呼喚,mother_tree
+spells/요정 전용 1단계/트리플 애로우.png,트리플 애로우,三重矢,
+spells/요정 전용 2단계/레지스트 엘리멘트.png,레지스트 엘리멘트,屬性防禦,armor_up
+spells/요정 전용 2단계/클리어 마인드.png,클리어 마인드,淨化精神,power_up
+spells/요정 전용 3단계/리턴 투 네이쳐.png,리턴 투 네이쳐,釋放元素,
+spells/요정 전용 3단계/블러드 투 소울.png,블러드 투 소울,魂體轉換,hp_to_mp
+spells/요정 전용 3단계/어스 스킨.png,어스 스킨,大地防護,armor_up
+spells/요정 전용 3단계/윈드 샷.png,윈드 샷,風之神射,power_up
+spells/요정 전용 3단계/윈드 워크.png,윈드 워크,風之疾走,power_up
+spells/요정 전용 3단계/인탱글.png,인탱글,地面障礙,
+spells/요정 전용 3단계/파이어 웨폰.png,파이어 웨폰,火焰武器,power_up
+spells/요정 전용 3단계/프로텍션 프롬 엘리멘트.png,프로텍션 프롬 엘리멘트,單屬性防禦,armor_up
+spells/요정 전용 4단계/네이쳐스 터치.png,네이쳐스 터치,生命之泉,heal
+spells/요정 전용 4단계/브레스 오브 파이어.png,브레스 오브 파이어,舞躍之火,power_up
+spells/요정 전용 4단계/블레스 오브 어스.png,블레스 오브 어스,大地的祝福,armor_up
+spells/요정 전용 4단계/서먼 레서 엘리멘탈.png,서먼 레서 엘리멘탈,召喚屬性精靈,
+spells/요정 전용 4단계/아이 오브 스톰.png,아이 오브 스톰,暴風之眼,power_up
+spells/요정 전용 4단계/어스 바인드.png,어스 바인드,大地屏障,
+spells/요정 전용 4단계/이레이즈 매직.png,이레이즈 매직,魔法消除,
+spells/요정 전용 5단계/네이쳐스 블레싱.png,네이쳐스 블레싱,生命的祝福,heal
+spells/요정 전용 5단계/버닝 웨폰.png,버닝 웨폰,烈炎武器,power_up
+spells/요정 전용 5단계/서먼 그레이터 엘리멘탈.png,서먼 그레이터 엘리멘탈,召喚強力屬性精靈,
+spells/요정 전용 5단계/스톰 샷.png,스톰 샷,暴風神射,power_up
+spells/요정 전용 5단계/아이언 스킨.png,아이언 스킨,鋼鐵防護,armor_up
+spells/요정 전용 5단계/에이리어 오브 사일런스.png,에이리어 오브 사일런스,封印禁地,
+spells/요정 전용/소울 오브 프레임.png,소울 오브 프레임,烈焰之魂,power_up
+spells/요정 전용/스트라이커 게일.png,스트라이커 게일,精準射擊,
+spells/요정 전용/워터 라이프.png,워터 라이프,水之元氣,
+spells/요정 전용/폴루트 워터.png,폴루트 워터,污濁之水,

@@ -1,0 +1,9 @@
+id: oren_ivory_tower_dungeon_F7
+name: "Oren Ivory Tower Dungeon F7"
+# From obstacle_tiles_raw map_81.png (1 px = 1 tile).
+raw_map: "81"
+origin_x: 32704
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

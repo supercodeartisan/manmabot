@@ -1,0 +1,27 @@
+# Areas (nav tiles). region selects vision models (not the map pack id).
+# Remapped +31,+43 for origin 32256,32704 (was 32287,32747).
+areas:
+  - name: area_1
+    region: talking island
+    x0: 204
+    y0: 447
+    x1: 285
+    y1: 480
+  - name: area_2
+    region: talking island
+    x0: 306
+    y0: 322
+    x1: 367
+    y1: 350
+  - name: area_3
+    region: talking island
+    x0: 284
+    y0: 155
+    x1: 339
+    y1: 196
+  - name: area_4
+    region: talking island
+    x0: 407
+    y0: 136
+    x1: 437
+    y1: 171

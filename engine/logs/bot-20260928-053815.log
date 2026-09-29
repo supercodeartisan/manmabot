@@ -1,0 +1,62 @@
+2026-09-28 05:38:15.586  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-28 05:38:15.592  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260928-053815.log
+2026-09-28 05:38:15.592  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\ManmabotV1_final\engine\logs\bot-20260928-053815.log
+2026-09-28 05:38:16.013  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-28 05:38:16.337  INFO   nav         portal graph: 188 components, 323 ms
+2026-09-28 05:38:16.345  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-28 05:38:16.806  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-28 05:38:17.412  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-28 05:38:17.430  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-28 05:38:17.441  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-28 05:38:17.469  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-28 05:38:17.715  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 힐@box1/f10, HP 물약@box1/f8, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f5
+2026-09-28 05:38:17.739  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f9:아데나
+2026-09-28 05:38:17.755  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-28 05:38:18.426  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-28 05:38:18.475  INFO   session     인벤토리 수신 준비 (dll) · hp=4 화살=1094 은화살=0 해독=0
+2026-09-28 05:38:18.533  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:38:23.550  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=14:青蛙,10:警衛
+2026-09-28 05:38:28.801  INFO   session     Entity shadow: vision=1 {'player': 1} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=14:青蛙,208:兔子
+2026-09-28 05:38:34.336  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=14:青蛙,208:兔子
+2026-09-28 05:38:37.024  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-28 05:38:39.229  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=208:兔子
+2026-09-28 05:38:44.202  INFO   decision    mode=traveling behavior=combat action=attack target=7 reason='engage target' status=success
+2026-09-28 05:38:44.931  INFO   session     Entity shadow: vision=2 {'monster': 2} memory=1 {'monster': 1} paired=1 median=0.018
+2026-09-28 05:38:49.283  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:38:50.051  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=0 {} paired=0 median=0.000
+2026-09-28 05:38:51.828  INFO   decision    mode=traveling behavior=combat action=attack target=8 reason='engage target' status=success
+2026-09-28 05:38:54.729  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:38:55.054  INFO   decision    mode=traveling behavior=combat action=attack target=9 reason='engage target' status=success
+2026-09-28 05:38:55.776  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=0 median=0.000
+2026-09-28 05:38:58.540  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:39:01.068  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 2} paired=0 median=0.000
+2026-09-28 05:39:03.377  INFO   decision    mode=traveling behavior=combat action=attack target=11 reason='engage target' status=success
+2026-09-28 05:39:06.293  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.020
+2026-09-28 05:39:08.616  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:39:11.618  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.035
+2026-09-28 05:39:16.657  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.022 unleveled=189:鹿
+2026-09-28 05:39:17.143  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success
+2026-09-28 05:39:21.939  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=5 {'monster': 5} paired=1 median=0.018 unleveled=206:兔子,14:青蛙,189:鹿
+2026-09-28 05:39:22.952  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 05:39:24.226  INFO   decision    mode=traveling behavior=survival_potion action=use_hp_potion target=- reason='critical hp, cannot heal' status=success
+2026-09-28 05:39:25.577  INFO   decision    mode=traveling behavior=combat action=attack target=16 reason='engage target' status=success
+2026-09-28 05:39:27.034  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=3 {'monster': 3} paired=2 median=0.019 unleveled=189:鹿
+2026-09-28 05:39:32.267  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=2 {'monster': 2} paired=2 median=0.038
+2026-09-28 05:39:35.841  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:39:36.400  INFO   decision    mode=traveling behavior=combat action=attack target=19 reason='engage target' status=success
+2026-09-28 05:39:37.350  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.020
+2026-09-28 05:39:38.329  INFO   decision    mode=traveling behavior=survival_potion action=use_hp_potion target=- reason='critical hp, cannot heal' status=success
+2026-09-28 05:39:40.310  INFO   decision    mode=traveling behavior=combat action=attack target=19 reason='attack target' status=success
+2026-09-28 05:39:41.423  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 05:39:42.347  INFO   decision    mode=traveling behavior=loot action=searching target=20 reason='walk onto item' status=success
+2026-09-28 05:39:42.711  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=0 {} paired=0 median=0.000
+2026-09-28 05:39:42.798  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:39:43.219  INFO   decision    mode=traveling behavior=combat action=attack target=21 reason='engage target' status=success
+2026-09-28 05:39:46.171  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 05:39:46.830  INFO   decision    mode=traveling behavior=combat action=attack target=23 reason='engage target' status=success
+2026-09-28 05:39:47.797  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=3 {'monster': 3} paired=1 median=0.019 unleveled=12:史萊姆
+2026-09-28 05:39:53.109  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=2 {'monster': 2} paired=1 median=0.012
+2026-09-28 05:39:55.321  INFO   decision    mode=traveling behavior=survival_potion action=use_hp_potion target=- reason='critical hp, cannot heal' status=success
+2026-09-28 05:39:56.135  INFO   session     일시정지 — 단축키
+2026-09-28 05:47:00.875  INFO   session     정지 → 중지됨
+2026-09-28 05:47:01.374  INFO   session     봇 작업이 종료되었습니다

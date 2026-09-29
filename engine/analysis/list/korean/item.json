@@ -1,0 +1,4718 @@
+{
+  "contents": [
+    {
+      "id": 1,
+      "name": "아탐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/8.png",
+      "options": [
+        "근거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 2,
+      "name": "일본도",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/58.png",
+      "options": [
+        "근거리 명중 +1"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 3,
+      "name": "장검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 4,
+      "name": "도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1.png",
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 5,
+      "name": "등잔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 6,
+      "name": "양손검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "양손검"
+    },
+    {
+      "id": 7,
+      "name": "아데나",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/5.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 8,
+      "name": "철퇴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/67.png",
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 9,
+      "name": "괴물 눈 고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/124.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "괴물눈의 두꺼운 껍질 안에 있는 부드러운 살. 주로 마법 재료로 사용되며, 먹으면 오감을 예민하게 해 주는 능력이 있습니다."
+    },
+    {
+      "id": 10,
+      "name": "고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/124.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "먹으면 배가 불러집니다. 배가 고프면 체력이 회복되지 않습니다."
+    },
+    {
+      "id": 11,
+      "name": "활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 12,
+      "name": "창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/101.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 13,
+      "name": "전투 도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/9.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 14,
+      "name": "빨간 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/80.png",
+      "options": [
+        "회복량 6 ~ 27"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 체력이 조금 회복됩니다.",
+      "name2": "체력 회복제"
+    },
+    {
+      "id": 15,
+      "name": "주홍 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/78.png",
+      "options": [
+        "회복량 26 ~ 68"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 체력이 조금 더 회복됩니다.",
+      "name2": "고급 체력 회복제"
+    },
+    {
+      "id": 16,
+      "name": "불투명 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/82.png",
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 일정 시간동안 눈이 멀게 됩니다. 하지만 쳐다보면 해가 되는 각종 위험으로부터 마신 사람을 지켜주기도 합니다.",
+      "name2": "눈멀기 물약"
+    },
+    {
+      "id": 17,
+      "name": "초록 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/77.png",
+      "options": [
+        "지속시간 +300초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 일정 시간동안 몸이 빨리 움직입니다.",
+      "name2": "속도향상 물약"
+    },
+    {
+      "id": 19,
+      "name": "소나무 막대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/117.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용하면 임의의 몬스터를 만들어냅니다. 어떤 몬스터들은 막대를 사용해도 만들어지지 않습니다.",
+      "name2": "괴물 생성 막대"
+    },
+    {
+      "id": 20,
+      "name": "단풍나무 막대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/116.png",
+      "options": [
+        "지속시간 +7200초"
+      ],
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용하면 임의의 몬스터로 변신합니다. '변신 조종 반지'와 함께 사용하면 자신의 캐릭터를 원하는 몬스터로 변신시킬 수 있습니다.",
+      "name2": "변신 막대"
+    },
+    {
+      "id": 21,
+      "name": "흑단 막대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/118.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용하면 번개를 소환하여 적을 공격할 수 있습니다.",
+      "name2": "번개 소환 막대"
+    },
+    {
+      "id": 22,
+      "name": "확인 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/475.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "사용한 뒤 아이템을 누르면 해당 아이템의 능력을 알 수 있습니다."
+    },
+    {
+      "id": 23,
+      "name": "순간이동 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/473.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "사용하면 임의의 장소로 텔레포트합니다. '순간 이동 조종 반지'와 함께 사용하면 자신이 가고싶은 곳으로 텔레포트할 수 있습니다. 축복받은 주문서의 경우에는 '순간 이동 조종반지'가 없어도 기억된 곳으로 텔레포트가 가능합니다."
+    },
+    {
+      "id": 24,
+      "name": "저주 풀기 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/470.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "사용하면 착용한 아이템에 걸린 저주를 풀어줍니다."
+    },
+    {
+      "id": 25,
+      "name": "무기 마법 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/468.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "무기에 마법을 부여하여 보다 강력하게 합니다. 단, 저주받은 경우 공격력을 약화시킬 수 있습니다."
+    },
+    {
+      "id": 26,
+      "name": "갑옷 마법 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/467.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "갑옷에 마법을 부여하여 보다 높은 방어력을 얻을 수 있습니다. 단, 저주받은 경우 방어력을 약화시킬 수 있습니다."
+    },
+    {
+      "id": 28,
+      "name": "부활 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/471.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "죽은 사람이나 펫, 죽은 괴물 등을 부활시킵니다."
+    },
+    {
+      "id": 29,
+      "name": "화살",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/7.png",
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 31,
+      "name": "바르디쉐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/11.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 32,
+      "name": "빌귀사름",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/13.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 33,
+      "name": "요정족 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/18.png",
+      "options": [
+        "양손",
+        "원거리 대미지 +1"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 34,
+      "name": "오크족 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/19.png",
+      "options": [
+        "양손",
+        "원거리 대미지 -1"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 35,
+      "name": "넓은 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/21.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 36,
+      "name": "양초",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/24.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 37,
+      "name": "당근",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/25.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 38,
+      "name": "몽둥이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/31.png",
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 39,
+      "name": "요정족 단검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/33.png",
+      "options": [
+        "근거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 40,
+      "name": "오크족 단검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/34.png",
+      "options": [
+        "근거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 41,
+      "name": "단검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/35.png",
+      "options": [
+        "근거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 42,
+      "name": "벡드코빈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/38.png",
+      "options": [
+        "양손",
+        "관통 효과"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 43,
+      "name": "달걀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/40.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 44,
+      "name": "포챠드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/41.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 45,
+      "name": "도리깨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/42.png",
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 46,
+      "name": "넓은 창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/45.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 47,
+      "name": "귀사름",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/48.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 48,
+      "name": "미늘창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/50.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 52,
+      "name": "금빛 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "말하는 섬 던전 2층의 봉인된 그곳을 열 수 있는 열쇠입니다."
+    },
+    {
+      "id": 53,
+      "name": "은회색 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "말하는 섬 던전 2층의 봉인된 그곳을 열 수 있는 열쇠입니다."
+    },
+    {
+      "id": 54,
+      "name": "기병창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/60.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 55,
+      "name": "레몬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/63.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 56,
+      "name": "루선해머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/66.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 57,
+      "name": "워해머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/119.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 58,
+      "name": "모닝스타",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/68.png",
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 59,
+      "name": "오렌지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/71.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 60,
+      "name": "팬케익",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/125.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 61,
+      "name": "파르티잔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/72.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 64,
+      "name": "순간이동 조종 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/87.png",
+      "favorite": false,
+      "categoryName": "반지",
+      "description": "순간 이동 주문서와 함께 사용하면 자신이 한번 가서 '기억'한 장소로 텔레포트할 수 있습니다."
+    },
+    {
+      "id": 65,
+      "name": "변신 조종 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/87.png",
+      "favorite": false,
+      "categoryName": "반지",
+      "description": "착용 시 상대가 나를 랜덤한 몬스터로 변신시키는 것을 방지할 수 있습니다."
+    },
+    {
+      "id": 67,
+      "name": "언월도",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/90.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 68,
+      "name": "은 화살",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/96.png",
+      "favorite": false,
+      "categoryName": "활",
+      "description": "일반 화살보다 강력한 화살. 일부 몬스터에게는 더욱 강한 피해를 줄 수도 있습니다."
+    },
+    {
+      "id": 69,
+      "name": "난쟁이족 도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/172.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 70,
+      "name": "요정족 창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/99.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 71,
+      "name": "오크족 창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/100.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 72,
+      "name": "난쟁이족 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/103.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 73,
+      "name": "요정족 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/325.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 74,
+      "name": "오크족 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/105.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 75,
+      "name": "짧은 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/106.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 77,
+      "name": "삼지창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/111.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 78,
+      "name": "싸울아비 장검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/112.png",
+      "options": [
+        "근거리 명중 +5"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 81,
+      "name": "장궁",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/123.png",
+      "options": [
+        "양손",
+        "원거리 대미지 +3"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 82,
+      "name": "사과",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/995.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 83,
+      "name": "바나나",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/127.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 86,
+      "name": "엘븐 와퍼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/130.png",
+      "options": [
+        "지속시간 +480초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "먹으면 온 몸이 활력으로 가득 차서 일정 시간 동안 모든 동작이 빨라집니다. 이 음식은 요정에게만 효과가 있습니다."
+    },
+    {
+      "id": 87,
+      "name": "요정족 가죽 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/53.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 88,
+      "name": "오크족 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/54.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 89,
+      "name": "난쟁이족 철 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/52.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 90,
+      "name": "투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/55.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 91,
+      "name": "판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/73.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 92,
+      "name": "수정 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/32.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 93,
+      "name": "청동 판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/22.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 94,
+      "name": "미늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/102.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 95,
+      "name": "띠 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/10.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 96,
+      "name": "사슬 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/26.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 97,
+      "name": "오크족 사슬 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/443.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 98,
+      "name": "비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/89.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 99,
+      "name": "징박힌 가죽 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/109.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 100,
+      "name": "고리 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/86.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 101,
+      "name": "오크족 고리 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/442.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 102,
+      "name": "가죽 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 103,
+      "name": "가죽 재킷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/62.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 104,
+      "name": "티셔츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/110.png",
+      "favorite": false,
+      "categoryName": "티셔츠",
+      "description": "펠트로 된 셔츠. 갑옷 안에 입을 수 있습니다."
+    },
+    {
+      "id": 105,
+      "name": "요정족 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/28.png",
+      "options": [
+        "요정 착용 시 HP회복 보너스 +1"
+      ],
+      "favorite": false,
+      "categoryName": "망토",
+      "description": "요정이 만든 망토. 요정이 입으면 체력 회복이 빨라집니다."
+    },
+    {
+      "id": 106,
+      "name": "오크족 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/29.png",
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 107,
+      "name": "난쟁이족 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/27.png",
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 109,
+      "name": "보호 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/30.png",
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 110,
+      "name": "투명 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/272.png",
+      "favorite": false,
+      "categoryName": "망토",
+      "description": "입은 사람은 다른 사람이나 괴물에게 보이지 않게 됩니다. 이 효과는 공격 등의 적극적인 행동을 하지 않을 때에만 지속됩니다."
+    },
+    {
+      "id": 111,
+      "name": "마법 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/265.png",
+      "options": [
+        "MR +10"
+      ],
+      "favorite": false,
+      "categoryName": "망토",
+      "description": "마법에 대한 저항력을 높여주는 망토입니다. 마법이 부여되면 부여될수록 더 높은 마법 저항력을 보여줍니다."
+    },
+    {
+      "id": 113,
+      "name": "작은 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/97.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 114,
+      "name": "요정족 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/92.png",
+      "options": [
+        "요정 착용 시 MR 보너스 +5"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "요정이 만든 방패. 마법에 대한 방어력도 조금이나마 갖추고 있습니다."
+    },
+    {
+      "id": 115,
+      "name": "우럭하이 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/114.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 117,
+      "name": "큰 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/61.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 118,
+      "name": "난쟁이족 둥근 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/95.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 119,
+      "name": "반사 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/137.png",
+      "options": [
+        "반사 효과"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "표면이 거울처리된 방패. 광선형으로 발사되는 마법에 대해서는 상당한 방어력을 가지고 있습니다."
+    },
+    {
+      "id": 120,
+      "name": "짧은 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/65.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 121,
+      "name": "셸로브 발톱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/139.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "흠집 하나 없는 셸로브 발톱. 노련한 검술과 절제된 마음가짐으로 맞선 자만이 손에 넣을 수 있는 사냥의 증표입니다. 말하는 섬의 군터에게 가져가면 그의 시련을 통과할 수 있습니다."
+    },
+    {
+      "id": 123,
+      "name": "붉은 기사의 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/441.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "한손검",
+      "description": "힘을 강하게 해주는 마법이 걸려있는 특수한 장검입니다."
+    },
+    {
+      "id": 124,
+      "name": "글루디오 영지행 배표",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/138.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "말하는 섬 선착장에서 배를 타기 위해 필요한 표입니다."
+    },
+    {
+      "id": 125,
+      "name": "말하는 섬행 배표",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/138.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "글루딘 마을 선착장에서 배를 타기 위해 필요한 표입니다."
+    },
+    {
+      "id": 126,
+      "name": "비취 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/76.png",
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "온갖 독을 치료해 주는 물약입니다.",
+      "name2": "해독제"
+    },
+    {
+      "id": 127,
+      "name": "랜턴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/140.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "랜턴을 사용하면 어두운 곳에서도 주변을 볼 수 있습니다."
+    },
+    {
+      "id": 128,
+      "name": "부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/435.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 129,
+      "name": "장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/141.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 130,
+      "name": "맑은 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/81.png",
+      "options": [
+        "회복량 44 ~ 107"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 체력이 상당히 회복됩니다.",
+      "name2": "강력 체력 회복제"
+    },
+    {
+      "id": 131,
+      "name": "랜턴용 기름",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/142.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 138,
+      "name": "대형 도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/171.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 140,
+      "name": "기사의 면갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/166.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 141,
+      "name": "그라디우스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/151.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 142,
+      "name": "악운의 단검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/144.png",
+      "options": [
+        "근거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "한손검",
+      "description": "위력 없는 단검이지만 아주 낮은 확률로 상대를 죽음으로 몰아넣을 수 있는 저주가 발동됩니다."
+    },
+    {
+      "id": 144,
+      "name": "광전사의 도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/439.png",
+      "options": [
+        "양손",
+        "헤이스트효과"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 145,
+      "name": "에바의 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1203.png",
+      "options": [
+        "헤이스트효과",
+        "최대 HP +20"
+      ],
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 155,
+      "name": "사각 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/177.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 157,
+      "name": "아투바의 토템",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/258.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "아투바 오크의 토템으로, 화전민 마을의 라이라에게 가지고 가면 아데나를 받을 수 있습니다."
+    },
+    {
+      "id": 158,
+      "name": "네루가의 토템",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/259.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "네루가 오크의 토템으로, 화전민 마을의 라이라에게 가지고 가면 아데나를 받을 수 있습니다."
+    },
+    {
+      "id": 159,
+      "name": "두다-마라의 토템",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/260.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "두다-마라 오크의 토템으로, 화전민 마을의 라이라에게 가지고 가면 아데나를 받을 수 있습니다."
+    },
+    {
+      "id": 160,
+      "name": "간디의 토템",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/261.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "간디 오크의 토템으로, 화전민 마을의 라이라에게 가지고 가면 아데나를 받을 수 있습니다."
+    },
+    {
+      "id": 161,
+      "name": "로바의 토템",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/262.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "로바 오크의 토템으로, 화전민 마을의 라이라에게 가지고 가면 아데나를 받을 수 있습니다."
+    },
+    {
+      "id": 162,
+      "name": "귀환 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/474.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "사용하면 가장 가까운 마을로 텔레포트합니다."
+    },
+    {
+      "id": 164,
+      "name": "마법서 (힐)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 166,
+      "name": "마력의 돌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/235.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 167,
+      "name": "사슬 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1201.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "마법 저항력(MR)을 올려주는 마법이 부여된 사슬 갑옷입니다. 마법이 부여되면 부여될수록 더 높은 마법 저항력을 보여줍니다.",
+      "name2": "마법 방어 사슬 갑옷"
+    },
+    {
+      "id": 168,
+      "name": "다이아몬드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/236.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 169,
+      "name": "고급 다이아몬드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/237.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 170,
+      "name": "최고급 다이아몬드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/238.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 171,
+      "name": "에메랄드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/239.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 172,
+      "name": "고급 에메랄드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/240.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 173,
+      "name": "최고급 에메랄드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/241.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 174,
+      "name": "루비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/242.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 175,
+      "name": "고급 루비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/243.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 176,
+      "name": "최고급 루비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/244.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 177,
+      "name": "사파이어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/245.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 178,
+      "name": "고급 사파이어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/246.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 179,
+      "name": "최고급 사파이어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/247.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 180,
+      "name": "마법서 (라이트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 181,
+      "name": "마법서 (실드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 182,
+      "name": "마법서 (에너지 볼트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 183,
+      "name": "마법서 (텔레포트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 184,
+      "name": "마법서 (큐어 포이즌)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 185,
+      "name": "마법서 (칠 터치)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/253.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 186,
+      "name": "마법서 (커스: 포이즌)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/253.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 187,
+      "name": "마법서 (인챈트 웨폰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 188,
+      "name": "마법서 (디텍션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 189,
+      "name": "마법서 (라이트닝)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 190,
+      "name": "마법서 (턴 언데드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 191,
+      "name": "마법서 (익스트라 힐)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 192,
+      "name": "마법서 (커스: 블라인드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 193,
+      "name": "마법서 (블레스드 아머)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 194,
+      "name": "마법서 (파이어볼)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 195,
+      "name": "마법서 (인챈트 덱스터리티)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 196,
+      "name": "마법서 (웨폰 브레이크)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 197,
+      "name": "마법서 (뱀파이어릭 터치)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 198,
+      "name": "마법서 (슬로우)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 199,
+      "name": "마법서 (커스: 패럴라이즈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 200,
+      "name": "마법서 (콜 라이트닝)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 201,
+      "name": "마법서 (그레이터 힐)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 202,
+      "name": "마법서 (테이밍 몬스터)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 203,
+      "name": "마법서 (리무브 커스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 204,
+      "name": "마법서 (크리에이트 좀비)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 205,
+      "name": "마법서 (인챈트 마이티)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 206,
+      "name": "마법서 (헤이스트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 207,
+      "name": "마법서 (캔슬레이션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 208,
+      "name": "마법서 (이럽션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 209,
+      "name": "마법서 (힐 올)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 210,
+      "name": "마법서 (아이스 랜스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 211,
+      "name": "마법서 (서먼 몬스터)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 212,
+      "name": "마법서 (홀리 워크)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 213,
+      "name": "마법서 (토네이도)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 214,
+      "name": "마법서 (풀 힐)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 216,
+      "name": "마법서 (블리자드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 217,
+      "name": "마법서 (인비지블리티)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 218,
+      "name": "마법서 (리절렉션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 219,
+      "name": "마법서 (라이트닝 스톰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 220,
+      "name": "마법서 (포그 오브 슬리핑)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/257.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 222,
+      "name": "마법서 (이뮨 투 함)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 223,
+      "name": "마법서 (매스 텔레포트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 225,
+      "name": "마법서 (미티어 스트라이크)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 229,
+      "name": "투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1204.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "마법 저항력(MR)을 올려주는 마법이 부여된 투구입니다. 마법이 부여되면 부여될수록 더 높은 마법 저항력을 보여줍니다.",
+      "name2": "마법 방어 투구"
+    },
+    {
+      "id": 230,
+      "name": "참나무 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/291.png",
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 231,
+      "name": "마법사의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/297.png",
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 232,
+      "name": "마력의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/292.png",
+      "options": [
+        "SP +1"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이",
+      "description": "마법 보너스가 +1됩니다."
+    },
+    {
+      "id": 233,
+      "name": "힘의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/293.png",
+      "options": [
+        "STR +3",
+        "근거리 대미지 +3",
+        "SP -2"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이",
+      "description": "마법 보너스가 떨어지는 대신 힘이 강력해지는 특이한 마법이 걸려 있는 무기입니다."
+    },
+    {
+      "id": 234,
+      "name": "무명 로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/287.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "마법 저항력(MR)이 약간 올라갑니다."
+    },
+    {
+      "id": 235,
+      "name": "다마스커스 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/298.png",
+      "favorite": false,
+      "categoryName": "한손검",
+      "description": "특수하게 제련되어 내구력이 극도로 강화된 검입니다."
+    },
+    {
+      "id": 243,
+      "name": "편지지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/464.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 244,
+      "name": "작은 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "양손",
+        "원거리 대미지 -1"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 245,
+      "name": "판의 갈기털",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/314.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 246,
+      "name": "미스릴 원석",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/320.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 247,
+      "name": "정령의 돌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/235.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 248,
+      "name": "엔트의 줄기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/309.png",
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "요정의 숲의 수호자 중 하나인 엔트의 줄기입니다. 치료 성분이 있어 먹으면 모든 종류의 독에 효과가 있습니다."
+    },
+    {
+      "id": 249,
+      "name": "버섯포자의 즙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/82.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "펑거스의 포자를 짜서 낸 즙입니다. 몇가지 마법이나 독의 원료로 쓰입니다."
+    },
+    {
+      "id": 250,
+      "name": "오우거의 피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/324.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오우거의 피입니다. 오우거의 강력한 힘의 원천이라 알려져 있습니다."
+    },
+    {
+      "id": 251,
+      "name": "실",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/326.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 252,
+      "name": "미스릴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/318.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 253,
+      "name": "페어리 더스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/312.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 254,
+      "name": "아라크네의 거미줄",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/308.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 255,
+      "name": "엔트의 껍질",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/311.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 256,
+      "name": "오리하루콘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/319.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "페어리 퀸이 만들어주는 고귀한 금속입니다. 손상된 무기나 방어구에 사용하면 일정한 확률로 손상도를 줄일 수 있습니다."
+    },
+    {
+      "id": 257,
+      "name": "미스릴 실",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/307.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 258,
+      "name": "미스릴 화살",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/96.png",
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 259,
+      "name": "아라크네의 허물",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/306.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 260,
+      "name": "활 골무",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/327.png",
+      "options": [
+        "원거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 261,
+      "name": "페어리의 날개",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/313.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "페어리들의 경화된 날개입니다. 사용하면 가장 가까운 마을로 텔레포트 합니다."
+    },
+    {
+      "id": 262,
+      "name": "마법의 플룻",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/43.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "판의 근처에서 이 플룻으로 연주를 하면 판이 다가옵니다."
+    },
+    {
+      "id": 263,
+      "name": "나무방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/97.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 264,
+      "name": "미스릴 판금",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/329.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 265,
+      "name": "오리하루콘 판금",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/330.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 266,
+      "name": "나무 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/109.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 267,
+      "name": "요정족 흉갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/302.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 268,
+      "name": "판의 뿔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/317.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 269,
+      "name": "크로스 보우",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/305.png",
+      "options": [
+        "원거리 명중 +3",
+        "양손",
+        "원거리 대미지 +2"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 270,
+      "name": "단검신",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/322.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 271,
+      "name": "장검신",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/321.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 272,
+      "name": "오리하루콘 검신",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/321.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 273,
+      "name": "요정족 판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/275.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 274,
+      "name": "레이피어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/104.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 275,
+      "name": "엘름의 축복",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/267.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "고대의 요정족의 영웅의 이름을 딴 투구입니다. 민첩성에 1의 보너스가 있습니다."
+    },
+    {
+      "id": 276,
+      "name": "미스릴 도금 뿔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/315.png",
+      "favorite": false,
+      "categoryName": "창",
+      "description": "판의 뿔을 미스릴로 도금하여 만드는 창입니다."
+    },
+    {
+      "id": 277,
+      "name": "오리하루콘 도금 뿔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/316.png",
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 278,
+      "name": "메일 브레이커",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/276.png",
+      "options": [
+        "근거리 명중 +10"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 279,
+      "name": "엔트의 열매",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/126.png",
+      "options": [
+        "회복량 44 ~ 107"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "요정의 숲 수호자의 하나인 엔트의 열매입니다. 먹으면 체력이 크게 회복됩니다."
+    },
+    {
+      "id": 280,
+      "name": "파워 글로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/328.png",
+      "options": [
+        "STR +2"
+      ],
+      "favorite": false,
+      "categoryName": "장갑",
+      "description": "오우거의 피가 재료로 들어간 장갑입니다. 착용하면 힘이 증가됩니다."
+    },
+    {
+      "id": 281,
+      "name": "요정족 사슬 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/281.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 283,
+      "name": "나무 줄기 옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 289,
+      "name": "은기사의 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/332.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "마법 저항력(MR)을 올려주는 마법이 부여된 방패입니다."
+    },
+    {
+      "id": 291,
+      "name": "마법의 투구: 치유",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/167.png",
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "기사 또는 군주가 치유 마법을 사용할 수 있게 해주는 투구입니다. 이 투구로 마법을 사용하면 마나 사용량이 통상의 절반이 됩니다."
+    },
+    {
+      "id": 292,
+      "name": "마법의 투구: 신속",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/168.png",
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "기사 또는 군주가 신체 속도에 대한 마법을 사용할 수 있게 해주는 투구입니다. 이 투구로 마법을 사용하면 마나 사용량이 통상의 절반이 됩니다."
+    },
+    {
+      "id": 293,
+      "name": "마법의 투구: 힘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/170.png",
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "기사 또는 군주가 힘과 권능에 대한 마법을 사용할 수 있게 해주는 투구입니다. 이 투구로 마법을 사용하면 마나 사용량이 통상의 절반이 됩니다."
+    },
+    {
+      "id": 296,
+      "name": "용기의 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/79.png",
+      "options": [
+        "지속시간 +300초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 마음속 깊은 곳으로부터 용기가 솟아 일정 시간동안 빠르게 움직이게 됩니다."
+    },
+    {
+      "id": 297,
+      "name": "지혜의 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1529.png",
+      "options": [
+        "지속시간 +300초",
+        "SP +2"
+      ],
+      "favorite": false,
+      "description": "마시면 마음이 잔잔해지며 집중력이 높아져 마법을 사용할 때 보다 큰 효과가 나도록 해 줍니다. 이 물약은 마법사에게만 효과가 있습니다."
+    },
+    {
+      "id": 299,
+      "name": "변신 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/472.png",
+      "options": [
+        "지속시간 +1200초"
+      ],
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "자신이 원하는 몬스터로 변신할 수 있도록 해주는 주문서입니다. 단 변신 지속 시간은 20~30분에 불과합니다."
+    },
+    {
+      "id": 306,
+      "name": "완력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "힘(Strength)을 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 307,
+      "name": "민첩의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "민첩성(Dexterity)을 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 308,
+      "name": "체력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "체력(Constitution)을 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 309,
+      "name": "지식의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "지식(Intelligence)을 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 310,
+      "name": "지혜의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "지혜(Wisdom)를 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 311,
+      "name": "매력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "매력(Charisma)을 1 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 314,
+      "name": "오크 투사의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/436.png",
+      "options": [
+        "최대 HP +20"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이",
+      "description": "최대 HP를 20 올려 주는 목걸이입니다."
+    },
+    {
+      "id": 317,
+      "name": "가죽모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/451.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 318,
+      "name": "징박은 가죽모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/445.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 319,
+      "name": "가죽투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/456.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 320,
+      "name": "해골투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/453.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 321,
+      "name": "가죽샌달",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/452.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 322,
+      "name": "징박은 가죽샌달",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/447.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 323,
+      "name": "가죽부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/461.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 324,
+      "name": "가죽방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/449.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 325,
+      "name": "징박은 가죽방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/450.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 326,
+      "name": "골각방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/457.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 327,
+      "name": "가죽조끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/459.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 328,
+      "name": "벨트달린 가죽조끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/460.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 329,
+      "name": "징박은 가죽조끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/458.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 330,
+      "name": "중갑가죽조끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/462.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 331,
+      "name": "뼈갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/448.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 332,
+      "name": "동물가죽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/446.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 333,
+      "name": "철괴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/454.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 334,
+      "name": "벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/264.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 335,
+      "name": "고급피혁",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/455.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 336,
+      "name": "뼈조각",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/444.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 337,
+      "name": "대검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/463.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "양손검"
+    },
+    {
+      "id": 342,
+      "name": "마나의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/293.png",
+      "options": [
+        "근거리 명중 -3",
+        "마나 흡수"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이",
+      "description": "대상을 때릴 때마다 MP를 조금씩 뺏어오는 지팡이입니다."
+    },
+    {
+      "id": 343,
+      "name": "펫 호루라기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/477.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "호루라기를 불면 길들인 펫이 자신의 주위로 모여듭니다."
+    },
+    {
+      "id": 348,
+      "name": "숫돌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/478.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "무기나 방어구의 손상도를 회복시키는 아이템입니다."
+    },
+    {
+      "id": 357,
+      "name": "혈맹 편지지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/464.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "혈맹원 모두에게 동시에 같은 내용의 편지를 보내는 마법 편지지입니다."
+    },
+    {
+      "id": 358,
+      "name": "은장검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/163.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 359,
+      "name": "은검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/156.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 360,
+      "name": "은도끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/173.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "둔기"
+    },
+    {
+      "id": 361,
+      "name": "펫 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/487.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "길들인 펫의 주인임을 표시하는 목걸이입니다. 이것을 서로 교환하면 펫을 교환할 수 있습니다."
+    },
+    {
+      "id": 362,
+      "name": "사탕",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/488.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 365,
+      "name": "강철 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/506.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 366,
+      "name": "강철 면갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/507.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 367,
+      "name": "강철 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/508.png",
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 368,
+      "name": "강철 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/509.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 369,
+      "name": "강철 판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/510.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 376,
+      "name": "파란 옷감",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/517.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 378,
+      "name": "붉은 옷감",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/519.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 379,
+      "name": "하얀 옷감",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/520.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 382,
+      "name": "강철 원석",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/523.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 385,
+      "name": "마법사 모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/526.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 386,
+      "name": "마법사 옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/527.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 388,
+      "name": "사냥꾼 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/279.png",
+      "options": [
+        "원거리 명중 +5",
+        "양손",
+        "원거리 대미지 +1"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 403,
+      "name": "수룡 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/539.png",
+      "options": [
+        "물 속성 저항력 증가 +20"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "수룡의 비늘로 만든 갑옷. 물결의 속성에 저항력을 가지고 있습니다."
+    },
+    {
+      "id": 404,
+      "name": "지룡 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/540.png",
+      "options": [
+        "땅 속성 저항력 증가 +20"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "지룡의 비늘로 만든 갑옷. 대지의 속성에 저항력을 가지고 있습니다."
+    },
+    {
+      "id": 405,
+      "name": "화룡 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/541.png",
+      "options": [
+        "불 속성 저항력 증가 +20"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "화룡의 비늘로 만든 갑옷. 화염의 속성에 저항력을 가지고 있습니다."
+    },
+    {
+      "id": 406,
+      "name": "풍룡 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/542.png",
+      "options": [
+        "바람 속성 저항력 증가 +20"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "풍룡의 비늘로 만든 갑옷. 바람의 속성에 저항력을 가지고 있습니다."
+    },
+    {
+      "id": 407,
+      "name": "수룡 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/547.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 408,
+      "name": "지룡 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/548.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 409,
+      "name": "화룡 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/549.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 410,
+      "name": "풍룡 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/550.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 415,
+      "name": "빈 주문서(레벨 1)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/859.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 417,
+      "name": "에바의 축복",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/557.png",
+      "options": [
+        "지속시간 +1800초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "에바의 축복이 깃들어 물 속에서도 숨을 쉴 수 있게 됩니다."
+    },
+    {
+      "id": 418,
+      "name": "인어의 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/556.png",
+      "options": [
+        "지속시간 +600초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "물 속에서도 숨을 쉴 수 있게 됩니다."
+    },
+    {
+      "id": 429,
+      "name": "아시타지오의 재",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/591.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 492,
+      "name": "파란 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/75.png",
+      "favorite": false,
+      "categoryName": "물약",
+      "name2": "마력 회복 물약"
+    },
+    {
+      "id": 495,
+      "name": "강화 초록 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/621.png",
+      "options": [
+        "지속시간 +1800초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "name2": "강화 속도향상 물약"
+    },
+    {
+      "id": 496,
+      "name": "항마의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/625.png",
+      "options": [
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 497,
+      "name": "멸마의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/626.png",
+      "options": [
+        "MR +10"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 498,
+      "name": "화령의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/628.png",
+      "options": [
+        "불 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 499,
+      "name": "수령의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/629.png",
+      "options": [
+        "물 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 500,
+      "name": "지령의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/627.png",
+      "options": [
+        "땅 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 501,
+      "name": "풍령의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/630.png",
+      "options": [
+        "바람 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 502,
+      "name": "낡은 신체의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/631.png",
+      "options": [
+        "최대 HP +30"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 503,
+      "name": "낡은 정신의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/632.png",
+      "options": [
+        "최대 MP +30"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 504,
+      "name": "낡은 영혼의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/633.png",
+      "options": [
+        "최대 MP +15",
+        "최대 HP +15"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 505,
+      "name": "신체의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/634.png",
+      "options": [
+        "최대 HP +50"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 506,
+      "name": "정신의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/635.png",
+      "options": [
+        "최대 MP +50"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 507,
+      "name": "영혼의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/636.png",
+      "options": [
+        "최대 MP +25",
+        "최대 HP +25"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 508,
+      "name": "낡은 완력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/637.png",
+      "options": [
+        "DEX -2",
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 509,
+      "name": "낡은 민첩의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/638.png",
+      "options": [
+        "DEX +1",
+        "CON -2"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 510,
+      "name": "낡은 체력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/639.png",
+      "options": [
+        "STR -2",
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 511,
+      "name": "낡은 지식의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/640.png",
+      "options": [
+        "INT +1",
+        "WIS -2"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 512,
+      "name": "낡은 지혜의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/641.png",
+      "options": [
+        "CHA -2",
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 513,
+      "name": "낡은 매력의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/642.png",
+      "options": [
+        "CHA +1",
+        "INT -2"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 515,
+      "name": "마법서 (아이스 대거)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 516,
+      "name": "마법서 (윈드 커터)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 517,
+      "name": "마법서 (파이어 애로우)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 518,
+      "name": "마법서 (스탈락)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 519,
+      "name": "마법서 (프로즌 클라우드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 520,
+      "name": "마법서 (어스 재일)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 521,
+      "name": "마법서 (콘 오브 콜드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 522,
+      "name": "마법서 (선 버스트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 523,
+      "name": "마법서 (그레이터 헤이스트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 524,
+      "name": "마법서 (어스 퀘이크)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 525,
+      "name": "마법서 (파이어 스톰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 545,
+      "name": "돌 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/712.png",
+      "options": [
+        "대미지 감소 +1"
+      ],
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 547,
+      "name": "수정 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/707.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 551,
+      "name": "수중 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/704.png",
+      "options": [
+        "수중 호흡 가능",
+        "MP회복 +1"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 556,
+      "name": "데스나이트의 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/708.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 557,
+      "name": "데스나이트의 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/695.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 558,
+      "name": "데스나이트의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/701.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 559,
+      "name": "데스나이트의 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/713.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 565,
+      "name": "트롤의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/699.png",
+      "options": [
+        "무게추가 +500"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 566,
+      "name": "오우거의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/697.png",
+      "options": [
+        "무게추가 +1000"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 567,
+      "name": "타이탄의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/698.png",
+      "options": [
+        "무게추가 +1500"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 568,
+      "name": "사이하의 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/705.png",
+      "options": [
+        "양손",
+        "원거리 대미지 +5",
+        "발동 : 장착된 화살이 없을 경우 무형 화살 사용",
+        "원거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 569,
+      "name": "정령옥",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/706.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 570,
+      "name": "정령의 수정 (레지스트 매직)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 571,
+      "name": "정령의 수정 (바디 투 마인드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 572,
+      "name": "정령의 수정 (텔레포트 투 마더)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 573,
+      "name": "정령의 수정 (클리어 마인드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/674.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 574,
+      "name": "정령의 수정 (레지스트 엘리멘트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/674.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 575,
+      "name": "정령의 수정 (리턴 투 네이처)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 576,
+      "name": "정령의 수정 (블러드 투 소울)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 577,
+      "name": "정령의 수정 (프로텍션 프롬 엘리멘트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 578,
+      "name": "정령의 수정 (파이어 웨폰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/675.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 579,
+      "name": "정령의 수정 (윈드 샷)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/679.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 580,
+      "name": "정령의 수정 (윈드 워크)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/679.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 581,
+      "name": "정령의 수정 (어스 스킨)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/676.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 582,
+      "name": "정령의 수정 (인탱글)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/676.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 583,
+      "name": "정령의 수정 (이레이즈 매직)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/682.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 584,
+      "name": "정령의 수정 (서먼 레서 엘리멘탈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/682.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 585,
+      "name": "정령의 수정 (브레스 오브 파이어)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/680.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 586,
+      "name": "정령의 수정 (아이 오브 스톰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/684.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 587,
+      "name": "정령의 수정 (어스 바인드)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 588,
+      "name": "정령의 수정 (네이쳐스 터치)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/683.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 589,
+      "name": "정령의 수정 (블레스 오브 어스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 590,
+      "name": "정령의 수정 (에어리어 오브 사일런스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/687.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 591,
+      "name": "정령의 수정 (서먼 그레이터 엘리멘탈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/687.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 592,
+      "name": "정령의 수정 (버닝 웨폰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/685.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 593,
+      "name": "정령의 수정 (네이쳐스 블레싱)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 595,
+      "name": "정령의 수정 (스톰 샷)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/689.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 597,
+      "name": "정령의 수정 (아이언 스킨)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/686.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 598,
+      "name": "마법서 (홀리 웨폰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 599,
+      "name": "마법서 (디크리즈 웨이트)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 600,
+      "name": "마법서 (위크 엘리멘탈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 601,
+      "name": "마법서 (카운터 매직)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 602,
+      "name": "마법서 (메디테이션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 603,
+      "name": "마법서 (마나 드레인)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 604,
+      "name": "마법서 (다크니스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 605,
+      "name": "마법서 (위크니스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 606,
+      "name": "마법서 (블레스 웨폰)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 607,
+      "name": "마법서 (버서커스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 608,
+      "name": "마법서 (디지즈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 610,
+      "name": "마법서 (사일런스)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 620,
+      "name": "빈 주문서(레벨 2)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/860.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 621,
+      "name": "빈 주문서(레벨 3)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/858.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 622,
+      "name": "빈 주문서(레벨 4)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/862.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 631,
+      "name": "민첩함의 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/913.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 632,
+      "name": "체력의 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/908.png",
+      "options": [
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 633,
+      "name": "낡은 거래 문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/919.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "대장장이 아논이 과거 반왕 세력에 협력하던 시절 흑기사들과 거래할 때 사용한 장부. 반왕 세력의 무기 제조술을 알아내기 위해 은기사 마을의 대장장이 아논이 이 문서를 찾고 있습니다."
+    },
+    {
+      "id": 636,
+      "name": "수색문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/914.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "흑기사 수색대가 켄트성 주변을 정찰하고 남긴 문서. 켄트성 마을의 제로가 이 문서를 기다리고 있습니다."
+    },
+    {
+      "id": 639,
+      "name": "흑기사의 서약서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/927.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "반왕의 조직에 절대적인 충성을 맹세한 증거. 반왕의 계획이 적혀 있기 때문에 은기사 마을의 리키가 이 서약서를 찾고 있습니다."
+    },
+    {
+      "id": 640,
+      "name": "두다 마라 오크 마법서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/923.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오크들이 사용하는 마법의 오랜 역사가 담긴 마법서. 오크의 마법을 연구하기 위해 화전민 마을의 오스가 이 마법서를 찾고 있습니다."
+    },
+    {
+      "id": 641,
+      "name": "네루가 오크 마법서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/925.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오크들이 사용하는 마법의 오랜 역사가 담긴 마법서. 오크의 마법을 연구하기 위해 화전민 마을의 오스가 이 마법서를 찾고 있습니다."
+    },
+    {
+      "id": 642,
+      "name": "간디 오크 마법서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/924.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오크들이 사용하는 마법의 오랜 역사가 담긴 마법서. 오크의 마법을 연구하기 위해 화전민 마을의 오스가 이 마법서를 찾고 있습니다."
+    },
+    {
+      "id": 643,
+      "name": "아투바 오크 마법서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/922.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오크들이 사용하는 마법의 오랜 역사가 담긴 마법서. 오크의 마법을 연구하기 위해 화전민 마을의 오스가 이 마법서를 찾고 있습니다."
+    },
+    {
+      "id": 644,
+      "name": "저주받은 마법서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/909.png",
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "마력이 부족하여 불완전한 상태의 마법서. 말하는 섬의 젬이 마력을 불어 넣어 완전한 모습으로 바꿔줄 수 있습니다."
+    },
+    {
+      "id": 645,
+      "name": "마력서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/906.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 646,
+      "name": "붉은 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/907.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 647,
+      "name": "해골의 두개골",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/921.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "해골의 몸에서 떨어져 나온, 달그락거리는 머리뼈. 희미한 저주가 남아 있어 가까이하면 기이한 환청이 들리기도 합니다. 말하는 섬의 젬에게 이것을 가져가면 저주받은 마법서에 마력을 불어넣어 줄 수 있습니다."
+    },
+    {
+      "id": 648,
+      "name": "구울의 손톱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/918.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "몸을 마비시키는 독이 발린 손톱. 말하는 섬의 젬은 영혼 마법의 비밀을 연구하기 위해 이 재료를 기다리고 있습니다."
+    },
+    {
+      "id": 649,
+      "name": "구울의 이빨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/926.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "썩은 사체 조각이 끼어 있어, 물린 자에게 마비를 일으키는 이빨. 말하는 섬의 젬은 영혼 마법의 비밀을 연구하기 위해 이 재료를 기다리고 있습니다."
+    },
+    {
+      "id": 650,
+      "name": "터틀 드래곤의 껍질",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/920.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "터틀 드래곤의 거대한 껍질로 수십 년을 버텨온 방어의 상징. 가공이 어려워 은기사 마을의 대장장이 아논만이 장비 제작에 사용할 수 있습니다."
+    },
+    {
+      "id": 651,
+      "name": "기사의 두건",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/915.png",
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "리키가 기사 시절 사용했던 두건. 은기사 마을의 대장장이 아논이 두건을 더 강력하게 만들어 줄 수 있습니다."
+    },
+    {
+      "id": 652,
+      "name": "붉은 기사의 두건",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/916.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 654,
+      "name": "잊혀진 판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/443.png",
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "강력한 기운에 둘러 싸인 판금 갑옷입니다.",
+      "name2": "봉인된 잊혀진 판금 갑옷"
+    },
+    {
+      "id": 655,
+      "name": "잊혀진 가죽 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/442.png",
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "강력한 기운에 둘러 싸인 가죽 갑옷입니다.",
+      "name2": "봉인된 잊혀진 가죽 갑옷"
+    },
+    {
+      "id": 656,
+      "name": "잊혀진 로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "강력한 기운에 둘러 싸인 로브입니다.",
+      "name2": "봉인된 잊혀진 로브"
+    },
+    {
+      "id": 657,
+      "name": "잊혀진 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/89.png",
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "강력한 기운에 둘러 싸인 비늘 갑옷입니다.",
+      "name2": "봉인된 잊혀진 비늘 갑옷"
+    },
+    {
+      "id": 658,
+      "name": "소환 조종 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/905.png",
+      "favorite": false,
+      "categoryName": "반지",
+      "description": "착용 시 서먼 몬스터 마법을 사용하면 자신이 원하는 몬스터를 소환할 수 있다"
+    },
+    {
+      "id": 659,
+      "name": "잊혀진 대검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/90.png",
+      "options": [
+        "근거리 명중 +3",
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "양손검",
+      "description": "강력한 힘이 느껴지는 대검입니다.",
+      "name2": "봉인된 잊혀진 대검"
+    },
+    {
+      "id": 660,
+      "name": "잊혀진 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/103.png",
+      "options": [
+        "근거리 명중 +5"
+      ],
+      "favorite": false,
+      "categoryName": "한손검",
+      "description": "강력한 힘이 느껴지는 한손검입니다.",
+      "name2": "봉인된 잊혀진 검"
+    },
+    {
+      "id": 661,
+      "name": "잊혀진 보우건",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "양손"
+      ],
+      "favorite": false,
+      "categoryName": "활",
+      "description": "강력한 힘이 느껴지는 활입니다.",
+      "name2": "봉인된 잊혀진 보우건"
+    },
+    {
+      "id": 666,
+      "name": "붉은 기사의 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/954.png",
+      "options": [
+        "반사 효과"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "붉은 눈을 가진 방패. 광선형으로 발사되는 마법에 대해서는 상당한 방어력을 가지고 있습니다."
+    },
+    {
+      "id": 667,
+      "name": "고대의 판금 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/899.png",
+      "options": [
+        "HP회복 +1"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "고대 기사가 사용하던 갑옷으로 갑옷 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 668,
+      "name": "고대의 가죽 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/898.png",
+      "options": [
+        "HP회복 +3",
+        "MP회복 +5"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "고대 요정이 사용하던 갑옷으로 갑옷 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 669,
+      "name": "고대의 로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/900.png",
+      "options": [
+        "MP회복 +8"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "고대 마법사가 사용하던 갑옷으로 갑옷 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 670,
+      "name": "고대의 비늘 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/901.png",
+      "options": [
+        "HP회복 +5",
+        "MP회복 +3"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷",
+      "description": "고대 군주가 사용하던 갑옷으로 갑옷 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 671,
+      "name": "고대의 대검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/897.png",
+      "options": [
+        "양손",
+        "근거리 명중 +7"
+      ],
+      "favorite": false,
+      "categoryName": "양손검",
+      "description": "고대인이 사용하던 대검으로 무기 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 672,
+      "name": "고대의 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/902.png",
+      "options": [
+        "근거리 명중 +9"
+      ],
+      "favorite": false,
+      "categoryName": "한손검",
+      "description": "고대인이 사용하던 검으로 무기 마법 주문서로는 인챈트가 불가능합니다."
+    },
+    {
+      "id": 673,
+      "name": "고대의 보우건",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/896.png",
+      "options": [
+        "원거리 명중 +5",
+        "원거리 대미지 +2"
+      ],
+      "favorite": false,
+      "categoryName": "활",
+      "description": "고대인이 사용하던 한손활로 명중률이 높습니다."
+    },
+    {
+      "id": 674,
+      "name": "고대의 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/911.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 675,
+      "name": "마법서 (트루 타겟)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 676,
+      "name": "마법서 (글로잉 오라)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 677,
+      "name": "생명의 비밀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/912.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "돌 골렘 속에 숨겨져 있던 생명의 비밀이 적힌 주문서. 말하는 섬의 군터가 이 주문서를 기다리고 있습니다."
+    },
+    {
+      "id": 686,
+      "name": "라미아의 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/953.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "라미아 우두머리의 몸에서 떨어져 나온 푸른 비늘. 은기사 마을의 게라드에게 가져가면 그의 시련을 통과할 수 있습니다."
+    },
+    {
+      "id": 687,
+      "name": "환생의 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/947.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "붉은 기사에게 단 하나만 주어지는 특별한 물약. 악의 신 그랑카인의 저주마저 풀어낼 만큼 강력한 힘을 지니고 있습니다. 진정한 붉은 기사는 이 물약을 자신보다 더 절실한 이에게 기꺼이 내어줄 수 있어야 합니다."
+    },
+    {
+      "id": 688,
+      "name": "감사의 편지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/917.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "저주로 해골이 된 짐이 감사의 마음을 담아서 남긴 편지. 은기사 마을의 게라드에게 가져가면 희생과 헌신의 증표로써 인정해 줄 것입니다."
+    },
+    {
+      "id": 689,
+      "name": "마을 주민들의 유품",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/952.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "변종 거대 여왕 개미의 배 속에서 발견된 유품. 우드벡 마을의 아리아는 개미굴에서 사라진 주민들과 아버지의 소식을 기다리고 있습니다."
+    },
+    {
+      "id": 690,
+      "name": "언데드의 뼈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/934.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "부활 중인 데스나이트의 뼈를 훔쳐 도망친 언데드의 배신자가 남긴 뼈. 말하는 섬의 게렝이 연구를 완성하기 위해 이것을 찾고 있습니다."
+    },
+    {
+      "id": 693,
+      "name": "저주 받은 정령서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/940.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "다크엘프 마법사 다크마르가 요정 숲에서 훔쳐간 정령서. 요정 숲의 숲과 요정의 어머니는 정령서가 다시 회수되기를 바라고 있습니다."
+    },
+    {
+      "id": 694,
+      "name": "언데드의 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "언데드의 던전 안의 마법으로 봉인된 문을 열기 위해 필요한 열쇠. 언데드의 던전은 말하는 섬 던전 1층의 디롱에게 말을 걸면 들어갈 수 있습니다. 게렝의 의뢰를 무사히 마쳤다면, 더는 가지고 있을 필요가 없습니다."
+    },
+    {
+      "id": 695,
+      "name": "좀비 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/945.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "언데드의 던전 안의 마법으로 봉인된 문을 열기 위해 필요한 열쇠. 게렝의 의뢰를 무사히 마쳤다면, 더는 가지고 있을 필요가 없습니다."
+    },
+    {
+      "id": 696,
+      "name": "해골 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/944.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "언데드의 던전 안의 마법으로 봉인된 문을 열기 위해 필요한 열쇠. 게렝의 의뢰를 무사히 마쳤다면, 더는 가지고 있을 필요가 없습니다."
+    },
+    {
+      "id": 705,
+      "name": "요정족 티셔츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/956.png",
+      "favorite": false,
+      "categoryName": "티셔츠"
+    },
+    {
+      "id": 706,
+      "name": "군주의 위엄",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/941.png",
+      "options": [
+        "DEX +1",
+        "STR +1",
+        "CHA +1",
+        "INT +1",
+        "CON +1",
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 707,
+      "name": "비밀방 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "글루디오 던전 깊숙한 곳, 마법사 오림 근처에서 사용할 수 있는 오래된 열쇠입니다. 비밀방에는 저주받은 자가 숨어 있다고 전해집니다."
+    },
+    {
+      "id": 709,
+      "name": "신비한 수정구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/938.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "글루디오 던전의 오림에게 얻은 마력이 응축된 수정구. 말하는 섬의 게렝에게 가져가면 신비한 지팡이를 완성하는데 사용할 수 있습니다."
+    },
+    {
+      "id": 710,
+      "name": "신비한 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/946.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "마력의 근원이 되는 신비한 수정구가 빠진 지팡이. 수정구를 구하려면 던전 깊숙한 곳에서 거래를 하는 마법사 오림을 찾아가야 합니다."
+    },
+    {
+      "id": 711,
+      "name": "수정 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/939.png",
+      "options": [
+        "MP회복 +10"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이",
+      "description": "MP를 상당히 빨리 회복 시켜주는 지팡이입니다."
+    },
+    {
+      "id": 712,
+      "name": "라미아 방 열쇠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "게라드가 시련을 위해 가두어 놓은 라미아 우두머리의 방을 여는 열쇠. 게라드의 시련을 무사히 마쳤다면, 더는 가지고 있을 필요가 없습니다."
+    },
+    {
+      "id": 713,
+      "name": "마법서 (콜 클랜)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 722,
+      "name": "반왕의 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/960.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 723,
+      "name": "반왕의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/961.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 724,
+      "name": "반왕의 건틀릿",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/962.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 725,
+      "name": "반왕의 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/959.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 727,
+      "name": "케레니스의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/964.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 732,
+      "name": "케레니스의 서클릿",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/969.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 734,
+      "name": "케레니스의 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/971.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 735,
+      "name": "케레니스의 로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/972.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 742,
+      "name": "메두사 방패",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/979.png",
+      "options": [
+        "반사 효과",
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "메두사의 기운이 깃든 방패. 광선형으로 발사되는 마법에 대해서는 상당한 방어력을 가지고 있습니다."
+    },
+    {
+      "id": 744,
+      "name": "에이션트 자이언트의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/981.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 756,
+      "name": "수호자의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/905.png",
+      "options": [
+        "최대 MP +20",
+        "최대 HP +30"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 768,
+      "name": "보호 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1011.png",
+      "options": [
+        "최대 MP +10",
+        "최대 HP +20"
+      ],
+      "favorite": false,
+      "categoryName": "장갑",
+      "description": "강력한 기운이 느껴지는 장갑"
+    },
+    {
+      "id": 769,
+      "name": "마나 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1007.png",
+      "options": [
+        "MP회복 +5"
+      ],
+      "favorite": false,
+      "categoryName": "망토",
+      "description": "MP를 상당히 빨리 회복 시켜주는 망토입니다."
+    },
+    {
+      "id": 770,
+      "name": "용기의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1009.png",
+      "options": [
+        "최대 HP +30"
+      ],
+      "favorite": false,
+      "categoryName": "벨트",
+      "description": "강력한 힘과 기운이 느껴지는 허리장식"
+    },
+    {
+      "id": 776,
+      "name": "결혼 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/986.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "name2": "와(과)의 결혼반지"
+    },
+    {
+      "id": 787,
+      "name": "데스 블레이드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1016.png",
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 788,
+      "name": "마나 수정구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1017.png",
+      "options": [
+        "INT +1",
+        "최대 MP +100"
+      ],
+      "favorite": false,
+      "categoryName": "방패"
+    },
+    {
+      "id": 789,
+      "name": "화염의 활",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1018.png",
+      "options": [
+        "양손",
+        "원거리 대미지 +4",
+        "발동 : 파이어 애로우",
+        "원거리 명중 +2"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 790,
+      "name": "화염의 검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1019.png",
+      "options": [
+        "근거리 명중 +4"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 791,
+      "name": "황금 지휘봉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1020.png",
+      "options": [
+        "근거리 명중 +1"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 806,
+      "name": "혈맹 귀환 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/474.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "성이나 아지트를 소유한 혈맹원이 사용하면 해당 되는 곳으로 텔레포트합니다."
+    },
+    {
+      "id": 815,
+      "name": "제니스의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1037.png",
+      "options": [
+        "독 이뮨 효과"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 895,
+      "name": "엘릭서(STR)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1143.png",
+      "favorite": false
+    },
+    {
+      "id": 896,
+      "name": "엘릭서(DEX)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1141.png",
+      "favorite": false
+    },
+    {
+      "id": 897,
+      "name": "엘릭서(CON)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1140.png",
+      "favorite": false
+    },
+    {
+      "id": 898,
+      "name": "엘릭서(INT)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1142.png",
+      "favorite": false
+    },
+    {
+      "id": 899,
+      "name": "엘릭서(WIS)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1144.png",
+      "favorite": false
+    },
+    {
+      "id": 900,
+      "name": "엘릭서(CHA)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1139.png",
+      "favorite": false
+    },
+    {
+      "id": 927,
+      "name": "검은 혈흔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1166.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 935,
+      "name": "빛나는 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1171.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 936,
+      "name": "빛나는 신체의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1168.png",
+      "options": [
+        "HP회복 +1",
+        "최대 HP +50"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 937,
+      "name": "빛나는 정신의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1169.png",
+      "options": [
+        "MP회복 +1",
+        "최대 MP +50"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 938,
+      "name": "빛나는 영혼의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1170.png",
+      "options": [
+        "HP회복 +1",
+        "최대 MP +20",
+        "MP회복 +1",
+        "최대 HP +20"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 978,
+      "name": "흑장로의 로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1229.png",
+      "options": [
+        "최대 MP +50",
+        "MP회복 +5"
+      ],
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 979,
+      "name": "흑장로의 샌달",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1230.png",
+      "options": [
+        "최대 MP +25",
+        "MP회복 +5"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 980,
+      "name": "발터자르의 모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1231.png",
+      "options": [
+        "MP회복 +5"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 981,
+      "name": "카스파의 모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1232.png",
+      "options": [
+        "최대 MP +25"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 982,
+      "name": "메르키오르의 모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1233.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 983,
+      "name": "세마의 모자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1234.png",
+      "options": [
+        "최대 MP +15",
+        "MP회복 +2"
+      ],
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 1007,
+      "name": "커츠의 장갑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1244.png",
+      "favorite": false,
+      "categoryName": "장갑"
+    },
+    {
+      "id": 1008,
+      "name": "커츠의 갑옷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1246.png",
+      "favorite": false,
+      "categoryName": "갑옷"
+    },
+    {
+      "id": 1009,
+      "name": "커츠의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1247.png",
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 1010,
+      "name": "커츠의 투구",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1245.png",
+      "favorite": false,
+      "categoryName": "투구"
+    },
+    {
+      "id": 1094,
+      "name": "얼음 여왕의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1239.png",
+      "options": [
+        "근거리 명중 +3",
+        "발동 : 콘 오브 콜드"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 1095,
+      "name": "데몬의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1240.png",
+      "options": [
+        "SP +5"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 1096,
+      "name": "바포메트의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1255.png",
+      "options": [
+        "근거리 대미지 +5",
+        "발동 : 이럽션",
+        "근거리 명중 +7"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 1097,
+      "name": "베레스의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1257.png",
+      "options": [
+        "MP회복 +10",
+        "SP +2"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 1221,
+      "name": "마법서 (브레이브 오라)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1285,
+      "name": "크림슨 랜스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/38.png",
+      "options": [
+        "근거리 명중 +1",
+        "양손",
+        "최대 HP +50"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 1294,
+      "name": "기술서 (쇼크 스턴)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1295,
+      "name": "마법서 (런 클랜)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1296,
+      "name": "정령의 수정 (트리플 애로우)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1408,
+      "name": "악마의 피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20029.png",
+      "options": [
+        "지속시간 +600초"
+      ],
+      "favorite": false,
+      "categoryName": "물약",
+      "description": "마시면 악마의 기운이 마음속 깊은 곳에 스며들며, 광폭한 기운을 일으켜 일정 시간동안 보다 빠르게 행동하게 됩니다."
+    },
+    {
+      "id": 1489,
+      "name": "바다의 망토",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1767.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "망토"
+    },
+    {
+      "id": 1490,
+      "name": "마법서 (디케이 포션)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1491,
+      "name": "마법서 (어드밴스 스피릿)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1492,
+      "name": "기술서 (카운터 배리어)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1493,
+      "name": "정령의 수정 (워터 라이프)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1494,
+      "name": "정령의 수정 (폴루트 워터)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1495,
+      "name": "정령의 수정 (스트라이커 게일)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/689.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1496,
+      "name": "정령의 수정 (소울 오브 프레임)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/685.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1861,
+      "name": "기술서 (리덕션 아머)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1862,
+      "name": "기술서 (바운스 어택)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 1863,
+      "name": "기술서 (솔리드 캐리지)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "마법서"
+    },
+    {
+      "id": 2069,
+      "name": "달빛의 정기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2179.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "상아탑 달빛을 머금고 응축된 정기."
+    },
+    {
+      "id": 2070,
+      "name": "신성한 유니콘의 뿔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2181.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "새 뿔이 돋아나며 떨어진 신성한 유니콘의 흔적."
+    },
+    {
+      "id": 2072,
+      "name": "달의 장궁",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2168.png",
+      "options": [
+        "원거리 명중 +3",
+        "발동 : 문라이트 이럽션",
+        "양손",
+        "원거리 대미지 +4"
+      ],
+      "favorite": false,
+      "categoryName": "활"
+    },
+    {
+      "id": 2586,
+      "name": "날이 빠진 무기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1542.png",
+      "favorite": false
+    },
+    {
+      "id": 2671,
+      "name": "픽시의 깃털",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2518.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "특별한 혜택을 받고 있는 용사에게 지급되는 특별한 아이템입니다."
+    },
+    {
+      "id": 3018,
+      "name": "천사의 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2915.png",
+      "options": [
+        "발동 : 턴 언데드",
+        "INT +1",
+        "MP회복 +4"
+      ],
+      "favorite": false,
+      "categoryName": "지팡이"
+    },
+    {
+      "id": 3019,
+      "name": "혹한의 창",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2919.png",
+      "options": [
+        "근거리 대미지 +1",
+        "발동 : 콜드 체이서"
+      ],
+      "favorite": false,
+      "categoryName": "창"
+    },
+    {
+      "id": 3020,
+      "name": "뇌신검",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2911.png",
+      "options": [
+        "근거리 명중 +1",
+        "근거리 대미지 +1",
+        "발동 : 일렉트릭 쇼크"
+      ],
+      "favorite": false,
+      "categoryName": "한손검"
+    },
+    {
+      "id": 3350,
+      "name": "속죄의 성서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3138.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "속죄의 문구가 쓰여져 있는 성서. 평화의 신녀를 통해 낭독할 수 있다."
+    },
+    {
+      "id": 3934,
+      "name": "불 정령의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3806.png",
+      "options": [
+        "무게추가 +500",
+        "불 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 3935,
+      "name": "물 정령의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3802.png",
+      "options": [
+        "무게추가 +500",
+        "물 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 3936,
+      "name": "땅 정령의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3800.png",
+      "options": [
+        "무게추가 +500",
+        "땅 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 3937,
+      "name": "바람 정령의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3804.png",
+      "options": [
+        "무게추가 +500",
+        "바람 속성 저항력 증가 +10"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 4052,
+      "name": "봉인 해제 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6059.png",
+      "favorite": false,
+      "categoryName": "주문서",
+      "description": "봉인된 아이템의 봉인을 해제할 수 있습니다. 사용 가능 시간이 끝나기 전에 사용해야 합니다."
+    },
+    {
+      "id": 12069,
+      "name": "회상의 촛불",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2923.png",
+      "favorite": false
+    },
+    {
+      "id": 12070,
+      "name": "회상의 촛불",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2923.png",
+      "favorite": false
+    },
+    {
+      "id": 12074,
+      "name": "속죄의 성서 상자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20044.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용 시 속죄의 성서를 10장 획득할 수 있습니다."
+    },
+    {
+      "id": 12104,
+      "name": "봉인 해제 주문서 상자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3942.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용 시 봉인 해제 주문서 10장을 획득할 수 있습니다. 사용 가능 시간이 끝나기 전에 사용해야 합니다."
+    },
+    {
+      "id": 12105,
+      "name": "종이 전령새",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20088.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용하여 부정한 자의 이름을 새기면 진실을 캐는 자에게 전달됩니다."
+    },
+    {
+      "id": 12106,
+      "name": "종이 전령새 상자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20092.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 12110,
+      "name": "도난당한 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/637.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "소매치기가 훔쳐간 귀중품으로, 기란 마을의 이올라가 애타게 찾고 있습니다."
+    },
+    {
+      "id": 12111,
+      "name": "도난당한 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/626.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "소매치기가 훔쳐간 귀중품으로, 기란 마을의 이올라가 애타게 찾고 있습니다."
+    },
+    {
+      "id": 12112,
+      "name": "사이클롭스의 피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20029.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사이클롭스를 처치한 증표. 은기사 마을의 가죽 세공사 줄리에게 가져가면 특별한 장비를 제작할 수 있습니다."
+    },
+    {
+      "id": 12113,
+      "name": "오염된 정령의 수정(물)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/683.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오염된 물의 정령을 처치한 증표. 요정 숲의 숲과 요정의 어머니에게 자신의 기량을 증명하기 위한 물품 중 하나입니다."
+    },
+    {
+      "id": 12114,
+      "name": "오염된 정령의 수정(불)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/680.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오염된 불의 정령을 처치한 증표. 요정 숲의 숲과 요정의 어머니에게 자신의 기량을 증명하기 위한 물품 중 하나입니다."
+    },
+    {
+      "id": 12115,
+      "name": "오염된 정령의 수정(땅)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오염된 땅의 정령을 처치한 증표. 요정 숲의 숲과 요정의 어머니에게 자신의 기량을 증명하기 위한 물품 중 하나입니다."
+    },
+    {
+      "id": 12116,
+      "name": "오염된 정령의 수정(바람)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/684.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오염된 바람의 정령을 처치한 증표. 요정 숲의 숲과 요정의 어머니에게 자신의 기량을 증명하기 위한 물품 중 하나입니다."
+    },
+    {
+      "id": 12117,
+      "name": "바실리스크의 비늘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/953.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "바실리스크를 처치한 증표. 요정 숲의 숲과 요정의 어머니에게 자신의 기량을 증명하기 위한 물품 중 하나입니다."
+    },
+    {
+      "id": 12118,
+      "name": "정화의 머리띠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/184.png",
+      "favorite": false,
+      "categoryName": "투구",
+      "description": "요정 숲의 숲과 요정의 어머니가 빌려주는 특수 장비. 착용 시, 오염된 바람의 정령을 볼 수 있게 됩니다."
+    },
+    {
+      "id": 12119,
+      "name": "신비한 마나 회복 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/75.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오림이 판매하는 특수 물약. 말하는 섬의 젬은 효율적인 마나 회복 방법을 연구하기 위해 이 재료를 기다리고 있습니다."
+    },
+    {
+      "id": 12120,
+      "name": "신비한 지혜의 물약",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1529.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "일부 장로가 소지하고 있는 특수 물약. 말하는 섬의 젬은 효율적인 마나 회복 방법을 연구하기 위해 이 재료를 기다리고 있습니다."
+    },
+    {
+      "id": 12121,
+      "name": "서큐버스 퀸의 신비한 지팡이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/946.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "일부 서큐버스 퀸이 소지하고 있는 특수 지팡이. 말하는 섬의 젬은 효율적인 마나 회복 방법을 연구하기 위해 이 재료를 기다리고 있습니다."
+    },
+    {
+      "id": 12130,
+      "name": "말하는 섬의 추억",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20100.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "말하는 섬을 다시 찾아주신 용사님들을 위해 준비한 메티스의 선물입니다. 소지 시 들고 있는 짐이 조금 가볍게 느껴집니다."
+    },
+    {
+      "id": 12149,
+      "name": "수호의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20025.png",
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 12170,
+      "name": "수호의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20138.png",
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 12209,
+      "name": "수호의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20170.png",
+      "options": [
+        "무게추가 +400"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 12242,
+      "name": "장로의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20212.png",
+      "options": [
+        "최대 MP +30",
+        "MP회복 +1"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 12243,
+      "name": "장로의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20214.png",
+      "options": [
+        "최대 MP +10",
+        "MP회복 +1"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 12286,
+      "name": "항마의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20257.png",
+      "options": [
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 12287,
+      "name": "항마의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20258.png",
+      "options": [
+        "무게추가 +400"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 12349,
+      "name": "신의의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20327.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 12350,
+      "name": "용기의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20328.png",
+      "options": [
+        "근거리 명중 +1"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 12351,
+      "name": "세피아의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20329.png",
+      "options": [
+        "원거리 명중 +1"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 12352,
+      "name": "마나의 부츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20330.png",
+      "options": [
+        "MP회복 +2"
+      ],
+      "favorite": false,
+      "categoryName": "부츠"
+    },
+    {
+      "id": 12405,
+      "name": "마나의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20348.png",
+      "options": [
+        "MP회복 +1"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 12456,
+      "name": "잊혀진 섬의 추억",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20409.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "잊혀진 섬을 향한 항로가 기록되어있는 책입니다. 소지 시 들고 있는 짐이 조금 가볍게 느껴집니다."
+    },
+    {
+      "id": 12458,
+      "name": "케플리샤의 기억 저장 구슬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20416.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "내 기억을 구슬에 담을 수 있습니다."
+    },
+    {
+      "id": 12514,
+      "name": "낡은 수렵꾼의 화살통",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20515.png",
+      "options": [
+        "화살 소지 무게 감소 300"
+      ],
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "오랜 사냥을 위해 만들어진 튼튼한 화살통입니다. 소지 시 들고 있는 화살의 무게가 조금 가볍게 느껴집니다."
+    },
+    {
+      "id": 12531,
+      "name": "낡은 가죽 화살통",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20533.png",
+      "options": [
+        "화살 소지 무게 감소 150"
+      ],
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "질긴 가죽으로 만든 화살통입니다. 소지 시 들고 있는 화살의 무게가 조금 가볍게 느껴집니다."
+    },
+    {
+      "id": 12557,
+      "name": "안타라스의 기억",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20610.png",
+      "options": [
+        "땅 속성 저항력 증가 +5"
+      ],
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "안타라스를 쓰러뜨린 자의 기억. 최초의 안타라스 토벌자로서 이룩한 위대한 영예를 간직하고 있습니다."
+    },
+    {
+      "id": 12860,
+      "name": "지식의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/5343.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 12875,
+      "name": "엘릭서 선택 상자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20084.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "사용 시 엘릭서 6종 중 1종 선택 획득 가능한 상자"
+    },
+    {
+      "id": 12876,
+      "name": "퓨어 엘릭서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4110.png",
+      "favorite": false,
+      "categoryName": "기타",
+      "description": "엘릭서 제작에 필요한 재료 아이템."
+    },
+    {
+      "id": 15090,
+      "name": "멸마의 목걸이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20408.png",
+      "options": [
+        "MR +8"
+      ],
+      "favorite": false,
+      "categoryName": "목걸이"
+    },
+    {
+      "id": 15091,
+      "name": "멸마의 벨트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20605.png",
+      "options": [
+        "무게추가 +500"
+      ],
+      "favorite": false,
+      "categoryName": "벨트"
+    },
+    {
+      "id": 15384,
+      "name": "완력의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6488.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 15385,
+      "name": "민첩의 반지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6486.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "반지"
+    },
+    {
+      "id": 15399,
+      "name": "시어의 심안",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4996.png",
+      "options": [
+        "INT +1",
+        "반사 효과",
+        "MP회복 +2",
+        "최대 MP +100"
+      ],
+      "favorite": false,
+      "categoryName": "방패",
+      "description": "표면이 거울처리된 방패. 광선형으로 발사되는 마법에 대해서는 상당한 방어력을 가지고 있습니다."
+    },
+    {
+      "id": 15400,
+      "name": "오만의 탑 1층 이동 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20535.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 15410,
+      "name": "오만의 탑 11층 이동 주문서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20566.png",
+      "favorite": false,
+      "categoryName": "주문서"
+    },
+    {
+      "id": 15420,
+      "name": "오만의 탑 1층 이동 부적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20545.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 15430,
+      "name": "오만의 탑 11층 이동 부적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20576.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 15456,
+      "name": "봉인된 오만의 탑 1층 이동 부적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20636.png",
+      "favorite": false,
+      "categoryName": "기타"
+    },
+    {
+      "id": 15457,
+      "name": "봉인된 오만의 탑 11층 이동 부적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6700.png",
+      "favorite": false,
+      "categoryName": "기타"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 2000,
+    "lastPage": 1,
+    "total": 566,
+    "limit": 10000
+  }
+}

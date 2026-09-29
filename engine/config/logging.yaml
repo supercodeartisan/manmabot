@@ -1,0 +1,6 @@
+# logging.yaml — live bot console + logs/bot-YYYYMMDD-HHMMSS.log + UI panel
+# Used by: main.configure (app.bot_log). Scripts/tests ignore this.
+# =============================================================================
+logging:
+  level: INFO          # INFO = session/decision/nav/combat/shop/hp/action; DEBUG = legs + dumps
+  console: true        # also print to the terminal (V1 worker uses console=false + UI sink)

@@ -1,0 +1,68 @@
+2026-09-21 20:42:31.706  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:31.727  INFO   session     Loading Manmabot from D:\Work\ManmabotV1\engine
+2026-09-21 20:42:31.752  INFO   session     Session log D:\Work\ManmabotV1\engine\logs\bot-20260921-204231.log
+2026-09-21 20:42:31.752  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6'] file=D:\Work\ManmabotV1\engine\logs\bot-20260921-204231.log
+2026-09-21 20:42:31.811  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-21 20:42:32.059  INFO   nav         portal graph: 188 components, 247 ms
+2026-09-21 20:42:32.064  INFO   nav         farms=6 safe=11 home=(354, 203) (files farm=D:\Work\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\Work\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\Work\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-21 20:42:32.080  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-21 20:42:32.110  INFO   session     Auto-resume → Running
+2026-09-21 20:42:32.403  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:32.468  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-21 20:42:32.476  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-21 20:42:32.690  INFO   session     Auto-resume → Running
+2026-09-21 20:42:32.975  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:33.253  INFO   session     Auto-resume → Running
+2026-09-21 20:42:33.525  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:33.812  INFO   session     Auto-resume → Running
+2026-09-21 20:42:34.091  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:34.373  INFO   session     Auto-resume → Running
+2026-09-21 20:42:34.654  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:34.940  INFO   session     Auto-resume → Running
+2026-09-21 20:42:35.219  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:35.508  INFO   session     Auto-resume → Running
+2026-09-21 20:42:47.165  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:47.443  INFO   session     Auto-resume → Running
+2026-09-21 20:42:47.716  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:48.000  INFO   session     Auto-resume → Running
+2026-09-21 20:42:48.995  INFO   session     Paused — hotkey
+2026-09-21 20:42:51.626  INFO   session     Hotkey resume → Running
+2026-09-21 20:42:52.148  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:52.423  INFO   session     Auto-resume → Running
+2026-09-21 20:42:52.699  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:42:54.214  INFO   session     Inventory listen ready (dll) · hp=26 arrows=481 silver=0 depoison=0
+2026-09-21 20:42:54.219  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-21 20:42:56.132  INFO   session     Auto-resume → Running
+2026-09-21 20:42:58.830  INFO   session     Hotbar scan done · no mapped roles
+2026-09-21 20:42:58.854  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6']
+2026-09-21 20:42:59.395  INFO   session     Entity shadow: vision=14 {'npc': 2, 'player': 12} memory=50 {'player': 47, 'npc': 3} paired=13 median=0.024
+2026-09-21 20:43:13.565  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:13.843  INFO   session     Auto-resume → Running
+2026-09-21 20:43:14.118  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:16.343  INFO   session     Auto-resume → Running
+2026-09-21 20:43:17.164  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:17.446  INFO   session     Auto-resume → Running
+2026-09-21 20:43:17.725  INFO   session     Auto-pause (not_focused)
+2026-09-21 20:43:18.843  INFO   session     Auto-resume → Running
+2026-09-21 20:43:21.037  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='walk to shop (buy_hp_potions_talking_ch)' status=success
+2026-09-21 20:43:21.770  INFO   session     Entity shadow: vision=13 {'player': 11, 'npc': 2} memory=52 {'player': 50, 'npc': 2} paired=12 median=0.049
+2026-09-21 20:43:27.948  INFO   session     Paused — hotkey
+2026-09-21 20:43:30.257  INFO   session     Resume → Running
+2026-09-21 20:43:43.493  INFO   session     Entity shadow: vision=17 {'player': 13, 'npc': 3, 'monster': 1} memory=52 {'player': 50, 'npc': 2} paired=15 median=0.038
+2026-09-21 20:43:49.845  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:50.118  INFO   session     Auto-resume → Running
+2026-09-21 20:43:50.388  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:54.804  INFO   session     Auto-resume → Running
+2026-09-21 20:43:58.100  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:58.373  INFO   session     Auto-resume → Running
+2026-09-21 20:43:58.651  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:58.926  INFO   session     Auto-resume → Running
+2026-09-21 20:43:59.198  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:43:59.470  INFO   session     Auto-resume → Running
+2026-09-21 20:43:59.745  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:44:00.022  INFO   session     Auto-resume → Running
+2026-09-21 20:44:00.293  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:44:00.566  INFO   session     Auto-resume → Running
+2026-09-21 20:44:00.836  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:44:03.019  INFO   session     Stop → Stopped
+2026-09-21 20:44:08.264  INFO   session     Bot worker exited

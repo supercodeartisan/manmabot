@@ -1,0 +1,29 @@
+# Shop catalog — each shop is reached with the talking scroll.
+# world: absolute game coordinates (same space as memory monitor position).
+# nav tile on that map = world - maps/<map>/meta.yaml origin.
+# scroll_spot: id in app/_04_decision/talking_scroll.py ROWS (kind: spot).
+# roles: optional tags (arrows, potions, repair, …) for buy/sell methods.
+#
+shops:
+- id: talking_island
+  label: 잡화 상인
+  map: talking_island
+  name: Talking Island shop
+  roles:
+  - arrows
+  - general
+  scroll_spot: ti_general_goods
+  world:
+  - 32642
+  - 32946
+- id: giran_general_goods
+  label: 잡화 상인
+  map: mainland
+  name: Giran general goods
+  roles:
+  - potions
+  - general
+  scroll_spot: giran_general_goods
+  world:
+  - 33455
+  - 32820

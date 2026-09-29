@@ -1,0 +1,56 @@
+# =============================================================================
+# navigation.yaml — Terrain map, farm/safe/home, click geometry
+# Used by: configure_navigation, pathfinding, farm enter/retreat travel
+# =============================================================================
+
+navigation:
+  # Region map packs under maps/<active_map>/ (meta.yaml + nav.png + origin + areas).
+  maps_dir: "maps"
+  active_map: "talking_island"
+
+  # Legacy single-file fallback (used only when maps_dir/active_map unset):
+  # terrain_map: "nav.png"
+  # map_origin_x: 32256
+  # map_origin_y: 32704
+  # pixel_scale: 4
+  # farm_areas_file / safe_areas_file / home_file: "areas/...."
+
+  # Fallback player nav tile when memory position is unavailable.
+  origin_x: 0
+  origin_y: 0
+
+  # Prefer paths this many tiles away from walls (clearance cost).
+  # Pack meta may override clearance_tiles / wall_penalty / cluster_size / pixel_scale.
+  clearance_tiles: 2
+  # Extra A* cost per missing clearance tile (higher = hug walls less).
+  wall_penalty: 4
+
+  # Hierarchical A* coarse cell size (tiles). Larger = faster, coarser guide.
+  cluster_size: 32
+
+  # SEARCH coverage grid cell size (tiles) for visit memory inside a farm.
+  coverage_cell: 16
+
+  # Farm / safe / home come from the active pack (maps/<id>/{farms,safe,home}.yaml).
+  # Optional overrides (absolute or project-relative) if you must force a path:
+  # farm_areas_file: "maps/talking_island/farms.yaml"
+  # safe_areas_file: "maps/talking_island/safe.yaml"
+  # home_file: "maps/talking_island/home.yaml"
+
+  # Optional inline overrides. Non-empty list replaces the corresponding file.
+  farm_areas: []
+  safe_areas: []
+
+  # Optional home tile override (omit both to use home_file rect center):
+  # home_x: 354
+  # home_y: 203
+
+  # --- Battle click parallelogram (relative WCS, player at 0,0) ---------------
+  # A travel hop click must land inside this region and pass path-slack.
+  # Slack: A* path length to click ≤ Chebyshev distance + slack.
+  # Used for travel waypoints and loot pickup (skip items with longer detours).
+  click_path_slack: 3
+  click_sum_min: -14    # bounds on (x + y)
+  click_sum_max: 14
+  click_diff_min: -16   # bounds on (x - y)
+  click_diff_max: 18

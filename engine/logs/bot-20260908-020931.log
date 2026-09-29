@@ -1,0 +1,10 @@
+2026-09-08 02:09:36.366  INFO   session     Loading Manmabot from D:\ManmabotV1\ManmabotV1\engine
+2026-09-08 02:09:36.382  INFO   session     Session log D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-020931.log
+2026-09-08 02:09:36.383  INFO   session     character=elf loot=all_items game_lang=ko map=mainland farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6'] file=D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-020931.log
+2026-09-08 02:09:37.418  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-08 02:09:41.499  INFO   nav         portal graph: 2586 components, 4080 ms
+2026-09-08 02:09:41.503  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\farms.yaml safe=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\safe.yaml home=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\home.yaml)
+2026-09-08 02:09:41.506  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-08 02:09:47.960  INFO   session     Memory monitor unavailable at worker start
+2026-09-08 02:09:47.964  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=[]
+2026-09-08 02:09:48.013  INFO   session     Bot worker exited

@@ -1,0 +1,38 @@
+2026-09-28 01:01:20.163  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-28 01:01:20.188  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260928-010120.log
+2026-09-28 01:01:20.188  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\ManmabotV1_final\engine\logs\bot-20260928-010120.log
+2026-09-28 01:01:20.293  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-28 01:01:20.693  INFO   nav         portal graph: 188 components, 399 ms
+2026-09-28 01:01:20.701  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-28 01:01:20.779  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-28 01:01:21.434  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-28 01:01:21.453  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-28 01:01:21.467  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-28 01:01:21.481  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-28 01:01:21.583  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 라이트@box1/f10, 힐@box1/f9, HP 물약@box1/f8, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f5
+2026-09-28 01:01:21.616  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f9:아데나
+2026-09-28 01:01:21.627  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-28 01:01:22.701  INFO   session     Entity shadow: vision=20 {'player': 15, 'npc': 4, 'monster': 1} memory=45 {'player': 38, 'npc': 7} paired=18 median=0.050
+2026-09-28 01:01:22.733  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=457 은화살=0 해독=0
+2026-09-28 01:01:22.757  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-28 01:01:24.015  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions_ch_mainland)' status=success
+2026-09-28 01:01:27.804  INFO   nav         async nav configure start map=mainland
+2026-09-28 01:01:29.779  INFO   session     Entity shadow: vision=37 {'player': 31, 'monster': 2, 'npc': 4} memory=74 {'player': 68, 'npc': 6} paired=33 median=0.069
+2026-09-28 01:01:29.802  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-28 01:01:34.084  INFO   nav         portal graph: 2586 components, 4282 ms
+2026-09-28 01:01:34.089  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1_final\engine\maps\mainland\farms.yaml safe=D:\ManmabotV1_final\engine\maps\mainland\safe.yaml home=D:\ManmabotV1_final\engine\maps\mainland\home.yaml)
+2026-09-28 01:01:34.089  INFO   nav         async nav configure done map=mainland (6285 ms)
+2026-09-28 01:01:34.250  INFO   decision    mode=farming behavior=buff action=buff target=- reason='light' status=success
+2026-09-28 01:01:35.800  INFO   session     Entity shadow: vision=36 {'player': 34, 'npc': 2} memory=84 {'player': 76, 'npc': 8} paired=35 median=0.056
+2026-09-28 01:01:35.912  INFO   decision    mode=farming behavior=shop action=idle target=- reason='waiting for shop map (buy_hp_potions_ch_mainland)' status=success
+2026-09-28 01:01:41.130  INFO   session     Entity shadow: vision=41 {'player': 38, 'npc': 2, 'monster': 1} memory=83 {'player': 75, 'npc': 8} paired=39 median=0.044
+2026-09-28 01:01:46.694  INFO   session     Entity shadow: vision=33 {'player': 30, 'npc': 2, 'monster': 1} memory=86 {'npc': 7, 'player': 78, 'monster': 1} paired=32 median=0.065
+2026-09-28 01:01:52.245  INFO   session     Entity shadow: vision=38 {'player': 34, 'npc': 2, 'monster': 2} memory=87 {'player': 79, 'npc': 8} paired=35 median=0.051
+2026-09-28 01:01:56.049  INFO   decision    mode=farming behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 01:01:57.360  INFO   session     Entity shadow: vision=43 {'player': 40, 'npc': 1, 'monster': 2} memory=90 {'player': 80, 'npc': 10} paired=41 median=0.040
+2026-09-28 01:01:57.463  INFO   decision    mode=farming behavior=shop action=idle target=- reason='waiting for shop map (buy_hp_potions_ch_mainland)' status=success
+2026-09-28 01:02:02.719  INFO   session     Entity shadow: vision=37 {'player': 36, 'npc': 1} memory=92 {'player': 82, 'npc': 10} paired=37 median=0.055
+2026-09-28 01:02:07.964  INFO   session     Entity shadow: vision=33 {'player': 31, 'npc': 2} memory=86 {'npc': 9, 'player': 77} paired=32 median=0.076
+2026-09-28 01:02:12.857  INFO   session     일시정지 — 단축키
+2026-09-28 01:02:12.997  INFO   session     Entity shadow: vision=28 {'player': 23, 'npc': 4, 'monster': 1} memory=84 {'npc': 9, 'player': 75} paired=26 median=0.052
+2026-09-28 01:08:15.542  INFO   session     정지 → 중지됨

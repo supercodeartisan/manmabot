@@ -1,0 +1,29 @@
+2026-09-28 01:00:50.457  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-28 01:00:50.612  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260928-010050.log
+2026-09-28 01:00:50.612  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\ManmabotV1_final\engine\logs\bot-20260928-010050.log
+2026-09-28 01:00:50.734  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-28 01:00:51.076  INFO   nav         portal graph: 188 components, 342 ms
+2026-09-28 01:00:51.084  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-28 01:00:51.165  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-28 01:00:51.788  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-28 01:00:51.806  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-28 01:00:51.821  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-28 01:00:51.834  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-28 01:00:51.936  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 라이트@box1/f10, 힐@box1/f9, HP 물약@box1/f8, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f5
+2026-09-28 01:00:51.971  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f9:아데나
+2026-09-28 01:00:51.982  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-28 01:00:53.122  INFO   session     Entity shadow: vision=23 {'player': 18, 'npc': 4, 'monster': 1} memory=49 {'monster': 3, 'player': 39, 'npc': 7} paired=19 median=0.049 unleveled=10:警衛,3934819820:土之精靈,206:兔子
+2026-09-28 01:00:53.165  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=457 은화살=0 해독=0
+2026-09-28 01:00:53.184  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-28 01:00:54.541  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions_talking_ch)' status=success
+2026-09-28 01:00:58.844  INFO   session     Entity shadow: vision=17 {'npc': 4, 'player': 12, 'monster': 1} memory=44 {'player': 36, 'monster': 1, 'npc': 7} paired=14 median=0.041 unleveled=206:兔子
+2026-09-28 01:00:59.387  INFO   decision    mode=farming behavior=shop action=idle target=- reason='waiting for shop map (buy_hp_potions_talking_ch)' status=success
+2026-09-28 01:01:03.393  INFO   decision    mode=farming behavior=buff action=buff target=- reason='light' status=success
+2026-09-28 01:01:04.160  INFO   session     Entity shadow: vision=20 {'player': 13, 'npc': 5, 'monster': 2} memory=47 {'npc': 7, 'player': 39, 'monster': 1} paired=16 median=0.039 unleveled=206:兔子
+2026-09-28 01:01:04.268  INFO   decision    mode=farming behavior=shop action=idle target=- reason='waiting for shop map (buy_hp_potions_talking_ch)' status=success
+2026-09-28 01:01:09.784  INFO   session     Entity shadow: vision=17 {'player': 13, 'npc': 3, 'monster': 1} memory=44 {'monster': 1, 'npc': 6, 'player': 37} paired=15 median=0.040 unleveled=206:兔子
+2026-09-28 01:01:14.738  INFO   session     Entity shadow: vision=13 {'npc': 3, 'player': 9, 'monster': 1} memory=44 {'npc': 6, 'player': 38} paired=11 median=0.055
+2026-09-28 01:01:14.783  INFO   decision    mode=farming behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 01:01:16.084  INFO   decision    mode=farming behavior=shop action=idle target=- reason='waiting for shop map (buy_hp_potions_talking_ch)' status=success
+2026-09-28 01:01:18.846  INFO   session     정지 → 중지됨
+2026-09-28 01:01:19.301  INFO   session     봇 작업이 종료되었습니다

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "state": "cancelled",
+  "exit_code": 130,
+  "detail": "pipeline cancelled",
+  "game_ready": false,
+  "finished_at": 1790555090.9822314
+}

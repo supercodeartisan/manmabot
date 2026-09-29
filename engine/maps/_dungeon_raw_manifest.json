@@ -1,0 +1,650 @@
+[
+  {
+    "pack_id": "talking_island_dungeon_F1",
+    "raw_map": "1",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "talking_island_dungeon_F2",
+    "raw_map": "2",
+    "w": 320,
+    "h": 256
+  },
+  {
+    "pack_id": "gunters_house_dungeon",
+    "raw_map": "3",
+    "w": 256,
+    "h": 192
+  },
+  {
+    "pack_id": "talkingisland_gludin_ship_dungeon",
+    "raw_map": "5",
+    "w": 128,
+    "h": 64
+  },
+  {
+    "pack_id": "gludin_talkingisland_ship_dungeon",
+    "raw_map": "6",
+    "w": 128,
+    "h": 64
+  },
+  {
+    "pack_id": "gludio_dungeon_F1",
+    "raw_map": "7",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F2",
+    "raw_map": "8",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F3",
+    "raw_map": "9",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F4",
+    "raw_map": "10",
+    "w": 192,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F5",
+    "raw_map": "11",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F6",
+    "raw_map": "12",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "gludio_dungeon_F7",
+    "raw_map": "13",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "underground_passageway_dungeon",
+    "raw_map": "14",
+    "w": 640,
+    "h": 192
+  },
+  {
+    "pack_id": "kent_inner_castle_dungeon",
+    "raw_map": "15",
+    "w": 64,
+    "h": 64
+  },
+  {
+    "pack_id": "hardins_laboratory_dungeon",
+    "raw_map": "16",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "nerupas_cave_dungeon",
+    "raw_map": "17",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "dupelgenon_dungeon",
+    "raw_map": "18",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "elven_forest_dungeon_F1",
+    "raw_map": "19",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "elven_forest_dungeon_F2",
+    "raw_map": "20",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "elven_forest_dungeon_F3",
+    "raw_map": "21",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "windawood_castle_dungeon_F1",
+    "raw_map": "23",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "windawood_castle_dungeon_F2",
+    "raw_map": "24",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "training_dungeon_F1",
+    "raw_map": "25",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "training_dungeon_F2",
+    "raw_map": "26",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "training_dungeon_F3",
+    "raw_map": "27",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "training_dungeon_F4",
+    "raw_map": "28",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "windawood_inner_castle_dungeon",
+    "raw_map": "29",
+    "w": 64,
+    "h": 64
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F1",
+    "raw_map": "30",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F2",
+    "raw_map": "31",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F3",
+    "raw_map": "32",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F4",
+    "raw_map": "33",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F5",
+    "raw_map": "35",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "dragon_valley_dungeon_F6",
+    "raw_map": "36",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "lair_of_antharas_dungeon",
+    "raw_map": "37",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F1",
+    "raw_map": "43",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F2",
+    "raw_map": "44",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F3",
+    "raw_map": "45",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F4",
+    "raw_map": "46",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F5",
+    "raw_map": "47",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F6",
+    "raw_map": "48",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F7",
+    "raw_map": "49",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F8",
+    "raw_map": "50",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ant_cave_dungeon_F9",
+    "raw_map": "51",
+    "w": 320,
+    "h": 256
+  },
+  {
+    "pack_id": "giran_inner_castle_dungeon",
+    "raw_map": "52",
+    "w": 64,
+    "h": 64
+  },
+  {
+    "pack_id": "giran_dungeon_F1",
+    "raw_map": "53",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "giran_dungeon_F2",
+    "raw_map": "54",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "giran_dungeon_F3",
+    "raw_map": "55",
+    "w": 192,
+    "h": 320
+  },
+  {
+    "pack_id": "giran_dungeon_F4",
+    "raw_map": "56",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "eva_kingdom_dungeon_F1",
+    "raw_map": "59",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "eva_kingdom_dungeon_F2",
+    "raw_map": "60",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "eva_kingdom_dungeon_F3",
+    "raw_map": "61",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "sanctuary_of_eva_dungeon",
+    "raw_map": "62",
+    "w": 192,
+    "h": 128
+  },
+  {
+    "pack_id": "kingdom_of_eva_dungeon",
+    "raw_map": "63",
+    "w": 320,
+    "h": 320
+  },
+  {
+    "pack_id": "heine_inner_castle_dungeon",
+    "raw_map": "64",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "lair_of_fafurion_dungeon",
+    "raw_map": "65",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "iron_gate_guild_inner_castle_dungeon",
+    "raw_map": "66",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "lair_of_valakas_dungeon",
+    "raw_map": "67",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "forgotten_island_dungeon",
+    "raw_map": "70",
+    "w": 448,
+    "h": 448
+  },
+  {
+    "pack_id": "ice_crystal_cave_dungeon",
+    "raw_map": "72",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ice_queens_castle_dungeon_F2",
+    "raw_map": "73",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "ice_queens_castle_dungeon_F3",
+    "raw_map": "74",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F1",
+    "raw_map": "75",
+    "w": 128,
+    "h": 192
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F2",
+    "raw_map": "76",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F3",
+    "raw_map": "77",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F4",
+    "raw_map": "78",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F5",
+    "raw_map": "79",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F6",
+    "raw_map": "80",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F7",
+    "raw_map": "81",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "oren_ivory_tower_dungeon_F8",
+    "raw_map": "82",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "unknown_99_dungeon",
+    "raw_map": "99",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F1",
+    "raw_map": "101",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F2",
+    "raw_map": "102",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F3",
+    "raw_map": "103",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F4",
+    "raw_map": "104",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F5",
+    "raw_map": "105",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F6",
+    "raw_map": "106",
+    "w": 128,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F7",
+    "raw_map": "107",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F8",
+    "raw_map": "108",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F9",
+    "raw_map": "109",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F10",
+    "raw_map": "110",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F11",
+    "raw_map": "111",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F12",
+    "raw_map": "112",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F13",
+    "raw_map": "113",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F14",
+    "raw_map": "114",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F15",
+    "raw_map": "115",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F16",
+    "raw_map": "116",
+    "w": 128,
+    "h": 64
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F17",
+    "raw_map": "117",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F18",
+    "raw_map": "118",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F19",
+    "raw_map": "119",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "tower_of_insolence_dungeon_F20",
+    "raw_map": "120",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "mage_quest_dungeon",
+    "raw_map": "201",
+    "w": 320,
+    "h": 320
+  },
+  {
+    "pack_id": "darkelf_dungeon",
+    "raw_map": "209",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "darkelf_dungeon_m213",
+    "raw_map": "213",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "mutant_ant_dungeon",
+    "raw_map": "217",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "gerard_test_dungeon",
+    "raw_map": "221",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "jim_dungeon",
+    "raw_map": "237",
+    "w": 192,
+    "h": 192
+  },
+  {
+    "pack_id": "polluted_land_of_blessing_dungeon",
+    "raw_map": "244",
+    "w": 384,
+    "h": 384
+  },
+  {
+    "pack_id": "aden_inner_castle_dungeon",
+    "raw_map": "300",
+    "w": 128,
+    "h": 128
+  },
+  {
+    "pack_id": "tower_of_insolence_underground_path_dungeon",
+    "raw_map": "301",
+    "w": 192,
+    "h": 320
+  },
+  {
+    "pack_id": "sepia_dungeon",
+    "raw_map": "302",
+    "w": 64,
+    "h": 64
+  },
+  {
+    "pack_id": "island_of_dreams_dungeon",
+    "raw_map": "303",
+    "w": 448,
+    "h": 448
+  },
+  {
+    "pack_id": "hell_dungeon",
+    "raw_map": "666",
+    "w": 320,
+    "h": 320
+  },
+  {
+    "pack_id": "land_of_the_abandoned_dungeon",
+    "raw_map": "777",
+    "w": 512,
+    "h": 512
+  },
+  {
+    "pack_id": "fallen_cave_dungeon",
+    "raw_map": "778",
+    "w": 512,
+    "h": 512
+  },
+  {
+    "pack_id": "fallen_cave_underwater_dungeon",
+    "raw_map": "779",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "thebes_desert_dungeon",
+    "raw_map": "780",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "air_temple_of_fairies_dungeon",
+    "raw_map": "7781",
+    "w": 256,
+    "h": 256
+  },
+  {
+    "pack_id": "air_temple_of_fairies_2_dungeon",
+    "raw_map": "7782",
+    "w": 256,
+    "h": 256
+  }
+]

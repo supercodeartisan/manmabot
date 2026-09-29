@@ -1,0 +1,264 @@
+2026-09-29 14:21:40.929  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 14:21:40.962  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-142140.log
+2026-09-29 14:21:40.983  INFO   session     character=elf loot=adena_only game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-142140.log
+2026-09-29 14:21:41.471  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-29 14:21:42.088  INFO   nav         portal graph: 188 components, 617 ms
+2026-09-29 14:21:42.138  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 14:21:42.503  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 14:21:43.193  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 14:21:43.247  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 14:21:43.334  INFO   session     Inventory listen scanning in background (inventory_listen.dll or place inv.json).
+2026-09-29 14:21:43.375  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-29 14:21:43.632  INFO   session     Hotbar scan done · Power-up@box1/f5, Armor-up@box1/f6, Light@box1/f7, Heal@box1/f8, HP potion@box2/f9, Teleport@box1/f10, Mage attack@box1/f12, Talking scroll@box2/f5, Mother tree@box2/f6, HP to MP@box2/f7
+2026-09-29 14:21:43.757  INFO   session     Unmapped hotbar icons: box1/f8:SPELL, box1/f11:Adena, box1/f12:Arrow, box2/f10:Silver Arrow, box2/f12:SPELL, box3/f10:SPELL
+2026-09-29 14:21:43.797  INFO   session     Loop ready · Elf · Korean · map=Talking Island · loot=Adená only · farms=Area 1, Area 3
+2026-09-29 14:21:44.292  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=2 {'monster': 2} paired=1 median=0.015
+2026-09-29 14:21:44.330  INFO   session     Inventory listen ready (dll) · hp=0 arrows=9651 silver=0 depoison=0
+2026-09-29 14:21:44.378  INFO   decision    mode=farming goal=buff action=buff target=- sticky=- origin=(314,340) shop=0 scrolled=0 reason='armor_up' status=success
+2026-09-29 14:21:44.953  INFO   combat      farm branch=screen_combat id=2 dist=1
+2026-09-29 14:21:44.961  INFO   combat      engage id=2 species=monster_오크 전사_8 rel=(0,-1)
+2026-09-29 14:21:44.970  INFO   decision    mode=farming goal=combat action=attack target=2 sticky=2 origin=(314,340) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 14:21:45.739  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:46.052  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:46.340  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:46.646  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:46.906  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:47.161  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:47.419  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:47.691  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:47.970  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:48.214  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:48.493  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:48.755  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:49.036  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:49.317  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:49.548  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=2 {'monster': 2} paired=1 median=0.019
+2026-09-29 14:21:49.706  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:50.165  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:50.436  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:50.696  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:50.967  INFO   combat      farm branch=sticky id=2 dist=1
+2026-09-29 14:21:50.968  INFO   decision    mode=farming goal=combat action=searching target=2 sticky=2 origin=(314,340) shop=0 scrolled=0 reason='sidestep combat block' status=success
+2026-09-29 14:21:51.325  INFO   combat      farm branch=screen_combat id=1 dist=3
+2026-09-29 14:21:51.333  INFO   combat      engage id=1 species=monster_셸로브_14 rel=(0,3)
+2026-09-29 14:21:51.342  INFO   decision    mode=farming goal=combat action=attack target=1 sticky=1 origin=(314,339) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 14:21:51.853  INFO   combat      farm branch=sticky id=1 dist=3
+2026-09-29 14:21:52.093  INFO   combat      farm branch=sticky id=1 dist=3
+2026-09-29 14:21:52.363  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:52.624  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:52.881  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:53.160  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:53.422  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:53.700  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:53.960  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:54.305  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:54.569  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=1 {'monster': 1} paired=1 median=0.016
+2026-09-29 14:21:54.638  INFO   decision    mode=farming goal=buff action=buff target=- sticky=1 origin=(315,340) shop=0 scrolled=0 reason='light' status=success
+2026-09-29 14:21:55.094  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:55.095  INFO   decision    mode=farming goal=combat action=attack target=1 sticky=1 origin=(315,340) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 14:21:55.682  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:55.943  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:56.256  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:56.745  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:56.981  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:56.991  INFO   decision    mode=farming goal=combat action=searching target=1 sticky=1 origin=(315,340) shop=0 scrolled=0 reason='sidestep combat block' status=success
+2026-09-29 14:21:57.287  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:57.298  INFO   decision    mode=farming goal=combat action=attack target=1 sticky=1 origin=(315,340) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 14:21:57.925  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:58.160  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:58.462  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:58.734  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:59.067  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:59.319  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:59.589  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:21:59.826  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=2 {'monster': 2} paired=2 median=0.022
+2026-09-29 14:21:59.875  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:00.153  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:00.418  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:00.648  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:00.918  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:01.170  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:01.426  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:01.719  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:02.014  INFO   combat      farm branch=sticky id=1 dist=2
+2026-09-29 14:22:02.015  INFO   combat      give-up id=1 sticky_was=1
+2026-09-29 14:22:02.039  INFO   combat      farm branch=screen_combat id=1 dist=2
+2026-09-29 14:22:02.063  INFO   combat      engage id=3 species=monster_오크 궁수_3 rel=(-5,-9)
+2026-09-29 14:22:02.073  INFO   decision    mode=farming goal=combat action=attack target=3 sticky=3 origin=(315,340) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 14:22:02.611  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:02.967  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:03.417  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:03.739  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:04.008  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:04.268  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:04.566  INFO   combat      farm branch=sticky id=3 dist=9
+2026-09-29 14:22:04.835  INFO   session     Entity shadow: vision=5 {'monster': 4, 'player': 1} memory=1 {'monster': 1} paired=1 median=0.022
+2026-09-29 14:22:04.955  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:04.955  INFO   travel      return/enter farm needed at (315,340)
+2026-09-29 14:22:04.984  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:05.040  INFO   travel      hop begin wp=(314, 355) purpose=enter_farm reason=enter farm area
+2026-09-29 14:22:05.041  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(315,340) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 14:22:05.422  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:05.593  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:05.777  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.015  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.205  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.400  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.573  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.767  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:06.970  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:07.169  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:07.225  INFO   travel      hop begin wp=(314, 355) purpose=enter_farm reason=enter farm area
+2026-09-29 14:22:07.554  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:07.733  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:07.937  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:08.120  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:08.345  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:08.538  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:08.758  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:08.943  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:09.147  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:09.356  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:09.412  INFO   travel      hop begin wp=(313, 356) purpose=enter_farm reason=enter farm area
+2026-09-29 14:22:09.838  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:10.201  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-29 14:22:10.256  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:10.499  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:10.730  INFO   search      farm branch=none (wander/search next)
+2026-09-29 14:22:10.960  INFO   combat      farm branch=screen_combat id=4 dist=12
+2026-09-29 14:22:10.983  INFO   combat      engage id=4 species=monster_오크 궁수_3 rel=(-8,12)
+2026-09-29 14:22:10.992  INFO   decision    mode=traveling goal=combat action=attack target=4 sticky=4 origin=(313,342) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 14:22:11.594  INFO   combat      farm branch=sticky id=4 dist=9
+2026-09-29 14:22:11.608  INFO   combat      wall/fence LOS blocked id=4 — A* detour hop to (307, 354)
+2026-09-29 14:22:11.611  INFO   decision    mode=traveling goal=combat action=searching target=4 sticky=4 origin=(313,344) shop=0 scrolled=0 reason='wall detour A*' status=success
+2026-09-29 14:22:11.955  INFO   combat      farm branch=sticky id=4 dist=8
+2026-09-29 14:22:11.962  INFO   decision    mode=traveling goal=combat action=attack target=4 sticky=4 origin=(313,344) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 14:22:12.526  INFO   combat      farm branch=sticky id=4 dist=8
+2026-09-29 14:22:12.795  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:13.055  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:13.311  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:13.553  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:13.856  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:14.108  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:14.357  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:14.605  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:14.976  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:15.390  INFO   session     Entity shadow: vision=3 {'monster': 3} memory=2 {'monster': 2} paired=2 median=0.044
+2026-09-29 14:22:15.438  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:15.743  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:16.041  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:16.330  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:16.657  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:16.937  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:17.231  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:17.252  INFO   decision    mode=traveling goal=combat action=searching target=4 sticky=4 origin=(312,345) shop=0 scrolled=0 reason='sidestep combat block' status=success
+2026-09-29 14:22:17.581  INFO   combat      farm branch=sticky id=4 dist=7
+2026-09-29 14:22:17.590  INFO   decision    mode=traveling goal=combat action=attack target=4 sticky=4 origin=(312,345) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 14:22:18.121  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:18.134  INFO   decision    mode=traveling goal=survival_potion action=use_hp_potion target=- sticky=4 origin=(312,345) shop=0 scrolled=0 reason='low hp' status=success
+2026-09-29 14:22:19.044  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:19.525  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:19.997  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:20.421  INFO   session     Entity shadow: vision=3 {'monster': 3} memory=2 {'monster': 2} paired=2 median=0.045
+2026-09-29 14:22:20.517  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:21.081  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:21.738  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:22.238  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:22.673  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:23.172  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:23.690  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:24.184  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:24.686  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:25.147  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:25.593  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=4 {'monster': 4} paired=1 median=0.009
+2026-09-29 14:22:25.676  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:26.181  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:26.681  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:27.214  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:27.866  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:28.276  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:28.786  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:29.258  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:29.753  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:30.289  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:30.728  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=4 {'monster': 4} paired=1 median=0.028
+2026-09-29 14:22:30.778  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:31.236  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:31.737  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:32.283  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:32.748  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:33.260  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:33.840  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:34.485  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:34.926  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:35.467  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:35.974  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=5 {'monster': 5} paired=2 median=0.038
+2026-09-29 14:22:36.039  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:36.584  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:37.071  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:37.540  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:38.012  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:38.555  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:39.013  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:39.458  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:39.967  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:40.479  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:41.073  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=5 {'monster': 5} paired=1 median=0.010
+2026-09-29 14:22:41.141  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:41.630  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:42.103  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:42.627  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:43.128  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:43.637  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:44.055  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:44.056  INFO   decision    mode=traveling goal=survival_potion action=use_hp_potion target=- sticky=4 origin=(312,345) shop=0 scrolled=0 reason='critical hp, cannot heal' status=success (repeat x50)
+2026-09-29 14:22:44.574  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:45.093  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:45.538  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:45.995  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:46.539  INFO   session     Entity shadow: vision=1 {'player': 1} memory=5 {'monster': 5} paired=0 median=0.000 unleveled=189:鹿,12:史萊姆
+2026-09-29 14:22:46.705  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:47.374  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:47.913  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:48.401  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:48.847  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:49.316  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:49.824  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:50.276  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:50.785  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:51.255  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:51.733  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=4 {'monster': 4} paired=1 median=0.027 unleveled=189:鹿
+2026-09-29 14:22:51.803  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:52.402  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:53.009  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:53.508  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:53.972  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:55.824  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:56.600  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:57.253  INFO   session     Entity shadow: vision=57 {'player': 55, 'monster': 2} memory=129 {'npc': 2, 'player': 127} paired=55 median=0.077
+2026-09-29 14:22:57.355  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:57.925  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:58.749  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:22:59.457  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:00.324  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:00.930  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:01.792  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:02.388  INFO   session     Entity shadow: vision=46 {'player': 44, 'monster': 2} memory=129 {'player': 127, 'npc': 2} paired=44 median=0.100
+2026-09-29 14:23:02.466  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:03.301  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:04.524  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:05.351  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:06.301  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:06.867  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:07.583  INFO   session     Entity shadow: vision=46 {'player': 41, 'monster': 5} memory=132 {'npc': 4, 'player': 128} paired=41 median=0.096
+2026-09-29 14:23:07.685  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:08.290  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:09.115  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:09.726  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:10.505  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:11.333  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:12.397  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:12.987  INFO   session     Entity shadow: vision=40 {'monster': 3, 'player': 37} memory=132 {'npc': 3, 'player': 129} paired=37 median=0.094
+2026-09-29 14:23:13.068  INFO   hp          hp action=item:빨간 물약
+2026-09-29 14:23:13.769  INFO   session     Stop → Stopped
+2026-09-29 14:23:14.158  INFO   session     Bot worker exited

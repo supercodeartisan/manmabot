@@ -1,0 +1,309 @@
+2026-09-24 22:46:06.007  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-24 22:46:06.010  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-224606.log
+2026-09-24 22:46:06.010  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_2', 'area_1', 'area_3'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-224606.log
+2026-09-24 22:46:06.226  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-24 22:46:06.494  INFO   nav         portal graph: 188 components, 268 ms
+2026-09-24 22:46:06.500  INFO   nav         farms=3 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-24 22:46:06.805  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-24 22:46:07.333  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-24 22:46:07.340  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-24 22:46:07.345  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-24 22:46:07.372  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-24 22:46:07.515  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 라이트@box1/f10, 힐@box1/f9, HP 물약@box1/f5, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f8
+2026-09-24 22:46:07.534  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:화살, box1/f7:아데나
+2026-09-24 22:46:07.543  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 2, 구역 1, 구역 3
+2026-09-24 22:46:08.064  INFO   session     Entity shadow: vision=4 {'npc': 1, 'player': 3} memory=3 {'monster': 1, 'player': 2} paired=2 median=0.017 unleveled=10:警衛
+2026-09-24 22:46:08.104  INFO   session     인벤토리 수신 준비 (dll) · hp=10 화살=527 은화살=5 해독=0
+2026-09-24 22:46:08.135  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-24 22:46:09.121  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 22:46:13.174  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=10:警衛
+2026-09-24 22:46:18.155  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-24 22:46:18.555  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:46:18.605  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 22:46:23.570  INFO   session     Entity shadow: vision=0 {} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-24 22:46:28.029  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-24 22:46:28.403  INFO   decision    mode=traveling behavior=combat action=attack target=7 reason='engage target' status=success
+2026-09-24 22:46:28.904  INFO   session     Entity shadow: vision=4 {'player': 1, 'npc': 2, 'monster': 1} memory=4 {'monster': 4} paired=1 median=0.018 unleveled=189:鹿,10:警衛,68:警衛
+2026-09-24 22:46:32.343  INFO   decision    mode=traveling behavior=loot action=searching target=11 reason='walk onto item' status=success
+2026-09-24 22:46:33.981  INFO   session     Entity shadow: vision=5 {'player': 1, 'item': 1, 'npc': 3} memory=9 {'monster': 8, 'item': 1} paired=1 median=0.010 unleveled=189:鹿,10:警衛,206:兔子,209:兔子,68:警衛
+2026-09-24 22:46:38.667  INFO   decision    mode=traveling behavior=loot action=pickup target=11 reason='loot target' status=success
+2026-09-24 22:46:39.001  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=7 {'monster': 6, 'item': 1} paired=0 median=0.000 unleveled=209:兔子,189:鹿,10:警衛,68:警衛,206:兔子
+2026-09-24 22:46:39.024  INFO   decision    mode=traveling behavior=loot action=idle target=- reason='pickup settle' status=success
+2026-09-24 22:46:39.475  INFO   decision    mode=traveling behavior=combat action=attack target=12 reason='engage target' status=success
+2026-09-24 22:46:39.945  INFO   decision    mode=traveling behavior=combat action=attack target=13 reason='engage target' status=success
+2026-09-24 22:46:43.698  INFO   decision    mode=traveling behavior=loot action=searching target=15 reason='walk onto item' status=success
+2026-09-24 22:46:44.266  INFO   session     Entity shadow: vision=4 {'item': 1, 'npc': 2, 'player': 1} memory=6 {'item': 1, 'monster': 5} paired=1 median=0.034 unleveled=209:兔子,206:兔子,189:鹿,10:警衛,68:警衛
+2026-09-24 22:46:49.279  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=5 {'monster': 4, 'item': 1} paired=1 median=0.009 unleveled=189:鹿,209:兔子,206:兔子,10:警衛
+2026-09-24 22:46:50.735  INFO   decision    mode=traveling behavior=loot action=pickup target=15 reason='loot target' status=success
+2026-09-24 22:46:51.101  INFO   decision    mode=traveling behavior=loot action=idle target=- reason='pickup settle' status=success
+2026-09-24 22:46:51.459  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 22:46:54.471  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=4 {'monster': 4} paired=0 median=0.000 unleveled=68:警衛,206:兔子,209:兔子,10:警衛
+2026-09-24 22:46:58.053  INFO   decision    mode=traveling behavior=loot action=searching target=18 reason='walk onto item' status=success
+2026-09-24 22:46:59.578  INFO   session     Entity shadow: vision=4 {'player': 1, 'npc': 2, 'item': 1} memory=5 {'item': 1, 'monster': 4} paired=1 median=0.002 unleveled=68:警衛,206:兔子,209:兔子,10:警衛
+2026-09-24 22:47:03.502  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-24 22:47:04.793  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 2} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-24 22:47:09.931  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:47:12.996  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-24 22:47:13.938  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:14.266  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-24 22:47:14.572  INFO   decision    mode=traveling behavior=combat action=attack target=20 reason='engage target' status=success
+2026-09-24 22:47:15.101  INFO   session     Entity shadow: vision=3 {'player': 1, 'item': 1, 'monster': 1} memory=2 {'monster': 1, 'item': 1} paired=2 median=0.037
+2026-09-24 22:47:20.302  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=2 {'monster': 1, 'item': 1} paired=1 median=0.010
+2026-09-24 22:47:25.241  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 22:47:25.507  INFO   session     Entity shadow: vision=3 {'player': 1, 'item': 1, 'monster': 1} memory=1 {'item': 1} paired=1 median=0.026
+2026-09-24 22:47:29.754  INFO   decision    mode=traveling behavior=combat action=attack target=21 reason='engage target' status=success
+2026-09-24 22:47:30.760  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 1, 'item': 1} memory=2 {'monster': 1, 'item': 1} paired=2 median=0.010
+2026-09-24 22:47:34.124  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-24 22:47:35.809  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=2 {'item': 2} paired=1 median=0.016
+2026-09-24 22:47:36.115  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:36.377  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-24 22:47:37.965  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:38.291  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-24 22:47:38.599  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:38.802  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 22:47:40.938  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=1 {'item': 1} paired=1 median=0.014
+2026-09-24 22:47:45.991  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=1 {'item': 1} paired=1 median=0.020
+2026-09-24 22:47:47.861  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-24 22:47:49.769  INFO   decision    mode=traveling behavior=combat action=attack target=23 reason='engage target' status=success
+2026-09-24 22:47:51.194  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 2, 'item': 1} paired=1 median=0.017
+2026-09-24 22:47:56.282  INFO   session     Entity shadow: vision=3 {'item': 1, 'player': 1, 'monster': 1} memory=3 {'monster': 2, 'item': 1} paired=2 median=0.034
+2026-09-24 22:47:58.584  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick nearby' status=success
+2026-09-24 22:47:58.905  INFO   decision    mode=traveling behavior=combat action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:59.085  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick nearby' status=success
+2026-09-24 22:47:59.440  INFO   decision    mode=traveling behavior=combat action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-24 22:47:59.633  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick nearby' status=success
+2026-09-24 22:47:59.941  INFO   decision    mode=traveling behavior=combat action=attack target=23 reason='attack target' status=success
+2026-09-24 22:48:01.449  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=2 {'monster': 2} paired=2 median=0.030
+2026-09-24 22:48:04.815  INFO   decision    mode=traveling behavior=combat action=attack target=26 reason='engage target' status=success
+2026-09-24 22:48:06.530  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=2 {'monster': 2} paired=2 median=0.029
+2026-09-24 22:48:07.057  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success
+2026-09-24 22:48:09.646  INFO   decision    mode=traveling behavior=combat action=attack target=26 reason='attack target' status=success
+2026-09-24 22:48:11.116  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success
+2026-09-24 22:48:11.857  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.020
+2026-09-24 22:48:17.381  INFO   session     Entity shadow: vision=3 {'item': 1, 'monster': 2} memory=2 {'monster': 2} paired=2 median=0.030
+2026-09-24 22:48:23.021  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:48:28.443  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=1 {'monster': 1} paired=1 median=0.022
+2026-09-24 22:48:34.209  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=2 {'item': 1, 'player': 1} paired=1 median=0.047
+2026-09-24 22:48:39.759  INFO   session     Entity shadow: vision=3 {'item': 1, 'monster': 1, 'player': 1} memory=3 {'player': 2, 'monster': 1} paired=2 median=0.067
+2026-09-24 22:48:45.608  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'player': 1, 'monster': 1} paired=0 median=0.000
+2026-09-24 22:48:51.309  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'monster': 1, 'player': 1} paired=0 median=0.000
+2026-09-24 22:48:56.735  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:48:57.678  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:49:02.401  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:49:08.068  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-24 22:49:13.621  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=2 {'monster': 1, 'player': 1} paired=1 median=0.034
+2026-09-24 22:49:19.217  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:49:24.955  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-24 22:49:30.399  INFO   session     Entity shadow: vision=2 {'item': 1, 'npc': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-24 22:49:36.106  INFO   session     Entity shadow: vision=3 {'npc': 1, 'item': 1, 'monster': 1} memory=5 {'monster': 5} paired=1 median=0.048 unleveled=68:警衛
+2026-09-24 22:49:41.757  INFO   session     Entity shadow: vision=3 {'monster': 1, 'item': 1, 'npc': 1} memory=3 {'monster': 3} paired=1 median=0.042 unleveled=68:警衛
+2026-09-24 22:49:44.621  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:49:47.489  INFO   session     Entity shadow: vision=3 {'monster': 2, 'item': 1} memory=3 {'monster': 3} paired=2 median=0.044 unleveled=68:警衛
+2026-09-24 22:49:53.185  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=2 {'player': 1, 'monster': 1} paired=1 median=0.051
+2026-09-24 22:49:58.868  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-24 22:50:04.385  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-24 22:50:09.972  INFO   session     Entity shadow: vision=1 {'item': 1} memory=3 {'player': 2, 'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-24 22:50:15.532  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-24 22:50:21.054  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:50:26.599  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:50:31.475  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:50:32.364  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:50:37.951  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:50:43.549  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:50:49.135  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:50:54.698  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:00.529  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:06.152  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:11.936  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:17.437  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-24 22:51:18.333  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:51:22.984  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-24 22:51:28.676  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'monster': 2} paired=0 median=0.000
+2026-09-24 22:51:34.123  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'monster': 2} paired=0 median=0.000
+2026-09-24 22:51:39.705  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:45.404  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:51.065  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:51:56.569  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:52:02.254  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:52:04.979  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:52:07.873  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.027 unleveled=12:史萊姆
+2026-09-24 22:52:13.421  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=3 {'monster': 2, 'item': 1} paired=1 median=0.039 unleveled=12:史萊姆
+2026-09-24 22:52:19.248  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=3 {'monster': 2, 'player': 1} paired=1 median=0.020 unleveled=12:史萊姆
+2026-09-24 22:52:24.885  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=1 {'player': 1} paired=1 median=0.042
+2026-09-24 22:52:30.670  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-24 22:52:36.301  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'monster': 1, 'player': 1} paired=0 median=0.000
+2026-09-24 22:52:41.877  INFO   session     Entity shadow: vision=4 {'item': 2, 'monster': 2} memory=2 {'item': 1, 'player': 1} paired=1 median=0.004
+2026-09-24 22:52:47.422  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=2 {'player': 1, 'monster': 1} paired=1 median=0.034
+2026-09-24 22:52:52.136  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:52:53.079  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=2 {'monster': 1, 'player': 1} paired=1 median=0.022
+2026-09-24 22:52:58.804  INFO   session     Entity shadow: vision=2 {'item': 1, 'player': 1} memory=1 {'player': 1} paired=1 median=0.017
+2026-09-24 22:53:04.153  INFO   session     Entity shadow: vision=1 {'item': 1} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=12:史萊姆
+2026-09-24 22:53:09.715  INFO   session     Entity shadow: vision=1 {'item': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=12:史萊姆
+2026-09-24 22:53:15.532  INFO   session     Entity shadow: vision=1 {'item': 1} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:21.199  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:26.978  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:32.633  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:38.146  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:39.093  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:53:43.679  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:49.469  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:53:54.910  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:00.496  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:06.261  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:11.810  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:17.495  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:22.882  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:25.690  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:54:28.595  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:34.217  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:39.747  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:45.279  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:50.976  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:54:56.486  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:02.046  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:07.653  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:12.464  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:55:13.358  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:18.990  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:24.685  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:30.426  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:36.176  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:41.907  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:47.576  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:53.161  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:58.840  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:55:59.825  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:56:04.732  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:10.340  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:15.961  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:21.537  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:27.107  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:32.767  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:38.323  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:43.909  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:46.741  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:56:49.560  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:56:55.239  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:00.922  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:06.527  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:12.257  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:18.010  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:23.554  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:29.356  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:33.871  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:57:34.770  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:40.494  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:46.108  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:51.736  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:57:57.225  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:03.030  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:08.730  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:14.328  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:19.812  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:20.810  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:58:25.482  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:31.322  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:37.012  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:42.657  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:48.289  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:54.073  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:58:59.705  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:05.552  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:08.348  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:59:11.205  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:16.836  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:22.555  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:28.068  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:33.780  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:39.568  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:45.240  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:50.899  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 22:59:55.741  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 22:59:56.640  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:02.376  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:08.036  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:13.807  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:19.453  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:25.204  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:30.935  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:36.509  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:42.148  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:43.192  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:00:47.906  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:53.683  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:00:59.118  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:04.757  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:10.369  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:16.085  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:21.903  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:27.703  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:30.418  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:01:33.291  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:39.085  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:44.640  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:50.346  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:01:56.015  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:01.737  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:07.414  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:13.273  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:18.070  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:02:18.961  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:24.667  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:30.473  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:36.100  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:41.870  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:47.447  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:53.179  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:02:58.851  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:04.528  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:05.481  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:03:10.305  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:15.771  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:21.263  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:27.063  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:32.627  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:38.350  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:43.963  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:49.611  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:03:52.445  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:03:55.281  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:00.864  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:06.743  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:12.348  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:17.880  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:23.536  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:29.218  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:34.835  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:39.650  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:04:40.532  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:46.195  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:51.847  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:04:57.463  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:03.104  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:08.786  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:14.578  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:20.228  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:25.977  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:26.912  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:05:31.599  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:37.328  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:42.934  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:48.634  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:54.213  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:05:59.840  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:05.461  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:11.039  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:13.901  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:06:16.621  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:22.375  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:27.979  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:33.740  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:39.260  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:44.920  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:50.643  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:06:56.342  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:07:01.142  INFO   decision    mode=traveling behavior=heal action=heal target=- reason='recover hp' status=success (repeat)
+2026-09-24 23:07:02.082  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-24 23:07:05.353  INFO   session     일시정지 — 단축키
+2026-09-24 23:07:16.051  INFO   session     정지 → 중지됨 (정지 — 게임 창이 닫혔습니다.)
+2026-09-24 23:07:16.113  INFO   session     봇 작업이 종료되었습니다

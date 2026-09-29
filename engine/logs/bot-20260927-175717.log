@@ -1,0 +1,55 @@
+2026-09-27 17:57:17.021  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-27 17:57:17.028  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260927-175717.log
+2026-09-27 17:57:17.028  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1_final\engine\logs\bot-20260927-175717.log
+2026-09-27 17:57:17.374  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-27 17:57:17.710  INFO   nav         portal graph: 188 components, 337 ms
+2026-09-27 17:57:17.717  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-27 17:57:17.972  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-27 17:57:18.746  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-27 17:57:18.764  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-27 17:57:18.775  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-27 17:57:18.807  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-27 17:57:18.882  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box1/f9, 텔레포트@box1/f10, 마법 공격@box1/f11, 말하는 두루마리@box1/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-27 17:57:18.917  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 2, 구역 3, 구역 4
+2026-09-27 17:57:19.689  INFO   session     Entity shadow: vision=5 {'monster': 3, 'npc': 1, 'player': 1} memory=6 {'monster': 6} paired=3 median=0.018 unleveled=206:兔子,68:警衛,209:兔子
+2026-09-27 17:57:19.754  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=806 은화살=0 해독=0
+2026-09-27 17:57:19.777  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-27 17:57:20.506  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 17:57:22.140  INFO   decision    mode=traveling behavior=combat action=attack target=7 reason='engage target' status=success
+2026-09-27 17:57:24.962  INFO   session     Entity shadow: vision=5 {'player': 1, 'monster': 3, 'npc': 1} memory=7 {'monster': 7} paired=3 median=0.041 unleveled=209:兔子,206:兔子,68:警衛
+2026-09-27 17:57:25.411  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick blocked attack' status=success
+2026-09-27 17:57:26.854  INFO   decision    mode=traveling behavior=combat action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-27 17:57:27.185  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick blocked attack' status=success
+2026-09-27 17:57:27.616  INFO   decision    mode=traveling behavior=combat action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-27 17:57:28.000  INFO   decision    mode=traveling behavior=combat action=searching target=- reason='unstick blocked attack' status=success
+2026-09-27 17:57:28.459  INFO   decision    mode=traveling behavior=combat action=teleport target=- reason='unstick teleport' status=success
+2026-09-27 17:57:30.255  INFO   session     일시정지 — 단축키
+2026-09-27 17:57:43.233  INFO   session     일시정지 / 재개 → 실행 중
+2026-09-27 17:57:43.686  INFO   session     Entity shadow: vision=5 {'player': 1, 'monster': 3, 'npc': 1} memory=6 {'monster': 6} paired=3 median=0.034 unleveled=209:兔子,206:兔子
+2026-09-27 17:57:43.797  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-27 17:57:44.392  INFO   decision    mode=traveling behavior=combat action=teleport target=- reason='unstick teleport' status=success
+2026-09-27 17:57:49.227  INFO   session     Entity shadow: vision=5 {'npc': 3, 'monster': 1, 'player': 1} memory=6 {'monster': 6} paired=1 median=0.017 unleveled=206:兔子,209:兔子
+2026-09-27 17:57:49.423  INFO   session     일시정지 — 단축키
+2026-09-27 17:57:51.407  INFO   session     재개 → 실행 중
+2026-09-27 17:57:54.242  INFO   session     Entity shadow: vision=2 {'monster': 1, 'player': 1} memory=6 {'monster': 6} paired=1 median=0.017 unleveled=206:兔子,209:兔子
+2026-09-27 17:58:00.160  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=6 {'monster': 6} paired=2 median=0.017 unleveled=206:兔子,209:兔子
+2026-09-27 17:58:06.009  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=5 {'monster': 5} paired=2 median=0.019 unleveled=209:兔子,206:兔子
+2026-09-27 17:58:11.560  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 3} memory=6 {'monster': 6} paired=3 median=0.023 unleveled=209:兔子
+2026-09-27 17:58:16.686  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 3} memory=6 {'monster': 6} paired=3 median=0.020
+2026-09-27 17:58:19.631  INFO   session     일시정지 — 단축키
+2026-09-27 17:58:20.889  INFO   session     일시정지 / 재개 → 실행 중
+2026-09-27 17:58:22.283  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=6 {'monster': 6} paired=2 median=0.013
+2026-09-27 17:58:28.219  INFO   session     Entity shadow: vision=2 {'monster': 1, 'player': 1} memory=5 {'monster': 5} paired=1 median=0.010
+2026-09-27 17:58:34.400  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=7 {'monster': 7} paired=2 median=0.017 unleveled=206:兔子,209:兔子
+2026-09-27 17:58:39.956  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 3} memory=8 {'monster': 8} paired=2 median=0.032 unleveled=206:兔子,209:兔子
+2026-09-27 17:58:45.887  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 3} memory=8 {'monster': 8} paired=3 median=0.034 unleveled=206:兔子,209:兔子
+2026-09-27 17:58:45.932  INFO   decision    mode=traveling behavior=combat action=teleport target=- reason='unstick teleport' status=success (repeat)
+2026-09-27 17:58:51.905  INFO   session     Entity shadow: vision=5 {'player': 1, 'monster': 4} memory=8 {'monster': 8} paired=4 median=0.049 unleveled=10:警衛,206:兔子
+2026-09-27 17:58:57.044  INFO   session     Entity shadow: vision=7 {'item': 1, 'npc': 1, 'player': 1, 'monster': 4} memory=8 {'monster': 7, 'item': 1} paired=5 median=0.017 unleveled=10:警衛
+2026-09-27 17:59:02.735  INFO   session     Entity shadow: vision=6 {'item': 1, 'npc': 1, 'monster': 3, 'player': 1} memory=9 {'monster': 8, 'item': 1} paired=4 median=0.024 unleveled=10:警衛
+2026-09-27 17:59:08.754  INFO   session     Entity shadow: vision=7 {'item': 1, 'player': 1, 'monster': 5} memory=8 {'monster': 7, 'item': 1} paired=6 median=0.023 unleveled=10:警衛
+2026-09-27 17:59:19.287  INFO   session     Entity shadow: vision=5 {'item': 1, 'player': 1, 'monster': 2, 'npc': 1} memory=6 {'monster': 5, 'item': 1} paired=3 median=0.009 unleveled=10:警衛
+2026-09-27 17:59:25.164  INFO   session     Entity shadow: vision=7 {'item': 1, 'player': 1, 'monster': 4, 'npc': 1} memory=10 {'monster': 9, 'item': 1} paired=5 median=0.033 unleveled=10:警衛
+2026-09-27 17:59:32.798  INFO   session     Entity shadow: vision=6 {'npc': 1, 'player': 1, 'item': 1, 'monster': 3} memory=10 {'monster': 9, 'item': 1} paired=4 median=0.024 unleveled=10:警衛
+2026-09-27 17:59:36.087  INFO   session     정지 → 중지됨
+2026-09-27 17:59:36.437  INFO   session     봇 작업이 종료되었습니다

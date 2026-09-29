@@ -1,0 +1,30 @@
+2026-09-21 01:15:29.353  INFO   session     Loading Manmabot from D:\ManmabotV1\engine
+2026-09-21 01:15:29.355  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:29.379  INFO   session     Session log D:\ManmabotV1\engine\logs\bot-20260921-011529.log
+2026-09-21 01:15:29.379  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1\engine\logs\bot-20260921-011529.log
+2026-09-21 01:15:29.439  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-21 01:15:29.690  INFO   nav         portal graph: 188 components, 250 ms
+2026-09-21 01:15:29.696  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-21 01:15:29.696  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-21 01:15:29.716  INFO   session     Auto-resume → Running
+2026-09-21 01:15:30.000  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:30.084  INFO   session     Memory monitor connected
+2026-09-21 01:15:30.086  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-21 01:15:30.327  INFO   session     Auto-resume → Running
+2026-09-21 01:15:30.598  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:30.972  INFO   session     Auto-resume → Running
+2026-09-21 01:15:31.322  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:31.671  INFO   session     Auto-resume → Running
+2026-09-21 01:15:31.938  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:32.294  INFO   session     Auto-resume → Running
+2026-09-21 01:15:32.714  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:33.110  INFO   session     Auto-resume → Running
+2026-09-21 01:15:33.420  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:33.777  INFO   session     Auto-resume → Running
+2026-09-21 01:15:34.183  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:34.457  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-21 01:15:34.483  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-21 01:15:34.499  INFO   session     Auto-resume → Running
+2026-09-21 01:15:34.767  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 01:15:58.047  INFO   session     Stop → Stopped
+2026-09-21 01:16:04.191  INFO   session     Bot worker exited

@@ -1,0 +1,6 @@
+id: gludio_dungeon_F2
+name: "Gludio Dungeon F2"
+origin_x: 32683
+origin_y: 32683
+pixel_scale: 1
+terrain: nav.png

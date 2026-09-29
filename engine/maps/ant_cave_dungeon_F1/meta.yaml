@@ -1,0 +1,9 @@
+id: ant_cave_dungeon_F1
+name: "Ant Cave Dungeon F1"
+# From obstacle_tiles_raw map_43.png (1 px = 1 tile).
+raw_map: "43"
+origin_x: 32640
+origin_y: 32640
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

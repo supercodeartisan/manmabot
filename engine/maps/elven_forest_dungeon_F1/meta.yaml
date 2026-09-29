@@ -1,0 +1,9 @@
+id: elven_forest_dungeon_F1
+name: "Elven Forest Dungeon Floor 1"
+# From obstacle_tiles_raw map_19.png (1 px = 1 tile).
+raw_map: "19"
+origin_x: 32640
+origin_y: 32640
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

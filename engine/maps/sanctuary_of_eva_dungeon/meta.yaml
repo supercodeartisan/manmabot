@@ -1,0 +1,9 @@
+id: sanctuary_of_eva_dungeon
+name: "Sanctuary of Eva"
+# From obstacle_tiles_raw map_62.png (1 px = 1 tile).
+raw_map: "62"
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

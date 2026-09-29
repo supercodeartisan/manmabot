@@ -1,0 +1,9 @@
+id: dragon_valley_dungeon_F2
+name: "Dragon Valley Dungeon Floor 2"
+# From obstacle_tiles_raw map_31.png (1 px = 1 tile).
+raw_map: "31"
+origin_x: 32640
+origin_y: 32640
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

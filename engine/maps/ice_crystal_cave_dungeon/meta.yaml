@@ -1,0 +1,9 @@
+id: ice_crystal_cave_dungeon
+name: "Ice Crystal Cave"
+# From obstacle_tiles_raw map_72.png (1 px = 1 tile).
+raw_map: "72"
+origin_x: 32640
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

@@ -1,0 +1,6 @@
+id: gludio_dungeon_F4
+name: "Gludio Dungeon F4"
+origin_x: 32688
+origin_y: 32689
+pixel_scale: 1
+terrain: nav.png

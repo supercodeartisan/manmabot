@@ -1,0 +1,163 @@
+# =============================================================================
+# decision.yaml — Mode policy: HP/MP, farm, combat, death, search
+# Used by: configure_decision; farming.loot_mode also by nav_config / startup
+# =============================================================================
+# Startup still prompts for loot mode and overrides farming.loot_mode for that
+# session. HUD bag fill forces adena-only above loot_adena_weight_ratio.
+
+# Default loot filter when the startup prompt is skipped / empty.
+farming:
+  # all_items = pick everything reachable
+  # adena_only = only 아데나 / adena (also forced when weight > loot_adena_weight_ratio)
+  loot_mode: all_items
+
+decision:
+  # --- Hit points (ratios of current/max from memory) -------------------------
+  hp:
+    critical_ratio: 0.30       # ≤ this → enter RETREATING (escape teleport)
+    low_ratio: 0.55            # fallback if hp.actions omit in-place gates
+    # Operator UI overrides hp.actions. Default order: heal → mother tree →
+    # red water → teleport → safe zone. Each row has enabled + hp_below.
+    almost_full_ratio: 0.90    # retreat exit if arrived at safe + HP ≥ this (heal/potion available)
+    full_ratio: 0.99           # retreat exit immediately if HP ≥ this
+    passive_recover_ratio: 0.50 # no heal/potion (or exhausted): leave retreat at this HP
+    idle_emergency_ratio: 0.10 # while idling in retreat, ≤ this → teleport to other safe
+    spike_window_s: 1.5        # accumulate HP loss across this many seconds
+    spike_drop: 0.20           # peak-to-current drop in the window → escape now
+
+  # --- Fix/Return 귀환 (talking-scroll / walk to safe; separate from escape) --
+  return:
+    hp_enabled: true
+    hp_ratio: 0.30             # ≤ this → 귀환 (prefer talking scroll)
+    mp_enabled: true
+    mp_ratio: 0.15             # mages only
+    idle_enabled: false
+    idle_seconds: 60.0         # out of combat this long → 귀환
+
+  # --- Teleport card emergency skill (PK / surround) -------------------------
+  teleport:
+    enabled: false             # schedule recovery.random_teleport_enabled
+    on_player: false
+    when_surrounded: false
+    surround_count: 4
+
+  # --- Mana (mages) ----------------------------------------------------------
+  mp:
+    low_ratio: 0.15            # ≤ this → teleport retreat to safe
+    recovered_ratio: 0.90      # leave MP retreat when MP ≥ this
+    # Non-teleport spells (buffs, heal, mage bolt) skipped at or below this
+    # so teleport always has mana. HP potion is an item and ignores this gate.
+    spell_reserve_ratio: 0.20
+
+  # --- Box 1 support spells (F5–F11) -----------------------------------------
+  spells:
+    buff_cooldown_s: 1200.0    # reuse for holy weapon / shell after first cast
+    buff_start_light_s: 10.0   # first light this many seconds after bot start
+    # Light itself is recast every 12 minutes (skill duration), not this timer.
+    buff_start_power_s: 600.0  # first power-up this many seconds after bot start
+    magic_cooldown_s: 0.5      # shared gap after any magic before the next magic
+    unstick_teleport_cooldown_s: 20.0  # min gap between stuck teleports
+    heal_until_hp_ratio: 0.50  # after danger TP, heal until HP ≥ this (or MP < reserve)
+
+  # --- Elf Return to Mother Tree ---------------------------------------------
+  # Learned the spell: on critical HP, warp to the tree. When HP is full,
+  # HP_to_MP (Box 2 F7) converts HP into MP until recovered, then
+  # talking-scroll to 마법서 상인. false = normal escape TP.
+  elf:
+    mother_tree: true
+
+  # --- Newbie (Talking Island scarecrows) ----------------------------------
+  # Level < 5: talking-scroll to 허수아비 수련장 and attack 허수아비 until 5.
+  # If the talking-scroll slot is off, walk to the dummy field (32525, 32824).
+  # Level ≥ 5: scarecrows give no EXP and are never attacked.
+
+  # --- Farming session -------------------------------------------------------
+  farm:
+    duration_limit_s: 600.0    # in-farm presence seconds before rotating to next farm
+    loot_adena_weight_ratio: 0.30  # HUD bag fill > this → loot adena only
+    loot_max_tiles: 7          # leftover item-distance cap for older loot-vs-combat
+    # Memory pile stays lootable if this close even when UV is slightly off-window.
+    loot_keep_tiles: 8
+    loot_pickup_settle_s: 0.0  # 0 = after pickup, go to the next pile immediately
+    loot_await_gone_s: 0.8     # hold/re-click clicked pile until gone (or timeout)
+    loot_hop_arrive_tiles: 1   # loot walk done this close to the hop (not farm arrive 2)
+    loot_cursor_search_tiles: 0.0  # pile UV + memory cell only; 0.2 neighbor walks away
+    # Living attackable monster inside this box (width × height radii) beats loot.
+    near_monster_width_tiles: 4
+    near_monster_height_tiles: 5
+    loot_danger_tiles: 3       # leftover Chebyshev alias; live path uses the box
+    arrive_tiles: 2            # Chebyshev distance to count as "arrived" at a goal
+    search_leg_ticks: 30       # decision ticks before rolling a new search hop
+
+  # Lineage client language (not Version 1 operator UI).
+  # ko = Korean (default). zh = Chinese. Shop / some dialog clicks differ.
+  game_language: ko
+
+  # --- Shop (talking scroll or walk nearby) ----------------------------------
+  # Go when needs_arrows / needs_potion / weight≥sell_weight_ratio (Fix/Return).
+  # Priority: HP potions → depoison → arrows → sell (two shops: goods then weapon).
+  shop:
+    arrow_qty: 200             # typed into the buy field (1–999; Version 1 UI overrides)
+    silver_arrow_qty: 200
+    buy_normal_arrows: true
+    buy_silver_arrows: false
+    restock_potions: true
+    sell_weight_ratio: 0.85    # Fix/Return weight gauge (default 85%)
+    sell_mode: sell_only_garbage  # or sell_except_keep
+    potion_suppress_s: 600     # after buying potions, ignore needs_potion this long
+    arrive_tiles: 7            # Chebyshev tiles from 잡화 상인 to stop walking
+    npc_search_px: 20          # screen-pixel ring around catalog UV until dialog cursor
+    ui_ref_w: 1118.0           # Korean shop-window capture (see game_language)
+    ui_ref_h: 839.0
+    buy_tab_px: [130.0, 380.0]  # Korean; Chinese buy-tab Y is 412/1017
+    arrow_row_px: [280.0, 186.0]
+    confirm_px: [258.0, 485.0]
+
+  # --- Travel stuck / unstick ------------------------------------------------
+  travel:
+    stuck_ticks: 100           # legacy; live recovery uses unstick_seconds
+    stuck_seconds: 10.0        # legacy hard-stuck gate
+    unstick_seconds: 5.0       # same tile this long → 360° nearby walk clicks
+    unstick_burst_count: 3     # this many standstills in the window → TP / scroll
+    unstick_burst_window_s: 20.0
+    confined_tiles: 5          # stay inside this Chebyshev bubble...
+    confined_seconds: 13.0     # ...this long → teleport / talking scroll
+    reclick_s: 2.0             # re-click / replan hop this often while traveling
+    unstick_radius: 3          # click every walkable tile in this Chebyshev radius
+    unstick_inner_radius: 2    # after all inner tiles fail → teleport / talking scroll
+    # If hop cursor is not NORMAL, try other in-view tiles within this radius.
+    # Keep small: each fallback is a snap + cursor verify on the same tick.
+    cursor_fallback_radius: 2
+    max_attackable: 2          # legacy travel combat gate (travel currently ignores combat)
+
+  # --- Combat target stickiness ----------------------------------------------
+  combat:
+    max_engage_seconds: 90.0   # last-resort sticky combat clock; living targets are not dropped
+    give_up_cooldown_ticks: 160  # do not reselect that target for this many ticks
+    max_missed_frames: 2       # vision miss frames before target is unreachable
+    mage_spell_range: 10       # Chebyshev tiles; mage only engages in this range
+    attack_click_tiles: 8      # click-attack from here; do not walk adjacent first
+    sticky_loot_hold_tiles: 2  # close unfinished kill still beats loot
+    cursor_search_tiles: 0.2   # hunt attack cursor in this Chebyshev radius around the entity
+    blocked_unstick_seconds: 5.0  # out-of-range monster tile unchanged → path clicks
+    blocked_unstick_radius: 2    # Chebyshev ring around the attack click tile
+
+  # --- Death screen → restart click → continue retreat -----------------------
+  death:
+    confirm_seconds: 2.0       # HP==0 this long + level loaded → confirmed dead
+    respawn_cooldown_s: 5.0    # min seconds between restart clicks
+    # Restart button UV on a reference resolution (jittered by ±respawn_jitter_px):
+    #   x = (respawn_px_x ± jitter) / respawn_ref_w
+    #   y = (respawn_px_y ± jitter) / respawn_ref_h
+    respawn_ref_w: 1280.0
+    respawn_ref_h: 960.0
+    respawn_px_x: 1110.0
+    respawn_px_y: 135.0
+    respawn_jitter_px: 10.0
+
+  # --- In-farm search wander -------------------------------------------------
+  search:
+    tile_dist_min: 5           # min Chebyshev tiles per search hop
+    tile_dist_max: 7           # max Chebyshev tiles per search hop
+    bearing_persist_farm_min: 12  # keep the same wander bearing for this many legs (min)
+    bearing_persist_farm_max: 20  # …and max

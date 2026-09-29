@@ -1,0 +1,51 @@
+2026-09-27 19:56:57.663  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-27 19:56:57.670  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260927-195657.log
+2026-09-27 19:56:57.670  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1_final\engine\logs\bot-20260927-195657.log
+2026-09-27 19:56:57.974  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-27 19:56:58.348  INFO   nav         portal graph: 188 components, 373 ms
+2026-09-27 19:56:58.355  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-27 19:56:58.625  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-27 19:56:59.133  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-27 19:56:59.150  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-27 19:56:59.163  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-27 19:56:59.195  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-27 19:56:59.281  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box1/f9, 텔레포트@box1/f10, 마법 공격@box1/f11, 말하는 두루마리@box1/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-27 19:56:59.355  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f8:아데나
+2026-09-27 19:56:59.372  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 2, 구역 3, 구역 4
+2026-09-27 19:57:00.088  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=2 {'player': 1, 'monster': 1} paired=2 median=0.031
+2026-09-27 19:57:00.110  INFO   session     인벤토리 수신 준비 (dll) · hp=1 화살=560 은화살=300 해독=0
+2026-09-27 19:57:00.135  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-27 19:57:00.994  INFO   decision    mode=farming behavior=combat action=attack target=2 reason='engage target' status=success
+2026-09-27 19:57:01.994  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 19:57:05.230  INFO   session     일시정지 — 단축키
+2026-09-27 19:57:05.230  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 19:57:10.678  INFO   session     재개 → 실행 중
+2026-09-27 19:57:11.058  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 19:57:11.162  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-27 19:57:11.733  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 19:57:14.775  INFO   decision    mode=traveling behavior=combat action=attack target=3 reason='engage target' status=success
+2026-09-27 19:57:16.256  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-27 19:57:21.449  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=1 {'monster': 1} paired=1 median=0.101
+2026-09-27 19:57:26.482  INFO   session     Entity shadow: vision=2 {'player': 2} memory=2 {'player': 1, 'monster': 1} paired=1 median=0.018
+2026-09-27 19:57:27.511  INFO   decision    mode=traveling behavior=survival_potion action=use_hp_potion target=- reason='low hp' status=success
+2026-09-27 19:57:30.657  INFO   decision    mode=retreating behavior=mother_tree action=return_to_mother_tree target=- reason='return to mother tree' status=success
+2026-09-27 19:57:32.533  INFO   session     Entity shadow: vision=2 {'player': 2} memory=2 {'player': 1, 'monster': 1} paired=1 median=0.016
+2026-09-27 19:57:32.574  INFO   decision    mode=retreating behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 19:57:34.697  INFO   decision    mode=retreating behavior=respawn action=respawn target=- reason='death confirmed, restart' status=success
+2026-09-27 19:57:35.250  INFO   decision    mode=retreating behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 19:57:37.028  INFO   decision    mode=retreating behavior=mother_tree action=idle target=- reason='recharging at mother tree' status=success
+2026-09-27 19:57:38.026  INFO   session     Entity shadow: vision=17 {'player': 15, 'npc': 1, 'monster': 1} memory=31 {'player': 26, 'npc': 5} paired=15 median=0.022
+2026-09-27 19:57:43.258  INFO   session     Entity shadow: vision=17 {'player': 15, 'npc': 1, 'monster': 1} memory=31 {'player': 26, 'npc': 5} paired=15 median=0.025
+2026-09-27 19:57:48.539  INFO   session     Entity shadow: vision=16 {'player': 14, 'monster': 2} memory=31 {'player': 26, 'npc': 5} paired=14 median=0.027
+2026-09-27 19:57:54.369  INFO   session     Entity shadow: vision=14 {'player': 12, 'npc': 2} memory=20 {'monster': 1, 'player': 15, 'npc': 4} paired=12 median=0.030 unleveled=14:青蛙
+2026-09-27 19:57:59.301  INFO   session     Entity shadow: vision=14 {'player': 13, 'npc': 1} memory=21 {'monster': 1, 'player': 16, 'npc': 4} paired=13 median=0.021 unleveled=14:青蛙
+2026-09-27 19:58:02.078  INFO   decision    mode=retreating behavior=mother_tree action=idle target=- reason='recharging at mother tree' status=success (repeat)
+2026-09-27 19:58:04.779  INFO   session     Entity shadow: vision=13 {'player': 12, 'npc': 1} memory=21 {'monster': 1, 'player': 16, 'npc': 4} paired=12 median=0.020 unleveled=14:青蛙
+2026-09-27 19:58:10.083  INFO   session     Entity shadow: vision=14 {'player': 13, 'npc': 1} memory=20 {'monster': 1, 'player': 15, 'npc': 4} paired=13 median=0.021 unleveled=14:青蛙
+2026-09-27 19:58:15.351  INFO   session     Entity shadow: vision=14 {'player': 13, 'npc': 1} memory=19 {'monster': 1, 'player': 14, 'npc': 4} paired=13 median=0.020 unleveled=14:青蛙
+2026-09-27 19:58:20.759  INFO   session     Entity shadow: vision=14 {'npc': 1, 'player': 12, 'monster': 1} memory=20 {'monster': 1, 'player': 15, 'npc': 4} paired=12 median=0.021 unleveled=14:青蛙
+2026-09-27 19:58:24.959  INFO   decision    mode=retreating behavior=mother_tree action=idle target=- reason='recharging at mother tree' status=success (repeat)
+2026-09-27 19:58:25.984  INFO   session     Entity shadow: vision=15 {'player': 12, 'monster': 2, 'npc': 1} memory=20 {'monster': 1, 'player': 15, 'npc': 4} paired=12 median=0.022 unleveled=14:青蛙
+2026-09-27 19:58:27.949  INFO   session     일시정지 — 단축키
+2026-09-27 20:01:37.109  INFO   session     정지 → 중지됨
+2026-09-27 20:01:37.341  INFO   session     봇 작업이 종료되었습니다

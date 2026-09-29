@@ -1,0 +1,6 @@
+id: ant_cave_dungeon_F1_5
+name: "Ant Cave Dungeon F1 5"
+origin_x: 32691
+origin_y: 32687
+pixel_scale: 1
+terrain: nav.png

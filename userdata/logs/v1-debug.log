@@ -1,0 +1,14 @@
+00:53:21  Requested signed driver start (admin)
+00:53:23  Driver start requested
+00:53:26  Started monitor (admin)
+00:53:46  Memory wait timed out: Memory monitor disconnected
+00:54:02  Requested signed driver start (admin)
+00:54:04  Driver start requested
+00:54:04  Monitor process already running — waiting for pipe
+00:54:24  Memory wait timed out: Memory monitor disconnected
+00:54:30  Requested signed driver start (admin)
+00:54:32  Driver start requested
+00:54:33  Started monitor (admin)
+00:54:53  Memory wait timed out: Memory monitor disconnected
+21:32:55  Stop → Stopped
+21:33:33  Stop → Stopped

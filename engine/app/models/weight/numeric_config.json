@@ -1,0 +1,50 @@
+{
+    "NUMERIC_ROI": [
+        73,
+        967,
+        110,
+        984
+    ],
+    "DIGIT_TEMPLATE_SIZE": 40,
+    "CONFIDENCE_THRESHOLD": 0.55,
+    "TEMPLATE_BUILDER": {
+        "input_dir": "cropped_image",
+        "output_dir": "templates_numeric",
+        "source_is_cropped": true
+    },
+    "MATCHER": {
+        "template_dir": "templates_numeric"
+    },
+    "MASK": {
+        "gray_threshold": 100,
+        "sat_max": 80
+    },
+    "SEGMENT": {
+        "bands": [
+            [
+                2,
+                15
+            ],
+            [
+                15,
+                26
+            ],
+            [
+                26,
+                37
+            ]
+        ]
+    },
+    "GLYPH": {
+        "min_area": 5,
+        "min_height": 4,
+        "max_aspect": 3.5,
+        "dilate": 3,
+        "split_aspect": 1.3,
+        "merge_gap": 3
+    },
+    "MATCH": {
+        "min_score": 0.5,
+        "score_delta": 0.0
+    }
+}

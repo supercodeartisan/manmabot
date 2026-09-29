@@ -1,0 +1,10 @@
+GiranDungeon_F1  origin_x=32689 origin_y=32690
+GiranDungeon_F2  origin_x=32687 origin=32681
+GiranDungeon_F3  origin_x=32684 origin_y=32685
+GiranDungeon_F4  origin_x=32686 origin_y=32684
+GludioDungen_F1  origin_x=32691 origin_y=32684
+GludioDungen_F2  origin_x=32683 origin_y=32683
+GludioDungeon_F3 origin_x=32685 origin_y=32688
+GludioDungeon_F4 origin_x=32688 origin_y=32689
+GludioDungeon_F5 origin_x=32682 origin_y=32683
+GludioDungeon_F6 origin_x=32692  origin_y=32684

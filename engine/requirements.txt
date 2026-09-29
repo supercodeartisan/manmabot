@@ -1,0 +1,46 @@
+# manmabot dependencies
+# Tested together on Python 3.14. Install with:
+#   pip install -r requirements.txt
+#   pip install -e .          # makes the local package importable
+#
+# Versions are pinned so another PC gets the exact same working setup.
+#
+# Extra (not pip):
+#   - Install the Interception driver (required by interception-python)
+#     https://github.com/oblitum/Interception
+#   - Tesseract OCR binary (required by pytesseract / app OCR)
+#   - analysis/realtime_monitor_full.exe --pipe --interval 200 (memory vitals)
+
+# Core
+PyYAML==6.0.3
+tqdm==4.67.3
+
+# Vision / ML (detector + classifier + tracker)
+ultralytics==8.4.115
+opencv-python==5.0.0.93
+numpy==2.5.1
+torch==2.13.0
+torchvision==0.28.0
+scipy==1.18.0
+Pillow==12.3.0
+# ByteTrack-style assignment used by app/_02_vision/tracker
+lap==0.5.12
+# Screen OCR helpers
+pytesseract==0.3.13
+
+# Data augmentation (scripts + augmentation viewer)
+albumentations==2.0.8
+matplotlib==3.11.1
+
+# Training logging (TensorBoard viewer for runs/)
+tensorboard==2.21.0
+
+# Bot runtime — capture
+mss==10.2.0
+dxcam==0.3.0                # optional faster capture; mss is the window-mode backend
+
+# Bot runtime — input
+# Hotkeys in main.py (alt+a / alt+q / alt+w)
+keyboard==0.13.5
+# Mouse/keyboard via Interception driver (replaces pynput)
+interception-python==1.13.6

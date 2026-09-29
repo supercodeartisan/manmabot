@@ -1,0 +1,9 @@
+id: iron_gate_guild_inner_castle_dungeon
+name: "Iron Gate Guild Inner Castle"
+# From obstacle_tiles_raw map_66.png (1 px = 1 tile).
+raw_map: "66"
+origin_x: 32704
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

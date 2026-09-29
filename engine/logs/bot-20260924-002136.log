@@ -1,0 +1,41 @@
+2026-09-24 00:21:36.553  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-24 00:21:36.556  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-002136.log
+2026-09-24 00:21:36.556  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_3', 'area_2'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-002136.log
+2026-09-24 00:21:36.614  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-24 00:21:36.864  INFO   nav         portal graph: 188 components, 249 ms
+2026-09-24 00:21:36.870  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-24 00:21:36.886  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-24 00:21:37.255  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-24 00:21:37.263  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-24 00:21:37.269  INFO   session     Inventory listen scanning in background (build inventory_listen.dll or place inv.json).
+2026-09-24 00:21:37.275  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-24 00:21:37.387  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-24 00:21:37.394  INFO   session     Unmapped hotbar icons: box1/f6:+0 화살 (2,483), box1/f7:아데나 (573), box1/f12:상쾌한 초록 물약
+2026-09-24 00:21:37.408  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_3', 'area_2']
+2026-09-24 00:21:38.219  INFO   session     Entity shadow: vision=31 {'player': 28, 'monster': 2, 'npc': 1} memory=58 {'player': 50, 'monster': 1, 'npc': 7} paired=27 median=0.029 unleveled=319:?
+2026-09-24 00:21:38.245  INFO   session     Inventory listen ready (dll) · hp=9 arrows=2483 silver=5 depoison=0
+2026-09-24 00:21:38.308  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions_mainland)' status=success
+2026-09-24 00:21:41.249  INFO   nav         async nav configure start map=mainland
+2026-09-24 00:21:41.792  INFO   decision    mode=farming behavior=shop action=shop_stop target=- reason='stop at shop' status=success
+2026-09-24 00:21:42.043  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-24 00:21:45.918  INFO   nav         portal graph: 2586 components, 3875 ms
+2026-09-24 00:21:45.924  INFO   nav         farms=6 safe=0 home=None (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\home.yaml)
+2026-09-24 00:21:45.924  INFO   nav         async nav configure done map=mainland (4675 ms)
+2026-09-24 00:21:46.102  INFO   session     Entity shadow: vision=36 {'npc': 1, 'player': 32, 'monster': 3} memory=61 {'player': 53, 'npc': 7, 'monster': 1} paired=32 median=0.031 unleveled=319:?
+2026-09-24 00:21:46.171  INFO   decision    mode=farming behavior=shop action=shop_buy_arrows target=- reason='shop:buy_hp_potions_mainland' status=success
+2026-09-24 00:21:51.760  INFO   session     Entity shadow: vision=24 {'player': 22, 'monster': 2} memory=58 {'player': 50, 'npc': 7, 'monster': 1} paired=22 median=0.031 unleveled=319:?
+2026-09-24 00:21:51.796  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='return to farm map after shop' status=success
+2026-09-24 00:21:54.503  INFO   nav         async nav configure start map=talking_island
+2026-09-24 00:21:54.573  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-24 00:21:54.841  INFO   nav         portal graph: 188 components, 268 ms
+2026-09-24 00:21:54.848  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-24 00:21:54.848  INFO   nav         async nav configure done map=talking_island (345 ms)
+2026-09-24 00:21:55.508  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-24 00:21:56.790  INFO   session     Entity shadow: vision=32 {'player': 31, 'monster': 1} memory=46 {'player': 38, 'npc': 7, 'monster': 1} paired=30 median=0.048 unleveled=319:?
+2026-09-24 00:22:01.959  INFO   session     Entity shadow: vision=23 {'player': 23} memory=45 {'npc': 7, 'player': 37, 'monster': 1} paired=23 median=0.042 unleveled=319:?
+2026-09-24 00:22:07.167  INFO   session     Entity shadow: vision=27 {'player': 27} memory=47 {'npc': 7, 'player': 39, 'monster': 1} paired=25 median=0.036 unleveled=319:?
+2026-09-24 00:22:09.189  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-24 00:22:12.372  INFO   session     Entity shadow: vision=27 {'player': 26, 'npc': 1} memory=46 {'npc': 7, 'player': 38, 'monster': 1} paired=25 median=0.074 unleveled=319:?
+2026-09-24 00:22:12.924  INFO   session     Auto-pause (not_focused)
+2026-09-24 00:22:14.409  INFO   session     Stop → Stopped
+2026-09-24 00:22:14.658  INFO   session     Bot worker exited

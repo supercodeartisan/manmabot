@@ -1,0 +1,35 @@
+2026-09-28 00:38:57.108  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-28 00:38:57.142  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260928-003857.log
+2026-09-28 00:38:57.142  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\ManmabotV1_final\engine\logs\bot-20260928-003857.log
+2026-09-28 00:38:57.318  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-28 00:38:57.651  INFO   nav         portal graph: 188 components, 333 ms
+2026-09-28 00:38:57.658  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-28 00:38:57.735  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-28 00:38:58.397  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-28 00:38:58.420  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-28 00:38:58.436  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-28 00:38:58.450  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-28 00:38:58.558  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 라이트@box1/f10, 힐@box1/f9, HP 물약@box1/f8, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f5
+2026-09-28 00:38:58.596  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f9:아데나
+2026-09-28 00:38:58.607  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-28 00:38:59.753  INFO   session     Entity shadow: vision=18 {'player': 16, 'npc': 2} memory=71 {'player': 69, 'npc': 2} paired=17 median=0.026
+2026-09-28 00:38:59.788  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=461 은화살=82 해독=0
+2026-09-28 00:38:59.811  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-28 00:39:01.076  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:39:05.088  INFO   session     Entity shadow: vision=20 {'npc': 4, 'player': 16} memory=71 {'monster': 1, 'player': 68, 'npc': 2} paired=18 median=0.024 unleveled=10:警衛
+2026-09-28 00:39:10.242  INFO   session     Entity shadow: vision=22 {'player': 21, 'monster': 1} memory=70 {'monster': 1, 'player': 67, 'npc': 2} paired=18 median=0.021 unleveled=10:警衛
+2026-09-28 00:39:10.615  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-28 00:39:11.525  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:39:15.485  INFO   session     Entity shadow: vision=20 {'player': 18, 'npc': 1, 'monster': 1} memory=71 {'player': 69, 'npc': 2} paired=19 median=0.025
+2026-09-28 00:39:20.865  INFO   session     Entity shadow: vision=18 {'player': 16, 'npc': 2} memory=73 {'player': 71, 'npc': 2} paired=18 median=0.022
+2026-09-28 00:39:21.450  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:39:23.394  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:39:26.019  INFO   session     Entity shadow: vision=19 {'player': 17, 'npc': 2} memory=75 {'player': 73, 'npc': 2} paired=19 median=0.022
+2026-09-28 00:39:28.415  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-28 00:39:29.062  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:39:31.743  INFO   session     Entity shadow: vision=17 {'npc': 2, 'player': 15} memory=77 {'player': 75, 'npc': 2} paired=17 median=0.026
+2026-09-28 00:39:33.510  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-28 00:39:34.178  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:39:36.998  INFO   session     Entity shadow: vision=20 {'npc': 1, 'player': 19} memory=79 {'player': 77, 'npc': 2} paired=18 median=0.023
+2026-09-28 00:39:40.697  INFO   session     일시정지 — 단축키
+2026-09-28 00:49:00.163  INFO   session     정지 → 중지됨

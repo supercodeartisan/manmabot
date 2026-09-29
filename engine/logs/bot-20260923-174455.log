@@ -1,0 +1,72 @@
+2026-09-23 17:44:55.041  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-23 17:44:55.044  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-174455.log
+2026-09-23 17:44:55.044  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-174455.log
+2026-09-23 17:44:55.257  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-23 17:44:55.506  INFO   nav         portal graph: 188 components, 249 ms
+2026-09-23 17:44:55.511  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-23 17:44:55.783  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-23 17:44:56.138  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-23 17:44:56.143  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-23 17:44:56.148  INFO   session     Inventory listen started · inv.json seed · hp=26 arrows=477 silver=0 depoison=0 (live scan in background)
+2026-09-23 17:44:56.156  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-23 17:45:00.303  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-23 17:45:00.308  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-23 17:45:12.367  INFO   session     Auto-resume → Running
+2026-09-23 17:45:12.818  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.066
+2026-09-23 17:45:12.849  INFO   decision    mode=traveling behavior=combat action=attack target=1 reason='engage target' status=success
+2026-09-23 17:45:15.652  INFO   action      cursor give-up id=1 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:45:15.828  INFO   decision    mode=traveling behavior=combat action=attack target=3 reason='engage target' status=success
+2026-09-23 17:45:16.541  INFO   action      cursor give-up id=3 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:45:16.715  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:45:17.830  INFO   session     Entity shadow: vision=5 {'player': 2, 'monster': 3} memory=3 {'player': 1, 'monster': 2} paired=2 median=0.049 unleveled=12:슬라임
+2026-09-23 17:45:22.940  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=3 {'player': 1, 'monster': 2} paired=2 median=0.082 unleveled=12:슬라임
+2026-09-23 17:45:26.136  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-23 17:45:28.002  INFO   session     Entity shadow: vision=4 {'monster': 3, 'player': 1} memory=2 {'monster': 2} paired=1 median=0.074 unleveled=12:슬라임
+2026-09-23 17:45:31.063  INFO   session     Inventory listen ready (dll) · hp=10 arrows=2889 silver=0 depoison=0
+2026-09-23 17:45:33.098  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=12:슬라임
+2026-09-23 17:45:33.294  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-23 17:45:38.198  INFO   session     Entity shadow: vision=4 {'player': 2, 'monster': 2} memory=3 {'monster': 2, 'player': 1} paired=2 median=0.041 unleveled=12:슬라임
+2026-09-23 17:45:38.425  INFO   decision    mode=traveling behavior=combat action=attack target=8 reason='engage target' status=success
+2026-09-23 17:45:41.554  INFO   action      cursor give-up id=8 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:45:41.775  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:45:43.282  INFO   session     Entity shadow: vision=5 {'monster': 3, 'player': 2} memory=3 {'monster': 2, 'player': 1} paired=2 median=0.024 unleveled=12:슬라임
+2026-09-23 17:45:46.824  INFO   decision    mode=traveling behavior=combat action=attack target=13 reason='engage target' status=success
+2026-09-23 17:45:47.304  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-23 17:45:48.320  INFO   session     Entity shadow: vision=7 {'player': 2, 'monster': 2, 'item': 3} memory=4 {'monster': 2, 'item': 1, 'player': 1} paired=3 median=0.025 unleveled=12:슬라임
+2026-09-23 17:45:50.464  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:45:53.525  INFO   session     Entity shadow: vision=4 {'player': 3, 'monster': 1} memory=4 {'monster': 2, 'player': 2} paired=3 median=0.055 unleveled=12:슬라임
+2026-09-23 17:45:55.173  INFO   decision    mode=traveling behavior=combat action=attack target=16 reason='engage target' status=success
+2026-09-23 17:45:56.875  INFO   action      cursor give-up id=16 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:45:57.045  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:45:58.543  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=2 {'player': 1, 'monster': 1} paired=2 median=0.037
+2026-09-23 17:46:03.657  INFO   session     Entity shadow: vision=5 {'player': 2, 'monster': 3} memory=5 {'monster': 3, 'player': 2} paired=4 median=0.041
+2026-09-23 17:46:03.885  INFO   decision    mode=traveling behavior=combat action=attack target=18 reason='engage target' status=success
+2026-09-23 17:46:04.808  INFO   action      cursor give-up id=18 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:46:04.987  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:46:08.852  INFO   session     Entity shadow: vision=7 {'player': 4, 'monster': 3} memory=5 {'monster': 3, 'player': 2} paired=5 median=0.062
+2026-09-23 17:46:13.977  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=3 {'player': 2, 'monster': 1} paired=2 median=0.084
+2026-09-23 17:46:14.945  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-23 17:46:18.023  INFO   decision    mode=traveling behavior=combat action=attack target=29 reason='engage target' status=success
+2026-09-23 17:46:18.853  INFO   action      cursor give-up id=29 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:46:18.983  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=5 {'monster': 3, 'player': 2} paired=2 median=0.031
+2026-09-23 17:46:19.013  INFO   decision    mode=traveling behavior=combat action=attack target=28 reason='engage target' status=success
+2026-09-23 17:46:21.049  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-23 17:46:24.160  INFO   session     Entity shadow: vision=5 {'monster': 3, 'item': 1, 'player': 1} memory=5 {'player': 2, 'monster': 2, 'item': 1} paired=3 median=0.021
+2026-09-23 17:46:24.196  INFO   decision    mode=traveling behavior=combat action=attack target=31 reason='engage target' status=success
+2026-09-23 17:46:25.515  INFO   action      cursor give-up id=31 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:46:25.701  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-23 17:46:27.195  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-23 17:46:29.183  INFO   session     Entity shadow: vision=3 {'player': 2, 'item': 1} memory=4 {'monster': 2, 'item': 1, 'player': 1} paired=2 median=0.056
+2026-09-23 17:46:29.405  INFO   decision    mode=farming behavior=combat action=attack target=32 reason='engage target' status=success
+2026-09-23 17:46:31.585  INFO   action      cursor give-up id=32 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:46:31.739  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-23 17:46:34.202  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=3 {'player': 1, 'monster': 2} paired=2 median=0.086
+2026-09-23 17:46:39.348  INFO   session     Entity shadow: vision=6 {'player': 4, 'monster': 2} memory=5 {'player': 3, 'monster': 2} paired=4 median=0.073
+2026-09-23 17:46:41.000  INFO   decision    mode=farming behavior=combat action=attack target=40 reason='engage target' status=success
+2026-09-23 17:46:42.445  INFO   action      cursor give-up id=40 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-23 17:46:42.734  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-23 17:46:44.384  INFO   session     Entity shadow: vision=8 {'player': 5, 'monster': 2, 'npc': 1} memory=5 {'player': 3, 'monster': 2} paired=4 median=0.048 unleveled=12:슬라임
+2026-09-23 17:46:49.391  INFO   session     Entity shadow: vision=4 {'monster': 2, 'player': 2} memory=3 {'player': 1, 'monster': 2} paired=2 median=0.088 unleveled=12:슬라임
+2026-09-23 17:46:50.439  INFO   session     Paused — hotkey
+2026-09-23 17:46:55.413  INFO   session     Stop → Stopped
+2026-09-23 17:46:55.659  INFO   session     Bot worker exited

@@ -1,0 +1,26 @@
+2026-09-08 02:12:24.576  INFO   session     Loading Manmabot from D:\ManmabotV1\ManmabotV1\engine
+2026-09-08 02:12:24.580  INFO   session     Session log D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-021224.log
+2026-09-08 02:12:24.580  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-021224.log
+2026-09-08 02:12:24.883  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-08 02:12:25.191  INFO   nav         portal graph: 188 components, 307 ms
+2026-09-08 02:12:25.199  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-08 02:12:25.200  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-08 02:12:25.691  INFO   session     Memory monitor connected
+2026-09-08 02:12:25.697  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-08 02:12:26.253  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-08 02:12:26.880  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:27.802  INFO   decision    mode=traveling behavior=combat action=attack target=13 reason='engage target' status=success
+2026-09-08 02:12:28.644  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:34.926  INFO   decision    mode=traveling behavior=combat action=attack target=24 reason='engage target' status=success
+2026-09-08 02:12:35.792  INFO   action      cursor give-up id=24 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-08 02:12:35.957  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:36.382  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-08 02:12:36.917  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:38.072  INFO   decision    mode=traveling behavior=combat action=attack target=70 reason='engage target' status=success
+2026-09-08 02:12:38.821  INFO   action      cursor give-up id=70 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-08 02:12:39.010  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:45.764  INFO   decision    mode=traveling behavior=combat action=attack target=82 reason='engage target' status=success
+2026-09-08 02:12:47.434  INFO   decision    mode=traveling behavior=combat action=attack target=90 reason='engage target' status=success
+2026-09-08 02:12:48.480  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-08 02:12:51.758  INFO   session     Stop → Stopped
+2026-09-08 02:12:58.167  INFO   session     Bot worker exited

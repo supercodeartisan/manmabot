@@ -1,0 +1,6 @@
+# Vision-region name catalog (area YAML ``region:``).
+# Classifier + YOLO: app/models/regions/<slug>/<slug>.pt and <slug>_yolo.pt
+# Key is region_names (avoids clash with vision.regions on merge).
+region_names:
+  - talking island
+  - silver knight

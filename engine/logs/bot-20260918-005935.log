@@ -1,0 +1,143 @@
+2026-09-18 00:59:35.160  INFO   session     Loading Manmabot from D:\Production\Manma\ManmabotV1(with autologin)1\engine
+2026-09-18 00:59:35.162  INFO   session     Session log D:\Production\Manma\ManmabotV1(with autologin)1\engine\logs\bot-20260918-005935.log
+2026-09-18 00:59:35.162  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\Production\Manma\ManmabotV1(with autologin)1\engine\logs\bot-20260918-005935.log
+2026-09-18 00:59:35.261  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-18 00:59:35.425  INFO   nav         portal graph: 188 components, 164 ms
+2026-09-18 00:59:35.439  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\Production\Manma\ManmabotV1(with autologin)1\engine\maps\talking_island\farms.yaml safe=D:\Production\Manma\ManmabotV1(with autologin)1\engine\maps\talking_island\safe.yaml home=D:\Production\Manma\ManmabotV1(with autologin)1\engine\maps\talking_island\home.yaml)
+2026-09-18 00:59:35.447  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-18 00:59:35.919  INFO   session     Memory monitor connected
+2026-09-18 00:59:35.932  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-18 00:59:35.999  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 00:59:36.269  INFO   session     Auto-resume → Running
+2026-09-18 00:59:36.535  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 00:59:36.801  INFO   session     Auto-resume → Running
+2026-09-18 00:59:37.068  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 00:59:37.336  INFO   session     Auto-resume → Running
+2026-09-18 00:59:37.599  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 00:59:37.868  INFO   session     Auto-resume → Running
+2026-09-18 00:59:37.918  INFO   session     Hotbar scan done · hp_potion@box1/f8
+2026-09-18 00:59:37.920  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-18 00:59:38.136  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 00:59:38.138  INFO   session     Auto-pause (not_focused)
+2026-09-18 00:59:38.402  INFO   session     Auto-resume → Running
+2026-09-18 00:59:43.737  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 00:59:47.185  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 00:59:47.449  INFO   session     Auto-resume → Running
+2026-09-18 00:59:47.707  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:00:41.114  INFO   session     Auto-resume → Running
+2026-09-18 01:00:42.465  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:00:47.301  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:00:52.010  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:00:56.705  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:00:57.121  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:00:57.393  INFO   session     Auto-resume → Running
+2026-09-18 01:00:57.650  INFO   session     Auto-pause (not_focused)
+2026-09-18 01:00:58.985  INFO   session     Auto-resume → Running
+2026-09-18 01:00:59.444  INFO   decision    mode=traveling behavior=combat action=attack target=39 reason='engage target' status=success
+2026-09-18 01:01:00.811  INFO   decision    mode=traveling behavior=combat action=attack target=42 reason='engage target' status=success
+2026-09-18 01:01:01.445  INFO   decision    mode=traveling behavior=combat action=attack target=45 reason='engage target' status=success
+2026-09-18 01:01:02.171  INFO   decision    mode=traveling behavior=combat action=attack target=38 reason='engage target' status=success
+2026-09-18 01:01:06.112  INFO   decision    mode=traveling behavior=combat action=attack target=48 reason='engage target' status=success
+2026-09-18 01:01:06.854  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:10.021  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:01:10.238  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:11.255  INFO   decision    mode=traveling behavior=loot action=pickup target=55 reason='engage item' status=success
+2026-09-18 01:01:12.447  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:01:17.660  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:01:22.720  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:01:28.045  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:01:33.405  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:01:37.562  INFO   decision    mode=traveling behavior=combat action=attack target=121 reason='engage target' status=success
+2026-09-18 01:01:37.934  INFO   decision    mode=traveling behavior=combat action=attack target=122 reason='engage target' status=success
+2026-09-18 01:01:41.614  INFO   decision    mode=traveling behavior=combat action=attack target=131 reason='engage target' status=success
+2026-09-18 01:01:45.309  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:46.331  INFO   decision    mode=traveling behavior=combat action=attack target=167 reason='engage target' status=success
+2026-09-18 01:01:46.681  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:46.914  INFO   decision    mode=traveling behavior=combat action=attack target=168 reason='engage target' status=success
+2026-09-18 01:01:47.959  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:48.167  INFO   decision    mode=traveling behavior=combat action=attack target=168 reason='engage target' status=success
+2026-09-18 01:01:48.717  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:48.926  INFO   decision    mode=traveling behavior=combat action=attack target=168 reason='engage target' status=success
+2026-09-18 01:01:49.165  INFO   action      cursor give-up id=168 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-18 01:01:49.282  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:01:51.051  INFO   decision    mode=traveling behavior=loot action=pickup target=182 reason='engage item' status=success
+2026-09-18 01:01:51.534  INFO   decision    mode=traveling behavior=loot action=pickup target=183 reason='engage item' status=success
+2026-09-18 01:01:52.654  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:01:57.807  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:01:59.791  INFO   decision    mode=traveling behavior=combat action=attack target=196 reason='engage target' status=success
+2026-09-18 01:02:00.366  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:00.674  INFO   decision    mode=traveling behavior=combat action=attack target=197 reason='engage target' status=success
+2026-09-18 01:02:01.028  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick' status=success
+2026-09-18 01:02:01.755  INFO   decision    mode=traveling behavior=combat action=attack target=197 reason='engage target' status=success
+2026-09-18 01:02:02.130  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:02.780  INFO   decision    mode=traveling behavior=combat action=attack target=198 reason='engage target' status=success
+2026-09-18 01:02:03.889  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:09.192  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:02:11.425  INFO   decision    mode=traveling behavior=combat action=attack target=208 reason='engage target' status=success
+2026-09-18 01:02:13.924  INFO   decision    mode=traveling behavior=combat action=attack target=213 reason='engage target' status=success
+2026-09-18 01:02:14.960  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:16.064  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:02:17.861  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:23.235  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:02:24.856  INFO   decision    mode=traveling behavior=combat action=attack target=233 reason='engage target' status=success
+2026-09-18 01:02:26.372  INFO   decision    mode=traveling behavior=combat action=attack target=234 reason='engage target' status=success
+2026-09-18 01:02:27.546  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:27.726  INFO   decision    mode=traveling behavior=loot action=searching target=- reason='approach item' status=success
+2026-09-18 01:02:28.252  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:28.591  INFO   decision    mode=traveling behavior=combat action=attack target=241 reason='engage target' status=success
+2026-09-18 01:02:29.203  INFO   action      cursor give-up id=241 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-18 01:02:29.292  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-18 01:02:34.455  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-18 01:02:39.244  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:02:41.664  INFO   decision    mode=farming behavior=combat action=attack target=261 reason='engage target' status=success
+2026-09-18 01:02:42.195  INFO   action      cursor give-up id=261 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-18 01:02:42.282  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:02:47.318  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success (repeat)
+2026-09-18 01:02:51.865  INFO   decision    mode=farming behavior=combat action=attack target=281 reason='engage target' status=success
+2026-09-18 01:02:53.334  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:02:53.901  INFO   decision    mode=farming behavior=combat action=attack target=281 reason='engage target' status=success
+2026-09-18 01:02:54.439  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:02:54.659  INFO   decision    mode=farming behavior=combat action=attack target=281 reason='engage target' status=success
+2026-09-18 01:02:55.410  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:02:57.044  INFO   decision    mode=farming behavior=combat action=attack target=281 reason='engage target' status=success
+2026-09-18 01:03:02.071  INFO   decision    mode=farming behavior=combat action=attack target=292 reason='engage target' status=success
+2026-09-18 01:03:03.117  INFO   decision    mode=farming behavior=combat action=attack target=298 reason='engage target' status=success
+2026-09-18 01:03:03.741  INFO   decision    mode=farming behavior=combat action=attack target=304 reason='engage target' status=success
+2026-09-18 01:03:04.385  INFO   decision    mode=farming behavior=combat action=attack target=308 reason='engage target' status=success
+2026-09-18 01:03:05.044  INFO   decision    mode=farming behavior=combat action=attack target=309 reason='engage target' status=success
+2026-09-18 01:03:05.600  INFO   action      cursor give-up id=309 item=false reason=cursor=normal/normal score=1.000 not allowed
+2026-09-18 01:03:05.690  INFO   decision    mode=farming behavior=combat action=attack target=300 reason='engage target' status=success
+2026-09-18 01:03:09.598  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:03:14.660  INFO   decision    mode=farming behavior=combat action=attack target=300 reason='engage target' status=success
+2026-09-18 01:03:15.272  INFO   decision    mode=farming behavior=combat action=attack target=332 reason='engage target' status=success
+2026-09-18 01:03:15.761  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-18 01:03:19.658  INFO   decision    mode=farming behavior=combat action=attack target=332 reason='engage target' status=success
+2026-09-18 01:03:20.307  INFO   decision    mode=farming behavior=combat action=attack target=357 reason='engage target' status=success
+2026-09-18 01:03:20.758  INFO   decision    mode=farming behavior=combat action=attack target=361 reason='engage target' status=success
+2026-09-18 01:03:24.832  INFO   decision    mode=farming behavior=survival_potion action=use_hp_potion target=- reason='low hp' status=success
+2026-09-18 01:03:26.766  INFO   decision    mode=retreating behavior=retreating action=traveling target=- reason='retreat to safe area' status=success
+2026-09-18 01:03:28.777  INFO   decision    mode=retreating behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-18 01:03:30.821  INFO   decision    mode=retreating behavior=respawn action=respawn target=- reason='death confirmed, restart' status=success
+2026-09-18 01:03:31.050  INFO   decision    mode=retreating behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-18 01:03:32.447  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success
+2026-09-18 01:03:38.836  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:03:45.527  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:03:52.166  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:03:58.620  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:04.584  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:10.639  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:16.734  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:22.896  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:29.574  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:35.657  INFO   decision    mode=retreating behavior=retreating action=idle target=- reason='retreating, waiting for hp' status=success (repeat)
+2026-09-18 01:04:40.998  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:04:41.258  INFO   session     Auto-resume → Running
+2026-09-18 01:04:41.528  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:04:41.798  INFO   session     Auto-resume → Running
+2026-09-18 01:04:42.056  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:04:42.321  INFO   session     Auto-resume → Running
+2026-09-18 01:04:42.579  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:04:42.853  INFO   session     Auto-resume → Running
+2026-09-18 01:04:43.117  INFO   session     Auto-pause (cursor_outside)
+2026-09-18 01:04:43.408  INFO   session     Stop → Stopped
+2026-09-18 01:04:49.477  INFO   session     Bot worker exited

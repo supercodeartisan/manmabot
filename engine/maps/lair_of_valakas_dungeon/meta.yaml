@@ -1,0 +1,9 @@
+id: lair_of_valakas_dungeon
+name: "Lair of Valakas"
+# From obstacle_tiles_raw map_67.png (1 px = 1 tile).
+raw_map: "67"
+origin_x: 32640
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml
