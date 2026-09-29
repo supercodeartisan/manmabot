@@ -6126,6 +6126,13 @@ class ScheduleWindow(tk.Tk):
     def __init__(self, profile: Profile | None = None, store: ScheduleStore | None = None) -> None:
         load_bundled_fonts()
         super().__init__()
+        # Hide until final geometry sticks. Otherwise Windows briefly maps the
+        # default ~200x200 Tk window, then jumps to 1187x806 (small→large flash).
+        try:
+            self.withdraw()
+        except tk.TclError:
+            pass
+        self._window_revealed = False
         ensure_userdata()
         self.profile = profile or load_profile()
         self.store = store or ScheduleStore()
@@ -6168,7 +6175,23 @@ class ScheduleWindow(tk.Tk):
         # clicks stay blocked while ``_schedule_ready`` is False.
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(250, self._poll)
+        self._reveal_window()
         self.after(0, self._bootstrap_initial_editor)
+
+    def _reveal_window(self) -> None:
+        """Show only after the intended size is applied (no 200x200 flash)."""
+        self._place_window()
+        try:
+            self.update_idletasks()
+            self._place_window()
+        except tk.TclError:
+            pass
+        try:
+            self.deiconify()
+            self.lift()
+        except tk.TclError:
+            pass
+        self._window_revealed = True
 
     @staticmethod
     def _sync_font_aliases() -> None:
@@ -6203,6 +6226,14 @@ class ScheduleWindow(tk.Tk):
 
     def _on_window_configure(self, event: tk.Event) -> None:
         if event.widget is not self:
+            return
+        # Ignore size events while hidden / before reveal (stale 200x200 configs).
+        if not getattr(self, "_window_revealed", False):
+            return
+        try:
+            if int(event.width) < ui_theme.MIN_WIDTH or int(event.height) < ui_theme.MIN_HEIGHT:
+                return
+        except (TypeError, ValueError):
             return
         job = getattr(self, "_scale_job", "")
         if job:
