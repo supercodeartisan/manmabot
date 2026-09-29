@@ -1,0 +1,48 @@
+2026-09-21 21:16:26.793  INFO   session     Loading Manmabot from D:\Work\ManmabotV1_final\engine
+2026-09-21 21:16:26.797  INFO   session     Session log D:\Work\ManmabotV1_final\engine\logs\bot-20260921-211626.log
+2026-09-21 21:16:26.797  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6'] file=D:\Work\ManmabotV1_final\engine\logs\bot-20260921-211626.log
+2026-09-21 21:16:27.006  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-21 21:16:27.253  INFO   nav         portal graph: 188 components, 247 ms
+2026-09-21 21:16:27.258  INFO   nav         farms=6 safe=11 home=(354, 203) (files farm=D:\Work\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-21 21:16:27.531  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-21 21:16:27.866  INFO   session     Auto-resume → Running
+2026-09-21 21:16:27.911  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-21 21:16:27.918  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-21 21:16:50.511  INFO   session     Inventory listen ready (dll) · hp=26 arrows=477 silver=0 depoison=0
+2026-09-21 21:16:50.517  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-21 21:16:55.069  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-21 21:16:55.098  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6']
+2026-09-21 21:16:55.510  INFO   session     Entity shadow: vision=4 {'player': 3, 'npc': 1} memory=5 {'monster': 3, 'player': 2} paired=2 median=0.031 unleveled=206:兔子,10:警衛,68:警衛
+2026-09-21 21:17:05.889  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:17:08.679  INFO   session     Auto-resume → Running
+2026-09-21 21:17:17.865  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-21 21:17:18.418  INFO   session     Entity shadow: vision=5 {'player': 4, 'npc': 1} memory=4 {'monster': 2, 'player': 2} paired=2 median=0.036 unleveled=10:警衛,68:警衛
+2026-09-21 21:17:28.457  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:17:30.142  INFO   session     Auto-resume → Running
+2026-09-21 21:17:40.966  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 1, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙
+2026-09-21 21:17:51.188  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:18:15.636  INFO   session     Resume → Running
+2026-09-21 21:18:15.832  INFO   session     Entity shadow: vision=3 {'player': 3} memory=2 {'player': 2} paired=2 median=0.031
+2026-09-21 21:18:36.664  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:20:12.118  INFO   session     Auto-resume → Running
+2026-09-21 21:20:12.343  INFO   session     Entity shadow: vision=4 {'player': 3, 'monster': 1} memory=4 {'monster': 2, 'player': 2} paired=3 median=0.040 unleveled=14:青蛙
+2026-09-21 21:20:36.062  INFO   decision    mode=traveling behavior=combat action=attack target=10 reason='engage target' status=success
+2026-09-21 21:20:36.498  INFO   session     Entity shadow: vision=3 {'player': 3} memory=2 {'monster': 1, 'player': 1} paired=1 median=0.032 unleveled=14:青蛙
+2026-09-21 21:20:59.300  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:21:01.827  INFO   session     Auto-resume → Running
+2026-09-21 21:21:02.074  INFO   session     Entity shadow: vision=4 {'player': 3, 'npc': 1} memory=2 {'monster': 1, 'player': 1} paired=1 median=0.039 unleveled=68:警衛
+2026-09-21 21:21:09.065  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:21:13.814  INFO   session     Auto-resume → Running
+2026-09-21 21:21:19.135  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:21:21.078  INFO   session     Auto-resume → Running
+2026-09-21 21:21:25.145  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-21 21:21:25.469  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=3 {'player': 1, 'monster': 2} paired=1 median=0.067 unleveled=10:警衛,68:警衛
+2026-09-21 21:21:49.377  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=10:警衛
+2026-09-21 21:21:57.940  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:23:56.949  INFO   session     Auto-resume → Running
+2026-09-21 21:23:57.133  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-21 21:23:59.797  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:24:00.086  INFO   session     Auto-resume → Running
+2026-09-21 21:24:00.928  INFO   session     Auto-pause (not_focused)
+2026-09-21 21:24:12.299  INFO   session     Stop → Stopped
+2026-09-21 21:24:21.181  INFO   session     Bot worker exited

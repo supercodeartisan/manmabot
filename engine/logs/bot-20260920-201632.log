@@ -1,0 +1,35 @@
+2026-09-20 20:16:32.198  INFO   session     Loading Manmabot from D:\ManmabotV1\engine
+2026-09-20 20:16:32.259  INFO   session     Session log D:\ManmabotV1\engine\logs\bot-20260920-201632.log
+2026-09-20 20:16:32.259  INFO   session     character=royal loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1\engine\logs\bot-20260920-201632.log
+2026-09-20 20:16:32.327  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-20 20:16:32.600  INFO   nav         portal graph: 188 components, 273 ms
+2026-09-20 20:16:32.606  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-20 20:16:32.607  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-20 20:16:32.610  INFO   session     Auto-pause (cursor_outside)
+2026-09-20 20:16:32.911  INFO   session     Auto-resume → Running
+2026-09-20 20:16:33.188  INFO   session     Auto-pause (cursor_outside)
+2026-09-20 20:16:33.198  INFO   session     Memory monitor connected
+2026-09-20 20:16:33.211  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-20 20:16:33.461  INFO   session     Auto-resume → Running
+2026-09-20 20:16:37.757  INFO   session     Hotbar scan done · talking_scroll@box1/f5
+2026-09-20 20:16:37.766  INFO   session     Potion restock armed · no hp_potion on hotbar
+2026-09-20 20:16:37.772  INFO   session     Loop ready · royal · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-20 20:16:38.134  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions)' status=success
+2026-09-20 20:16:39.053  INFO   nav         async nav configure start map=mainland
+2026-09-20 20:16:39.241  INFO   decision    mode=farming behavior=shop action=shop_stop target=- reason='stop at shop' status=success
+2026-09-20 20:16:39.726  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-20 20:16:43.182  INFO   nav         portal graph: 2586 components, 3456 ms
+2026-09-20 20:16:43.186  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1\engine\maps\mainland\farms.yaml safe=D:\ManmabotV1\engine\maps\mainland\safe.yaml home=D:\ManmabotV1\engine\maps\mainland\home.yaml)
+2026-09-20 20:16:43.186  INFO   nav         async nav configure done map=mainland (4133 ms)
+2026-09-20 20:16:43.312  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick' status=success
+2026-09-20 20:16:52.037  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='walk to shop (buy_hp_potions)' status=success (repeat)
+2026-09-20 20:17:01.665  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='walk to shop (buy_hp_potions)' status=success (repeat)
+2026-09-20 20:17:04.784  INFO   session     Auto-pause (cursor_outside)
+2026-09-20 20:17:05.065  INFO   session     Auto-resume → Running
+2026-09-20 20:17:05.331  INFO   session     Auto-pause (cursor_outside)
+2026-09-20 20:17:05.607  INFO   session     Auto-resume → Running
+2026-09-20 20:17:05.873  INFO   session     Auto-pause (cursor_outside)
+2026-09-20 20:17:06.155  INFO   session     Auto-resume → Running
+2026-09-20 20:17:06.419  INFO   session     Auto-pause (not_focused)
+2026-09-20 20:17:07.142  INFO   session     Stop → Stopped
+2026-09-20 20:17:13.874  INFO   session     Bot worker exited

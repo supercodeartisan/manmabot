@@ -1,0 +1,136 @@
+# Manmabot V1 — Logic Gaps To-Do
+
+GUI features are largely in place. Items below are **main-logic gaps**: settings that save/show but do not drive the live bot, or engine behaviors that are still missing.
+
+Check items off as you complete them.
+
+---
+
+## 1. Schedule executor
+
+The schedule UI saves tasks and labels timing as Draft. Nothing runs tasks by clock.
+
+- [ ] Build a schedule executor (pick due task → apply settings → start → stop on window/duration)
+- [ ] Honor `enabled`, `start_time` / `end_time`, `duration_minutes`, `time_mode`
+- [ ] Honor `repeat_daily` and `weekdays`
+- [ ] Switch to the next due task when the current one ends
+- [ ] On Apply / Start: use the task’s `account_id` **and** its server / character slot for login (not only the account store defaults)
+- [ ] Align task `character_slot` with autologin (accounts currently allow slots 1–3)
+
+---
+
+## 2. Settings → runtime adapter
+
+`apply_runtime_settings()` only copies a subset of fields into `Profile`. Wire every control you treat as a real feature, or remove/hide it from the UI.
+
+### Already applied (reference — leave checked)
+
+- [x] Class, map, selected farms, farm rotate timer
+- [x] Species levels / blacklist
+- [x] HP potion %, escape HP/MP %
+- [x] Spell slots, heal-until-HP, mana reserve
+- [x] Arrow buy quantity
+- [x] Loot `all_items` / `adena_only`, adena-weight threshold, humanize, game language
+
+### Still decorative / ignored
+
+- [ ] Hunt: attack mode (ranged / magic / melee)
+- [ ] Hunt: attack range, keep distance, close attack
+- [ ] Hunt: MP-above spell, spell count, ranged count, fallback melee
+- [ ] Hunt: hunt route, hunt radius, transit route
+- [ ] Hunt: return on weight / no supplies / potion NPC
+- [ ] Deduplicate Hunt “return HP/MP” vs Recovery escape % (one source of truth)
+- [ ] Recovery: “Use HP potion” toggle
+- [ ] Recovery: resurrect if dead
+- [ ] Recovery: resume after relogin
+- [ ] Recovery: max retries (drive `RecoveryBudget`, not hardcoded 3/10 min)
+- [ ] Recovery: random teleport enable + HP threshold
+- [ ] Magic: per-class skill checkboxes (sunlight, glowing aura, bounce attack, …)
+- [ ] Magic: disable-in-combat, stop-below-MP
+- [ ] Equipment: buy arrows on/off, normal vs silver, silver qty
+- [ ] Equipment: repair, restock potions, equip profile
+- [ ] Other: loot mode `adena_weighted` (accepted by UI, rejected by adapter)
+
+---
+
+## 3. Town / bag loop
+
+Arrow buy exists. Full supply cycle does not.
+
+- [ ] Shop sell when bag is full (explicitly not implemented today)
+- [ ] Repair equipment trip
+- [ ] Restock potions trip
+- [ ] Return to town / safe on high weight (HUD weight only forces adena loot today)
+- [ ] Return on no supplies
+- [ ] Honor chosen potion / shop NPC from settings
+- [ ] Implement or remove `PlayerMode.TRADING`
+
+---
+
+## 4. Combat policy
+
+Live combat is sticky click/cast + give-up + species rules. Hunt tab policies are not implemented.
+
+- [ ] Attack mode selection actually changes behavior (not only character class)
+- [ ] Keep-distance / kiting
+- [ ] Attack-range gate for bow / melee / magic
+- [ ] Mage: spell-then-melee (or ranged) fallback when MP is low
+- [ ] Royal-specific combat (currently knight clone)
+- [ ] Elf-specific combat policy beyond Mother Tree + click cadence
+
+---
+
+## 5. Recovery & session lifecycle
+
+Engine already potions, retreats, teleports, respawns, and can relogin — but Recovery toggles do not control it.
+
+- [ ] Gate HP potions on the Recovery toggle (+ hotbar mapping)
+- [ ] Gate death → restart click on “resurrect if dead”
+- [ ] Gate auto-relogin on “resume after relogin”
+- [ ] Pass Recovery max retries into `RecoveryBudget`
+- [ ] Random teleport at configured HP (not only fixed ~10% idle emergency)
+- [ ] Allow Start when game is already in-world **without** requiring an account (optional / advanced)
+- [ ] Pass task server + character slot into `AutoLoginRequest`
+
+---
+
+## 6. Content & maps
+
+- [ ] Ship dungeon map packs named in UI (`talking_island_dungeon_F1`, `desert_dungeon_F1`) **or** remove those names from the map list
+- [ ] Ensure dungeon packs include terrain / `patrol.yaml` so patrol mode can run
+- [ ] Confirm mainland + talking_island nav assets are complete for pathfinding
+
+---
+
+## 7. Autologin & language
+
+- [ ] Wire CAPTCHA solve into the login pipeline (solver exists; stages do not call it)
+- [ ] Game-language calibrations for Japanese (UI offers JA; shop/HUD clicks are ko/zh only)
+- [ ] Document or fix Chinese shop-click X still using Korean UV
+
+---
+
+## 8. Engine stubs / cleanup
+
+- [ ] Replace blackboard `is_walkable` stub with real terrain checks (or delete unused path)
+- [ ] Hotbar: decide whether class skill checkboxes override role map, or drop those UI rows
+- [ ] Remove or gray out Draft-only fields until the matching logic exists (reduces false confidence)
+
+---
+
+## Suggested order
+
+1. [ ] Schedule executor + account/slot wiring  
+2. [ ] Expand `apply_runtime_settings` (adapter) for every setting you keep  
+3. [ ] Town / bag loop (sell, repair, restock, weight return)  
+4. [ ] Combat modes (keep-distance, fallback, class policies)  
+5. [ ] Recovery flags + budget  
+6. [ ] Dungeon packs / CAPTCHA / language polish  
+
+---
+
+## Notes
+
+- **Draft** in the schedule UI means “saved only; no timer.” That stays true until §1 is done.
+- Prefer wiring a control **or** hiding it — leaving live-looking toggles that do nothing is the main UX risk.
+- Core farm loop that **does** work today: farms/patrol, hotbar scan, potions/escape, Mother Tree, talking-scroll shop for arrows, loot filters, death restart, game-closed relogin (when account exists).

@@ -1,0 +1,6 @@
+id: desert_dungeon_F4
+name: "Desert Dungeon F4"
+origin_x: 32694
+origin_y: 32696
+pixel_scale: 1
+terrain: nav.png

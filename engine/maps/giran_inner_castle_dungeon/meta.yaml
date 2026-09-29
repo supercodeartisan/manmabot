@@ -1,0 +1,9 @@
+id: giran_inner_castle_dungeon
+name: "Giran Inner Castle"
+# From obstacle_tiles_raw map_52.png (1 px = 1 tile).
+raw_map: "52"
+origin_x: 32704
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

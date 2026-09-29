@@ -1,0 +1,1842 @@
+{
+  "contents": [
+    {
+      "id": 0,
+      "name": "初級治癒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/383.png",
+      "favorite": false,
+      "description": "恢復目標少量的體力(對不死系給予少量傷害)",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 4,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 1,
+      "name": "日光術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/384.png",
+      "favorite": false,
+      "description": "持續期間製造光源照亮施法者的周圍",
+      "duration": "7,200秒",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 4,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 2,
+      "name": "保護罩",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/385.png",
+      "favorite": false,
+      "description": "強化防禦力(增加防禦2點)",
+      "duration": "1,200秒",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 2,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 3,
+      "name": "光箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/386.png",
+      "favorite": false,
+      "description": "壓縮射出的魔法能量，讓對方受到些許的傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 4,
+      "name": "傳送術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/387.png",
+      "favorite": false,
+      "description": "傳送到任意場所，或使用傳送控制戒指傳送到記憶場所",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 5,
+      "name": "冰箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/657.png",
+      "favorite": false,
+      "description": "利用冰短劍，讓對方受到些許的傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 6,
+      "name": "風刃",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/663.png",
+      "favorite": false,
+      "description": "利用風鋸齒，讓對方受到些許的傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 7,
+      "name": "神聖武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/775.png",
+      "favorite": false,
+      "description": "在武器上賦予神聖的咒語(追加傷害+1、近距離命中+1、不死族追加傷害)",
+      "duration": "1,200秒",
+      "classNames": [
+        "王族",
+        "騎士",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 8,
+      "name": "解毒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/388.png",
+      "favorite": false,
+      "description": "中和對象所中的毒",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 9,
+      "name": "寒冷戰慄",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/389.png",
+      "favorite": false,
+      "description": "奪走對象一些體力",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 9,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 10,
+      "name": "毒咒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/390.png",
+      "favorite": false,
+      "description": "將對象中毒，緩慢減少對象的體力",
+      "duration": "30秒",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 11,
+      "name": "擬似魔法武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/391.png",
+      "favorite": false,
+      "description": "在武器上賦予魔法(追加傷害+2)",
+      "duration": "1,800秒",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 12,
+      "name": "無所遁形術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/392.png",
+      "favorite": false,
+      "description": "找出隱身的對象",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 13,
+      "name": "負重強化",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/755.png",
+      "favorite": false,
+      "description": "減少持有道具的重量",
+      "duration": "1,800秒",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 14,
+      "name": "火箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/651.png",
+      "favorite": false,
+      "description": "利用火炎箭，讓對方受到些許的傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 15,
+      "name": "地獄之牙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/659.png",
+      "favorite": false,
+      "description": "利用石柱，讓對方受到些許的傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "王族",
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 16,
+      "name": "極光雷電",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/393.png",
+      "favorite": false,
+      "description": "射出閃電而且施以傷害前方的敵人",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 13,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 17,
+      "name": "起死回生術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/394.png",
+      "favorite": false,
+      "description": "一定的機率破壞不死系怪物(但也有一定機率引起狂暴憤怒)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 18,
+      "name": "中級治癒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/395.png",
+      "favorite": false,
+      "description": "能恢復對象較多的體力(對不死族給予一定傷害)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 11,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 19,
+      "name": "闇盲咒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/396.png",
+      "favorite": false,
+      "description": "有一定的機率能使敵人盲目",
+      "duration": "10秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 20,
+      "name": "鎧甲護持",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/397.png",
+      "favorite": false,
+      "description": "在盔甲上賦予魔法(增加防禦3點)",
+      "duration": "1,800秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 21,
+      "name": "寒冰氣息",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/655.png",
+      "favorite": false,
+      "description": "利用冰雲給予範圍傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 9,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 22,
+      "name": "能量感測",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/848.png",
+      "favorite": false,
+      "description": "查看對象的弱點屬性(地、火、風、水屬性)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 24,
+      "name": "燃燒的火球",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/398.png",
+      "favorite": false,
+      "description": "給予投擲火球範圍內的所有敵人傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 16,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 25,
+      "name": "通暢氣脈術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/399.png",
+      "favorite": false,
+      "description": "提升敏捷(敏捷+5)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 26,
+      "name": "壞物術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/400.png",
+      "favorite": false,
+      "description": "能損害對象角色的武器",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 27,
+      "name": "吸血鬼之吻",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/401.png",
+      "favorite": false,
+      "description": "吸取攻擊對象角色的體力",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 13,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 28,
+      "name": "緩速術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/402.png",
+      "favorite": false,
+      "description": "在持續時間內，降低對象的移動及攻擊速度",
+      "duration": "30秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 29,
+      "name": "岩牢",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/647.png",
+      "favorite": false,
+      "description": "利用刺藤蔓給予範圍傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 11,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 30,
+      "name": "魔法屏障",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/746.png",
+      "favorite": false,
+      "description": "使魔法傷害無效化1次(部分除外)",
+      "duration": "16秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 31,
+      "name": "冥想術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/793.png",
+      "favorite": false,
+      "description": "透過冥想集中精神(服用魔力回復藥水時增幅)",
+      "duration": "600秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 40,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 32,
+      "name": "木乃伊的詛咒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/403.png",
+      "favorite": false,
+      "description": "有一定的機率麻痺對象，使其無法動彈(石化狀態)",
+      "duration": "4秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 33,
+      "name": "極道落雷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/404.png",
+      "favorite": false,
+      "description": "從天空呼叫閃電並在對象上施以嚴重的損害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 34,
+      "name": "高級治癒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/405.png",
+      "favorite": false,
+      "description": "恢復施法者的體力(對不死系給予一定傷害)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 35,
+      "name": "迷魅術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/406.png",
+      "favorite": false,
+      "description": "有一定的機率迷惑對象並使它跟隨施法者的命令",
+      "duration": "3,600秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 36,
+      "name": "聖潔之光",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/407.png",
+      "favorite": false,
+      "description": "解除詛咒",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 37,
+      "name": "冰錐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/643.png",
+      "favorite": false,
+      "description": "用冰圓錐給予大傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 21,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 38,
+      "name": "魔力奪取",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/791.png",
+      "favorite": false,
+      "description": "吸收對象的魔力",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 50,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 39,
+      "name": "黑闇之影",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/749.png",
+      "favorite": false,
+      "description": "施放魔法使其失明(暗黑狀態)",
+      "duration": "20秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 40,
+      "name": "造屍術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/408.png",
+      "favorite": false,
+      "description": "從對象的屍體創造人形殭屍，依施法者的等級決定殭屍的強度",
+      "duration": "3,600秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 41,
+      "name": "體魄強健術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/409.png",
+      "favorite": false,
+      "description": "提高力量5點",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 42,
+      "name": "加速術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/410.png",
+      "favorite": false,
+      "description": "在持續時間內，對象的移動及攻擊速度上升",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 43,
+      "name": "魔法相消術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/411.png",
+      "favorite": false,
+      "description": "能消除對象角色身上所有的魔法效果(部分效果除外)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 44,
+      "name": "地裂術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/412.png",
+      "favorite": false,
+      "description": "崩裂地塊，使之撞擊在對象上施以損害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 45,
+      "name": "烈炎術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/661.png",
+      "favorite": false,
+      "description": "透過凝聚的爆炸給予大傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 46,
+      "name": "弱化術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/850.png",
+      "favorite": false,
+      "description": "施放詛咒使其弱化(近距離傷害-4、近距離命中-2)",
+      "duration": "30秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 47,
+      "name": "祝福魔法武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/726.png",
+      "favorite": false,
+      "description": "在武器上賦予魔法(追加傷害+2、近距離命中+2)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精",
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 48,
+      "name": "體力回復術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/413.png",
+      "favorite": false,
+      "description": "除了施展者，同時恢復隊員的體力",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 49,
+      "name": "冰矛圍籬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/414.png",
+      "favorite": false,
+      "description": "對目標給予水屬性魔法傷害(一定機率冰凍)",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 50,
+      "name": "召喚術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/415.png",
+      "favorite": false,
+      "description": "依照魅力召喚複數的怪物(依照等級可召喚的怪物不同)",
+      "duration": "3,600秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 3
+      }
+    },
+    {
+      "id": 51,
+      "name": "神聖疾走",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1578.png",
+      "favorite": false,
+      "description": "提升移動速度",
+      "duration": "64秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 52,
+      "name": "龍捲風",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/417.png",
+      "favorite": false,
+      "description": "以咒文召喚強大旋風而且在施法者本身四個單位內施以嚴重的損害",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 45,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 53,
+      "name": "強力加速術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/622.png",
+      "favorite": false,
+      "description": "提升移動及攻擊速度",
+      "duration": "2,400秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 54,
+      "name": "狂暴術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1570.png",
+      "favorite": false,
+      "description": "施放魔法使其陷入狂戰士化(近距離傷害+5、降低防禦10點、無法自然恢復體力)",
+      "duration": "1,200秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 55,
+      "name": "疾病術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/758.png",
+      "favorite": false,
+      "description": "施放詛咒使其弱化(近距離命中-4、降低防禦8點)",
+      "duration": "30秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 56,
+      "name": "全部治癒術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/418.png",
+      "favorite": false,
+      "description": "回復對象的大量體力，若用在不死系怪物上則可以造成大量傷害",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 58,
+      "name": "冰雪暴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/420.png",
+      "favorite": false,
+      "description": "以冰暴來給畫面內所有敵人強大損害",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 59,
+      "name": "隱身術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/421.png",
+      "favorite": false,
+      "description": "在持續時間內其他玩家或非玩家操控角色看不到施法者，但除此之外，施法者若有任何積極性的動作，效果就會消失",
+      "duration": "魔力持續時間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 45,
+        "hp": 25,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 60,
+      "name": "返生術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/422.png",
+      "favorite": false,
+      "description": "復活對象",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 61,
+      "name": "震裂術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/649.png",
+      "favorite": false,
+      "description": "引發放射型地震，給予範圍傷害。",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 63,
+      "name": "魔法封印",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/822.png",
+      "favorite": false,
+      "description": "使周邊成為真空狀態(無法使用魔法及交談)",
+      "duration": "16秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 64,
+      "name": "雷霆風暴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1579.png",
+      "favorite": false,
+      "description": "呼喚大自然裡的閃電及狂風攻擊敵人",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 48,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 65,
+      "name": "沉睡之霧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/424.png",
+      "favorite": false,
+      "description": "召喚雲層使敵人或怪物進入睡眠",
+      "duration": "1~8秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 67,
+      "name": "聖結界",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/426.png",
+      "favorite": false,
+      "description": "提高目標對各種傷害的抵抗力，受術者對在法術的作用期間所受到的傷害減少30%。",
+      "duration": "32秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 68,
+      "name": "集體傳送術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/427.png",
+      "favorite": false,
+      "description": "與周邊的血盟成員一起移動，若搭配「傳送控制戒指」能指定傳送去的目的地",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 69,
+      "name": "火風暴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/653.png",
+      "favorite": false,
+      "description": "在施法者周圍一定範圍內引發火屬性風暴",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 48,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 70,
+      "name": "藥水霜化術",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/752.png",
+      "favorite": false,
+      "description": "無法使用藥水",
+      "duration": "4~16秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 73,
+      "name": "流星雨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/429.png",
+      "favorite": false,
+      "description": "從天空召喚流星，且對目標三單元內所有敵人施以極大的損害",
+      "duration": "瞬間",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 78,
+      "name": "靈魂昇華",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1610.png",
+      "favorite": false,
+      "description": "在持續時間內增加施展者最大HP+20%、最大MP+20%",
+      "duration": "1,200秒",
+      "classNames": [
+        "魔法師"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 86,
+      "name": "衝擊之暈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1624.png",
+      "favorite": false,
+      "description": "一定機率使目標暈眩，並造成傷害",
+      "duration": "4秒以下",
+      "classNames": [
+        "騎士"
+      ],
+      "consumables": {
+        "mp": 12,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 87,
+      "name": "增幅防禦",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1887.png",
+      "favorite": false,
+      "description": "以精神力吸收傷害(傷害減少+1，自50級起，每5級增加1)",
+      "duration": "1,200秒",
+      "classNames": [
+        "騎士"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 88,
+      "name": "尖刺盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1881.png",
+      "favorite": false,
+      "description": "在雙手賦予力量(近距離命中+5)",
+      "duration": "1,200秒",
+      "classNames": [
+        "騎士"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 89,
+      "name": "堅固防護",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20160.png",
+      "favorite": false,
+      "description": "把精神集中在迴避上(ER+15, 到達50級時額外+5，從51級到55級為止，每一級額外+1，最多+25)",
+      "duration": "180秒",
+      "classNames": [
+        "騎士"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 30,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 90,
+      "name": "反擊屏障",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20480.png",
+      "favorite": false,
+      "description": "在持續時間內，以一定機率迴避對方的近距離傷害後進行反擊，反擊傷害會受到目前穿戴中雙手劍的大型怪物傷害影響。(僅穿戴雙手劍時可使用)",
+      "duration": "64秒",
+      "classNames": [
+        "騎士"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 100,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 112,
+      "name": "精準目標",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/894.png",
+      "favorite": false,
+      "description": "生成追蹤對象的的標誌",
+      "duration": "16秒",
+      "classNames": [
+        "王族"
+      ],
+      "consumables": {
+        "mp": 1,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 113,
+      "name": "灼熱靈氣",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/878.png",
+      "favorite": false,
+      "description": "近距離傷害+1、近距離命中+1",
+      "duration": "1,200秒",
+      "classNames": [
+        "王族"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 115,
+      "name": "呼喚盟友",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/883.png",
+      "favorite": false,
+      "description": "將1名血盟成員召喚到自身的位置",
+      "duration": "瞬間",
+      "classNames": [
+        "王族"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 116,
+      "name": "勇敢靈氣",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/885.png",
+      "favorite": false,
+      "description": "近距離傷害+3、近距離命中+3",
+      "duration": "1,200秒",
+      "classNames": [
+        "王族"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 117,
+      "name": "援護盟友",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1751.png",
+      "favorite": false,
+      "description": "傳送到指定的血盟成員身邊",
+      "duration": "瞬間",
+      "classNames": [
+        "王族"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 128,
+      "name": "魔法防禦",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/811.png",
+      "favorite": false,
+      "description": "增加魔法防禦力(魔法抵抗+10%)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 129,
+      "name": "心靈轉換",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/731.png",
+      "favorite": false,
+      "description": "消耗體力來恢復精神(恢復魔力2)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 8,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 130,
+      "name": "世界樹的呼喚",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/846.png",
+      "favorite": false,
+      "description": "移動至世界樹",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 131,
+      "name": "三重矢",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1755.png",
+      "favorite": false,
+      "description": "以極快的速度射出三隻箭",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 136,
+      "name": "淨化精神",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/743.png",
+      "favorite": false,
+      "description": "提升精神3點",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 137,
+      "name": "屬性防禦",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/802.png",
+      "favorite": false,
+      "description": "增加屬性防禦(所有屬性防禦+10)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 144,
+      "name": "釋放元素",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/820.png",
+      "favorite": false,
+      "description": "消除召喚的手下",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 145,
+      "name": "魂體轉換",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/729.png",
+      "favorite": false,
+      "description": "消耗體力來恢復精神(恢復魔力15)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 50,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 146,
+      "name": "單屬性防禦",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/871.png",
+      "favorite": false,
+      "description": "增加自身所屬屬性的抵抗力(屬性防禦+50)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 147,
+      "name": "火焰武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/772.png",
+      "favorite": false,
+      "description": "借助火焰的攻擊力(近距離傷害+3)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 148,
+      "name": "風之神射",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/853.png",
+      "favorite": false,
+      "description": "借助風的攻擊力(遠距離命中+5)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 149,
+      "name": "風之疾走",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/856.png",
+      "favorite": false,
+      "description": "提升移動速度",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 150,
+      "name": "大地防護",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/761.png",
+      "favorite": false,
+      "description": "借助大地的防禦力(提升防禦4點)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 151,
+      "name": "地面障礙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/764.png",
+      "favorite": false,
+      "description": "用樹枝綁住腳步(減少移動速度)",
+      "duration": "30秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 152,
+      "name": "魔法消除",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/767.png",
+      "favorite": false,
+      "description": "1次為限，魔法抵抗減少約1/2",
+      "duration": "16秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 153,
+      "name": "召喚屬性精靈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/867.png",
+      "favorite": false,
+      "description": "召喚自身所屬屬性的精靈",
+      "duration": "3,600秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 154,
+      "name": "舞躍之火",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/733.png",
+      "favorite": false,
+      "description": "借助火焰的攻擊力(近距離傷害 +3)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 155,
+      "name": "暴風之眼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/769.png",
+      "favorite": false,
+      "description": "借助風的攻擊力(遠距離傷害+2、遠距離命中+2)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 156,
+      "name": "大地屏障",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/891.png",
+      "favorite": false,
+      "description": "使目標束縛(束縛中不受任何傷害及無法行動)",
+      "duration": "8秒以下",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 4
+      }
+    },
+    {
+      "id": 157,
+      "name": "生命之泉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/799.png",
+      "favorite": false,
+      "description": "借助水的恢復力(恢復大量的體力)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 158,
+      "name": "大地的祝福",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/723.png",
+      "favorite": false,
+      "description": "借助大地的防禦力(提升防禦5點)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 160,
+      "name": "封印禁地",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/720.png",
+      "favorite": false,
+      "description": "以一定機率所有非玩家操縱之角色或玩家無法使用魔法及聊天",
+      "duration": "1~8秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 161,
+      "name": "召喚強力屬性精靈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/869.png",
+      "favorite": false,
+      "description": "召喚自身所屬屬性的上級精靈",
+      "duration": "3,600秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 4
+      }
+    },
+    {
+      "id": 162,
+      "name": "烈炎武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/736.png",
+      "favorite": false,
+      "description": "借助火焰的攻擊力(近距離傷害+5、近距離命中+3)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 163,
+      "name": "生命的祝福",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/796.png",
+      "favorite": false,
+      "description": "借助水的恢復力(恢復所有隊員一定量的體力)",
+      "duration": "瞬間",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 165,
+      "name": "暴風神射",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/825.png",
+      "favorite": false,
+      "description": "借助風的攻擊力(遠距離傷害+4、遠距離命中+2)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 167,
+      "name": "鋼鐵防護",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/781.png",
+      "favorite": false,
+      "description": "借助大地的防禦力(提升防禦7點)",
+      "duration": "1,200秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 169,
+      "name": "水之元氣",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1756.png",
+      "favorite": false,
+      "description": "治癒系魔法效果套用1.5倍",
+      "duration": "64秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 172,
+      "name": "污濁之水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20477.png",
+      "favorite": false,
+      "description": "治癒系魔法和恢復藥水效果減少1/2",
+      "duration": "4~16秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 173,
+      "name": "精準射擊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20474.png",
+      "favorite": false,
+      "description": "對象的ER減少1/3",
+      "duration": "4~12秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 174,
+      "name": "烈焰之魂",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20471.png",
+      "favorite": false,
+      "description": "在持續時間內，施展者可使用其穿戴近距離武器的最大傷害進行攻擊，且武器不會受損",
+      "duration": "128秒",
+      "classNames": [
+        "妖精"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 3
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 2000,
+    "lastPage": 1,
+    "total": 110,
+    "limit": 10000
+  }
+}

@@ -1,0 +1,50 @@
+2026-09-29 23:05:21.228  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 23:05:21.257  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-230521.log
+2026-09-29 23:05:21.269  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-230521.log
+2026-09-29 23:05:21.981  INFO   nav         building portal graph (cluster=32, 512x576)
+2026-09-29 23:05:22.884  INFO   nav         portal graph: 189 components, 771 ms
+2026-09-29 23:05:23.166  INFO   nav         farms=2 safe=11 home=(385, 246) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 23:05:23.587  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 23:05:24.325  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 23:05:24.386  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 23:05:24.424  INFO   session     인벤토리 수신 시작 · inv.json 시드 · hp=42 화살=9151 은화살=0 해독=0 (백그라운드 실시간 스캔)
+2026-09-29 23:05:24.758  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-29 23:05:25.515  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box2/f9, 텔레포트@box1/f10, 마법 공격@box1/f12, 말하는 두루마리@box2/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-29 23:05:25.693  INFO   session     매핑되지 않은 핫바 아이콘: box1/f8:SPELL, box1/f11:아데나, box1/f12:화살, box2/f10:상쾌한 빨간 물약, box2/f12:속도향상 물약, box3/f10:SPELL
+2026-09-29 23:05:26.093  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-29 23:05:27.103  INFO   session     Entity shadow: vision=24 {'player': 21, 'monster': 1, 'npc': 2} memory=40 {'npc': 6, 'player': 34} paired=22 median=0.027
+2026-09-29 23:05:27.156  INFO   session     인벤토리 수신 준비 (dll) · hp=42 화살=9129 은화살=0 해독=0
+2026-09-29 23:05:27.298  INFO   nav         talking scroll emit spot=ti_general_goods purpose=shop reason=go to shop (sell_garbage_ch)
+2026-09-29 23:05:27.298  INFO   shop        shop scrolled behavior=sell_garbage_ch retry=0
+2026-09-29 23:05:27.319  INFO   decision    mode=farming goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(1132,-32) shop=1 scrolled=1 reason='go to shop (sell_garbage_ch)' status=success
+2026-09-29 23:05:32.401  INFO   shop        at shop — stop behavior=sell_garbage_ch
+2026-09-29 23:05:33.005  INFO   decision    mode=farming goal=shop action=shop_stop target=- sticky=- origin=(386,245) shop=1 scrolled=1 reason='stop at shop' status=success
+2026-09-29 23:05:33.706  INFO   session     Entity shadow: vision=13 {'player': 11, 'item': 1, 'npc': 1} memory=23 {'player': 20, 'item': 1, 'npc': 2} paired=13 median=0.023
+2026-09-29 23:05:33.896  INFO   shop        open shop UI behavior=sell_garbage_ch
+2026-09-29 23:05:34.158  INFO   decision    mode=farming goal=shop action=shop_buy_arrows target=- sticky=- origin=(386,245) shop=1 scrolled=1 reason='shop:sell_garbage_ch' status=success
+2026-09-29 23:05:58.716  INFO   session     Entity shadow: vision=14 {'npc': 3, 'player': 10, 'item': 1} memory=21 {'player': 18, 'item': 1, 'npc': 2} paired=13 median=0.021
+2026-09-29 23:05:59.474  INFO   nav         talking scroll emit spot=giran_weapon purpose=shop reason=go to shop (sell_garbage_weapon_ch)
+2026-09-29 23:06:00.094  INFO   shop        shop scrolled behavior=sell_garbage_weapon_ch retry=0
+2026-09-29 23:06:00.129  INFO   decision    mode=farming goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(386,245) shop=1 scrolled=1 reason='go to shop (sell_garbage_weapon_ch)' status=success
+2026-09-29 23:06:00.591  INFO   session     일시정지 — 단축키
+2026-09-29 23:06:03.110  INFO   session     일시정지 / 재개 → 실행 중
+2026-09-29 23:06:04.175  INFO   nav         async nav configure start map=mainland
+2026-09-29 23:06:04.708  INFO   session     Entity shadow: vision=24 {'player': 23, 'npc': 1} memory=37 {'player': 33, 'npc': 4} paired=23 median=0.027
+2026-09-29 23:06:04.990  INFO   shop        at shop — stop behavior=sell_garbage_weapon_ch
+2026-09-29 23:06:05.227  INFO   decision    mode=farming goal=shop action=shop_stop target=- sticky=- origin=(886,534) shop=1 scrolled=1 reason='stop at shop' status=success
+2026-09-29 23:06:05.400  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-29 23:06:12.265  INFO   nav         portal graph: 2586 components, 6845 ms
+2026-09-29 23:06:12.532  INFO   session     Entity shadow: vision=12 {'player': 11, 'npc': 1} memory=33 {'player': 29, 'npc': 4} paired=10 median=0.089
+2026-09-29 23:06:12.537  INFO   nav         farms=6 safe=0 home=None (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\mainland\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\mainland\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\mainland\home.yaml)
+2026-09-29 23:06:12.598  INFO   nav         async nav configure done map=mainland (8421 ms)
+2026-09-29 23:06:23.469  INFO   session     Entity shadow: vision=0 {} memory=36 {'npc': 5, 'player': 31} paired=0 median=0.000
+2026-09-29 23:06:23.811  INFO   shop        open shop UI behavior=sell_garbage_weapon_ch
+2026-09-29 23:06:24.363  INFO   decision    mode=farming goal=shop action=shop_buy_arrows target=- sticky=- origin=(886,534) shop=1 scrolled=1 reason='shop:sell_garbage_weapon_ch' status=success
+2026-09-29 23:06:28.550  INFO   session     일시정지 — 단축키
+2026-09-29 23:07:28.940  INFO   session     재개 → 실행 중
+2026-09-29 23:07:29.650  INFO   nav         talking scroll emit spot=giran_general_goods purpose=shop reason=go to shop (sell_garbage_mainland_ch)
+2026-09-29 23:07:30.017  INFO   shop        shop scrolled behavior=sell_garbage_mainland_ch retry=0
+2026-09-29 23:07:30.277  INFO   decision    mode=farming goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(140,811) shop=1 scrolled=1 reason='go to shop (sell_garbage_mainland_ch)' status=success
+2026-09-29 23:07:30.838  INFO   session     일시정지 — 단축키
+2026-09-29 23:07:35.178  INFO   session     정지 → 중지됨
+2026-09-29 23:07:35.664  INFO   session     봇 작업이 종료되었습니다

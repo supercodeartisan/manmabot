@@ -1,0 +1,14 @@
+# Talking Island walkability pack (nav tiles relative to origin).
+# Terrain from new/map_0.png (1 px = 1 tile). Previous pack kept as nav_prev.png.
+id: talking_island
+name: "Talking Island"
+origin_x: 32256
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+# Default vision-model region stamped on new areas (≠ map id).
+default_region: talking island
+# Area YAML files in this folder (nav-tile rects for this map only).
+farms: farms.yaml
+safe: safe.yaml
+home: home.yaml

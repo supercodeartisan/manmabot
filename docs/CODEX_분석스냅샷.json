@@ -1,0 +1,123 @@
+{
+  "author": "Codex",
+  "recorded_at_utc": "2026-09-27T23:55:57.504155+00:00",
+  "scope": "Source hashes at evidence-generation time; not EXE/runtime certification",
+  "source_sha256": {
+    "manmabot_v1/bot_controller.py": "08cc520f50b030731efc5b58839750350e6417b206b5c5df0610294b909b012a",
+    "manmabot_v1/task_runtime.py": "6c9c02bc5a324c33134a64b3145a8c2f2b1d2fc503d38d1e7edb09c932f252be",
+    "manmabot_v1/hp_actions.py": "a7b2b657c3f07795435cd44276dbc928352b8863b148d134fea9f8d26bd0403c",
+    "engine/app/_04_decision/manager.py": "f95a8982a21b1673cad9393cd3f5bb9f7e05f7fec527194b44c15139828be6d8",
+    "engine/app/_04_decision/configure.py": "bd8bb188d6f246a606b3e0b95b2a2ea496766c9d86f2d237e1f186d59315782a",
+    "engine/app/_04_decision/behaviors/mode_ticks.py": "939348b51abc0f004caf2f410314ad50b0ed81de8609731e32ade08c322a6bf6",
+    "engine/app/_04_decision/behaviors/mode_actions.py": "e27cd0389fac1809829358116bac68cc319cd577c41082dfcbf07dee5e3e3faa",
+    "engine/app/_04_decision/mode_control.py": "de648636f9a1b70907dc76819d444ea7521d5fa752a253d5ff09037e440a80f3",
+    "engine/app/_04_decision/hp_actions.py": "6481a6b242f4b85bb72584bb9350ca512b65d6a966fc528e8cf484e9aa96c24b",
+    "engine/app/_04_decision/shops.py": "1d25073355dd2731d198d24155d12b6d9b6d36ec303cee6184a5fc53e618f07e",
+    "engine/app/_04_decision/shop_trip.py": "7e2779ecb545ba05e15ea38de6ab4d4427981abde0f418220e2aa168873c28c9",
+    "engine/app/_03_world/memory_inventory.py": "1a16f5ad8f9bbf23bff22cd8ff043bb321d0bb2fd82a50d9ea8cee38d72001b9",
+    "engine/app/_03_world/memory_sync.py": "28aaf450c0fe72546411d55f9316fa3253e11975248db6faeb6bf4cc25f71472",
+    "engine/app/_04_decision/combat_query.py": "26a3b818633881dfa04999ecda77e8924635849caac53ebe9fd7504c5b25271d",
+    "engine/app/_04_decision/behaviors/combat.py": "f1d6d2b16e9892aa5e311e2f97bc3d0c541e7697a7f9be2e19229f755a27417a",
+    "engine/app/_04_decision/attack_feedback.py": "1e3523c66421f7ac870fac38cd6e603761e96d72551288fb547823649ad46c86",
+    "engine/app/_04_decision/behaviors/unstick.py": "80d3a04c24a0589342349db6cf116ef9c572a6cfb2cb1b10f865a00c1a3d9f9c",
+    "engine/app/_04_decision/behaviors/travel.py": "391d16e14da83ffd98d977ba76e964c5826be04ffeaaf82449624f40084098da",
+    "engine/app/_04_decision/behaviors/loot_hop.py": "a08ead9399baed8f9431707af9d4e880d645064efd07ecf632fbe593b75aee2a",
+    "engine/app/_04_decision/talking_scroll.py": "bbc419c11f50ea1e9b241c70818db0df01373e94e5ae6d4314eb5909c1010818",
+    "engine/app/_04_decision/spells.py": "185b4f94dda3e5a26121c1cc56232fe307887aef85ed565e15115645f7db80f0",
+    "engine/app/_04_decision/hunt_area.py": "c4123335e8a8dd8984f7a9aeeaefce5379e4a07467c855bfd4a6d4b54b2fb2c2",
+    "engine/app/_04_decision/species_rules.py": "34920bc6c97cc03e5de108c64fc265e76be0ca64e76108da4ed5bdc31ace4a81",
+    "engine/app/_05_action/controller.py": "e0d3b2d85e2e6857d3768e8a1714bf6e43b4be48dd7ce26cbb060c60e2fd9126",
+    "manmabot_v1/shopping/runtime.py": "5459c55cd80ec3e66c4a9505c033e49d34d50d5f75f111b5df22e5e75f36050e",
+    "run.py": "a989d6d170f31c1f9f5130a07a3ae18c4a79c3dd889e4c004a1221a13b9f6788",
+    "engine/config/decision.yaml": "32dec8934cced783c0671763e9d094e673e7d898a740ce8b9ea3c654c121a56d",
+    "engine/config/memory.yaml": "80e2e0038c915049c44f1bb7780e5a75485cb1d0640dbfb8728314509dc4f39e",
+    "engine/app/_04_decision/player_mode.py": "9dafea13b835d10b89aa53a1b44defef05f3d3dce14ef5a497970ff0ff496ba8",
+    "engine/app/_04_decision/farm_time.py": "660cabd0cf93414d243b0b9b388debb80c4ba66fc90ade3df2b75ec0d9b38710",
+    "engine/app/_04_decision/behaviors/search_hop.py": "78e71253c90b524f558fc3b0b43bd02e0ad33c8de3d674e3e1c5dd96918f1d03",
+    "engine/app/_03_world/world_coords.py": "46d8ac78c7fb9ce39409e9e6990726950748d20d6ff024a82f79311c10ffb312",
+    "engine/app/_05_action/humanize.py": "7b9c0eb15b5b981058cb73b7c2dcb7c9472c4bad5c70c2dbecdb1dfd3edc689b",
+    "engine/app/_05_action/combat_strategies/elf.py": "87db317f649c9606aeb9e477d2653c4a2305607bb0af22a9e3e3e549b7f71ec3",
+    "engine/app/_05_action/combat_strategies/knight.py": "95223ecd49f53a7ecacc63970e6d45be25304c926efd925eb57523f90909ec2e",
+    "engine/app/_05_action/combat_strategies/mage.py": "38f4ea83a318968f171e1c0ba9ee3961d03dec03429fb08dc3156f0ef68c3ce2",
+    "engine/app/_05_action/combat_strategies/royal.py": "a27ce56db6fe079540e638d1520ffbbcdcadac55e6969e85d76fdcf1692dea0d",
+    "userdata/profile.json": "64ecf1c9c53847954e16813dd5e8615112e745e9ac7f2fc228eed659de439231",
+    "userdata/shopping_behaviors.yaml": "a6d3b1a9aae8eb143ab09daf8e5781e27611955c1497d6b221f0b4217685f133",
+    "tests/test_hp_actions.py": "b721d1b554978d24263a86672128aa666c7067f5146573d769a54966e433eab9",
+    "tests/test_shop_trip.py": "a7811984894961e74857f3659d0381bc64613485e8c089e83bb240b699121b4b",
+    "tests/test_combat_focus.py": "f4d9ed982c48346e2507db5c69abfda81587040289640c4e6b6ec4e2d464bb19",
+    "tests/test_ground_loot.py": "19d6f15b89e84c4872604807d182b87ac26a2e3f921d06bc634b64d61bdc887a",
+    "tests/test_loot_stand.py": "b29a74d0105a662efb2437d849e3b131e898b4a8e6da6488ab6a7cd8206a0c50",
+    "tests/test_unstick.py": "03bebc7d20176b17a6cb9e2fed0cad846af0c240f082062ee78e25d893c7d80d",
+    "tests/test_dungeon_farming.py": "c78e632927a1c3a35f0c41135b2316fb0e222a656357b14a617a2a1ff3b94592",
+    "tests/test_hunt_attack_settings.py": "b69a86ae8b30b9a3dff1ad18a1ac0f576dae980949e209fee95fd390552b063d",
+    "tests/test_buff_cadence.py": "3b4571ce2d0df1fbf076e13e593b3f779ebdd703c5efef071d2466a8275f3609",
+    "tests/test_weight_source.py": "c726b49460838d4d57c400ae2193f00c705ceb5c7c3939c2a36a3b673082ad64"
+  },
+  "profile_subset": {
+    "character": "elf",
+    "active_map": "talking_island",
+    "game_language": "ko",
+    "shop_locale": "zh",
+    "hp_actions": [
+      {
+        "id": "heal",
+        "enabled": true,
+        "hp_below": 30
+      },
+      {
+        "id": "item:빨간 물약",
+        "enabled": true,
+        "hp_below": 30
+      },
+      {
+        "id": "teleport",
+        "enabled": true,
+        "hp_below": 30
+      },
+      {
+        "id": "safe_zone",
+        "enabled": true,
+        "hp_below": 30
+      },
+      {
+        "id": "mother_tree",
+        "enabled": true,
+        "hp_below": 30
+      },
+      {
+        "id": "item:주홍 물약",
+        "enabled": false,
+        "hp_below": 30
+      },
+      {
+        "id": "item:맑은 물약",
+        "enabled": false,
+        "hp_below": 30
+      },
+      {
+        "id": "item:엔트의 열매",
+        "enabled": false,
+        "hp_below": 30
+      },
+      {
+        "id": "item:고기",
+        "enabled": false,
+        "hp_below": 30
+      }
+    ],
+    "return_arrow_count": 100,
+    "arrow_buy_qty": 100,
+    "return_potion_count": 1,
+    "hp_potion_buy_qty": 3,
+    "hp_potion_npc": "기란 마을 / 잡화 상인",
+    "return_weight_above": 30,
+    "loot_adena_weight_ratio": 0.7,
+    "return_idle_seconds": 54.0,
+    "abandon_seconds": 15,
+    "farm_stays_s": {
+      "area_1": 3600.0,
+      "area_3": 3600.0
+    },
+    "teleport_surround_count": 10
+  }
+}

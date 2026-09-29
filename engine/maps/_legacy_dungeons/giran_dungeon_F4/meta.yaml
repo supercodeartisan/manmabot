@@ -1,0 +1,6 @@
+id: giran_dungeon_F4
+name: "Giran Dungeon F4"
+origin_x: 32686
+origin_y: 32684
+pixel_scale: 1
+terrain: nav.png

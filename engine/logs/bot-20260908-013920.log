@@ -1,0 +1,64 @@
+2026-09-08 01:39:20.467  INFO   session     Loading Manmabot from D:\ManmabotV1\ManmabotV1\engine
+2026-09-08 01:39:20.473  INFO   session     Session log D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-013920.log
+2026-09-08 01:39:20.473  INFO   session     character=elf loot=all_items game_lang=ko map=mainland farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6'] file=D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-013920.log
+2026-09-08 01:39:22.092  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-08 01:39:26.021  INFO   nav         portal graph: 2586 components, 3929 ms
+2026-09-08 01:39:26.026  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\farms.yaml safe=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\safe.yaml home=D:\ManmabotV1\ManmabotV1\engine\maps\mainland\home.yaml)
+2026-09-08 01:39:26.036  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-08 01:39:26.452  INFO   session     Bot worker crashed:
+Traceback (most recent call last):
+  File "D:\ManmabotV1\ManmabotV1\manmabot_v1\bot_controller.py", line 329, in _worker
+    self._run_bot_loop()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "D:\ManmabotV1\ManmabotV1\manmabot_v1\bot_controller.py", line 476, in _run_bot_loop
+    vision = VisionSystem(**vision_kwargs)
+  File "D:\ManmabotV1\ManmabotV1\engine\app\_02_vision\vision_system.py", line 342, in __init__
+    self.load_models(
+    ~~~~~~~~~~~~~~~~^
+        detector_conf, detector_iou, self.detector_device, detector_imgsz
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\ManmabotV1\ManmabotV1\engine\app\_02_vision\vision_system.py", line 411, in load_models
+    self.classifier = Classifier(self.classifier_model_path, device=clf_dev)
+                      ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ManmabotV1\ManmabotV1\engine\app\_02_vision\classifier.py", line 114, in __init__
+    self.load_model()
+    ~~~~~~~~~~~~~~~^^
+  File "D:\ManmabotV1\ManmabotV1\engine\app\_02_vision\classifier.py", line 175, in load_model
+    model = ModelFactory.from_checkpoint(checkpoint)
+  File "D:\ManmabotV1\ManmabotV1\engine\scripts\classify_model\model_architectures.py", line 348, in from_checkpoint
+    return cls.create(
+           ~~~~~~~~~~^
+        architecture,
+        ^^^^^^^^^^^^^
+    ...<4 lines>...
+        fine_hidden=info.get("fine_hidden", 256),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\ManmabotV1\ManmabotV1\engine\scripts\classify_model\model_architectures.py", line 315, in create
+    return cls._registry[architecture](num_classes, **kwargs).get_model()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ManmabotV1\ManmabotV1\engine\scripts\classify_model\model_architectures.py", line 231, in __init__
+    self.backbone = ResNet18Backbone()
+                    ~~~~~~~~~~~~~~~~^^
+  File "D:\ManmabotV1\ManmabotV1\engine\scripts\classify_model\model_architectures.py", line 53, in __init__
+    base = resnet18(weights=ResNet18_Weights.DEFAULT)
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torchvision\models\_utils.py", line 142, in wrapper
+    return fn(*args, **kwargs)
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torchvision\models\_utils.py", line 227, in inner_wrapper
+    return builder(*args, **kwargs)
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torchvision\models\resnet.py", line 705, in resnet18
+    return _resnet(BasicBlock, [2, 2, 2, 2], weights, progress, **kwargs)
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torchvision\models\resnet.py", line 301, in _resnet
+    model.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
+                          ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torchvision\models\_api.py", line 91, in get_state_dict
+    return load_state_dict_from_url(self.url, *args, **kwargs)
+  File "D:\ManmabotV1\ManmabotV1\python\Lib\site-packages\torch\hub.py", line 889, in load_state_dict_from_url
+    sys.stdout.write(f'Downloading: "{url}" to {cached_file}\n')
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'write'
+
+2026-09-08 01:39:27.782  INFO   session     Bot worker exited

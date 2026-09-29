@@ -1,0 +1,1842 @@
+{
+  "contents": [
+    {
+      "id": 0,
+      "name": "힐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/383.png",
+      "favorite": false,
+      "description": "대상의 HP를 조금 회복 시킴(언데드에게는 소량의 피해)",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 4,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 1,
+      "name": "라이트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/384.png",
+      "favorite": false,
+      "description": "밝은 광원을 만들어 주위를 밝힘",
+      "duration": "7,200초",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 4,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 2,
+      "name": "실드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/385.png",
+      "favorite": false,
+      "description": "방어력 강화(AC-2)",
+      "duration": "1,200초",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 2,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 3,
+      "name": "에너지 볼트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/386.png",
+      "favorite": false,
+      "description": "마법 에너지로 작은 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 4,
+      "name": "텔레포트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/387.png",
+      "favorite": false,
+      "description": "임의의 장소로 이동 혹은 순간이동 조종 반지로 기억 장소 이동",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 5,
+      "name": "아이스 대거",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/657.png",
+      "favorite": false,
+      "description": "얼음 단검으로 작은 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 6,
+      "name": "윈드 커터",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/663.png",
+      "favorite": false,
+      "description": "바람의 톱니로 작은 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 7,
+      "name": "홀리 웨폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/775.png",
+      "favorite": false,
+      "description": "무기에 성스러운 주문을 부여(추가 대미지+1, 근거리 명중+1, 언데드 추가 대미지)",
+      "duration": "1,200초",
+      "classNames": [
+        "군주",
+        "기사",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 8,
+      "name": "큐어 포이즌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/388.png",
+      "favorite": false,
+      "description": "독에 걸린 상태를 치료함",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 9,
+      "name": "칠 터치",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/389.png",
+      "favorite": false,
+      "description": "대상의 HP를 조금 빼앗음",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 9,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 10,
+      "name": "커스:포이즌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/390.png",
+      "favorite": false,
+      "description": "독에 중독 시킴(HP를 소모시키는 독)",
+      "duration": "30초",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 11,
+      "name": "인챈트 웨폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/391.png",
+      "favorite": false,
+      "description": "무기에 마법을 부여함(추가 대미지+2)",
+      "duration": "1,800초",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 12,
+      "name": "디텍션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/392.png",
+      "favorite": false,
+      "description": "숨어 있는 대상을 찾아냄",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 13,
+      "name": "디크리즈 웨이트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/755.png",
+      "favorite": false,
+      "description": "소지한 아이템의 무게 감소",
+      "duration": "1,800초",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 14,
+      "name": "파이어 애로우",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/651.png",
+      "favorite": false,
+      "description": "불꽃의 화살로 작은 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 15,
+      "name": "스탈락",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/659.png",
+      "favorite": false,
+      "description": "바위 송곳으로 작은 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "군주",
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 3,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 16,
+      "name": "라이트닝",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/393.png",
+      "favorite": false,
+      "description": "번개로 앞의 적들에게 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 13,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 17,
+      "name": "턴 언데드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/394.png",
+      "favorite": false,
+      "description": "언데드 몬스터를 해방 시킴(확률적으로 버서크 상태가 됨)",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 18,
+      "name": "익스트라 힐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/395.png",
+      "favorite": false,
+      "description": "대상의 HP를 약간 회복 시킴(언데드에게는 일정 피해)",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 11,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 19,
+      "name": "커스:블라인드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/396.png",
+      "favorite": false,
+      "description": "저주를 걸어 눈을 멀게함(암흑 상태)",
+      "duration": "10초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 20,
+      "name": "블레스드 아머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/397.png",
+      "favorite": false,
+      "description": "갑옷에 마법을 부여함(AC-3)",
+      "duration": "1,800초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 21,
+      "name": "프로즌 클라우드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/655.png",
+      "favorite": false,
+      "description": "냉기 구름으로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 9,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 22,
+      "name": "위크 엘리멘탈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/848.png",
+      "favorite": false,
+      "description": "상대의 취약 속성 파악(땅,불,바람,물 속성)",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 8,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 24,
+      "name": "파이어볼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/398.png",
+      "favorite": false,
+      "description": "불타는 화염구로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 16,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 25,
+      "name": "인챈트 덱스터리티",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/399.png",
+      "favorite": false,
+      "description": "민첩 강화(DEX+5)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 26,
+      "name": "웨폰 브레이크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/400.png",
+      "favorite": false,
+      "description": "대상이 무장한 무기를 손상시킴",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 27,
+      "name": "뱀파이어릭 터치",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/401.png",
+      "favorite": false,
+      "description": "대상의 HP를 빼앗음",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 13,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 28,
+      "name": "슬로우",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/402.png",
+      "favorite": false,
+      "description": "이동 및 공격 속도 감소",
+      "duration": "30초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 29,
+      "name": "어스재일",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/647.png",
+      "favorite": false,
+      "description": "가시 덩굴로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 11,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 30,
+      "name": "카운터 매직",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/746.png",
+      "favorite": false,
+      "description": "피해 마법을 1회 무효화함(일부 제외)",
+      "duration": "16초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 31,
+      "name": "메디테이션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/793.png",
+      "favorite": false,
+      "description": "명상을 통해 정신을 집중함",
+      "duration": "600초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 40,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 32,
+      "name": "커스:패럴라이즈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/403.png",
+      "favorite": false,
+      "description": "저주를 걸어 마비를 시킴(석화 상태)",
+      "duration": "4초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 33,
+      "name": "콜 라이트닝",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/404.png",
+      "favorite": false,
+      "description": "번개 소환으로 큰 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 34,
+      "name": "그레이터 힐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/405.png",
+      "favorite": false,
+      "description": "대상의 HP를 회복 시킴(언데드에게는 일정 피해)",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 35,
+      "name": "테이밍 몬스터",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/406.png",
+      "favorite": false,
+      "description": "몬스터에게 최면을 걸어 하수인으로 만듦",
+      "duration": "3,600초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 36,
+      "name": "리무브 커스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/407.png",
+      "favorite": false,
+      "description": "걸려있는 저주를 풂",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 37,
+      "name": "콘 오브 콜드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/643.png",
+      "favorite": false,
+      "description": "냉기의 원뿔로 큰 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 21,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 38,
+      "name": "마나 드레인",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/791.png",
+      "favorite": false,
+      "description": "대상의 MP를 흡수함",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 50,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 39,
+      "name": "다크니스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/749.png",
+      "favorite": false,
+      "description": "마법을 걸어 눈을 멀게함(암흑 상태)",
+      "duration": "20초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 40,
+      "name": "크리에이트 좀비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/408.png",
+      "favorite": false,
+      "description": "시체를 좀비화 하여 하수인으로 만듦",
+      "duration": "3,600초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 41,
+      "name": "인챈트 마이티",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/409.png",
+      "favorite": false,
+      "description": "완력 강화(STR +5)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 42,
+      "name": "헤이스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/410.png",
+      "favorite": false,
+      "description": "대상의 이동 및 공격 속도 향상",
+      "duration": "1,200초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 43,
+      "name": "캔슬레이션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/411.png",
+      "favorite": false,
+      "description": "상태 변화 마법을 제거함(일부 제외)",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 44,
+      "name": "이럽션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/412.png",
+      "favorite": false,
+      "description": "직진형 지진으로 큰 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 45,
+      "name": "선 버스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/661.png",
+      "favorite": false,
+      "description": "응집된 폭발로 큰 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 46,
+      "name": "위크니스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/850.png",
+      "favorite": false,
+      "description": "저주를 걸어 약화 시킴(근거리 대미지-4, 근거리 명중-2)",
+      "duration": "30초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 47,
+      "name": "블레스 웨폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/726.png",
+      "favorite": false,
+      "description": "무기에 마법을 부여(추가 대미지+2, 근거리 명중+2)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정",
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 48,
+      "name": "힐 올",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/413.png",
+      "favorite": false,
+      "description": "술자를 제외한 파티원의 HP를 동시에 회복 시킴",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 49,
+      "name": "아이스 랜스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/414.png",
+      "favorite": false,
+      "description": "대상에게 물 속성 마법 피해를 줌(일정 확률로 빙결시킴)",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 50,
+      "name": "서먼 몬스터",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/415.png",
+      "favorite": false,
+      "description": "카리스마에 따라 복수의 몬스터를 소환(레벨에 따라 소환 가능한 몬스터 상이)",
+      "duration": "3,600초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 3
+      }
+    },
+    {
+      "id": 51,
+      "name": "홀리 워크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1578.png",
+      "favorite": false,
+      "description": "이동 속도 향상",
+      "duration": "64초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 52,
+      "name": "토네이도",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/417.png",
+      "favorite": false,
+      "description": "회오리 바람으로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 45,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 53,
+      "name": "그레이터 헤이스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/622.png",
+      "favorite": false,
+      "description": "이동 및 공격 속도 향상",
+      "duration": "2,400초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 54,
+      "name": "버서커스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1570.png",
+      "favorite": false,
+      "description": "마법을 걸어 광전사화 시킴(근거리 대미지+5, AC+10, HP 자연 회복 불가)",
+      "duration": "1200초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 55,
+      "name": "디지즈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/758.png",
+      "favorite": false,
+      "description": "저주를 걸어 쇠약화 시킴(근거리 명중-4, AC+8)",
+      "duration": "30초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 56,
+      "name": "풀 힐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/418.png",
+      "favorite": false,
+      "description": "대상의 HP를 상당량 회복 시킴(언데드에게는 일정 피해)",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 58,
+      "name": "블리자드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/420.png",
+      "favorite": false,
+      "description": "혹한의 바람으로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 59,
+      "name": "인비지블리티",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/421.png",
+      "favorite": false,
+      "description": "투명 상태(행동에 제약을 받음)",
+      "duration": "MP가 유지되는 시간 동안",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 45,
+        "hp": 25,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 60,
+      "name": "리절렉션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/422.png",
+      "favorite": false,
+      "description": "시체를 부활 시킴",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 61,
+      "name": "어스 퀘이크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/649.png",
+      "favorite": false,
+      "description": "방사형 지진을 일으켜 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 63,
+      "name": "사일런스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/822.png",
+      "favorite": false,
+      "description": "주변을 진공 상태로 만듦(마법 사용 및 채팅 불가)",
+      "duration": "16초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 64,
+      "name": "라이트닝 스톰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1579.png",
+      "favorite": false,
+      "description": "번개 무리를 소환해 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 48,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 65,
+      "name": "포그 오브 슬리핑",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/424.png",
+      "favorite": false,
+      "description": "먼지 구름을 소환(수면 상태)",
+      "duration": "1~8초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 67,
+      "name": "이뮨 투 함",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/426.png",
+      "favorite": false,
+      "description": "매직 배리어를 만듦(술자가 받는 대미지를 30% 감소시킴)",
+      "duration": "32초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 68,
+      "name": "매스 텔레포트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/427.png",
+      "favorite": false,
+      "description": "주변의 혈맹원과 함께 이동(순간이동 조종 반지로 기억 장소 이동)",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 69,
+      "name": "파이어 스톰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/653.png",
+      "favorite": false,
+      "description": "불꽃 폭풍으로 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 48,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 70,
+      "name": "디케이 포션",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/752.png",
+      "favorite": false,
+      "description": "물약 사용 불가",
+      "duration": "4~16초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 73,
+      "name": "미티어 스트라이크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/429.png",
+      "favorite": false,
+      "description": "불꽃의 운석을 소환해 범위 피해를 줌",
+      "duration": "순간",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 60,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 78,
+      "name": "어드밴스 스피릿",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1610.png",
+      "favorite": false,
+      "description": "지속시간 동안 술자의 최대 HP +20%, 최대 MP +20%",
+      "duration": "1200초",
+      "classNames": [
+        "마법사"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 86,
+      "name": "쇼크 스턴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1624.png",
+      "favorite": false,
+      "description": "대상을 기절 상태로 만듬",
+      "duration": "4초 이하",
+      "classNames": [
+        "기사"
+      ],
+      "consumables": {
+        "mp": 12,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 87,
+      "name": "리덕션 아머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1887.png",
+      "favorite": false,
+      "description": "정신력으로 피해를 흡수(대미지 감소+1, 50레벨 후 5레벨 당 1씩 증가)",
+      "duration": "1,200초",
+      "classNames": [
+        "기사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 88,
+      "name": "바운스 어택",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1881.png",
+      "favorite": false,
+      "description": "두 손에 힘을 불어 넣음(근거리 명중+5)",
+      "duration": "1,200초",
+      "classNames": [
+        "기사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 89,
+      "name": "솔리드 캐리지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20160.png",
+      "favorite": false,
+      "description": "회피에 정신을 집중(ER+15, 50레벨 도달 시 +5 추가, 51레벨 부터 55레벨까지 레벨당 +1 추가, 최대 +25)",
+      "duration": "180초",
+      "classNames": [
+        "기사"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 30,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 90,
+      "name": "카운터 배리어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20480.png",
+      "favorite": false,
+      "description": "지속 시간 동안 일정 확률로 상대방의 근거리 대미지를 회피한 후 카운터 공격을 하며, 카운터 공격 대미지는 현재 착용 중인 양손검의 큰 몬스터 대미지에 영향을 받음 (양손검 착용 시에만 사용 가능)",
+      "duration": "64초",
+      "classNames": [
+        "기사"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 100,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 112,
+      "name": "트루 타겟",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/894.png",
+      "favorite": false,
+      "description": "대상을 쫓아다니는 표식을 생성",
+      "duration": "16초",
+      "classNames": [
+        "군주"
+      ],
+      "consumables": {
+        "mp": 1,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 113,
+      "name": "글로잉 오라",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/878.png",
+      "favorite": false,
+      "description": "근거리 대미지+1, 근거리 명중 +1",
+      "duration": "1,200초",
+      "classNames": [
+        "군주"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 115,
+      "name": "콜 클랜",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/883.png",
+      "favorite": false,
+      "description": "혈맹원 한 명을 자신의 위치로 소환",
+      "duration": "순간",
+      "classNames": [
+        "군주"
+      ],
+      "consumables": {
+        "mp": 25,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 116,
+      "name": "브레이브 오라",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/885.png",
+      "favorite": false,
+      "description": "근거리 대미지+3, 근거리 명중+3,",
+      "duration": "1200초",
+      "classNames": [
+        "군주"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 117,
+      "name": "런 클랜",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1751.png",
+      "favorite": false,
+      "description": "지정한 혈맹원에게 텔레포트 함",
+      "duration": "순간",
+      "classNames": [
+        "군주"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 128,
+      "name": "레지스트 매직",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/811.png",
+      "favorite": false,
+      "description": "마법 방어력이 증가(MR+10%)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 129,
+      "name": "바디 투 마인드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/731.png",
+      "favorite": false,
+      "description": "체력을 소모해 정신을 회복(MP 2 회복)",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 8,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 130,
+      "name": "텔레포트 투 마더",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/846.png",
+      "favorite": false,
+      "description": "세계수로 이동 함",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 131,
+      "name": "트리플 애로우",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1755.png",
+      "favorite": false,
+      "description": "빠르게 3발의 화살을 연사함",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 136,
+      "name": "클리어 마인드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/743.png",
+      "favorite": false,
+      "description": "WIS +3 상승",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 137,
+      "name": "레지스트 엘리멘트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/802.png",
+      "favorite": false,
+      "description": "속성 저항이 증가(모든 속성 저항+10)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 5,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 144,
+      "name": "리턴 투 네이쳐",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/820.png",
+      "favorite": false,
+      "description": "소환된 하수인을 사라지게 함",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 145,
+      "name": "블러드 투 소울",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/729.png",
+      "favorite": false,
+      "description": "체력을 소모해 정신을 회복(MP 15 회복)",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 0,
+        "hp": 50,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 146,
+      "name": "프로텍션 프롬 엘리멘트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/871.png",
+      "favorite": false,
+      "description": "자신이 속한 속성 저항력이 증가(속성 저항+50)",
+      "duration": "1200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 10,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 147,
+      "name": "파이어 웨폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/772.png",
+      "favorite": false,
+      "description": "화염의 공격력을 빌림(근거리 대미지+3)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 148,
+      "name": "윈드 샷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/853.png",
+      "favorite": false,
+      "description": "바람의 공격력을 빌림(원거리 명중+5)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 149,
+      "name": "윈드 워크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/856.png",
+      "favorite": false,
+      "description": "이동 속도 향상",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 150,
+      "name": "어스 스킨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/761.png",
+      "favorite": false,
+      "description": "대지의 방어력을 빌림(AC-4)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 15,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 151,
+      "name": "인탱글",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/764.png",
+      "favorite": false,
+      "description": "나무 뿌리로 발을 묶음(이동 속도 감소)",
+      "duration": "30초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 152,
+      "name": "이레이즈 매직",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/767.png",
+      "favorite": false,
+      "description": "1회에 한해 MR이 약 1/2로 감소함",
+      "duration": "16초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 153,
+      "name": "서먼 레서 엘리멘탈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/867.png",
+      "favorite": false,
+      "description": "자신이 속한 속성 정령을 소환함",
+      "duration": "3,600초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 154,
+      "name": "브레스 오브 파이어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/733.png",
+      "favorite": false,
+      "description": "불의 공격력을 빌림(근거리 대미지 +3)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 155,
+      "name": "아이 오브 스톰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/769.png",
+      "favorite": false,
+      "description": "바람의 공격력을 빌림(원거리 대미지+2, 원거리 명중+2)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 156,
+      "name": "어스 바인드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/891.png",
+      "favorite": false,
+      "description": "대상을 홀드시킴(홀드 중에는 어떠한 피해와 행동이 불가)",
+      "duration": "8초 이하",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 4
+      }
+    },
+    {
+      "id": 157,
+      "name": "네이쳐스 터치",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/799.png",
+      "favorite": false,
+      "description": "물의 회복력을 빌림(대량의 HP 회복)",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 50,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 158,
+      "name": "블레스 오브 어스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/723.png",
+      "favorite": false,
+      "description": "대지의 방어력을 빌림(AC-5)",
+      "duration": "1,200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 35,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 160,
+      "name": "에이리어 오브 사일런스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/720.png",
+      "favorite": false,
+      "description": "일정확률로 모든 PC, NPC 마법과 채팅 사용 불가",
+      "duration": "1~8초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 40,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 161,
+      "name": "서먼 그레이터 엘리멘탈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/869.png",
+      "favorite": false,
+      "description": "선택한 계열의 상급 정령을 소환함",
+      "duration": "3,600초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 4
+      }
+    },
+    {
+      "id": 162,
+      "name": "버닝 웨폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/736.png",
+      "favorite": false,
+      "description": "화염의 공격력을 빌림(근거리 대미지+5, 근거리 명중+3)",
+      "duration": "1200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 163,
+      "name": "네이쳐스 블레싱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/796.png",
+      "favorite": false,
+      "description": "물의 회복력을 빌림(파티원 전원의 HP를 일정량 회복)",
+      "duration": "순간",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 165,
+      "name": "스톰 샷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/825.png",
+      "favorite": false,
+      "description": "바람의 공격력을 빌림 (원거리 대미지+4, 원거리 명중+2)",
+      "duration": "1200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 167,
+      "name": "아이언 스킨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/781.png",
+      "favorite": false,
+      "description": "대지의 방어력을 빌림(AC-7)",
+      "duration": "1200초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 0
+      }
+    },
+    {
+      "id": 169,
+      "name": "워터 라이프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/1756.png",
+      "favorite": false,
+      "description": "힐 계열 마법 효과 1.5배 적용",
+      "duration": "64초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 172,
+      "name": "폴루트 워터",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20477.png",
+      "favorite": false,
+      "description": "힐 계열 마법과 회복 물약 효과가 1/2로 감소",
+      "duration": "4~16초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 20,
+        "hp": 0,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": 173,
+      "name": "스트라이커 게일",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20474.png",
+      "favorite": false,
+      "description": "대상의 ER을 1/3로 감소",
+      "duration": "4~12초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": 174,
+      "name": "소울 오브 프레임",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/SpellIcon/20471.png",
+      "favorite": false,
+      "description": "지속 시간 동안 술자가 착용한 근거리 무기의 최대 대미지로 공격할 수 있으며, 무기가 손상되지 않게됨",
+      "duration": "128초",
+      "classNames": [
+        "요정"
+      ],
+      "consumables": {
+        "mp": 30,
+        "hp": 0,
+        "itemCount": 3
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 2000,
+    "lastPage": 1,
+    "total": 110,
+    "limit": 10000
+  }
+}

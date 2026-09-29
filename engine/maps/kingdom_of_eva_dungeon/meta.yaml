@@ -1,0 +1,9 @@
+id: kingdom_of_eva_dungeon
+name: "Kingdom of Eva"
+# From obstacle_tiles_raw map_63.png (1 px = 1 tile).
+raw_map: "63"
+origin_x: 32576
+origin_y: 32640
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

@@ -1,0 +1,6 @@
+id: ant_cave_dungeon_F1_7
+name: "Ant Cave Dungeon F1 7"
+origin_x: 32697
+origin_y: 32687
+pixel_scale: 1
+terrain: nav.png

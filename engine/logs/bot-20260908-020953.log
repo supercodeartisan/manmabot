@@ -1,0 +1,49 @@
+2026-09-08 02:09:53.844  INFO   session     Loading Manmabot from D:\ManmabotV1\ManmabotV1\engine
+2026-09-08 02:09:53.889  INFO   session     Session log D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-020953.log
+2026-09-08 02:09:53.890  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1\ManmabotV1\engine\logs\bot-20260908-020953.log
+2026-09-08 02:09:53.988  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-08 02:09:54.524  INFO   nav         portal graph: 188 components, 535 ms
+2026-09-08 02:09:54.534  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-08 02:09:54.536  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-08 02:09:54.952  INFO   session     Memory monitor connected
+2026-09-08 02:09:54.956  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4']
+2026-09-08 02:09:55.953  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick teleport' status=success
+2026-09-08 02:09:57.013  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-08 02:09:57.214  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-08 02:10:01.918  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:02.220  INFO   session     Auto-resume → Running
+2026-09-08 02:10:02.541  INFO   session     Auto-pause (not_focused)
+2026-09-08 02:10:03.959  INFO   session     Auto-resume → Running
+2026-09-08 02:10:08.276  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:08.576  INFO   session     Auto-resume → Running
+2026-09-08 02:10:08.862  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:09.162  INFO   session     Auto-resume → Running
+2026-09-08 02:10:09.463  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:09.757  INFO   session     Auto-resume → Running
+2026-09-08 02:10:10.052  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:10.358  INFO   session     Auto-resume → Running
+2026-09-08 02:10:13.237  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success (repeat)
+2026-09-08 02:10:16.014  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick teleport' status=success
+2026-09-08 02:10:16.934  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-08 02:10:17.128  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success
+2026-09-08 02:10:25.443  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:25.736  INFO   session     Auto-resume → Running
+2026-09-08 02:10:26.034  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:26.336  INFO   session     Auto-resume → Running
+2026-09-08 02:10:26.632  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:26.925  INFO   session     Auto-resume → Running
+2026-09-08 02:10:27.203  INFO   decision    mode=traveling behavior=enter_farm action=idle target=- reason='enter farm, path blocked' status=success (repeat)
+2026-09-08 02:10:27.228  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:27.535  INFO   session     Auto-resume → Running
+2026-09-08 02:10:27.838  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:28.139  INFO   session     Auto-resume → Running
+2026-09-08 02:10:28.450  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:28.744  INFO   session     Auto-resume → Running
+2026-09-08 02:10:29.044  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:30.785  INFO   session     Auto-resume → Running
+2026-09-08 02:10:31.007  INFO   session     Memory snapshot failed: write to monitor failed
+2026-09-08 02:10:31.423  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:31.722  INFO   session     Auto-resume → Running
+2026-09-08 02:10:32.017  INFO   session     Auto-pause (cursor_outside)
+2026-09-08 02:10:33.493  INFO   session     Stop → Stopped
+2026-09-08 02:10:38.733  INFO   session     Bot worker exited

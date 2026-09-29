@@ -1,0 +1,9 @@
+id: polluted_land_of_blessing_dungeon
+name: "Polluted Land of Blessing"
+# From obstacle_tiles_raw map_244.png (1 px = 1 tile).
+raw_map: "244"
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

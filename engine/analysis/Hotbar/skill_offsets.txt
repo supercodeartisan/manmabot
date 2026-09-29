@@ -1,0 +1,25 @@
+# hotbar / HudSlotDataSubsystem (T4). After a patch: run skilllocate.exe
+# HSD_IDX is decimal. All other keys are hex (0x optional).
+
+MGR=0x1668860
+HOLDER_OFF=0xD0
+SUBLIST_BEG=0x180
+SUBLIST_END=0x188
+HSD_IDX=30
+HSD_ADJ=18
+HSD_VFT=1182F48
+HSD_VFT2=1182EF8
+MAP_HEAD=0x08
+MAP_SIZE=0x10
+N_L=0x00
+N_R=0x10
+N_NIL=0x19
+N_KEY=0x20
+N_VAL=0x28
+V_TYPE=0x08
+V_RAW=0x00
+V_ID=0xC0
+V_CFG=0x0C
+V_T10=0x10
+V_STRLEN=0x40
+V_STR=0x30

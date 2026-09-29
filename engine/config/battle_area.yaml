@@ -1,0 +1,23 @@
+# =============================================================================
+# battle_area.yaml — Walkable battle field inside the cropped game content
+# Used by: configure_battle_area → click clamp, player screen anchor
+# =============================================================================
+# All values are fractions of the cropped content frame (0–1), not fixed pixels.
+# They stay valid at any window resolution after the 4:3 content crop.
+
+battle_area:
+  # Battle rectangle in content UV (left/top/width/height).
+  # Default: full width, top portion only (bottom strip is UI, not walkable).
+  left: 0.0
+  top: 0.0
+  width: 1.0
+  height: 0.7871287128712872   # ~795/1010 from one measured layout
+
+  # Local character anchor inside the battle rect (battle-local u,v).
+  # Camera follows the player; this is where "self" sits on screen.
+  player_u: 0.5                  # horizontal: center
+  player_v: 0.5263157894736842   # vertical: 10/19 of battle height
+
+  # Inset when clamping movement/retreat clicks into the battle rect
+  # (fraction of battle width/height). Avoids edge/UI clicks.
+  clamp_margin: 0.05

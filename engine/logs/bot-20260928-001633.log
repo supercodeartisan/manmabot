@@ -1,0 +1,200 @@
+2026-09-28 00:16:33.704  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-28 00:16:33.729  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260928-001633.log
+2026-09-28 00:16:33.729  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\ManmabotV1_final\engine\logs\bot-20260928-001633.log
+2026-09-28 00:16:33.817  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-28 00:16:34.146  INFO   nav         portal graph: 188 components, 329 ms
+2026-09-28 00:16:34.153  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-28 00:16:34.422  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-28 00:16:35.034  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-28 00:16:35.053  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-28 00:16:35.067  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-28 00:16:35.080  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-28 00:16:35.187  INFO   session     핫바 스캔 완료 · 파워 업@box2/f8, 아머 업@box2/f5, 라이트@box1/f10, 힐@box1/f9, HP 물약@box1/f9, 텔레포트@box1/f11, 마법 공격@box1/f12, 말하는 두루마리@box1/f5
+2026-09-28 00:16:35.242  INFO   session     매핑되지 않은 핫바 아이콘: box1/f6:작은 활 (무장), box1/f7:나무 화살, box1/f8:아데나
+2026-09-28 00:16:35.252  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 3
+2026-09-28 00:16:35.868  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=3 {'monster': 2, 'player': 1} paired=1 median=0.028 unleveled=68:警衛,10:警衛
+2026-09-28 00:16:35.893  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=461 은화살=139 해독=0
+2026-09-28 00:16:35.914  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-28 00:16:37.084  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:16:41.111  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=4 {'monster': 3, 'player': 1} paired=1 median=0.029 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:16:46.240  INFO   session     Entity shadow: vision=4 {'npc': 2, 'player': 2} memory=4 {'monster': 3, 'player': 1} paired=1 median=0.029 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:16:46.282  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-28 00:16:47.283  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:16:51.413  INFO   session     Entity shadow: vision=4 {'npc': 2, 'player': 2} memory=4 {'monster': 3, 'player': 1} paired=1 median=0.029 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:16:57.143  INFO   session     Entity shadow: vision=4 {'npc': 3, 'player': 1} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=1 median=0.053 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:16:57.183  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:16:58.577  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:17:02.343  INFO   session     Entity shadow: vision=4 {'npc': 2, 'player': 2} memory=5 {'monster': 3, 'npc': 1, 'player': 1} paired=1 median=0.028 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:06.810  INFO   decision    mode=traveling behavior=traveling action=idle target=- reason='no behavior produced an intent' status=success
+2026-09-28 00:17:07.243  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:17:07.851  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=1 median=0.029 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:08.473  INFO   decision    mode=traveling behavior=combat action=attack target=7 reason='engage target' status=success
+2026-09-28 00:17:12.932  INFO   session     Entity shadow: vision=5 {'npc': 2, 'player': 2, 'monster': 1} memory=7 {'monster': 5, 'npc': 1, 'player': 1} paired=2 median=0.029 unleveled=14:青蛙,207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:18.187  INFO   session     Entity shadow: vision=5 {'npc': 2, 'player': 2, 'monster': 1} memory=7 {'monster': 5, 'npc': 1, 'player': 1} paired=2 median=0.028 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:17:23.811  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 1, 'monster': 5, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:23.854  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:17:25.302  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:17:28.844  INFO   session     Entity shadow: vision=0 {} memory=7 {'monster': 4, 'npc': 2, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:17:34.099  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 4, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:39.553  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 4, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:17:44.942  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:45.390  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:17:46.610  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:17:50.071  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:17:55.181  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 4, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:18:00.621  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 4, 'npc': 4, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,207:兔子,68:警衛,10:警衛
+2026-09-28 00:18:05.852  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 4, 'npc': 4, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:06.915  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:18:07.839  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:18:10.970  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 4, 'player': 1} paired=0 median=0.000 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:15.988  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:21.040  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 4, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:26.050  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:27.868  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:18:29.783  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:18:31.051  INFO   session     Entity shadow: vision=0 {} memory=6 {'player': 2, 'npc': 1, 'monster': 3} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:36.192  INFO   session     Entity shadow: vision=0 {} memory=7 {'player': 3, 'monster': 3, 'npc': 1} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:41.487  INFO   session     Entity shadow: vision=0 {} memory=6 {'monster': 3, 'npc': 1, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:18:46.540  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'player': 2, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:18:49.921  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:18:51.070  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:18:51.910  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'player': 2, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:18:57.049  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 3, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:02.113  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:07.365  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 4, 'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:11.134  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:19:12.346  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:19:12.736  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 4, 'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,208:兔子,68:警衛,10:警衛
+2026-09-28 00:19:18.252  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:19:23.648  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:19:29.168  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:19:32.581  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:19:33.952  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:19:34.251  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 3, 'player': 2, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:19:39.659  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:45.265  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 3, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:50.199  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 3, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:53.948  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:19:55.242  INFO   session     Entity shadow: vision=0 {} memory=6 {'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:19:55.329  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:20:00.369  INFO   session     Entity shadow: vision=0 {} memory=7 {'monster': 4, 'player': 3} paired=0 median=0.000 unleveled=14:青蛙,208:兔子,68:警衛,10:警衛
+2026-09-28 00:20:05.599  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 3, 'monster': 4, 'player': 3} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:11.068  INFO   session     Entity shadow: vision=0 {} memory=10 {'monster': 4, 'npc': 3, 'player': 3} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:15.744  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:20:16.962  INFO   session     Entity shadow: vision=0 {} memory=10 {'monster': 4, 'npc': 3, 'player': 3} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:17.056  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:20:22.180  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 3, 'monster': 3, 'player': 3} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:27.391  INFO   session     Entity shadow: vision=0 {} memory=5 {'player': 3, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:20:32.983  INFO   session     Entity shadow: vision=0 {} memory=5 {'player': 3, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:20:37.076  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:20:38.056  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 1, 'monster': 3, 'player': 3} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:38.392  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:20:43.478  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 4, 'npc': 1, 'player': 3} paired=0 median=0.000 unleveled=14:青蛙,208:兔子,68:警衛,10:警衛
+2026-09-28 00:20:49.901  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 4, 'player': 3, 'npc': 1} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:54.893  INFO   session     Entity shadow: vision=0 {} memory=7 {'monster': 4, 'npc': 1, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:20:58.657  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:20:59.887  INFO   session     Entity shadow: vision=0 {} memory=7 {'monster': 4, 'npc': 1, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,208:兔子,68:警衛,10:警衛
+2026-09-28 00:20:59.971  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:21:05.081  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 3, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,68:警衛,10:警衛
+2026-09-28 00:21:10.159  INFO   session     Entity shadow: vision=0 {} memory=10 {'monster': 4, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,14:青蛙,68:警衛,10:警衛
+2026-09-28 00:21:15.468  INFO   session     Entity shadow: vision=0 {} memory=10 {'monster': 4, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=14:青蛙,207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:19.992  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:21:21.261  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 3, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:21.333  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:21:26.237  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:31.755  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 4, 'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:36.893  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 4, 'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,208:兔子,68:警衛,10:警衛
+2026-09-28 00:21:41.864  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:21:42.974  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:43.068  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:21:48.136  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:53.488  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 3, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:21:58.851  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 3, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:22:03.314  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:22:04.327  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 4, 'monster': 3, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,68:警衛,10:警衛
+2026-09-28 00:22:04.413  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:22:09.859  INFO   session     Entity shadow: vision=0 {} memory=10 {'monster': 4, 'npc': 4, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,207:兔子,68:警衛,10:警衛
+2026-09-28 00:22:14.626  INFO   session     Entity shadow: vision=0 {} memory=9 {'monster': 4, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,207:兔子,68:警衛,10:警衛
+2026-09-28 00:22:19.903  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 3, 'monster': 4, 'player': 2} paired=0 median=0.000 unleveled=207:兔子,208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:24.544  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:22:25.752  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:25.826  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:22:30.603  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:35.904  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 3, 'player': 2} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:40.999  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:46.098  INFO   session     Entity shadow: vision=0 {} memory=4 {'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:46.123  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:22:47.474  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:22:51.303  INFO   session     Entity shadow: vision=0 {} memory=4 {'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:22:56.474  INFO   session     Entity shadow: vision=0 {} memory=3 {'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:01.799  INFO   session     Entity shadow: vision=0 {} memory=4 {'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:23:07.170  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 2, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:23:07.695  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:23:09.121  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:23:12.523  INFO   session     Entity shadow: vision=0 {} memory=7 {'monster': 3, 'npc': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:23:17.775  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 6, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:23:22.785  INFO   session     Entity shadow: vision=0 {} memory=11 {'player': 2, 'npc': 6, 'monster': 3} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:23:27.825  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:29.206  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:23:30.608  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:23:32.839  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:38.012  INFO   session     Entity shadow: vision=0 {} memory=11 {'player': 3, 'npc': 6, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:43.261  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 6, 'player': 2, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:48.387  INFO   session     Entity shadow: vision=0 {} memory=10 {'player': 2, 'npc': 6, 'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:50.749  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:23:51.935  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:23:53.396  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:23:58.703  INFO   session     Entity shadow: vision=0 {} memory=10 {'npc': 7, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:04.287  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:09.456  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:12.606  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:24:13.938  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:24:14.969  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:20.569  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:25.565  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:30.882  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:34.402  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:24:35.807  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:24:36.308  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:41.693  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 5, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:47.020  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:52.452  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:24:55.978  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:24:57.177  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:24:57.497  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:02.644  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:07.608  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:12.631  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:17.199  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:25:18.435  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:18.525  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:25:23.504  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:28.785  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:33.864  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:38.588  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:25:39.766  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:39.835  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:25:44.679  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:50.045  INFO   session     Entity shadow: vision=0 {} memory=9 {'npc': 6, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:25:55.298  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 5, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:00.072  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:26:01.458  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 4, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:01.601  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:26:06.832  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:12.347  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:17.495  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:21.606  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:26:22.715  INFO   session     Entity shadow: vision=0 {} memory=5 {'npc': 1, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:22.797  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:26:27.896  INFO   session     Entity shadow: vision=0 {} memory=8 {'npc': 4, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:33.084  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 3, 'monster': 3, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:26:35.988  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='power_up' status=success
+2026-09-28 00:26:37.066  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:26:37.991  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:43.321  INFO   session     Entity shadow: vision=0 {} memory=6 {'npc': 3, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:43.343  INFO   decision    mode=traveling behavior=unstick action=teleport target=- reason='unstick confined' status=success
+2026-09-28 00:26:44.960  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-28 00:26:48.414  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 4, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:53.841  INFO   session     Entity shadow: vision=0 {} memory=7 {'npc': 4, 'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-28 00:26:59.323  INFO   session     Entity shadow: vision=0 {} memory=8 {'monster': 3, 'npc': 4, 'player': 1} paired=0 median=0.000 unleveled=208:兔子,68:警衛,10:警衛
+2026-09-28 00:27:03.276  INFO   session     정지 → 중지됨

@@ -1,0 +1,14 @@
+2026-09-24 00:04:40.995  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-24 00:04:40.999  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-000440.log
+2026-09-24 00:04:40.999  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_3', 'area_2'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260924-000440.log
+2026-09-24 00:04:41.231  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-24 00:04:41.493  INFO   nav         portal graph: 188 components, 262 ms
+2026-09-24 00:04:41.499  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-24 00:04:41.782  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-24 00:04:41.827  INFO   session     Stop → Stopped (정지 — 게임 창이 닫혔습니다.)
+2026-09-24 00:04:43.839  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-24 00:04:43.851  INFO   session     Memory monitor unavailable at worker start
+2026-09-24 00:04:43.855  INFO   session     Inventory listen scanning in background (build inventory_listen.dll or place inv.json).
+2026-09-24 00:04:43.862  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-24 00:04:43.882  INFO   session     Hotbar scan cancelled.
+2026-09-24 00:04:43.936  INFO   session     Bot worker exited

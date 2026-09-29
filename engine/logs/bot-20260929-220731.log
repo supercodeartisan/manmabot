@@ -1,0 +1,22 @@
+2026-09-29 22:07:31.173  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 22:07:31.202  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-220731.log
+2026-09-29 22:07:31.215  INFO   session     character=elf loot=adena_only game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-220731.log
+2026-09-29 22:07:31.605  INFO   nav         building portal graph (cluster=32, 512x576)
+2026-09-29 22:07:32.307  INFO   nav         portal graph: 189 components, 701 ms
+2026-09-29 22:07:32.586  INFO   nav         farms=2 safe=11 home=(385, 246) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 22:07:32.960  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 22:07:34.104  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 22:07:34.166  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 22:07:34.216  INFO   session     인벤토리 수신 시작 · inv.json 시드 · hp=42 화살=9151 은화살=0 해독=0 (백그라운드 실시간 스캔)
+2026-09-29 22:07:34.295  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-29 22:07:35.331  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box2/f9, 텔레포트@box1/f10, 마법 공격@box1/f12, 말하는 두루마리@box2/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-29 22:07:35.504  INFO   session     매핑되지 않은 핫바 아이콘: box1/f8:SPELL, box1/f11:아데나, box1/f12:화살, box2/f10:상쾌한 빨간 물약, box2/f12:속도향상 물약, box3/f10:SPELL
+2026-09-29 22:07:35.894  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=아데나만 · 구역=구역 1, 구역 3
+2026-09-29 22:07:36.982  INFO   session     Entity shadow: vision=19 {'player': 18, 'npc': 1} memory=34 {'player': 28, 'npc': 6} paired=17 median=0.035
+2026-09-29 22:07:37.059  INFO   session     인벤토리 수신 준비 (dll) · hp=42 화살=9129 은화살=0 해독=0
+2026-09-29 22:07:37.215  INFO   nav         talking scroll emit spot=ti_general_goods purpose=shop reason=go to shop (sell_garbage_ch)
+2026-09-29 22:07:37.216  INFO   shop        shop scrolled behavior=sell_garbage_ch retry=0
+2026-09-29 22:07:37.477  INFO   decision    mode=farming goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(1129,-43) shop=1 scrolled=1 reason='go to shop (sell_garbage_ch)' status=success
+2026-09-29 22:07:40.249  INFO   session     일시정지 — 단축키
+2026-09-29 22:07:41.549  INFO   session     정지 → 중지됨
+2026-09-29 22:07:41.791  INFO   session     봇 작업이 종료되었습니다

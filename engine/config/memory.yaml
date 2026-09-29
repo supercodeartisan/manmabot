@@ -1,0 +1,42 @@
+# =============================================================================
+# memory.yaml — Player HP/MP/level/position from memory
+# Used by: open_monitor_from_config, main reconnect loop
+# =============================================================================
+# The bot loads analysis/realtime_monitor.dll in this process and reads LC.exe
+# through the signed driver. The DLL is not injected. offsets.json is re-read
+# on every snapshot; edit that file when offsets change. No console and no
+# named pipe. Bag fill comes from weight/maxWeight on the player snapshot;
+# vision.weight_hud is only a fallback when maxWeight is missing.
+
+memory:
+  # false = skip player memory (vision-only; config navigation.origin_* used).
+  enabled: true
+
+  # Kept for older tools that still open the named pipe. The bot does not use it.
+  pipe: "\\\\.\\pipe\\realtime_monitor"
+
+  # How many times to try opening the pipe at startup.
+  connect_retries: 30
+
+  # Seconds between startup connect attempts.
+  connect_delay: 0.2
+
+  # While running, if the pipe drops, retry at most this often (seconds).
+  reconnect_interval_s: 2.5
+
+  # Each tick loads analysis/entities/print_state.dll in this process and
+  # sweeps LC.exe through the signed driver. The DLL is not injected into
+  # the game. state.json is not read.
+  # entity_source vision: clicks stay on the full image-recognition workflow.
+  # entity_source hybrid: monsters, items, and other entities come from memory
+  # (name, species, world cell, screen point). Image recognition still runs
+  # every tick and supplies a level when the name table has none. Set this
+  # back to vision to restore image-only clicks without removing that path.
+  entity_source: hybrid
+  entity_shadow: true
+  entity_log_interval_s: 5.0
+  # Copy a nearby vision level onto a memory monster the name table missed.
+  entity_level_fallback: true
+  # Bag scan (inventory_listen.dll) runs on a background thread so capture
+  # and preview keep ticking. Seconds between scan starts.
+  inventory_interval_s: 20.0

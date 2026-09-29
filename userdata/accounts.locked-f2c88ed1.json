@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "accounts": [
+    {
+      "account_id": "939eba10-6dd1-40b5-8d4c-27cf9fde5fc6",
+      "username": "juliegrimes37393@gmail.com",
+      "password_dpapi": "AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA+MZqFBejW0OzaVa7ovFn4QAAAAACAAAAAAAQZgAAAAEAACAAAAAzpdtXPoMWWygqnN+GQgjvOlscIC98W6EIY8UyVCCR5wAAAAAOgAAAAAIAACAAAAAWssibo+ZxJl4oa3jBcFBuE0Gryq2qHCNsqlpkOK6z7RAAAABrvQl8h4L8nR/6eJQnGktmQAAAAOJGVqyLENgM/2YIzsNQDEpQxsFoahqiLBrR7VPRF3UKUrEH/XvMgwMkN5/BwEoysTMXjQP1DcwCDUbDQnNqliU=",
+      "region": "China",
+      "server": "獨眼巨人庫克羅普斯",
+      "character_number": 1,
+      "click_mode": "dynamic",
+      "display_name": "cha1",
+      "locale": "zh-CN",
+      "character_type": "elf",
+      "purple_launcher_path": "C:\\Program Files (x86)\\NC\\Purple\\PurpleLauncher.exe",
+      "game_path": "C:\\Program Files (x86)\\NC\\Lineage Classic\\LC.exe"
+    }
+  ]
+}

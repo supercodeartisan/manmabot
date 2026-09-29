@@ -1,0 +1,29 @@
+2026-09-23 21:40:12.589  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-23 21:40:12.592  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-214012.log
+2026-09-23 21:40:12.592  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-214012.log
+2026-09-23 21:40:12.720  INFO   session     Auto-pause (not_focused)
+2026-09-23 21:40:12.814  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-23 21:40:13.060  INFO   nav         portal graph: 188 components, 246 ms
+2026-09-23 21:40:13.065  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-23 21:40:13.339  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-23 21:40:13.713  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-23 21:40:13.720  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-23 21:40:13.726  INFO   session     Inventory listen scanning in background (build inventory_listen.dll or place inv.json).
+2026-09-23 21:40:13.731  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-23 21:40:17.744  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-23 21:40:17.748  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_3']
+2026-09-23 21:40:20.447  INFO   session     Auto-resume → Running
+2026-09-23 21:40:20.838  INFO   session     Entity shadow: vision=2 {'player': 2} memory=2 {'monster': 1, 'item': 1} paired=0 median=0.000 unleveled=206:토끼
+2026-09-23 21:40:20.857  INFO   session     Inventory listen ready (dll) · hp=8 arrows=2672 silver=5 depoison=0
+2026-09-23 21:40:20.898  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions_talking)' status=success
+2026-09-23 21:40:24.402  INFO   decision    mode=farming behavior=shop action=shop_stop target=- reason='stop at shop' status=success
+2026-09-23 21:40:25.843  INFO   session     Entity shadow: vision=22 {'player': 20, 'npc': 2} memory=59 {'player': 57, 'npc': 2} paired=21 median=0.025
+2026-09-23 21:40:25.908  INFO   decision    mode=farming behavior=shop action=shop_buy_arrows target=- reason='shop:buy_hp_potions_talking' status=success
+2026-09-23 21:40:33.327  INFO   session     Entity shadow: vision=20 {'player': 18, 'npc': 2} memory=54 {'player': 52, 'npc': 2} paired=20 median=0.024
+2026-09-23 21:40:33.352  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='return to farm map after shop' status=success
+2026-09-23 21:40:36.737  INFO   decision    mode=traveling behavior=loot action=searching target=2 reason='stand beside item' status=success
+2026-09-23 21:40:38.428  INFO   session     Entity shadow: vision=39 {'npc': 5, 'player': 33, 'monster': 1} memory=56 {'player': 47, 'npc': 7, 'monster': 2} paired=35 median=0.013 unleveled=68:경비병,319:?
+2026-09-23 21:40:43.888  INFO   session     Entity shadow: vision=35 {'player': 27, 'npc': 3, 'monster': 5} memory=65 {'player': 58, 'monster': 3, 'npc': 4} paired=28 median=0.054 unleveled=10:경비병,68:경비병,319:?
+2026-09-23 21:40:44.446  INFO   session     Paused — hotkey
+2026-09-23 21:41:03.838  INFO   session     Stop → Stopped
+2026-09-23 21:41:04.110  INFO   session     Bot worker exited

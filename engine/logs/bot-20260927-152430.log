@@ -1,0 +1,150 @@
+2026-09-27 15:24:30.110  INFO   session     Loading Manmabot from D:\ManmabotV1_final\engine
+2026-09-27 15:24:30.116  INFO   session     Session log D:\ManmabotV1_final\engine\logs\bot-20260927-152430.log
+2026-09-27 15:24:30.116  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4'] file=D:\ManmabotV1_final\engine\logs\bot-20260927-152430.log
+2026-09-27 15:24:30.124  INFO   config      config resolved {'config_version': 1, 'hp.retreat_ratio': 0.35, 'hp.potion_ratio': 0.6, 'mp.spell_reserve_ratio': 0.15, 'economy.sell_weight_ratio': 0.49, 'economy.loot_adena_weight_ratio': 0.85, 'economy.loot_pickup_tiles': 2}
+2026-09-27 15:24:30.436  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-27 15:24:30.758  INFO   nav         portal graph: 188 components, 322 ms
+2026-09-27 15:24:30.764  INFO   nav         farms=4 safe=11 home=(354, 203) (files farm=D:\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-27 15:24:31.018  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-27 15:24:31.531  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-27 15:24:31.548  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-27 15:24:31.560  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-27 15:24:31.592  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-27 15:24:31.650  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box1/f9, 텔레포트@box1/f10, 마법 공격@box1/f11, 말하는 두루마리@box1/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-27 15:24:31.684  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=전부 줍기 · 구역=구역 1, 구역 2, 구역 3, 구역 4
+2026-09-27 15:24:33.047  INFO   session     Entity shadow: vision=19 {'npc': 2, 'player': 14, 'monster': 3} memory=59 {'player': 53, 'npc': 5, 'monster': 1} paired=16 median=0.050 unleveled=206:兔子
+2026-09-27 15:24:33.107  INFO   session     인벤토리 수신 준비 (dll) · hp=0 화살=912 은화살=0 해독=0
+2026-09-27 15:24:33.124  INFO   trust       trust memory none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust entity_sweep none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust inventory none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust vision none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust capture none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust input none -> ok
+2026-09-27 15:24:33.124  INFO   trust       trust cursor none -> ok
+2026-09-27 15:24:33.125  INFO   trust       trust focus none -> ok
+2026-09-27 15:24:33.130  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-27 15:24:33.982  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:24:38.358  INFO   session     Entity shadow: vision=9 {'player': 9} memory=17 {'player': 13, 'npc': 3, 'monster': 1} paired=8 median=0.067 unleveled=206:兔子
+2026-09-27 15:24:43.450  INFO   session     Entity shadow: vision=6 {'player': 4, 'npc': 1, 'monster': 1} memory=6 {'monster': 1, 'npc': 3, 'player': 2} paired=2 median=0.025 unleveled=68:警衛
+2026-09-27 15:24:43.476  INFO   decision    mode=traveling behavior=buff action=buff target=- reason='light' status=success
+2026-09-27 15:24:44.096  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:24:48.693  INFO   session     Entity shadow: vision=3 {'monster': 1, 'player': 1, 'npc': 1} memory=6 {'npc': 2, 'monster': 1, 'player': 3} paired=1 median=0.086 unleveled=68:警衛
+2026-09-27 15:24:53.805  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 1, 'npc': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-27 15:24:59.051  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 2} memory=7 {'monster': 5, 'npc': 2} paired=1 median=0.031 unleveled=208:兔子,68:警衛,10:警衛,189:鹿,14:青蛙
+2026-09-27 15:25:00.135  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:25:04.570  INFO   session     Entity shadow: vision=4 {'player': 1, 'npc': 3} memory=8 {'npc': 2, 'monster': 6} paired=1 median=0.058 unleveled=207:兔子,208:兔子,68:警衛,10:警衛,189:鹿,14:青蛙
+2026-09-27 15:25:09.749  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=7 {'monster': 5, 'npc': 2} paired=0 median=0.000 unleveled=208:兔子,189:鹿,14:青蛙,68:警衛,10:警衛
+2026-09-27 15:25:14.883  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 2} memory=7 {'monster': 6, 'npc': 1} paired=0 median=0.000 unleveled=208:兔子,14:青蛙,189:鹿,68:警衛,10:警衛,207:兔子
+2026-09-27 15:25:15.798  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:25:19.906  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=5 {'monster': 4, 'npc': 1} paired=0 median=0.000 unleveled=14:青蛙,208:兔子,68:警衛,10:警衛
+2026-09-27 15:25:25.228  INFO   session     Entity shadow: vision=0 {} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=208:兔子
+2026-09-27 15:25:29.672  INFO   decision    mode=traveling behavior=combat action=searching target=89 reason='elf approach' status=success
+2026-09-27 15:25:30.016  INFO   decision    mode=traveling behavior=? action=searching target=89 reason='elf approach' status=success
+2026-09-27 15:25:30.381  INFO   session     Entity shadow: vision=2 {'monster': 1, 'player': 1} memory=3 {'player': 1, 'monster': 2} paired=1 median=0.036 unleveled=208:兔子
+2026-09-27 15:25:33.489  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:25:35.400  INFO   session     Entity shadow: vision=3 {'player': 2, 'monster': 1} memory=1 {'player': 1} paired=1 median=0.034
+2026-09-27 15:25:40.659  INFO   session     Entity shadow: vision=2 {'player': 2} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-27 15:25:45.815  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=1 median=0.020
+2026-09-27 15:25:47.769  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:25:50.979  INFO   session     Entity shadow: vision=4 {'player': 2, 'monster': 2} memory=2 {'monster': 2} paired=1 median=0.017 unleveled=208:兔子
+2026-09-27 15:25:56.166  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.020 unleveled=207:兔子,68:警衛
+2026-09-27 15:25:58.763  INFO   decision    mode=traveling behavior=combat action=searching target=98 reason='elf approach' status=success
+2026-09-27 15:25:59.159  INFO   decision    mode=traveling behavior=? action=searching target=98 reason='elf approach' status=success
+2026-09-27 15:26:01.511  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 1, 'npc': 1} memory=4 {'monster': 4} paired=1 median=0.057 unleveled=68:警衛,207:兔子
+2026-09-27 15:26:06.711  INFO   session     Entity shadow: vision=2 {'npc': 2} memory=4 {'monster': 4} paired=0 median=0.000 unleveled=207:兔子,68:警衛
+2026-09-27 15:26:08.916  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:26:11.724  INFO   session     Entity shadow: vision=2 {'npc': 1, 'player': 1} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=68:警衛
+2026-09-27 15:26:16.722  INFO   decision    mode=traveling behavior=loot action=searching target=101 reason='walk onto item' status=success
+2026-09-27 15:26:17.089  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=4 {'monster': 3, 'item': 1} paired=0 median=0.000 unleveled=68:警衛,189:鹿
+2026-09-27 15:26:21.870  INFO   decision    mode=traveling behavior=loot action=pickup target=101 reason='loot target' status=success
+2026-09-27 15:26:22.313  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=1 {'item': 1} paired=1 median=0.014
+2026-09-27 15:26:22.338  INFO   decision    mode=traveling behavior=loot action=idle target=- reason='pickup settle' status=success
+2026-09-27 15:26:22.570  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:26:27.493  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 15:26:32.518  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-27 15:26:36.057  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:26:37.826  INFO   session     Entity shadow: vision=1 {'player': 1} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=14:青蛙,189:鹿
+2026-09-27 15:26:43.059  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 15:26:48.157  INFO   session     Entity shadow: vision=0 {} memory=0 {} paired=0 median=0.000
+2026-09-27 15:26:49.836  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:26:52.642  INFO   decision    mode=traveling behavior=combat action=searching target=108 reason='elf approach' status=success
+2026-09-27 15:26:53.053  INFO   decision    mode=traveling behavior=? action=searching target=108 reason='elf approach' status=success
+2026-09-27 15:26:53.424  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.040
+2026-09-27 15:26:56.182  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:26:58.592  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.021
+2026-09-27 15:27:01.675  INFO   decision    mode=traveling behavior=combat action=searching target=110 reason='elf approach' status=success
+2026-09-27 15:27:02.147  INFO   decision    mode=traveling behavior=? action=searching target=110 reason='elf approach' status=success
+2026-09-27 15:27:03.669  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=2 {'monster': 2} paired=2 median=0.027
+2026-09-27 15:27:04.071  INFO   decision    mode=traveling behavior=? action=attack target=110 reason='elf fire' status=success
+2026-09-27 15:27:04.955  INFO   decision    mode=traveling behavior=? action=searching target=110 reason='elf reposition' status=success
+2026-09-27 15:27:08.445  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:27:08.750  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-27 15:27:12.687  INFO   decision    mode=traveling behavior=combat action=searching target=111 reason='elf approach' status=success
+2026-09-27 15:27:13.009  INFO   decision    mode=traveling behavior=? action=searching target=111 reason='elf approach' status=success
+2026-09-27 15:27:14.015  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=68:警衛
+2026-09-27 15:27:16.867  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:27:19.055  INFO   session     Entity shadow: vision=0 {} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-27 15:27:24.168  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 15:27:29.304  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=1 {'player': 1} paired=0 median=0.000
+2026-09-27 15:27:29.857  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success (repeat)
+2026-09-27 15:27:34.309  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-27 15:27:39.347  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-27 15:27:42.259  INFO   decision    mode=traveling behavior=combat action=searching target=115 reason='elf approach' status=success
+2026-09-27 15:27:42.628  INFO   decision    mode=traveling behavior=? action=searching target=115 reason='elf approach' status=success
+2026-09-27 15:27:44.374  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=1 median=0.016
+2026-09-27 15:27:49.519  INFO   session     Entity shadow: vision=3 {'monster': 2, 'player': 1} memory=1 {'monster': 1} paired=1 median=0.027
+2026-09-27 15:27:52.595  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:27:54.628  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=1 median=0.020
+2026-09-27 15:27:59.473  INFO   decision    mode=farming behavior=search action=searching target=- reason='search area' status=success
+2026-09-27 15:27:59.828  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=1 median=0.034
+2026-09-27 15:28:05.024  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=1 {'monster': 1} paired=1 median=0.012
+2026-09-27 15:28:10.025  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 2} memory=1 {'monster': 1} paired=1 median=0.037
+2026-09-27 15:28:13.740  INFO   decision    mode=farming behavior=survival action=use_hp_potion target=- reason='elf potion' status=success
+2026-09-27 15:28:15.282  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=1 {'monster': 1} paired=1 median=0.005
+2026-09-27 15:28:20.434  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-27 15:28:23.766  INFO   decision    mode=farming behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 15:28:25.454  INFO   session     Entity shadow: vision=1 {'monster': 1} memory=1 {'monster': 1} paired=1 median=0.006
+2026-09-27 15:28:25.943  INFO   decision    mode=farming behavior=respawn action=respawn target=- reason='death confirmed, restart' status=success
+2026-09-27 15:28:26.386  INFO   decision    mode=farming behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 15:28:27.838  INFO   decision    mode=farming behavior=survival action=use_hp_potion target=- reason='elf potion' status=success
+2026-09-27 15:28:30.868  INFO   session     Entity shadow: vision=13 {'player': 11, 'npc': 1, 'monster': 1} memory=21 {'player': 14, 'npc': 6, 'monster': 1} paired=9 median=0.032 unleveled=206:兔子
+2026-09-27 15:28:36.235  INFO   session     Entity shadow: vision=13 {'player': 9, 'npc': 1, 'monster': 3} memory=21 {'npc': 6, 'player': 14, 'monster': 1} paired=9 median=0.031 unleveled=206:兔子
+2026-09-27 15:28:41.606  INFO   session     Entity shadow: vision=7 {'player': 5, 'npc': 2} memory=13 {'player': 7, 'npc': 5, 'monster': 1} paired=6 median=0.048 unleveled=206:兔子
+2026-09-27 15:28:46.918  INFO   session     Entity shadow: vision=8 {'player': 5, 'npc': 3} memory=17 {'npc': 6, 'monster': 1, 'player': 10} paired=7 median=0.022
+2026-09-27 15:28:48.184  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='respawn, 마법서 상인' status=success
+2026-09-27 15:28:49.057  INFO   trust       trust input ok -> failed
+2026-09-27 15:28:49.057  INFO   trust       trust cursor ok -> failed
+2026-09-27 15:28:52.171  INFO   session     Entity shadow: vision=6 {'item': 2, 'npc': 2, 'player': 1, 'monster': 1} memory=8 {'monster': 3, 'item': 2, 'npc': 3} paired=3 median=0.014 unleveled=10:警衛,68:警衛
+2026-09-27 15:28:57.435  INFO   session     Entity shadow: vision=5 {'item': 2, 'npc': 2, 'player': 1} memory=7 {'item': 2, 'npc': 3, 'monster': 2} paired=2 median=0.013 unleveled=10:警衛,68:警衛
+2026-09-27 15:29:02.638  INFO   session     Entity shadow: vision=5 {'item': 2, 'npc': 2, 'player': 1} memory=7 {'item': 2, 'npc': 3, 'monster': 2} paired=2 median=0.013 unleveled=10:警衛,68:警衛
+2026-09-27 15:29:07.824  INFO   session     Entity shadow: vision=5 {'item': 2, 'npc': 2, 'player': 1} memory=7 {'item': 2, 'npc': 3, 'monster': 2} paired=2 median=0.013 unleveled=10:警衛,68:警衛
+2026-09-27 15:29:13.098  INFO   session     Entity shadow: vision=6 {'item': 2, 'npc': 2, 'player': 1, 'monster': 1} memory=8 {'item': 2, 'monster': 3, 'npc': 3} paired=3 median=0.014 unleveled=10:警衛,68:警衛
+2026-09-27 15:29:18.221  INFO   session     Entity shadow: vision=6 {'item': 2, 'npc': 3, 'player': 1} memory=9 {'monster': 4, 'item': 2, 'npc': 3} paired=2 median=0.014 unleveled=68:警衛,10:警衛
+2026-09-27 15:29:23.406  INFO   session     Entity shadow: vision=6 {'npc': 3, 'item': 2, 'player': 1} memory=9 {'monster': 4, 'item': 2, 'npc': 3} paired=2 median=0.014 unleveled=68:警衛,10:警衛
+2026-09-27 15:29:26.813  INFO   decision    mode=farming behavior=loot action=searching target=160 reason='walk onto item' status=success
+2026-09-27 15:29:28.816  INFO   session     Entity shadow: vision=6 {'player': 1, 'npc': 3, 'item': 2} memory=8 {'monster': 3, 'item': 2, 'npc': 3} paired=2 median=0.059 unleveled=68:警衛,10:警衛
+2026-09-27 15:29:33.587  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-27 15:29:33.911  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=2 {'monster': 1, 'item': 1} paired=1 median=0.018
+2026-09-27 15:29:38.972  INFO   session     Entity shadow: vision=3 {'player': 1, 'item': 1, 'monster': 1} memory=3 {'monster': 2, 'item': 1} paired=2 median=0.027
+2026-09-27 15:29:42.027  INFO   decision    mode=traveling behavior=loot action=searching target=172 reason='walk onto item' status=success
+2026-09-27 15:29:43.678  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick nearby' status=success
+2026-09-27 15:29:44.035  INFO   session     Entity shadow: vision=2 {'monster': 1, 'item': 1} memory=3 {'monster': 2, 'item': 1} paired=2 median=0.032
+2026-09-27 15:29:48.064  INFO   decision    mode=traveling behavior=combat action=searching target=173 reason='elf approach' status=success
+2026-09-27 15:29:48.481  INFO   decision    mode=traveling behavior=? action=searching target=173 reason='elf approach' status=success
+2026-09-27 15:29:49.210  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=4 {'monster': 3, 'item': 1} paired=2 median=0.024
+2026-09-27 15:29:53.590  INFO   decision    mode=traveling behavior=loot action=searching target=174 reason='walk onto item' status=success
+2026-09-27 15:29:54.436  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 1, 'item': 2} memory=3 {'monster': 2, 'item': 1} paired=2 median=0.064
+2026-09-27 15:29:56.870  INFO   decision    mode=traveling behavior=loot action=pickup target=174 reason='loot target' status=success
+2026-09-27 15:29:57.360  INFO   decision    mode=traveling behavior=loot action=idle target=- reason='pickup settle' status=success
+2026-09-27 15:29:57.639  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-27 15:29:59.461  INFO   session     Entity shadow: vision=5 {'item': 1, 'monster': 3, 'player': 1} memory=4 {'monster': 3, 'item': 1} paired=4 median=0.027
+2026-09-27 15:29:59.488  INFO   decision    mode=traveling behavior=loot action=searching target=174 reason='walk onto item' status=success
+2026-09-27 15:30:00.719  INFO   decision    mode=traveling behavior=survival action=use_hp_potion target=- reason='elf potion' status=success
+2026-09-27 15:30:03.669  INFO   decision    mode=traveling behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 15:30:04.520  INFO   session     Entity shadow: vision=2 {'item': 1, 'monster': 1} memory=4 {'monster': 3, 'item': 1} paired=2 median=0.013
+2026-09-27 15:30:05.959  INFO   decision    mode=traveling behavior=respawn action=respawn target=- reason='death confirmed, restart' status=success
+2026-09-27 15:30:06.498  INFO   decision    mode=traveling behavior=? action=idle target=- reason='waiting for respawn' status=success
+2026-09-27 15:30:07.019  INFO   decision    mode=traveling behavior=survival action=use_hp_potion target=- reason='elf potion' status=success
+2026-09-27 15:30:09.743  INFO   session     Entity shadow: vision=27 {'player': 20, 'monster': 1, 'npc': 6} memory=49 {'player': 40, 'npc': 7, 'monster': 2} paired=21 median=0.033 unleveled=208:兔子
+2026-09-27 15:30:12.447  INFO   session     정지 → 중지됨
+2026-09-27 15:30:12.719  INFO   session     봇 작업이 종료되었습니다

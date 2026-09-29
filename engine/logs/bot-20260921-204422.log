@@ -1,0 +1,63 @@
+2026-09-21 20:44:22.547  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:44:22.568  INFO   session     Loading Manmabot from D:\Work\ManmabotV1\engine
+2026-09-21 20:44:22.592  INFO   session     Session log D:\Work\ManmabotV1\engine\logs\bot-20260921-204422.log
+2026-09-21 20:44:22.592  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6'] file=D:\Work\ManmabotV1\engine\logs\bot-20260921-204422.log
+2026-09-21 20:44:22.653  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-21 20:44:22.918  INFO   nav         portal graph: 188 components, 265 ms
+2026-09-21 20:44:22.926  INFO   nav         farms=6 safe=11 home=(354, 203) (files farm=D:\Work\ManmabotV1\engine\maps\talking_island\farms.yaml safe=D:\Work\ManmabotV1\engine\maps\talking_island\safe.yaml home=D:\Work\ManmabotV1\engine\maps\talking_island\home.yaml)
+2026-09-21 20:44:22.948  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-21 20:44:22.969  INFO   session     Auto-resume → Running
+2026-09-21 20:44:23.300  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-21 20:44:23.307  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-21 20:44:44.210  INFO   session     Inventory listen ready (dll) · hp=26 arrows=481 silver=0 depoison=0
+2026-09-21 20:44:44.215  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-21 20:44:48.916  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-21 20:44:48.958  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_2', 'area_3', 'area_4', 'area_5', 'area_6']
+2026-09-21 20:44:49.530  INFO   session     Entity shadow: vision=17 {'player': 15, 'npc': 2} memory=52 {'player': 50, 'npc': 2} paired=17 median=0.024
+2026-09-21 20:45:02.869  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:45:03.142  INFO   session     Auto-resume → Running
+2026-09-21 20:45:03.412  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:45:06.751  INFO   session     Auto-resume → Running
+2026-09-21 20:45:10.775  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-21 20:45:11.528  INFO   session     Entity shadow: vision=16 {'player': 14, 'npc': 2} memory=51 {'player': 49, 'npc': 2} paired=15 median=0.012
+2026-09-21 20:45:22.667  INFO   session     Paused — hotkey
+2026-09-21 20:45:26.314  INFO   session     Resume → Running
+2026-09-21 20:45:32.684  INFO   session     Entity shadow: vision=8 {'player': 5, 'npc': 2, 'monster': 1} memory=7 {'player': 4, 'npc': 1, 'monster': 2} paired=5 median=0.022 unleveled=10:警衛,68:警衛
+2026-09-21 20:45:40.901  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:45:41.176  INFO   session     Auto-resume → Running
+2026-09-21 20:45:41.461  INFO   session     Auto-pause (not_focused)
+2026-09-21 20:45:44.242  INFO   session     Auto-resume → Running
+2026-09-21 20:45:53.942  INFO   session     Entity shadow: vision=5 {'player': 1, 'npc': 4} memory=4 {'monster': 3, 'npc': 1} paired=1 median=0.033 unleveled=10:警衛,68:警衛
+2026-09-21 20:46:04.436  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:04.717  INFO   session     Auto-resume → Running
+2026-09-21 20:46:05.002  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:05.285  INFO   session     Auto-resume → Running
+2026-09-21 20:46:05.563  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:05.845  INFO   session     Auto-resume → Running
+2026-09-21 20:46:08.052  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:08.324  INFO   session     Auto-resume → Running
+2026-09-21 20:46:08.606  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:08.879  INFO   session     Auto-resume → Running
+2026-09-21 20:46:09.155  INFO   session     Auto-pause (not_focused)
+2026-09-21 20:46:31.974  INFO   session     Auto-resume → Running
+2026-09-21 20:46:32.280  INFO   session     Entity shadow: vision=8 {'player': 4, 'npc': 4} memory=7 {'player': 3, 'monster': 3, 'npc': 1} paired=4 median=0.040 unleveled=68:警衛,10:警衛
+2026-09-21 20:46:35.025  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:35.312  INFO   session     Auto-resume → Running
+2026-09-21 20:46:35.595  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:35.878  INFO   session     Auto-resume → Running
+2026-09-21 20:46:38.949  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:39.221  INFO   session     Auto-resume → Running
+2026-09-21 20:46:39.509  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:39.797  INFO   session     Auto-resume → Running
+2026-09-21 20:46:40.069  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:46:40.350  INFO   session     Auto-resume → Running
+2026-09-21 20:46:40.628  INFO   session     Auto-pause (cursor_outside)
+2026-09-21 20:47:09.103  INFO   session     Auto-resume → Running
+2026-09-21 20:47:09.415  INFO   session     Entity shadow: vision=8 {'player': 4, 'npc': 4} memory=7 {'player': 3, 'monster': 3, 'npc': 1} paired=3 median=0.015 unleveled=68:警衛,10:警衛
+2026-09-21 20:47:10.546  INFO   session     Paused — hotkey
+2026-09-21 20:47:11.199  INFO   session     Hotkey resume → Running
+2026-09-21 20:47:33.102  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-21 20:47:55.756  INFO   session     Entity shadow: vision=1 {'player': 1} memory=3 {'monster': 2, 'player': 1} paired=0 median=0.000 unleveled=10:警衛,68:警衛
+2026-09-21 20:48:18.320  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=6 {'monster': 2, 'player': 2, 'npc': 2} paired=2 median=0.061 unleveled=10:警衛,68:警衛
+2026-09-21 20:48:41.006  INFO   session     Entity shadow: vision=4 {'player': 3, 'npc': 1} memory=6 {'player': 4, 'monster': 2} paired=3 median=0.053 unleveled=10:警衛,68:警衛
+2026-09-21 20:48:46.388  INFO   session     Stop → Stopped

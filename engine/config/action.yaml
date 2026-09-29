@@ -1,0 +1,63 @@
+# =============================================================================
+# action.yaml — Mouse/keyboard humanization and UI Esc dismiss
+# Used by: configure_action → humanize.py; ActionExecutor dismiss flag
+# =============================================================================
+# Ranges are [low, high]; each use samples uniformly in that range so timing
+# and aim are not metronomic.
+
+action:
+  # Periodic Esc to close mis-click dialogs. Keep false until vision detects
+  # windows (Esc can cancel walks / menus mid-action).
+  dismiss_ui_enabled: false
+  # Seconds between Esc taps when dismiss_ui_enabled is true.
+  dismiss_ui_interval: [3.0, 5.0]
+
+  # Random pixel offset around click centers. Keep [0, 0]: YOLO boxes and
+  # planned tile centers already have bias; extra jitter drifts aim.
+  aim_jitter_px: [0.0, 0.0]
+
+  # Curved mouse path: number of intermediate steps and sleep per step.
+  move_steps: [6, 14]
+  move_step_sleep: [0.0003, 0.002]
+  # Control-point bend as a fraction of move length (min ~4 px in code).
+  move_curve_fraction: [0.08, 0.22]
+
+  # Key hold duration (potions, box keys, teleport).
+  key_hold: [0.035, 0.09]
+  # Mage F5 energy-bolt hold (press → release).
+  mage_key_hold: [0.01, 0.03]
+  # After heal F8 (or a self-buff), pause before clicking self.
+  mage_pre_click_gap: [0.03, 0.12]
+  # Pause between the two F8 taps for heal.
+  heal_double_gap: [0.06, 0.14]
+  # Seconds between mage cast loops (must be ≥ 0.5 s magic cooldown).
+  mage_cast_interval: [0.50, 0.55]
+  # Elf/knight attack: seconds between left-clicks on the sticky target (no hold).
+  elf_attack_interval: [0.09, 0.14]
+  # Esc before the first click on a monster (cancels search/travel walk).
+  # Sticky re-clicks skip this. Set false if it hurts melee close-range.
+  stop_before_attack: true
+  stop_before_attack_wait_s: 0.0
+  # Loot: seconds between left-clicks on the sticky item.
+  loot_click_interval: [0.15, 0.25]
+
+  # After switching shortcut box F1/F2/F3.
+  box_switch_wait: [0.2, 0.4]
+  # After teleport / escape key before next input.
+  escape_wait: [0.35, 0.75]
+
+  # Action-layer anti-spam: re-click same combat/loot action after this many
+  # consecutive same-type ticks (sampled each time the action type changes).
+  stuck_ticks: [16, 26]
+
+  # Cursor appearance verifier (templates in repo ``cursors/``).
+  # After aiming, capture Win32 cursor and match before attack/loot/travel click.
+  cursor_verify:
+    enabled: true
+    templates_dir: cursors
+    min_score: 0.72
+    settle_s: 0
+    capture_size: 64
+
+  # Mouse button press → release delay.
+  click_delay: [0.01, 0.03]

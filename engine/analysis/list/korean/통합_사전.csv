@@ -1,0 +1,1024 @@
+﻿category,id,name
+monster,535,말미잘
+monster,536,말미잘
+monster,723,얼음 여왕
+monster,0,오크
+monster,156,오크
+monster,245,고블린
+monster,521,물고기
+monster,522,물고기
+monster,523,물고기
+monster,524,물고기
+monster,525,물고기
+monster,1,오크 궁수
+monster,147,오크 궁수
+monster,249,코볼트
+monster,2381,오염된 딥플라워
+monster,2384,오염된 땅의 정기
+monster,2388,오염된 인간 투사
+monster,2396,오염된 오크
+monster,144,펑거스
+monster,155,늑대
+monster,293,아이들론
+monster,294,그렘린
+monster,4,난쟁이
+monster,145,브롭
+monster,163,난쟁이
+monster,176,세인트버나드
+monster,178,콜리
+monster,179,세퍼드
+monster,180,비글
+monster,295,임프
+monster,465,여우
+monster,516,곰
+monster,706,허스키
+monster,1387,열혈토끼
+monster,1388,고양이
+monster,2214,라쿤
+monster,9,늑대
+monster,27,좀비
+monster,164,좀비
+monster,177,도베르만
+monster,190,멧돼지
+monster,296,임프 장로
+monster,2382,오염된 물의 정령
+monster,2389,오염된 인간 도끼병
+monster,2393,오염된 엔트
+monster,2397,오염된 오크 도끼병
+monster,11,괴물 눈
+monster,2,오크 전사
+monster,64,크로울링 크로
+monster,148,오크 전사
+monster,459,놀
+monster,512,실라칸스
+monster,8,늑대인간
+monster,154,늑대인간
+monster,324,난쟁이족 전사
+monster,514,해파리
+monster,515,해파리
+monster,25,해골
+monster,29,해골
+monster,94,간디 오크
+monster,152,간디 오크
+monster,299,오크 좀비
+monster,472,악어
+monster,972,얼음 여왕의 시녀
+monster,2383,오염된 불의 정령
+monster,2391,오염된 인간 검사
+monster,2394,오염된 판
+monster,2399,오염된 오크 전사
+monster,235,거대 개미
+monster,274,오크 마법사
+monster,276,해골궁수
+monster,500,바쿡
+monster,5,돌 골렘
+monster,6,돌 골렘
+monster,95,로바 오크
+monster,153,로바 오크
+monster,162,돌 골렘
+monster,277,해골도끼병
+monster,278,해골창병
+monster,2386,오염된 어둠의 정령
+monster,2390,오염된 인간 궁수
+monster,2395,오염된 아라크네
+monster,2398,오염된 오크 궁수
+monster,2402,스피리드의 소환물
+monster,17,셸로브
+monster,116,오크 스카우트
+monster,323,홉고블린
+monster,91,아투바 오크
+monster,93,두다-마라 오크
+monster,149,아투바 오크
+monster,151,두다-마라 오크
+monster,298,아울베어
+monster,331,리자드맨
+monster,506,혈거인간
+monster,568,혈거인간
+monster,15,흑기사
+monster,28,구울
+monster,30,스파토이
+monster,504,크랩맨
+monster,511,머맨
+monster,518,상어
+monster,750,흑기사 수색대
+monster,2392,오염된 요정 궁수
+monster,2400,오염된 오크 창병
+monster,2401,오염된 빛의 대정령
+monster,92,네루가 오크
+monster,150,네루가 오크
+monster,280,라이칸스로프
+monster,10001,타락한 바람의 대정령
+monster,10006,타락한 간디 오크
+monster,10014,타락한 페어리
+monster,10015,타락한 인간 투사
+monster,31,웅골리언트
+monster,560,도펠겡어
+monster,236,거대 병정 개미
+monster,505,랫맨
+monster,519,아스테
+monster,10002,타락한 물의 대정령
+monster,10009,타락한 오크 궁수
+monster,10010,타락한 요정 궁수
+monster,10017,타락한 인간 궁수
+monster,7,장로
+monster,115,가스트
+monster,33,버그베어
+monster,501,라미아
+monster,502,라미아
+monster,562,라미아
+monster,563,라미아
+monster,10000,타락한 빛의 대정령
+monster,10005,타락한 두다-마라 오크
+monster,10011,타락한 만드라고라
+monster,10016,타락한 인간 도적
+monster,182,켈베로스
+monster,503,시댄서
+monster,520,터틀 드래곤
+monster,246,스콜피온
+monster,252,하피
+monster,567,터틀 드래곤
+monster,10003,타락한 땅의 대정령
+monster,10007,타락한 오크 마법사
+monster,10012,타락한 요정 마법사
+monster,10019,타락한 인간 마법사
+monster,10021,타락한 스피리드의 소환물
+monster,288,해골저격병
+monster,290,해골근위병
+monster,297,다크 엘프
+monster,223,오우거
+monster,279,트롤
+monster,464,페이퍼 맨
+monster,507,일렉카둠
+monster,701,눈사람
+monster,735,페이퍼 맨
+monster,879,산적
+monster,10219,오우거
+monster,289,해골돌격병
+monster,513,크러스트시안
+monster,592,폭탄 꽃
+monster,212,킹 버그베어
+monster,281,무리안
+monster,708,좀비 엘모어 병사
+monster,709,아이스 맨
+monster,882,산적
+monster,899,젤라틴 큐브
+monster,2403,스피리드
+monster,10004,타락한 어둠의 대정령
+monster,10008,타락한 오크 전사
+monster,10013,타락한 요정 검사
+monster,10018,타락한 인간 전사
+monster,10257,펑거스
+monster,10258,꿈의 혼령
+monster,333,그리폰
+monster,460,미믹
+monster,703,좀비 엘모어 마법사
+monster,881,산적
+monster,10125,오염된 물의 정령
+monster,10126,오염된 불의 정령
+monster,10127,오염된 땅의 정령
+monster,10128,오염된 바람의 정령
+monster,463,아이스 골렘
+monster,471,크로코다일
+monster,880,산적
+monster,129,가스트 로드
+monster,286,비홀더
+monster,473,리빙아머
+monster,595,드래곤 플라이
+monster,702,샤벨 타이거
+monster,704,에티
+monster,884,도펠갱어
+monster,12091,도마뱀
+monster,248,코카트리스
+monster,287,에틴
+monster,587,불타는 전사
+monster,705,좀비 엘모어 장군
+monster,707,아이언 골렘
+monster,883,산적 두목
+monster,247,바실리스크
+monster,593,불타는 궁수
+monster,975,흑기사
+monster,2782,선택받지 못한 자
+monster,2784,선택받지 못한 자
+monster,2785,선택받지 못한 자
+monster,2786,선택받지 못한 자
+monster,284,서큐버스
+monster,2787,보초병
+monster,10272,어둠의 해골 궁수
+monster,534,사라만다
+monster,2783,선택받지 못한 자
+monster,10245,사라만다
+monster,10247,아이스 맨
+monster,10250,킬러비
+monster,10253,열혈토끼
+monster,10260,어둠의 버그베어
+monster,10262,어둠의 켈베로스
+monster,10271,어둠의 해골
+monster,12087,밀림 호랑이
+monster,12181,놀
+monster,591,파이어 에그
+monster,2807,순찰병
+monster,10204,선택받지 못한 자
+monster,10206,선택받지 못한 자
+monster,10207,선택받지 못한 자
+monster,10208,선택받지 못한 자
+monster,10244,파이어 에그
+monster,10248,아이스 골렘
+monster,10251,볼 라이트닝
+monster,10254,가디언 아머
+monster,325,사이클롭스
+monster,753,리자드맨
+monster,758,악어
+monster,771,늑대인간
+monster,772,아울베어
+monster,773,셸로브
+monster,10209,보초병
+monster,10255,나이트메어
+monster,10259,꿈의 혼령
+monster,10261,어둠의 킹 버그베어
+monster,10311,화염의 해골저격병
+monster,285,서큐버스 퀸
+monster,469,실루엣
+monster,761,버그베어
+monster,774,웅골리언트
+monster,776,가스트
+monster,976,흑기사 대장
+monster,10205,선택받지 못한 자
+monster,10310,화염의 해골돌격병
+monster,37,세마
+monster,580,유령
+monster,764,코카트리스
+monster,10129,네크로맨서
+monster,10210,순찰병
+monster,12173,리자드맨 검사
+monster,12175,리자드맨 마법사
+monster,12182,독침 킬러비
+monster,12183,하피
+monster,34,발터자르
+monster,581,유령
+monster,586,라바 골렘
+monster,754,라미아
+monster,755,라미아
+monster,767,하피
+monster,10243,불의 대정령
+monster,10246,물의 대정령
+monster,10249,바람의 대정령
+monster,10252,땅의 대정령
+monster,10256,유니콘
+monster,10300,화염의 불타는 궁수
+monster,10301,화염의 드래곤 플라이
+monster,12184,페르페르
+monster,12185,펠리컬
+monster,35,카스파
+monster,757,그리폰
+monster,762,킹 버그베어
+monster,770,라이칸스로프
+monster,775,트롤
+monster,10299,화염의 불타는 전사
+monster,12174,리자드맨 전사
+monster,12177,자이언트
+monster,36,메르키오르
+monster,579,데스
+monster,596,아시타지오
+monster,765,사이클롭스
+monster,10302,화염의 아시타지오
+monster,10303,화염의 혼 켈베로스
+monster,12186,블루 하피
+monster,588,이프리트
+monster,777,가스트 로드
+monster,12179,자이언트
+monster,12187,마이노
+monster,589,혼 켈베로스
+monster,759,크로코다일
+monster,760,에틴
+monster,827,다크 엘프
+monster,12188,와이번
+monster,250,드레이크
+monster,756,도펠갱어
+monster,763,바실리스크
+monster,768,미노타우르스
+monster,12178,자이언트
+monster,766,드레이크
+monster,769,미노타우르스
+monster,12191,유니 드래곤
+monster,24,바포메트
+monster,216,베레스
+monster,282,흑장로
+monster,885,도펠겡어 보스
+monster,10020,타락한 스피리드
+monster,10266,어둠의 바포메트
+monster,10267,어둠의 베레스
+monster,12192,테라 드래곤
+monster,16,커츠
+monster,10264,어둠의 커츠
+monster,63,데스나이트
+monster,10263,어둠의 데스나이트
+monster,891,키메라
+monster,1025,변종 웅골리언트
+monster,1026,변종 라미아
+monster,10307,화염의 바포메트
+monster,10308,화염의 베레스
+monster,710,얼음 여왕
+monster,897,메두사
+monster,10305,화염의 커츠
+monster,454,거대 여왕 개미
+monster,10304,화염의 데스나이트
+monster,1331,코카트리스
+monster,12180,에이션트 자이언트
+monster,590,피닉스
+monster,1028,사악한 미믹
+monster,1410,서큐버스
+monster,10309,화염의 피닉스
+monster,1039,제니스 퀸
+monster,332,데몬
+monster,895,댄싱 소드
+monster,1027,사악한 비홀더
+monster,10265,어둠의 데몬
+monster,1041,시어
+monster,889,다이어울프
+monster,10306,화염의 데몬
+monster,902,케레니스
+monster,971,켄 라우헬
+monster,327,안타라스
+monster,499,파푸리온
+monster,621,발라카스
+monster,900,린드비오르
+item,1,아탐
+item,2,일본도
+item,3,장검
+item,4,도끼
+item,5,등잔
+item,6,양손검
+item,7,아데나
+item,8,철퇴
+item,9,괴물 눈 고기
+item,10,고기
+item,11,활
+item,12,창
+item,13,전투 도끼
+item,14,빨간 물약
+item,15,주홍 물약
+item,16,불투명 물약
+item,17,초록 물약
+item,19,소나무 막대
+item,20,단풍나무 막대
+item,21,흑단 막대
+item,22,확인 주문서
+item,23,순간이동 주문서
+item,24,저주 풀기 주문서
+item,25,무기 마법 주문서
+item,26,갑옷 마법 주문서
+item,28,부활 주문서
+item,29,화살
+item,31,바르디쉐
+item,32,빌귀사름
+item,33,요정족 활
+item,34,오크족 활
+item,35,넓은 검
+item,36,양초
+item,37,당근
+item,38,몽둥이
+item,39,요정족 단검
+item,40,오크족 단검
+item,41,단검
+item,42,벡드코빈
+item,43,달걀
+item,44,포챠드
+item,45,도리깨
+item,46,넓은 창
+item,47,귀사름
+item,48,미늘창
+item,52,금빛 열쇠
+item,53,은회색 열쇠
+item,54,기병창
+item,55,레몬
+item,56,루선해머
+item,57,워해머
+item,58,모닝스타
+item,59,오렌지
+item,60,팬케익
+item,61,파르티잔
+item,64,순간이동 조종 반지
+item,65,변신 조종 반지
+item,67,언월도
+item,68,은 화살
+item,69,난쟁이족 도끼
+item,70,요정족 창
+item,71,오크족 창
+item,72,난쟁이족 검
+item,73,요정족 검
+item,74,오크족 검
+item,75,짧은 검
+item,77,삼지창
+item,78,싸울아비 장검
+item,81,장궁
+item,82,사과
+item,83,바나나
+item,86,엘븐 와퍼
+item,87,요정족 가죽 투구
+item,88,오크족 투구
+item,89,난쟁이족 철 투구
+item,90,투구
+item,91,판금 갑옷
+item,92,수정 갑옷
+item,93,청동 판금 갑옷
+item,94,미늘 갑옷
+item,95,띠 갑옷
+item,96,사슬 갑옷
+item,97,오크족 사슬 갑옷
+item,98,비늘 갑옷
+item,99,징박힌 가죽 갑옷
+item,100,고리 갑옷
+item,101,오크족 고리 갑옷
+item,102,가죽 갑옷
+item,103,가죽 재킷
+item,104,티셔츠
+item,105,요정족 망토
+item,106,오크족 망토
+item,107,난쟁이족 망토
+item,109,보호 망토
+item,110,투명 망토
+item,111,마법 망토
+item,113,작은 방패
+item,114,요정족 방패
+item,115,우럭하이 방패
+item,117,큰 방패
+item,118,난쟁이족 둥근 방패
+item,119,반사 방패
+item,120,짧은 부츠
+item,121,셸로브 발톱
+item,123,붉은 기사의 검
+item,124,글루디오 영지행 배표
+item,125,말하는 섬행 배표
+item,126,비취 물약
+item,127,랜턴
+item,128,부츠
+item,129,장갑
+item,130,맑은 물약
+item,131,랜턴용 기름
+item,138,대형 도끼
+item,140,기사의 면갑
+item,141,그라디우스
+item,142,악운의 단검
+item,144,광전사의 도끼
+item,145,에바의 방패
+item,155,사각 방패
+item,157,아투바의 토템
+item,158,네루가의 토템
+item,159,두다-마라의 토템
+item,160,간디의 토템
+item,161,로바의 토템
+item,162,귀환 주문서
+item,164,마법서 (힐)
+item,166,마력의 돌
+item,167,사슬 갑옷
+item,168,다이아몬드
+item,169,고급 다이아몬드
+item,170,최고급 다이아몬드
+item,171,에메랄드
+item,172,고급 에메랄드
+item,173,최고급 에메랄드
+item,174,루비
+item,175,고급 루비
+item,176,최고급 루비
+item,177,사파이어
+item,178,고급 사파이어
+item,179,최고급 사파이어
+item,180,마법서 (라이트)
+item,181,마법서 (실드)
+item,182,마법서 (에너지 볼트)
+item,183,마법서 (텔레포트)
+item,184,마법서 (큐어 포이즌)
+item,185,마법서 (칠 터치)
+item,186,마법서 (커스: 포이즌)
+item,187,마법서 (인챈트 웨폰)
+item,188,마법서 (디텍션)
+item,189,마법서 (라이트닝)
+item,190,마법서 (턴 언데드)
+item,191,마법서 (익스트라 힐)
+item,192,마법서 (커스: 블라인드)
+item,193,마법서 (블레스드 아머)
+item,194,마법서 (파이어볼)
+item,195,마법서 (인챈트 덱스터리티)
+item,196,마법서 (웨폰 브레이크)
+item,197,마법서 (뱀파이어릭 터치)
+item,198,마법서 (슬로우)
+item,199,마법서 (커스: 패럴라이즈)
+item,200,마법서 (콜 라이트닝)
+item,201,마법서 (그레이터 힐)
+item,202,마법서 (테이밍 몬스터)
+item,203,마법서 (리무브 커스)
+item,204,마법서 (크리에이트 좀비)
+item,205,마법서 (인챈트 마이티)
+item,206,마법서 (헤이스트)
+item,207,마법서 (캔슬레이션)
+item,208,마법서 (이럽션)
+item,209,마법서 (힐 올)
+item,210,마법서 (아이스 랜스)
+item,211,마법서 (서먼 몬스터)
+item,212,마법서 (홀리 워크)
+item,213,마법서 (토네이도)
+item,214,마법서 (풀 힐)
+item,216,마법서 (블리자드)
+item,217,마법서 (인비지블리티)
+item,218,마법서 (리절렉션)
+item,219,마법서 (라이트닝 스톰)
+item,220,마법서 (포그 오브 슬리핑)
+item,222,마법서 (이뮨 투 함)
+item,223,마법서 (매스 텔레포트)
+item,225,마법서 (미티어 스트라이크)
+item,229,투구
+item,230,참나무 지팡이
+item,231,마법사의 지팡이
+item,232,마력의 지팡이
+item,233,힘의 지팡이
+item,234,무명 로브
+item,235,다마스커스 검
+item,243,편지지
+item,244,작은 활
+item,245,판의 갈기털
+item,246,미스릴 원석
+item,247,정령의 돌
+item,248,엔트의 줄기
+item,249,버섯포자의 즙
+item,250,오우거의 피
+item,251,실
+item,252,미스릴
+item,253,페어리 더스트
+item,254,아라크네의 거미줄
+item,255,엔트의 껍질
+item,256,오리하루콘
+item,257,미스릴 실
+item,258,미스릴 화살
+item,259,아라크네의 허물
+item,260,활 골무
+item,261,페어리의 날개
+item,262,마법의 플룻
+item,263,나무방패
+item,264,미스릴 판금
+item,265,오리하루콘 판금
+item,266,나무 갑옷
+item,267,요정족 흉갑
+item,268,판의 뿔
+item,269,크로스 보우
+item,270,단검신
+item,271,장검신
+item,272,오리하루콘 검신
+item,273,요정족 판금 갑옷
+item,274,레이피어
+item,275,엘름의 축복
+item,276,미스릴 도금 뿔
+item,277,오리하루콘 도금 뿔
+item,278,메일 브레이커
+item,279,엔트의 열매
+item,280,파워 글로브
+item,281,요정족 사슬 갑옷
+item,283,나무 줄기 옷
+item,289,은기사의 방패
+item,291,마법의 투구: 치유
+item,292,마법의 투구: 신속
+item,293,마법의 투구: 힘
+item,296,용기의 물약
+item,297,지혜의 물약
+item,299,변신 주문서
+item,306,완력의 목걸이
+item,307,민첩의 목걸이
+item,308,체력의 목걸이
+item,309,지식의 목걸이
+item,310,지혜의 목걸이
+item,311,매력의 목걸이
+item,314,오크 투사의 목걸이
+item,317,가죽모자
+item,318,징박은 가죽모자
+item,319,가죽투구
+item,320,해골투구
+item,321,가죽샌달
+item,322,징박은 가죽샌달
+item,323,가죽부츠
+item,324,가죽방패
+item,325,징박은 가죽방패
+item,326,골각방패
+item,327,가죽조끼
+item,328,벨트달린 가죽조끼
+item,329,징박은 가죽조끼
+item,330,중갑가죽조끼
+item,331,뼈갑옷
+item,332,동물가죽
+item,333,철괴
+item,334,벨트
+item,335,고급피혁
+item,336,뼈조각
+item,337,대검
+item,342,마나의 지팡이
+item,343,펫 호루라기
+item,348,숫돌
+item,357,혈맹 편지지
+item,358,은장검
+item,359,은검
+item,360,은도끼
+item,361,펫 목걸이
+item,362,사탕
+item,365,강철 장갑
+item,366,강철 면갑
+item,367,강철 방패
+item,368,강철 부츠
+item,369,강철 판금 갑옷
+item,376,파란 옷감
+item,378,붉은 옷감
+item,379,하얀 옷감
+item,382,강철 원석
+item,385,마법사 모자
+item,386,마법사 옷
+item,388,사냥꾼 활
+item,403,수룡 비늘 갑옷
+item,404,지룡 비늘 갑옷
+item,405,화룡 비늘 갑옷
+item,406,풍룡 비늘 갑옷
+item,407,수룡 비늘
+item,408,지룡 비늘
+item,409,화룡 비늘
+item,410,풍룡 비늘
+item,415,빈 주문서(레벨 1)
+item,417,에바의 축복
+item,418,인어의 비늘
+item,429,아시타지오의 재
+item,492,파란 물약
+item,495,강화 초록 물약
+item,496,항마의 반지
+item,497,멸마의 반지
+item,498,화령의 반지
+item,499,수령의 반지
+item,500,지령의 반지
+item,501,풍령의 반지
+item,502,낡은 신체의 벨트
+item,503,낡은 정신의 벨트
+item,504,낡은 영혼의 벨트
+item,505,신체의 벨트
+item,506,정신의 벨트
+item,507,영혼의 벨트
+item,508,낡은 완력의 목걸이
+item,509,낡은 민첩의 목걸이
+item,510,낡은 체력의 목걸이
+item,511,낡은 지식의 목걸이
+item,512,낡은 지혜의 목걸이
+item,513,낡은 매력의 목걸이
+item,515,마법서 (아이스 대거)
+item,516,마법서 (윈드 커터)
+item,517,마법서 (파이어 애로우)
+item,518,마법서 (스탈락)
+item,519,마법서 (프로즌 클라우드)
+item,520,마법서 (어스 재일)
+item,521,마법서 (콘 오브 콜드)
+item,522,마법서 (선 버스트)
+item,523,마법서 (그레이터 헤이스트)
+item,524,마법서 (어스 퀘이크)
+item,525,마법서 (파이어 스톰)
+item,545,돌 장갑
+item,547,수정 장갑
+item,551,수중 부츠
+item,556,데스나이트의 장갑
+item,557,데스나이트의 갑옷
+item,558,데스나이트의 부츠
+item,559,데스나이트의 투구
+item,565,트롤의 벨트
+item,566,오우거의 벨트
+item,567,타이탄의 벨트
+item,568,사이하의 활
+item,569,정령옥
+item,570,정령의 수정 (레지스트 매직)
+item,571,정령의 수정 (바디 투 마인드)
+item,572,정령의 수정 (텔레포트 투 마더)
+item,573,정령의 수정 (클리어 마인드)
+item,574,정령의 수정 (레지스트 엘리멘트)
+item,575,정령의 수정 (리턴 투 네이처)
+item,576,정령의 수정 (블러드 투 소울)
+item,577,정령의 수정 (프로텍션 프롬 엘리멘트)
+item,578,정령의 수정 (파이어 웨폰)
+item,579,정령의 수정 (윈드 샷)
+item,580,정령의 수정 (윈드 워크)
+item,581,정령의 수정 (어스 스킨)
+item,582,정령의 수정 (인탱글)
+item,583,정령의 수정 (이레이즈 매직)
+item,584,정령의 수정 (서먼 레서 엘리멘탈)
+item,585,정령의 수정 (브레스 오브 파이어)
+item,586,정령의 수정 (아이 오브 스톰)
+item,587,정령의 수정 (어스 바인드)
+item,588,정령의 수정 (네이쳐스 터치)
+item,589,정령의 수정 (블레스 오브 어스)
+item,590,정령의 수정 (에어리어 오브 사일런스)
+item,591,정령의 수정 (서먼 그레이터 엘리멘탈)
+item,592,정령의 수정 (버닝 웨폰)
+item,593,정령의 수정 (네이쳐스 블레싱)
+item,595,정령의 수정 (스톰 샷)
+item,597,정령의 수정 (아이언 스킨)
+item,598,마법서 (홀리 웨폰)
+item,599,마법서 (디크리즈 웨이트)
+item,600,마법서 (위크 엘리멘탈)
+item,601,마법서 (카운터 매직)
+item,602,마법서 (메디테이션)
+item,603,마법서 (마나 드레인)
+item,604,마법서 (다크니스)
+item,605,마법서 (위크니스)
+item,606,마법서 (블레스 웨폰)
+item,607,마법서 (버서커스)
+item,608,마법서 (디지즈)
+item,610,마법서 (사일런스)
+item,620,빈 주문서(레벨 2)
+item,621,빈 주문서(레벨 3)
+item,622,빈 주문서(레벨 4)
+item,631,민첩함의 투구
+item,632,체력의 투구
+item,633,낡은 거래 문서
+item,636,수색문서
+item,639,흑기사의 서약서
+item,640,두다 마라 오크 마법서
+item,641,네루가 오크 마법서
+item,642,간디 오크 마법서
+item,643,아투바 오크 마법서
+item,644,저주받은 마법서
+item,645,마력서
+item,646,붉은 망토
+item,647,해골의 두개골
+item,648,구울의 손톱
+item,649,구울의 이빨
+item,650,터틀 드래곤의 껍질
+item,651,기사의 두건
+item,652,붉은 기사의 두건
+item,654,잊혀진 판금 갑옷
+item,655,잊혀진 가죽 갑옷
+item,656,잊혀진 로브
+item,657,잊혀진 비늘 갑옷
+item,658,소환 조종 반지
+item,659,잊혀진 대검
+item,660,잊혀진 검
+item,661,잊혀진 보우건
+item,666,붉은 기사의 방패
+item,667,고대의 판금 갑옷
+item,668,고대의 가죽 갑옷
+item,669,고대의 로브
+item,670,고대의 비늘 갑옷
+item,671,고대의 대검
+item,672,고대의 검
+item,673,고대의 보우건
+item,674,고대의 주문서
+item,675,마법서 (트루 타겟)
+item,676,마법서 (글로잉 오라)
+item,677,생명의 비밀
+item,686,라미아의 비늘
+item,687,환생의 물약
+item,688,감사의 편지
+item,689,마을 주민들의 유품
+item,690,언데드의 뼈
+item,693,저주 받은 정령서
+item,694,언데드의 열쇠
+item,695,좀비 열쇠
+item,696,해골 열쇠
+item,705,요정족 티셔츠
+item,706,군주의 위엄
+item,707,비밀방 열쇠
+item,709,신비한 수정구
+item,710,신비한 지팡이
+item,711,수정 지팡이
+item,712,라미아 방 열쇠
+item,713,마법서 (콜 클랜)
+item,722,반왕의 갑옷
+item,723,반왕의 부츠
+item,724,반왕의 건틀릿
+item,725,반왕의 투구
+item,727,케레니스의 부츠
+item,732,케레니스의 서클릿
+item,734,케레니스의 장갑
+item,735,케레니스의 로브
+item,742,메두사 방패
+item,744,에이션트 자이언트의 반지
+item,756,수호자의 반지
+item,768,보호 장갑
+item,769,마나 망토
+item,770,용기의 벨트
+item,776,결혼 반지
+item,787,데스 블레이드
+item,788,마나 수정구
+item,789,화염의 활
+item,790,화염의 검
+item,791,황금 지휘봉
+item,806,혈맹 귀환 주문서
+item,815,제니스의 반지
+item,895,엘릭서(STR)
+item,896,엘릭서(DEX)
+item,897,엘릭서(CON)
+item,898,엘릭서(INT)
+item,899,엘릭서(WIS)
+item,900,엘릭서(CHA)
+item,927,검은 혈흔
+item,935,빛나는 비늘
+item,936,빛나는 신체의 벨트
+item,937,빛나는 정신의 벨트
+item,938,빛나는 영혼의 벨트
+item,978,흑장로의 로브
+item,979,흑장로의 샌달
+item,980,발터자르의 모자
+item,981,카스파의 모자
+item,982,메르키오르의 모자
+item,983,세마의 모자
+item,1007,커츠의 장갑
+item,1008,커츠의 갑옷
+item,1009,커츠의 부츠
+item,1010,커츠의 투구
+item,1094,얼음 여왕의 지팡이
+item,1095,데몬의 지팡이
+item,1096,바포메트의 지팡이
+item,1097,베레스의 지팡이
+item,1221,마법서 (브레이브 오라)
+item,1285,크림슨 랜스
+item,1294,기술서 (쇼크 스턴)
+item,1295,마법서 (런 클랜)
+item,1296,정령의 수정 (트리플 애로우)
+item,1408,악마의 피
+item,1489,바다의 망토
+item,1490,마법서 (디케이 포션)
+item,1491,마법서 (어드밴스 스피릿)
+item,1492,기술서 (카운터 배리어)
+item,1493,정령의 수정 (워터 라이프)
+item,1494,정령의 수정 (폴루트 워터)
+item,1495,정령의 수정 (스트라이커 게일)
+item,1496,정령의 수정 (소울 오브 프레임)
+item,1861,기술서 (리덕션 아머)
+item,1862,기술서 (바운스 어택)
+item,1863,기술서 (솔리드 캐리지)
+item,2069,달빛의 정기
+item,2070,신성한 유니콘의 뿔
+item,2072,달의 장궁
+item,2586,날이 빠진 무기
+item,2671,픽시의 깃털
+item,3018,천사의 지팡이
+item,3019,혹한의 창
+item,3020,뇌신검
+item,3350,속죄의 성서
+item,3934,불 정령의 벨트
+item,3935,물 정령의 벨트
+item,3936,땅 정령의 벨트
+item,3937,바람 정령의 벨트
+item,4052,봉인 해제 주문서
+item,12069,회상의 촛불
+item,12070,회상의 촛불
+item,12074,속죄의 성서 상자
+item,12104,봉인 해제 주문서 상자
+item,12105,종이 전령새
+item,12106,종이 전령새 상자
+item,12110,도난당한 목걸이
+item,12111,도난당한 반지
+item,12112,사이클롭스의 피
+item,12113,오염된 정령의 수정(물)
+item,12114,오염된 정령의 수정(불)
+item,12115,오염된 정령의 수정(땅)
+item,12116,오염된 정령의 수정(바람)
+item,12117,바실리스크의 비늘
+item,12118,정화의 머리띠
+item,12119,신비한 마나 회복 물약
+item,12120,신비한 지혜의 물약
+item,12121,서큐버스 퀸의 신비한 지팡이
+item,12130,말하는 섬의 추억
+item,12149,수호의 반지
+item,12170,수호의 목걸이
+item,12209,수호의 벨트
+item,12242,장로의 목걸이
+item,12243,장로의 반지
+item,12286,항마의 목걸이
+item,12287,항마의 벨트
+item,12349,신의의 부츠
+item,12350,용기의 부츠
+item,12351,세피아의 부츠
+item,12352,마나의 부츠
+item,12405,마나의 반지
+item,12456,잊혀진 섬의 추억
+item,12458,케플리샤의 기억 저장 구슬
+item,12514,낡은 수렵꾼의 화살통
+item,12531,낡은 가죽 화살통
+item,12557,안타라스의 기억
+item,12860,지식의 반지
+item,12875,엘릭서 선택 상자
+item,12876,퓨어 엘릭서
+item,15090,멸마의 목걸이
+item,15091,멸마의 벨트
+item,15384,완력의 반지
+item,15385,민첩의 반지
+item,15399,시어의 심안
+item,15400,오만의 탑 1층 이동 주문서
+item,15410,오만의 탑 11층 이동 주문서
+item,15420,오만의 탑 1층 이동 부적
+item,15430,오만의 탑 11층 이동 부적
+item,15456,봉인된 오만의 탑 1층 이동 부적
+item,15457,봉인된 오만의 탑 11층 이동 부적
+spell,0,힐
+spell,1,라이트
+spell,2,실드
+spell,3,에너지 볼트
+spell,4,텔레포트
+spell,5,아이스 대거
+spell,6,윈드 커터
+spell,7,홀리 웨폰
+spell,8,큐어 포이즌
+spell,9,칠 터치
+spell,10,커스:포이즌
+spell,11,인챈트 웨폰
+spell,12,디텍션
+spell,13,디크리즈 웨이트
+spell,14,파이어 애로우
+spell,15,스탈락
+spell,16,라이트닝
+spell,17,턴 언데드
+spell,18,익스트라 힐
+spell,19,커스:블라인드
+spell,20,블레스드 아머
+spell,21,프로즌 클라우드
+spell,22,위크 엘리멘탈
+spell,24,파이어볼
+spell,25,인챈트 덱스터리티
+spell,26,웨폰 브레이크
+spell,27,뱀파이어릭 터치
+spell,28,슬로우
+spell,29,어스재일
+spell,30,카운터 매직
+spell,31,메디테이션
+spell,32,커스:패럴라이즈
+spell,33,콜 라이트닝
+spell,34,그레이터 힐
+spell,35,테이밍 몬스터
+spell,36,리무브 커스
+spell,37,콘 오브 콜드
+spell,38,마나 드레인
+spell,39,다크니스
+spell,40,크리에이트 좀비
+spell,41,인챈트 마이티
+spell,42,헤이스트
+spell,43,캔슬레이션
+spell,44,이럽션
+spell,45,선 버스트
+spell,46,위크니스
+spell,47,블레스 웨폰
+spell,48,힐 올
+spell,49,아이스 랜스
+spell,50,서먼 몬스터
+spell,51,홀리 워크
+spell,52,토네이도
+spell,53,그레이터 헤이스트
+spell,54,버서커스
+spell,55,디지즈
+spell,56,풀 힐
+spell,58,블리자드
+spell,59,인비지블리티
+spell,60,리절렉션
+spell,61,어스 퀘이크
+spell,63,사일런스
+spell,64,라이트닝 스톰
+spell,65,포그 오브 슬리핑
+spell,67,이뮨 투 함
+spell,68,매스 텔레포트
+spell,69,파이어 스톰
+spell,70,디케이 포션
+spell,73,미티어 스트라이크
+spell,78,어드밴스 스피릿
+spell,86,쇼크 스턴
+spell,87,리덕션 아머
+spell,88,바운스 어택
+spell,89,솔리드 캐리지
+spell,90,카운터 배리어
+spell,112,트루 타겟
+spell,113,글로잉 오라
+spell,115,콜 클랜
+spell,116,브레이브 오라
+spell,117,런 클랜
+spell,128,레지스트 매직
+spell,129,바디 투 마인드
+spell,130,텔레포트 투 마더
+spell,131,트리플 애로우
+spell,136,클리어 마인드
+spell,137,레지스트 엘리멘트
+spell,144,리턴 투 네이쳐
+spell,145,블러드 투 소울
+spell,146,프로텍션 프롬 엘리멘트
+spell,147,파이어 웨폰
+spell,148,윈드 샷
+spell,149,윈드 워크
+spell,150,어스 스킨
+spell,151,인탱글
+spell,152,이레이즈 매직
+spell,153,서먼 레서 엘리멘탈
+spell,154,브레스 오브 파이어
+spell,155,아이 오브 스톰
+spell,156,어스 바인드
+spell,157,네이쳐스 터치
+spell,158,블레스 오브 어스
+spell,160,에이리어 오브 사일런스
+spell,161,서먼 그레이터 엘리멘탈
+spell,162,버닝 웨폰
+spell,163,네이쳐스 블레싱
+spell,165,스톰 샷
+spell,167,아이언 스킨
+spell,169,워터 라이프
+spell,172,폴루트 워터
+spell,173,스트라이커 게일
+spell,174,소울 오브 프레임
+class,1,군주
+class,10,기사
+class,100,요정
+class,1000,마법사

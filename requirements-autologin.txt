@@ -1,0 +1,23 @@
+# Autologin runtime deps for ManmabotV1's bundled Python (3.14).
+# Install with: python\python.exe -m pip install -r requirements-autologin.txt
+#
+# Pins from autologin/requirements.txt that do not publish 3.14 wheels are
+# replaced with the newest available compatible releases.
+
+numpy>=2.5.1
+onnxruntime>=1.29.0
+opencv-python>=5.0.0.93
+pillow>=12.3.0
+psutil>=7.2.2
+pywin32>=312
+shapely>=2.1.2
+uiautomation>=2.0.29
+rapidocr>=3.9.2
+rapidocr-onnxruntime>=1.2.3
+winrt-runtime>=3.2.1
+winrt-Windows.Foundation>=3.2.1
+winrt-Windows.Foundation.Collections>=3.2.1
+winrt-Windows.Globalization>=3.2.1
+winrt-Windows.Graphics.Imaging>=3.2.1
+winrt-Windows.Media.Ocr>=3.2.1
+winrt-Windows.Storage.Streams>=3.2.1

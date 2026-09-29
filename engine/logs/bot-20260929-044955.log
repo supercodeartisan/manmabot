@@ -1,0 +1,49 @@
+2026-09-29 04:49:55.264  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 04:49:55.276  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-044955.log
+2026-09-29 04:49:55.276  INFO   session     character=elf loot=adena_only game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-044955.log
+2026-09-29 04:50:07.377  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-29 04:50:08.106  INFO   nav         portal graph: 188 components, 728 ms
+2026-09-29 04:50:08.146  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 04:50:08.881  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 04:50:09.721  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 04:50:09.759  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 04:50:09.814  INFO   session     인벤토리를 백그라운드에서 스캔 중 (inventory_listen.dll 또는 inv.json을 두세요).
+2026-09-29 04:50:09.976  INFO   session     메모리에서 핫바 24칸을 읽는 중…
+2026-09-29 04:50:10.347  INFO   session     핫바 스캔 완료 · 파워 업@box1/f5, 아머 업@box1/f6, 라이트@box1/f7, 힐@box1/f8, HP 물약@box2/f9, 텔레포트@box1/f10, 마법 공격@box1/f12, 말하는 두루마리@box2/f5, 마더 트리@box2/f6, HP를 MP로@box2/f7
+2026-09-29 04:50:10.479  INFO   session     매핑되지 않은 핫바 아이콘: box1/f11:아데나, box1/f12:화살, box2/f10:은화살, box2/f12:SPELL
+2026-09-29 04:50:10.531  INFO   session     루프 준비 · 요정 · 한국어 · 맵=말하는 섬 · 룻=아데나만 · 구역=구역 1, 구역 3
+2026-09-29 04:50:12.063  INFO   session     Entity shadow: vision=49 {'player': 42, 'monster': 4, 'npc': 3} memory=90 {'player': 82, 'npc': 7, 'monster': 1} paired=45 median=0.066 unleveled=319:?
+2026-09-29 04:50:12.116  INFO   session     인벤토리 수신 준비 (dll) · hp=35 화살=490 은화살=0 해독=0
+2026-09-29 04:50:12.165  INFO   decision    mode=farming behavior=buff action=buff target=- reason='armor_up' status=success
+2026-09-29 04:50:13.239  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='return to selected hunt map' status=success
+2026-09-29 04:50:17.111  INFO   decision    mode=farming behavior=talking_scroll action=idle target=- reason='waiting talking scroll (hunt map)' status=success
+2026-09-29 04:50:18.550  INFO   session     Entity shadow: vision=54 {'player': 46, 'monster': 5, 'npc': 3} memory=94 {'npc': 6, 'player': 86, 'monster': 2} paired=48 median=0.060 unleveled=319:?
+2026-09-29 04:50:21.747  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='return to selected hunt map' status=success
+2026-09-29 04:50:24.409  INFO   session     Entity shadow: vision=51 {'player': 45, 'monster': 4, 'npc': 1, 'item': 1} memory=40 {'npc': 6, 'player': 32, 'monster': 2} paired=21 median=0.052 unleveled=68:경비병
+2026-09-29 04:50:24.860  INFO   decision    mode=farming behavior=buff action=buff target=- reason='light' status=success
+2026-09-29 04:50:26.444  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-29 04:50:30.001  INFO   session     Entity shadow: vision=32 {'player': 29, 'npc': 3} memory=41 {'player': 35, 'npc': 5, 'monster': 1} paired=30 median=0.054 unleveled=319:?
+2026-09-29 04:50:35.325  INFO   session     Entity shadow: vision=20 {'player': 16, 'npc': 4} memory=38 {'npc': 7, 'player': 30, 'monster': 1} paired=17 median=0.044 unleveled=319:?
+2026-09-29 04:50:40.490  INFO   session     Entity shadow: vision=16 {'player': 13, 'npc': 3} memory=22 {'monster': 1, 'npc': 7, 'player': 14} paired=14 median=0.032 unleveled=208:토끼
+2026-09-29 04:50:45.688  INFO   session     Entity shadow: vision=9 {'player': 6, 'npc': 3} memory=23 {'monster': 3, 'player': 17, 'npc': 3} paired=5 median=0.028 unleveled=68:경비병,208:토끼,10:경비병
+2026-09-29 04:50:50.765  INFO   session     Entity shadow: vision=5 {'player': 3, 'npc': 2} memory=5 {'monster': 3, 'player': 2} paired=2 median=0.048 unleveled=208:토끼,68:경비병,10:경비병
+2026-09-29 04:50:51.687  INFO   decision    mode=traveling behavior=combat action=attack target=198 reason='engage target' status=success
+2026-09-29 04:50:56.326  INFO   session     Entity shadow: vision=5 {'npc': 2, 'player': 1, 'monster': 2} memory=6 {'monster': 6} paired=2 median=0.018 unleveled=208:토끼,10:경비병,68:경비병
+2026-09-29 04:50:58.123  INFO   decision    mode=traveling behavior=combat action=attack target=199 reason='attack target' status=success
+2026-09-29 04:51:00.384  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-29 04:51:01.364  INFO   session     Entity shadow: vision=4 {'npc': 2, 'monster': 1, 'player': 1} memory=5 {'monster': 5} paired=0 median=0.000 unleveled=14:개구리,208:토끼,10:경비병,68:경비병
+2026-09-29 04:51:06.451  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=4 {'monster': 4} paired=0 median=0.000 unleveled=208:토끼,14:개구리,68:경비병
+2026-09-29 04:51:11.622  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=14:개구리
+2026-09-29 04:51:14.471  INFO   decision    mode=traveling behavior=combat action=attack target=204 reason='engage target' status=success
+2026-09-29 04:51:16.699  INFO   session     Entity shadow: vision=2 {'monster': 1, 'player': 1} memory=1 {'item': 1} paired=0 median=0.000
+2026-09-29 04:51:16.765  INFO   decision    mode=traveling behavior=loot action=searching target=205 reason='walk onto item' status=success
+2026-09-29 04:51:21.824  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 1, 'item': 1} memory=2 {'monster': 1, 'item': 1} paired=2 median=0.018
+2026-09-29 04:51:23.222  INFO   decision    mode=traveling behavior=loot action=pickup target=205 reason='loot target' status=success
+2026-09-29 04:51:23.887  INFO   decision    mode=traveling behavior=loot action=idle target=- reason='pickup memory gone' status=success
+2026-09-29 04:51:25.125  INFO   decision    mode=traveling behavior=combat action=attack target=206 reason='engage target' status=success
+2026-09-29 04:51:27.482  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=14:개구리
+2026-09-29 04:51:27.568  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='enter farm area' status=success
+2026-09-29 04:51:32.572  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=14:개구리
+2026-09-29 04:51:35.802  INFO   session     일시정지 — 단축키
+2026-09-29 04:51:39.729  INFO   session     정지 → 중지됨
+2026-09-29 04:51:40.400  INFO   session     봇 작업이 종료되었습니다

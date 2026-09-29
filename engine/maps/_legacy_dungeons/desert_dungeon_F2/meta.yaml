@@ -1,0 +1,6 @@
+id: desert_dungeon_F2
+name: "Desert Dungeon F2"
+origin_x: 32692
+origin_y: 32698
+pixel_scale: 1
+terrain: nav.png

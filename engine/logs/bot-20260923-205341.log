@@ -1,0 +1,32 @@
+2026-09-23 20:53:41.064  INFO   session     Loading Manmabot from D:\Work\Lineage\ManmabotV1_final\engine
+2026-09-23 20:53:41.068  INFO   session     Session log D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-205341.log
+2026-09-23 20:53:41.068  INFO   session     character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\Work\Lineage\ManmabotV1_final\engine\logs\bot-20260923-205341.log
+2026-09-23 20:53:41.277  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-23 20:53:41.522  INFO   nav         portal graph: 188 components, 245 ms
+2026-09-23 20:53:41.528  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-23 20:53:41.806  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-23 20:53:42.146  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-23 20:53:42.152  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-23 20:53:42.158  INFO   session     Inventory listen scanning in background (build inventory_listen.dll or place inv.json).
+2026-09-23 20:53:42.163  INFO   session     Scanning hotbar (skill boxes 1–3)…
+2026-09-23 20:53:46.259  INFO   session     Hotbar scan done · hp_potion@box1/f5, talking_scroll@box1/f8
+2026-09-23 20:53:46.264  INFO   session     Loop ready · elf · ko · map=talking_island · loot=all_items · farms=['area_1', 'area_3']
+2026-09-23 20:53:46.688  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=7 {'player': 2, 'monster': 2, 'npc': 3} paired=1 median=0.021 unleveled=68:경비병,10:경비병
+2026-09-23 20:53:46.714  INFO   session     Inventory listen ready (dll) · hp=7 arrows=2694 silver=0 depoison=0
+2026-09-23 20:53:46.762  INFO   decision    mode=farming behavior=talking_scroll action=use_talking_scroll target=- reason='go to shop (buy_hp_potions_mainland)' status=success
+2026-09-23 20:53:47.633  INFO   nav         async nav configure start map=mainland
+2026-09-23 20:53:47.847  INFO   decision    mode=farming behavior=shop action=shop_stop target=- reason='stop at shop' status=success
+2026-09-23 20:53:48.334  INFO   nav         building portal graph (cluster=32, 1755x1414)
+2026-09-23 20:53:52.555  INFO   nav         portal graph: 2586 components, 4221 ms
+2026-09-23 20:53:52.559  INFO   nav         farms=6 safe=0 home=None (files farm=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\farms.yaml safe=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\safe.yaml home=D:\Work\Lineage\ManmabotV1_final\engine\maps\mainland\home.yaml)
+2026-09-23 20:53:52.559  INFO   nav         async nav configure done map=mainland (4926 ms)
+2026-09-23 20:53:53.369  INFO   session     Entity shadow: vision=39 {'monster': 4, 'player': 35} memory=83 {'player': 76, 'npc': 7} paired=35 median=0.045
+2026-09-23 20:53:53.464  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='unstick' status=success
+2026-09-23 20:53:58.726  INFO   session     Entity shadow: vision=47 {'monster': 6, 'player': 39, 'npc': 2} memory=81 {'player': 74, 'npc': 7} paired=39 median=0.033
+2026-09-23 20:54:04.002  INFO   session     Entity shadow: vision=38 {'player': 30, 'monster': 6, 'npc': 2} memory=76 {'player': 69, 'npc': 7} paired=30 median=0.029
+2026-09-23 20:54:09.279  INFO   session     Entity shadow: vision=37 {'player': 31, 'monster': 3, 'npc': 3} memory=76 {'player': 69, 'npc': 7} paired=33 median=0.065
+2026-09-23 20:54:14.299  INFO   session     Entity shadow: vision=37 {'player': 35, 'monster': 2} memory=78 {'player': 71, 'npc': 7} paired=35 median=0.039
+2026-09-23 20:54:14.360  INFO   decision    mode=traveling behavior=traveling action=traveling target=- reason='walk to shop (buy_hp_potions_mainland)' status=success (repeat)
+2026-09-23 20:54:14.519  INFO   session     Paused — hotkey
+2026-09-23 21:24:12.421  INFO   session     Stop → Stopped
+2026-09-23 21:24:14.633  INFO   session     Bot worker exited

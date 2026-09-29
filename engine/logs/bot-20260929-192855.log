@@ -1,0 +1,37 @@
+2026-09-29 19:28:55.675  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 19:28:55.705  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-192855.log
+2026-09-29 19:28:55.718  INFO   session     character=elf loot=adena_only game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-192855.log
+2026-09-29 19:28:56.171  INFO   nav         building portal graph (cluster=32, 512x576)
+2026-09-29 19:28:56.803  INFO   nav         portal graph: 189 components, 623 ms
+2026-09-29 19:28:57.055  INFO   nav         farms=2 safe=11 home=(385, 246) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 19:28:57.520  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 19:28:58.372  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 19:28:58.532  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 19:28:58.585  INFO   session     Inventory listen scanning in background (inventory_listen.dll or place inv.json).
+2026-09-29 19:28:58.831  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-29 19:28:59.528  INFO   session     Hotbar scan done · Power-up@box1/f5, Armor-up@box1/f6, Light@box1/f7, Heal@box1/f8, HP potion@box2/f9, Teleport@box1/f10, Mage attack@box1/f12, Talking scroll@box2/f5, Mother tree@box2/f6, HP to MP@box2/f7
+2026-09-29 19:28:59.704  INFO   session     Unmapped hotbar icons: box1/f8:SPELL, box1/f11:Adena, box1/f12:Arrow, box2/f10:Silver Arrow, box2/f12:속도향상 물약, box3/f10:SPELL
+2026-09-29 19:28:59.994  INFO   session     Loop ready · Elf · Korean · map=Talking Island · loot=Adená only · farms=Area 1, Area 3
+2026-09-29 19:29:00.943  INFO   session     Entity shadow: vision=24 {'player': 24} memory=40 {'player': 33, 'npc': 6, 'monster': 1} paired=23 median=0.038 unleveled=319:?
+2026-09-29 19:29:01.039  INFO   session     Inventory listen ready (dll) · hp=42 arrows=9221 silver=0 depoison=0
+2026-09-29 19:29:01.087  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:01.088  INFO   travel      return/enter farm needed at (326,223)
+2026-09-29 19:29:01.104  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:01.241  INFO   travel      hop begin wp=(327, 236) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:01.412  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(326,223) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 19:29:02.395  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:03.233  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:03.401  INFO   travel      hop begin wp=(329, 238) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:04.635  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:05.863  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:06.706  INFO   travel      hop begin wp=(325, 232) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:07.991  INFO   session     Entity shadow: vision=29 {'player': 22, 'item': 3, 'npc': 2, 'monster': 2} memory=70 {'player': 57, 'npc': 10, 'item': 2, 'monster': 1} paired=26 median=0.048 unleveled=319:?
+2026-09-29 19:29:08.578  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:09.631  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:09.738  INFO   travel      hop begin wp=(335, 243) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:11.409  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:12.375  INFO   travel      hop begin wp=(333, 243) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:14.160  INFO   session     Entity shadow: vision=32 {'player': 24, 'item': 2, 'npc': 5, 'monster': 1} memory=46 {'npc': 8, 'player': 36, 'item': 2} paired=26 median=0.091
+2026-09-29 19:29:14.389  INFO   search      farm branch=none (wander/search next)
+2026-09-29 19:29:14.560  INFO   travel      hop begin wp=(345, 241) purpose=enter_farm reason=enter farm area
+2026-09-29 19:29:15.106  INFO   session     Paused — hotkey

@@ -1,0 +1,100 @@
+# =============================================================================
+# vision.yaml — YOLO detect + ResNet classify + tracking
+# Used by: configure_classification_thresholds, VisionSystem(**kwargs)
+# Paths are relative to the project root unless absolute.
+# =============================================================================
+
+vision:
+  # --- ObjectType gates (ResNet coarse / detail → world ObjectType) -----------
+  # Below these confidences the crop is treated as OTHER (not farmed/looted).
+  coarse_class_conf_min: 0.5
+  detail_class_conf_min: 0.5
+
+  # --- YOLO 1-class detector (boxes only; type comes from ResNet) ------------
+  detector:
+    # Weights file for the object locator.
+    model_path: "app/models/960+1400+1_label.pt"
+    # Minimum detection score to keep a box.
+    conf: 0.3
+    # NMS IoU: lower = suppress more overlaps; higher = keep more overlapping parts.
+    iou: 0.7
+    # Inference input size (must match how the weights were trained).
+    imgsz: 960
+
+  # --- ResNet classifier edition ---------------------------------------------
+  classifier:
+    # Which trained edition to load: "v1" or "v2"
+    # (see app/_02_vision/classifier.py CLASSIFY_EDITIONS).
+    edition: "v2"
+    # Optional path override. null = use the edition’s default .pt.
+    model_path: null
+
+  # --- Per-area vision region (≠ map pack id) --------------------------------
+  # Area YAML ``region:`` →
+  #   app/models/regions/<slug>/<slug>.pt          classifier
+  #   app/models/regions/<slug>/<slug>_yolo.pt     YOLO (or yolo.pt)
+  # Missing files fall back to the global detector / classifier blocks above.
+  regions:
+    talking island: {}           # convention paths if the files exist
+    # mainland: {}
+    # orcish forest:
+    #   classifier: "app/models/regions/orcish_forest/orcish_forest.pt"
+    #   detector: "app/models/regions/orcish_forest/orcish_forest_yolo.pt"
+
+  # --- VisionSystem runtime knobs (passed into VisionSystem.__init__) --------
+  system:
+    # Duplicates of detector conf/iou/imgsz applied at system construction.
+    detector_conf: 0.3
+    detector_iou: 0.7
+    detector_imgsz: 960
+
+    # Assumed camera FPS for tracker time constants.
+    frame_rate: 30
+
+    # Tracker association thresholds (ByteTrack / IoU tracker backends).
+    track_thresh: 0.5          # high-score track start
+    track_buffer: 3            # frames to keep a lost track before dropping
+    match_thresh: 0.8          # first-association cost threshold
+    low_thresh: 0.4            # second-pass low-score detections
+    second_match_thresh: 0.5
+    unconfirmed_match_thresh: 0.7
+
+    # Simple IoU tracker (if backend uses it).
+    yolo_conf_low: 0.4        # low band for second association
+    yolo_conf_high: 0.70       # confident detections
+    track_iou_thresh: 0.2      # (if exposed by backend)
+    track_max_center_dist: 100.0
+
+    # ROI / focus boost: keep weaker YOLO boxes near prior boxes or focus zone.
+    roi_conf: 0.40
+    focus_conf: 0.40
+    roi_expand_ratio: 1.4
+    roi_expand_px: 32
+    focus_center_x: 0.5
+    focus_center_y: 0.37
+    focus_radius_x: 0.30
+    focus_radius_y: 0.25
+
+    # Re-run ResNet on monsters periodically (frames between refresh).
+    detail_conf_low: 0.5
+    monster_reclassify_interval: 20
+    max_reclassify_per_frame: 2
+
+    # Long-lived tracks: after this age, force ResNet every interval (bypasses freeze).
+    stable_reclassify_after_s: 5.0
+    stable_reclassify_interval_s: 5.0
+
+    # Force-reclassify the track nearest the local player (fixes ego mislabel).
+    ego_reclassify_interval_s: 2.0
+    ego_center_x: 0.5
+    ego_center_y: 0.41427826993225636  # ≈ battle player UV in content
+    ego_match_radius: 0.08             # content UV radius around ego center
+
+  # --- HUD bag fill (fallback only) ------------------------------------------
+  # Memory weight/maxWeight is the live source. Enable this only when the
+  # monitor has no maxWeight so HUD OCR can fill inventory.weight_ratio.
+  weight_hud:
+    enabled: false
+    min_confidence: 0.55       # ignore a read below this (keep last ratio)
+    interval_frames: 1         # 1 = every captured frame
+    config_path: "app/models/weight/numeric_config.json"

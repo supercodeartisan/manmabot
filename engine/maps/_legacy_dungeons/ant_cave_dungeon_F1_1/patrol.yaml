@@ -1,0 +1,6 @@
+# Patrol midpoints (nav tiles). Dungeon mode travels these in order.
+waypoints:
+  - { x: 177, y: 231, name: mid_1 }
+  - { x: 267, y: 353, name: mid_2 }
+  - { x: 341, y: 284, name: mid_3 }
+  - { x: 330, y: 293, name: mid_4 }

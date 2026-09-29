@@ -1,0 +1,6 @@
+id: desert_dungeon_F3
+name: "Desert Dungeon F3"
+origin_x: 32683
+origin_y: 32686
+pixel_scale: 1
+terrain: nav.png

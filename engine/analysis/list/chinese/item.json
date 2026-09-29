@@ -1,0 +1,4737 @@
+{
+  "contents": [
+    {
+      "id": 1,
+      "name": "亞連",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/8.png",
+      "options": [
+        "近距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 2,
+      "name": "武士刀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/58.png",
+      "options": [
+        "近距離命中 +1"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 3,
+      "name": "長劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 4,
+      "name": "斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1.png",
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 5,
+      "name": "燈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 6,
+      "name": "雙手劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "雙手劍"
+    },
+    {
+      "id": 7,
+      "name": "金幣",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/5.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 8,
+      "name": "釘錘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/67.png",
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 9,
+      "name": "漂浮之眼肉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/124.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "是漂浮之眼厚厚的殼裡面的嫩肉。吃完後會提高靈敏的能力。通常作為魔法材料。"
+    },
+    {
+      "id": 10,
+      "name": "肉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/124.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "吃了能夠增加飽度。肚子餓時體力無法恢復。"
+    },
+    {
+      "id": 11,
+      "name": "弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 12,
+      "name": "矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/101.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 13,
+      "name": "戰斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/9.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 14,
+      "name": "紅色藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/80.png",
+      "options": [
+        "恢復量 6 ~ 27"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝下時恢復一點體力。",
+      "name2": "治癒藥水"
+    },
+    {
+      "id": 15,
+      "name": "橙色藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/78.png",
+      "options": [
+        "恢復量 26 ~ 68"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝下時恢復多一點體力。",
+      "name2": "強力治癒藥水"
+    },
+    {
+      "id": 16,
+      "name": "黑色藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/82.png",
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝完之後暫時失明。但也可以保護喝下的人免受盯著看就有害的各種危險。",
+      "name2": "失明藥水"
+    },
+    {
+      "id": 17,
+      "name": "自我加速藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/77.png",
+      "options": [
+        "持續時間 +300秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "一定的時間動作變快。",
+      "name2": "自我加速藥水"
+    },
+    {
+      "id": 19,
+      "name": "松木魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/117.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時將創造任意怪物。部分怪物無法用魔杖創造。",
+      "name2": "創造怪物魔杖"
+    },
+    {
+      "id": 20,
+      "name": "楓木魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/116.png",
+      "options": [
+        "持續時間 +7200秒"
+      ],
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時會變成任意怪物。若與「變形控制戒指」一起使用時，可將自己的角色變身為想要的怪物。",
+      "name2": "變形魔杖"
+    },
+    {
+      "id": 21,
+      "name": "烏木魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/118.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可召喚雷電攻擊怪物。",
+      "name2": "閃電魔杖"
+    },
+    {
+      "id": 22,
+      "name": "鑑定卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/475.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "使用後按下道具時，可確認該道具的能力。"
+    },
+    {
+      "id": 23,
+      "name": "瞬間移動卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/473.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "會傳送到任意的場所，若跟傳送控制戒指一起用，可以移動到自己想要去的地方。"
+    },
+    {
+      "id": 24,
+      "name": "解除詛咒的卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/470.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "使用時可解除穿戴道具上的詛咒。"
+    },
+    {
+      "id": 25,
+      "name": "對武器施法的卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/468.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "施魔法在武器上，使武器增加攻擊力。但詛咒的則會弱化攻擊力。"
+    },
+    {
+      "id": 26,
+      "name": "對盔甲施法的卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/467.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "施魔法在盔甲上，使盔甲增加防禦力。但詛咒的則會弱化防禦力。"
+    },
+    {
+      "id": 28,
+      "name": "復活卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/471.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "復活死亡的人、寵物或死亡的怪物。"
+    },
+    {
+      "id": 29,
+      "name": "箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/7.png",
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 31,
+      "name": "巴迪須",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/11.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 32,
+      "name": "柴刀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/13.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 33,
+      "name": "精靈弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/18.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 +1"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 34,
+      "name": "歐西斯弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/19.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 -1"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 35,
+      "name": "闊劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/21.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 36,
+      "name": "蠟燭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/24.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 37,
+      "name": "胡蘿蔔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/25.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 38,
+      "name": "木棒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/31.png",
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 39,
+      "name": "精靈匕首",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/33.png",
+      "options": [
+        "近距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 40,
+      "name": "歐西斯匕首",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/34.png",
+      "options": [
+        "近距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 41,
+      "name": "匕首",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/35.png",
+      "options": [
+        "近距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 42,
+      "name": "貝卡合金",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/38.png",
+      "options": [
+        "雙手",
+        "穿透效果"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 43,
+      "name": "蛋",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/40.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 44,
+      "name": "法丘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/41.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 45,
+      "name": "弗萊爾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/42.png",
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 46,
+      "name": "闊矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/45.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 47,
+      "name": "吉薩",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/48.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 48,
+      "name": "戟",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/50.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 52,
+      "name": "黃金鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可以打開說話之島地監2樓封印的那個地方的鑰匙。"
+    },
+    {
+      "id": 53,
+      "name": "銀鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可以打開說話之島地監2樓封印的那個地方的鑰匙。"
+    },
+    {
+      "id": 54,
+      "name": "槍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/60.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 55,
+      "name": "檸檬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/63.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 56,
+      "name": "露西錘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/66.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 57,
+      "name": "戰錘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/119.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 58,
+      "name": "流星錘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/68.png",
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 59,
+      "name": "橘子",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/71.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 60,
+      "name": "烤薄餅",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/125.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 61,
+      "name": "帕提森",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/72.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 64,
+      "name": "傳送控制戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/87.png",
+      "favorite": false,
+      "categoryName": "戒指",
+      "description": "跟瞬間移動的卷軸一起用的話，可以傳送到之前標記的場所。"
+    },
+    {
+      "id": 65,
+      "name": "變形控制戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/87.png",
+      "favorite": false,
+      "categoryName": "戒指",
+      "description": "若跟變身魔杖一起使用，可以變為自己想要的怪物。"
+    },
+    {
+      "id": 67,
+      "name": "彎刀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/90.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 68,
+      "name": "銀箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/96.png",
+      "favorite": false,
+      "categoryName": "弓",
+      "description": "比一般箭強。有些怪物受到的打擊較大。"
+    },
+    {
+      "id": 69,
+      "name": "侏儒鐵斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/172.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 70,
+      "name": "精靈之矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/99.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 71,
+      "name": "歐西斯之矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/100.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 72,
+      "name": "小侏儒短劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/103.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 73,
+      "name": "精靈短劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/325.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 74,
+      "name": "歐西斯短劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/105.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 75,
+      "name": "短劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/106.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 77,
+      "name": "三叉戟",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/111.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 78,
+      "name": "瑟魯基之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/112.png",
+      "options": [
+        "近距離命中 +5"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 81,
+      "name": "尤米弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/123.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 +3"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 82,
+      "name": "蘋果",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/995.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 83,
+      "name": "香蕉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/127.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 86,
+      "name": "精靈餅乾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/130.png",
+      "options": [
+        "持續時間 +480秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "妖精的特殊食物。是把精靈食物灌入森林的活力做的。吃下去後在一定的時間內，所有的動作變快。這個食物針對妖精才有效果"
+    },
+    {
+      "id": 87,
+      "name": "精靈皮盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/53.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 88,
+      "name": "歐西斯頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/54.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 89,
+      "name": "侏儒鐵盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/52.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 90,
+      "name": "頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/55.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 91,
+      "name": "金屬盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/73.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 92,
+      "name": "水晶盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/32.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 93,
+      "name": "青銅盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/22.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 94,
+      "name": "藤甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/102.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 95,
+      "name": "皮甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/10.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 96,
+      "name": "鏈甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/26.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 97,
+      "name": "歐西斯鏈甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/443.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 98,
+      "name": "鱗甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/89.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 99,
+      "name": "銀釘皮甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/109.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 100,
+      "name": "環甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/86.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 101,
+      "name": "歐西斯環甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/442.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 102,
+      "name": "小藤甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 103,
+      "name": "皮夾克",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/62.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 104,
+      "name": "T恤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/110.png",
+      "favorite": false,
+      "categoryName": "T恤",
+      "description": "可穿在盔甲裡面。"
+    },
+    {
+      "id": 105,
+      "name": "精靈斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/28.png",
+      "options": [
+        "妖精裝備時 體力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷",
+      "description": "妖精製作的斗篷，妖精穿時體力恢復的速度變快。"
+    },
+    {
+      "id": 106,
+      "name": "歐西斯斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/29.png",
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 107,
+      "name": "侏儒斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/27.png",
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 109,
+      "name": "保護者斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/30.png",
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 110,
+      "name": "隱身斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/272.png",
+      "favorite": false,
+      "categoryName": "斗篷",
+      "description": "穿了後怪物和其他玩家看不到。不主動攻擊或行為才會有效果。"
+    },
+    {
+      "id": 111,
+      "name": "抗魔法斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/265.png",
+      "options": [
+        "MR +10"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷",
+      "description": "針對魔法提高抵抗力的斗篷。施魔法時抵抗力更有效。"
+    },
+    {
+      "id": 113,
+      "name": "小盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/97.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 114,
+      "name": "精靈盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/92.png",
+      "options": [
+        "妖精裝備時 MR加成 +5"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "妖精製作的盾牌。對魔法的抵抗力提高。"
+    },
+    {
+      "id": 115,
+      "name": "阿克海盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/114.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 117,
+      "name": "大盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/61.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 118,
+      "name": "侏儒圓盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/95.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 119,
+      "name": "反射之盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/137.png",
+      "options": [
+        "反射效果"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "像針對光箭型魔法擁有相當高的防禦力。"
+    },
+    {
+      "id": 120,
+      "name": "短統靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/65.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 121,
+      "name": "夏洛伯之爪",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/139.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "毫無瑕疵的夏洛伯之爪。只有以老練的劍術和節制的心態對抗的人才能得到的狩獵憑證。拿給說話之島的甘特的話，就可以通過他的試煉。"
+    },
+    {
+      "id": 123,
+      "name": "紅騎士之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/441.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍",
+      "description": "提高力量的特殊長劍。"
+    },
+    {
+      "id": 124,
+      "name": "往古魯丁的船票",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/138.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "在說話之島港口為了搭船所需的船票。"
+    },
+    {
+      "id": 125,
+      "name": "往說話之島的船票",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/138.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "在古魯丁村莊港口為了搭船所需的船票。"
+    },
+    {
+      "id": 126,
+      "name": "翡翠藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/76.png",
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "治療所有毒。",
+      "name2": "解毒藥水"
+    },
+    {
+      "id": 127,
+      "name": "燈籠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/140.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用燈籠時，在黑暗的地方也能看到周圍。"
+    },
+    {
+      "id": 128,
+      "name": "長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/435.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 129,
+      "name": "手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/141.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 130,
+      "name": "白色藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/81.png",
+      "options": [
+        "恢復量 44 ~ 107"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝下時恢復更多的體力。",
+      "name2": "終極治癒藥水"
+    },
+    {
+      "id": 131,
+      "name": "燈油",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/142.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 138,
+      "name": "巨斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/171.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 140,
+      "name": "騎士面甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/166.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 141,
+      "name": "侵略者之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/151.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 142,
+      "name": "骰子匕首",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/144.png",
+      "options": [
+        "近距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍",
+      "description": "雖然是沒有威力的匕首，但以低機率發動使目標陷入死亡的詛咒。"
+    },
+    {
+      "id": 144,
+      "name": "狂戰士斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/439.png",
+      "options": [
+        "雙手",
+        "加速效果"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 145,
+      "name": "伊娃之盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1203.png",
+      "options": [
+        "體力上限 +20",
+        "加速效果"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 155,
+      "name": "塔盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/177.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 157,
+      "name": "阿吐巴圖騰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/258.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "把阿吐巴圖騰拿給燃柳村的萊拉的話，就可以換取金幣。"
+    },
+    {
+      "id": 158,
+      "name": "那魯加圖騰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/259.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "把那魯加圖騰拿給燃柳村的萊拉的話，就可以換取金幣。"
+    },
+    {
+      "id": 159,
+      "name": "都達瑪拉圖騰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/260.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "把都達瑪拉圖騰拿給燃柳村的萊拉的話，就可以換取金幣。"
+    },
+    {
+      "id": 160,
+      "name": "甘地圖騰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/261.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "把甘地圖騰拿給燃柳村的萊拉的話，就可以換取金幣。"
+    },
+    {
+      "id": 161,
+      "name": "羅孚圖騰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/262.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "把羅孚圖騰拿給燃柳村的萊拉的話，就可以換取金幣。"
+    },
+    {
+      "id": 162,
+      "name": "返回卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/474.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "傳送到最近的村莊。"
+    },
+    {
+      "id": 164,
+      "name": "魔法書(初級治癒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 166,
+      "name": "魔法寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/235.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 167,
+      "name": "鏈甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1201.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "提高魔法抵抗力的鏈甲。魔法施的越多魔法抵抗力越高。",
+      "name2": "抗魔法鏈甲"
+    },
+    {
+      "id": 168,
+      "name": "鑽石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/236.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 169,
+      "name": "品質鑽石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/237.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 170,
+      "name": "高品質鑽石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/238.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 171,
+      "name": "綠寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/239.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 172,
+      "name": "品質綠寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/240.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 173,
+      "name": "高品質綠寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/241.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 174,
+      "name": "紅寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/242.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 175,
+      "name": "品質紅寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/243.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 176,
+      "name": "高品質紅寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/244.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 177,
+      "name": "藍寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/245.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 178,
+      "name": "品質藍寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/246.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 179,
+      "name": "高品質藍寶石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/247.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 180,
+      "name": "魔法書(日光術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 181,
+      "name": "魔法書(保護罩)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 182,
+      "name": "魔法書(光箭)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 183,
+      "name": "魔法書(指定傳送)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 184,
+      "name": "魔法書(解毒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 185,
+      "name": "魔法書(寒冷戰慄)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/253.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 186,
+      "name": "魔法書(毒咒)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/253.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 187,
+      "name": "魔法書(擬似魔法武器)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 188,
+      "name": "魔法書(無所遁形術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 189,
+      "name": "魔法書(極光雷電)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 190,
+      "name": "魔法書(起死回生術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 191,
+      "name": "魔法書(中級治癒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 192,
+      "name": "魔法書(闇盲咒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 193,
+      "name": "魔法書(鎧甲護持)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 194,
+      "name": "魔法書(燃燒的火球)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 195,
+      "name": "魔法書(通暢氣脈術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 196,
+      "name": "魔法書(壞物術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 197,
+      "name": "魔法書(吸血鬼之吻)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/254.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 198,
+      "name": "魔法書(緩速術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 199,
+      "name": "魔法書(木乃伊的詛咒)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 200,
+      "name": "魔法書(極道落雷)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 201,
+      "name": "魔法書(高級治癒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 202,
+      "name": "魔法書(迷魅術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 203,
+      "name": "魔法書(聖潔之光)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 204,
+      "name": "魔法書(造屍術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 205,
+      "name": "魔法書(體魄強健術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 206,
+      "name": "魔法書(加速術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 207,
+      "name": "魔法書(魔法相消術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 208,
+      "name": "魔法書(地裂術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 209,
+      "name": "魔法書(體力回復術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 210,
+      "name": "魔法書(冰矛圍籬)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 211,
+      "name": "魔法書(召喚術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 212,
+      "name": "魔法書(神聖疾走)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 213,
+      "name": "魔法書(龍捲風)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 214,
+      "name": "魔法書(全部治癒術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 216,
+      "name": "魔法書(冰雪暴)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 217,
+      "name": "魔法書(隱身術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 218,
+      "name": "魔法書(返生術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 219,
+      "name": "魔法書(雷霆風暴)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 220,
+      "name": "魔法書(沉睡之霧)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/257.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 222,
+      "name": "魔法書(聖結界)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 223,
+      "name": "魔法書(集體傳送術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 225,
+      "name": "魔法書(流星雨)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 229,
+      "name": "頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1204.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "提高魔法抵抗力的頭盔。魔法施的越多魔法抵抗力越高。",
+      "name2": "抗魔法頭盔"
+    },
+    {
+      "id": 230,
+      "name": "橡木魔法杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/291.png",
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 231,
+      "name": "美基魔法杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/297.png",
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 232,
+      "name": "巫術魔法杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/292.png",
+      "options": [
+        "SP +1"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖",
+      "description": "魔法加成+1。"
+    },
+    {
+      "id": 233,
+      "name": "力量魔法杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/293.png",
+      "options": [
+        "STR +3",
+        "SP -2",
+        "近距離傷害 +3"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖",
+      "description": "降低魔法加成，但會提升攻擊力的武器。"
+    },
+    {
+      "id": 234,
+      "name": "綿質長袍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/287.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "提升一點魔法抵抗力。"
+    },
+    {
+      "id": 235,
+      "name": "大馬士革刀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/298.png",
+      "favorite": false,
+      "categoryName": "單手劍",
+      "description": "不容易損壞的特殊劍。"
+    },
+    {
+      "id": 243,
+      "name": "信紙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/464.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 244,
+      "name": "短弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 -1"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 245,
+      "name": "潘的鬃毛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/314.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 246,
+      "name": "粗糙的米索莉塊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/320.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 247,
+      "name": "元素石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/235.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 248,
+      "name": "安特的樹枝",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/309.png",
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "安特的樹枝，含有治療所有毒的成分。"
+    },
+    {
+      "id": 249,
+      "name": "蘑菇汁",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/82.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "是蘑菇汁。可當在各魔法或毒性之原料。"
+    },
+    {
+      "id": 250,
+      "name": "食人巨魔的血",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/324.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "歐吉的血。是歐吉的力量之源。"
+    },
+    {
+      "id": 251,
+      "name": "線",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/326.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 252,
+      "name": "純粹的米索莉塊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/318.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 253,
+      "name": "精靈粉末",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/312.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 254,
+      "name": "芮克妮的網",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/308.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 255,
+      "name": "安特的樹皮",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/311.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 256,
+      "name": "奧里哈魯根",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/319.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "精靈女皇製作的高貴金屬。使用於損壞的武器或防具上時，可減少損壞程度。"
+    },
+    {
+      "id": 257,
+      "name": "米索莉線",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/307.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 258,
+      "name": "米索莉箭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/96.png",
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 259,
+      "name": "芮克妮的蛻皮",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/306.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 260,
+      "name": "腕甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/327.png",
+      "options": [
+        "遠距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 261,
+      "name": "精靈羽翼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/313.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "精靈的強化翅膀。使用時可以傳送到最近的村莊。"
+    },
+    {
+      "id": 262,
+      "name": "魔法笛子",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/43.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "在潘的附近演奏時，潘就會靠近。"
+    },
+    {
+      "id": 263,
+      "name": "木盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/97.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 264,
+      "name": "米索莉金屬板",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/329.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 265,
+      "name": "奧里哈魯根金屬板",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/330.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 266,
+      "name": "木甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/109.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 267,
+      "name": "精靈護胸金屬板",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/302.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 268,
+      "name": "潘的角",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/317.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 269,
+      "name": "十字弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/305.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 +2",
+        "遠距離命中 +3"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 270,
+      "name": "短劍的劍身",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/322.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 271,
+      "name": "長劍的劍身",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/321.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 272,
+      "name": "奧里哈魯根的劍身",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/321.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 273,
+      "name": "精靈金屬盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/275.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 274,
+      "name": "細劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/104.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 275,
+      "name": "艾爾穆的祝福",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/267.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "古代精靈族的頭盔。敏捷+1。"
+    },
+    {
+      "id": 276,
+      "name": "覆上米索莉的角",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/315.png",
+      "favorite": false,
+      "categoryName": "矛",
+      "description": "在潘的角覆上米索莉的槍。"
+    },
+    {
+      "id": 277,
+      "name": "覆上奧里哈魯根的角",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/316.png",
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 278,
+      "name": "鎖子甲破壞者",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/276.png",
+      "options": [
+        "近距離命中 +10"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 279,
+      "name": "安特的水果",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/126.png",
+      "options": [
+        "恢復量 44 ~ 107"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "安特的水果。吃完後恢復很多體力。"
+    },
+    {
+      "id": 280,
+      "name": "力量手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/328.png",
+      "options": [
+        "STR +2"
+      ],
+      "favorite": false,
+      "categoryName": "手套",
+      "description": "含歐吉的血的手套。穿戴時會增加力量。"
+    },
+    {
+      "id": 281,
+      "name": "精靈鏈甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/281.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 283,
+      "name": "木製的夾克",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 289,
+      "name": "銀騎士之盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/332.png",
+      "options": [
+        "MR +4"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "提高魔法抵抗力的盾牌。"
+    },
+    {
+      "id": 291,
+      "name": "治癒魔法頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/167.png",
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "使騎士或王族可使用治療魔法的特殊頭盔。使用此頭盔耗的魔力省一半。"
+    },
+    {
+      "id": 292,
+      "name": "敏捷魔法頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/168.png",
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "使騎士或王族能使用迅速魔法的特殊頭盔。使用此頭盔耗的魔力省一半。"
+    },
+    {
+      "id": 293,
+      "name": "力量魔法頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/170.png",
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "使騎士或王族能使用力量魔法的特殊頭盔。使用此頭盔耗的魔力省一半。"
+    },
+    {
+      "id": 296,
+      "name": "勇敢藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/79.png",
+      "options": [
+        "持續時間 +300秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝下後，勇氣會從內心深處湧出，在一定時間內快速移動。"
+    },
+    {
+      "id": 297,
+      "name": "慎重藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1529.png",
+      "options": [
+        "지속시간 +300秒",
+        "SP +2"
+      ],
+      "favorite": false,
+      "description": "集中力提高，比平常使用魔法還更有效果。只有魔法師才會有效果。"
+    },
+    {
+      "id": 299,
+      "name": "變形卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/472.png",
+      "options": [
+        "持續時間 +1200秒"
+      ],
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "可以變為怪物的卷軸。持續時間為20~30分鐘的時間而已。"
+    },
+    {
+      "id": 306,
+      "name": "力量項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升力量的項鍊。"
+    },
+    {
+      "id": 307,
+      "name": "敏捷項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升敏捷的項鍊。"
+    },
+    {
+      "id": 308,
+      "name": "體質項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升體力的項鍊。"
+    },
+    {
+      "id": 309,
+      "name": "智力項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升智力的項鍊。"
+    },
+    {
+      "id": 310,
+      "name": "精神項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升精神的項鍊。"
+    },
+    {
+      "id": 311,
+      "name": "魅力項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/304.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提升魅力的項鍊。"
+    },
+    {
+      "id": 314,
+      "name": "妖魔戰士護身符",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/436.png",
+      "options": [
+        "體力上限 +20"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊",
+      "description": "提昇體力20點的項鍊。"
+    },
+    {
+      "id": 317,
+      "name": "皮帽子",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/451.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 318,
+      "name": "銀釘皮帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/445.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 319,
+      "name": "皮頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/456.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 320,
+      "name": "骷髏頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/453.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 321,
+      "name": "皮涼鞋",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/452.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 322,
+      "name": "銀釘皮涼鞋",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/447.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 323,
+      "name": "皮長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/461.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 324,
+      "name": "皮盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/449.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 325,
+      "name": "銀釘皮盾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/450.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 326,
+      "name": "骷髏盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/457.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 327,
+      "name": "皮背心",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/459.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 328,
+      "name": "皮盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/460.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 329,
+      "name": "銀釘皮背心",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/458.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 330,
+      "name": "硬皮背心",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/462.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 331,
+      "name": "骷髏盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/448.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 332,
+      "name": "皮革",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/446.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 333,
+      "name": "金屬塊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/454.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 334,
+      "name": "皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/264.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 335,
+      "name": "高級皮革",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/455.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 336,
+      "name": "骨頭碎片",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/444.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 337,
+      "name": "巨劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/463.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "雙手劍"
+    },
+    {
+      "id": 342,
+      "name": "瑪那魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/293.png",
+      "options": [
+        "近距離命中 -3",
+        "魔力吸收"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖",
+      "description": "攻擊對方時，漸漸奪取對方魔力的魔杖。"
+    },
+    {
+      "id": 343,
+      "name": "哨子",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/477.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "吹哨子時，馴服的寵物會聚集到自己周邊。"
+    },
+    {
+      "id": 348,
+      "name": "磨刀石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/478.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "能夠復原武器防具損害的道具。"
+    },
+    {
+      "id": 357,
+      "name": "血盟信紙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/464.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可以將同一個內容的信件寄到所有血盟成員的魔法信件。"
+    },
+    {
+      "id": 358,
+      "name": "銀長劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/163.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 359,
+      "name": "銀劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/156.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 360,
+      "name": "銀斧",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/173.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "鈍器"
+    },
+    {
+      "id": 361,
+      "name": "項圈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/487.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "代表已經馴養的寵物的項圈。若交換此項圈，可以交換寵物。"
+    },
+    {
+      "id": 362,
+      "name": "糖果",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/488.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 365,
+      "name": "鋼鐵手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/506.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 366,
+      "name": "鋼鐵頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/507.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 367,
+      "name": "鋼鐵盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/508.png",
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 368,
+      "name": "鋼鐵長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/509.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 369,
+      "name": "鋼鐵金屬盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/510.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 376,
+      "name": "藍色布料",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/517.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 378,
+      "name": "紅色布料",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/519.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 379,
+      "name": "白色布料",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/520.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 382,
+      "name": "鋼鐵原石",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/523.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 385,
+      "name": "法師之帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/526.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 386,
+      "name": "法師長袍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/527.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 388,
+      "name": "獵人之弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/279.png",
+      "options": [
+        "雙手",
+        "遠距離傷害 +1",
+        "遠距離命中 +5"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 403,
+      "name": "水龍鱗盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/539.png",
+      "options": [
+        "水屬性抗性增加 +20"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "以水龍鱗製作的盔甲，能增加對水屬性魔法的抵抗力。"
+    },
+    {
+      "id": 404,
+      "name": "地龍鱗盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/540.png",
+      "options": [
+        "地屬性抗性增加 +20"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "以地龍鱗製作的盔甲，能增加對地屬性魔法的抵抗力。"
+    },
+    {
+      "id": 405,
+      "name": "火龍鱗盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/541.png",
+      "options": [
+        "火屬性抗性增加 +20"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "以火龍鱗製作的盔甲，能增加對火屬性魔法的抵抗力。"
+    },
+    {
+      "id": 406,
+      "name": "風龍鱗盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/542.png",
+      "options": [
+        "風屬性抗性增加 +20"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "以風龍鱗製作的盔甲，能增加對風屬性魔法的抵抗力。"
+    },
+    {
+      "id": 407,
+      "name": "水龍鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/547.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 408,
+      "name": "地龍鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/548.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 409,
+      "name": "火龍鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/549.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 410,
+      "name": "風龍鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/550.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 415,
+      "name": "空的魔法卷軸(等級1)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/859.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 417,
+      "name": "伊娃的祝福",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/557.png",
+      "options": [
+        "持續時間 +1800秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "由於蘊含著伊娃的祝福，可以在水中進行呼吸。"
+    },
+    {
+      "id": 418,
+      "name": "人魚之鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/556.png",
+      "options": [
+        "持續時間 +600秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "可以在水中進行呼吸。"
+    },
+    {
+      "id": 429,
+      "name": "阿西塔基奧的灰燼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/591.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 492,
+      "name": "藍色藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/75.png",
+      "favorite": false,
+      "categoryName": "藥水",
+      "name2": "魔力回復藥水"
+    },
+    {
+      "id": 495,
+      "name": "強化自我加速藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/621.png",
+      "options": [
+        "持續時間 +1800秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "name2": "強化加速藥水"
+    },
+    {
+      "id": 496,
+      "name": "抗魔戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/625.png",
+      "options": [
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 497,
+      "name": "滅魔戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/626.png",
+      "options": [
+        "MR +10"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 498,
+      "name": "火靈戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/628.png",
+      "options": [
+        "火屬性抗性增加 +10"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 499,
+      "name": "水靈戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/629.png",
+      "options": [
+        "水屬性抗性增加 +10"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 500,
+      "name": "地靈戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/627.png",
+      "options": [
+        "地屬性抗性增加 +10"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 501,
+      "name": "風靈戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/630.png",
+      "options": [
+        "風屬性抗性增加 +10"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 502,
+      "name": "老舊的身體皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/631.png",
+      "options": [
+        "體力上限 +30"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 503,
+      "name": "老舊的精神腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/632.png",
+      "options": [
+        "魔力上限 +30"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 504,
+      "name": "老舊的靈魂皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/633.png",
+      "options": [
+        "魔力上限 +15",
+        "體力上限 +15"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 505,
+      "name": "身體腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/634.png",
+      "options": [
+        "體力上限 +50"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 506,
+      "name": "精神腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/635.png",
+      "options": [
+        "魔力上限 +50"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 507,
+      "name": "靈魂腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/636.png",
+      "options": [
+        "魔力上限 +25",
+        "體力上限 +25"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 508,
+      "name": "老舊的力量項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/637.png",
+      "options": [
+        "DEX -2",
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 509,
+      "name": "老舊的敏捷項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/638.png",
+      "options": [
+        "DEX +1",
+        "CON -2"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 510,
+      "name": "老舊的體質項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/639.png",
+      "options": [
+        "STR -2",
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 511,
+      "name": "老舊的智力項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/640.png",
+      "options": [
+        "INT +1",
+        "WIS -2"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 512,
+      "name": "老舊的精神項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/641.png",
+      "options": [
+        "CHA -2",
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 513,
+      "name": "老舊的魅力項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/642.png",
+      "options": [
+        "CHA +1",
+        "INT -2"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 515,
+      "name": "魔法書(冰箭)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 516,
+      "name": "魔法書(風刃)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 517,
+      "name": "魔法書(火箭)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 518,
+      "name": "魔法書(地獄之牙)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 519,
+      "name": "魔法書(寒冰氣息)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 520,
+      "name": "魔法書(岩牢)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 521,
+      "name": "魔法書(冰錐)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 522,
+      "name": "魔法書(烈炎術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 523,
+      "name": "魔法書(強力加速術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 524,
+      "name": "魔法書(震裂術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 525,
+      "name": "魔法書(火風暴)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 545,
+      "name": "石製手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/712.png",
+      "options": [
+        "傷害減少 +1"
+      ],
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 547,
+      "name": "水晶手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/707.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 551,
+      "name": "深水長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/704.png",
+      "options": [
+        "可在水中呼吸",
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 556,
+      "name": "死亡騎士手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/708.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 557,
+      "name": "死亡騎士盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/695.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 558,
+      "name": "死亡騎士長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/701.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 559,
+      "name": "死亡騎士頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/713.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 565,
+      "name": "多羅皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/699.png",
+      "options": [
+        "增加負重 +500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 566,
+      "name": "歐吉皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/697.png",
+      "options": [
+        "增加負重 +1000"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 567,
+      "name": "泰坦皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/698.png",
+      "options": [
+        "增加負重 +1500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 568,
+      "name": "沙哈之弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/705.png",
+      "options": [
+        "雙手",
+        "發動 : 沒有穿戴的弓箭時使用無形箭",
+        "遠距離傷害 +5",
+        "遠距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 569,
+      "name": "精靈玉",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/706.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 570,
+      "name": "精靈水晶(魔法防禦)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 571,
+      "name": "精靈水晶(心靈轉換)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 572,
+      "name": "精靈水晶(世界樹的呼喚)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/673.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 573,
+      "name": "精靈水晶(淨化精神)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/674.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 574,
+      "name": "精靈水晶(屬性防禦)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/674.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 575,
+      "name": "精靈水晶(釋放元素)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 576,
+      "name": "精靈水晶(魂體轉換)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 577,
+      "name": "精靈水晶(單屬性防禦)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 578,
+      "name": "精靈水晶(火焰武器)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/675.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 579,
+      "name": "精靈水晶(風之神射)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/679.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 580,
+      "name": "精靈水晶(風之疾走)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/679.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 581,
+      "name": "精靈水晶(大地防護)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/676.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 582,
+      "name": "精靈水晶(地面障礙)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/676.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 583,
+      "name": "精靈水晶(魔法消除)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/682.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 584,
+      "name": "精靈水晶(召喚屬性精靈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/682.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 585,
+      "name": "精靈水晶(舞躍之火)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/680.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 586,
+      "name": "精靈水晶(暴風之眼)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/684.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 587,
+      "name": "精靈水晶(大地屏障)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 588,
+      "name": "精靈水晶(生命之泉)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/683.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 589,
+      "name": "精靈水晶(大地的祝福)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 590,
+      "name": "精靈水晶(封印禁地)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/687.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 591,
+      "name": "精靈水晶(召喚強力屬性精靈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/687.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 592,
+      "name": "精靈水晶(烈炎武器)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/685.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 593,
+      "name": "精靈水晶(生命的祝福)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 595,
+      "name": "精靈水晶(暴風神射)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/689.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 597,
+      "name": "精靈水晶(鋼鐵防護)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/686.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 598,
+      "name": "魔法書(神聖武器)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 599,
+      "name": "魔法書(負重強化)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/248.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 600,
+      "name": "魔法書(能量感測)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 601,
+      "name": "魔法書(魔法屏障)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 602,
+      "name": "魔法書(冥想術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/249.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 603,
+      "name": "魔法書(魔力奪取)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 604,
+      "name": "魔法書(黑闇之影)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 605,
+      "name": "魔法書(弱化術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/255.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 606,
+      "name": "魔法書(祝福魔法武器)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/250.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 607,
+      "name": "魔法書(狂暴術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 608,
+      "name": "魔法書(疾病術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/256.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 610,
+      "name": "魔法書(魔法封印)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/251.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 620,
+      "name": "空的魔法卷軸(等級2)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/860.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 621,
+      "name": "空的魔法卷軸(等級3)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/858.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 622,
+      "name": "空的魔法卷軸(等級4)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/862.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 631,
+      "name": "精靈敏捷頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/913.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 632,
+      "name": "精靈體質頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/908.png",
+      "options": [
+        "CON +1"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 633,
+      "name": "古老的交易文件",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/919.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "鐵匠亞南過去在反王的勢力之下合作的時期，與黑騎士們交易時所使用的帳簿。為了查明反王勢力的武器製造術，銀騎士村莊的鐵匠亞南正在尋找這份文件。"
+    },
+    {
+      "id": 636,
+      "name": "搜索狀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/914.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "黑騎士搜索隊在偵察肯特城周邊時留下的文件。肯特村莊的傑羅正在等待這份文件。"
+    },
+    {
+      "id": 639,
+      "name": "黑騎士的誓約",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/927.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "對反王組織發誓絕對忠誠的證據。因為記錄著反王的計畫，銀騎士村莊的瑞奇正在尋找這份契約書。"
+    },
+    {
+      "id": 640,
+      "name": "都達瑪拉妖魔魔法書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/923.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "記錄著妖魔們使用的魔法悠久歷史的魔法書。為了研究妖魔的魔法，燃柳村的歐斯正在尋找這本魔法書。"
+    },
+    {
+      "id": 641,
+      "name": "那魯加妖魔魔法書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/925.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "記錄著妖魔們使用的魔法悠久歷史的魔法書。為了研究妖魔的魔法，燃柳村的歐斯正在尋找這本魔法書。"
+    },
+    {
+      "id": 642,
+      "name": "甘地妖魔魔法書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/924.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "記錄著妖魔們使用的魔法悠久歷史的魔法書。為了研究妖魔的魔法，燃柳村的歐斯正在尋找這本魔法書。"
+    },
+    {
+      "id": 643,
+      "name": "阿吐巴妖魔魔法書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/922.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "記錄著妖魔們使用的魔法悠久歷史的魔法書。為了研究妖魔的魔法，燃柳村的歐斯正在尋找這本魔法書。"
+    },
+    {
+      "id": 644,
+      "name": "受詛咒的魔法書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/909.png",
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "魔力不足而不完整狀態的魔法書。說話之島的詹姆可以注入魔力變成完整的樣貌。"
+    },
+    {
+      "id": 645,
+      "name": "魔法能量之書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/906.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 646,
+      "name": "紅色斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/907.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 647,
+      "name": "骷髏頭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/921.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "從骷髏身上掉下來，並咯咯作響的頭骨。因為殘留著微弱的詛咒，所以靠近的話，有可能會聽到奇異的幻聽。把這個拿給說話之島的詹姆的話，就可以在詛咒的魔法書注入魔力。"
+    },
+    {
+      "id": 648,
+      "name": "食屍鬼的指甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/918.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "塗著能使身體麻痹的有毒腳爪。說話之島的詹姆為了研究靈魂魔法的秘密正在等待著這種材料。"
+    },
+    {
+      "id": 649,
+      "name": "食屍鬼的牙齒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/926.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "卡著腐爛的屍塊，使被啃咬的人引發麻痺的牙齒。說話之島的詹姆為了研究靈魂魔法的秘密正在等待著這種材料。"
+    },
+    {
+      "id": 650,
+      "name": "龍龜甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/920.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "用龍龜的巨大外殼堅持了幾十年的防禦象徵。由於加工困難，只有銀騎士村莊的鐵匠亞南才能製作裝備。"
+    },
+    {
+      "id": 651,
+      "name": "騎士頭巾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/915.png",
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "瑞奇在騎士時期所使用的頭巾。銀騎士村莊的鐵匠亞南可以把頭巾變得更強。"
+    },
+    {
+      "id": 652,
+      "name": "紅騎士頭巾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/916.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 654,
+      "name": "被遺忘的金屬盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/443.png",
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "圍著強烈氣息的金屬盔甲。",
+      "name2": "封印的遺忘金屬盔甲"
+    },
+    {
+      "id": 655,
+      "name": "被遺忘的皮盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/442.png",
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "圍著強烈氣息的皮甲。",
+      "name2": "封印的遺忘皮盔甲"
+    },
+    {
+      "id": 656,
+      "name": "被遺忘的長袍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/51.png",
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "圍著強烈氣息的長袍。",
+      "name2": "封印的遺忘長袍"
+    },
+    {
+      "id": 657,
+      "name": "被遺忘的鱗甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/89.png",
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "圍著強烈氣息的鱗甲。",
+      "name2": "封印的遺忘鱗甲"
+    },
+    {
+      "id": 658,
+      "name": "召喚控制戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/905.png",
+      "favorite": false,
+      "categoryName": "戒指",
+      "description": "穿戴時，使用召喚術魔法時可以召喚出自己想要的怪物"
+    },
+    {
+      "id": 659,
+      "name": "被遺忘的巨劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/90.png",
+      "options": [
+        "雙手",
+        "近距離命中 +3"
+      ],
+      "favorite": false,
+      "categoryName": "雙手劍",
+      "description": "能感受到強烈力量的大劍。",
+      "name2": "封印的遺忘大劍"
+    },
+    {
+      "id": 660,
+      "name": "被遺忘的劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/103.png",
+      "options": [
+        "近距離命中 +5"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍",
+      "description": "能感受到強烈力量的單手劍。",
+      "name2": "封印的遺忘之劍"
+    },
+    {
+      "id": 661,
+      "name": "被遺忘的弩槍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20.png",
+      "options": [
+        "雙手"
+      ],
+      "favorite": false,
+      "categoryName": "弓",
+      "description": "能感受到強烈力量的弓。",
+      "name2": "封印的遺忘弩槍"
+    },
+    {
+      "id": 666,
+      "name": "紅騎士盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/954.png",
+      "options": [
+        "反射效果"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "具有紅眼的盾牌。對於光線型魔法具有相當的防禦力。"
+    },
+    {
+      "id": 667,
+      "name": "古老的金屬盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/899.png",
+      "options": [
+        "體力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "古代騎士曾用過的盔甲，無法使用對盔甲施法的卷軸進行強化。"
+    },
+    {
+      "id": 668,
+      "name": "古老的皮盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/898.png",
+      "options": [
+        "體力回復量 +3",
+        "魔力回復量 +5"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "古代妖精曾用過的盔甲，無法使用對盔甲施法的卷軸進行強化。"
+    },
+    {
+      "id": 669,
+      "name": "古老的長袍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/900.png",
+      "options": [
+        "魔力回復量 +8"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "古代魔法師曾用過的盔甲，無法使用對盔甲施法的卷軸進行強化。"
+    },
+    {
+      "id": 670,
+      "name": "古老的鱗甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/901.png",
+      "options": [
+        "體力回復量 +5",
+        "魔力回復量 +3"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲",
+      "description": "古代王族曾用過的盔甲，無法使用對盔甲施法的卷軸進行強化。"
+    },
+    {
+      "id": 671,
+      "name": "古老的巨劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/897.png",
+      "options": [
+        "雙手",
+        "近距離命中 +7"
+      ],
+      "favorite": false,
+      "categoryName": "雙手劍",
+      "description": "古人曾用過的大劍，無法使用對武器施法的卷軸進行強化。"
+    },
+    {
+      "id": 672,
+      "name": "古老的劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/902.png",
+      "options": [
+        "近距離命中 +9"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍",
+      "description": "古人曾用過的短劍，無法使用對武器施法的卷軸進行強化。"
+    },
+    {
+      "id": 673,
+      "name": "古老的弩槍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/896.png",
+      "options": [
+        "遠距離傷害 +2",
+        "遠距離命中 +5"
+      ],
+      "favorite": false,
+      "categoryName": "弓",
+      "description": "古人曾用過的單手弓，能提升命中率。"
+    },
+    {
+      "id": 674,
+      "name": "古代的卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/911.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 675,
+      "name": "魔法書(精準目標)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 676,
+      "name": "魔法書(灼熱靈氣)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 677,
+      "name": "生命的卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/912.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "記載著藏在石頭高崙中的生命祕密的卷軸。說話之島的甘特正在等待這個卷軸。"
+    },
+    {
+      "id": 686,
+      "name": "蛇女之鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/953.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "從蛇女頭目身上掉下來的藍色鱗片。拿給銀騎士村的傑瑞德的的話，就可以通過他的試煉。"
+    },
+    {
+      "id": 687,
+      "name": "返生藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/947.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "給予紅騎士的唯一一個特別的藥水。它擁有強大的力量，甚至可以解開邪惡神格蘭肯的詛咒。真正的紅騎士應該能夠甘願把這瓶藥水交給比自己更迫切的人。"
+    },
+    {
+      "id": 688,
+      "name": "感謝信",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/917.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "因詛咒變成骷髏的吉姆懷著感恩的心留下的的信。如果拿給銀騎士村的傑瑞德，作為犧牲和獻身的憑證會給予認可。"
+    },
+    {
+      "id": 689,
+      "name": "村民的遺物",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/952.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "在變異巨蟻女皇的肚子裏發現的遺物。風木村莊的艾莉亞正在等待從螞蟻洞窟中消失的居民和父親的消息。"
+    },
+    {
+      "id": 690,
+      "name": "不死族的骨頭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/934.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "偷走復活中的死亡騎士的骨頭後，逃跑的不死族背叛者所留下的骨頭。說話之島的吉倫為了完成研究，正在尋找這個。"
+    },
+    {
+      "id": 693,
+      "name": "受詛咒的精靈書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/940.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "黑暗妖精魔法師達克馬勒，從妖精森林偷走的精靈書。妖精森林的迷幻森林之母希望重新回收精靈書。"
+    },
+    {
+      "id": 694,
+      "name": "不死族的鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "打開不死族地監被魔法封印的門所需的鑰匙。只要跟說話之島地監1樓的迪隆搭話就可以進去不死族地監。如果順利完成了吉倫的委託，就沒有必要再保留了。"
+    },
+    {
+      "id": 695,
+      "name": "殭屍鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/945.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "打開不死族地監被魔法封印的門所需的鑰匙。如果順利完成了吉倫的委託，就沒有必要再保留了。"
+    },
+    {
+      "id": 696,
+      "name": "骷髏鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/944.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "打開不死族地監被魔法封印的門所需的鑰匙。如果順利完成了吉倫的委託，就沒有必要再保留了。"
+    },
+    {
+      "id": 705,
+      "name": "精靈T恤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/956.png",
+      "favorite": false,
+      "categoryName": "T恤"
+    },
+    {
+      "id": 706,
+      "name": "君主的威嚴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/941.png",
+      "options": [
+        "DEX +1",
+        "STR +1",
+        "CHA +1",
+        "INT +1",
+        "CON +1",
+        "WIS +1"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 707,
+      "name": "密室鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可以在古魯丁地監深處，魔法師歐林附近使用的的老舊鑰匙。據說，祕密房間裏藏著被詛咒的人。"
+    },
+    {
+      "id": 709,
+      "name": "神秘水晶球",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/938.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "從古魯丁地監的歐林得到的凝聚著魔力的水晶球。拿給說話之島的吉倫的話，就可以用來完成神秘的魔杖。"
+    },
+    {
+      "id": 710,
+      "name": "神秘魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/946.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "缺少魔力根源神祕水晶球的魔杖。若要尋找水晶球，必須找到地監深處進行交易的魔法師歐林。"
+    },
+    {
+      "id": 711,
+      "name": "水晶魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/939.png",
+      "options": [
+        "魔力回復量 +10"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖",
+      "description": "能快速恢復魔力的魔杖。"
+    },
+    {
+      "id": 712,
+      "name": "蛇女房間鑰匙",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/59.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "這是傑瑞德為了試煉，打開關著蛇女頭目房間的鑰匙。如果順利完成了傑瑞德的試煉，就不用再保留了。"
+    },
+    {
+      "id": 713,
+      "name": "魔法書(呼喚盟友)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 722,
+      "name": "反王盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/960.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 723,
+      "name": "反王長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/961.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 724,
+      "name": "反王手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/962.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 725,
+      "name": "反王頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/959.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 727,
+      "name": "賽尼斯長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/964.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 732,
+      "name": "賽尼斯頭箍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/969.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 734,
+      "name": "賽尼斯手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/971.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 735,
+      "name": "賽尼斯斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/972.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 742,
+      "name": "梅杜莎盾牌",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/979.png",
+      "options": [
+        "反射效果",
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "蘊含著梅杜莎的氣息的盾牌。對於光線型魔法具有相當的防禦力。"
+    },
+    {
+      "id": 744,
+      "name": "古代巨人戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/981.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 756,
+      "name": "守護者的戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/905.png",
+      "options": [
+        "體力上限 +30",
+        "魔力上限 +20"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 768,
+      "name": "保護者手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1011.png",
+      "options": [
+        "體力上限 +20",
+        "魔力上限 +10"
+      ],
+      "favorite": false,
+      "categoryName": "手套",
+      "description": "擁有強烈氣息的手套"
+    },
+    {
+      "id": 769,
+      "name": "瑪那斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1007.png",
+      "options": [
+        "魔力回復量 +5"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷",
+      "description": "相當快速恢復MP的斗篷。"
+    },
+    {
+      "id": 770,
+      "name": "勇敢皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1009.png",
+      "options": [
+        "體力上限 +30"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶",
+      "description": "擁有強烈力量與氣息的腰飾"
+    },
+    {
+      "id": 776,
+      "name": "結婚戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/986.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "name2": "的結婚戒指"
+    },
+    {
+      "id": 787,
+      "name": "黑燄之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1016.png",
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 788,
+      "name": "瑪那水晶球",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1017.png",
+      "options": [
+        "INT +1",
+        "魔力上限 +100"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌"
+    },
+    {
+      "id": 789,
+      "name": "赤焰之弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1018.png",
+      "options": [
+        "雙手",
+        "發動 : 火箭",
+        "遠距離傷害 +4",
+        "遠距離命中 +2"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 790,
+      "name": "赤焰之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1019.png",
+      "options": [
+        "近距離命中 +4"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 791,
+      "name": "黃金權杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1020.png",
+      "options": [
+        "近距離命中 +1"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 806,
+      "name": "血盟返回卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/474.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "持有城堡或小屋的血盟成員使用時，就會傳送到所屬的地方。"
+    },
+    {
+      "id": 815,
+      "name": "傑尼斯戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1037.png",
+      "options": [
+        "毒免疫效果"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 895,
+      "name": "萬能藥(STR)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1143.png",
+      "favorite": false
+    },
+    {
+      "id": 896,
+      "name": "萬能藥(DEX)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1141.png",
+      "favorite": false
+    },
+    {
+      "id": 897,
+      "name": "萬能藥(CON)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1140.png",
+      "favorite": false
+    },
+    {
+      "id": 898,
+      "name": "萬能藥(INT)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1142.png",
+      "favorite": false
+    },
+    {
+      "id": 899,
+      "name": "萬能藥(WIS)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1144.png",
+      "favorite": false
+    },
+    {
+      "id": 900,
+      "name": "萬能藥(CHA)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1139.png",
+      "favorite": false
+    },
+    {
+      "id": 927,
+      "name": "黑色血痕",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1166.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 935,
+      "name": "光明的鱗片",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1171.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 936,
+      "name": "光明身體腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1168.png",
+      "options": [
+        "體力上限 +50",
+        "體力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 937,
+      "name": "光明精神腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1169.png",
+      "options": [
+        "魔力上限 +50",
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 938,
+      "name": "光明靈魂腰帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1170.png",
+      "options": [
+        "體力上限 +20",
+        "體力回復量 +1",
+        "魔力上限 +20",
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 978,
+      "name": "黑長者長袍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1229.png",
+      "options": [
+        "魔力上限 +50",
+        "魔力回復量 +5"
+      ],
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 979,
+      "name": "黑長者涼鞋",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1230.png",
+      "options": [
+        "魔力上限 +25",
+        "魔力回復量 +5"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 980,
+      "name": "巴土瑟之帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1231.png",
+      "options": [
+        "魔力回復量 +5"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 981,
+      "name": "卡士柏之帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1232.png",
+      "options": [
+        "魔力上限 +25"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 982,
+      "name": "馬庫爾之帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1233.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 983,
+      "name": "西瑪之帽",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1234.png",
+      "options": [
+        "魔力上限 +15",
+        "魔力回復量 +2"
+      ],
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 1007,
+      "name": "克特手套",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1244.png",
+      "favorite": false,
+      "categoryName": "手套"
+    },
+    {
+      "id": 1008,
+      "name": "克特盔甲",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1246.png",
+      "favorite": false,
+      "categoryName": "盔甲"
+    },
+    {
+      "id": 1009,
+      "name": "克特長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1247.png",
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 1010,
+      "name": "克特頭盔",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1245.png",
+      "favorite": false,
+      "categoryName": "頭盔"
+    },
+    {
+      "id": 1094,
+      "name": "冰之女王魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1239.png",
+      "options": [
+        "近距離命中 +3",
+        "發動 : 冰錐"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 1095,
+      "name": "惡魔魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1240.png",
+      "options": [
+        "SP +5"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 1096,
+      "name": "巴風特魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1255.png",
+      "options": [
+        "近距離傷害 +5",
+        "近距離命中 +7",
+        "發動 : 地裂術"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 1097,
+      "name": "巴列斯魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1257.png",
+      "options": [
+        "SP +2",
+        "魔力回復量 +10"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 1221,
+      "name": "魔法書(勇敢靈氣)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1285,
+      "name": "深紅長矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/38.png",
+      "options": [
+        "雙手",
+        "近距離命中 +1",
+        "體力上限 +50"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 1294,
+      "name": "技術書(衝擊之暈)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1295,
+      "name": "魔法書(援護盟友)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1296,
+      "name": "精靈水晶(三重矢)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/677.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1408,
+      "name": "惡魔之血",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20029.png",
+      "options": [
+        "持續時間 +600秒"
+      ],
+      "favorite": false,
+      "categoryName": "藥水",
+      "description": "喝下後，魔鬼的氣息會滲透到內心深處，產生狂暴的氣息，在一定時間內快速行動。"
+    },
+    {
+      "id": 1489,
+      "name": "藍海賊斗篷",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1767.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "斗篷"
+    },
+    {
+      "id": 1490,
+      "name": "魔法書(藥水霜化術)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1491,
+      "name": "魔法書(靈魂昇華)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1492,
+      "name": "技術書(反擊屏障)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1493,
+      "name": "精靈水晶(水之元氣)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1494,
+      "name": "精靈水晶(污濁之水)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/688.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1495,
+      "name": "精靈水晶(精準射擊)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/689.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1496,
+      "name": "精靈水晶(烈焰之魂)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/685.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1861,
+      "name": "技術書(增幅防禦)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1862,
+      "name": "技術書 (尖刺盔甲)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 1863,
+      "name": "技術書 (堅固防護)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/252.png",
+      "favorite": false,
+      "categoryName": "魔法書"
+    },
+    {
+      "id": 2069,
+      "name": "月光之氣息",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2179.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "蘊含象牙塔月光而凝聚的精氣。"
+    },
+    {
+      "id": 2070,
+      "name": "神聖獨角獸之角",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2181.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "長出新的角而掉落的神聖獨角獸的痕跡。"
+    },
+    {
+      "id": 2072,
+      "name": "熾炎天使弓",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2168.png",
+      "options": [
+        "雙手",
+        "發動 : 月光地裂術",
+        "遠距離傷害 +4",
+        "遠距離命中 +3"
+      ],
+      "favorite": false,
+      "categoryName": "弓"
+    },
+    {
+      "id": 2586,
+      "name": "變鈍的武器",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1542.png",
+      "favorite": false
+    },
+    {
+      "id": 2671,
+      "name": "畢克斯的羽毛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2518.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "對獲得特別優惠的勇士發送的特別道具。"
+    },
+    {
+      "id": 2679,
+      "name": "畢克斯的沙漏",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20027.png",
+      "options": [
+        "持續時間 +3600秒"
+      ],
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時，可獲得特別的優惠。"
+    },
+    {
+      "id": 3018,
+      "name": "天使魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2915.png",
+      "options": [
+        "INT +1",
+        "魔力回復量 +4",
+        "發動 : 起死回生術"
+      ],
+      "favorite": false,
+      "categoryName": "魔杖"
+    },
+    {
+      "id": 3019,
+      "name": "酷寒之矛",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2919.png",
+      "options": [
+        "發動 : 冰寒之錐",
+        "近距離傷害 +1"
+      ],
+      "favorite": false,
+      "categoryName": "矛"
+    },
+    {
+      "id": 3020,
+      "name": "雷雨之劍",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2911.png",
+      "options": [
+        "近距離命中 +1",
+        "發動 : 電擊",
+        "近距離傷害 +1"
+      ],
+      "favorite": false,
+      "categoryName": "單手劍"
+    },
+    {
+      "id": 3350,
+      "name": "贖罪聖書",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3138.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "寫著贖罪內容的聖書。透過和平神女可進行朗讀。"
+    },
+    {
+      "id": 3934,
+      "name": "火精靈的皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3806.png",
+      "options": [
+        "增加負重 +500",
+        "火屬性抗性增加 +10"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 3935,
+      "name": "水精靈的皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3802.png",
+      "options": [
+        "水屬性抗性增加 +10",
+        "增加負重 +500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 3936,
+      "name": "地精靈的皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3800.png",
+      "options": [
+        "地屬性抗性增加 +10",
+        "增加負重 +500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 3937,
+      "name": "風精靈的皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3804.png",
+      "options": [
+        "風屬性抗性增加 +10",
+        "增加負重 +500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 4052,
+      "name": "解除封印卷軸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6059.png",
+      "favorite": false,
+      "categoryName": "卷軸",
+      "description": "可解除封印道具的卷軸。必須在可使用時間內使用。"
+    },
+    {
+      "id": 12069,
+      "name": "回憶蠟燭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2923.png",
+      "favorite": false
+    },
+    {
+      "id": 12070,
+      "name": "回憶蠟燭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/2923.png",
+      "favorite": false
+    },
+    {
+      "id": 12074,
+      "name": "贖罪聖書箱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20044.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時，可獲得10張贖罪聖書。"
+    },
+    {
+      "id": 12075,
+      "name": "畢克斯的沙漏箱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20048.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時，可獲得3個畢克斯的沙漏。"
+    },
+    {
+      "id": 12104,
+      "name": "解除封印卷軸箱子",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/3942.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時，可獲得10張解除封印卷軸。必須在可使用時間內使用。"
+    },
+    {
+      "id": 12105,
+      "name": "摺紙傳令鳥",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20088.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用後刻上不當之人的名稱時，就會傳送到追逐真相的人。"
+    },
+    {
+      "id": 12106,
+      "name": "摺紙傳令鳥箱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20092.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 12110,
+      "name": "被偷的項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/637.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "竊賊偷走的貴重品，奇岩村的艾歐拉正焦急地在尋找。"
+    },
+    {
+      "id": 12111,
+      "name": "被偷的戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/626.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "竊賊偷走的貴重品，奇岩村的艾歐拉正焦急地在尋找。"
+    },
+    {
+      "id": 12112,
+      "name": "獨眼巨人的血",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20029.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅獨眼巨人的憑證。拿給銀騎士村的皮革加工師朱利的話，就能製作特別的裝備。"
+    },
+    {
+      "id": 12113,
+      "name": "污染的精靈水晶(水)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/683.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅污染的水精靈的憑證。向迷幻森林之母證明自己實力的物品之一。"
+    },
+    {
+      "id": 12114,
+      "name": "污染的精靈水晶(火)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/680.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅污染的火精靈的憑證。向迷幻森林之母證明自己實力的物品之一。"
+    },
+    {
+      "id": 12115,
+      "name": "污染的精靈水晶(地)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/681.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅污染的地精靈的憑證。向迷幻森林之母證明自己實力的物品之一。"
+    },
+    {
+      "id": 12116,
+      "name": "污染的精靈水晶(風)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/684.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅污染的風精靈的憑證。向迷幻森林之母證明自己實力的物品之一。"
+    },
+    {
+      "id": 12117,
+      "name": "邪惡蜥蜴之鱗",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/953.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "消滅邪惡蜥蜴的憑證。向迷幻森林之母證明自己實力的物品之一。"
+    },
+    {
+      "id": 12118,
+      "name": "淨化頭飾",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/184.png",
+      "favorite": false,
+      "categoryName": "頭盔",
+      "description": "迷幻森林之母所借的特殊裝備。穿戴時，就可以看到污染的風精靈。"
+    },
+    {
+      "id": 12119,
+      "name": "神秘魔力恢復藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/75.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "歐林販售的特殊藥水。說話之島的詹姆為了研究有效恢復魔力的方法正在等待著這個材料。"
+    },
+    {
+      "id": 12120,
+      "name": "神秘慎重藥水",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/1529.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "部分長者攜帶的特殊藥水。說話之島的詹姆為了研究有效恢復魔力的方法正在等待著這個材料。"
+    },
+    {
+      "id": 12121,
+      "name": "思克巴女皇的神祕魔杖",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/946.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "部分思克巴女皇攜帶的特殊魔杖。說話之島的詹姆為了研究有效恢復魔力的方法正在等待著這個材料。"
+    },
+    {
+      "id": 12130,
+      "name": "說話之島的回憶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20100.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "為了重新回到說話之島的勇士們準備的GM的禮物。持有時，能感覺到負重變輕。"
+    },
+    {
+      "id": 12149,
+      "name": "守護戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20025.png",
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 12170,
+      "name": "守護項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20138.png",
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 12209,
+      "name": "守護皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20170.png",
+      "options": [
+        "增加負重 +400"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 12242,
+      "name": "長老項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20212.png",
+      "options": [
+        "魔力上限 +30",
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 12243,
+      "name": "長者戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20214.png",
+      "options": [
+        "魔力上限 +10",
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 12286,
+      "name": "抗魔項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20257.png",
+      "options": [
+        "MR +5"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 12287,
+      "name": "抗魔皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20258.png",
+      "options": [
+        "增加負重 +400"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 12349,
+      "name": "神意長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20327.png",
+      "options": [
+        "CHA +1"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 12350,
+      "name": "勇氣長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20328.png",
+      "options": [
+        "近距離命中 +1"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 12351,
+      "name": "賽菲亞長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20329.png",
+      "options": [
+        "遠距離命中 +1"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 12352,
+      "name": "瑪那長靴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20330.png",
+      "options": [
+        "魔力回復量 +2"
+      ],
+      "favorite": false,
+      "categoryName": "長靴"
+    },
+    {
+      "id": 12405,
+      "name": "魔力戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20348.png",
+      "options": [
+        "魔力回復量 +1"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 12456,
+      "name": "遺忘之島的回憶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20409.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "是一本記載著通往遺忘之島航線的書。持有時，能感覺到負重變輕。"
+    },
+    {
+      "id": 12458,
+      "name": "凱莉紗的記憶水晶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20416.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "可以將我的記憶保存到水晶中。"
+    },
+    {
+      "id": 12514,
+      "name": "老舊獵人箭筒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20515.png",
+      "options": [
+        "화살 소지 무게 감소 300"
+      ],
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "專為長時間狩獵而製的堅固箭筒。攜帶時，會感覺手上的箭稍微變輕。"
+    },
+    {
+      "id": 12531,
+      "name": "老舊皮革箭筒",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20533.png",
+      "options": [
+        "화살 소지 무게 감소 150"
+      ],
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "用堅韌的皮革製成的箭筒。攜帶時，會感覺手上的箭稍微變輕。"
+    },
+    {
+      "id": 12557,
+      "name": "安塔瑞斯的記憶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20610.png",
+      "options": [
+        "地屬性抗性增加 +5"
+      ],
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "打倒安塔瑞斯的人的記憶。珍藏著身為首位安塔瑞斯討伐者所贏得的偉大榮耀。"
+    },
+    {
+      "id": 12860,
+      "name": "智力戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/5343.png",
+      "options": [
+        "INT +1"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 12875,
+      "name": "萬能藥選擇箱",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20084.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "使用時，可從6種萬能藥中選擇獲得1種的箱子"
+    },
+    {
+      "id": 12876,
+      "name": "純白的萬能藥",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4110.png",
+      "favorite": false,
+      "categoryName": "其他",
+      "description": "製作萬能藥時所需的材料道具。"
+    },
+    {
+      "id": 15090,
+      "name": "滅魔項鍊",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20408.png",
+      "options": [
+        "MR +8"
+      ],
+      "favorite": false,
+      "categoryName": "項鍊"
+    },
+    {
+      "id": 15091,
+      "name": "滅魔皮帶",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20605.png",
+      "options": [
+        "增加負重 +500"
+      ],
+      "favorite": false,
+      "categoryName": "腰帶"
+    },
+    {
+      "id": 15384,
+      "name": "力量戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6488.png",
+      "options": [
+        "STR +1"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 15385,
+      "name": "敏捷戒指",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6486.png",
+      "options": [
+        "DEX +1"
+      ],
+      "favorite": false,
+      "categoryName": "戒指"
+    },
+    {
+      "id": 15399,
+      "name": "幻象眼魔的心眼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/4996.png",
+      "options": [
+        "INT +1",
+        "反射效果",
+        "魔力上限 +100",
+        "魔力回復量 +2"
+      ],
+      "favorite": false,
+      "categoryName": "盾牌",
+      "description": "像針對光箭型魔法擁有相當高的防禦力。"
+    },
+    {
+      "id": 15400,
+      "name": "傲慢之塔移動卷軸(1樓)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20535.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 15410,
+      "name": "傲慢之塔移動卷軸(11樓)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20566.png",
+      "favorite": false,
+      "categoryName": "卷軸"
+    },
+    {
+      "id": 15420,
+      "name": "傲慢之塔傳送符(1樓)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20545.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 15430,
+      "name": "傲慢之塔傳送符(11樓)",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20576.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 15456,
+      "name": "封印的傲慢之塔1樓傳送符",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/20636.png",
+      "favorite": false,
+      "categoryName": "其他"
+    },
+    {
+      "id": 15457,
+      "name": "封印的傲慢之塔11樓傳送符",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/ItemIcon/6700.png",
+      "favorite": false,
+      "categoryName": "其他"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 2000,
+    "lastPage": 1,
+    "total": 568,
+    "limit": 10000
+  }
+}

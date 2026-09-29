@@ -1,0 +1,6 @@
+id: giran_dungeon_F3
+name: "Giran Dungeon F3"
+origin_x: 32684
+origin_y: 32685
+pixel_scale: 1
+terrain: nav.png

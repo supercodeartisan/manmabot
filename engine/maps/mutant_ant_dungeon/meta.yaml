@@ -1,0 +1,9 @@
+id: mutant_ant_dungeon
+name: "Mutant Ant Dungeon"
+# From obstacle_tiles_raw map_217.png (1 px = 1 tile).
+raw_map: "217"
+origin_x: 32576
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

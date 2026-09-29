@@ -1,0 +1,6 @@
+id: giran_dungeon_F2
+name: "Giran Dungeon F2"
+origin_x: 32687
+origin_y: 32681
+pixel_scale: 1
+terrain: nav.png

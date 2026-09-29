@@ -1,0 +1,544 @@
+2026-09-29 13:12:14.611  INFO   session     Loading Manmabot from D:\KRR\1.LCBot\ManmabotV1_final\engine
+2026-09-29 13:12:14.638  INFO   session     Session log D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-131214.log
+2026-09-29 13:12:14.657  INFO   session     character=elf loot=adena_only game_lang=ko map=talking_island farms=['area_1', 'area_3'] file=D:\KRR\1.LCBot\ManmabotV1_final\engine\logs\bot-20260929-131214.log
+2026-09-29 13:12:15.114  INFO   nav         building portal graph (cluster=32, 479x511)
+2026-09-29 13:12:15.860  INFO   nav         portal graph: 188 components, 739 ms
+2026-09-29 13:12:15.922  INFO   nav         farms=2 safe=11 home=(354, 203) (files farm=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\farms.yaml safe=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\safe.yaml home=D:\KRR\1.LCBot\ManmabotV1_final\engine\maps\talking_island\home.yaml)
+2026-09-29 13:12:16.292  INFO   capture     mss window capture process='LC.exe' title=None content_aspect=4:3
+2026-09-29 13:12:16.955  INFO   session     Entity clicks use memory names, species, and world cells. Image recognition still runs. Set memory.entity_source to vision to restore image-only clicks.
+2026-09-29 13:12:17.004  INFO   session     Player memory is read in this process (realtime_monitor.dll, offsets.json). No separate console.
+2026-09-29 13:12:17.067  INFO   session     Inventory listen scanning in background (inventory_listen.dll or place inv.json).
+2026-09-29 13:12:17.109  INFO   session     Reading hotbar from memory (24 slots)…
+2026-09-29 13:12:17.362  INFO   session     Hotbar scan done · Power-up@box1/f5, Armor-up@box1/f6, Light@box1/f7, Heal@box1/f8, HP potion@box2/f9, Teleport@box1/f10, Mage attack@box1/f12, Talking scroll@box2/f5, Mother tree@box2/f6, HP to MP@box2/f7
+2026-09-29 13:12:17.489  INFO   session     Unmapped hotbar icons: box1/f8:SPELL, box1/f11:Adena, box1/f12:Arrow, box2/f10:Silver Arrow, box2/f12:SPELL, box3/f10:SPELL
+2026-09-29 13:12:17.528  INFO   session     Loop ready · Elf · Korean · map=Talking Island · loot=Adená only · farms=Area 1, Area 3
+2026-09-29 13:12:18.209  INFO   session     Entity shadow: vision=13 {'player': 11, 'npc': 2} memory=49 {'player': 40, 'npc': 6, 'monster': 3} paired=12 median=0.043 unleveled=14:青蛙,319:?,68:警衛
+2026-09-29 13:12:18.336  INFO   session     Inventory listen ready (dll) · hp=0 arrows=9671 silver=0 depoison=0
+2026-09-29 13:12:18.381  INFO   decision    mode=farming goal=buff action=buff target=- sticky=- origin=(293,182) shop=0 scrolled=0 reason='armor_up' status=success
+2026-09-29 13:12:19.159  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:19.252  INFO   travel      return/enter farm needed at (293,182)
+2026-09-29 13:12:19.274  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:19.323  INFO   travel      hop begin wp=(297, 192) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:19.426  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(293,182) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:12:19.559  INFO   action      travel click failed (no NORMAL in ring) travel=True search=False loot=False
+2026-09-29 13:12:20.294  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:20.534  INFO   travel      hop begin wp=(297, 192) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:20.648  INFO   action      travel click failed (no NORMAL in ring) travel=True search=False loot=False
+2026-09-29 13:12:21.142  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:21.193  INFO   travel      hop begin wp=(297, 192) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:21.610  INFO   session     Paused — hotkey
+2026-09-29 13:12:26.258  INFO   session     Pause / Resume → Running
+2026-09-29 13:12:26.890  INFO   session     Entity shadow: vision=17 {'player': 15, 'npc': 2} memory=50 {'player': 41, 'monster': 3, 'npc': 6} paired=16 median=0.037 unleveled=14:青蛙,319:?,68:警衛
+2026-09-29 13:12:27.325  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:27.518  INFO   travel      hop begin wp=(297, 192) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:28.878  INFO   decision    mode=traveling goal=buff action=buff target=- sticky=- origin=(293,182) shop=0 scrolled=0 reason='light' status=success
+2026-09-29 13:12:30.271  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:30.319  INFO   travel      hop begin wp=(297, 193) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:30.319  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(294,183) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:12:30.913  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:31.331  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:31.666  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:32.068  INFO   session     Entity shadow: vision=17 {'player': 15, 'monster': 1, 'npc': 1} memory=49 {'player': 42, 'monster': 2, 'npc': 5} paired=15 median=0.056 unleveled=14:青蛙,319:?
+2026-09-29 13:12:32.138  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:32.644  INFO   nav         unstick TP emit reason=unstick confined
+2026-09-29 13:12:32.785  INFO   nav         confined escape fired (bubble timeout)
+2026-09-29 13:12:32.802  INFO   decision    mode=traveling goal=unstick action=teleport target=- sticky=- origin=(294,183) shop=0 scrolled=0 reason='unstick confined' status=success
+2026-09-29 13:12:34.173  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:34.426  INFO   travel      hop begin wp=(297, 193) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:34.450  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(294,183) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:12:35.585  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:36.173  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:37.043  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:37.358  INFO   travel      hop begin wp=(275, 214) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:38.164  INFO   session     Entity shadow: vision=27 {'player': 23, 'npc': 3, 'monster': 1} memory=52 {'npc': 7, 'player': 45} paired=24 median=0.026
+2026-09-29 13:12:38.618  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:39.686  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:39.746  INFO   travel      hop begin wp=(272, 215) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:40.421  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:40.736  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:41.210  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:41.858  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:42.128  INFO   travel      hop begin wp=(267, 216) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:42.511  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:43.035  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:43.500  INFO   session     Entity shadow: vision=11 {'player': 9, 'npc': 2} memory=23 {'npc': 7, 'player': 16} paired=11 median=0.020
+2026-09-29 13:12:43.557  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:44.517  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:44.699  INFO   travel      hop begin wp=(266, 217) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:45.297  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:45.775  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:46.038  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:46.541  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:46.866  INFO   travel      hop begin wp=(266, 217) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:47.319  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:47.778  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:48.026  INFO   travel      hop begin wp=(275, 212) purpose=enter_farm reason=unstick nearby
+2026-09-29 13:12:48.612  INFO   session     Entity shadow: vision=10 {'player': 7, 'npc': 3} memory=25 {'npc': 8, 'player': 17} paired=10 median=0.060
+2026-09-29 13:12:48.684  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:48.685  INFO   travel      hop begin wp=(276, 212) purpose=enter_farm reason=unstick nearby
+2026-09-29 13:12:49.463  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:49.762  INFO   travel      hop arrive wp=(276, 212) purpose=enter_farm
+2026-09-29 13:12:49.845  INFO   travel      hop begin wp=(266, 217) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:50.975  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:51.682  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:52.120  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:52.142  INFO   travel      hop begin wp=(272, 226) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:52.786  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:53.055  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:53.471  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:53.870  INFO   session     Entity shadow: vision=2 {'npc': 1, 'player': 1} memory=12 {'npc': 7, 'player': 5} paired=2 median=0.046
+2026-09-29 13:12:53.958  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:54.246  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:54.485  INFO   travel      hop begin wp=(266, 220) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:55.085  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:55.296  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:55.843  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:56.504  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:56.790  INFO   travel      hop begin wp=(272, 226) purpose=enter_farm reason=enter farm area
+2026-09-29 13:12:57.266  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:57.956  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:58.674  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:59.098  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=7 {'npc': 4, 'monster': 1, 'player': 2} paired=1 median=0.027 unleveled=68:警衛
+2026-09-29 13:12:59.183  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:12:59.184  INFO   travel      hop begin wp=(264, 216) purpose=enter_farm reason=enter farm, walk around
+2026-09-29 13:12:59.794  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:00.105  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:00.452  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:00.935  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:01.131  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:01.435  INFO   travel      hop begin wp=(271, 225) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:02.002  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:02.222  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:02.690  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:02.876  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:03.800  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:03.939  INFO   travel      hop begin wp=(271, 225) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:04.478  INFO   session     Entity shadow: vision=1 {'player': 1} memory=5 {'npc': 4, 'player': 1} paired=0 median=0.000
+2026-09-29 13:13:04.557  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:05.003  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:05.180  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:05.490  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(269,220) shop=0 scrolled=0 reason='enter farm area' status=success (repeat x50)
+2026-09-29 13:13:05.762  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:06.078  INFO   travel      hop begin wp=(264, 219) purpose=enter_farm reason=enter farm, walk around
+2026-09-29 13:13:06.421  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:06.993  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:07.488  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:07.890  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:08.128  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:08.444  INFO   travel      hop begin wp=(280, 228) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:08.813  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:09.663  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:10.234  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=4 {'npc': 3, 'player': 1} paired=1 median=0.047
+2026-09-29 13:13:10.305  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:10.571  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:10.766  INFO   travel      hop begin wp=(280, 228) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:11.115  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:11.598  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:12.159  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:12.714  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:13.124  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:13.144  INFO   travel      hop begin wp=(283, 231) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:13.721  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:14.028  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:14.434  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:14.931  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:15.360  INFO   session     Entity shadow: vision=4 {'player': 2, 'npc': 2} memory=4 {'monster': 3, 'npc': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-29 13:13:15.435  INFO   combat      farm branch=screen_combat id=125 dist=18
+2026-09-29 13:13:15.440  INFO   combat      engage id=125 species=monster_오크_2 rel=(0,18)
+2026-09-29 13:13:15.449  INFO   decision    mode=traveling goal=combat action=attack target=125 sticky=125 origin=(277,229) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:13:16.220  INFO   combat      farm branch=sticky id=125 dist=17
+2026-09-29 13:13:17.102  INFO   combat      farm branch=sticky id=125 dist=15
+2026-09-29 13:13:17.645  INFO   combat      farm branch=sticky id=125 dist=14
+2026-09-29 13:13:18.314  INFO   combat      farm branch=sticky id=125 dist=14
+2026-09-29 13:13:18.744  INFO   combat      farm branch=sticky id=125 dist=12
+2026-09-29 13:13:19.302  INFO   combat      farm branch=sticky id=125 dist=12
+2026-09-29 13:13:19.979  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:20.220  INFO   travel      hop begin wp=(285, 243) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:20.221  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(278,236) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:13:20.779  INFO   session     Entity shadow: vision=3 {'npc': 2, 'player': 1} memory=3 {'monster': 2, 'npc': 1} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-29 13:13:20.836  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:21.084  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:21.965  INFO   combat      farm branch=screen_combat id=126 dist=14
+2026-09-29 13:13:22.105  INFO   combat      engage id=126 species=monster_오크_2 rel=(1,14)
+2026-09-29 13:13:22.123  INFO   decision    mode=traveling goal=combat action=attack target=126 sticky=126 origin=(278,236) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:13:22.873  INFO   combat      farm branch=sticky id=126 dist=13
+2026-09-29 13:13:23.591  INFO   combat      farm branch=sticky id=126 dist=11
+2026-09-29 13:13:24.047  INFO   combat      farm branch=sticky id=126 dist=11
+2026-09-29 13:13:24.704  INFO   combat      farm branch=sticky id=126 dist=8
+2026-09-29 13:13:25.367  INFO   combat      farm branch=sticky id=126 dist=7
+2026-09-29 13:13:26.078  INFO   session     Entity shadow: vision=4 {'player': 1, 'npc': 2, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.007 unleveled=68:警衛,10:警衛
+2026-09-29 13:13:26.169  INFO   combat      farm branch=sticky id=126 dist=5
+2026-09-29 13:13:26.780  INFO   combat      farm branch=sticky id=126 dist=3
+2026-09-29 13:13:27.255  INFO   combat      farm branch=sticky id=126 dist=2
+2026-09-29 13:13:27.529  INFO   combat      farm branch=sticky id=126 dist=2
+2026-09-29 13:13:28.472  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:28.644  INFO   travel      hop begin wp=(285, 248) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:28.653  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(278,241) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:13:29.471  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:29.781  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:30.234  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:30.579  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:30.760  INFO   travel      hop begin wp=(285, 248) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:31.335  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 2} memory=3 {'monster': 3} paired=0 median=0.000 unleveled=189:鹿,68:警衛,10:警衛
+2026-09-29 13:13:31.408  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:31.710  INFO   combat      farm branch=screen_combat id=128 dist=17
+2026-09-29 13:13:31.956  INFO   combat      engage id=128 species=monster_오크_2 rel=(17,0)
+2026-09-29 13:13:31.986  INFO   decision    mode=traveling goal=combat action=attack target=128 sticky=128 origin=(281,244) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:13:32.803  INFO   combat      farm branch=sticky id=128 dist=15
+2026-09-29 13:13:33.387  INFO   combat      farm branch=sticky id=128 dist=15
+2026-09-29 13:13:34.365  INFO   combat      farm branch=sticky id=128 dist=14
+2026-09-29 13:13:35.115  INFO   combat      farm branch=sticky id=128 dist=12
+2026-09-29 13:13:35.633  INFO   combat      farm branch=sticky id=128 dist=11
+2026-09-29 13:13:36.149  INFO   session     Entity shadow: vision=4 {'player': 1, 'monster': 1, 'npc': 2} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=68:警衛,10:警衛
+2026-09-29 13:13:36.244  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:36.264  INFO   travel      hop begin wp=(283, 253) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:36.275  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(287,242) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:13:36.947  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:37.447  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:38.049  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:38.369  INFO   travel      hop begin wp=(297, 247) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:38.784  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:39.160  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:39.611  INFO   combat      farm branch=screen_combat id=130 dist=10
+2026-09-29 13:13:39.639  INFO   combat      engage id=130 species=monster_고블린_2 rel=(10,8)
+2026-09-29 13:13:39.650  INFO   decision    mode=traveling goal=combat action=attack target=130 sticky=130 origin=(288,242) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:13:40.286  INFO   combat      farm branch=sticky id=130 dist=9
+2026-09-29 13:13:40.662  INFO   session     Paused — hotkey
+2026-09-29 13:13:48.422  INFO   session     Pause / Resume → Running
+2026-09-29 13:13:49.010  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=68:警衛
+2026-09-29 13:13:49.190  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:13:49.644  INFO   travel      hop begin wp=(299, 247) purpose=enter_farm reason=enter farm area
+2026-09-29 13:13:49.679  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(289,243) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:13:50.308  INFO   combat      farm branch=screen_combat id=134 dist=8
+2026-09-29 13:13:50.345  INFO   combat      engage id=134 species=monster_고블린_2 rel=(6,8)
+2026-09-29 13:13:50.354  INFO   decision    mode=traveling goal=combat action=attack target=134 sticky=134 origin=(290,244) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:13:51.023  INFO   combat      farm branch=sticky id=134 dist=6
+2026-09-29 13:13:51.504  INFO   combat      farm branch=sticky id=134 dist=7
+2026-09-29 13:13:51.959  INFO   combat      farm branch=sticky id=134 dist=6
+2026-09-29 13:13:52.238  INFO   combat      farm branch=sticky id=134 dist=7
+2026-09-29 13:13:52.928  INFO   combat      farm branch=sticky id=134 dist=5
+2026-09-29 13:13:53.162  INFO   session     Paused — hotkey
+2026-09-29 13:13:54.838  INFO   session     Pause / Resume → Running
+2026-09-29 13:13:55.419  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 1, 'monster': 1} memory=3 {'monster': 2, 'npc': 1} paired=1 median=0.027 unleveled=189:鹿
+2026-09-29 13:13:55.521  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:13:55.729  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (290, 251)
+2026-09-29 13:13:55.730  INFO   decision    mode=traveling goal=combat action=searching target=134 sticky=134 origin=(291,248) shop=0 scrolled=0 reason='wall detour A*' status=success
+2026-09-29 13:13:56.695  INFO   combat      farm branch=sticky id=134 dist=10
+2026-09-29 13:13:56.922  INFO   decision    mode=traveling goal=combat action=attack target=134 sticky=134 origin=(291,248) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 13:13:57.354  INFO   session     Paused — hotkey
+2026-09-29 13:14:00.904  INFO   session     Pause / Resume → Running
+2026-09-29 13:14:01.483  INFO   session     Entity shadow: vision=3 {'monster': 2, 'npc': 1} memory=4 {'monster': 3, 'npc': 1} paired=3 median=0.023 unleveled=189:鹿
+2026-09-29 13:14:01.576  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:14:01.663  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (282, 257)
+2026-09-29 13:14:01.673  INFO   decision    mode=traveling goal=combat action=searching target=134 sticky=134 origin=(290,252) shop=0 scrolled=0 reason='wall detour A*' status=success
+2026-09-29 13:14:02.346  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:14:02.920  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (282, 257)
+2026-09-29 13:14:03.549  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:14:03.634  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (282, 257)
+2026-09-29 13:14:04.112  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:14:04.193  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (282, 257)
+2026-09-29 13:14:04.772  INFO   combat      farm branch=sticky id=134 dist=9
+2026-09-29 13:14:04.852  INFO   combat      wall/fence LOS blocked id=134 — A* detour hop to (282, 257)
+2026-09-29 13:14:05.549  INFO   combat      give-up id=134 sticky_was=134
+2026-09-29 13:14:05.839  INFO   combat      farm branch=screen_combat id=136 dist=1
+2026-09-29 13:14:05.881  INFO   combat      engage id=136 species=monster_오크_2 rel=(-1,0)
+2026-09-29 13:14:05.891  INFO   decision    mode=traveling goal=combat action=attack target=136 sticky=136 origin=(289,252) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:14:06.558  INFO   session     Entity shadow: vision=5 {'player': 1, 'monster': 3, 'npc': 1} memory=5 {'monster': 4, 'npc': 1} paired=4 median=0.025 unleveled=189:鹿
+2026-09-29 13:14:06.647  INFO   combat      farm branch=sticky id=136 dist=1
+2026-09-29 13:14:07.341  INFO   combat      farm branch=sticky id=136 dist=1
+2026-09-29 13:14:07.958  INFO   combat      farm branch=sticky id=137 dist=9
+2026-09-29 13:14:08.176  INFO   decision    mode=traveling goal=combat action=attack target=137 sticky=137 origin=(289,252) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 13:14:08.775  INFO   combat      farm branch=sticky id=137 dist=8
+2026-09-29 13:14:09.538  INFO   combat      farm branch=sticky id=137 dist=7
+2026-09-29 13:14:10.034  INFO   combat      farm branch=sticky id=137 dist=6
+2026-09-29 13:14:10.610  INFO   loot        begin_loot_item id=138
+2026-09-29 13:14:10.610  INFO   loot        pickup emit item=138 reason=engage item
+2026-09-29 13:14:10.617  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:10.626  INFO   decision    mode=traveling goal=loot action=pickup target=138 sticky=- origin=(289,252) shop=0 scrolled=0 reason='engage item' status=success
+2026-09-29 13:14:11.190  INFO   loot        pickup re-approach id=138 (await still listed)
+2026-09-29 13:14:11.192  INFO   loot        approach hop item=138 wp=(287, 251) reason=walk onto item
+2026-09-29 13:14:11.201  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:11.212  INFO   decision    mode=traveling goal=loot action=searching target=138 sticky=- origin=(290,251) shop=0 scrolled=0 reason='walk onto item' status=success
+2026-09-29 13:14:11.685  INFO   session     Entity shadow: vision=3 {'npc': 1, 'item': 1, 'monster': 1} memory=4 {'monster': 2, 'item': 1, 'npc': 1} paired=3 median=0.021 unleveled=189:鹿
+2026-09-29 13:14:11.777  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:11.784  INFO   travel      hop begin wp=(293, 247) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:11.792  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(290,251) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:14:12.403  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:12.901  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:13.132  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:13.648  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:13.969  INFO   travel      hop begin wp=(293, 247) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:14.588  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:14.705  INFO   travel      hop arrive wp=(293, 247) purpose=enter_farm
+2026-09-29 13:14:14.723  INFO   travel      hop begin wp=(303, 252) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:15.251  INFO   loot        begin_loot_item id=138
+2026-09-29 13:14:15.254  INFO   loot        approach hop item=138 wp=(287, 251) reason=walk onto item
+2026-09-29 13:14:15.261  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:15.272  INFO   decision    mode=traveling goal=loot action=searching target=138 sticky=- origin=(293,247) shop=0 scrolled=0 reason='walk onto item' status=success
+2026-09-29 13:14:15.811  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:15.964  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:16.529  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:17.005  INFO   session     Entity shadow: vision=4 {'player': 1, 'npc': 1, 'item': 1, 'monster': 1} memory=4 {'monster': 2, 'item': 1, 'npc': 1} paired=3 median=0.019 unleveled=189:鹿
+2026-09-29 13:14:17.095  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:17.740  INFO   loot        approach hop item=138 wp=(287, 251) reason=walk onto item
+2026-09-29 13:14:18.004  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:18.615  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:18.836  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:19.231  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:19.444  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:20.345  INFO   loot        approach hop item=138 wp=(287, 251) reason=walk onto item
+2026-09-29 13:14:20.481  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:21.125  INFO   loot        farm branch=loot item_id=138
+2026-09-29 13:14:21.125  INFO   decision    mode=traveling goal=loot action=pickup target=138 sticky=- origin=(289,252) shop=0 scrolled=0 reason='loot target' status=success
+2026-09-29 13:14:21.688  INFO   loot        pickup retry id=138 (await still listed)
+2026-09-29 13:14:21.689  INFO   loot        pickup emit item=138 reason=pickup retry
+2026-09-29 13:14:21.697  INFO   loot        farm branch=loot item_id=None
+2026-09-29 13:14:22.197  INFO   session     Entity shadow: vision=3 {'player': 1, 'npc': 1, 'monster': 1} memory=4 {'monster': 2, 'item': 1, 'npc': 1} paired=2 median=0.021 unleveled=189:鹿
+2026-09-29 13:14:22.281  INFO   loot        pickup retry id=138 (await still listed)
+2026-09-29 13:14:22.295  INFO   loot        pickup emit item=138 reason=pickup retry
+2026-09-29 13:14:22.305  INFO   loot        farm branch=loot item_id=None
+2026-09-29 13:14:23.373  INFO   combat      farm branch=screen_combat id=140 dist=1
+2026-09-29 13:14:23.391  INFO   combat      engage id=140 species=monster_오크 전사_8 rel=(1,0)
+2026-09-29 13:14:23.400  INFO   decision    mode=traveling goal=combat action=attack target=140 sticky=140 origin=(287,252) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:14:24.043  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:24.769  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:25.614  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:26.323  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:26.837  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:27.313  INFO   session     Entity shadow: vision=5 {'npc': 1, 'monster': 3, 'player': 1} memory=4 {'monster': 3, 'npc': 1} paired=3 median=0.018 unleveled=189:鹿
+2026-09-29 13:14:27.389  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:27.763  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:28.236  INFO   combat      farm branch=sticky id=140 dist=1
+2026-09-29 13:14:28.856  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:29.075  INFO   travel      hop begin wp=(302, 250) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:29.088  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(288,251) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:14:29.752  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:30.020  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:30.590  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:31.267  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:31.529  INFO   travel      hop begin wp=(293, 247) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:32.078  INFO   session     Paused — hotkey
+2026-09-29 13:14:33.272  INFO   session     Pause / Resume → Running
+2026-09-29 13:14:33.863  INFO   session     Entity shadow: vision=5 {'player': 1, 'npc': 1, 'monster': 3} memory=3 {'monster': 2, 'npc': 1} paired=2 median=0.039 unleveled=189:鹿
+2026-09-29 13:14:34.020  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:34.025  INFO   travel      hop begin wp=(303, 254) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:34.608  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:35.037  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:35.302  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:35.837  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:36.158  INFO   travel      hop begin wp=(303, 251) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:36.741  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:36.929  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:37.415  INFO   combat      farm branch=screen_combat id=141 dist=5
+2026-09-29 13:14:37.449  INFO   combat      engage id=141 species=monster_오크_2 rel=(-5,3)
+2026-09-29 13:14:37.458  INFO   decision    mode=traveling goal=combat action=attack target=141 sticky=141 origin=(298,251) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:14:38.056  INFO   combat      farm branch=sticky id=141 dist=5
+2026-09-29 13:14:38.645  INFO   combat      farm branch=sticky id=141 dist=5
+2026-09-29 13:14:39.670  INFO   session     Entity shadow: vision=2 {'npc': 1, 'player': 1} memory=2 {'monster': 1, 'npc': 1} paired=1 median=0.027 unleveled=189:鹿
+2026-09-29 13:14:39.771  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:39.775  INFO   travel      hop begin wp=(303, 261) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:39.788  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(299,251) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:14:40.336  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:40.587  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:41.080  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:41.627  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:42.093  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:42.097  INFO   travel      hop begin wp=(303, 265) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:42.684  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:42.900  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:43.368  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:43.877  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:44.390  INFO   travel      hop begin wp=(305, 269) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:44.919  INFO   session     Entity shadow: vision=2 {'player': 1, 'npc': 1} memory=1 {'npc': 1} paired=1 median=0.030
+2026-09-29 13:14:44.997  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:45.240  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:45.663  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:46.141  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:46.384  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:46.736  INFO   travel      hop begin wp=(305, 272) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:47.311  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:47.545  INFO   combat      farm branch=screen_combat id=142 dist=11
+2026-09-29 13:14:47.785  INFO   combat      engage id=142 species=monster_오크_2 rel=(11,5)
+2026-09-29 13:14:47.813  INFO   decision    mode=traveling goal=combat action=attack target=142 sticky=142 origin=(305,262) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:14:48.537  INFO   combat      farm branch=sticky id=142 dist=10
+2026-09-29 13:14:48.999  INFO   combat      farm branch=sticky id=142 dist=9
+2026-09-29 13:14:49.265  INFO   combat      farm branch=sticky id=142 dist=9
+2026-09-29 13:14:50.122  INFO   combat      farm branch=sticky id=142 dist=7
+2026-09-29 13:14:50.725  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=2 {'monster': 2} paired=1 median=0.035
+2026-09-29 13:14:50.776  INFO   combat      farm branch=sticky id=142 dist=5
+2026-09-29 13:14:51.300  INFO   combat      farm branch=sticky id=142 dist=4
+2026-09-29 13:14:51.762  INFO   combat      farm branch=sticky id=142 dist=2
+2026-09-29 13:14:52.157  INFO   combat      farm branch=sticky id=142 dist=2
+2026-09-29 13:14:52.775  INFO   combat      farm branch=sticky id=142 dist=1
+2026-09-29 13:14:53.378  INFO   combat      farm branch=sticky id=142 dist=1
+2026-09-29 13:14:53.950  INFO   combat      farm branch=sticky id=144 dist=11
+2026-09-29 13:14:54.175  INFO   decision    mode=traveling goal=combat action=attack target=144 sticky=144 origin=(311,264) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 13:14:54.516  INFO   combat      farm branch=sticky id=144 dist=10
+2026-09-29 13:14:55.133  INFO   combat      farm branch=sticky id=144 dist=10
+2026-09-29 13:14:56.007  INFO   combat      farm branch=sticky id=144 dist=9
+2026-09-29 13:14:56.648  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=1 {'monster': 1} paired=0 median=0.000
+2026-09-29 13:14:56.725  INFO   combat      farm branch=sticky id=143 dist=12
+2026-09-29 13:14:56.729  INFO   decision    mode=traveling goal=combat action=attack target=143 sticky=143 origin=(311,263) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 13:14:57.190  INFO   combat      farm branch=sticky id=143 dist=12
+2026-09-29 13:14:57.549  INFO   combat      farm branch=sticky id=143 dist=12
+2026-09-29 13:14:58.094  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:58.380  INFO   travel      hop begin wp=(305, 273) purpose=enter_farm reason=enter farm area
+2026-09-29 13:14:58.381  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(312,264) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:14:58.970  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:59.253  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:14:59.674  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:00.127  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:00.334  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:00.709  INFO   travel      hop begin wp=(305, 273) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:01.349  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:02.069  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-29 13:15:02.507  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:02.788  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:03.127  INFO   travel      hop begin wp=(305, 279) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:03.735  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:04.039  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:04.382  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:04.776  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:04.989  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:05.391  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:05.455  INFO   travel      hop begin wp=(305, 285) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:06.072  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:06.281  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:06.748  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:07.177  INFO   session     Entity shadow: vision=1 {'player': 1} memory=0 {} paired=0 median=0.000
+2026-09-29 13:15:07.260  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:07.559  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:07.743  INFO   travel      hop begin wp=(305, 286) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:08.184  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:08.923  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:09.557  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:09.788  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:10.080  INFO   travel      hop begin wp=(305, 290) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:10.559  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:10.791  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:11.123  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:11.333  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:11.592  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:11.994  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:12.395  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=206:兔子
+2026-09-29 13:15:12.459  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:12.511  INFO   travel      hop begin wp=(305, 294) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:13.059  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:13.278  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:13.678  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:13.925  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:14.707  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:14.909  INFO   travel      hop begin wp=(305, 297) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:15.374  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:15.577  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:16.019  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:16.474  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:16.660  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:17.002  INFO   travel      hop begin wp=(305, 300) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:17.425  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:17.762  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 2} paired=0 median=0.000 unleveled=189:鹿,14:青蛙
+2026-09-29 13:15:17.835  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:18.362  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:18.802  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:19.011  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:19.555  INFO   travel      hop begin wp=(303, 304) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:20.550  INFO   combat      farm branch=screen_combat id=148 dist=16
+2026-09-29 13:15:20.706  INFO   combat      engage id=148 species=monster_오크_2 rel=(16,-1)
+2026-09-29 13:15:20.724  INFO   decision    mode=traveling goal=combat action=attack target=148 sticky=148 origin=(305,292) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:15:21.385  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:21.440  INFO   travel      hop begin wp=(303, 307) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:21.448  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(305,293) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:15:22.218  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:22.622  INFO   combat      farm branch=screen_combat id=149 dist=16
+2026-09-29 13:15:22.942  INFO   combat      engage id=149 species=monster_오크_2 rel=(16,-2)
+2026-09-29 13:15:22.958  INFO   decision    mode=traveling goal=combat action=attack target=149 sticky=149 origin=(305,293) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:15:23.687  INFO   session     Entity shadow: vision=2 {'player': 1, 'monster': 1} memory=3 {'monster': 3} paired=1 median=0.020 unleveled=14:青蛙,189:鹿
+2026-09-29 13:15:23.775  INFO   combat      farm branch=screen_combat id=150 dist=7
+2026-09-29 13:15:23.786  INFO   combat      engage id=150 species=monster_오크_2 rel=(7,3)
+2026-09-29 13:15:23.798  INFO   decision    mode=traveling goal=combat action=attack target=150 sticky=150 origin=(306,292) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:15:24.846  INFO   combat      farm branch=sticky id=150 dist=8
+2026-09-29 13:15:25.245  INFO   combat      farm branch=sticky id=150 dist=7
+2026-09-29 13:15:25.558  INFO   combat      farm branch=sticky id=150 dist=7
+2026-09-29 13:15:26.280  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:26.529  INFO   travel      hop begin wp=(303, 307) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:26.539  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(306,294) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:15:27.207  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:27.924  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:28.468  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:28.873  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=14:青蛙
+2026-09-29 13:15:28.958  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:29.010  INFO   travel      hop begin wp=(303, 311) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:29.518  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:29.699  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:30.236  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:30.782  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:31.167  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:31.216  INFO   travel      hop begin wp=(304, 313) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:31.812  INFO   combat      farm branch=screen_combat id=151 dist=11
+2026-09-29 13:15:31.827  INFO   combat      engage id=151 species=monster_그렘린_4 rel=(-11,7)
+2026-09-29 13:15:31.836  INFO   decision    mode=traveling goal=combat action=attack target=151 sticky=151 origin=(303,300) shop=0 scrolled=0 reason='screen engage' status=success
+2026-09-29 13:15:32.430  INFO   combat      farm branch=sticky id=151 dist=11
+2026-09-29 13:15:32.911  INFO   combat      farm branch=sticky id=151 dist=11
+2026-09-29 13:15:33.219  INFO   combat      farm branch=sticky id=151 dist=12
+2026-09-29 13:15:34.074  INFO   combat      farm branch=sticky id=151 dist=12
+2026-09-29 13:15:34.681  INFO   session     Entity shadow: vision=1 {'player': 1} memory=2 {'monster': 2} paired=0 median=0.000
+2026-09-29 13:15:34.753  INFO   combat      farm branch=sticky id=151 dist=10
+2026-09-29 13:15:35.244  INFO   combat      farm branch=sticky id=151 dist=8
+2026-09-29 13:15:35.522  INFO   combat      farm branch=sticky id=151 dist=8
+2026-09-29 13:15:36.091  INFO   combat      farm branch=sticky id=151 dist=8
+2026-09-29 13:15:36.619  INFO   combat      farm branch=sticky id=151 dist=6
+2026-09-29 13:15:37.280  INFO   combat      farm branch=sticky id=152 dist=10
+2026-09-29 13:15:37.522  INFO   decision    mode=traveling goal=combat action=attack target=152 sticky=152 origin=(300,307) shop=0 scrolled=0 reason='attack target' status=success
+2026-09-29 13:15:37.907  INFO   combat      farm branch=sticky id=152 dist=10
+2026-09-29 13:15:38.530  INFO   combat      farm branch=sticky id=152 dist=13
+2026-09-29 13:15:39.330  INFO   combat      farm branch=sticky id=152 dist=13
+2026-09-29 13:15:39.988  INFO   session     Entity shadow: vision=3 {'player': 1, 'monster': 1, 'item': 1} memory=2 {'monster': 1, 'item': 1} paired=2 median=0.014
+2026-09-29 13:15:40.069  INFO   combat      farm branch=sticky id=152 dist=13
+2026-09-29 13:15:40.544  INFO   combat      farm branch=sticky id=152 dist=11
+2026-09-29 13:15:40.892  INFO   combat      farm branch=sticky id=152 dist=11
+2026-09-29 13:15:41.433  INFO   combat      farm branch=sticky id=152 dist=10
+2026-09-29 13:15:41.865  INFO   combat      farm branch=sticky id=152 dist=10
+2026-09-29 13:15:42.559  INFO   combat      farm branch=sticky id=152 dist=9
+2026-09-29 13:15:43.049  INFO   combat      farm branch=sticky id=152 dist=9
+2026-09-29 13:15:43.654  INFO   loot        begin_loot_item id=154
+2026-09-29 13:15:43.924  INFO   loot        approach hop item=154 wp=(304, 320) reason=walk onto item
+2026-09-29 13:15:43.930  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:43.942  INFO   decision    mode=traveling goal=loot action=searching target=154 sticky=- origin=(304,311) shop=0 scrolled=0 reason='walk onto item' status=success
+2026-09-29 13:15:44.389  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:44.771  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:45.287  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=2 {'monster': 1, 'item': 1} paired=1 median=0.004 unleveled=189:鹿
+2026-09-29 13:15:45.689  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:46.340  INFO   loot        approach hop item=154 wp=(304, 320) reason=walk onto item
+2026-09-29 13:15:46.341  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:46.907  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:47.071  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:47.610  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:48.008  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:48.182  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:48.617  INFO   loot        approach hop item=154 wp=(304, 320) reason=walk onto item
+2026-09-29 13:15:48.617  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:49.184  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:49.396  INFO   loot        farm branch=loot item_id=154
+2026-09-29 13:15:49.690  INFO   decision    mode=traveling goal=loot action=pickup target=154 sticky=- origin=(304,319) shop=0 scrolled=0 reason='loot target' status=success
+2026-09-29 13:15:50.371  INFO   session     Entity shadow: vision=2 {'player': 1, 'item': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-29 13:15:50.460  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:50.535  INFO   travel      hop begin wp=(306, 332) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:50.543  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(304,320) shop=0 scrolled=0 reason='enter farm area' status=success
+2026-09-29 13:15:51.526  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:52.146  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:52.386  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:52.736  INFO   travel      hop begin wp=(306, 332) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:53.262  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:53.448  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:53.808  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:54.018  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:54.395  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:54.591  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:54.785  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:55.100  INFO   travel      hop begin wp=(315, 332) purpose=enter_farm reason=enter farm area
+2026-09-29 13:15:55.591  INFO   session     Entity shadow: vision=1 {'player': 1} memory=1 {'monster': 1} paired=0 median=0.000 unleveled=189:鹿
+2026-09-29 13:15:55.669  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:55.876  INFO   search      farm branch=none (wander/search next)
+2026-09-29 13:15:56.197  INFO   session     Paused — hotkey
+2026-09-29 13:15:59.130  INFO   session     Stop → Stopped
+2026-09-29 13:15:59.369  INFO   session     Bot worker exited
