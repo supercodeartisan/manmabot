@@ -256,12 +256,21 @@ class SellFilterPanel(ttk.Frame):
         self.show_var = tk.StringVar(self, value=t["filter_all"])
         self.count_var = tk.StringVar(self, value="")
         self.status_var = tk.StringVar(self, value="")
+        # Catalog/icons load on first ensure_loaded() (Equipment → Sell tab),
+        # not at app startup — keeps the schedule shell responsive.
+        self._loaded = False
         self._build()
-        self.after_idle(self.reload)
 
     @property
     def _own_label(self) -> str:
         return str(self._t.get("filter_own", "Own"))
+
+    def ensure_loaded(self) -> None:
+        """Load keep filters + item icons once when the Sell UI is shown."""
+        if self._loaded:
+            return
+        self._loaded = True
+        self.reload()
 
     def _build(self) -> None:
         hint = str(self._t.get("sell_logic_hint") or self._t.get("sell_filter_hint") or "")
@@ -476,6 +485,7 @@ class SellFilterPanel(ttk.Frame):
 
     def reload(self) -> None:
         """Load keep filters + catalog, then pull live bag synchronously."""
+        self._loaded = True
         self._load_filters_and_catalog()
         self._rebuild_icons_and_categories(clear_photos=True)
         snap, error = self._snapshot_inventory()

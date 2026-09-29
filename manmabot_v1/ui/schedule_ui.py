@@ -884,6 +884,7 @@ class UnifiedTaskEditor(ttk.Frame):
             )
 
         tabs = ttk.Notebook(self, style="MainTabs.TNotebook")
+        self._main_tabs = tabs
         self.pages = {}
         for key in ("move", "hunt", "recovery", "magic", "equipment", "other"):
             page = ttk.Frame(tabs, padding=6)
@@ -904,8 +905,15 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         self.commit_button.pack(anchor="center")
         tabs.pack(fill="both", expand=True)
+        tabs.bind("<<NotebookTabChanged>>", self._on_main_tab_changed, add="+")
 
-    def _nested(self, page: ttk.Frame, keys: tuple[str, ...]) -> dict[str, ttk.Frame]:
+    def _nested(
+        self,
+        page: ttk.Frame,
+        keys: tuple[str, ...],
+        *,
+        store_as: str | None = None,
+    ) -> dict[str, ttk.Frame]:
         book = ttk.Notebook(page, style="SubTabs.TNotebook")
         book.pack(fill="both", expand=True)
         result = {}
@@ -913,7 +921,32 @@ class UnifiedTaskEditor(ttk.Frame):
             frame = ttk.Frame(book, padding=7)
             book.add(frame, text=self.t[key])
             result[key] = frame
+        if store_as:
+            setattr(self, store_as, book)
         return result
+
+    def _on_main_tab_changed(self, _event: object = None) -> None:
+        self._maybe_load_sell_filters()
+
+    def _on_equipment_tab_changed(self, _event: object = None) -> None:
+        self._maybe_load_sell_filters()
+
+    def _maybe_load_sell_filters(self) -> None:
+        """Load sell catalog/icons only when Equipment → Sell is the visible tab."""
+        panel = getattr(self, "sell_filter_panel", None)
+        if panel is None:
+            return
+        tabs = getattr(self, "_main_tabs", None)
+        equip = getattr(self, "_equipment_tabs", None)
+        if tabs is None or equip is None:
+            return
+        try:
+            main_text = str(tabs.tab(tabs.select(), "text") or "")
+            sub_text = str(equip.tab(equip.select(), "text") or "")
+        except tk.TclError:
+            return
+        if main_text == self.t["equipment"] and sub_text == self.t["sell"]:
+            panel.ensure_loaded()
 
     def _build_move(self) -> None:
         page = self.pages["move"]
@@ -3976,7 +4009,16 @@ class UnifiedTaskEditor(ttk.Frame):
             )
 
     def _build_equipment(self) -> None:
-        pages = self._nested(self.pages["equipment"], ("buy", "sell", "routing"))
+        pages = self._nested(
+            self.pages["equipment"],
+            ("buy", "sell", "routing"),
+            store_as="_equipment_tabs",
+        )
+        equip_tabs = getattr(self, "_equipment_tabs", None)
+        if equip_tabs is not None:
+            equip_tabs.bind(
+                "<<NotebookTabChanged>>", self._on_equipment_tab_changed, add="+",
+            )
         buy_page = pages["buy"]
         buy_page.configure(style="Page.TFrame")
         buy_body = ttk.Frame(buy_page, style="Page.TFrame")
@@ -4144,9 +4186,10 @@ class UnifiedTaskEditor(ttk.Frame):
 
         items = group(sell_inner, self.t["sell_items"])
         items.pack(fill="both", expand=True)
-        SellFilterPanel(items, self.t, language=self.app.language).pack(
-            fill="both", expand=True
+        self.sell_filter_panel = SellFilterPanel(
+            items, self.t, language=self.app.language,
         )
+        self.sell_filter_panel.pack(fill="both", expand=True)
 
         def _bind_sell_wheel(widget: tk.Misc) -> None:
             if widget.winfo_class() == "Treeview":
