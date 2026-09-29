@@ -926,10 +926,73 @@ class UnifiedTaskEditor(ttk.Frame):
         return result
 
     def _on_main_tab_changed(self, _event: object = None) -> None:
-        self._maybe_load_sell_filters()
+        self._maybe_load_deferred_views()
 
     def _on_equipment_tab_changed(self, _event: object = None) -> None:
+        self._maybe_load_deferred_views()
+
+    def _on_hunt_tab_changed(self, _event: object = None) -> None:
+        self._maybe_load_deferred_views()
+
+    def _on_magic_tab_changed(self, _event: object = None) -> None:
+        self._maybe_load_deferred_views()
+
+    def _maybe_load_deferred_views(self) -> None:
+        """Fill heavy Hunt/Magic/Sell views only when that tab is visible."""
         self._maybe_load_sell_filters()
+        tabs = getattr(self, "_main_tabs", None)
+        if tabs is None:
+            return
+        try:
+            main_text = str(tabs.tab(tabs.select(), "text") or "")
+        except tk.TclError:
+            return
+        if main_text == self.t["hunt"]:
+            hunt = getattr(self, "_hunt_tabs", None)
+            if hunt is None:
+                return
+            try:
+                sub = str(hunt.tab(hunt.select(), "text") or "")
+            except tk.TclError:
+                return
+            if sub == self.t["monsters"]:
+                self._ensure_species_view()
+            elif sub == self.t["hunt_items"]:
+                self._ensure_items_view()
+        elif main_text == self.t["magic"]:
+            magic = getattr(self, "_magic_tabs", None)
+            if magic is None:
+                return
+            try:
+                sub = str(magic.tab(magic.select(), "text") or "")
+            except tk.TclError:
+                return
+            if sub == self.t["individual"]:
+                self._ensure_magic_skills_view()
+
+    def _ensure_species_view(self) -> None:
+        if getattr(self, "_species_view_loaded", False):
+            return
+        was_clean = not self.form_is_dirty()
+        self._load_species()
+        if was_clean:
+            self.mark_form_clean()
+
+    def _ensure_items_view(self) -> None:
+        if getattr(self, "_items_view_loaded", False):
+            return
+        was_clean = not self.form_is_dirty()
+        self._load_item_names()
+        if was_clean:
+            self.mark_form_clean()
+
+    def _ensure_magic_skills_view(self) -> None:
+        if getattr(self, "_magic_skills_shown", False):
+            return
+        was_clean = not self.form_is_dirty()
+        self._show_magic_skills()
+        if was_clean:
+            self.mark_form_clean()
 
     def _maybe_load_sell_filters(self) -> None:
         """Load sell catalog/icons only when Equipment → Sell is the visible tab."""
@@ -1551,7 +1614,14 @@ class UnifiedTaskEditor(ttk.Frame):
         box.configure(state="disabled")
 
     def _build_hunt(self) -> None:
-        pages = self._nested(self.pages["hunt"], ("attack", "monsters", "hunt_items"))
+        pages = self._nested(
+            self.pages["hunt"],
+            ("attack", "monsters", "hunt_items"),
+            store_as="_hunt_tabs",
+        )
+        hunt_tabs = getattr(self, "_hunt_tabs", None)
+        if hunt_tabs is not None:
+            hunt_tabs.bind("<<NotebookTabChanged>>", self._on_hunt_tab_changed, add="+")
         self._build_attack(pages["attack"])
         self._build_hunt_monsters(pages["monsters"])
         self._build_hunt_items(pages["hunt_items"])
@@ -3019,7 +3089,14 @@ class UnifiedTaskEditor(ttk.Frame):
         box.yview_moveto(0)
 
     def _build_magic(self) -> None:
-        pages = self._nested(self.pages["magic"], ("general", "individual"))
+        pages = self._nested(
+            self.pages["magic"], ("general", "individual"), store_as="_magic_tabs",
+        )
+        magic_tabs = getattr(self, "_magic_tabs", None)
+        if magic_tabs is not None:
+            magic_tabs.bind(
+                "<<NotebookTabChanged>>", self._on_magic_tab_changed, add="+",
+            )
         self._build_magic_general(pages["general"])
         self._build_magic_individual(pages["individual"])
 
@@ -3427,6 +3504,7 @@ class UnifiedTaskEditor(ttk.Frame):
         sheet = getattr(self, "_magic_sheet", None)
         if sheet is None:
             return
+        self._magic_skills_shown = True
         for child in sheet.winfo_children():
             child.destroy()
         self._magic_cell_refs = []
@@ -3513,7 +3591,7 @@ class UnifiedTaskEditor(ttk.Frame):
             self.vars[f"magic.skill_{key}_priority"].set(1)
             self.vars[f"magic.skill_{key}_hotkey"].set("")
 
-    def _sync_magic_class(self) -> None:
+    def _sync_magic_class(self, *, show_skills: bool = True) -> None:
         if not hasattr(self, "magic_class_combo"):
             return
         character = str(getattr(self.task, "character", "") or "")
@@ -3523,7 +3601,17 @@ class UnifiedTaskEditor(ttk.Frame):
         show_combobox_value(
             self.magic_class_combo, self.t[character], list(self._magic_class_ids),
         )
-        self._show_magic_skills()
+        if show_skills:
+            self._show_magic_skills()
+        else:
+            self._magic_skills_shown = False
+            sheet = getattr(self, "_magic_sheet", None)
+            if sheet is not None:
+                for child in sheet.winfo_children():
+                    child.destroy()
+                self._magic_cell_refs = []
+            if hasattr(self, "magic_pick_summary"):
+                self._refresh_magic_pick_summary()
 
     def _refresh_magic_pick_summary(self, *_args: object) -> None:
         if not hasattr(self, "magic_pick_summary"):
@@ -5073,6 +5161,7 @@ class UnifiedTaskEditor(ttk.Frame):
                 or entry.display_category(language)
             )
             self._item_icons[entry.key] = entry.image_path()
+        self._items_view_loaded = True
         self._refresh_item_rows(fit=True)
         self._refresh_items_summary()
 
@@ -5190,7 +5279,24 @@ class UnifiedTaskEditor(ttk.Frame):
             loot_mode = "all_items"
         if hasattr(self, "loot_var"):
             self.loot_var.set(loot_mode)
-        self._load_item_names()
+        # Heavy Hunt/Magic icon tables load when those tabs are opened.
+        self._species_view_loaded = False
+        self._items_view_loaded = False
+        self._magic_skills_shown = False
+        self._species_order = []
+        self._species_allowed = {}
+        self._item_order = []
+        self._item_allowed = {}
+        if hasattr(self, "species_tree"):
+            try:
+                self.species_tree.delete(*self.species_tree.get_children())
+            except tk.TclError:
+                pass
+        if hasattr(self, "item_tree"):
+            try:
+                self.item_tree.delete(*self.item_tree.get_children())
+            except tk.TclError:
+                pass
         species_sort = str(self._value("hunt", "species_sort", "name"))
         show_combobox_value(
             self.species_sort_combo,
@@ -5231,9 +5337,8 @@ class UnifiedTaskEditor(ttk.Frame):
         self._load_maps(prefer=saved_map)
         self._sync_map_areas_ui()
         self._load_move_areas()
-        self._load_species()
         self._load_slots()
-        self._sync_magic_class()
+        self._sync_magic_class(show_skills=False)
         if hasattr(self, "magic_summary"):
             self._refresh_magic_summary()
         if hasattr(self, "attack_summary"):
@@ -5242,11 +5347,13 @@ class UnifiedTaskEditor(ttk.Frame):
             self._refresh_monsters_summary()
         if hasattr(self, "items_summary"):
             self._refresh_items_summary()
-        if hasattr(self, "fix_summary"):
-            self._refresh_fix_summary()
+        if hasattr(self, "form_summary"):
+            self._refresh_form_summary()
         if hasattr(self, "buy_summary"):
             self._refresh_buy_summary()
         self.mark_form_clean()
+        # If the user already sits on a heavy tab, fill it now.
+        self._maybe_load_deferred_views()
 
     def _fp_cell(self, value: object) -> str:
         if isinstance(value, bool):
@@ -5768,6 +5875,7 @@ class UnifiedTaskEditor(ttk.Frame):
                 self._species_region_text[key] = ""
                 self._species_region_values[key] = ()
                 self._species_icons[key] = None
+        self._species_view_loaded = True
         self._refresh_species_rows(fit=True)
         self._refresh_monsters_summary()
 
@@ -5957,25 +6065,28 @@ class UnifiedTaskEditor(ttk.Frame):
             if npc_shown:
                 equipment["hp_potion_npc"] = npc_shown
                 result.settings.setdefault("hunt", {})["return_potion_npc"] = npc_shown
-            blocked, wanted = [], []
-            for iid in getattr(self, "_species_order", []) or []:
-                if bool(self._species_allowed.get(iid, True)):
-                    wanted.append(iid)
+            # Only rewrite species/item lists from UI maps after those views loaded;
+            # otherwise keep the cloned task settings (Start/Save must not wipe them).
+            if getattr(self, "_species_view_loaded", False):
+                blocked, wanted = [], []
+                for iid in getattr(self, "_species_order", []) or []:
+                    if bool(self._species_allowed.get(iid, True)):
+                        wanted.append(iid)
+                    else:
+                        blocked.append(iid)
+                hunt = result.settings.setdefault("hunt", {})
+                hunt["species_levels"] = {}
+                species_mode = str(self.species_mode_var.get()).strip().lower()
+                if species_mode not in ("blacklist", "whitelist"):
+                    species_mode = "blacklist"
+                hunt["species_filter_mode"] = species_mode
+                if species_mode == "whitelist":
+                    hunt["species_whitelist"] = wanted
+                    hunt["species_blacklist"] = []
                 else:
-                    blocked.append(iid)
-            hunt = result.settings.setdefault("hunt", {})
-            hunt["species_levels"] = {}
-            species_mode = str(self.species_mode_var.get()).strip().lower()
-            if species_mode not in ("blacklist", "whitelist"):
-                species_mode = "blacklist"
-            hunt["species_filter_mode"] = species_mode
-            if species_mode == "whitelist":
-                hunt["species_whitelist"] = wanted
-                hunt["species_blacklist"] = []
-            else:
-                hunt["species_blacklist"] = blocked
-                hunt["species_whitelist"] = []
-            if hasattr(self, "item_tree"):
+                    hunt["species_blacklist"] = blocked
+                    hunt["species_whitelist"] = []
+            if getattr(self, "_items_view_loaded", False) and hasattr(self, "item_tree"):
                 other = result.settings.setdefault("other", {})
                 item_mode = str(self.item_mode_var.get()).strip().lower()
                 if item_mode not in ("blacklist", "whitelist"):
