@@ -8852,6 +8852,13 @@ class ScheduleWindow(tk.Tk):
         self._session.disarm()
         self._clear_power_buttons()
         self.coordinator.close()
+        # Rebuild while withdrawn so the user never sees a blank/torn layout
+        # between destroy() and the restored editor form.
+        self._window_revealed = False
+        try:
+            self.withdraw()
+        except tk.TclError:
+            pass
         for child in self.winfo_children():
             child.destroy()
         self.language = language
@@ -8870,6 +8877,7 @@ class ScheduleWindow(tk.Tk):
             self._restore_editor()
         finally:
             self._nav_lock -= 1
+        self._reveal_window()
 
     def _restore_editor(self) -> None:
         editing = self._editing_id
