@@ -623,12 +623,26 @@ _SCHEDULE_COLUMNS: tuple[tuple[str, str, int], ...] = (
     ("enabled", "enabled", 64),
     ("account", "account", 110),
     ("when", "time_choice", 136),
-    ("repeat_daily", "repeat_daily", 72),
     ("weekdays", "weekdays", 100),
     ("character_slot", "character_order", 72),
     ("character", "character_type", 80),
     ("server", "server", 72),
 )
+
+def _pane_split(total: int) -> tuple[int, int, int]:
+    """Schedule-list width, its minimum, and the account editor minimum.
+
+    The list is the narrow pane, about 2/7 of the window.
+    """
+    left_min = ui_theme.scaled(280, 220)
+    right_min = ui_theme.scaled(480, 320)
+    if total < left_min + right_min:
+        left_min = max(160, min(left_min, total // 3))
+        right_min = max(160, total - left_min)
+    left = int(round(total * 2 / 7))
+    left = min(max(left, left_min), max(left_min, total - right_min))
+    return left, left_min, right_min
+
 
 # Schedule UI category ids. Skill rows come from skill_catalog.
 _MAGIC_CATEGORIES = (
@@ -1190,13 +1204,18 @@ class UnifiedTaskEditor(ttk.Frame):
         identity.pack(fill="x", pady=(0, 4))
         row = ttk.Frame(identity)
         row.pack(fill="x")
-        row.columnconfigure(1, weight=1)
-        row.columnconfigure(2, weight=1)
-        account = ttk.Frame(row)
-        account.grid(row=0, column=0, sticky="w")
-        ttk.Label(account, text=self.t["account"], foreground=TEXT_MUTED).pack(
-            side="left", padx=(0, 8),
-        )
+        label_gap = 8
+        pair_gap = 24
+
+        def place_pair(column: int, label: str) -> ttk.Frame:
+            cell = ttk.Frame(row)
+            cell.grid(row=0, column=column, sticky="w")
+            ttk.Label(cell, text=label, foreground=TEXT).pack(
+                side="left", padx=(0, label_gap),
+            )
+            return cell
+
+        account = place_pair(0, self.t["account"])
         self.account_combo = ttk.Combobox(account, state="readonly", width=18)
         self.vars["task.account_id"] = tk.StringVar(self)
         self.account_combo.configure(textvariable=self.vars["task.account_id"])
@@ -1209,15 +1228,15 @@ class UnifiedTaskEditor(ttk.Frame):
             (self.t["character_type"], self.type_display),
         )
         for index, (label, variable) in enumerate(facts, start=1):
-            cell = ttk.Frame(row)
-            cell.grid(
-                row=0, column=index, sticky="e" if index == len(facts) else "w",
-                padx=(16, 0),
-            )
-            ttk.Label(cell, text=label, foreground=TEXT_MUTED).pack(side="left")
+            gap_column = index * 2 - 1
+            gap = ttk.Frame(row, width=pair_gap)
+            gap.grid(row=0, column=gap_column, sticky="ew")
+            gap.grid_propagate(False)
+            row.columnconfigure(gap_column, weight=1, minsize=pair_gap)
+            cell = place_pair(index * 2, label)
             ttk.Label(
                 cell, textvariable=variable, foreground=TEXT, font=value_font,
-            ).pack(side="left", padx=(8, 0))
+            ).pack(side="left")
 
     def _build_schedule_timing(self) -> None:
         """Time, account, and weekdays for the schedule list header."""
@@ -1279,22 +1298,26 @@ class UnifiedTaskEditor(ttk.Frame):
 
         days = ttk.Frame(host)
         days.pack(fill="x", anchor="w", pady=(6, 2))
-        ttk.Button(
-            days, text=self.t["add"], command=self.app._new, padding=(10, 2),
-        ).pack(side="right", padx=(12, 0))
         repeat = self._var("task.repeat_daily", True, "bool")
         ttk.Checkbutton(days, text=self.t["repeat_daily"], variable=repeat).pack(
-            side="left", padx=(0, 8),
+            side="left",
         )
         repeat.trace_add("write", self._on_repeat_daily)
+        weekdays = ttk.Frame(host)
+        weekdays.pack(fill="x", anchor="w", pady=(2, 0))
         self.weekday_vars = []
         for _day, key in enumerate(("mon", "tue", "wed", "thu", "fri", "sat", "sun")):
             variable = tk.BooleanVar(self, value=True)
             self.weekday_vars.append(variable)
             variable.trace_add("write", self._on_weekday_toggled)
-            ttk.Checkbutton(days, text=self.t[key], variable=variable).pack(
+            ttk.Checkbutton(weekdays, text=self.t[key], variable=variable).pack(
                 side="left", padx=(0, 4),
             )
+        add_row = ttk.Frame(host)
+        add_row.pack(fill="x", pady=(2, 2))
+        ttk.Button(
+            add_row, text=self.t["add"], command=self.app._new,
+        ).pack(anchor="center")
         self._account_align_tries = 0
         self.after_idle(self._align_account_to_time)
 
@@ -5366,9 +5389,9 @@ class UnifiedTaskEditor(ttk.Frame):
         settings.pack(fill="x", pady=(0, 6))
         mode = self._var("equipment.sell_mode", "sell_except_keep")
         mode.set("sell_except_keep")
-        ttk.Label(settings, text=self.t["sell_except_keep"]).grid(
-            row=0, column=0, columnspan=3, sticky="w", pady=2
-        )
+        ttk.Label(
+            settings, text=self.t["sell_except_keep"], foreground=TEXT_MUTED,
+        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=2)
         self._check(
             settings, 1, self.t["store_after_sell"], "equipment.store_after_sell", False,
         )
@@ -8247,11 +8270,10 @@ class ScheduleWindow(tk.Tk):
             return
         if width < 80:
             return
-        left_min = max(520, ui_theme.scaled(720, 520))
-        right_min = max(240, width - left_min)
+        _left, left_min, right_min = _pane_split(width)
         try:
             self.paned.paneconfigure(self.paned.panes()[0], minsize=left_min)
-            self.paned.paneconfigure(self.paned.panes()[1], minsize=min(right_min, width - left_min))
+            self.paned.paneconfigure(self.paned.panes()[1], minsize=right_min)
         except (tk.TclError, IndexError):
             pass
 
@@ -8389,10 +8411,8 @@ class ScheduleWindow(tk.Tk):
         if total < 80:
             self.after(50, self._balance_panes)
             return
-        # Room for the time controls and the account form side by side.
-        left_min = max(520, ui_theme.scaled(720, 520))
-        left_width = int(round(total * 0.52))
-        left_width = min(max(left_width, left_min), max(left_min, total - 240))
+        # Schedule list is the narrow pane, about 2/7 of the window.
+        left_width, _left_min, _right_min = _pane_split(total)
         self.paned.sashpos(0, left_width)
         self._panes_balanced = True
         editor = getattr(self, "editor", None)

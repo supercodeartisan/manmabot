@@ -21,7 +21,6 @@ dist/
 
 # Runtime logs
 *.log
-engine/logs/
 
 # Editor and OS junk
 .idea/
