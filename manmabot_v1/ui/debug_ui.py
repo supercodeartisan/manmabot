@@ -763,13 +763,13 @@ class DebugPlayer(tk.Tk):
     """Independent bot player for debugging (separate from the schedule console)."""
 
     def __init__(self, profile: Profile | None = None) -> None:
-        load_bundled_fonts()
         super().__init__()
         ensure_userdata()
         self.profile = profile or load_profile()
         self.language = (
             self.profile.language if self.profile.language in ("en", "ko", "zh") else "en"
         )
+        load_bundled_fonts(self.language)
         self.t = tr(self.language)
         self._log_lines: list[str] = []
         self._closing = False

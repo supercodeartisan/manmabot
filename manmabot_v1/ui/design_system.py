@@ -424,7 +424,7 @@ def use_ui_fonts(language: str, scale: float | None = None) -> None:
 def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
     from manmabot_v1.ui.fonts import load_bundled_fonts
 
-    load_bundled_fonts()
+    load_bundled_fonts(language)
     use_ui_fonts(language)
     root.option_add("*Font", FONT_BODY)
     root.option_add("*Background", BG)

@@ -6430,7 +6430,6 @@ class ScheduleWindow(tk.Tk):
     """Exactly one application root containing schedule and operator controls."""
 
     def __init__(self, profile: Profile | None = None, store: ScheduleStore | None = None) -> None:
-        load_bundled_fonts()
         super().__init__()
         # Hide until final geometry sticks. Otherwise Windows briefly maps the
         # default ~200x200 Tk window, then jumps to 1187x806 (small→large flash).
@@ -6443,6 +6442,7 @@ class ScheduleWindow(tk.Tk):
         self.profile = profile or load_profile()
         self.store = store or ScheduleStore()
         self.language = self.profile.language if self.profile.language in ("en", "ko", "zh") else "en"
+        load_bundled_fonts(self.language)
         self.t = tr(self.language)
         self.tasks = self.store.load()
         self._editing_id: str | None = None

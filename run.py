@@ -51,9 +51,7 @@ def main() -> int:
         from manmabot_v1.elevate import prepare_runtime
 
         prepare_runtime()
-        from manmabot_v1.ui.fonts import load_bundled_fonts
-
-        load_bundled_fonts()
+        # Fonts load with the UI language inside apply_classic_style / window init.
         if "--shopping-practice" in sys.argv:
             from debug_tools.shopping_practice import run_shopping_practice
 
