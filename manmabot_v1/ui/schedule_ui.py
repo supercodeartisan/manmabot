@@ -293,7 +293,8 @@ def _wrap_to_allocated(label: ttk.Label, *, pad: int = 4, minimum: int = 48) -> 
             current = int(label.cget("wraplength"))
         except (TypeError, ValueError, tk.TclError):
             current = -1
-        if current != target:
+        # Ignore 1–2px jitter so first Map after prewarm does not reflow text.
+        if current < 0 or abs(current - target) > 2:
             label.configure(wraplength=target)
 
     label.bind("<Configure>", _sync, add="+")
@@ -617,17 +618,16 @@ _ACCOUNT_PATH_COLUMNS = ("purple_path", "game_path")
 _ACCOUNT_CELL_PAD = 18
 _ACCOUNT_HEAD_PAD = 22
 
-# Fields shown on the New schedule form. Kept narrow so the list pane
-# does not push the form off the window.
+# Schedule list headers. Enabled first, then account, then time.
 _SCHEDULE_COLUMNS: tuple[tuple[str, str, int], ...] = (
     ("enabled", "enabled", 64),
     ("account", "account", 110),
-    ("character_slot", "character_order", 72),
-    ("character", "character_type", 80),
-    ("server", "server", 72),
     ("when", "time_choice", 136),
     ("repeat_daily", "repeat_daily", 72),
     ("weekdays", "weekdays", 100),
+    ("character_slot", "character_order", 72),
+    ("character", "character_type", 80),
+    ("server", "server", 72),
 )
 
 # Schedule UI category ids. Skill rows come from skill_catalog.
@@ -970,6 +970,14 @@ def _enable_bbox_grid(tree: ttk.Treeview) -> None:
     schedule()
 
 
+def _clock_hm(value: str) -> str:
+    """Show a stored HH:MM:SS clock as HH:MM."""
+    bits = str(value or "00:00").split(":")
+    hour = bits[0] if bits and bits[0] else "00"
+    minute = bits[1] if len(bits) > 1 and bits[1] else "00"
+    return f"{hour}:{minute}"
+
+
 class _TimeField(ttk.Frame):
     """Hour and minute spin boxes. Seconds stay at 00 in the stored clock."""
 
@@ -1223,13 +1231,16 @@ class UnifiedTaskEditor(ttk.Frame):
         ttk.Label(form, text=self.t["account"]).grid(
             row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 4),
         )
+        account_slot = ttk.Frame(form)
+        account_slot.grid(row=0, column=1, sticky="w", pady=(0, 4))
+        account_slot.grid_propagate(False)
+        self._account_slot = account_slot
         self.schedule_account_combo = ttk.Combobox(
-            form,
+            account_slot,
             state="readonly",
-            width=22,
             textvariable=self.vars["task.account_id"],
         )
-        self.schedule_account_combo.grid(row=0, column=1, sticky="w", pady=(0, 4))
+        self.schedule_account_combo.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.schedule_account_combo.bind("<<ComboboxSelected>>", self._account_changed)
 
         ttk.Radiobutton(
@@ -1237,6 +1248,7 @@ class UnifiedTaskEditor(ttk.Frame):
         ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 2))
         window_row = ttk.Frame(form)
         window_row.grid(row=1, column=1, sticky="w", pady=(0, 2))
+        self._time_window_row = window_row
         self.start_time = _TimeField(
             window_row, self._var("task.start_time", "00:00:00")
         )
@@ -1263,9 +1275,13 @@ class UnifiedTaskEditor(ttk.Frame):
         ttk.Label(duration_row, text=self.t["minutes"]).pack(side="left", padx=(4, 0))
         mode.trace_add("write", lambda *_args: self._sync_timing_inputs())
         self._sync_timing_inputs()
+        self._build_schedule_clock(form)
 
         days = ttk.Frame(host)
-        days.pack(fill="x", anchor="w", pady=(4, 2))
+        days.pack(fill="x", anchor="w", pady=(6, 2))
+        ttk.Button(
+            days, text=self.t["add"], command=self.app._new, padding=(10, 2),
+        ).pack(side="right", padx=(12, 0))
         repeat = self._var("task.repeat_daily", True, "bool")
         ttk.Checkbutton(days, text=self.t["repeat_daily"], variable=repeat).pack(
             side="left", padx=(0, 8),
@@ -1279,9 +1295,84 @@ class UnifiedTaskEditor(ttk.Frame):
             ttk.Checkbutton(days, text=self.t[key], variable=variable).pack(
                 side="left", padx=(0, 4),
             )
-        ttk.Button(
-            days, text=self.t["add"], command=self.app._new,
-        ).pack(side="left", padx=(8, 0))
+        self._account_align_tries = 0
+        self.after_idle(self._align_account_to_time)
+
+    def _align_account_to_time(self) -> None:
+        """Keep the account list's right edge on the time row's right edge."""
+        slot = getattr(self, "_account_slot", None)
+        row = getattr(self, "_time_window_row", None)
+        combo = getattr(self, "schedule_account_combo", None)
+        if slot is None or row is None or combo is None:
+            return
+        try:
+            if not row.winfo_exists() or not slot.winfo_exists():
+                return
+            row.update_idletasks()
+            width = int(row.winfo_reqwidth())
+            height = int(combo.winfo_reqheight())
+        except tk.TclError:
+            return
+        if width < 40 or height < 8:
+            tries = int(getattr(self, "_account_align_tries", 0))
+            if tries < 8:
+                self._account_align_tries = tries + 1
+                self.after(50, self._align_account_to_time)
+            return
+        self._account_align_tries = 0
+        try:
+            slot.configure(width=width, height=height)
+        except tk.TclError:
+            return
+
+    def _build_schedule_clock(self, form: ttk.Frame) -> None:
+        """Live clock and end-time jitter, directly under the duration field."""
+        app = self.app
+        ttk.Label(form, text=self.t["current_time"], foreground=TEXT_MUTED).grid(
+            row=3, column=0, sticky="w", padx=(0, 8), pady=(8, 2),
+        )
+        clock = ttk.Frame(form)
+        clock.grid(row=3, column=1, sticky="w", pady=(8, 2))
+        app.current_time_var = tk.StringVar(app, value=datetime.now().strftime("%H:%M:%S"))
+        ttk.Label(
+            clock,
+            textvariable=app.current_time_var,
+            width=8,
+            anchor="w",
+            font=(FONT_BODY[0], FONT_BODY[1], "bold"),
+            foreground=TEXT,
+        ).pack(side="left")
+        app._start_clock()
+        ttk.Checkbutton(
+            clock, text=self.t["randomize"], variable=self._randomize_var(),
+        ).pack(side="left", padx=(16, 0))
+        ttk.Spinbox(
+            clock,
+            from_=0,
+            to=120,
+            width=4,
+            textvariable=self._random_minutes_var(),
+        ).pack(side="left", padx=(6, 0))
+
+    def _randomize_var(self) -> tk.BooleanVar:
+        app = self.app
+        existing = getattr(app, "randomize_var", None)
+        if isinstance(existing, tk.BooleanVar):
+            return existing
+        variable = tk.BooleanVar(app, value=bool(app.store.randomize_enabled))
+        app.randomize_var = variable
+        variable.trace_add("write", app._save_randomize)
+        return variable
+
+    def _random_minutes_var(self) -> tk.IntVar:
+        app = self.app
+        existing = getattr(app, "random_minutes_var", None)
+        if isinstance(existing, tk.IntVar):
+            return existing
+        variable = tk.IntVar(app, value=int(app.store.randomize_minutes or 0))
+        app.random_minutes_var = variable
+        variable.trace_add("write", app._save_randomize)
+        return variable
 
     def _on_repeat_daily(self, *_args: object) -> None:
         """Repeat daily turns every weekday on, or all of them off."""
@@ -1342,13 +1433,8 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _on_main_tab_changed(self, _event: object = None) -> None:
         self._maybe_load_deferred_views()
-        try:
-            main = getattr(self, "_main_tabs", None)
-            if main is not None and str(main.tab(main.select(), "text") or "") == self.t["recovery"]:
-                self._hp_page_settled = False
-                self._settle_hp_page_layout(force=True)
-        except tk.TclError:
-            pass
+        if self._hp_page_is_visible():
+            self._settle_hp_page_layout(force=True)
 
     def _on_equipment_tab_changed(self, _event: object = None) -> None:
         self._maybe_load_deferred_views()
@@ -2918,16 +3004,80 @@ class UnifiedTaskEditor(ttk.Frame):
         page.bind("<Map>", self._settle_hp_page_on_map, add="+")
 
     def _on_recovery_tab_changed(self, _event: object = None) -> None:
-        recovery = getattr(self, "_recovery_tabs", None)
-        if recovery is None:
-            return
-        try:
-            sub = str(recovery.tab(recovery.select(), "text") or "")
-        except tk.TclError:
-            return
-        if sub == self.t["hp_and_inventory"]:
-            self._hp_page_settled = False
+        if self._hp_page_is_visible():
             self._settle_hp_page_layout(force=True)
+
+    def _hp_page_is_visible(self) -> bool:
+        page = getattr(self, "_hp_page", None)
+        if page is None:
+            return False
+        try:
+            return bool(page.winfo_ismapped()) and int(page.winfo_width()) >= 40
+        except tk.TclError:
+            return False
+
+    def _select_notebook_tab_by_text(self, book: ttk.Notebook, text: str) -> str | None:
+        """Select a notebook tab by its label; return the previous tab id."""
+        try:
+            previous = book.select()
+        except tk.TclError:
+            previous = None
+        try:
+            for tab in book.tabs():
+                if str(book.tab(tab, "text") or "") == text:
+                    book.select(tab)
+                    return previous
+        except tk.TclError:
+            pass
+        return previous
+
+    def _prewarm_hp_page_geometry(self) -> None:
+        """Map Recovery→HP once while the shell is still hidden.
+
+        Notebook children stay 1px until first select. Doing that select before
+        ``deiconify`` locks wraps/canvas/columns so the user's first open does
+        not show the tidy-up snap.
+        """
+        main = getattr(self, "_main_tabs", None)
+        recovery = getattr(self, "_recovery_tabs", None)
+        page = getattr(self, "_hp_page", None)
+        if main is None or recovery is None or page is None:
+            return
+        prev_main = self._select_notebook_tab_by_text(main, self.t["recovery"])
+        prev_rec = self._select_notebook_tab_by_text(
+            recovery, self.t["hp_and_inventory"],
+        )
+        try:
+            self.update_idletasks()
+            last_cw = -1
+            for _ in range(16):
+                self._hp_page_settled = False
+                self._settle_hp_page_layout(force=True)
+                try:
+                    self.update_idletasks()
+                except tk.TclError:
+                    break
+                try:
+                    cw = int(self._hp_action_canvas.winfo_width())
+                    pw = int(page.winfo_width())
+                except (tk.TclError, AttributeError):
+                    cw, pw = 0, 0
+                if pw >= 40 and cw >= 40 and abs(cw - last_cw) <= 2:
+                    self._hp_page_settled = True
+                    self._hp_geometry_prewarmed = True
+                    break
+                last_cw = cw
+            else:
+                self._hp_geometry_prewarmed = False
+        finally:
+            try:
+                if prev_rec:
+                    recovery.select(prev_rec)
+                if prev_main:
+                    main.select(prev_main)
+                self.update_idletasks()
+            except tk.TclError:
+                pass
 
     def _build_hp_action_order(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
@@ -2997,11 +3147,8 @@ class UnifiedTaskEditor(ttk.Frame):
         except tk.TclError:
             return
         if not mapped or width < 40:
-            # Geometry not ready yet — retry once the notebook finishes sizing.
-            try:
-                self.after(16, lambda: self._settle_hp_page_layout(force=True))
-            except tk.TclError:
-                pass
+            # Unmapped tabs have no geometry. Prewarm while hidden; do not
+            # schedule retry storms from scale/balance while the tab is closed.
             return
         self._hp_page_settling = True
         try:
@@ -4105,12 +4252,23 @@ class UnifiedTaskEditor(ttk.Frame):
 
         shell = tk.Frame(table_wrap, background=BORDER, highlightthickness=0, bd=0)
         shell.grid(row=0, column=0, sticky="nsew")
-        shell.rowconfigure(0, weight=1)
+        # Title row stays put. Only the skill rows use the scrolling canvas.
+        shell.rowconfigure(1, weight=1)
         shell.columnconfigure(0, weight=1)
 
-        # One sheet for title row + field rows so every column is the same grid.
+        header_clip = tk.Frame(
+            shell, background="#ffffff", height=1, bd=0, highlightthickness=0,
+        )
+        header_clip.grid(row=0, column=0, sticky="ew", padx=1, pady=(1, 0))
+        header_clip.pack_propagate(False)
+        self._magic_header_clip = header_clip
+        self._magic_header = tk.Frame(
+            header_clip, background="#ffffff", bd=0, highlightthickness=0,
+        )
+        self._magic_header.place(x=0, y=0, anchor="nw")
+
         body_host = tk.Frame(shell, background="#ffffff", bd=0)
-        body_host.grid(row=0, column=0, sticky="nsew", padx=1, pady=1)
+        body_host.grid(row=1, column=0, sticky="nsew", padx=1, pady=(0, 1))
         body_host.rowconfigure(0, weight=1)
         body_host.columnconfigure(0, weight=1)
 
@@ -4119,7 +4277,6 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         self._magic_canvas.grid(row=0, column=0, sticky="nsew")
         self._magic_sheet = tk.Frame(self._magic_canvas, background="#ffffff", bd=0)
-        self._magic_header = self._magic_sheet
         self._magic_table = self._magic_sheet
         self._magic_window = self._magic_canvas.create_window(
             (0, 0), window=self._magic_sheet, anchor="nw",
@@ -4136,8 +4293,12 @@ class UnifiedTaskEditor(ttk.Frame):
         self._magic_hscroll.grid(row=1, column=0, columnspan=2, sticky="ew")
         self._magic_canvas.configure(
             yscrollcommand=self._magic_scroll.set,
-            xscrollcommand=self._magic_hscroll.set,
+            xscrollcommand=self._magic_xscroll,
         )
+        header_clip.bind("<MouseWheel>", self._magic_list_wheel)
+        header_clip.bind("<Shift-MouseWheel>", self._magic_list_shift_wheel)
+        self._magic_header.bind("<MouseWheel>", self._magic_list_wheel)
+        self._magic_header.bind("<Shift-MouseWheel>", self._magic_list_shift_wheel)
 
         def fit_magic_body(_event: object = None) -> None:
             self._update_magic_scrollregion()
@@ -4199,8 +4360,35 @@ class UnifiedTaskEditor(ttk.Frame):
             column += 1
             x += need
 
+    def _magic_xscroll(self, first: str, last: str) -> None:
+        hscroll = getattr(self, "_magic_hscroll", None)
+        if hscroll is not None:
+            hscroll.set(first, last)
+        self._position_magic_header()
+
+    def _magic_y_overflows(self) -> bool:
+        canvas = getattr(self, "_magic_canvas", None)
+        if canvas is None:
+            return False
+        try:
+            first, last = canvas.yview()
+        except (tk.TclError, TypeError, ValueError):
+            return False
+        return (float(last) - float(first)) < 0.995
+
+    def _bind_magic_wheel(self, widget: tk.Misc) -> None:
+        if widget.winfo_class() in ("TSpinbox", "TEntry"):
+            return
+        widget.bind("<MouseWheel>", self._magic_list_wheel, add="+")
+        widget.bind("<Shift-MouseWheel>", self._magic_list_shift_wheel, add="+")
+        for child in widget.winfo_children():
+            self._bind_magic_wheel(child)
+
     def _magic_list_wheel(self, event: tk.Event) -> str:
-        self._magic_canvas.yview_scroll(int(-event.delta / 120), "units")
+        # A short list already fits. Scrolling would slide the whole table
+        # through the empty area under the title row.
+        if self._magic_y_overflows():
+            self._magic_canvas.yview_scroll(int(-event.delta / 120), "units")
         return "break"
 
     def _magic_list_shift_wheel(self, event: tk.Event) -> str:
@@ -4215,32 +4403,68 @@ class UnifiedTaskEditor(ttk.Frame):
             self._apply_magic_column_widths(target)
         self._update_magic_scrollregion()
 
+    def _position_magic_header(self) -> None:
+        """Keep the title row aligned with the rows, including horizontal scroll."""
+        clip = getattr(self, "_magic_header_clip", None)
+        header = getattr(self, "_magic_header", None)
+        canvas = getattr(self, "_magic_canvas", None)
+        if clip is None or header is None or canvas is None:
+            return
+        try:
+            x = int(canvas.canvasx(0))
+            width = max(int(getattr(self, "_magic_content_width", 1) or 1), 1)
+            height = max(int(header.winfo_reqheight()), 1)
+            header.place(x=-x, y=0, width=width, height=height)
+            if int(clip.cget("height")) != height:
+                clip.configure(height=height)
+        except (tk.TclError, TypeError, ValueError):
+            return
+
     def _update_magic_scrollregion(self) -> None:
         body = getattr(self, "_magic_canvas", None)
         sheet = getattr(self, "_magic_sheet", None)
         if body is None or sheet is None:
             return
         planned = int(getattr(self, "_magic_content_width", 0) or 0)
-        try:
-            req_h = max(int(sheet.winfo_reqheight()), 1)
-        except tk.TclError:
-            req_h = 1
         # Stay on the fitted column widths so a long name cannot widen the row.
         content_w = max(planned, 1)
         self._magic_content_width = content_w
-        body.itemconfigure(self._magic_window, width=content_w)
         try:
+            body.coords(self._magic_window, 0, 0)
+            body.itemconfigure(self._magic_window, width=content_w, anchor="nw")
             body.update_idletasks()
-            bbox = body.bbox("all")
+            req_h = max(int(sheet.winfo_reqheight()), 1)
+            bbox = body.bbox(self._magic_window)
             viewport = max(int(body.winfo_width()), 1)
+            viewport_h = max(int(body.winfo_height()), 1)
         except tk.TclError:
-            bbox = None
-            viewport = 1
+            return
+        content_h = req_h
         if bbox is not None:
-            _x0, y0, _x1, y1 = bbox
-            body.configure(scrollregion=(0, y0, content_w, max(y1, req_h)))
-        else:
-            body.configure(scrollregion=(0, 0, content_w, req_h))
+            box_h = max(int(bbox[3] - bbox[1]), 1)
+            # A requested height taken before the width fit can be much taller
+            # than the drawn rows, which leaves blank space the wheel can scroll.
+            if box_h + 4 < content_h:
+                content_h = box_h
+            else:
+                content_h = max(content_h, box_h)
+        body.configure(scrollregion=(0, 0, content_w, content_h))
+        overflows = content_h > viewport_h + 1
+        if not overflows:
+            try:
+                body.yview_moveto(0)
+            except tk.TclError:
+                pass
+        vscroll = getattr(self, "_magic_scroll", None)
+        if vscroll is not None and viewport_h > 1:
+            try:
+                if overflows:
+                    if not vscroll.winfo_ismapped():
+                        vscroll.grid(row=0, column=1, sticky="ns")
+                elif vscroll.winfo_ismapped():
+                    vscroll.grid_remove()
+            except tk.TclError:
+                pass
         hscroll = getattr(self, "_magic_hscroll", None)
         if hscroll is not None and viewport > 1:
             try:
@@ -4251,6 +4475,7 @@ class UnifiedTaskEditor(ttk.Frame):
                     hscroll.grid_remove()
             except tk.TclError:
                 pass
+        self._position_magic_header()
 
     def _on_magic_class(self, _event: object = None) -> None:
         class_id = self._magic_class_ids.get(self.magic_class_combo.get(), "elf")
@@ -4334,12 +4559,16 @@ class UnifiedTaskEditor(ttk.Frame):
                 split.columnconfigure(0, minsize=self._magic_table_min_width())
             except tk.TclError:
                 pass
-        sheet = getattr(self, "_magic_sheet", None)
-        if sheet is not None:
+        for frame in (
+            getattr(self, "_magic_sheet", None),
+            getattr(self, "_magic_header", None),
+        ):
+            if frame is None:
+                continue
             for column, width in enumerate(widths):
-                sheet.columnconfigure(column, minsize=width, weight=0, uniform="")
+                frame.columnconfigure(column, minsize=width, weight=0, uniform="")
             try:
-                sheet.configure(width=self._magic_content_width)
+                frame.configure(width=self._magic_content_width)
             except tk.TclError:
                 pass
         for holder, column in getattr(self, "_magic_cell_refs", []):
@@ -4408,8 +4637,12 @@ class UnifiedTaskEditor(ttk.Frame):
         if sheet is None:
             return
         self._magic_skills_shown = True
-        for child in sheet.winfo_children():
-            child.destroy()
+        header = getattr(self, "_magic_header", None)
+        for host in (sheet, header):
+            if host is None:
+                continue
+            for child in host.winfo_children():
+                child.destroy()
         self._magic_cell_refs = []
 
         headers = (
@@ -4427,9 +4660,10 @@ class UnifiedTaskEditor(ttk.Frame):
             viewport = self._magic_table_min_width()
         self._apply_magic_column_widths(viewport)
 
-        # Title row and field rows share this same grid → identical column widths.
+        # Title row is outside the canvas. Field rows use the same column widths.
+        title_parent = header if header is not None else sheet
         for column, text in enumerate(headers):
-            cell = self._magic_cell(sheet, 0, column, header=True)
+            cell = self._magic_cell(title_parent, 0, column, header=True)
             inner = tk.Frame(cell, background=TABLE_HEADER)
             inner.pack(fill="both", expand=True)
             anchor = "w" if column == self._magic_name_col else "center"
@@ -4443,12 +4677,12 @@ class UnifiedTaskEditor(ttk.Frame):
             ).pack(fill="both", expand=True, padx=6, pady=6)
 
         language = self.app.language
-        for row_index, skill in enumerate(self._visible_magic_skills(), start=1):
+        for row_index, skill in enumerate(self._visible_magic_skills()):
             key = skill.setting_key
             enabled = self.vars[f"magic.skill_{key}"]
             auto = self.vars[f"magic.skill_{key}_auto"]
             priority = self.vars[f"magic.skill_{key}_priority"]
-            zebra = row_index % 2 == 0
+            zebra = row_index % 2 == 1
 
             enabled_cell = self._magic_cell(sheet, row_index, 0, zebra=zebra)
             ttk.Checkbutton(enabled_cell, variable=enabled).pack(expand=True, pady=6)
@@ -4470,13 +4704,9 @@ class UnifiedTaskEditor(ttk.Frame):
                 priority_cell, from_=1, to=99, width=4, textvariable=priority,
             ).pack(expand=True, pady=6)
 
-        for child in sheet.winfo_children():
-            child.bind("<MouseWheel>", self._magic_list_wheel, add="+")
-            child.bind("<Shift-MouseWheel>", self._magic_list_shift_wheel, add="+")
-            for nested in child.winfo_children():
-                if nested.winfo_class() not in ("TSpinbox", "TEntry"):
-                    nested.bind("<MouseWheel>", self._magic_list_wheel, add="+")
-                    nested.bind("<Shift-MouseWheel>", self._magic_list_shift_wheel, add="+")
+        for host in (sheet, header):
+            if host is not None:
+                self._bind_magic_wheel(host)
 
         self._magic_canvas.yview_moveto(0)
         self._magic_canvas.xview_moveto(0)
@@ -4510,11 +4740,15 @@ class UnifiedTaskEditor(ttk.Frame):
             self._show_magic_skills()
         else:
             self._magic_skills_shown = False
-            sheet = getattr(self, "_magic_sheet", None)
-            if sheet is not None:
-                for child in sheet.winfo_children():
+            for host in (
+                getattr(self, "_magic_sheet", None),
+                getattr(self, "_magic_header", None),
+            ):
+                if host is None:
+                    continue
+                for child in host.winfo_children():
                     child.destroy()
-                self._magic_cell_refs = []
+            self._magic_cell_refs = []
             if hasattr(self, "magic_pick_summary"):
                 self._refresh_magic_pick_summary()
 
@@ -5592,86 +5826,109 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _build_copy_import(self, page: ttk.Frame) -> None:
         page.columnconfigure(0, weight=1)
-        page.columnconfigure(1, weight=1)
-        page.rowconfigure(1, weight=1)
-        save_card = self._attack_card(page, self.t["save_current"])
-        save_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
-        ttk.Label(save_card, text=self.t["save_current_hint"], wraplength=360).pack(anchor="w")
-        form = ttk.Frame(save_card)
-        form.pack(fill="x", pady=(8, 0))
-        ttk.Label(form, text=self.t["profile_name"]).pack(anchor="w")
-        line = ttk.Frame(form)
-        line.pack(fill="x", pady=(4, 0))
+        page.rowconfigure(0, weight=1)
+
+        library = self._attack_card(page, self.t["saved_profiles"])
+        library.grid(row=0, column=0, sticky="nsew", pady=(0, 8))
+        library.columnconfigure(0, weight=1)
+        library.rowconfigure(2, weight=1)
+        ttk.Label(
+            library, text=self.t["saved_profiles_hint"], wraplength=720,
+        ).grid(row=0, column=0, sticky="ew")
+
+        save = ttk.Frame(library)
+        save.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        ttk.Label(save, text=self.t["profile_name"]).pack(side="left")
         self.profile_name_var = tk.StringVar()
-        ttk.Entry(line, textvariable=self.profile_name_var).pack(
-            side="left", fill="x", expand=True, padx=(0, 6),
+        ttk.Entry(save, textvariable=self.profile_name_var).pack(
+            side="left", fill="x", expand=True, padx=6,
         )
         ttk.Button(
-            line, text=self.t["save_as_name"], style="Accent.TButton",
+            save, text=self.t["save_current"], style="Accent.TButton",
             command=self._save_profile_from_entry,
         ).pack(side="left")
 
-        load_card = self._attack_card(page, self.t["load_settings"])
-        load_card.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
-        ttk.Label(load_card, text=self.t["load_settings_hint"], wraplength=360).pack(anchor="w")
-        # Pack actions first (bottom) so the expanding list cannot hide the buttons.
-        actions = ttk.Frame(load_card)
-        actions.pack(side="bottom", fill="x", pady=(6, 0))
+        body = ttk.Frame(library)
+        body.grid(row=2, column=0, sticky="nsew", pady=(8, 0))
+        body.columnconfigure(0, weight=3)
+        body.columnconfigure(2, weight=2)
+        body.rowconfigure(0, weight=1)
+
+        listing = ttk.Frame(body)
+        listing.grid(row=0, column=0, sticky="nsew")
+        listing.rowconfigure(0, weight=1)
+        listing.columnconfigure(0, weight=1)
+        self.profile_tree = ttk.Treeview(
+            listing, columns=("name", "class", "date"), show="headings",
+            selectmode="browse", height=8,
+        )
+        for column, heading, width, stretch in (
+            ("name", self.t["col_name"], 160, True),
+            ("class", self.t["profile_class"], 80, False),
+            ("date", self.t["profile_date"], 140, False),
+        ):
+            self.profile_tree.heading(column, text=heading)
+            self.profile_tree.column(column, width=width, anchor="w", stretch=stretch)
+        profile_scroll = ttk.Scrollbar(listing, orient="vertical", command=self.profile_tree.yview)
+        self.profile_tree.configure(yscrollcommand=profile_scroll.set)
+        self.profile_tree.grid(row=0, column=0, sticky="nsew")
+        profile_scroll.grid(row=0, column=1, sticky="ns")
+        self.profile_tree.bind("<<TreeviewSelect>>", lambda _event: self._show_selected_profile())
+
+        actions = ttk.Frame(listing)
+        actions.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
         ttk.Button(
             actions, text=self.t["load_profile"], command=self._load_selected_profile,
         ).pack(side="left", padx=(0, 6))
         ttk.Button(
             actions, text=self.t["delete_profile"], command=self._delete_selected_profile,
         ).pack(side="left")
-        listing = ttk.Frame(load_card)
-        listing.pack(fill="both", expand=True, pady=(6, 0))
-        self.profile_tree = ttk.Treeview(
-            listing, columns=("name", "class", "date"), show="headings",
-            selectmode="browse", height=6,
+
+        ttk.Separator(body, orient="vertical").grid(row=0, column=1, sticky="ns", padx=10)
+
+        detail = ttk.Frame(body)
+        detail.grid(row=0, column=2, sticky="nsew")
+        tk.Label(
+            detail, text=self.t["selected_profile"],
+            background=SURFACE, foreground=TEXT, font=FONT_SECTION, anchor="w",
+        ).pack(fill="x")
+        self.profile_empty = ttk.Label(
+            detail, text=self.t["no_profile"], foreground=TEXT_MUTED, wraplength=240,
         )
-        for column, heading, width in (
-            ("name", self.t["col_name"], 120),
-            ("class", self.t["profile_class"], 80),
-            ("date", self.t["profile_date"], 130),
-        ):
-            self.profile_tree.heading(column, text=heading)
-            self.profile_tree.column(column, width=width, anchor="w")
-        profile_scroll = ttk.Scrollbar(listing, orient="vertical", command=self.profile_tree.yview)
-        self.profile_tree.configure(yscrollcommand=profile_scroll.set)
-        self.profile_tree.pack(side="left", fill="both", expand=True)
-        profile_scroll.pack(side="right", fill="y")
-        self.profile_tree.bind("<<TreeviewSelect>>", lambda _event: self._show_selected_profile())
-
-        backup = self._attack_card(page, self.t["backup_exchange"])
-        backup.grid(row=0, column=1, sticky="nsew", pady=(0, 8))
-        ttk.Label(backup, text=self.t["backup_hint"], wraplength=360).pack(anchor="w", pady=(0, 6))
-        self._action_row(
-            backup, self.t["export_file"], self.t["export_file_hint"],
-            self._export_selected_profile,
-        ).pack(fill="x", pady=3)
-        self._action_row(
-            backup, self.t["import_file"], self.t["import_file_hint"],
-            self._import_profile_file,
-        ).pack(fill="x", pady=3)
-
-        info = self._attack_card(page, self.t["selected_profile"])
-        info.grid(row=1, column=1, sticky="nsew")
+        self.profile_empty.pack(anchor="w", pady=(4, 8))
         self.profile_info = {}
         for key, label in (
             ("name", self.t["col_name"]),
             ("class", self.t["profile_class"]),
-            ("created", self.t["profile_created"]),
+            ("created", self.t["profile_date"]),
+            ("language", self.t["language"]),
+            ("map", self.t["map"]),
         ):
-            line = ttk.Frame(info)
-            line.pack(fill="x", pady=1)
-            ttk.Label(line, text=label, width=12).pack(side="left")
+            line = ttk.Frame(detail)
+            line.pack(fill="x", pady=2)
+            ttk.Label(line, text=label, width=12, foreground=TEXT_MUTED).pack(side="left")
             value = ttk.Label(line, text="-")
             value.pack(side="left", fill="x", expand=True)
             self.profile_info[key] = value
-        ttk.Label(info, text=self.t["profile_details"]).pack(anchor="w", pady=(6, 2))
-        self.profile_desc = tk.Text(info, height=4, wrap="word", state="disabled")
-        style_text(self.profile_desc)
-        self.profile_desc.pack(fill="both", expand=True)
+
+        files = self._attack_card(page, self.t["file_transfer"])
+        files.grid(row=1, column=0, sticky="ew")
+        files.columnconfigure(1, weight=1)
+        ttk.Label(files, text=self.t["file_transfer_hint"], wraplength=720).grid(
+            row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6),
+        )
+        ttk.Button(
+            files, text=self.t["export_file"], command=self._export_selected_profile,
+        ).grid(row=1, column=0, sticky="ew", pady=2)
+        ttk.Label(files, text=self.t["export_file_hint"], foreground=TEXT_MUTED).grid(
+            row=1, column=1, sticky="w", padx=(8, 0),
+        )
+        ttk.Button(
+            files, text=self.t["import_file"], command=self._import_profile_file,
+        ).grid(row=2, column=0, sticky="ew", pady=2)
+        ttk.Label(files, text=self.t["import_file_hint"], foreground=TEXT_MUTED).grid(
+            row=2, column=1, sticky="w", padx=(8, 0),
+        )
         self._reload_profile_table()
 
     def _profile_class_label(self, character: str) -> str:
@@ -5713,16 +5970,14 @@ class UnifiedTaskEditor(ttk.Frame):
     def _show_selected_profile(self) -> None:
         name = self._selected_profile_name()
         info = getattr(self, "profile_info", None)
-        desc = getattr(self, "profile_desc", None)
-        if not info or desc is None:
+        empty = getattr(self, "profile_empty", None)
+        if not info:
             return
         if not name:
             for value in info.values():
                 value.configure(text="-")
-            desc.configure(state="normal")
-            desc.delete("1.0", "end")
-            desc.insert("1.0", self.t["no_profile"])
-            desc.configure(state="disabled")
+            if empty is not None:
+                empty.configure(text=self.t["no_profile"])
             return
         path = named_profile_path(name)
         character = ""
@@ -5741,21 +5996,15 @@ class UnifiedTaskEditor(ttk.Frame):
             created = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
         except OSError:
             pass
+        language_label = language_display_name(language, self.app.language) if language else ""
+        map_label = map_display_name(active_map, self.app.language) if active_map else ""
         info["name"].configure(text=name)
-        info["class"].configure(text=self._profile_class_label(character))
+        info["class"].configure(text=self._profile_class_label(character) or "-")
         info["created"].configure(text=created or "-")
-        lines = [
-            part
-            for part in (
-                language_display_name(language, self.app.language) if language else "",
-                map_display_name(active_map, self.app.language) if active_map else "",
-            )
-            if part
-        ]
-        desc.configure(state="normal")
-        desc.delete("1.0", "end")
-        desc.insert("1.0", "\n".join(lines) if lines else self.t["no_profile"])
-        desc.configure(state="disabled")
+        info["language"].configure(text=language_label or "-")
+        info["map"].configure(text=map_label or "-")
+        if empty is not None:
+            empty.configure(text="")
 
     def _save_profile_from_entry(self) -> None:
         name = self.profile_name_var.get().strip()
@@ -5784,46 +6033,52 @@ class UnifiedTaskEditor(ttk.Frame):
         self._reload_profile_table()
 
     def _build_hotkey_page(self, page: ttk.Frame) -> None:
-        page.columnconfigure(0, weight=3)
-        page.columnconfigure(1, weight=2)
-        page.rowconfigure(0, weight=1)
+        page.columnconfigure(0, weight=1)
+        page.rowconfigure(1, weight=1)
         settings = self._attack_card(page, self.t["hotkey_settings"])
-        settings.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-        header = ttk.Frame(settings)
-        header.pack(fill="x", pady=(0, 4))
-        ttk.Label(header, text=self.t["hotkey_action"], width=28).pack(side="left")
-        ttk.Label(header, text=self.t["hotkey_key"], width=16).pack(side="left")
-        ttk.Label(header, text=self.t["hotkey_enabled"]).pack(side="left")
+        settings.grid(row=0, column=0, sticky="ew")
+
+        table = ttk.Frame(settings)
+        table.pack(fill="x")
+        table.columnconfigure(0, weight=1)
+        for column, text, pad in (
+            (0, self.t["hotkey_action"], (0, 16)),
+            (1, self.t["hotkey_key"], (8, 8)),
+            (2, self.t["hotkey_enabled"], (16, 4)),
+        ):
+            ttk.Label(table, text=text, foreground=TEXT_MUTED).grid(
+                row=0, column=column, sticky="w", padx=pad, pady=(0, 4),
+            )
+
         self._hotkey_vars: dict[str, tk.StringVar] = {}
         self._hotkey_labels: dict[str, ttk.Label] = {}
         self._hotkey_enabled: dict[str, tk.BooleanVar] = {}
-        for key, label in (
+        for index, (key, label) in enumerate((
             ("pause_resume", self.t["pause_hotkey"]),
             ("stop", self.t["stop_hotkey"]),
-        ):
-            row = ttk.Frame(settings)
-            row.pack(fill="x", pady=4)
-            ttk.Label(row, text=label, width=28).pack(side="left")
+        ), start=1):
+            ttk.Label(table, text=label).grid(
+                row=index, column=0, sticky="w", padx=(0, 16), pady=5,
+            )
             variable = tk.StringVar()
             self._hotkey_vars[key] = variable
-            key_label = ttk.Label(row, textvariable=variable, width=16, anchor="w")
-            key_label.pack(side="left", padx=(0, 8))
+            key_label = ttk.Label(
+                table, textvariable=variable, width=14, anchor="center",
+                style="Field.TLabel", cursor="hand2",
+            )
+            key_label.grid(row=index, column=1, padx=8, pady=5, sticky="w")
+            key_label.bind("<Button-1>", lambda _event: self._edit_hotkeys_from_page())
             self._hotkey_labels[key] = key_label
             enabled = tk.BooleanVar(value=True)
             self._hotkey_enabled[key] = enabled
-            ttk.Checkbutton(row, variable=enabled).pack(side="left")
+            ttk.Checkbutton(table, variable=enabled).grid(
+                row=index, column=2, padx=(16, 4), pady=5, sticky="w",
+            )
         self._load_hotkey_fields()
 
-        side = ttk.Frame(page)
-        side.grid(row=0, column=1, sticky="nsew")
-        side.rowconfigure(1, weight=1)
-        side.columnconfigure(0, weight=1)
-        options = self._attack_card(side, self.t["hotkey_options"])
-        options.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        ttk.Label(options, text=self.t["hotkey_global_note"], wraplength=280).pack(anchor="w", pady=2)
-        ttk.Label(options, text=self.t["hotkey_duplicate_note"], wraplength=280).pack(anchor="w", pady=2)
-        buttons = ttk.Frame(options)
-        buttons.pack(fill="x", pady=(8, 0))
+        ttk.Separator(settings, orient="horizontal").pack(fill="x", pady=(10, 8))
+        buttons = ttk.Frame(settings)
+        buttons.pack(fill="x")
         ttk.Button(
             buttons, text=self.t["save_hotkeys"], command=self._edit_hotkeys_from_page,
         ).pack(side="left", padx=(0, 6))
@@ -5831,13 +6086,28 @@ class UnifiedTaskEditor(ttk.Frame):
             buttons, text=self.t["reset_hotkeys"], command=self._reset_hotkeys_from_page,
         ).pack(side="left")
         ttk.Button(
-            options, text=self.t["hotkey_apply"], command=self._apply_hotkey_fields,
-        ).pack(fill="x", pady=(8, 0))
-        howto = self._attack_card(side, self.t["hotkey_howto"])
-        howto.grid(row=1, column=0, sticky="nsew")
-        ttk.Label(
-            howto, text=self.t["hotkey_howto_body"], justify="left", wraplength=280,
-        ).pack(anchor="w", fill="x")
+            buttons, text=self.t["hotkey_apply"], style="Accent.TButton",
+            command=self._apply_hotkey_fields,
+        ).pack(side="right")
+
+        notes = ttk.Label(
+            settings,
+            text=f"{self.t['hotkey_global_note']}  {self.t['hotkey_duplicate_note']}",
+            foreground=TEXT_MUTED, justify="left", wraplength=520,
+        )
+        notes.pack(anchor="w", fill="x", pady=(10, 0))
+        howto = ttk.Label(
+            settings, text=self.t["hotkey_howto_body"],
+            foreground=TEXT_MUTED, justify="left", wraplength=520,
+        )
+        howto.pack(anchor="w", fill="x", pady=(4, 2))
+
+        def _fit_hotkey_notes(event: tk.Event) -> None:
+            width = max(280, int(event.width) - 28)
+            notes.configure(wraplength=width)
+            howto.configure(wraplength=width)
+
+        settings.bind("<Configure>", _fit_hotkey_notes)
 
     def _load_hotkey_fields(self) -> None:
         current = dict(getattr(self.app.profile, "hotkeys", {}) or {})
@@ -7563,8 +7833,42 @@ class ScheduleWindow(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(250, self._poll)
         self._bootstrap_initial_editor()
+        self._prepare_geometry_before_reveal()
         self._reveal_window()
         self.after(0, self._start_startup_asset_warmup)
+
+    def _prepare_geometry_before_reveal(self) -> None:
+        """Map the shell invisibly so notebook tabs get real widths, then warm HP.
+
+        A withdrawn Tk window leaves unselected notebook children at 1px, so
+        prewarm cannot lock canvas/wrap sizes. Show at alpha=0, settle geometry,
+        keep ``_window_revealed`` false until the final opaque reveal.
+        """
+        self._place_window()
+        try:
+            self.attributes("-alpha", 0.0)
+        except tk.TclError:
+            pass
+        try:
+            self.deiconify()
+            self.update_idletasks()
+            self._place_window()
+            self.update()
+        except tk.TclError:
+            pass
+        self._balance_panes()
+        self._apply_window_scale()
+        try:
+            self.update_idletasks()
+        except tk.TclError:
+            pass
+        editor = getattr(self, "editor", None)
+        if editor is not None and hasattr(editor, "_prewarm_hp_page_geometry"):
+            editor._prewarm_hp_page_geometry()
+        try:
+            self.update_idletasks()
+        except tk.TclError:
+            pass
 
     def _reveal_window(self) -> None:
         """Show only after size + initial form are ready (no empty/flashy first paint)."""
@@ -7572,6 +7876,10 @@ class ScheduleWindow(tk.Tk):
         try:
             self.update_idletasks()
             self._place_window()
+        except tk.TclError:
+            pass
+        try:
+            self.attributes("-alpha", 1.0)
         except tk.TclError:
             pass
         try:
@@ -7856,12 +8164,29 @@ class ScheduleWindow(tk.Tk):
         self._apply_scaled_metrics()
         self._fit_panes(width)
         editor = getattr(self, "editor", None)
-        if editor is not None and hasattr(editor, "_settle_hp_page_layout"):
+        if editor is not None and hasattr(editor, "_align_account_to_time"):
             try:
-                editor._hp_page_settled = False
+                editor.after_idle(editor._align_account_to_time)
+            except tk.TclError:
+                pass
+        if editor is None:
+            return
+        if getattr(editor, "_hp_page_is_visible", lambda: False)():
+            try:
                 editor._settle_hp_page_layout(force=True)
             except Exception:
                 pass
+        elif not getattr(self, "_window_revealed", False) and hasattr(
+            editor, "_prewarm_hp_page_geometry"
+        ):
+            try:
+                editor._prewarm_hp_page_geometry()
+            except Exception:
+                pass
+        else:
+            # Fonts/metrics changed while HP was closed; settle again on next Map.
+            editor._hp_page_settled = False
+            editor._hp_geometry_prewarmed = False
 
     def _apply_scaled_metrics(self) -> None:
         """Keep tables, summaries, and row heights in step with the window."""
@@ -8066,61 +8391,44 @@ class ScheduleWindow(tk.Tk):
         self.paned.sashpos(0, left_width)
         self._panes_balanced = True
         editor = getattr(self, "editor", None)
-        if editor is not None and hasattr(editor, "_settle_hp_page_layout"):
+        if editor is not None and getattr(editor, "_hp_page_is_visible", lambda: False)():
             try:
-                editor._hp_page_settled = False
                 editor.after(1, lambda: editor._settle_hp_page_layout(force=True))
             except tk.TclError:
                 pass
         self._fit_panes(total)
 
-    def _flow_buttons(
-        self,
-        parent: ttk.Frame,
-        items: tuple[tuple[str, object], ...],
-        *,
-        columns: int | None = None,
-    ) -> None:
-        """Keep every toolbar button fully visible, wrapping onto extra rows."""
-        buttons = []
-        for text, command in items:
-            button = ttk.Button(parent, text=text, command=command, padding=(6, 2))
-            buttons.append(button)
-
-        forced = max(1, int(columns)) if columns else None
-        if forced is not None:
-            for column in range(forced):
-                parent.columnconfigure(column, weight=1, uniform="schedflow")
-
-        def reflow(event: tk.Event | None = None) -> None:
-            width = parent.winfo_width() if event is None else int(event.width)
-            if width <= 1 and forced is None:
-                return
-            if forced is not None:
-                for index, button in enumerate(buttons):
-                    button.grid(
-                        row=index // forced,
-                        column=index % forced,
-                        padx=(0, 3),
-                        pady=2,
-                        sticky="ew",
-                    )
-                return
-            x = 0
-            row = 0
-            column = 0
-            for button in buttons:
-                need = button.winfo_reqwidth() + 6
-                if column and x + need > width:
-                    row += 1
-                    column = 0
-                    x = 0
-                button.grid(row=row, column=column, padx=(0, 4), pady=2, sticky="w")
-                column += 1
-                x += need
-
-        parent.bind("<Configure>", reflow)
-        parent.after_idle(reflow)
+    def _build_schedule_toolbar(self, parent: ttk.Frame) -> None:
+        """Reorder controls on the left, edit actions sharing one row."""
+        bar = ttk.Frame(parent)
+        bar.pack(fill="x", pady=(8, 4))
+        moves = ttk.Frame(bar)
+        moves.pack(side="left")
+        for text, delta in (("▲", -1), ("▼", 1)):
+            ttk.Button(
+                moves,
+                text=text,
+                width=3,
+                padding=(4, 2),
+                command=lambda step=delta: self._move(step),
+            ).pack(side="left", padx=(0, 4))
+        actions = ttk.Frame(bar)
+        actions.pack(side="left", fill="x", expand=True, padx=(12, 0))
+        items = (
+            (self.t["edit"], self.edit_selected_task),
+            (self.t["duplicate"], self._duplicate),
+            (self.t["delete"], self._delete),
+        )
+        for index, (text, command) in enumerate(items):
+            actions.columnconfigure(index, weight=1, uniform="schedact", minsize=72)
+            ttk.Button(
+                actions, text=text, command=command, padding=(8, 2),
+            ).grid(
+                row=0,
+                column=index,
+                sticky="ew",
+                padx=(0, 4 if index < len(items) - 1 else 0),
+            )
 
     def _build_schedule(self, parent) -> None:
         box = group(parent, self.t["master_schedules"])
@@ -8173,41 +8481,7 @@ class ScheduleWindow(tk.Tk):
             "<<TreeviewSelect>>", lambda _event: self._layout_power_buttons(), add="+",
         )
         _fit_tree_columns(self.tree)
-        row = ttk.Frame(box)
-        row.pack(fill="x", pady=(6, 3))
-        self._flow_buttons(
-            row,
-            (
-                ("▲", lambda: self._move(-1)),
-                ("▼", lambda: self._move(1)),
-                (self.t["new"], self._new),
-                (self.t["edit"], self.edit_selected_task),
-                (self.t["duplicate"], self._duplicate),
-                (self.t["delete"], self._delete),
-            ),
-            columns=3,
-        )
-        clock = ttk.Frame(box)
-        clock.pack(fill="x", pady=(1, 3))
-        ttk.Label(clock, text=self.t["current_time"]).pack(side="left")
-        self.current_time_var = tk.StringVar(self, value=datetime.now().strftime("%H:%M:%S"))
-        ttk.Label(
-            clock,
-            textvariable=self.current_time_var,
-            width=8,
-            font=FONT_BODY,
-        ).pack(side="left", padx=3)
-        self._start_clock()
-        self.randomize_var = tk.BooleanVar(self, value=bool(self.store.randomize_enabled))
-        ttk.Checkbutton(
-            clock, text=self.t["randomize"], variable=self.randomize_var
-        ).pack(side="left", padx=(5, 1))
-        self.random_minutes_var = tk.IntVar(self, value=int(self.store.randomize_minutes or 0))
-        ttk.Spinbox(
-            clock, from_=0, to=120, width=4, textvariable=self.random_minutes_var
-        ).pack(side="left")
-        self.randomize_var.trace_add("write", self._save_randomize)
-        self.random_minutes_var.trace_add("write", self._save_randomize)
+        self._build_schedule_toolbar(box)
 
     def _start_clock(self) -> None:
         """Refresh the local clock. A new build cancels the previous timer."""
@@ -8293,7 +8567,7 @@ class ScheduleWindow(tk.Tk):
         if column == "when":
             if task.time_mode == "duration":
                 return f"{task.duration_minutes} {self.t['minutes']}"
-            return f"{task.start_time}~{task.end_time}"
+            return f"{_clock_hm(task.start_time)}~{_clock_hm(task.end_time)}"
         if column == "character":
             return self.t.get(task.character, task.character)
         if column == "time_mode":
@@ -10260,13 +10534,13 @@ class ScheduleWindow(tk.Tk):
         self.minsize(ui_theme.MIN_WIDTH, ui_theme.MIN_HEIGHT)
         self.coordinator = self._open_coordinator()
         self._build()
-        self._apply_window_scale()
         self._nav_lock += 1
         try:
             self._refresh()
             self._restore_editor()
         finally:
             self._nav_lock -= 1
+        self._prepare_geometry_before_reveal()
         self._reveal_window()
         self.after(0, self._start_startup_asset_warmup)
 
