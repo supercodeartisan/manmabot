@@ -83,6 +83,46 @@ def test_header_status_chips_are_short():
     assert _map_chip_text(MapProbe(Lamp.RED, "missing", []), texts, []) == "맵 없음"
 
 
+def test_header_map_chip_follows_editor_map_setting():
+    """The badge uses the open map setting, not the last applied profile map."""
+    from manmabot_v1.probes import probe_map
+
+    texts = TABLE["ko"]
+    profile_probe = probe_map(
+        ["area_1", "area_3"], map_id="talking_island", language="ko",
+    )
+    assert profile_probe.map_name == "말하는 섬"
+    assert _map_chip_text(profile_probe, texts, ["area_1", "area_3"]) == "말하는 섬 · 2"
+
+    class _Editor:
+        task = object()
+        _map_ids = {"본토": "mainland"}
+
+        def _map_id(self) -> str:
+            return "mainland"
+
+        def _is_dungeon_style(self) -> bool:
+            return False
+
+        def _selected_farm_names(self) -> list[str]:
+            return ["area_1", "area_3"]
+
+    class _App:
+        language = "ko"
+        editor = _Editor()
+
+    app = _App()
+    found = ScheduleWindow._map_setting_probe(app)
+    assert found is not None
+    probe, selected = found
+    assert probe.map_id == "mainland"
+    assert _map_chip_text(probe, texts, selected) == "본토 · 2"
+    assert ScheduleWindow._map_setting_probe(app)[0] is probe
+
+    app.editor = type("_Empty", (), {"task": None})()
+    assert ScheduleWindow._map_setting_probe(app) is None
+
+
 def test_schedule_translations_cover_all_labels():
     assert set(LANGUAGES.values()) == {"ko", "zh"}
     assert set(TABLE) == {"en", "ko", "zh"}
@@ -120,6 +160,69 @@ def test_buy_portion_does_not_scale_arrow_quantities():
     apply_runtime_settings(task, profile)
     assert profile.arrow_buy_qty == 200
     assert profile.silver_arrow_buy_qty == 80
+
+
+def test_saved_hunt_zones_remain_after_leaving_the_map(monkeypatch):
+    """Save, switch maps, and come back — the farm checks must stay saved."""
+    import tkinter as tk
+
+    from manmabot_v1.hotkeys import HotkeyManager
+
+    monkeypatch.setattr(HotkeyManager, "bind", lambda self, *args, **kwargs: None)
+    monkeypatch.setattr(ScheduleWindow, "_prepare_geometry_before_reveal", lambda self: None)
+    monkeypatch.setattr(ScheduleWindow, "_reveal_window", lambda self: None)
+    monkeypatch.setattr(ScheduleWindow, "_start_startup_asset_warmup", lambda self: None)
+    monkeypatch.setattr(ScheduleWindow, "_poll", lambda self: None)
+
+    path = USERDATA / f"test-schedules-{uuid.uuid4().hex}.json"
+    store = ScheduleStore(path)
+    window = None
+    try:
+        task = store.create(Profile(), "zones")
+        task.settings["move"]["map_id"] = "mainland"
+        task.settings["move"]["map_style"] = "normal"
+        task.settings["move"]["selected_farms"] = ["area_1"]
+        task.settings["move"]["farm_stays_s"] = {"area_1": 3600.0}
+        store.save([task])
+
+        window = ScheduleWindow(profile=Profile(), store=store)
+        editor = window.editor
+        assert editor._selected_farm_names() == ["area_1"]
+
+        editor._set_farm_checked("area_1", False)
+        editor._set_farm_checked("area_4", True)
+        editor._farm_stays_s["area_4"] = 1200.0
+        editor._refresh_farm_schedule_columns()
+        assert editor.commit(confirm_update=False) is True
+
+        saved = store.load()[0]
+        assert saved.settings["move"]["selected_farms"] == ["area_4"]
+        assert saved.settings["move"]["farm_stays_s"]["area_4"] == 1200.0
+
+        def choose(map_id: str) -> None:
+            label = next(
+                name for name, mid in editor._map_ids.items() if mid == map_id
+            )
+            editor.map_var.set(label)
+            editor._on_map_combo()
+
+        choose("talking_island")
+        assert editor._map_id() == "talking_island"
+        choose("mainland")
+
+        assert editor._map_id() == "mainland"
+        assert editor._selected_farm_names() == ["area_4"]
+        values = editor.farm_tree.item("area_4", "values")
+        assert str(values[2]) == "20"
+        assert not editor.form_is_dirty()
+    finally:
+        if window is not None:
+            try:
+                window._closing = True
+                window.destroy()
+            except tk.TclError:
+                pass
+        path.unlink(missing_ok=True)
 
 
 def test_farm_schedule_order_and_stays_apply_to_profile():

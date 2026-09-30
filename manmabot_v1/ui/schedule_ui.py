@@ -7701,6 +7701,11 @@ class UnifiedTaskEditor(ttk.Frame):
                 index = len(self.app.tasks) - 1
             else:
                 self.app.tasks[index] = task
+            # Keep the open form's task copy on the saved settings. Map changes
+            # rebuild farm rows from ``self.task``; a stale copy would restore
+            # checkboxes from when the form was first opened.
+            self.task = _clone(task)
+            self.mark_form_clean()
             self.app._persist(index)
             self.app.footer_status.configure(text=self.t["saved"])
             return True
