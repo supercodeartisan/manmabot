@@ -94,10 +94,15 @@ from manmabot_v1.ui.design_system import (
 )
 from manmabot_v1.ui import design_system as ui_theme
 from manmabot_v1.ui.fonts import load_bundled_fonts
-from manmabot_v1.ui.icon_warmup import hunt_icon_cache_key, prepare_hunt_icons
+from manmabot_v1.ui.icon_warmup import (
+    collect_startup_asset_jobs,
+    hunt_icon_cache_key,
+    prepare_hunt_icons,
+    prepare_startup_assets,
+)
 from manmabot_v1.ui.operator_coordinator import OperatorCoordinator
 from manmabot_v1.ui.schedule_i18n import LANGUAGES, LANGUAGE_NAMES, tr
-from manmabot_v1.ui.sell_filter_panel import SellFilterPanel
+from manmabot_v1.ui.sell_filter_panel import SellFilterPanel, _thumb as _sell_thumb
 
 
 def _no_activate(widget: tk.Misc) -> None:
@@ -205,6 +210,19 @@ def _filled_icon(path: Path | None, size: int, *, enabled: bool):
     faded = ImageEnhance.Brightness(gray).enhance(1.2)
     plate = Image.new("RGBA", image.size, (243, 244, 246, 255))
     return Image.blend(faded, plate, 0.5)
+
+
+def _magic_thumb(path: Path | None, size: int = 28):
+    """Decode a magic skill icon for background warmup (PIL only)."""
+    from PIL import Image
+
+    if path is not None and path.is_file():
+        try:
+            image = Image.open(path).convert("RGBA")
+            return image.resize((size, size), Image.Resampling.LANCZOS)
+        except OSError:
+            pass
+    return Image.new("RGBA", (size, size), (219, 234, 254, 255))
 
 
 def _tree_row(tree: ttk.Treeview, x: int, y: int) -> str:
@@ -640,6 +658,51 @@ def _narrow_species_columns(tree: ttk.Treeview) -> None:
             continue
         width = max(44, current - trim)
         tree.column(column, width=width, minwidth=width, stretch=False, anchor=anchor)
+
+
+def _fit_inventory_columns(tree: ttk.Treeview, available: int) -> None:
+    """Size slot, item, and count so every heading stays inside the table."""
+    if available < 48:
+        return
+    _body, head = _tree_fonts(tree)
+    # Heading padding plus the cell border, so the title is fully visible.
+    pad = ui_theme.scaled(6) * 2 + ui_theme.scaled(12)
+
+    def needed(column: str) -> int:
+        title = str(tree.heading(column, "text") or "")
+        return max(ui_theme.scaled(36, 24), head.measure(title) + pad)
+
+    slot_w = needed("slot")
+    count_w = needed("count")
+    name_w = max(1, available - slot_w - count_w)
+    total = slot_w + name_w + count_w
+    if total > available and total > 0:
+        slot_w = max(1, available * slot_w // total)
+        count_w = max(1, available * count_w // total)
+        name_w = max(1, available - slot_w - count_w)
+    specs = (
+        ("slot", slot_w, False, "center"),
+        ("name", name_w, True, "w"),
+        ("count", count_w, False, "center"),
+    )
+    for column, width, stretch, anchor in specs:
+        try:
+            current = int(tree.column(column, "width"))
+            current_stretch = str(tree.column(column, "stretch")) not in (
+                "0", "false", "False",
+            )
+        except (tk.TclError, TypeError, ValueError):
+            current = -1
+            current_stretch = not stretch
+        if current == width and current_stretch == stretch:
+            continue
+        tree.column(
+            column,
+            width=width,
+            minwidth=ui_theme.scaled(24, 16) if column == "name" else min(width, needed(column)),
+            stretch=stretch,
+            anchor=anchor,
+        )
 
 
 def _fit_tree_columns(
@@ -1701,6 +1764,64 @@ class UnifiedTaskEditor(ttk.Frame):
         variable.trace_add("write", _sync)
         _sync()
 
+    def _build_magic_use(self, parent: ttk.LabelFrame) -> None:
+        """Label, spin box, and unit share columns inside the magic card."""
+        sheet = ttk.Frame(parent)
+        sheet.pack(fill="x")
+        sheet.columnconfigure(3, weight=1)
+
+        def field(
+            row: int,
+            label: str,
+            name: str,
+            default: int,
+            low: int,
+            high: int,
+            suffix: str,
+            *,
+            label_pad: tuple[int, int] = (0, 8),
+            gated: bool = False,
+        ) -> None:
+            caption = ttk.Label(sheet, text=label)
+            caption.grid(row=row, column=0, sticky="w", padx=label_pad, pady=3)
+            spin = self._attack_spin(sheet, name, default, low, high)
+            spin.grid(row=row, column=1, sticky="w", pady=3)
+            unit = ttk.Label(sheet, text=suffix)
+            unit.grid(row=row, column=2, sticky="w", padx=(6, 0), pady=3)
+            if gated:
+                self._remember(name, caption)
+                self._remember(name, unit)
+
+        field(0, self.t["mp_above"], "hunt.mp_spell_above", 80, 0, 100, "[%]")
+        field(
+            1, self.t["spell_count"], "hunt.spell_count", 1, 1, 99,
+            f"[{self.t['times']}]",
+        )
+        field(
+            2, self.t["basic_attack_count"], "hunt.ranged_count", 1, 1, 99,
+            f"[{self.t['times']}]",
+        )
+
+        variable = self._var("hunt.fallback_melee", False, "bool")
+        check = ttk.Frame(sheet)
+        check.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(8, 2))
+        button = ttk.Checkbutton(check, variable=variable)
+        button.pack(side="left", anchor="n")
+        self._remember("hunt.fallback_melee", button)
+        title = ttk.Label(check, text=self.t["fallback"], justify="left", wraplength=160)
+        title.pack(side="left", fill="x", expand=True, padx=(4, 0))
+        title.bind("<Button-1>", lambda _event: variable.set(not bool(variable.get())))
+
+        def fit(event: tk.Event) -> None:
+            title.configure(wraplength=max(48, int(event.width) - 28))
+
+        check.bind("<Configure>", fit)
+        field(
+            4, "MP <", "hunt.fallback_mp_below", 20, 0, 100, "[%]",
+            label_pad=(22, 8), gated=True,
+        )
+        self._bind_gate("hunt.fallback_melee", "hunt.fallback_mp_below")
+
     def _build_attack(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
         body = ttk.Frame(page, style="Page.TFrame")
@@ -1783,21 +1904,7 @@ class UnifiedTaskEditor(ttk.Frame):
 
         magic = self._attack_card(middle, self.t["magic_use"])
         magic.pack(fill="x", pady=(0, 8))
-        self._attack_value_row(
-            magic, self.t["mp_above"], "hunt.mp_spell_above", 80, 0, 100, "[%]",
-        )
-        self._attack_value_row(
-            magic, self.t["spell_count"], "hunt.spell_count", 1, 1, 99, f"[{self.t['times']}]",
-        )
-        self._attack_value_row(
-            magic, self.t["basic_attack_count"], "hunt.ranged_count", 1, 1, 99,
-            f"[{self.t['times']}]",
-        )
-        self._attack_flag(magic, self.t["fallback"], "hunt.fallback_melee", False)
-        self._attack_value_row(
-            magic, "MP <", "hunt.fallback_mp_below", 20, 0, 100, "[%]",
-        )
-        self._bind_gate("hunt.fallback_melee", "hunt.fallback_mp_below")
+        self._build_magic_use(magic)
 
         priority = self._attack_card(middle, self.t["target_priority"])
         priority.pack(fill="x", pady=(0, 8))
@@ -2397,26 +2504,16 @@ class UnifiedTaskEditor(ttk.Frame):
             "sheet": sheet,
             "row": 0,
             "titles": [],
-            "suffixes": [],
         }
 
         def fit(event: tk.Event) -> None:
-            suffix_w = 0
-            for label in state["suffixes"]:
-                try:
-                    suffix_w = max(suffix_w, int(label.winfo_reqwidth()))
-                except tk.TclError:
-                    pass
             width = max(0, int(event.width))
-            meter_wrap = max(88, width - suffix_w - 116)
             flag_wrap = max(120, width - 40)
             for title, kind in state["titles"]:
-                if kind == "stack":
+                if kind != "flag":
                     continue
                 try:
-                    title.configure(
-                        wraplength=meter_wrap if kind == "meter" else flag_wrap,
-                    )
+                    title.configure(wraplength=flag_wrap)
                 except tk.TclError:
                     pass
 
@@ -2453,57 +2550,79 @@ class UnifiedTaskEditor(ttk.Frame):
         indent: int = 0,
         bind: bool = True,
         stack: bool = False,
+        inline: bool = False,
     ) -> tk.BooleanVar:
         sheet: ttk.Frame = state["sheet"]
         row = self._fix_take_row(state)
         variable = self._var(gate, gate_default, "bool")
+        if inline or stack:
+            # Keep the words, the number, and the suffix together. The shared
+            # value column stretches short text and opens a gap before the suffix.
+            block = ttk.Frame(sheet)
+            block.grid(
+                row=row, column=0, columnspan=4, sticky="w",
+                padx=(indent, 0), pady=3,
+            )
+            head = ttk.Frame(block)
+            head.pack(anchor="w")
+            button = ttk.Checkbutton(head, variable=variable)
+            button.pack(side="left", anchor="n")
+            self._remember(gate, button)
+            title = ttk.Label(head, text=label, anchor="w")
+            title.pack(side="left", padx=(4, 0 if stack else 8))
+            title.bind(
+                "<Button-1>",
+                lambda _event, var=variable: var.set(not bool(var.get())),
+            )
+            value_parent: tk.Misc = head
+            if stack:
+                value_parent = ttk.Frame(block)
+                value_parent.pack(anchor="w", padx=(22, 0), pady=(2, 0))
+            spin = ttk.Spinbox(
+                value_parent, from_=low, to=high, width=5,
+                textvariable=self._var(name, default, "int"),
+            )
+            spin.pack(side="left")
+            self._remember(name, spin)
+            ttk.Label(value_parent, text=suffix, anchor="w").pack(side="left", padx=(6, 0))
+            if bind:
+                self._bind_gate(gate, name)
+            return variable  # type: ignore[return-value]
         button = ttk.Checkbutton(sheet, variable=variable)
-        button.grid(row=row, column=0, sticky="nw", pady=(3, 0) if stack else 3)
+        button.grid(row=row, column=0, sticky="nw", pady=3)
         self._remember(gate, button)
         title = ttk.Label(
             sheet,
             text=label,
             justify="left",
             anchor="w",
-            wraplength=220 if stack else 140,
+            wraplength=1,
         )
-        if stack:
-            title.grid(
-                row=row, column=1, columnspan=3, sticky="ew",
-                padx=(4 + indent, 0), pady=(3, 0),
-            )
-        else:
-            title.grid(row=row, column=1, sticky="ew", padx=(4 + indent, 8), pady=3)
+        title.grid(row=row, column=1, sticky="ew", padx=(4 + indent, 8), pady=3)
         title.bind(
             "<Button-1>",
             lambda _event, var=variable: var.set(not bool(var.get())),
         )
-        state["titles"].append((title, "stack" if stack else "meter"))
-        if stack:
-            def _fit_stack(event: tk.Event, label_widget: ttk.Label = title) -> None:
-                label_widget.configure(wraplength=max(48, int(event.width)))
 
-            title.bind("<Configure>", _fit_stack, add="+")
+        def _fit_meter(event: tk.Event, label_widget: ttk.Label = title) -> None:
+            # Wrap inside the cell. A wider wraplength paints over the spinbox.
+            width = max(1, int(event.width))
+            try:
+                current = int(float(label_widget.cget("wraplength")))
+            except (tk.TclError, TypeError, ValueError):
+                return
+            if current != width:
+                label_widget.configure(wraplength=width)
+
+        title.bind("<Configure>", _fit_meter)
         spin = ttk.Spinbox(
             sheet, from_=low, to=high, width=5,
             textvariable=self._var(name, default, "int"),
         )
         self._remember(name, spin)
         suffix_label = ttk.Label(sheet, text=suffix, anchor="w")
-        if stack:
-            value_row = self._fix_take_row(state)
-            spin.grid(
-                row=value_row, column=1, sticky="w",
-                padx=(4 + indent, 0), pady=(2, 4),
-            )
-            suffix_label.grid(
-                row=value_row, column=2, columnspan=2, sticky="w",
-                padx=(6, 0), pady=(2, 4),
-            )
-        else:
-            spin.grid(row=row, column=2, sticky="e", pady=3)
-            suffix_label.grid(row=row, column=3, sticky="w", padx=(6, 0), pady=3)
-            state["suffixes"].append(suffix_label)
+        spin.grid(row=row, column=2, sticky="e", pady=3)
+        suffix_label.grid(row=row, column=3, sticky="w", padx=(6, 0), pady=3)
         if bind:
             self._bind_gate(gate, name)
         return variable  # type: ignore[return-value]
@@ -2520,13 +2639,29 @@ class UnifiedTaskEditor(ttk.Frame):
         sheet: ttk.Frame = state["sheet"]
         row = self._fix_take_row(state)
         variable = self._var(name, default, "bool")
+        if indent:
+            line = ttk.Frame(sheet)
+            line.grid(
+                row=row, column=0, columnspan=4, sticky="w",
+                padx=(indent, 0), pady=2,
+            )
+            button = ttk.Checkbutton(line, variable=variable)
+            button.pack(side="left", anchor="n")
+            self._remember(name, button)
+            title = ttk.Label(line, text=label, anchor="w")
+            title.pack(side="left", padx=(4, 0))
+            title.bind(
+                "<Button-1>",
+                lambda _event, var=variable: var.set(not bool(var.get())),
+            )
+            return variable  # type: ignore[return-value]
         button = ttk.Checkbutton(sheet, variable=variable)
         button.grid(row=row, column=0, sticky="nw", pady=2)
         self._remember(name, button)
         title = ttk.Label(
             sheet, text=label, justify="left", anchor="w", wraplength=200,
         )
-        title.grid(row=row, column=1, columnspan=3, sticky="ew", padx=(4 + indent, 0), pady=2)
+        title.grid(row=row, column=1, columnspan=3, sticky="ew", padx=(4, 0), pady=2)
         title.bind(
             "<Button-1>",
             lambda _event, var=variable: var.set(not bool(var.get())),
@@ -2596,6 +2731,7 @@ class UnifiedTaskEditor(ttk.Frame):
             gate="recovery.mp_recover_enabled", gate_default=False,
             label="MP", name="recovery.mp_potion_below", default=30,
             suffix=self.t["pct_or_less"],
+            inline=True,
         )
         self._fix_flag(
             recover, self.t["use_mp_potion"], "recovery.use_mp_potion", False, indent=18,
@@ -2629,7 +2765,7 @@ class UnifiedTaskEditor(ttk.Frame):
             warp, self.t["random_teleport"], "recovery.random_teleport_enabled", False,
         )
         self._fix_flag(
-            warp, self.t["teleport_player"], "recovery.teleport_on_player", False, indent=18,
+            warp, self.t["teleport_player"], "recovery.teleport_on_player", False, indent=28,
         )
         self._fix_meter(
             warp,
@@ -2640,9 +2776,9 @@ class UnifiedTaskEditor(ttk.Frame):
             suffix=self.t["teleport_surround_count_suffix"],
             low=2,
             high=20,
-            indent=18,
+            indent=28,
             bind=False,
-            stack=True,
+            inline=True,
         )
         _teleport_fields = (
             "recovery.teleport_on_player",
@@ -2821,23 +2957,21 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         hp_hint.pack(fill="x", anchor="w", pady=(2, 0))
         _wrap_to_allocated(hp_hint)
-        head = ttk.Frame(card)
-        head.pack(fill="x", pady=(4, 6))
+        self.fix_inventory_status = ttk.Label(
+            card,
+            text=self.t["inventory_empty"],
+            justify="left",
+            anchor="w",
+            wraplength=ui_theme.scaled(160, 80),
+        )
+        self.fix_inventory_status.pack(fill="x", anchor="w", pady=(4, 0))
+        _wrap_to_allocated(self.fix_inventory_status)
         self.fix_inventory_refresh_btn = ttk.Button(
-            head,
+            card,
             text=self.t["inventory_refresh"],
             command=self._on_inventory_refresh,
         )
-        self.fix_inventory_refresh_btn.pack(side="right", anchor="n")
-        self.fix_inventory_status = ttk.Label(
-            head,
-            text=self.t["inventory_empty"],
-            justify="left",
-            anchor="nw",
-            wraplength=ui_theme.scaled(160, 80),
-        )
-        self.fix_inventory_status.pack(side="left", fill="x", expand=True, anchor="n")
-        _wrap_to_allocated(self.fix_inventory_status)
+        self.fix_inventory_refresh_btn.pack(anchor="e", pady=(6, 6))
         table = ttk.Frame(card)
         table.pack(fill="both", expand=True)
         columns = ("slot", "name", "count")
@@ -2853,16 +2987,34 @@ class UnifiedTaskEditor(ttk.Frame):
             "name": self.t.get("item_name", self.t.get("debug_name", "Item")),
             "count": self.t.get("debug_count", "Count"),
         }
-        widths = {"slot": 48, "name": 220, "count": 64}
         for column in columns:
             self.fix_inventory_tree.heading(column, text=headings[column])
             self.fix_inventory_tree.column(
                 column,
-                width=widths[column],
-                minwidth=40,
+                width=ui_theme.scaled(48, 32),
+                minwidth=ui_theme.scaled(24, 16),
                 stretch=column == "name",
                 anchor="w" if column == "name" else "center",
             )
+
+        def _sync_inventory_columns(event: tk.Event | None = None) -> None:
+            tree = self.fix_inventory_tree
+            if getattr(tree, "_inventory_fitting", False):
+                return
+            try:
+                width = int(event.width) if event is not None else int(tree.winfo_width())
+            except (tk.TclError, AttributeError):
+                return
+            if width < 48 or getattr(tree, "_inventory_fit_width", None) == width:
+                return
+            tree._inventory_fitting = True
+            try:
+                _fit_inventory_columns(tree, max(1, width - ui_theme.scaled(4)))
+                tree._inventory_fit_width = width
+            finally:
+                tree._inventory_fitting = False
+
+        self.fix_inventory_tree.bind("<Configure>", _sync_inventory_columns)
         _mount_vertical_scroll(table, self.fix_inventory_tree)
         _enable_bbox_grid(self.fix_inventory_tree)
         self.fix_inventory_tree.bind("<Double-1>", self._on_inventory_add_hp)
@@ -3633,8 +3785,8 @@ class UnifiedTaskEditor(ttk.Frame):
         row = ttk.Frame(parent)
         row.pack(fill="x", pady=2, padx=(indent, 0))
         ttk.Label(row, text=label).pack(side="left")
-        ttk.Label(row, text="%").pack(side="right")
-        self._attack_spin(row, name, default, 0, 100).pack(side="right", padx=(8, 4))
+        self._attack_spin(row, name, default, 0, 100).pack(side="left", padx=(8, 0))
+        ttk.Label(row, text="%").pack(side="left", padx=(4, 0))
 
     def _build_magic_general(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
@@ -3728,13 +3880,12 @@ class UnifiedTaskEditor(ttk.Frame):
         photo = cache.get(key)
         if photo is not None:
             return photo
-        from PIL import Image, ImageTk
+        from PIL import ImageTk
 
-        if icon is not None and icon.is_file():
-            image = Image.open(icon).convert("RGBA")
-            image = image.resize((28, 28), Image.Resampling.LANCZOS)
-        else:
-            image = Image.new("RGBA", (28, 28), (219, 234, 254, 255))
+        pil_cache = getattr(self, "_magic_pil", None) or {}
+        image = pil_cache.get(key)
+        if image is None:
+            image = _magic_thumb(icon, 28)
         photo = ImageTk.PhotoImage(image, master=self)
         cache[key] = photo
         return photo
@@ -3750,7 +3901,7 @@ class UnifiedTaskEditor(ttk.Frame):
         body.grid(row=1, column=0, sticky="nsew")
         # Table takes leftover width; the summary stays at its text width.
         body.columnconfigure(0, weight=1)
-        body.columnconfigure(1, weight=0, minsize=ui_theme.scaled(168, 120))
+        body.columnconfigure(1, weight=0, minsize=ui_theme.scaled(252, 180))
         body.rowconfigure(2, weight=1)
 
         picker = ttk.Frame(body, style="Page.TFrame")
@@ -3875,7 +4026,7 @@ class UnifiedTaskEditor(ttk.Frame):
         summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.magic_pick_summary = tk.Text(
-            summary, wrap="word", width=18, height=ui_theme.scaled(12, 7), relief="flat", borderwidth=0,
+            summary, wrap="word", width=27, height=ui_theme.scaled(12, 7), relief="flat", borderwidth=0,
             highlightthickness=0, background="#ffffff", foreground="#1f2328",
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
@@ -3913,10 +4064,10 @@ class UnifiedTaskEditor(ttk.Frame):
         return "break"
 
     def _fit_magic_table_width(self, viewport: int) -> None:
-        # Never shrink below fixed column totals — hscroll reveals overflow fields.
-        min_w = self._magic_table_min_width()
-        target = max(int(viewport), min_w)
-        if target != getattr(self, "_magic_content_width", None):
+        # Match the visible table. The name column gives up width so the row fits.
+        target = max(int(viewport), 1)
+        widths = self._magic_column_widths(target)
+        if widths != list(getattr(self, "_magic_widths", []) or []):
             self._apply_magic_column_widths(target)
         self._update_magic_scrollregion()
 
@@ -3925,16 +4076,13 @@ class UnifiedTaskEditor(ttk.Frame):
         sheet = getattr(self, "_magic_sheet", None)
         if body is None or sheet is None:
             return
-        min_w = self._magic_table_min_width()
         planned = int(getattr(self, "_magic_content_width", 0) or 0)
         try:
-            req_w = max(int(sheet.winfo_reqwidth()), 0)
             req_h = max(int(sheet.winfo_reqheight()), 1)
         except tk.TclError:
-            req_w = 0
             req_h = 1
-        # Content width is the full table (all fields), never the clipped viewport.
-        content_w = max(planned, min_w, req_w)
+        # Stay on the fitted column widths so a long name cannot widen the row.
+        content_w = max(planned, 1)
         self._magic_content_width = content_w
         body.itemconfigure(self._magic_window, width=content_w)
         try:
@@ -3943,9 +4091,8 @@ class UnifiedTaskEditor(ttk.Frame):
         except tk.TclError:
             bbox = None
         if bbox is not None:
-            # Ensure scrollregion covers every column even if bbox is tight.
-            x0, y0, x1, y1 = bbox
-            body.configure(scrollregion=(x0, y0, max(x1, content_w), max(y1, req_h)))
+            _x0, y0, _x1, y1 = bbox
+            body.configure(scrollregion=(0, y0, content_w, max(y1, req_h)))
         else:
             body.configure(scrollregion=(0, 0, content_w, req_h))
 
@@ -3971,13 +4118,16 @@ class UnifiedTaskEditor(ttk.Frame):
     def _magic_column_widths(self, available: int) -> list[int]:
         fixed = list(self._magic_col_fixed)
         widths = list(fixed)
-        extra = max(0, int(available) - sum(fixed))
-        if extra:
-            widths[self._magic_name_col] = fixed[self._magic_name_col] + extra
+        name = self._magic_name_col
+        others = sum(fixed) - fixed[name]
+        room = int(available) - others
+        # Cap the name header at its column width, and shrink it so the row fits.
+        floor = ui_theme.scaled(72, 56)
+        widths[name] = min(fixed[name], max(floor, room))
         return widths
 
     def _apply_magic_column_widths(self, available: int) -> None:
-        widths = self._magic_column_widths(max(int(available), self._magic_table_min_width()))
+        widths = self._magic_column_widths(max(int(available), 1))
         self._magic_widths = widths
         self._magic_content_width = int(sum(widths))
         sheet = getattr(self, "_magic_sheet", None)
@@ -4046,7 +4196,9 @@ class UnifiedTaskEditor(ttk.Frame):
             viewport = max(int(self._magic_canvas.winfo_width()), 1)
         except tk.TclError:
             viewport = self._magic_table_min_width()
-        self._apply_magic_column_widths(max(viewport, self._magic_table_min_width()))
+        if viewport <= 1:
+            viewport = self._magic_table_min_width()
+        self._apply_magic_column_widths(viewport)
 
         # Title row and field rows share this same grid → identical column widths.
         for column, text in enumerate(headers):
@@ -5610,6 +5762,61 @@ class UnifiedTaskEditor(ttk.Frame):
         else:
             self._icon_warmup_pumping = False
 
+    def _ingest_hunt_pil_cache(self, prepared: dict[str, object]) -> None:
+        """Turn pre-decoded Hunt PIL images into PhotoImages (no Treeview yet)."""
+        if not prepared:
+            return
+        from PIL import ImageTk
+
+        cache = getattr(self, "_hunt_photos", None)
+        if cache is None:
+            self._hunt_photos = {}
+            cache = self._hunt_photos
+        for cache_key, image in prepared.items():
+            if cache_key in cache:
+                continue
+            try:
+                cache[cache_key] = ImageTk.PhotoImage(image, master=self)
+            except Exception:
+                continue
+
+    def _attach_hunt_icons_from_cache(self, kind: str) -> None:
+        """Attach already-warm PhotoImages to visible Hunt rows in small batches."""
+        if kind == "species":
+            tree = getattr(self, "species_tree", None)
+            order = list(getattr(self, "_species_order", []) or [])
+            icons = getattr(self, "_species_icons", {}) or {}
+            allowed_map = getattr(self, "_species_allowed", {}) or {}
+        else:
+            tree = getattr(self, "item_tree", None)
+            order = list(getattr(self, "_item_order", []) or [])
+            icons = getattr(self, "_item_icons", {}) or {}
+            allowed_map = getattr(self, "_item_allowed", {}) or {}
+        if tree is None or not order:
+            return
+
+        def attach(start: int = 0) -> None:
+            end = min(start + 40, len(order))
+            for key in order[start:end]:
+                try:
+                    if not tree.exists(key):
+                        continue
+                except tk.TclError:
+                    return
+                allowed = bool(allowed_map.get(key, True))
+                try:
+                    photo = self._hunt_photo(icons.get(key), key, allowed)
+                    tree.item(key, image=photo)
+                except tk.TclError:
+                    return
+            if end < len(order):
+                try:
+                    self.after(1, lambda: attach(end))
+                except tk.TclError:
+                    return
+
+        attach(0)
+
     def _start_hunt_icon_warmup(self, kind: str) -> None:
         """Decode Hunt icons off the UI thread, then attach PhotoImages in batches."""
         if kind == "species":
@@ -5624,13 +5831,22 @@ class UnifiedTaskEditor(ttk.Frame):
             return
         if not order:
             return
+        size = _hunt_icon_box()
+        photos = getattr(self, "_hunt_photos", None) or {}
+        jobs = []
+        for key in order:
+            allowed = bool(allowed_map.get(key, True))
+            cache_key = hunt_icon_cache_key(key, allowed=allowed, size=size)
+            if cache_key in photos:
+                continue
+            jobs.append((key, icons.get(key), allowed))
+        if not jobs:
+            # Startup warmup already filled PhotoImages; just attach to rows.
+            self._attach_hunt_icons_from_cache(kind)
+            return
         self._ensure_icon_warmup_queue()
         token = self._bump_icon_warmup_token()
         self._icon_warmup_pending = int(getattr(self, "_icon_warmup_pending", 0) or 0) + 1
-        jobs = [
-            (key, icons.get(key), bool(allowed_map.get(key, True)))
-            for key in order
-        ]
         if not getattr(self, "_icon_warmup_pumping", False):
             self._icon_warmup_pumping = True
             try:
@@ -7155,11 +7371,12 @@ class ScheduleWindow(tk.Tk):
         # Sensitive data (profile + tasks) is already in memory. Fill the first
         # schedule form while still withdrawn so the first visible frame has
         # layout groups and fields — not an empty shell that populates later.
-        # Heavy Hunt/Magic icons stay lazy (tab open + background warmup).
+        # Heavy Hunt/Magic/Sell icons warm in the background after reveal.
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(250, self._poll)
         self._bootstrap_initial_editor()
         self._reveal_window()
+        self.after(0, self._start_startup_asset_warmup)
 
     def _reveal_window(self) -> None:
         """Show only after size + initial form are ready (no empty/flashy first paint)."""
@@ -7176,6 +7393,187 @@ class ScheduleWindow(tk.Tk):
             pass
         _disable_window_maximize(self)
         self._window_revealed = True
+
+    def _start_startup_asset_warmup(self) -> None:
+        """Decode Hunt / Sell / Magic icons off-thread right after the UI shows."""
+        if self._closing:
+            return
+        import queue
+
+        self._startup_warmup_token = int(getattr(self, "_startup_warmup_token", 0) or 0) + 1
+        token = self._startup_warmup_token
+        self._startup_warmup_q = queue.Queue()
+        self._startup_warmup_pending = True
+        # Pump from the UI thread only (worker must not call after()).
+        try:
+            self.after(40, self._pump_startup_asset_warmup)
+        except tk.TclError:
+            self._startup_warmup_pending = False
+            return
+
+        def worker() -> None:
+            try:
+                jobs = collect_startup_asset_jobs(manmabot_root())
+                prepared = prepare_startup_assets(
+                    jobs,
+                    hunt_size=_hunt_icon_box(),
+                    sell_size=48,
+                    magic_size=28,
+                    filled_icon=_filled_icon,
+                    sell_thumb=_sell_thumb,
+                    magic_thumb=_magic_thumb,
+                )
+                self._startup_warmup_q.put((token, prepared))
+            except Exception:
+                self._startup_warmup_pending = False
+
+        threading.Thread(
+            target=worker, name="ui-startup-asset-warmup", daemon=True,
+        ).start()
+    def _pump_startup_asset_warmup(self) -> None:
+        if self._closing:
+            self._startup_warmup_pending = False
+            return
+        import queue
+
+        q = getattr(self, "_startup_warmup_q", None)
+        if q is None:
+            self._startup_warmup_pending = False
+            return
+        try:
+            token, prepared = q.get_nowait()
+        except queue.Empty:
+            if getattr(self, "_startup_warmup_pending", False):
+                try:
+                    self.after(40, self._pump_startup_asset_warmup)
+                except tk.TclError:
+                    self._startup_warmup_pending = False
+            return
+        if token != int(getattr(self, "_startup_warmup_token", 0) or 0):
+            self._startup_warmup_pending = False
+            return
+        self._apply_startup_assets(token, prepared, "hunt", 0)
+
+    def _apply_startup_assets(
+        self,
+        token: int,
+        prepared: dict[str, dict[str, object]],
+        phase: str,
+        start: int,
+    ) -> None:
+        """Convert background PIL caches into Tk PhotoImages in small batches."""
+        if self._closing or token != int(getattr(self, "_startup_warmup_token", 0) or 0):
+            self._startup_warmup_pending = False
+            return
+        editor = getattr(self, "editor", None)
+        if editor is None:
+            self._startup_warmup_pending = False
+            return
+        from PIL import ImageTk
+
+        batch = 40
+        if phase == "hunt":
+            items = list((prepared.get("hunt") or {}).items())
+            cache = getattr(editor, "_hunt_photos", None)
+            if cache is None:
+                editor._hunt_photos = {}
+                cache = editor._hunt_photos
+            end = min(start + batch, len(items))
+            for cache_key, image in items[start:end]:
+                if cache_key in cache:
+                    continue
+                try:
+                    cache[cache_key] = ImageTk.PhotoImage(image, master=editor)
+                except Exception:
+                    continue
+            if end < len(items):
+                try:
+                    self.after(
+                        1,
+                        lambda: self._apply_startup_assets(
+                            token, prepared, "hunt", end,
+                        ),
+                    )
+                except tk.TclError:
+                    self._startup_warmup_pending = False
+                return
+            try:
+                self.after(
+                    1,
+                    lambda: self._apply_startup_assets(token, prepared, "sell", 0),
+                )
+            except tk.TclError:
+                self._startup_warmup_pending = False
+            return
+
+        if phase == "sell":
+            panel = getattr(editor, "sell_filter_panel", None)
+            sell = prepared.get("sell") or {}
+            if panel is not None and sell:
+                panel.accept_warm_thumbs(sell)
+                # Prefill a slice of PhotoImages so Sell opens snappier.
+                keys = list(sell.keys())
+                end = min(start + batch, len(keys))
+                for key in keys[start:end]:
+                    try:
+                        panel._photo_for(key)
+                    except Exception:
+                        continue
+                if end < len(keys):
+                    try:
+                        self.after(
+                            1,
+                            lambda: self._apply_startup_assets(
+                                token, prepared, "sell", end,
+                            ),
+                        )
+                    except tk.TclError:
+                        self._startup_warmup_pending = False
+                    return
+            try:
+                self.after(
+                    1,
+                    lambda: self._apply_startup_assets(token, prepared, "magic", 0),
+                )
+            except tk.TclError:
+                self._startup_warmup_pending = False
+            return
+
+        # magic
+        magic = prepared.get("magic") or {}
+        pil_cache = getattr(editor, "_magic_pil", None)
+        if pil_cache is None:
+            editor._magic_pil = {}
+            pil_cache = editor._magic_pil
+        pil_cache.update(magic)
+        photo_cache = getattr(editor, "_magic_icons", None)
+        if photo_cache is None:
+            editor._magic_icons = {}
+            photo_cache = editor._magic_icons
+        keys = list(magic.keys())
+        end = min(start + batch, len(keys))
+        for key in keys[start:end]:
+            if key in photo_cache:
+                continue
+            image = magic.get(key)
+            if image is None:
+                continue
+            try:
+                photo_cache[key] = ImageTk.PhotoImage(image, master=editor)
+            except Exception:
+                continue
+        if end < len(keys):
+            try:
+                self.after(
+                    1,
+                    lambda: self._apply_startup_assets(
+                        token, prepared, "magic", end,
+                    ),
+                )
+            except tk.TclError:
+                self._startup_warmup_pending = False
+            return
+        self._startup_warmup_pending = False
 
     @staticmethod
     def _sync_font_aliases() -> None:
@@ -9629,6 +10027,7 @@ class ScheduleWindow(tk.Tk):
         finally:
             self._nav_lock -= 1
         self._reveal_window()
+        self.after(0, self._start_startup_asset_warmup)
 
     def _restore_editor(self) -> None:
         editing = self._editing_id

@@ -263,9 +263,10 @@ class SellFilterPanel(ttk.Frame):
         self.show_var = tk.StringVar(self, value=t["filter_all"])
         self.count_var = tk.StringVar(self, value="")
         self.status_var = tk.StringVar(self, value="")
-        # Catalog/icons load on first ensure_loaded() (Equipment → Sell tab),
-        # not at app startup — keeps the schedule shell responsive.
+        # Catalog/marks load on first ensure_loaded(); icon PIL may already be
+        # warm from ScheduleWindow startup background prep.
         self._loaded = False
+        self._warm_pil: dict[str, object] = {}
         self._build()
 
     @property
@@ -382,12 +383,21 @@ class SellFilterPanel(ttk.Frame):
             side="right"
         )
 
+    def accept_warm_thumbs(self, thumbs: dict[str, object]) -> None:
+        """Store background-prepared PIL thumbs for instant PhotoImage create."""
+        if not thumbs:
+            return
+        self._warm_pil.update(thumbs)
+
     def _photo_for(self, key: str) -> tk.PhotoImage:
         cached = self._photo_cache.get(key)
         if cached is not None:
             return cached
-        path = self._icon_paths.get(key)
-        photo = ImageTk.PhotoImage(_thumb(path), master=self)
+        image = (getattr(self, "_warm_pil", None) or {}).get(key)
+        if image is None:
+            path = self._icon_paths.get(key)
+            image = _thumb(path)
+        photo = ImageTk.PhotoImage(image, master=self)
         self._photo_cache[key] = photo
         return photo
 
