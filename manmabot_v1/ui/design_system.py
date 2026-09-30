@@ -870,8 +870,13 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
     return style
 
 
-def group(parent: tk.Misc, text: str) -> ttk.LabelFrame:
-    return ttk.LabelFrame(parent, text=text, padding=(scaled(8), scaled(4)))
+def group(parent: tk.Misc, text: str, *, i18n_key: str | None = None) -> ttk.LabelFrame:
+    frame = ttk.LabelFrame(parent, text=text, padding=(scaled(8), scaled(4)))
+    if i18n_key:
+        from manmabot_v1.ui.live_i18n import tag
+
+        tag(frame, i18n_key)
+    return frame
 
 
 def refresh_ui_scale(root: tk.Misc, language: str, scale: float) -> None:
