@@ -2765,7 +2765,7 @@ class UnifiedTaskEditor(ttk.Frame):
             warp, self.t["random_teleport"], "recovery.random_teleport_enabled", False,
         )
         self._fix_flag(
-            warp, self.t["teleport_player"], "recovery.teleport_on_player", False, indent=28,
+            warp, self.t["teleport_player"], "recovery.teleport_on_player", False,
         )
         self._fix_meter(
             warp,
@@ -2776,9 +2776,8 @@ class UnifiedTaskEditor(ttk.Frame):
             suffix=self.t["teleport_surround_count_suffix"],
             low=2,
             high=20,
-            indent=28,
             bind=False,
-            inline=True,
+            stack=True,
         )
         _teleport_fields = (
             "recovery.teleport_on_player",
@@ -2889,8 +2888,15 @@ class UnifiedTaskEditor(ttk.Frame):
         right = ttk.Frame(page, style="Page.TFrame")
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         right.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        self._hp_page = page
+        self._hp_page_settling = False
         self._build_hp_action_order(left)
         self._build_fix_inventory(right)
+        # This sub-tab stays unmapped until it is opened. Child widths stay at
+        # 1px until then, and the first Expose is queued before those children
+        # configure — that is the visible snap. Flush layout in Map, which
+        # runs before that expose.
+        page.bind("<Map>", self._settle_hp_page_on_map, add="+")
 
     def _build_hp_action_order(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
@@ -2934,6 +2940,28 @@ class UnifiedTaskEditor(ttk.Frame):
         self._hp_action_canvas = canvas
         self._rebuild_hp_action_rows()
         self._refresh_fix_summary()
+
+    def _settle_hp_page_on_map(self, event: tk.Event | None = None) -> None:
+        """Lay out HP rows and inventory before the sub-tab's first paint."""
+        page = getattr(self, "_hp_page", None)
+        if page is None or getattr(self, "_hp_page_settling", False):
+            return
+        if event is not None and event.widget is not page:
+            return
+        try:
+            if int(page.winfo_width()) < 20:
+                return
+        except tk.TclError:
+            return
+        self._hp_page_settling = True
+        try:
+            page.update_idletasks()
+            self._lock_hp_action_columns()
+            page.update_idletasks()
+        except tk.TclError:
+            return
+        finally:
+            self._hp_page_settling = False
 
     def _build_fix_inventory(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
@@ -3943,14 +3971,11 @@ class UnifiedTaskEditor(ttk.Frame):
         left.rowconfigure(0, weight=1)
         left.columnconfigure(0, weight=1)
 
-        # Column minimums (px) sized for KO/ZH headers + controls.
-        # Name grows only when the viewport is wider than this sum.
-        # enabled, icon, name, auto, priority
-        self._magic_col_fixed = tuple(
-            ui_theme.scaled(value, 32) for value in (64, 44, 180, 88, 80)
-        )
-        body.columnconfigure(0, minsize=int(sum(self._magic_col_fixed)))
+        # enabled, icon, name, auto, priority. Name grows to fill the table.
         self._magic_name_col = 2
+        self._magic_split = body
+        self._magic_col_fixed = tuple(self._magic_column_minimums())
+        body.columnconfigure(0, minsize=int(sum(self._magic_col_fixed)))
         self._magic_widths = list(self._magic_col_fixed)
         self._magic_content_width = int(sum(self._magic_widths))
 
@@ -4064,7 +4089,7 @@ class UnifiedTaskEditor(ttk.Frame):
         return "break"
 
     def _fit_magic_table_width(self, viewport: int) -> None:
-        # Match the visible table. The name column gives up width so the row fits.
+        # Match the visible table. Extra width goes to the name column.
         target = max(int(viewport), 1)
         widths = self._magic_column_widths(target)
         if widths != list(getattr(self, "_magic_widths", []) or []):
@@ -4088,13 +4113,25 @@ class UnifiedTaskEditor(ttk.Frame):
         try:
             body.update_idletasks()
             bbox = body.bbox("all")
+            viewport = max(int(body.winfo_width()), 1)
         except tk.TclError:
             bbox = None
+            viewport = 1
         if bbox is not None:
             _x0, y0, _x1, y1 = bbox
             body.configure(scrollregion=(0, y0, content_w, max(y1, req_h)))
         else:
             body.configure(scrollregion=(0, 0, content_w, req_h))
+        hscroll = getattr(self, "_magic_hscroll", None)
+        if hscroll is not None and viewport > 1:
+            try:
+                if content_w > viewport + 1:
+                    if not hscroll.winfo_ismapped():
+                        hscroll.grid(row=1, column=0, columnspan=2, sticky="ew")
+                elif hscroll.winfo_ismapped():
+                    hscroll.grid_remove()
+            except tk.TclError:
+                pass
 
     def _on_magic_class(self, _event: object = None) -> None:
         class_id = self._magic_class_ids.get(self.magic_class_combo.get(), "elf")
@@ -4113,23 +4150,71 @@ class UnifiedTaskEditor(ttk.Frame):
         return self._skill_catalog.for_filter(class_id, category)
 
     def _magic_table_min_width(self) -> int:
-        return int(sum(self._magic_col_fixed))
+        return int(sum(self._magic_column_minimums()))
+
+    def _magic_column_minimums(self) -> list[int]:
+        """Widths that keep every heading and control fully visible."""
+        head = tkfont.Font(font=FONT_SECTION)
+        # Label padx is 6 on each side, plus the 1px cell rule and a little slack.
+        pad = 6 * 2 + 4
+        headers = (
+            self.t["enabled"],
+            self.t["col_icon"],
+            self.t["col_magic_name"],
+            self.t["col_auto"],
+            self.t["col_priority"],
+        )
+        text = [head.measure(str(item)) + pad for item in headers]
+        icon = 28 + 8
+        check = ui_theme.scaled(28, 22)
+        return [
+            max(text[0], check),
+            max(text[1], icon),
+            max(text[2], ui_theme.scaled(72, 56)),
+            max(text[3], check),
+            max(text[4], self._magic_spin_min_width()),
+        ]
+
+    def _magic_spin_min_width(self) -> int:
+        scale = round(float(ui_theme.UI_SCALE), 3)
+        cached = getattr(self, "_magic_spin_width", None)
+        if isinstance(cached, tuple) and cached[0] == scale:
+            return int(cached[1])
+        probe = ttk.Spinbox(self, from_=1, to=99, width=4)
+        try:
+            self.update_idletasks()
+            width = max(int(probe.winfo_reqwidth()) + 8, ui_theme.scaled(48, 36))
+        except tk.TclError:
+            width = ui_theme.scaled(72, 48)
+        finally:
+            try:
+                probe.destroy()
+            except tk.TclError:
+                pass
+        self._magic_spin_width = (scale, width)
+        return width
 
     def _magic_column_widths(self, available: int) -> list[int]:
-        fixed = list(self._magic_col_fixed)
-        widths = list(fixed)
+        floors = self._magic_column_minimums()
+        widths = list(floors)
         name = self._magic_name_col
-        others = sum(fixed) - fixed[name]
+        others = sum(floors) - floors[name]
         room = int(available) - others
-        # Cap the name header at its column width, and shrink it so the row fits.
-        floor = ui_theme.scaled(72, 56)
-        widths[name] = min(fixed[name], max(floor, room))
+        # Leftover viewport width belongs to the name column so the row
+        # fills the frame. Other columns stay at their heading width.
+        widths[name] = max(floors[name], room)
         return widths
 
     def _apply_magic_column_widths(self, available: int) -> None:
         widths = self._magic_column_widths(max(int(available), 1))
         self._magic_widths = widths
         self._magic_content_width = int(sum(widths))
+        split = getattr(self, "_magic_split", None)
+        if split is not None:
+            try:
+                split.columnconfigure(0, minsize=self._magic_table_min_width())
+            except tk.TclError:
+                pass
         sheet = getattr(self, "_magic_sheet", None)
         if sheet is not None:
             for column, width in enumerate(widths):
@@ -4164,9 +4249,12 @@ class UnifiedTaskEditor(ttk.Frame):
             highlightthickness=0,
             bd=0,
             width=width,
+            height=1,
         )
+        # Children are packed, so pack_propagate is what stops a long heading
+        # or skill name from stretching this column and crushing the next one.
+        holder.pack_propagate(False)
         holder.grid(row=row, column=column, sticky="nsew")
-        holder.grid_propagate(False)
         cell = tk.Frame(holder, background=bg, highlightthickness=0, bd=0)
         cell.pack(fill="both", expand=True, padx=(0, 1), pady=(0, 1))
         refs = getattr(self, "_magic_cell_refs", None)
@@ -4175,6 +4263,26 @@ class UnifiedTaskEditor(ttk.Frame):
             refs = self._magic_cell_refs
         refs.append((holder, column))
         return cell
+
+    def _sync_magic_row_heights(self) -> None:
+        """Give width-locked cells the height their contents actually need."""
+        refs = getattr(self, "_magic_cell_refs", None) or []
+        if not refs:
+            return
+        try:
+            self.update_idletasks()
+        except tk.TclError:
+            return
+        for holder, _column in refs:
+            try:
+                children = holder.winfo_children()
+                if not children:
+                    continue
+                need = max(int(children[0].winfo_reqheight()) + 1, 1)
+                if int(holder.cget("height")) != need:
+                    holder.configure(height=need)
+            except (tk.TclError, TypeError, ValueError):
+                continue
 
     def _show_magic_skills(self) -> None:
         sheet = getattr(self, "_magic_sheet", None)
@@ -4253,7 +4361,7 @@ class UnifiedTaskEditor(ttk.Frame):
 
         self._magic_canvas.yview_moveto(0)
         self._magic_canvas.xview_moveto(0)
-        self.update_idletasks()
+        self._sync_magic_row_heights()
         self._update_magic_scrollregion()
         self._refresh_magic_pick_summary()
 
@@ -7417,7 +7525,7 @@ class ScheduleWindow(tk.Tk):
                 prepared = prepare_startup_assets(
                     jobs,
                     hunt_size=_hunt_icon_box(),
-                    sell_size=48,
+                    sell_size=_hunt_icon_box(),
                     magic_size=28,
                     filled_icon=_filled_icon,
                     sell_thumb=_sell_thumb,

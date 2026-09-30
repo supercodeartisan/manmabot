@@ -40,21 +40,15 @@ from manmabot_v1.shopping.behaviors import (
     load_sell_filters,
     save_behaviors,
 )
-from manmabot_v1.ui.design_system import (
-    BORDER,
-    SELECTED,
-    SURFACE,
-    TEXT,
-    TEXT_MUTED,
-    FitLabel,
-)
+from manmabot_v1.ui.design_system import TEXT_MUTED, FitLabel
 
 _NONE = ""
 _KEEP = "keep"
 _CYCLE = (_NONE, _KEEP)
 
-_ICON_CELL = 48
-_ICON_GAP = 6
+# Same square as the hunt monster table: 32px sprite plus 4px on every side.
+_ICON_PAD = 4
+_ICON_BOX = 40
 
 
 @dataclass(frozen=True)
@@ -67,45 +61,8 @@ class _SellListRow:
     source_category: str = ""  # catalog category for filtering when is_own
 
 
-def _configure_sell_tree(widget: tk.Misc) -> None:
-    style = ttk.Style(widget)
-    style.configure(
-        "Sell.Treeview",
-        rowheight=_ICON_CELL,
-        fieldbackground=SURFACE,
-        background=SURFACE,
-        foreground=TEXT,
-        bordercolor=BORDER,
-        lightcolor=BORDER,
-        darkcolor=BORDER,
-        borderwidth=1,
-        relief="solid",
-        indent=0,
-    )
-    style.layout(
-        "Sell.Treeview.Item",
-        [
-            (
-                "Treeitem.padding",
-                {
-                    "sticky": "nswe",
-                    "children": [
-                        ("Treeitem.image", {"side": "left", "sticky": "w"}),
-                        ("Treeitem.text", {"side": "left", "sticky": ""}),
-                    ],
-                },
-            )
-        ],
-    )
-    style.configure("Sell.Treeview.Item", padding=(0, 0, 0, 0))
-    style.map(
-        "Sell.Treeview",
-        background=[("selected", SELECTED)],
-        foreground=[("selected", "#ffffff")],
-    )
-
-
-def _thumb(path: Path | None, size: int = _ICON_CELL):
+def _thumb(path: Path | None, size: int = _ICON_BOX):
+    """Fit an item sprite the same way hunt monster icons are fitted."""
     image = None
     if path is not None and path.is_file():
         try:
@@ -120,9 +77,21 @@ def _thumb(path: Path | None, size: int = _ICON_CELL):
     bounds = image.getbbox()
     if bounds:
         image = image.crop(bounds)
-    if image.size != (size, size):
-        image = image.resize((size, size), Image.Resampling.LANCZOS)
-    return image
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    inner = max(1, size - _ICON_PAD * 2)
+    if image.width < 1 or image.height < 1:
+        return canvas
+    scale = min(inner / image.width, inner / image.height)
+    width = min(inner, max(1, int(round(image.width * scale))))
+    height = min(inner, max(1, int(round(image.height * scale))))
+    if image.size != (width, height):
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+    canvas.paste(
+        image,
+        ((size - image.width) // 2, (size - image.height) // 2),
+        image,
+    )
+    return canvas
 
 
 def _catalog_by_id(catalog: list[ItemCatalogRow]) -> dict[int, ItemCatalogRow]:
@@ -329,36 +298,34 @@ class SellFilterPanel(ttk.Frame):
 
         table = ttk.Frame(self)
         table.pack(fill="both", expand=True)
-        table.rowconfigure(0, weight=1)
-        table.columnconfigure(0, weight=1)
-        _configure_sell_tree(self)
+        # Hunt style is defined in schedule_ui. Import here so this module can
+        # still be imported from schedule_ui without a cycle.
+        from manmabot_v1.ui.schedule_ui import (
+            _configure_hunt_icon_column,
+            _configure_hunt_tree,
+            _enable_bbox_grid,
+            _mount_vertical_scroll,
+        )
+
+        _configure_hunt_tree(self)
         self._tree = ttk.Treeview(
             table,
             columns=("save", "category", "name"),
             show="tree headings",
             selectmode="extended",
             height=8,
-            style="Sell.Treeview",
+            style="Hunt.Treeview",
         )
-        self._tree.heading("#0", text="")
-        self._tree.column(
-            "#0",
-            width=_ICON_CELL + _ICON_GAP,
-            minwidth=_ICON_CELL + _ICON_GAP,
-            stretch=False,
-            anchor="w",
-        )
+        _configure_hunt_icon_column(self._tree, heading="")
         save_heading = self._t.get("filter_save", self._t["filter_mark"])
         self._tree.heading("save", text=save_heading, anchor="center")
         self._tree.heading("category", text=self._t["filter_category"], anchor="center")
         self._tree.heading("name", text=self._t["filter_item"], anchor="center")
         self._tree.column("save", width=88, minwidth=72, anchor="center", stretch=False)
         self._tree.column("category", width=110, minwidth=80, anchor="center", stretch=False)
-        self._tree.column("name", width=280, minwidth=120, anchor="center", stretch=True)
-        scroll = ttk.Scrollbar(table, orient="vertical", command=self._tree.yview)
-        self._tree.configure(yscrollcommand=scroll.set)
-        self._tree.grid(row=0, column=0, sticky="nsew")
-        scroll.grid(row=0, column=1, sticky="ns")
+        self._tree.column("name", width=280, minwidth=120, anchor="w", stretch=True)
+        _mount_vertical_scroll(table, self._tree)
+        _enable_bbox_grid(self._tree)
         self._tree.tag_configure("keep", foreground="#0f766e")
         self._tree.tag_configure("own", foreground="#1d4ed8")
         self._tree.bind("<Double-1>", self._on_double_click)
@@ -684,6 +651,9 @@ class SellFilterPanel(ttk.Frame):
             self.count_var.set(f"{len(rows)} / save {keep} / own {len(self._owned)}")
         if not self._catalog and not self._owned and not self.status_var.get():
             self.status_var.set(self._t["filter_empty"])
+        from manmabot_v1.ui.schedule_ui import _refresh_cell_grid
+
+        _refresh_cell_grid(self._tree)
 
     def _names(self, iids: tuple[str, ...] | list[str]) -> list[str]:
         return [self._iid_to_name[iid] for iid in iids if iid in self._iid_to_name]
