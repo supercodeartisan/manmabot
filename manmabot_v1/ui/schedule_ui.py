@@ -93,6 +93,7 @@ from manmabot_v1.ui.design_system import (
 )
 from manmabot_v1.ui import design_system as ui_theme
 from manmabot_v1.ui.fonts import load_bundled_fonts
+from manmabot_v1.ui.icon_warmup import hunt_icon_cache_key, prepare_hunt_icons
 from manmabot_v1.ui.operator_coordinator import OperatorCoordinator
 from manmabot_v1.ui.schedule_i18n import LANGUAGES, LANGUAGE_NAMES, tr
 from manmabot_v1.ui.sell_filter_panel import SellFilterPanel
@@ -5023,23 +5024,165 @@ class UnifiedTaskEditor(ttk.Frame):
         save_profile(self.app.profile)
         self._load_hotkey_fields()
 
-    def _hunt_photo(self, path: Path | None, key: str, allowed: bool) -> tk.PhotoImage:
+    def _hunt_photo(
+        self,
+        path: Path | None,
+        key: str,
+        allowed: bool,
+        *,
+        pil_image: object | None = None,
+    ) -> tk.PhotoImage:
         from PIL import ImageTk
 
         cache = getattr(self, "_hunt_photos", None)
         if cache is None:
             self._hunt_photos = {}
             cache = self._hunt_photos
-        state = "on" if allowed else "off"
-        cache_key = f"{key}:{state}:{_HUNT_CELL}"
+        cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_HUNT_CELL)
         photo = cache.get(cache_key)
         if photo is None:
-            photo = ImageTk.PhotoImage(
-                _filled_icon(path, _HUNT_CELL, enabled=allowed),
-                master=self,
+            image = pil_image if pil_image is not None else _filled_icon(
+                path, _HUNT_CELL, enabled=allowed,
             )
+            photo = ImageTk.PhotoImage(image, master=self)
             cache[cache_key] = photo
         return photo
+
+    def _bump_icon_warmup_token(self) -> int:
+        token = int(getattr(self, "_icon_warmup_token", 0) or 0) + 1
+        self._icon_warmup_token = token
+        return token
+
+    def _ensure_icon_warmup_queue(self) -> None:
+        q = getattr(self, "_icon_warmup_q", None)
+        if q is None:
+            import queue
+
+            self._icon_warmup_q = queue.Queue()
+            self._icon_warmup_pumping = False
+
+    def _pump_icon_warmup(self) -> None:
+        """Apply background-prepared icons on the UI thread."""
+        self._ensure_icon_warmup_queue()
+        import queue
+
+        consumed = 0
+        try:
+            while True:
+                kind, token, prepared = self._icon_warmup_q.get_nowait()
+                consumed += 1
+                self._apply_hunt_icon_batch(kind, token, prepared, 0)
+        except queue.Empty:
+            pass
+        if consumed:
+            self._icon_warmup_pending = max(
+                0, int(getattr(self, "_icon_warmup_pending", 0) or 0) - consumed
+            )
+        if int(getattr(self, "_icon_warmup_pending", 0) or 0) > 0:
+            self._icon_warmup_pumping = True
+            try:
+                self.after(40, self._pump_icon_warmup)
+            except tk.TclError:
+                self._icon_warmup_pending = 0
+                self._icon_warmup_pumping = False
+        else:
+            self._icon_warmup_pumping = False
+
+    def _start_hunt_icon_warmup(self, kind: str) -> None:
+        """Decode Hunt icons off the UI thread, then attach PhotoImages in batches."""
+        if kind == "species":
+            order = list(getattr(self, "_species_order", []) or [])
+            icons = getattr(self, "_species_icons", {}) or {}
+            allowed_map = getattr(self, "_species_allowed", {}) or {}
+        elif kind == "items":
+            order = list(getattr(self, "_item_order", []) or [])
+            icons = getattr(self, "_item_icons", {}) or {}
+            allowed_map = getattr(self, "_item_allowed", {}) or {}
+        else:
+            return
+        if not order:
+            return
+        self._ensure_icon_warmup_queue()
+        token = self._bump_icon_warmup_token()
+        self._icon_warmup_pending = int(getattr(self, "_icon_warmup_pending", 0) or 0) + 1
+        jobs = [
+            (key, icons.get(key), bool(allowed_map.get(key, True)))
+            for key in order
+        ]
+        if not getattr(self, "_icon_warmup_pumping", False):
+            self._icon_warmup_pumping = True
+            try:
+                self.after(0, self._pump_icon_warmup)
+            except tk.TclError:
+                self._icon_warmup_pending = max(
+                    0, int(getattr(self, "_icon_warmup_pending", 0) or 0) - 1
+                )
+                self._icon_warmup_pumping = False
+                return
+
+        def worker() -> None:
+            try:
+                prepared = prepare_hunt_icons(
+                    jobs, size=_HUNT_CELL, filled_icon=_filled_icon,
+                )
+                self._icon_warmup_q.put((kind, token, prepared))
+            except Exception:
+                # Drop the pending slot so the pump can stop.
+                self._icon_warmup_pending = max(
+                    0, int(getattr(self, "_icon_warmup_pending", 0) or 0) - 1
+                )
+
+        threading.Thread(
+            target=worker, name=f"hunt-icon-warmup-{kind}", daemon=True,
+        ).start()
+
+    def _apply_hunt_icon_batch(
+        self,
+        kind: str,
+        token: int,
+        prepared: dict[str, object],
+        start: int,
+    ) -> None:
+        if token != int(getattr(self, "_icon_warmup_token", 0) or 0):
+            return
+        if kind == "species":
+            tree = getattr(self, "species_tree", None)
+            order = list(getattr(self, "_species_order", []) or [])
+            icons = getattr(self, "_species_icons", {}) or {}
+            allowed_map = getattr(self, "_species_allowed", {}) or {}
+        else:
+            tree = getattr(self, "item_tree", None)
+            order = list(getattr(self, "_item_order", []) or [])
+            icons = getattr(self, "_item_icons", {}) or {}
+            allowed_map = getattr(self, "_item_allowed", {}) or {}
+        if tree is None:
+            return
+        batch = 40
+        end = min(start + batch, len(order))
+        for key in order[start:end]:
+            try:
+                if not tree.exists(key):
+                    continue
+            except tk.TclError:
+                return
+            allowed = bool(allowed_map.get(key, True))
+            cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_HUNT_CELL)
+            pil_image = prepared.get(cache_key)
+            try:
+                photo = self._hunt_photo(
+                    icons.get(key), key, allowed, pil_image=pil_image,
+                )
+                tree.item(key, image=photo)
+            except tk.TclError:
+                return
+        if end < len(order):
+            try:
+                self.after(
+                    1,
+                    lambda: self._apply_hunt_icon_batch(kind, token, prepared, end),
+                )
+            except tk.TclError:
+                return
 
     def _toggle_items(self) -> None:
         for iid in self.item_tree.selection():
@@ -5162,10 +5305,11 @@ class UnifiedTaskEditor(ttk.Frame):
             )
             self._item_icons[entry.key] = entry.image_path()
         self._items_view_loaded = True
-        self._refresh_item_rows(fit=True)
+        self._refresh_item_rows(fit=True, with_icons=False)
         self._refresh_items_summary()
+        self._start_hunt_icon_warmup("items")
 
-    def _refresh_item_rows(self, *, fit: bool = False) -> None:
+    def _refresh_item_rows(self, *, fit: bool = False, with_icons: bool = True) -> None:
         if not hasattr(self, "item_tree"):
             return
         show = "all"
@@ -5191,19 +5335,21 @@ class UnifiedTaskEditor(ttk.Frame):
             haystack = self._item_search.get(key) or " ".join((key, label, item_cat))
             if not table_name_matches(needle, haystack):
                 continue
-            self.item_tree.insert(
-                "",
-                "end",
-                iid=key,
-                text="",
-                image=self._hunt_photo(self._item_icons.get(key), key, allowed),
-                tags=() if allowed else ("denied",),
-                values=(
+            row_kw: dict[str, Any] = {
+                "iid": key,
+                "text": "",
+                "tags": () if allowed else ("denied",),
+                "values": (
                     label,
                     item_cat,
                     self.t["yes"] if allowed else self.t["no"],
                 ),
-            )
+            }
+            if with_icons:
+                row_kw["image"] = self._hunt_photo(
+                    self._item_icons.get(key), key, allowed,
+                )
+            self.item_tree.insert("", "end", **row_kw)
         if fit:
             _fit_tree_columns(self.item_tree, include_tree=True, stretch_last=False)
             self.item_tree.column("name", stretch=True)
@@ -5876,10 +6022,11 @@ class UnifiedTaskEditor(ttk.Frame):
                 self._species_region_values[key] = ()
                 self._species_icons[key] = None
         self._species_view_loaded = True
-        self._refresh_species_rows(fit=True)
+        self._refresh_species_rows(fit=True, with_icons=False)
         self._refresh_monsters_summary()
+        self._start_hunt_icon_warmup("species")
 
-    def _refresh_species_rows(self, *, fit: bool = False) -> None:
+    def _refresh_species_rows(self, *, fit: bool = False, with_icons: bool = True) -> None:
         if not hasattr(self, "species_tree"):
             return
         show = "all"
@@ -5910,17 +6057,22 @@ class UnifiedTaskEditor(ttk.Frame):
             if not table_name_matches(needle, haystack):
                 continue
             level = self._species_defaults.get(key, self._species_level.get(key, 1))
-            self.species_tree.insert(
-                "", "end", iid=key, text="",
-                image=self._hunt_photo(self._species_icons.get(key), key, allowed),
-                tags=() if allowed else ("denied",),
-                values=(
+            row_kw: dict[str, Any] = {
+                "iid": key,
+                "text": "",
+                "tags": () if allowed else ("denied",),
+                "values": (
                     label,
                     level,
                     self.t["yes"] if allowed else self.t["no"],
                     self._species_region_text.get(key, ""),
                 ),
-            )
+            }
+            if with_icons:
+                row_kw["image"] = self._hunt_photo(
+                    self._species_icons.get(key), key, allowed,
+                )
+            self.species_tree.insert("", "end", **row_kw)
         if fit:
             _fit_tree_columns(self.species_tree, include_tree=True, stretch_last=True)
             self.species_tree.column("allow", stretch=False, anchor="center")
