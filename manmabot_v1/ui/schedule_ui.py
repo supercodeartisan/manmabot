@@ -6475,17 +6475,17 @@ class ScheduleWindow(tk.Tk):
         self.coordinator = self._open_coordinator()
         self._build()
         self._refresh()
-        # Sensitive data (profile + tasks) is already in memory. Defer the heavy
-        # first-task form fill (monster/item icons, magic grid, …) until after
-        # the window can paint so the shell stays responsive. Schedule row
-        # clicks stay blocked while ``_schedule_ready`` is False.
+        # Sensitive data (profile + tasks) is already in memory. Fill the first
+        # schedule form while still withdrawn so the first visible frame has
+        # layout groups and fields — not an empty shell that populates later.
+        # Heavy Hunt/Magic icons stay lazy (tab open + background warmup).
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(250, self._poll)
+        self._bootstrap_initial_editor()
         self._reveal_window()
-        self.after(0, self._bootstrap_initial_editor)
 
     def _reveal_window(self) -> None:
-        """Show only after the intended size is applied (no 200x200 flash)."""
+        """Show only after size + initial form are ready (no empty/flashy first paint)."""
         self._place_window()
         try:
             self.update_idletasks()
@@ -7069,23 +7069,13 @@ class ScheduleWindow(tk.Tk):
             self.editor.begin_new()
 
     def _bootstrap_initial_editor(self) -> None:
-        """Fill the first schedule form after the first paint (UI-only timing)."""
+        """Fill the first schedule form before the window is shown (UI-only timing)."""
         if self._closing or self._schedule_ready:
             return
         try:
-            if hasattr(self, "footer_status"):
-                self.footer_status.configure(text=self.t.get("load_settings", "Loading…"))
-            self.update_idletasks()
             self._open_initial_editor()
         finally:
             self._schedule_ready = True
-            if hasattr(self, "footer_status"):
-                try:
-                    current = str(self.footer_status.cget("text") or "")
-                except tk.TclError:
-                    current = ""
-                if current == self.t.get("load_settings", "Loading…"):
-                    self.footer_status.configure(text="")
             self._refresh_operator()
 
     def _open_edit_id(self, task_id: str) -> None:
