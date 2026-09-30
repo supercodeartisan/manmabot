@@ -23,24 +23,13 @@ dist/
 *.log
 engine/logs/
 
-# Local user data created on first run (accounts, sessions, profiles)
-userdata/accounts.json
-userdata/accounts.locked-*.json
-userdata/autologin_runs/
-userdata/logs/
-userdata/profiles/
-userdata/profile.json
-userdata/schedules.json
-userdata/hotbar_slot_layout.json
-userdata/shopping_behaviors.yaml
-userdata/shop_sell_slot_layout.json
-userdata/shop_sell_ui_prefs.json
-
 # Editor and OS junk
 .idea/
 .cursor/
 .vscode/
 *.swp
+*.pyd
+*.pyc
 Thumbs.db
 ehthumbs.db
 Desktop.ini

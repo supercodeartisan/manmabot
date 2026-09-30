@@ -259,6 +259,31 @@ def _bind_wraplength(
     _sync()
 
 
+def _wrap_to_allocated(label: ttk.Label, *, pad: int = 4, minimum: int = 48) -> None:
+    """Wrap plain text to the width the layout gives this label."""
+
+    def _sync(_event: tk.Event | None = None) -> None:
+        try:
+            width = int(label.winfo_width())
+        except tk.TclError:
+            return
+        if width < 20:
+            return
+        target = max(minimum, width - pad)
+        try:
+            current = int(label.cget("wraplength"))
+        except (TypeError, ValueError, tk.TclError):
+            current = -1
+        if current != target:
+            label.configure(wraplength=target)
+
+    label.bind("<Configure>", _sync, add="+")
+    try:
+        label.after_idle(_sync)
+    except tk.TclError:
+        pass
+
+
 # Blue summary bullet. Wrapped lines start at the same column as the text after it.
 _SUMMARY_BULLET = "●  "
 
@@ -2735,9 +2760,15 @@ class UnifiedTaskEditor(ttk.Frame):
         page.configure(style="Page.TFrame")
         card = self._attack_card(page, self.t["hp_action_order"])
         card.pack(fill="both", expand=True)
-        ttk.Label(
-            card, text=self.t["hp_action_note"], justify="left", wraplength=420,
-        ).pack(anchor="w", pady=(0, 4))
+        hp_note = ttk.Label(
+            card,
+            text=self.t["hp_action_note"],
+            justify="left",
+            anchor="w",
+            wraplength=ui_theme.scaled(160, 80),
+        )
+        hp_note.pack(fill="x", anchor="w", pady=(0, 4))
+        _wrap_to_allocated(hp_note)
         self._hp_actions = self._normalize_hp_actions_for_ui(None)
         self._hp_action_rows: dict[str, tuple[tk.BooleanVar, tk.IntVar]] = {}
         self._hp_action_hotbar_labels: dict[str, ttk.Label] = {}
@@ -2772,22 +2803,41 @@ class UnifiedTaskEditor(ttk.Frame):
         page.configure(style="Page.TFrame")
         card = self._attack_card(page, self.t["fix_inventory"])
         card.pack(fill="both", expand=True)
-        ttk.Label(
-            card, text=self.t["inventory_live_note"], wraplength=360, justify="left",
-        ).pack(anchor="w")
-        ttk.Label(
-            card, text=self.t["inventory_hp_hint"], wraplength=360, justify="left",
-        ).pack(anchor="w", pady=(2, 0))
+        live_note = ttk.Label(
+            card,
+            text=self.t["inventory_live_note"],
+            justify="left",
+            anchor="w",
+            wraplength=ui_theme.scaled(160, 80),
+        )
+        live_note.pack(fill="x", anchor="w")
+        _wrap_to_allocated(live_note)
+        hp_hint = ttk.Label(
+            card,
+            text=self.t["inventory_hp_hint"],
+            justify="left",
+            anchor="w",
+            wraplength=ui_theme.scaled(160, 80),
+        )
+        hp_hint.pack(fill="x", anchor="w", pady=(2, 0))
+        _wrap_to_allocated(hp_hint)
         head = ttk.Frame(card)
         head.pack(fill="x", pady=(4, 6))
-        self.fix_inventory_status = ttk.Label(head, text=self.t["inventory_empty"])
-        self.fix_inventory_status.pack(side="left", fill="x", expand=True)
         self.fix_inventory_refresh_btn = ttk.Button(
             head,
             text=self.t["inventory_refresh"],
             command=self._on_inventory_refresh,
         )
-        self.fix_inventory_refresh_btn.pack(side="right")
+        self.fix_inventory_refresh_btn.pack(side="right", anchor="n")
+        self.fix_inventory_status = ttk.Label(
+            head,
+            text=self.t["inventory_empty"],
+            justify="left",
+            anchor="nw",
+            wraplength=ui_theme.scaled(160, 80),
+        )
+        self.fix_inventory_status.pack(side="left", fill="x", expand=True, anchor="n")
+        _wrap_to_allocated(self.fix_inventory_status)
         table = ttk.Frame(card)
         table.pack(fill="both", expand=True)
         columns = ("slot", "name", "count")
@@ -3698,8 +3748,9 @@ class UnifiedTaskEditor(ttk.Frame):
         ).grid(row=0, column=0, sticky="w", pady=(0, 6))
         body = ttk.Frame(page, style="Page.TFrame")
         body.grid(row=1, column=0, sticky="nsew")
-        body.columnconfigure(0, weight=3)
-        body.columnconfigure(1, weight=2)
+        # Table takes leftover width; the summary stays at its text width.
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=0, minsize=ui_theme.scaled(168, 120))
         body.rowconfigure(2, weight=1)
 
         picker = ttk.Frame(body, style="Page.TFrame")
@@ -3745,8 +3796,9 @@ class UnifiedTaskEditor(ttk.Frame):
         # Name grows only when the viewport is wider than this sum.
         # enabled, icon, name, auto, priority
         self._magic_col_fixed = tuple(
-            ui_theme.scaled(value, 36) for value in (72, 48, 220, 100, 96)
+            ui_theme.scaled(value, 32) for value in (64, 44, 180, 88, 80)
         )
+        body.columnconfigure(0, minsize=int(sum(self._magic_col_fixed)))
         self._magic_name_col = 2
         self._magic_widths = list(self._magic_col_fixed)
         self._magic_content_width = int(sum(self._magic_widths))
@@ -3823,7 +3875,7 @@ class UnifiedTaskEditor(ttk.Frame):
         summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.magic_pick_summary = tk.Text(
-            summary, wrap="word", height=ui_theme.scaled(12, 7), relief="flat", borderwidth=0,
+            summary, wrap="word", width=18, height=ui_theme.scaled(12, 7), relief="flat", borderwidth=0,
             highlightthickness=0, background="#ffffff", foreground="#1f2328",
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )

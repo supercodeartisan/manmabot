@@ -1,0 +1,634 @@
+{
+  "wizard_completed": true,
+  "language": "ko",
+  "game_language": "ko",
+  "character": "elf",
+  "loot_mode": "adena_only",
+  "loot_adena_weight_ratio": 0.7,
+  "active_map": "talking_island",
+  "map_style": "normal",
+  "selected_farms": [
+    "area_1",
+    "area_3"
+  ],
+  "farm_stays_s": {
+    "area_1": 3600.0,
+    "area_3": 3600.0
+  },
+  "species_levels": {},
+  "species_blacklist": [],
+  "species_filter_mode": "whitelist",
+  "species_whitelist": [
+    "monster_고블린",
+    "monster_오크",
+    "monster_오크 궁수",
+    "monster_코볼트",
+    "monster_그렘린",
+    "monster_늑대",
+    "monster_난쟁이",
+    "monster_세퍼드",
+    "monster_도베르만",
+    "monster_좀비",
+    "monster_놀",
+    "monster_오크 전사",
+    "monster_늑대인간",
+    "monster_간디 오크",
+    "monster_해골",
+    "monster_해골궁수",
+    "monster_로바 오크",
+    "monster_해골도끼병",
+    "monster_해골창병",
+    "monster_셸로브",
+    "monster_홉고블린",
+    "monster_두다-마라 오크",
+    "monster_리자드맨",
+    "monster_아투바 오크",
+    "monster_구울",
+    "monster_스파토이",
+    "monster_네루가 오크",
+    "monster_라이칸스로프",
+    "monster_웅골리언트",
+    "monster_해골근위병",
+    "monster_해골저격병",
+    "monster_해골돌격병"
+  ],
+  "species_sort": "level",
+  "item_pickup_mode": "whitelist",
+  "item_pickup_names": [],
+  "hp_potion_ratio": 0.5,
+  "hp_recover_enabled": true,
+  "use_hp_potion": true,
+  "use_heal": true,
+  "mp_recover_enabled": false,
+  "mp_potion_ratio": 0.3,
+  "use_mp_potion": false,
+  "resurrect_if_dead": true,
+  "resume_after_relogin": true,
+  "max_retries": 3,
+  "hp_escape_ratio": 0.3,
+  "mp_escape_enabled": false,
+  "mp_escape_ratio": 0.15,
+  "return_hp_enabled": false,
+  "return_hp_ratio": 0.3,
+  "return_mp_enabled": false,
+  "return_mp_ratio": 0.15,
+  "return_idle_enabled": false,
+  "return_idle_seconds": 54.0,
+  "random_teleport_enabled": true,
+  "teleport_on_player": false,
+  "teleport_when_surrounded": true,
+  "teleport_surround_count": 10,
+  "farm_rotate_s": 600.0,
+  "arrow_buy_qty": 100,
+  "silver_arrow_buy_qty": 200,
+  "buy_normal_arrows": true,
+  "buy_silver_arrows": false,
+  "restock_potions": true,
+  "buy_depoison": false,
+  "hp_potion_buy_qty": 3,
+  "depoison_buy_qty": 1,
+  "hp_potion_npc": "기란 마을 / 잡화 상인",
+  "shop_locale": "zh",
+  "return_potion_enabled": false,
+  "return_potion_count": 1,
+  "return_arrow_enabled": false,
+  "return_arrow_count": 100,
+  "return_depoison_enabled": false,
+  "return_depoison_count": 0,
+  "attack_jitter": false,
+  "attack_jitter_ms": 30,
+  "target_delay": false,
+  "target_delay_min_ms": 20,
+  "target_delay_max_ms": 40,
+  "abandon_same": true,
+  "abandon_seconds": 50,
+  "antidote_auto": true,
+  "area_empty": true,
+  "area_empty_seconds": 100,
+  "area_low_yield": true,
+  "area_low_yield_adena": 1000,
+  "area_low_yield_seconds": 600,
+  "area_players": true,
+  "area_player_count": 8,
+  "return_weight_enabled": true,
+  "return_weight_above": 80,
+  "sell_mode": "sell_only_garbage",
+  "always_on_top": false,
+  "humanize": true,
+  "show_preview": false,
+  "hotkeys": {
+    "pause_resume": "alt+a",
+    "stop": "alt+q"
+  },
+  "spell_slots": {
+    "power_up": {
+      "box": 1,
+      "key": "f5",
+      "reuse_s": 1200.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "armor_up": {
+      "box": 1,
+      "key": "f6",
+      "reuse_s": 1200.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "light": {
+      "box": 1,
+      "key": "f7",
+      "reuse_s": 720.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "heal": {
+      "box": 1,
+      "key": "f8",
+      "reuse_s": 0.0,
+      "cast": "double",
+      "enabled": true
+    },
+    "hp_potion": {
+      "box": 2,
+      "key": "f9",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "mp_potion": {
+      "box": 0,
+      "key": "f12",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": false
+    },
+    "teleport": {
+      "box": 1,
+      "key": "f10",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "mage_attack": {
+      "box": 1,
+      "key": "f12",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "talking_scroll": {
+      "box": 2,
+      "key": "f5",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "mother_tree": {
+      "box": 2,
+      "key": "f6",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "hp_to_mp": {
+      "box": 2,
+      "key": "f7",
+      "reuse_s": 0.0,
+      "cast": "press",
+      "enabled": true
+    },
+    "depoison": {
+      "box": 0,
+      "key": "f5",
+      "reuse_s": 1.0,
+      "cast": "press",
+      "enabled": false
+    }
+  },
+  "hotbar_layout": {
+    "boxes": {
+      "1": {
+        "f5": {
+          "box": 1,
+          "key": "f5",
+          "template": "",
+          "kr_name": "擬似魔法武器",
+          "zh_name": "",
+          "role": "power_up",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "擬似魔法武器"
+        },
+        "f6": {
+          "box": 1,
+          "key": "f6",
+          "template": "",
+          "kr_name": "保護罩",
+          "zh_name": "",
+          "role": "armor_up",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "保護罩"
+        },
+        "f7": {
+          "box": 1,
+          "key": "f7",
+          "template": "",
+          "kr_name": "日光術",
+          "zh_name": "",
+          "role": "light",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "日光術"
+        },
+        "f8": {
+          "box": 1,
+          "key": "f8",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": ""
+        },
+        "f9": {
+          "box": 1,
+          "key": "f9",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        },
+        "f10": {
+          "box": 1,
+          "key": "f10",
+          "template": "",
+          "kr_name": "傳送術",
+          "zh_name": "",
+          "role": "teleport",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "傳送術"
+        },
+        "f11": {
+          "box": 1,
+          "key": "f11",
+          "template": "",
+          "kr_name": "아데나",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "ITEM",
+          "count": 163111,
+          "label": "아데나"
+        },
+        "f12": {
+          "box": 1,
+          "key": "f12",
+          "template": "",
+          "kr_name": "화살",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "ITEM",
+          "count": 8548,
+          "label": "화살"
+        }
+      },
+      "2": {
+        "f5": {
+          "box": 2,
+          "key": "f5",
+          "template": "items/주문서/말하는 두루마리.png",
+          "kr_name": "말하는 두루마리",
+          "zh_name": "",
+          "role": "talking_scroll",
+          "score": 1.0,
+          "bound": true,
+          "kind": "ITEM",
+          "count": 1,
+          "label": "말하는 두루마리"
+        },
+        "f6": {
+          "box": 2,
+          "key": "f6",
+          "template": "",
+          "kr_name": "世界樹的呼喚",
+          "zh_name": "",
+          "role": "mother_tree",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "世界樹的呼喚"
+        },
+        "f7": {
+          "box": 2,
+          "key": "f7",
+          "template": "",
+          "kr_name": "心靈轉換",
+          "zh_name": "",
+          "role": "hp_to_mp",
+          "score": 1.0,
+          "bound": true,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "心靈轉換"
+        },
+        "f8": {
+          "box": 2,
+          "key": "f8",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        },
+        "f9": {
+          "box": 2,
+          "key": "f9",
+          "template": "items/물약/체력 회복제.png",
+          "kr_name": "체력 회복제",
+          "zh_name": "",
+          "role": "hp_potion",
+          "score": 1.0,
+          "bound": true,
+          "kind": "ITEM",
+          "count": 31,
+          "label": "체력 회복제"
+        },
+        "f10": {
+          "box": 2,
+          "key": "f10",
+          "template": "",
+          "kr_name": "상쾌한 빨간 물약",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "ITEM",
+          "count": 97,
+          "label": "상쾌한 빨간 물약"
+        },
+        "f11": {
+          "box": 2,
+          "key": "f11",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        },
+        "f12": {
+          "box": 2,
+          "key": "f12",
+          "template": "",
+          "kr_name": "속도향상 물약",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "STALE",
+          "count": 0,
+          "label": "속도향상 물약"
+        }
+      },
+      "3": {
+        "f5": {
+          "box": 3,
+          "key": "f5",
+          "template": "",
+          "kr_name": "魔法防禦",
+          "zh_name": "",
+          "role": "armor_up",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "魔法防禦"
+        },
+        "f6": {
+          "box": 3,
+          "key": "f6",
+          "template": "",
+          "kr_name": "心靈轉換",
+          "zh_name": "",
+          "role": "hp_to_mp",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "心靈轉換"
+        },
+        "f7": {
+          "box": 3,
+          "key": "f7",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        },
+        "f8": {
+          "box": 3,
+          "key": "f8",
+          "template": "",
+          "kr_name": "日光術",
+          "zh_name": "",
+          "role": "light",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "日光術"
+        },
+        "f9": {
+          "box": 3,
+          "key": "f9",
+          "template": "",
+          "kr_name": "保護罩",
+          "zh_name": "",
+          "role": "armor_up",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": "保護罩"
+        },
+        "f10": {
+          "box": 3,
+          "key": "f10",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 1.0,
+          "bound": false,
+          "kind": "SPELL",
+          "count": 0,
+          "label": ""
+        },
+        "f11": {
+          "box": 3,
+          "key": "f11",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        },
+        "f12": {
+          "box": 3,
+          "key": "f12",
+          "template": "",
+          "kr_name": "",
+          "zh_name": "",
+          "role": "",
+          "score": 0.0,
+          "bound": false,
+          "kind": "EMPTY",
+          "count": null,
+          "label": ""
+        }
+      }
+    },
+    "unbound_icons": [
+      "box1/f8:SPELL",
+      "box1/f11:아데나",
+      "box1/f12:화살",
+      "box2/f10:상쾌한 빨간 물약",
+      "box2/f12:속도향상 물약",
+      "box3/f10:SPELL"
+    ],
+    "active_roles": {
+      "power_up": {
+        "box": 1,
+        "key": "f5",
+        "enabled": true
+      },
+      "armor_up": {
+        "box": 1,
+        "key": "f6",
+        "enabled": true
+      },
+      "light": {
+        "box": 1,
+        "key": "f7",
+        "enabled": true
+      },
+      "heal": {
+        "box": 0,
+        "key": "f8",
+        "enabled": false
+      },
+      "hp_potion": {
+        "box": 2,
+        "key": "f9",
+        "enabled": true
+      },
+      "mp_potion": {
+        "box": 0,
+        "key": "f12",
+        "enabled": false
+      },
+      "teleport": {
+        "box": 1,
+        "key": "f10",
+        "enabled": true
+      },
+      "mage_attack": {
+        "box": 0,
+        "key": "f11",
+        "enabled": false
+      },
+      "talking_scroll": {
+        "box": 2,
+        "key": "f5",
+        "enabled": true
+      },
+      "mother_tree": {
+        "box": 2,
+        "key": "f6",
+        "enabled": true
+      },
+      "hp_to_mp": {
+        "box": 2,
+        "key": "f7",
+        "enabled": true
+      },
+      "depoison": {
+        "box": 0,
+        "key": "f5",
+        "enabled": false
+      }
+    },
+    "updated_at": "01:41:41"
+  },
+  "buff_cooldown_min": 20.0,
+  "heal_until_hp_ratio": 0.4,
+  "spell_reserve_ratio": 0.2,
+  "heal_double_press": true,
+  "hp_actions": [
+    {
+      "id": "item:빨간 물약",
+      "enabled": true,
+      "hp_below": 50
+    },
+    {
+      "id": "heal",
+      "enabled": true,
+      "hp_below": 50
+    },
+    {
+      "id": "teleport",
+      "enabled": true,
+      "hp_below": 30
+    },
+    {
+      "id": "mother_tree",
+      "enabled": true,
+      "hp_below": 30
+    },
+    {
+      "id": "safe_zone",
+      "enabled": true,
+      "hp_below": 30
+    }
+  ],
+  "selected_account_id": "d2759608-38e3-4077-aae9-7c974fcecf27"
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "accounts": [
+    {
+      "account_id": "d2759608-38e3-4077-aae9-7c974fcecf27",
+      "username": "condra.wow@gmail.com",
+      "password_dpapi": "AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAHElYstsMDEGDIZBHfEkhCQAAAAACAAAAAAAQZgAAAAEAACAAAADe7JyzNYGh7PJuhpK0hSb+2cayw5kC636fQVoV4gyXoAAAAAAOgAAAAAIAACAAAABOpjj9HdZPHZ+5ans8o7g0ezt/+pyJdeM9pUERgjHujxAAAAB/NYaccp+LInvsGme56MnoQAAAADrz86DBF89qTY7GKGCtMYSlUfJQqauHywOWdjwiPKMrM7EYd5+OTogv5vzGKI2T/JtMilT8nrO6NyRlMWbTUbw=",
+      "region": "Korea",
+      "server": "데포로쥬",
+      "character_number": 1,
+      "click_mode": "dynamic",
+      "display_name": "condra",
+      "locale": "ko",
+      "character_type": "royal",
+      "purple_launcher_path": "C:\\Program Files (x86)\\NC\\Purple\\PurpleLauncher.exe",
+      "game_path": "C:\\Program Files (x86)\\NC\\Lineage Classic\\LC.exe"
+    }
+  ]
+}

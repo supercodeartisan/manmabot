@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "state": "config_error",
+  "exit_code": 78,
+  "detail": "Required autologin asset 'captcha_model' is missing: D:\\Production\\Manma\\autologin\\bot\\data\\f.onnx. Restore the asset or correct launcher_config.json.",
+  "game_ready": false,
+  "finished_at": 1788959453.9078252
+}

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "state": "config_error",
+  "exit_code": 78,
+  "detail": "Game executable is missing: C:\\Program Files (x86)\\NC\\Lineage Classic\\LC.exe. Correct the selected account or install Lineage Classic.",
+  "game_ready": false,
+  "finished_at": 1790275984.8887246
+}
