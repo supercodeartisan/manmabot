@@ -70,6 +70,7 @@ from manmabot_v1.probes import (
     localize_probe_detail,
     normalize_map_style,
     probe_game,
+    probe_map,
 )
 from manmabot_v1.strings import START_FAIL
 from manmabot_v1.profile import (
@@ -1341,6 +1342,13 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _on_main_tab_changed(self, _event: object = None) -> None:
         self._maybe_load_deferred_views()
+        try:
+            main = getattr(self, "_main_tabs", None)
+            if main is not None and str(main.tab(main.select(), "text") or "") == self.t["recovery"]:
+                self._hp_page_settled = False
+                self._settle_hp_page_layout(force=True)
+        except tk.TclError:
+            pass
 
     def _on_equipment_tab_changed(self, _event: object = None) -> None:
         self._maybe_load_deferred_views()
@@ -2697,9 +2705,15 @@ class UnifiedTaskEditor(ttk.Frame):
         pages = self._nested(
             self.pages["recovery"],
             ("fix_options", "hp_and_inventory"),
+            store_as="_recovery_tabs",
         )
         self._build_recovery_options(pages["fix_options"])
         self._build_hp_and_inventory(pages["hp_and_inventory"])
+        recovery = getattr(self, "_recovery_tabs", None)
+        if recovery is not None:
+            recovery.bind(
+                "<<NotebookTabChanged>>", self._on_recovery_tab_changed, add="+",
+            )
 
     def _build_recovery_options(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
@@ -2881,8 +2895,10 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _build_hp_and_inventory(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
-        page.columnconfigure(0, weight=5, minsize=ui_theme.scaled(420, 220))
-        page.columnconfigure(1, weight=4, minsize=ui_theme.scaled(320, 180))
+        left_min = ui_theme.scaled(420, 220)
+        right_min = ui_theme.scaled(320, 180)
+        page.columnconfigure(0, weight=5, minsize=left_min)
+        page.columnconfigure(1, weight=4, minsize=right_min)
         page.rowconfigure(0, weight=1)
         left = ttk.Frame(page, style="Page.TFrame")
         right = ttk.Frame(page, style="Page.TFrame")
@@ -2890,26 +2906,43 @@ class UnifiedTaskEditor(ttk.Frame):
         right.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
         self._hp_page = page
         self._hp_page_settling = False
+        self._hp_page_settled = False
+        # Guess wrap from column minsizes so the first mapped paint is not the
+        # tiny default 160px wrap that later expands (visible snap).
+        self._hp_left_wrap_guess = max(200, left_min - 48)
+        self._hp_right_wrap_guess = max(160, right_min - 48)
         self._build_hp_action_order(left)
         self._build_fix_inventory(right)
-        # This sub-tab stays unmapped until it is opened. Child widths stay at
-        # 1px until then, and the first Expose is queued before those children
-        # configure — that is the visible snap. Flush layout in Map, which
-        # runs before that expose.
+        # Sub-tab stays unmapped until opened; children are ~1px until Map.
+        # Settle on Map + tab change so the first expose already has widths.
         page.bind("<Map>", self._settle_hp_page_on_map, add="+")
+
+    def _on_recovery_tab_changed(self, _event: object = None) -> None:
+        recovery = getattr(self, "_recovery_tabs", None)
+        if recovery is None:
+            return
+        try:
+            sub = str(recovery.tab(recovery.select(), "text") or "")
+        except tk.TclError:
+            return
+        if sub == self.t["hp_and_inventory"]:
+            self._hp_page_settled = False
+            self._settle_hp_page_layout(force=True)
 
     def _build_hp_action_order(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
         card = self._attack_card(page, self.t["hp_action_order"])
         card.pack(fill="both", expand=True)
+        wrap = int(getattr(self, "_hp_left_wrap_guess", 0) or ui_theme.scaled(360, 200))
         hp_note = ttk.Label(
             card,
             text=self.t["hp_action_note"],
             justify="left",
             anchor="w",
-            wraplength=ui_theme.scaled(160, 80),
+            wraplength=wrap,
         )
         hp_note.pack(fill="x", anchor="w", pady=(0, 4))
+        self._hp_action_note = hp_note
         _wrap_to_allocated(hp_note)
         self._hp_actions = self._normalize_hp_actions_for_ui(None)
         self._hp_action_rows: dict[str, tuple[tk.BooleanVar, tk.IntVar]] = {}
@@ -2925,12 +2958,13 @@ class UnifiedTaskEditor(ttk.Frame):
         scroll = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
         self._hp_action_body = ttk.Frame(canvas)
         window_id = canvas.create_window((0, 0), window=self._hp_action_body, anchor="nw")
+        self._hp_action_window = window_id
 
         def _sync_scroll(_event: tk.Event | None = None) -> None:
             canvas.configure(scrollregion=canvas.bbox("all"))
 
         def _sync_width(event: tk.Event) -> None:
-            canvas.itemconfigure(window_id, width=event.width)
+            canvas.itemconfigure(window_id, width=max(1, int(event.width)))
 
         self._hp_action_body.bind("<Configure>", _sync_scroll)
         canvas.bind("<Configure>", _sync_width)
@@ -2944,20 +2978,96 @@ class UnifiedTaskEditor(ttk.Frame):
     def _settle_hp_page_on_map(self, event: tk.Event | None = None) -> None:
         """Lay out HP rows and inventory before the sub-tab's first paint."""
         page = getattr(self, "_hp_page", None)
-        if page is None or getattr(self, "_hp_page_settling", False):
+        if page is None:
             return
         if event is not None and event.widget is not page:
             return
+        self._settle_hp_page_layout(force=False)
+
+    def _settle_hp_page_layout(self, *, force: bool = False) -> None:
+        """Force canvas width, wraps, column locks, and inventory fit in one pass."""
+        page = getattr(self, "_hp_page", None)
+        if page is None or getattr(self, "_hp_page_settling", False):
+            return
+        if not force and getattr(self, "_hp_page_settled", False):
+            return
         try:
-            if int(page.winfo_width()) < 20:
-                return
+            mapped = bool(page.winfo_ismapped())
+            width = int(page.winfo_width())
         except tk.TclError:
+            return
+        if not mapped or width < 40:
+            # Geometry not ready yet — retry once the notebook finishes sizing.
+            try:
+                self.after(16, lambda: self._settle_hp_page_layout(force=True))
+            except tk.TclError:
+                pass
             return
         self._hp_page_settling = True
         try:
             page.update_idletasks()
+            left_w = 0
+            right_w = 0
+            try:
+                slaves = page.grid_slaves(row=0)
+            except tk.TclError:
+                slaves = []
+            for slave in slaves:
+                try:
+                    info = slave.grid_info()
+                    col = int(info.get("column", -1))
+                    sw = int(slave.winfo_width())
+                except (tk.TclError, TypeError, ValueError):
+                    continue
+                if col == 0:
+                    left_w = sw
+                elif col == 1:
+                    right_w = sw
+            if left_w < 40:
+                left_w = max(200, width * 5 // 9)
+            if right_w < 40:
+                right_w = max(160, width - left_w)
+
+            for label, avail in (
+                (getattr(self, "_hp_action_note", None), left_w - 24),
+                (getattr(self, "_fix_inventory_live_note", None), right_w - 24),
+                (getattr(self, "_fix_inventory_hp_hint", None), right_w - 24),
+                (getattr(self, "fix_inventory_status", None), right_w - 24),
+            ):
+                if label is None:
+                    continue
+                try:
+                    label.configure(wraplength=max(80, int(avail)))
+                except tk.TclError:
+                    pass
+
+            canvas = getattr(self, "_hp_action_canvas", None)
+            window_id = getattr(self, "_hp_action_window", None)
+            if canvas is not None and window_id is not None:
+                try:
+                    cw = int(canvas.winfo_width())
+                    if cw < 40:
+                        cw = max(80, left_w - 28)
+                    canvas.itemconfigure(window_id, width=cw)
+                    canvas.configure(scrollregion=canvas.bbox("all"))
+                except tk.TclError:
+                    pass
+
             self._lock_hp_action_columns()
+
+            tree = getattr(self, "fix_inventory_tree", None)
+            if tree is not None:
+                try:
+                    tw = int(tree.winfo_width())
+                    if tw < 48:
+                        tw = max(120, right_w - 28)
+                    _fit_inventory_columns(tree, max(1, tw - ui_theme.scaled(4)))
+                    tree._inventory_fit_width = tw
+                except tk.TclError:
+                    pass
+
             page.update_idletasks()
+            self._hp_page_settled = True
         except tk.TclError:
             return
         finally:
@@ -2967,30 +3077,33 @@ class UnifiedTaskEditor(ttk.Frame):
         page.configure(style="Page.TFrame")
         card = self._attack_card(page, self.t["fix_inventory"])
         card.pack(fill="both", expand=True)
+        wrap = int(getattr(self, "_hp_right_wrap_guess", 0) or ui_theme.scaled(280, 160))
         live_note = ttk.Label(
             card,
             text=self.t["inventory_live_note"],
             justify="left",
             anchor="w",
-            wraplength=ui_theme.scaled(160, 80),
+            wraplength=wrap,
         )
         live_note.pack(fill="x", anchor="w")
+        self._fix_inventory_live_note = live_note
         _wrap_to_allocated(live_note)
         hp_hint = ttk.Label(
             card,
             text=self.t["inventory_hp_hint"],
             justify="left",
             anchor="w",
-            wraplength=ui_theme.scaled(160, 80),
+            wraplength=wrap,
         )
         hp_hint.pack(fill="x", anchor="w", pady=(2, 0))
+        self._fix_inventory_hp_hint = hp_hint
         _wrap_to_allocated(hp_hint)
         self.fix_inventory_status = ttk.Label(
             card,
             text=self.t["inventory_empty"],
             justify="left",
             anchor="w",
-            wraplength=ui_theme.scaled(160, 80),
+            wraplength=wrap,
         )
         self.fix_inventory_status.pack(fill="x", anchor="w", pady=(4, 0))
         _wrap_to_allocated(self.fix_inventory_status)
@@ -3024,10 +3137,16 @@ class UnifiedTaskEditor(ttk.Frame):
                 stretch=column == "name",
                 anchor="w" if column == "name" else "center",
             )
+        # Seed column widths from the right-pane guess so the first paint is
+        # not the tiny default 48px slots that later expand.
+        guess = max(160, int(getattr(self, "_hp_right_wrap_guess", 0) or 240))
+        _fit_inventory_columns(self.fix_inventory_tree, guess)
 
         def _sync_inventory_columns(event: tk.Event | None = None) -> None:
             tree = self.fix_inventory_tree
             if getattr(tree, "_inventory_fitting", False):
+                return
+            if getattr(self, "_hp_page_settling", False):
                 return
             try:
                 width = int(event.width) if event is not None else int(tree.winfo_width())
@@ -5009,43 +5128,7 @@ class UnifiedTaskEditor(ttk.Frame):
         self._refresh_buy_summary()
 
         sell_page = pages["sell"]
-        sell_page.rowconfigure(0, weight=1)
-        sell_page.columnconfigure(0, weight=1)
-        background = ttk.Style(sell_page).lookup("TFrame", "background") or "#f0f0f0"
-        sell_canvas = tk.Canvas(
-            sell_page, highlightthickness=0, borderwidth=0, background=background, height=1,
-        )
-        sell_scroll = ttk.Scrollbar(sell_page, orient="vertical", command=sell_canvas.yview)
-        sell_canvas.configure(yscrollcommand=sell_scroll.set)
-        sell_canvas.grid(row=0, column=0, sticky="nsew")
-        sell_scroll.grid(row=0, column=1, sticky="ns")
-        sell_inner = ttk.Frame(sell_canvas)
-        sell_window = sell_canvas.create_window((0, 0), window=sell_inner, anchor="nw")
-
-        def _fit_sell(_event=None) -> None:
-            bbox = sell_canvas.bbox("all")
-            if bbox:
-                sell_canvas.configure(scrollregion=bbox)
-
-        def _fit_sell_width(event) -> None:
-            if int(sell_canvas.itemcget(sell_window, "width") or 0) != event.width:
-                sell_canvas.itemconfigure(sell_window, width=event.width)
-
-        def _sell_wheel(event) -> str | None:
-            widget = event.widget
-            while widget is not None:
-                if widget.winfo_class() == "Treeview":
-                    return None
-                if widget in (sell_canvas, sell_inner, sell_page):
-                    sell_canvas.yview_scroll(int(-event.delta / 120), "units")
-                    return "break"
-                widget = getattr(widget, "master", None)
-            return None
-
-        sell_inner.bind("<Configure>", _fit_sell)
-        sell_canvas.bind("<Configure>", _fit_sell_width)
-
-        settings = group(sell_inner, self.t["sell_settings"])
+        settings = group(sell_page, self.t["sell_settings"])
         settings.pack(fill="x", pady=(0, 6))
         mode = self._var("equipment.sell_mode", "sell_except_keep")
         mode.set("sell_except_keep")
@@ -5056,22 +5139,12 @@ class UnifiedTaskEditor(ttk.Frame):
             settings, 1, self.t["store_after_sell"], "equipment.store_after_sell", False,
         )
 
-        items = group(sell_inner, self.t["sell_items"])
+        items = group(sell_page, self.t["sell_items"])
         items.pack(fill="both", expand=True)
         self.sell_filter_panel = SellFilterPanel(
             items, self.t, language=self.app.language,
         )
         self.sell_filter_panel.pack(fill="both", expand=True)
-
-        def _bind_sell_wheel(widget: tk.Misc) -> None:
-            if widget.winfo_class() == "Treeview":
-                return
-            widget.bind("<MouseWheel>", _sell_wheel, add="+")
-            for child in widget.winfo_children():
-                _bind_sell_wheel(child)
-
-        _bind_sell_wheel(sell_inner)
-        sell_canvas.bind("<MouseWheel>", _sell_wheel, add="+")
 
         self._build_routing(pages["routing"])
 
@@ -6839,6 +6912,7 @@ class UnifiedTaskEditor(ttk.Frame):
             )
             if hasattr(self, "map_schedule_label"):
                 self.map_schedule_label.configure(text="")
+            self._refresh_map_badge()
             return
         checked = [
             iid for iid in rows if "on" in self.farm_tree.item(iid, "tags")
@@ -6863,6 +6937,12 @@ class UnifiedTaskEditor(ttk.Frame):
                 self.map_schedule_label.configure(
                     text=self.t["map_schedule_line"].format(order=" → ".join(parts)),
                 )
+        self._refresh_map_badge()
+
+    def _refresh_map_badge(self) -> None:
+        refresh = getattr(self.app, "_refresh_operator", None)
+        if refresh is not None:
+            refresh()
 
     def _selected_farm_names(self) -> list[str]:
         if self._is_dungeon_style():
@@ -7775,6 +7855,13 @@ class ScheduleWindow(tk.Tk):
         self._sync_font_aliases()
         self._apply_scaled_metrics()
         self._fit_panes(width)
+        editor = getattr(self, "editor", None)
+        if editor is not None and hasattr(editor, "_settle_hp_page_layout"):
+            try:
+                editor._hp_page_settled = False
+                editor._settle_hp_page_layout(force=True)
+            except Exception:
+                pass
 
     def _apply_scaled_metrics(self) -> None:
         """Keep tables, summaries, and row heights in step with the window."""
@@ -7978,6 +8065,13 @@ class ScheduleWindow(tk.Tk):
         left_width = min(max(left_width, left_min), max(left_min, total - 240))
         self.paned.sashpos(0, left_width)
         self._panes_balanced = True
+        editor = getattr(self, "editor", None)
+        if editor is not None and hasattr(editor, "_settle_hp_page_layout"):
+            try:
+                editor._hp_page_settled = False
+                editor.after(1, lambda: editor._settle_hp_page_layout(force=True))
+            except tk.TclError:
+                pass
         self._fit_panes(total)
 
     def _flow_buttons(
@@ -9006,12 +9100,50 @@ class ScheduleWindow(tk.Tk):
         save_profile(self.profile)
         self.attributes("-topmost", self.profile.always_on_top)
 
+    def _map_setting_probe(self):
+        """Header map badge follows the map setting open in the editor.
+
+        The profile keeps the last applied map until a task starts. The badge
+        has to show the map and farms currently chosen on the Map tab.
+        """
+        editor = getattr(self, "editor", None)
+        if editor is None or getattr(editor, "task", None) is None:
+            return None
+        ids = getattr(editor, "_map_ids", None)
+        if not isinstance(ids, dict) or not ids:
+            return None
+        try:
+            map_id = str(editor._map_id() or "").strip()
+            style = "dungeon" if editor._is_dungeon_style() else "normal"
+            selected = [str(name) for name in editor._selected_farm_names()]
+        except (tk.TclError, AttributeError, TypeError, ValueError):
+            return None
+        if map_id not in set(ids.values()):
+            return None
+        key = (map_id, style, tuple(selected), str(getattr(self, "language", "") or ""))
+        cached = getattr(self, "_map_setting_cache", None)
+        if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == key:
+            return cached[1]
+        probe = probe_map(
+            selected,
+            map_id=map_id,
+            language=getattr(self, "language", None),
+            map_style=style,
+        )
+        result = (probe, selected)
+        self._map_setting_cache = (key, result)
+        return result
+
     def _refresh_operator(self) -> None:
         self._paint_run_status()
         state = self.coordinator.controller.state
         scheduled = self._session.armed or self._session.switching
         try:
             game, memory, map_probe = self.coordinator.probes()
+            selected = [str(name) for name in (self.profile.selected_farms or [])]
+            configured = self._map_setting_probe()
+            if configured is not None:
+                map_probe, selected = configured
             key = (
                 state,
                 self.coordinator.arming,
@@ -9023,6 +9155,8 @@ class ScheduleWindow(tk.Tk):
                 memory.detail,
                 map_probe.lamp,
                 map_probe.detail,
+                getattr(map_probe, "map_id", ""),
+                tuple(selected),
             )
             if key == getattr(self, "_operator_key", None):
                 return
@@ -9030,7 +9164,6 @@ class ScheduleWindow(tk.Tk):
             editor = getattr(self, "editor", None)
             if editor is not None and hasattr(editor, "_show_status"):
                 editor._show_status(game, memory, map_probe)
-            selected = [str(name) for name in (self.profile.selected_farms or [])]
             self._paint_status_chip(
                 self.game_lamp,
                 _game_chip_text(game.detail, game.lamp, self.t),
