@@ -754,7 +754,7 @@ class BotController:
         combat_cfg["target_delay_min_ms"] = max(10, min(50, int(getattr(profile, "target_delay_min_ms", 20))))
         combat_cfg["target_delay_max_ms"] = max(10, min(50, int(getattr(profile, "target_delay_max_ms", 50))))
         combat_cfg["abandon_same"] = bool(getattr(profile, "abandon_same", False))
-        combat_cfg["abandon_seconds"] = int(getattr(profile, "abandon_seconds", 30))
+        combat_cfg["abandon_seconds"] = int(getattr(profile, "abandon_seconds", 20))
         combat_cfg["antidote_auto"] = bool(getattr(profile, "antidote_auto", False))
         decision_cfg["combat"] = combat_cfg
         shop = dict(decision_cfg.get("shop") or {})

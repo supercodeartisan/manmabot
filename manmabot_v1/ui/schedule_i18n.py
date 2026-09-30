@@ -1,7 +1,7 @@
 """Translations for the classic schedule shell."""
 from __future__ import annotations
 
-LANGUAGES = {"English": "en", "한국어": "ko", "简体中文": "zh"}
+LANGUAGES = {"한국어": "ko", "简体中文": "zh"}
 LANGUAGE_NAMES = {value: key for key, value in LANGUAGES.items()}
 
 _EN = {
@@ -19,6 +19,7 @@ _EN = {
     "current_time": "Current time",
     "randomize": "Randomize ± minutes",
     "new": "New",
+    "add": "Add",
     "edit": "Edit",
     "edit_account": "Edit",
     "select_schedule": "Select a schedule to edit.",
@@ -279,6 +280,7 @@ _EN = {
     "humanize": "Humanize input",
     "notes": "Notes",
     "account": "Account",
+    "account_add": "Add",
     "slot": "Character",
     "character_order": "Character order",
     "character_type": "Character type",
@@ -305,7 +307,7 @@ _EN = {
     "console_title": "Manmabot v1",
     "task_details": "New schedule",
     "add_schedule": "Add schedule",
-    "update_schedule": "Update schedule",
+    "update_schedule": "Save",
     "confirm_create_schedule": "Add this schedule to the list?",
     "confirm_update_schedule": "Save your changes to this schedule?",
     "confirm_leave_new": (
@@ -329,7 +331,7 @@ _EN = {
         "Fill in the required fields before adding this schedule:\n{fields}\n\n"
         "Discard the new schedule to edit another, or cancel and keep creating."
     ),
-    "edit_schedule": "Edit schedule",
+    "edit_schedule": "Account management",
     "start_time": "Start",
     "end_time": "End",
     "weekdays": "Weekdays",
@@ -370,7 +372,8 @@ _EN = {
     "sort_name": "Name",
     "sort_level": "Level",
     "route_editor_hint": "Edit farm rectangles and patrol routes in-process. Changes are saved to the map overlay.",
-    "species_name": "Species",
+    "species_name": "Name",
+    "species_image": "Image",
     "item_name": "Item",
     "species_level": "Level",
     "species_regions": "Regions",
@@ -633,6 +636,20 @@ _EN = {
     "probe_map_select_farm": "Select at least one farm",
     "probe_map_farms": "{title} · {n} farms",
     "probe_map_patrol": "{title} · {n} patrol points",
+    "chip_game_on": "Game",
+    "chip_game_off": "No game",
+    "chip_game_min": "Minimized",
+    "chip_game_focus": "No focus",
+    "chip_game_cursor": "Cursor out",
+    "chip_game_error": "Game error",
+    "chip_mem_on": "Monitor",
+    "chip_mem_off": "Monitor off",
+    "chip_mem_wait": "No position",
+    "chip_map_on": "Map",
+    "chip_map_off": "No map",
+    "chip_farm_off": "No farm",
+    "chip_patrol_off": "No patrol",
+    "chip_place": "{title} · {n}",
     "exec_log": "Execution log",
     "log_full_line": "Full line (select a row)",
     "auto_scroll": "Auto-scroll",
@@ -692,6 +709,7 @@ _KO = {
     "current_time": "현재 시간",
     "randomize": "시간 무작위 ±분",
     "new": "새로 만들기",
+    "add": "추가",
     "edit": "편집",
     "edit_account": "수정",
     "select_schedule": "편집할 일정을 선택하세요.",
@@ -948,6 +966,7 @@ _KO = {
     "humanize": "사람처럼 입력",
     "notes": "메모",
     "account": "계정",
+    "account_add": "추가",
     "slot": "캐릭터",
     "character_order": "캐릭터 순서",
     "character_type": "캐릭터 유형",
@@ -986,6 +1005,7 @@ _ZH = {
     "current_time": "当前时间",
     "randomize": "随机时间 ±分钟",
     "new": "新建",
+    "add": "添加",
     "edit": "编辑",
     "edit_account": "修改",
     "select_schedule": "请选择要编辑的日程。",
@@ -1242,6 +1262,7 @@ _ZH = {
     "humanize": "模拟人工输入",
     "notes": "备注",
     "account": "账号",
+    "account_add": "添加",
     "slot": "角色",
     "character_order": "角色顺序",
     "character_type": "角色类型",
@@ -1266,7 +1287,7 @@ _ZH = {
 
 _KO.update({
     "console_title": "Manmabot v1", "task_details": "새 일정",
-    "add_schedule": "일정 추가", "update_schedule": "일정 수정", "schedule_added": "일정을 목록에 추가했습니다.",
+    "add_schedule": "일정 추가", "update_schedule": "보관", "schedule_added": "일정을 목록에 추가했습니다.",
     "confirm_create_schedule": "이 일정을 목록에 추가할까요?",
     "confirm_update_schedule": "이 일정의 변경 내용을 저장할까요?",
     "confirm_leave_new": (
@@ -1285,7 +1306,7 @@ _KO.update({
         "이 일정을 추가하기 전에 비어 있는 필수 항목을 입력하세요:\n{fields}\n\n"
         "다른 일정을 편집하려면 새 일정을 버리거나, 취소하고 계속 작성하세요."
     ),
-    "edit_schedule": "일정 수정", "start_time": "시작", "end_time": "종료",
+    "edit_schedule": "계정관리", "start_time": "시작", "end_time": "종료",
     "weekdays": "요일", "attack_mode": "공격",
     "value_empty": "_ _", "time_choice": "시간", "duration_choice": "지속 시간",
     "reload": "새로 고침", "select_all": "전체 선택", "deselect_all": "전체 해제",
@@ -1314,7 +1335,7 @@ _KO.update({
     "map_schedule_empty": "사냥 일정: 선택한 구역 없음",
     "sort_name": "이름", "sort_level": "레벨",
     "route_editor_hint": "프로그램 안에서 사냥 구역과 순찰 경로를 편집합니다.",
-    "species_name": "종족", "item_name": "아이템", "species_level": "레벨", "species_regions": "출현 지역",
+    "species_name": "이름", "species_image": "그림", "item_name": "아이템", "species_level": "레벨", "species_regions": "출현 지역",
     "filter_region": "지역", "allowed": "허용", "forced_level": "강제 레벨",
     "toggle": "허용 / 차단", "set_level": "레벨 설정", "yes": "예", "no": "아니요",
     "filter_blacklist": "블랙리스트", "filter_whitelist": "화이트리스트",
@@ -1544,6 +1565,20 @@ _KO.update({
     "probe_map_select_farm": "농장을 하나 이상 선택하세요",
     "probe_map_farms": "{title} · 농장 {n}곳",
     "probe_map_patrol": "{title} · 순찰 {n}곳",
+    "chip_game_on": "게임",
+    "chip_game_off": "게임 없음",
+    "chip_game_min": "최소화",
+    "chip_game_focus": "포커스 없음",
+    "chip_game_cursor": "커서 밖",
+    "chip_game_error": "게임 오류",
+    "chip_mem_on": "모니터",
+    "chip_mem_off": "모니터 꺼짐",
+    "chip_mem_wait": "좌표 대기",
+    "chip_map_on": "맵",
+    "chip_map_off": "맵 없음",
+    "chip_farm_off": "농장 없음",
+    "chip_patrol_off": "순찰 없음",
+    "chip_place": "{title} · {n}",
     "exec_log": "실행 로그",
     "log_full_line": "전체 줄 (행 선택)",
     "auto_scroll": "자동 스크롤",
@@ -1589,7 +1624,7 @@ _KO.update({
 
 _ZH.update({
     "console_title": "Manmabot v1", "task_details": "新建日程",
-    "add_schedule": "添加日程", "update_schedule": "修改日程", "schedule_added": "已将日程添加到列表。",
+    "add_schedule": "添加日程", "update_schedule": "保存", "schedule_added": "已将日程添加到列表。",
     "confirm_create_schedule": "要将此日程添加到列表吗？",
     "confirm_update_schedule": "要保存对此日程的更改吗？",
     "confirm_leave_new": (
@@ -1608,7 +1643,7 @@ _ZH.update({
         "添加此日程前请填写以下空白必填项：\n{fields}\n\n"
         "丢弃新建日程以编辑其他日程，或取消并继续创建。"
     ),
-    "edit_schedule": "编辑日程", "start_time": "开始", "end_time": "结束",
+    "edit_schedule": "账号管理", "start_time": "开始", "end_time": "结束",
     "weekdays": "星期", "attack_mode": "攻击",
     "value_empty": "_ _", "time_choice": "时间", "duration_choice": "持续时间",
     "reload": "重新载入", "select_all": "全选", "deselect_all": "全部取消",
@@ -1637,7 +1672,7 @@ _ZH.update({
     "map_schedule_empty": "狩猎日程：未选择区域",
     "sort_name": "名称", "sort_level": "等级",
     "route_editor_hint": "在程序内编辑狩猎区域和巡逻路线，改动保存到地图覆盖层。",
-    "species_name": "种类", "item_name": "物品", "species_level": "等级", "species_regions": "出现地区",
+    "species_name": "名称", "species_image": "图片", "item_name": "物品", "species_level": "等级", "species_regions": "出现地区",
     "filter_region": "地区", "allowed": "允许", "forced_level": "强制等级",
     "toggle": "允许 / 屏蔽", "set_level": "设置等级", "yes": "是", "no": "否",
     "filter_blacklist": "黑名单", "filter_whitelist": "白名单",
@@ -1867,6 +1902,20 @@ _ZH.update({
     "probe_map_select_farm": "请至少选择一个农场",
     "probe_map_farms": "{title} · {n} 个农场",
     "probe_map_patrol": "{title} · {n} 个巡逻点",
+    "chip_game_on": "游戏",
+    "chip_game_off": "无游戏",
+    "chip_game_min": "已最小化",
+    "chip_game_focus": "未前台",
+    "chip_game_cursor": "光标在外",
+    "chip_game_error": "游戏错误",
+    "chip_mem_on": "监控",
+    "chip_mem_off": "监控关闭",
+    "chip_mem_wait": "等待坐标",
+    "chip_map_on": "地图",
+    "chip_map_off": "无地图",
+    "chip_farm_off": "无猎场",
+    "chip_patrol_off": "无巡逻",
+    "chip_place": "{title} · {n}",
     "exec_log": "执行日志",
     "log_full_line": "完整一行（选择行）",
     "auto_scroll": "自动滚动",

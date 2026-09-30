@@ -242,6 +242,36 @@ def map_display_name(map_id: str, language: str | None, fallback: str = "") -> s
     return text or mid
 
 
+def monster_region_candidates(map_id: str, language: str | None) -> tuple[str, ...]:
+    """Region strings a monster row may use for this map pack.
+
+    The monster catalog stores Korean regions, and Simplified Chinese when the
+    UI language is Chinese. An English UI still filters with the Korean label.
+    """
+    mid = str(map_id or "").strip()
+    if not mid:
+        return ()
+    region_lang = "zh" if normalize_language(language) == "zh" else "ko"
+    primary = map_display_name(mid, region_lang)
+    found: list[str] = []
+
+    def add(text: str) -> None:
+        name = str(text or "").strip()
+        if name and name not in found:
+            found.append(name)
+
+    add(primary)
+    match = _DUNGEON_ID.match(mid)
+    if match is not None:
+        place_id = str(match.group("place") or "").strip().lower()
+        floor = _floor_label(match.group("major"), match.group("minor"), region_lang)
+        if place_id == "ant_cave" and region_lang == "ko":
+            add(f"개미굴 던전 {floor}")
+        if region_lang == "zh" and primary:
+            add(primary.replace("地下城", "地监").replace("层", "楼"))
+    return tuple(found)
+
+
 def species_catalog_name(species: str) -> str:
     """Korean name used in training tables and monster image files."""
     text = str(species or "").strip()

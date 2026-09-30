@@ -62,7 +62,7 @@ from manmabot_v1.strings import (
     DEFAULT_HOTKEYS,
     LANGUAGE_CHOICES,
     normalize_game_language,
-    normalize_language,
+    ui_language,
     ui_strings,
 )
 from manmabot_v1.ui.character_picker import pack_character_choices
@@ -1661,7 +1661,7 @@ class MainWindow(ctk.CTk):
             command=self._change_language,
         )
         self.language_menu.set(
-            self._language_code_to_display[normalize_language(self.profile.language)]
+            self._language_code_to_display[ui_language(self.profile.language)]
         )
         self.language_menu.pack(anchor="w", padx=12, pady=2)
         ctk.CTkLabel(general, text=self.s.language_hint, text_color="gray").pack(
@@ -2242,8 +2242,8 @@ class MainWindow(ctk.CTk):
         )
 
     def _change_language(self, display_name: str) -> None:
-        code = normalize_language(self._language_display_to_code.get(display_name))
-        if code == normalize_language(self.profile.language):
+        code = ui_language(self._language_display_to_code.get(display_name))
+        if code == ui_language(self.profile.language):
             return
         self.profile.language = code
         save_profile(self.profile)
@@ -2880,9 +2880,8 @@ class MainWindow(ctk.CTk):
 
     def apply_profile(self, profile: Profile) -> None:
         """Called by wizard on finish."""
-        language_changed = normalize_language(profile.language) != normalize_language(
-            self.profile.language
-        )
+        profile.language = ui_language(profile.language)
+        language_changed = profile.language != ui_language(self.profile.language)
         self.profile = profile
         self.s = ui_strings(profile.language)
         if language_changed:

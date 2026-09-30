@@ -9,10 +9,18 @@ from manmabot_v1.profile import Profile
 from manmabot_v1.schedule import ScheduleStore
 from manmabot_v1.task_runtime import apply_runtime_settings
 from manmabot_v1.ui.schedule_i18n import LANGUAGES, TABLE
+from manmabot_v1.probes import Lamp, MapProbe
 from manmabot_v1.ui.schedule_ui import (
     ScheduleWindow,
     UnifiedTaskEditor,
+    _HUNT_PAD,
     _combo_char_width,
+    _fit_icon,
+    _game_chip_text,
+    _hunt_icon_box,
+    _hunt_row_height,
+    _map_chip_text,
+    _memory_chip_text,
     table_name_matches,
 )
 
@@ -52,8 +60,31 @@ def test_runtime_adapter_applies_only_supported_profile_fields():
     assert "start_time" not in changed
 
 
+def test_header_status_chips_are_short():
+    texts = TABLE["ko"]
+    assert _game_chip_text("Game window not found", Lamp.RED, texts) == "게임 없음"
+    assert _game_chip_text("Game ready", Lamp.GREEN, texts) == "게임"
+    assert _game_chip_text("Game window is minimized", Lamp.YELLOW, texts) == "최소화"
+    assert _memory_chip_text("Memory monitor disconnected", Lamp.RED, texts) == "모니터 꺼짐"
+    assert _memory_chip_text("Memory connected", Lamp.GREEN, texts) == "모니터"
+    assert (
+        _memory_chip_text("Memory connected — waiting for player data", Lamp.YELLOW, texts)
+        == "좌표 대기"
+    )
+    ready = MapProbe(
+        Lamp.GREEN,
+        "말하는 섬 · 농장 2곳",
+        ["a", "b"],
+        map_name="말하는 섬",
+    )
+    assert _map_chip_text(ready, texts, ["a", "b"]) == "말하는 섬 · 2"
+    missing = MapProbe(Lamp.YELLOW, "select", ["a"], map_name="말하는 섬")
+    assert _map_chip_text(missing, texts, []) == "농장 없음"
+    assert _map_chip_text(MapProbe(Lamp.RED, "missing", []), texts, []) == "맵 없음"
+
+
 def test_schedule_translations_cover_all_labels():
-    assert set(LANGUAGES.values()) == {"en", "ko", "zh"}
+    assert set(LANGUAGES.values()) == {"ko", "zh"}
     assert set(TABLE) == {"en", "ko", "zh"}
     expected = set(TABLE["en"])
     assert all(set(strings) == expected for strings in TABLE.values())
@@ -141,6 +172,44 @@ def test_hunt_tables_include_name_search() -> None:
     assert "table_name_matches" in source
 
 
+def test_monster_region_filter_follows_selected_map() -> None:
+    assert "self._sync_species_region_to_map()" in inspect.getsource(
+        UnifiedTaskEditor._on_map_combo
+    )
+    assert "self._sync_species_region_to_map()" in inspect.getsource(
+        UnifiedTaskEditor._load_maps
+    )
+    assert "_matching_map_region" in inspect.getsource(
+        UnifiedTaskEditor._species_region_choice
+    )
+
+
+def test_hunt_icon_shows_the_full_sprite() -> None:
+    from PIL import Image
+
+    sprite = Image.new("RGBA", (40, 80), (0, 0, 0, 0))
+    for y in range(10, 70):
+        for x in range(8, 32):
+            sprite.putpixel((x, y), (20, 140, 40, 255))
+    box = _hunt_icon_box()
+    fitted = _fit_icon(sprite, box)
+    assert fitted.size == (box, box)
+    left, top, right, bottom = fitted.getbbox()
+    assert bottom - top > right - left
+    assert abs(top - (box - bottom)) <= 1
+    assert abs(left - (box - right)) <= 1
+    assert abs(top - _HUNT_PAD) <= 1
+    square = Image.new("RGBA", (24, 24), (10, 20, 30, 255))
+    even = _fit_icon(square, box)
+    sleft, stop, sright, sbottom = even.getbbox()
+    assert abs(stop - sleft) <= 1
+    assert abs(stop - (box - sbottom)) <= 1
+    assert abs(sleft - (box - sright)) <= 1
+    assert _hunt_row_height() == box
+    metrics = inspect.getsource(ScheduleWindow._apply_scaled_metrics)
+    assert "rowheight=_hunt_row_height()" in metrics
+
+
 def test_hunt_filter_toolbars_share_one_line_layout() -> None:
     monsters = inspect.getsource(UnifiedTaskEditor._build_hunt_monsters)
     items = inspect.getsource(UnifiedTaskEditor._build_hunt_items)
@@ -152,3 +221,4 @@ def test_hunt_filter_toolbars_share_one_line_layout() -> None:
     assert items.index('text=self.t["filter_search"]') < items.index('text=self.t["filter_show"]')
     assert items.index('text=self.t["filter_show"]') < items.index('text=self.t["filter_blacklist"]')
     assert items.index('text=self.t["filter_blacklist"]') < items.index('text=self.t["item_pickup_hint"]')
+    assert 'heading=self.t["species_image"]' in items

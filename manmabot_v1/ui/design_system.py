@@ -227,7 +227,7 @@ def _button_plate(root: tk.Misc, top: str, bottom: str, edge: str) -> tk.PhotoIm
 
 def _tab_plate(root: tk.Misc, top: str, bottom: str, edge: str) -> tk.PhotoImage:
     """A fixed-size nine-slice tab with softly rounded top corners."""
-    width, height, radius = 26, 30, 6.0
+    width, height, radius = 26, 22, 4.5
     image = tk.PhotoImage(master=root, width=width, height=height)
 
     def inside(px: float, py: float, inset: float) -> bool:
@@ -272,7 +272,8 @@ def _install_rounded_tabs(root: tk.Misc, style: ttk.Style) -> None:
             images[0],
             ("selected", images[2]),
             ("active", images[1]),
-            border=(7, 7, 7, 1),
+            border=(6, 5, 6, 1),
+            padding=(6, 1, 6, 0),
             sticky="nswe",
         )
     except tk.TclError:
@@ -295,7 +296,7 @@ def _install_rounded_tabs(root: tk.Misc, style: ttk.Style) -> None:
                 })],
             })],
         )
-        tab_pad = (scaled(12), scaled(4, 2))
+        tab_pad = (scaled(12), scaled(1, 0))
         style.configure(
             f"{name}.TNotebook.Tab",
             padding=tab_pad,
@@ -668,6 +669,9 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
         arrowcolor=[("active", ACCENT), ("disabled", "#c5cad1")],
         foreground=[("disabled", TEXT_MUTED)],
     )
+    # Clam draws the title above the rectangle (labeloutside). Keep it in
+    # the top edge so every group title stays inside the outline.
+    _label_margins = (scaled(6), 0, scaled(6), 0)
     style.configure(
         "TLabelframe",
         background=SURFACE,
@@ -676,6 +680,8 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
         darkcolor=BORDER,
         relief="solid",
         borderwidth=1,
+        labeloutside=False,
+        labelmargins=_label_margins,
     )
     style.configure(
         "TLabelframe.Label",
@@ -691,6 +697,8 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
         darkcolor="#c5daf6",
         relief="solid",
         borderwidth=1,
+        labeloutside=False,
+        labelmargins=_label_margins,
     )
     style.configure(
         "Card.TLabelframe.Label",
@@ -758,7 +766,7 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
     )
     style.configure(
         "TNotebook.Tab",
-        padding=(scaled(10), scaled(4)),
+        padding=(scaled(10), scaled(1, 0)),
         background=SURFACE,
         foreground=TEXT,
         bordercolor=BORDER,
@@ -870,13 +878,24 @@ def apply_classic_style(root: tk.Misc, language: str = "en") -> ttk.Style:
     return style
 
 
-def group(parent: tk.Misc, text: str, *, i18n_key: str | None = None) -> ttk.LabelFrame:
-    frame = ttk.LabelFrame(parent, text=text, padding=(scaled(8), scaled(4)))
-    if i18n_key:
-        from manmabot_v1.ui.live_i18n import tag
+class FitLabel(ttk.Label):
+    """Themed label. Panels import this instead of constructing ttk.Label."""
 
-        tag(frame, i18n_key)
-    return frame
+
+class FitPlainLabel(tk.Label):
+    """Plain tk label for chrome that sets its own background."""
+
+
+class FitCheckbutton(ttk.Checkbutton):
+    """Themed checkbutton shared by the debug and schedule panels."""
+
+
+class FitText(tk.Text):
+    """Text area shared by the debug panel."""
+
+
+def group(parent: tk.Misc, text: str) -> ttk.LabelFrame:
+    return ttk.LabelFrame(parent, text=text, padding=(scaled(8), scaled(4)))
 
 
 def refresh_ui_scale(root: tk.Misc, language: str, scale: float) -> None:
@@ -909,13 +928,16 @@ def refresh_ui_scale(root: tk.Misc, language: str, scale: float) -> None:
     )
     style.configure("TLabelframe.Label", font=FONT_SECTION)
     style.configure("Card.TLabelframe.Label", font=FONT_SECTION)
+    _label_margins = (scaled(6), 0, scaled(6), 0)
+    style.configure("TLabelframe", labeloutside=False, labelmargins=_label_margins)
+    style.configure("Card.TLabelframe", labeloutside=False, labelmargins=_label_margins)
     style.configure("Title.TLabel", font=FONT_TITLE)
     style.configure("Page.TLabel", font=FONT_BODY)
     style.configure("Field.TLabel", font=FONT_BODY, padding=(scaled(12), scaled(3)))
     style.configure("Accent.TLabel", font=FONT_BODY)
     style.configure("TScrollbar", arrowsize=scaled(12, 10))
-    style.configure("TNotebook.Tab", font=FONT_BUTTON, padding=(scaled(10), scaled(4)))
-    tab_pad = (scaled(12), scaled(4, 2))
+    style.configure("TNotebook.Tab", font=FONT_BUTTON, padding=(scaled(10), scaled(1, 0)))
+    tab_pad = (scaled(12), scaled(1, 0))
     for name in ("MainTabs", "SubTabs"):
         style.configure(f"{name}.TNotebook.Tab", font=FONT_BUTTON, padding=tab_pad)
         style.map(

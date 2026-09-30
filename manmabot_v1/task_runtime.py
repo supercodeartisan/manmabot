@@ -116,7 +116,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("abandon_same", bool(hunt.get("abandon_same", getattr(profile, "abandon_same", False))))
     set_value(
         "abandon_seconds",
-        _int_range(hunt.get("abandon_seconds"), getattr(profile, "abandon_seconds", 30), 1, 600),
+        _int_range(hunt.get("abandon_seconds"), getattr(profile, "abandon_seconds", 20), 1, 600),
     )
     set_value("antidote_auto", bool(hunt.get("antidote_auto", getattr(profile, "antidote_auto", False))))
     set_value("area_empty", bool(hunt.get("area_empty", getattr(profile, "area_empty", False))))

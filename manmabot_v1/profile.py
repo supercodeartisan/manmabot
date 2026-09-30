@@ -26,7 +26,7 @@ from manmabot_v1.strings import (
     DEFAULT_HOTKEYS,
     detect_system_language,
     normalize_game_language,
-    normalize_language,
+    ui_language,
 )
 
 DEFAULT_MAP_ID = "talking_island"
@@ -37,7 +37,7 @@ _PROFILE_NAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$")
 @dataclass
 class Profile:
     wizard_completed: bool = False
-    language: str = "en"
+    language: str = "ko"
     game_language: str = "ko"
     character: str = "mage"
     loot_mode: str = "all_items"
@@ -100,7 +100,7 @@ class Profile:
     target_delay_min_ms: int = 20
     target_delay_max_ms: int = 50
     abandon_same: bool = False
-    abandon_seconds: int = 30
+    abandon_seconds: int = 20
     antidote_auto: bool = False
     area_empty: bool = False
     area_empty_seconds: int = 60
@@ -208,7 +208,7 @@ class Profile:
             raw_sort = str(kwargs["species_sort"] or "name").strip().lower()
             kwargs["species_sort"] = raw_sort if raw_sort in ("name", "level") else "name"
         if "language" in kwargs:
-            kwargs["language"] = normalize_language(str(kwargs["language"]))
+            kwargs["language"] = ui_language(str(kwargs["language"]))
         if "game_language" in kwargs:
             kwargs["game_language"] = normalize_game_language(
                 str(kwargs["game_language"])
@@ -405,7 +405,7 @@ def load_profile(path: Path | None = None) -> Profile:
 def save_profile(profile: Profile, path: Path | None = None) -> None:
     ensure_userdata()
     p = assert_userdata_write(path or PROFILE_PATH)
-    profile.language = normalize_language(profile.language)
+    profile.language = ui_language(profile.language)
     profile.game_language = normalize_game_language(profile.game_language)
     temporary = assert_userdata_write(p.with_suffix(p.suffix + ".tmp"))
     try:

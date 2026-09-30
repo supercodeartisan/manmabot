@@ -64,9 +64,19 @@ class OperatorCoordinator:
     def rebind_hotkeys(self) -> str | None:
         return self.hotkeys.bind(
             self.profile.hotkeys,
-            on_pause_resume=lambda: self.dispatch(self.controller.toggle_pause_hotkey),
-            on_stop=lambda: self.dispatch(self.stop),
+            on_pause_resume=lambda: self.dispatch(self._hotkey_pause_resume),
+            on_stop=lambda: self.dispatch(self._hotkey_stop),
         )
+
+    def _hotkey_pause_resume(self) -> None:
+        """Pause or resume, then refresh the header status on this same turn."""
+        self.controller.toggle_pause_hotkey()
+        self.on_change()
+
+    def _hotkey_stop(self) -> None:
+        """Stop, then refresh the header status on this same turn."""
+        self.stop()
+        self.on_change()
 
     def invalidate_map_probe(self) -> None:
         self._map_probe = None

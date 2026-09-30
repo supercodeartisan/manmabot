@@ -2,18 +2,18 @@
   "version": 1,
   "accounts": [
     {
-      "account_id": "a805e76b-f705-4f76-bb76-31b8fef1132f",
-      "username": "guanghui222333@gmail.com",
-      "password_dpapi": "AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA7qZ/Q/fV3kye/ATHIEpauQAAAAACAAAAAAAQZgAAAAEAACAAAAAD0ZxY0T+NjQkQvo8EmeVN/jHBc5UPuNl1/0EIpoUZXgAAAAAOgAAAAAIAACAAAADWHJP81ylYVJbUM5QBzivGXniaQmmbaCwXENOd7RRUVhAAAABPtHhIbS/a1ZUUXp/W07MmQAAAAFvkwrZCulCZ0s+uSu5WEXXLdx8432hJP/PWcrCxbeysowCjCQoRbwjfmFM6pPB/IeWhexBtsZ9+Fq6pi4tlRV8=",
-      "region": "China",
-      "server": "飛馬珀伽索斯",
+      "account_id": "d2759608-38e3-4077-aae9-7c974fcecf27",
+      "username": "condra.wow@gmail.com",
+      "password_dpapi": "AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAHElYstsMDEGDIZBHfEkhCQAAAAACAAAAAAAQZgAAAAEAACAAAADe7JyzNYGh7PJuhpK0hSb+2cayw5kC636fQVoV4gyXoAAAAAAOgAAAAAIAACAAAABOpjj9HdZPHZ+5ans8o7g0ezt/+pyJdeM9pUERgjHujxAAAAB/NYaccp+LInvsGme56MnoQAAAADrz86DBF89qTY7GKGCtMYSlUfJQqauHywOWdjwiPKMrM7EYd5+OTogv5vzGKI2T/JtMilT8nrO6NyRlMWbTUbw=",
+      "region": "Korea",
+      "server": "데포로쥬",
       "character_number": 1,
       "click_mode": "dynamic",
-      "display_name": "brgxfc",
-      "locale": "zh-CN",
-      "character_type": "elf",
-      "purple_launcher_path": "C:/Program Files (x86)/NC/Purple/PurpleLauncher.exe",
-      "game_path": "D:/Lineage Classic/LC.exe"
+      "display_name": "condra",
+      "locale": "ko",
+      "character_type": "royal",
+      "purple_launcher_path": "C:\\Program Files (x86)\\NC\\Purple\\PurpleLauncher.exe",
+      "game_path": "C:\\Program Files (x86)\\NC\\Lineage Classic\\LC.exe"
     }
   ]
 }

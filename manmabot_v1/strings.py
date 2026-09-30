@@ -1,6 +1,7 @@
-"""UI copy for Version 0 — English, Korean, and Mandarin Chinese.
+"""UI copy for Version 0 — Korean and Mandarin Chinese.
 
 Operator-facing strings only. Probe / diagnostic details stay English.
+English UI copy remains in the catalog but is not a selectable language.
 """
 from __future__ import annotations
 
@@ -11,11 +12,10 @@ from typing import Any
 LANG_EN = "en"
 LANG_KO = "ko"
 LANG_ZH = "zh"
-SUPPORTED_LANGUAGES: tuple[str, ...] = (LANG_EN, LANG_KO, LANG_ZH)
+SUPPORTED_LANGUAGES: tuple[str, ...] = (LANG_KO, LANG_ZH)
 
 # Display names shown in the Language dropdown.
 LANGUAGE_CHOICES: tuple[tuple[str, str], ...] = (
-    (LANG_EN, "English"),
     (LANG_KO, "한국어"),
     (LANG_ZH, "简体中文"),
 )
@@ -27,6 +27,7 @@ DEFAULT_HOTKEYS = {
 
 
 def normalize_language(code: str | None) -> str:
+    """Content locale, including English name tables. Unknown codes stay English."""
     c = (code or LANG_EN).strip().lower().replace("_", "-")
     if c.startswith("ko"):
         return LANG_KO
@@ -35,15 +36,23 @@ def normalize_language(code: str | None) -> str:
     return LANG_EN
 
 
+def ui_language(code: str | None) -> str:
+    """Selectable window language. English is not offered; other codes use Korean."""
+    c = (code or "").strip().lower().replace("_", "-")
+    if c.startswith("zh"):
+        return LANG_ZH
+    return LANG_KO
+
+
 def detect_system_language() -> str:
-    """Best-effort OS locale → en|ko|zh for first-run profile default."""
+    """Best-effort OS locale → ko|zh for first-run profile default."""
     try:
         import locale
 
         loc = locale.getdefaultlocale()[0] or ""
     except Exception:
         loc = ""
-    return normalize_language(loc)
+    return ui_language(loc)
 
 
 GAME_LANG_KO = "ko"

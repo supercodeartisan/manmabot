@@ -40,7 +40,14 @@ from manmabot_v1.shopping.behaviors import (
     load_sell_filters,
     save_behaviors,
 )
-from manmabot_v1.ui.design_system import BORDER, SELECTED, SURFACE, TEXT, TEXT_MUTED
+from manmabot_v1.ui.design_system import (
+    BORDER,
+    SELECTED,
+    SURFACE,
+    TEXT,
+    TEXT_MUTED,
+    FitLabel,
+)
 
 _NONE = ""
 _KEEP = "keep"
@@ -275,7 +282,7 @@ class SellFilterPanel(ttk.Frame):
     def _build(self) -> None:
         hint = str(self._t.get("sell_logic_hint") or self._t.get("sell_filter_hint") or "")
         if hint:
-            ttk.Label(
+            FitLabel(
                 self,
                 text=hint,
                 foreground=TEXT_MUTED,
@@ -285,11 +292,11 @@ class SellFilterPanel(ttk.Frame):
 
         bar = ttk.Frame(self)
         bar.pack(fill="x", pady=(0, 6))
-        ttk.Label(bar, text=self._t["filter_search"]).pack(side="left")
+        FitLabel(bar, text=self._t["filter_search"]).pack(side="left")
         search = ttk.Entry(bar, textvariable=self.search_var, width=18)
         search.pack(side="left", padx=(4, 10))
         search.bind("<KeyRelease>", lambda _event: self._refresh())
-        ttk.Label(bar, text=self._t["filter_category"]).pack(side="left")
+        FitLabel(bar, text=self._t["filter_category"]).pack(side="left")
         self._category = ttk.Combobox(
             bar,
             textvariable=self.category_var,
@@ -299,7 +306,7 @@ class SellFilterPanel(ttk.Frame):
         )
         self._category.pack(side="left", padx=(4, 10))
         self._category.bind("<<ComboboxSelected>>", lambda _event: self._refresh())
-        ttk.Label(bar, text=self._t["filter_show"]).pack(side="left")
+        FitLabel(bar, text=self._t["filter_show"]).pack(side="left")
         show = ttk.Combobox(
             bar,
             textvariable=self.show_var,
@@ -315,7 +322,7 @@ class SellFilterPanel(ttk.Frame):
             command=self.reload_owned,
         )
         self._reload_btn.pack(side="left", padx=(10, 0))
-        ttk.Label(bar, textvariable=self.count_var, foreground=TEXT_MUTED).pack(
+        FitLabel(bar, textvariable=self.count_var, foreground=TEXT_MUTED).pack(
             side="left", padx=(10, 0)
         )
 
@@ -371,7 +378,7 @@ class SellFilterPanel(ttk.Frame):
             text=self._t.get("mark_clear_save", self._t["mark_clear"]),
             command=lambda: self._mark_selected(_NONE),
         ).pack(side="left")
-        ttk.Label(actions, textvariable=self.status_var, foreground=TEXT_MUTED).pack(
+        FitLabel(actions, textvariable=self.status_var, foreground=TEXT_MUTED).pack(
             side="right"
         )
 

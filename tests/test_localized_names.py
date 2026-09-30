@@ -5,6 +5,7 @@ from manmabot_v1.localized_names import (
     item_search_names,
     language_display_name,
     map_display_name,
+    monster_region_candidates,
     memory_name_for_ui,
     route_point_display_name,
     shop_npc_display,
@@ -31,6 +32,19 @@ def test_dungeon_maps_follow_ui_language():
     assert map_display_name("ant_cave_dungeon_F1_3", "ko") == "개미굴 1층-3"
     assert map_display_name("ant_cave_dungeon_F1_3", "zh") == "蚂蚁洞穴1层-3"
     assert map_display_name("talking_island_dungeon_F1", "ko") == "말하는 섬 던전 1층"
+
+
+def test_monster_region_candidates_use_catalog_language():
+    assert monster_region_candidates("talking_island", "ko") == ("말하는 섬",)
+    assert monster_region_candidates("talking_island", "en") == ("말하는 섬",)
+    assert monster_region_candidates("talking_island", "zh") == ("说话之岛",)
+    assert monster_region_candidates("giran_dungeon_F1", "ko") == ("기란 던전 1층",)
+    assert monster_region_candidates("talking_island_dungeon_F2", "ko") == (
+        "말하는 섬 던전 2층",
+    )
+    assert "개미굴 던전 1층-3" in monster_region_candidates("ant_cave_dungeon_F1_3", "ko")
+    assert "奇岩地监1楼" in monster_region_candidates("giran_dungeon_F1", "zh")
+    assert monster_region_candidates("mainland", "ko") == ("본토",)
 
 
 def test_area_and_mid_names_follow_ui_language():

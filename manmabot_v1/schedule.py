@@ -86,7 +86,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "target_delay_min_ms": max(10, min(50, int(getattr(profile, "target_delay_min_ms", 20)))),
             "target_delay_max_ms": max(10, min(50, int(getattr(profile, "target_delay_max_ms", 50)))),
             "abandon_same": bool(getattr(profile, "abandon_same", False)),
-            "abandon_seconds": int(getattr(profile, "abandon_seconds", 30)),
+            "abandon_seconds": int(getattr(profile, "abandon_seconds", 20)),
             "antidote_auto": bool(getattr(profile, "antidote_auto", False)),
             "area_empty": bool(getattr(profile, "area_empty", False)),
             "area_empty_seconds": int(getattr(profile, "area_empty_seconds", 60)),

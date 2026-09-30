@@ -18,6 +18,7 @@ from manmabot_v1.debug_snapshot import (
 from manmabot_v1.map_previews import brand_icon_path
 from manmabot_v1.paths import LOG_DIR, USERDATA, ensure_userdata
 from manmabot_v1.probes import Lamp, localize_probe_detail
+from manmabot_v1.strings import ui_language
 from manmabot_v1.profile import Profile, load_profile, save_profile
 from manmabot_v1.ui.design_system import (
     BG,
@@ -28,6 +29,10 @@ from manmabot_v1.ui.design_system import (
     TEXT,
     TEXT_MUTED,
     FONT_BODY,
+    FitCheckbutton,
+    FitLabel,
+    FitPlainLabel,
+    FitText,
     apply_classic_style,
 )
 from manmabot_v1.ui import design_system as ui_theme
@@ -88,7 +93,7 @@ class DebugPanel(ttk.Frame):
         self.state_dot_item = self.state_dot.create_oval(
             2, 2, 11, 11, fill="#dc2626", outline="#991b1b"
         )
-        self.state_label = tk.Label(
+        self.state_label = FitPlainLabel(
             status_box,
             text="",
             background=CHROME,
@@ -96,7 +101,7 @@ class DebugPanel(ttk.Frame):
             font=(FONT_BODY[0], FONT_BODY[1], "bold"),
         )
         self.state_label.pack(side="left")
-        self.note_label = tk.Label(
+        self.note_label = FitPlainLabel(
             header,
             text=self._note_text or self._tr("debug_same_run"),
             background=CHROME,
@@ -150,7 +155,7 @@ class DebugPanel(ttk.Frame):
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree_scroll.grid(row=0, column=1, sticky="ns")
 
-        self.log_widget = tk.Text(
+        self.log_widget = FitText(
             details,
             state="disabled",
             wrap="word",
@@ -160,14 +165,14 @@ class DebugPanel(ttk.Frame):
             relief="solid",
             borderwidth=1,
         )
-        self.preview_label = tk.Label(
+        self.preview_label = FitPlainLabel(
             details,
             text=self._tr("debug_preview_waiting"),
             background="#111111",
             foreground="#d1d5db",
             anchor="center",
         )
-        self.empty_label = tk.Label(
+        self.empty_label = FitPlainLabel(
             details,
             text=self._tr("debug_idle"),
             background=SURFACE,
@@ -710,7 +715,7 @@ class DebugWindow(tk.Toplevel):
         top = ttk.Frame(self, padding=4, style="Chrome.TFrame")
         top.pack(fill="x")
         self.topmost_var = tk.BooleanVar(self, value=True)
-        ttk.Checkbutton(
+        FitCheckbutton(
             top,
             text=t.get("always_on_top", "Always on top"),
             variable=self.topmost_var,
@@ -766,9 +771,8 @@ class DebugPlayer(tk.Tk):
         super().__init__()
         ensure_userdata()
         self.profile = profile or load_profile()
-        self.language = (
-            self.profile.language if self.profile.language in ("en", "ko", "zh") else "en"
-        )
+        self.language = ui_language(self.profile.language)
+        self.profile.language = self.language
         load_bundled_fonts(self.language)
         self.t = tr(self.language)
         self._log_lines: list[str] = []
@@ -832,9 +836,9 @@ class DebugPlayer(tk.Tk):
         header = ttk.Frame(self, padding=6, style="Chrome.TFrame")
         header.pack(fill="x")
 
-        self.game_lamp = ttk.Label(header, style="Chrome.TLabel")
-        self.memory_lamp = ttk.Label(header, style="Chrome.TLabel")
-        self.map_lamp = ttk.Label(header, style="Chrome.TLabel")
+        self.game_lamp = FitLabel(header, style="Chrome.TLabel")
+        self.memory_lamp = FitLabel(header, style="Chrome.TLabel")
+        self.map_lamp = FitLabel(header, style="Chrome.TLabel")
         for widget in (self.game_lamp, self.memory_lamp, self.map_lamp):
             widget.pack(side="left", padx=(0, 12))
 
@@ -849,7 +853,7 @@ class DebugPlayer(tk.Tk):
             button.pack(side="right", padx=2)
 
         self.topmost_var = tk.BooleanVar(self, value=True)
-        ttk.Checkbutton(
+        FitCheckbutton(
             header,
             text=self._tr("always_on_top"),
             variable=self.topmost_var,

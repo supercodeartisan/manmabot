@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 MAX_ENGAGE_SECONDS = 90.0
 # Hunt/Attack "same monster N seconds then give up". Off = legacy sticky.
 ABANDON_SAME_ENABLED = False
-ABANDON_SECONDS = 30.0
+ABANDON_SECONDS = 20.0
 # Only used when print_state is missing. A listed death / omit drops instantly.
 STICKY_MISS_FRAMES = 1
 # After giving up on a target, do not re-select it for this many ticks.

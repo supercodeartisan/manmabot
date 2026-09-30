@@ -40,6 +40,7 @@ from manmabot_v1.localized_names import (
     language_display_name,
     map_display_name,
     memory_name_for_ui,
+    monster_region_candidates,
     route_point_display_name,
     scroll_label_display,
     shop_npc_display,
@@ -79,7 +80,7 @@ from manmabot_v1.schedule import ScheduleStore, ScheduleTask, profile_snapshot
 from manmabot_v1.schedule_clock import ScheduleSession
 from manmabot_v1.server_list import server_names_list
 from manmabot_v1.spell_defaults import SKILL_GRID, SKILL_KEYS
-from manmabot_v1.strings import DEFAULT_HOTKEYS, ui_strings
+from manmabot_v1.strings import DEFAULT_HOTKEYS, ui_language, ui_strings
 from manmabot_v1.task_runtime import (
     JITTER_MS_MAX,
     JITTER_MS_MIN,
@@ -94,7 +95,6 @@ from manmabot_v1.ui.design_system import (
 from manmabot_v1.ui import design_system as ui_theme
 from manmabot_v1.ui.fonts import load_bundled_fonts
 from manmabot_v1.ui.icon_warmup import hunt_icon_cache_key, prepare_hunt_icons
-from manmabot_v1.ui import live_i18n
 from manmabot_v1.ui.operator_coordinator import OperatorCoordinator
 from manmabot_v1.ui.schedule_i18n import LANGUAGES, LANGUAGE_NAMES, tr
 from manmabot_v1.ui.sell_filter_panel import SellFilterPanel
@@ -110,14 +110,38 @@ def _no_activate(widget: tk.Misc) -> None:
         pass
 
 
+def _disable_window_maximize(widget: tk.Misc) -> None:
+    """Keep drag-resize, but drop the title-bar maximize button.
+
+    ``winfo_id()`` is the client HWND. The caption (min/max/close) lives on
+    its parent. ``resizable(True, True)`` puts ``WS_MAXIMIZEBOX`` back, so
+    callers must run this again after that.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        hwnd = int(ctypes.windll.user32.GetParent(int(widget.winfo_id())) or 0)
+        if not hwnd:
+            return
+        style = ctypes.windll.user32.GetWindowLongW(hwnd, -16)
+        cleared = style & ~0x00010000  # WS_MAXIMIZEBOX
+        if cleared == style:
+            return
+        ctypes.windll.user32.SetWindowLongW(hwnd, -16, cleared)
+        # NOSIZE | NOMOVE | NOZORDER | FRAMECHANGED — refresh the title bar.
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0027)
+    except (tk.TclError, OSError, AttributeError, ValueError):
+        pass
+
+
 def _clone(task: ScheduleTask) -> ScheduleTask:
     return ScheduleTask.from_dict(copy.deepcopy(task.to_dict()))
 
 
-# Square thumbnail, plus a gap so the picture does not touch the name.
-# ~2/3 of the previous 48px cell keeps rows denser without clipping icons.
+# Square thumbnail. The same pad sits on every side, and the column matches that box.
 _FARM_MAP_IDS = frozenset({"talking_island", "mainland"})
 _HUNT_CELL = 32
+_HUNT_PAD = 4
 # Detected hotbar slot tiles (Other / Game F keys). Base sizes; live layout scales.
 _HOTBAR_SLOT = 56
 _HOTBAR_SLOT_MIN = 40
@@ -126,8 +150,41 @@ _HOTBAR_SLOT_BG = "#2b3340"
 _HOTBAR_SLOT_EDGE = "#4a5568"
 
 
+def _hunt_icon_box() -> int:
+    """Thumbnail plus the same padding on every side."""
+    return _HUNT_CELL + _HUNT_PAD * 2
+
+
+def _hunt_row_height() -> int:
+    return _hunt_icon_box()
+
+
+def _fit_icon(image, size: int):
+    """Center the sprite in a square with equal padding on every side."""
+    from PIL import Image
+
+    bounds = image.getbbox()
+    if bounds:
+        image = image.crop(bounds)
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    inner = max(1, size - _HUNT_PAD * 2)
+    if image.width < 1 or image.height < 1:
+        return canvas
+    scale = min(inner / image.width, inner / image.height)
+    width = min(inner, max(1, int(round(image.width * scale))))
+    height = min(inner, max(1, int(round(image.height * scale))))
+    if image.size != (width, height):
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+    canvas.paste(
+        image,
+        ((size - image.width) // 2, (size - image.height) // 2),
+        image,
+    )
+    return canvas
+
+
 def _filled_icon(path: Path | None, size: int, *, enabled: bool):
-    """Stretch an icon to the cell, and fade it when the row is not allowed."""
+    """Fit an icon in the cell, and fade it when the row is not allowed."""
     from PIL import Image, ImageEnhance
 
     image = None
@@ -141,11 +198,7 @@ def _filled_icon(path: Path | None, size: int, *, enabled: bool):
         image = placeholder_thumb(size)
     if image.mode != "RGBA":
         image = image.convert("RGBA")
-    bounds = image.getbbox()
-    if bounds:
-        image = image.crop(bounds)
-    if image.size != (size, size):
-        image = image.resize((size, size), Image.Resampling.LANCZOS)
+    image = _fit_icon(image, size)
     if enabled:
         return image
     gray = ImageEnhance.Color(image).enhance(0)
@@ -206,6 +259,39 @@ def _bind_wraplength(
     _sync()
 
 
+# Blue summary bullet. Wrapped lines start at the same column as the text after it.
+_SUMMARY_BULLET = "●  "
+
+
+def _summary_bullet_indent(box: tk.Text) -> int:
+    """Pixel width of the blue bullet, used as the hanging indent."""
+    try:
+        font = tkfont.Font(font=box.cget("font"))
+    except tk.TclError:
+        font = tkfont.Font(font=FONT_BODY)
+    return max(1, int(font.measure(_SUMMARY_BULLET)))
+
+
+def _configure_summary_text(box: tk.Text) -> None:
+    """Keep every summary line inside the card, hung from the blue bullet."""
+    hang = _summary_bullet_indent(box)
+    box.tag_configure("mark", foreground=ACCENT)
+    box.tag_configure(
+        "item",
+        lmargin1=0,
+        lmargin2=hang,
+        rmargin=ui_theme.scaled(4, 2),
+        spacing1=3,
+    )
+    box.tag_configure("body", foreground=TEXT, spacing1=3)
+    box.tag_raise("mark")
+
+
+def _insert_summary_bullet(box: tk.Text, line: str) -> None:
+    box.insert("end", _SUMMARY_BULLET, ("item", "mark"))
+    box.insert("end", f"{line}\n", ("item", "body"))
+
+
 def _as_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in ("1", "true", "yes", "on")
@@ -220,22 +306,31 @@ _JITTER_VAR_NAMES = (
 
 
 def _mount_scroll_column(parent: ttk.Frame) -> ttk.Frame:
-    """Vertical scroll host so a stacked card column can show every row."""
+    """Vertical scroll host so a stacked card column can show every row.
+
+    When the cards are shorter than the page, the inner frame grows to the
+    viewport so expanding cards fill the column the way the summary card does.
+    """
     style = ttk.Style(parent)
     background = str(style.lookup("Page.TFrame", "background") or "#ffffff")
     canvas = tk.Canvas(parent, highlightthickness=0, bd=0, background=background)
     bar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
     inner = ttk.Frame(canvas, style="Page.TFrame")
     window = canvas.create_window((0, 0), window=inner, anchor="nw")
+    fitted = {"width": 0, "height": 0}
 
-    def _region(_event: tk.Event | None = None) -> None:
+    def _fit(_event: tk.Event | None = None) -> None:
+        width = max(1, int(canvas.winfo_width()))
+        view_h = max(1, int(canvas.winfo_height()))
+        need_h = max(inner.winfo_reqheight(), view_h)
+        if fitted["width"] != width or fitted["height"] != need_h:
+            fitted["width"] = width
+            fitted["height"] = need_h
+            canvas.itemconfigure(window, width=width, height=need_h)
         canvas.configure(scrollregion=canvas.bbox("all") or (0, 0, 0, 0))
 
-    def _width(event: tk.Event) -> None:
-        canvas.itemconfigure(window, width=max(1, int(event.width)))
-
-    inner.bind("<Configure>", _region)
-    canvas.bind("<Configure>", _width)
+    inner.bind("<Configure>", _fit)
+    canvas.bind("<Configure>", _fit)
     canvas.configure(yscrollcommand=bar.set)
     canvas.pack(side="left", fill="both", expand=True)
     bar.pack(side="right", fill="y")
@@ -268,16 +363,23 @@ def _set_tree_column_value(tree: ttk.Treeview, iid: str, column: str, value: obj
     tree.item(iid, values=values)
 
 
-def _configure_hunt_icon_column(tree: ttk.Treeview) -> None:
-    tree.heading("#0", text="")
-    tree.column("#0", width=36, minwidth=32, stretch=False, anchor="center")
+def _configure_hunt_icon_column(tree: ttk.Treeview, *, heading: str = "") -> None:
+    width = _hunt_icon_box()
+    tree.heading("#0", text=heading, anchor="center")
+    tree.column("#0", width=width, minwidth=width, stretch=False, anchor="center")
+
+
+def _lock_hunt_icon_column(tree: ttk.Treeview) -> None:
+    """Keep the picture column the same width as the thumbnail after auto-fit."""
+    width = _hunt_icon_box()
+    tree.column("#0", width=width, minwidth=width, stretch=False, anchor="center")
 
 
 def _configure_hunt_tree(widget: tk.Misc) -> None:
     style = ttk.Style(widget)
     style.configure(
         "Hunt.Treeview",
-        rowheight=_HUNT_CELL,
+        rowheight=_hunt_row_height(),
         fieldbackground=SURFACE,
         background=SURFACE,
         foreground=TEXT,
@@ -298,7 +400,7 @@ def _configure_hunt_tree(widget: tk.Misc) -> None:
                 {
                     "sticky": "nswe",
                     "children": [
-                        ("Treeitem.image", {"side": "left", "sticky": "w"}),
+                        ("Treeitem.image", {"side": "left", "sticky": ""}),
                         ("Treeitem.text", {"side": "left", "sticky": ""}),
                     ],
                 },
@@ -471,9 +573,12 @@ _ACCOUNT_COLUMNS = (
     ("region", "region", 72, False, "w"),
     ("locale", "server_language", 124, False, "w"),
     ("character_type", "character_type", 108, False, "center"),
-    ("purple_path", "purple_path", 180, True, "w"),
-    ("game_path", "game_path", 160, True, "w"),
+    ("purple_path", "purple_path", 140, True, "w"),
+    ("game_path", "game_path", 140, True, "w"),
 )
+_ACCOUNT_PATH_COLUMNS = ("purple_path", "game_path")
+_ACCOUNT_CELL_PAD = 18
+_ACCOUNT_HEAD_PAD = 22
 
 # Fields shown on the New schedule form. Kept narrow so the list pane
 # does not push the form off the window.
@@ -505,6 +610,18 @@ def _label_for(ids: dict[str, str], code: str) -> str:
         if item_id == str(code):
             return label
     return str(code)
+
+
+def _narrow_species_columns(tree: ttk.Treeview) -> None:
+    """Take a little padding off the monster name and level columns."""
+    for column, trim in (("name", 20), ("level", 14)):
+        try:
+            current = int(float(tree.column(column, "width")))
+            anchor = str(tree.column(column, "anchor") or "w")
+        except (tk.TclError, TypeError, ValueError):
+            continue
+        width = max(44, current - trim)
+        tree.column(column, width=width, minwidth=width, stretch=False, anchor=anchor)
 
 
 def _fit_tree_columns(
@@ -540,6 +657,133 @@ def _fit_tree_columns(
         tree.column(
             column, width=width, minwidth=width, stretch=stretch, anchor=anchor,
         )
+
+
+def _tree_fonts(tree: ttk.Treeview) -> tuple[tkfont.Font, tkfont.Font]:
+    style_name = str(tree.cget("style") or "Treeview") or "Treeview"
+    style = ttk.Style(tree)
+    from manmabot_v1.ui import design_system as ui_theme
+    body = tkfont.Font(font=style.lookup(style_name, "font") or ui_theme.FONT_BODY)
+    head = tkfont.Font(
+        font=style.lookup(f"{style_name}.Heading", "font") or ui_theme.FONT_SECTION,
+    )
+    return body, head
+
+
+def _ellipsize(text: str, font: tkfont.Font, width: int) -> str:
+    """Shorten text with \"...\" so it fits inside a column."""
+    value = str(text or "")
+    if width <= 0 or font.measure(value) <= width:
+        return value
+    ellipsis = "..."
+    if font.measure(ellipsis) >= width:
+        return ellipsis
+    low, high = 0, len(value)
+    best = ellipsis
+    while low <= high:
+        mid = (low + high) // 2
+        candidate = value[:mid] + ellipsis
+        if font.measure(candidate) <= width:
+            best = candidate
+            low = mid + 1
+        else:
+            high = mid - 1
+    return best
+
+
+def _fit_account_columns(
+    tree: ttk.Treeview,
+    full_paths: dict[str, tuple[str, str]],
+    available: int,
+) -> None:
+    """Size account columns to the window and ellipsize long launcher paths."""
+    if available < 80:
+        return
+    body, head = _tree_fonts(tree)
+    columns = [str(column) for column in tree["columns"]]
+    path_columns = [column for column in columns if column in _ACCOUNT_PATH_COLUMNS]
+    if not columns:
+        return
+
+    def heading_width(column: str) -> int:
+        return head.measure(str(tree.heading(column, "text"))) + _ACCOUNT_HEAD_PAD
+
+    widths: dict[str, int] = {}
+    for column in columns:
+        if column in _ACCOUNT_PATH_COLUMNS:
+            widths[column] = heading_width(column)
+            continue
+        index = columns.index(column)
+        width = heading_width(column)
+        for iid in tree.get_children():
+            values = tree.item(iid, "values")
+            if index < len(values):
+                width = max(width, body.measure(str(values[index])) + _ACCOUNT_CELL_PAD)
+        widths[column] = width
+
+    def shrink(group: list[str], floors: dict[str, int], overflow: int) -> int:
+        slack = {column: max(0, widths[column] - floors[column]) for column in group}
+        pool = sum(slack.values())
+        if pool <= 0 or overflow <= 0:
+            return overflow
+        take = min(overflow, pool)
+        consumed = 0
+        keys = [column for column in group if slack[column]]
+        for index, column in enumerate(keys):
+            if index == len(keys) - 1:
+                cut = take - consumed
+            else:
+                cut = take * slack[column] // pool
+            cut = min(cut, slack[column], take - consumed)
+            widths[column] -= cut
+            consumed += cut
+        return overflow - consumed
+
+    heading_floors = {column: heading_width(column) for column in columns}
+    text_columns = [column for column in columns if column not in _ACCOUNT_PATH_COLUMNS]
+    overflow = shrink(
+        text_columns,
+        heading_floors,
+        sum(widths[column] for column in columns) - available,
+    )
+    if overflow > 0:
+        shrink(columns, {column: 48 for column in columns}, overflow)
+    spare = available - sum(widths[column] for column in columns)
+    if spare > 0 and path_columns:
+        share, remainder = divmod(spare, len(path_columns))
+        for index, column in enumerate(path_columns):
+            widths[column] += share + (1 if index < remainder else 0)
+
+    drift = sum(widths[column] for column in columns) - available
+    if path_columns and drift:
+        last = path_columns[-1]
+        widths[last] = max(48, widths[last] - drift)
+
+    for column in columns:
+        anchor = str(tree.column(column, "anchor") or "w")
+        tree.column(
+            column,
+            width=max(40, int(widths[column])),
+            minwidth=40,
+            stretch=False,
+            anchor=anchor,
+        )
+
+    purple_index = columns.index("purple_path") if "purple_path" in columns else -1
+    game_index = columns.index("game_path") if "game_path" in columns else -1
+    for iid, (purple, game) in full_paths.items():
+        if not tree.exists(iid):
+            continue
+        values = list(tree.item(iid, "values"))
+        if 0 <= purple_index < len(values):
+            values[purple_index] = _ellipsize(
+                purple, body, int(widths.get("purple_path", 0)) - _ACCOUNT_CELL_PAD,
+            )
+        if 0 <= game_index < len(values):
+            values[game_index] = _ellipsize(
+                game, body, int(widths.get("game_path", 0)) - _ACCOUNT_CELL_PAD,
+            )
+        tree.item(iid, values=tuple(values))
 
 
 def _enable_bbox_grid(tree: ttk.Treeview) -> None:
@@ -645,14 +889,15 @@ def _enable_bbox_grid(tree: ttk.Treeview) -> None:
 
 
 class _TimeField(ttk.Frame):
-    """Hour, minute, and second spin boxes that also accept typed values."""
+    """Hour and minute spin boxes. Seconds stay at 00 in the stored clock."""
 
-    def __init__(self, master, variable: tk.StringVar) -> None:
+    def __init__(self, master, variable: tk.StringVar, *, with_seconds: bool = False) -> None:
         super().__init__(master)
         self.variable = variable
         self._guard = False
         self._parts: list[tuple[tk.StringVar, int, ttk.Spinbox]] = []
-        for index, limit in enumerate((23, 59, 59)):
+        limits = (23, 59, 59) if with_seconds else (23, 59)
+        for index, limit in enumerate(limits):
             if index:
                 ttk.Label(self, text=":").pack(side="left")
             part = tk.StringVar(self, value="00")
@@ -720,6 +965,8 @@ class _TimeField(ttk.Frame):
             except ValueError:
                 value = 0
             values.append(max(0, min(limit, value)))
+        while len(values) < 3:
+            values.append(0)
         text = f"{values[0]:02d}:{values[1]:02d}:{values[2]:02d}"
         if str(self.variable.get()) != text:
             self._guard = True
@@ -808,18 +1055,6 @@ class UnifiedTaskEditor(ttk.Frame):
         _sync()
 
     def _build(self) -> None:
-        identity = group(self, self.t["task_details"], i18n_key="task_details")
-        self.identity_box = identity
-        identity.pack(fill="x", pady=(0, 4))
-        identity.columnconfigure(1, weight=1)
-        account_label = ttk.Label(identity, text=self.t["account"])
-        live_i18n.tag(account_label, "account")
-        account_label.grid(row=0, column=0, sticky="w")
-        self.account_combo = ttk.Combobox(identity, state="readonly", width=28)
-        self.account_combo.grid(row=0, column=1, sticky="w", pady=2)
-        self.vars["task.account_id"] = tk.StringVar(self)
-        self.account_combo.configure(textvariable=self.vars["task.account_id"])
-        self.account_combo.bind("<<ComboboxSelected>>", self._account_changed)
         self._character_ids = {
             self.t[key]: key for key in ("royal", "knight", "elf", "mage")
         }
@@ -830,84 +1065,17 @@ class UnifiedTaskEditor(ttk.Frame):
         self.order_display = tk.StringVar(self, value=empty)
         self.type_display = tk.StringVar(self, value=empty)
         self.server_display = tk.StringVar(self, value=empty)
-        for row, (key, variable) in enumerate((
-            ("character_order", self.order_display),
-            ("character_type", self.type_display),
-            ("server", self.server_display),
-        ), start=1):
-            label = ttk.Label(identity, text=self.t[key])
-            live_i18n.tag(label, key)
-            label.grid(row=row, column=0, sticky="w", pady=2)
-            ttk.Label(identity, textvariable=variable).grid(row=row, column=1, sticky="w")
-
-        timing = ttk.Frame(identity)
-        timing.grid(row=0, column=2, rowspan=4, sticky="nw", padx=(18, 4))
-        mode = self._var("task.time_mode", "window")
-        time_choice = ttk.Radiobutton(
-            timing, text=self.t["time_choice"], value="window", variable=mode,
-        )
-        live_i18n.tag(time_choice, "time_choice")
-        time_choice.grid(row=0, column=0, sticky="w")
-        window_row = ttk.Frame(timing)
-        window_row.grid(row=1, column=0, sticky="w", padx=(18, 0), pady=(0, 4))
-        self.start_time = _TimeField(
-            window_row, self._var("task.start_time", "00:00:00")
-        )
-        self.start_time.pack(side="left")
-        ttk.Label(window_row, text="~").pack(side="left", padx=3)
-        self.end_time = _TimeField(
-            window_row, self._var("task.end_time", "23:59:59")
-        )
-        self.end_time.pack(side="left")
-        duration_choice = ttk.Radiobutton(
-            timing, text=self.t["duration_choice"], value="duration", variable=mode,
-        )
-        live_i18n.tag(duration_choice, "duration_choice")
-        duration_choice.grid(row=2, column=0, sticky="w")
-        duration_row = ttk.Frame(timing)
-        duration_row.grid(row=3, column=0, sticky="w", padx=(18, 0))
-        self.duration_spin = ttk.Spinbox(
-            duration_row,
-            from_=1,
-            to=10080,
-            width=6,
-            textvariable=self._var("task.duration_minutes", 90, "int"),
-        )
-        self.duration_spin.pack(side="left")
-        minutes_label = ttk.Label(duration_row, text=self.t["minutes"])
-        live_i18n.tag(minutes_label, "minutes")
-        minutes_label.pack(side="left", padx=(4, 0))
-        mode.trace_add("write", lambda *_args: self._sync_timing_inputs())
-        self._sync_timing_inputs()
-
-        repeat = ttk.Frame(identity)
-        repeat.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(3, 0))
-        repeat_daily = ttk.Checkbutton(
-            repeat,
-            text=self.t["repeat_daily"],
-            variable=self._var("task.repeat_daily", True, "bool"),
-        )
-        live_i18n.tag(repeat_daily, "repeat_daily")
-        repeat_daily.pack(side="left", padx=(0, 8))
-        self.weekday_vars = []
-        self._weekday_buttons = []
-        for day, key in enumerate(("mon", "tue", "wed", "thu", "fri", "sat", "sun")):
-            variable = tk.BooleanVar(self, value=True)
-            self.weekday_vars.append(variable)
-            button = ttk.Checkbutton(repeat, text=self.t[key], variable=variable)
-            live_i18n.tag(button, key)
-            button.pack(side="left", padx=1)
-            self._weekday_buttons.append(button)
+        self._repeat_guard = False
+        self._build_account_identity()
+        self._build_schedule_timing()
 
         tabs = ttk.Notebook(self, style="MainTabs.TNotebook")
         self._main_tabs = tabs
         self.pages = {}
-        main_keys = ("move", "hunt", "recovery", "magic", "equipment", "other")
-        for key in main_keys:
+        for key in ("move", "hunt", "recovery", "magic", "equipment", "other"):
             page = ttk.Frame(tabs, padding=6)
             tabs.add(page, text=self.t[key])
             self.pages[key] = page
-        live_i18n.tag_notebook(tabs, main_keys)
         self._build_move()
         self._build_hunt()
         self._build_recovery()
@@ -921,10 +1089,156 @@ class UnifiedTaskEditor(ttk.Frame):
             commit_bar, text=self.t["add_schedule"], command=self.commit,
             style="Accent.TButton",
         )
-        live_i18n.tag(self.commit_button, "add_schedule")
         self.commit_button.pack(anchor="center")
         tabs.pack(fill="both", expand=True)
         tabs.bind("<<NotebookTabChanged>>", self._on_main_tab_changed, add="+")
+
+    def _build_account_identity(self) -> None:
+        """Account, character, and server. Stays with the schedule editor."""
+        identity = group(self, self.t["task_details"])
+        self.identity_box = identity
+        identity.pack(fill="x", pady=(0, 4))
+        row = ttk.Frame(identity)
+        row.pack(fill="x")
+        row.columnconfigure(1, weight=1)
+        row.columnconfigure(2, weight=1)
+        account = ttk.Frame(row)
+        account.grid(row=0, column=0, sticky="w")
+        ttk.Label(account, text=self.t["account"], foreground=TEXT_MUTED).pack(
+            side="left", padx=(0, 8),
+        )
+        self.account_combo = ttk.Combobox(account, state="readonly", width=18)
+        self.vars["task.account_id"] = tk.StringVar(self)
+        self.account_combo.configure(textvariable=self.vars["task.account_id"])
+        self.account_combo.bind("<<ComboboxSelected>>", self._account_changed)
+        self.account_combo.pack(side="left")
+        value_font = (FONT_BODY[0], FONT_BODY[1], "bold")
+        facts = (
+            (self.t["server"], self.server_display),
+            (self.t["character_order"], self.order_display),
+            (self.t["character_type"], self.type_display),
+        )
+        for index, (label, variable) in enumerate(facts, start=1):
+            cell = ttk.Frame(row)
+            cell.grid(
+                row=0, column=index, sticky="e" if index == len(facts) else "w",
+                padx=(16, 0),
+            )
+            ttk.Label(cell, text=label, foreground=TEXT_MUTED).pack(side="left")
+            ttk.Label(
+                cell, textvariable=variable, foreground=TEXT, font=value_font,
+            ).pack(side="left", padx=(8, 0))
+
+    def _build_schedule_timing(self) -> None:
+        """Time, account, and weekdays for the schedule list header."""
+        host = self.app.schedule_timing_host
+        for child in host.winfo_children():
+            child.destroy()
+        form = ttk.Frame(host)
+        form.pack(fill="x", anchor="w")
+        mode = self._var("task.time_mode", "window")
+
+        ttk.Label(form, text=self.t["account"]).grid(
+            row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 4),
+        )
+        self.schedule_account_combo = ttk.Combobox(
+            form,
+            state="readonly",
+            width=22,
+            textvariable=self.vars["task.account_id"],
+        )
+        self.schedule_account_combo.grid(row=0, column=1, sticky="w", pady=(0, 4))
+        self.schedule_account_combo.bind("<<ComboboxSelected>>", self._account_changed)
+
+        ttk.Radiobutton(
+            form, text=self.t["time_choice"], value="window", variable=mode,
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 2))
+        window_row = ttk.Frame(form)
+        window_row.grid(row=1, column=1, sticky="w", pady=(0, 2))
+        self.start_time = _TimeField(
+            window_row, self._var("task.start_time", "00:00:00")
+        )
+        self.start_time.pack(side="left")
+        ttk.Label(window_row, text="~").pack(side="left", padx=3)
+        self.end_time = _TimeField(
+            window_row, self._var("task.end_time", "23:59:59")
+        )
+        self.end_time.pack(side="left")
+
+        ttk.Radiobutton(
+            form, text=self.t["duration_choice"], value="duration", variable=mode,
+        ).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=(0, 2))
+        duration_row = ttk.Frame(form)
+        duration_row.grid(row=2, column=1, sticky="w", pady=(0, 2))
+        self.duration_spin = ttk.Spinbox(
+            duration_row,
+            from_=1,
+            to=10080,
+            width=6,
+            textvariable=self._var("task.duration_minutes", 90, "int"),
+        )
+        self.duration_spin.pack(side="left")
+        ttk.Label(duration_row, text=self.t["minutes"]).pack(side="left", padx=(4, 0))
+        mode.trace_add("write", lambda *_args: self._sync_timing_inputs())
+        self._sync_timing_inputs()
+
+        days = ttk.Frame(host)
+        days.pack(fill="x", anchor="w", pady=(4, 2))
+        repeat = self._var("task.repeat_daily", True, "bool")
+        ttk.Checkbutton(days, text=self.t["repeat_daily"], variable=repeat).pack(
+            side="left", padx=(0, 8),
+        )
+        repeat.trace_add("write", self._on_repeat_daily)
+        self.weekday_vars = []
+        for _day, key in enumerate(("mon", "tue", "wed", "thu", "fri", "sat", "sun")):
+            variable = tk.BooleanVar(self, value=True)
+            self.weekday_vars.append(variable)
+            variable.trace_add("write", self._on_weekday_toggled)
+            ttk.Checkbutton(days, text=self.t[key], variable=variable).pack(
+                side="left", padx=(0, 4),
+            )
+        ttk.Button(
+            days, text=self.t["add"], command=self.app._new,
+        ).pack(side="left", padx=(8, 0))
+
+    def _on_repeat_daily(self, *_args: object) -> None:
+        """Repeat daily turns every weekday on, or all of them off."""
+        if self._repeat_guard:
+            return
+        try:
+            on = bool(self.vars["task.repeat_daily"].get())
+        except (tk.TclError, TypeError, ValueError):
+            return
+        self._repeat_guard = True
+        try:
+            for variable in self.weekday_vars:
+                if bool(variable.get()) != on:
+                    variable.set(on)
+        finally:
+            self._repeat_guard = False
+
+    def _on_weekday_toggled(self, *_args: object) -> None:
+        """Keep Repeat daily checked only while every weekday is checked."""
+        if self._repeat_guard:
+            return
+        self._align_repeat_daily_checkbox()
+
+    def _align_repeat_daily_checkbox(self) -> None:
+        repeat = self.vars.get("task.repeat_daily")
+        if repeat is None or not getattr(self, "weekday_vars", None):
+            return
+        try:
+            all_on = all(bool(variable.get()) for variable in self.weekday_vars)
+            current = bool(repeat.get())
+        except (tk.TclError, TypeError, ValueError):
+            return
+        if current == all_on:
+            return
+        self._repeat_guard = True
+        try:
+            repeat.set(all_on)
+        finally:
+            self._repeat_guard = False
 
     def _nested(
         self,
@@ -940,7 +1254,6 @@ class UnifiedTaskEditor(ttk.Frame):
             frame = ttk.Frame(book, padding=7)
             book.add(frame, text=self.t[key])
             result[key] = frame
-        live_i18n.tag_notebook(book, keys)
         if store_as:
             setattr(self, store_as, book)
         return result
@@ -1036,16 +1349,13 @@ class UnifiedTaskEditor(ttk.Frame):
         self._farm_check_on = _checkbox_photo(self, True)
         self._farm_check_off = _checkbox_photo(self, False)
         page.columnconfigure(0, weight=1)
-        page.columnconfigure(1, weight=2)
-        page.rowconfigure(0, weight=1)
+        page.rowconfigure(1, weight=1)
 
-        settings = group(page, self.t["map_settings"], i18n_key="map_settings")
-        settings.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        settings = group(page, self.t["map_settings"])
+        settings.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         picker = ttk.Frame(settings)
         picker.pack(fill="x")
-        map_select = ttk.Label(picker, text=self.t["map_select"])
-        live_i18n.tag(map_select, "map_select")
-        map_select.pack(side="left")
+        ttk.Label(picker, text=self.t["map_select"]).pack(side="left")
         self.map_var = self._var("move.map_id", "")
         self.map_combo = ttk.Combobox(
             picker, state="readonly", width=28, textvariable=self.map_var,
@@ -1053,33 +1363,26 @@ class UnifiedTaskEditor(ttk.Frame):
         self.map_combo.pack(side="left", padx=(8, 8))
         self.map_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_map_combo())
         self.btn_edit_map = ttk.Button(
-            picker, text=self.t["edit_map"], command=self.app.open_map_editor,
+            picker, text=self.t["edit"], command=self.app.open_map_editor,
         )
-        live_i18n.tag(self.btn_edit_map, "edit_map")
         self.btn_edit_map.pack(side="left")
 
         style_row = ttk.Frame(settings)
         style_row.pack(fill="x", pady=(8, 0))
-        map_style_label = ttk.Label(style_row, text=self.t["map_style"])
-        live_i18n.tag(map_style_label, "map_style")
-        map_style_label.pack(side="left")
+        ttk.Label(style_row, text=self.t["map_style"]).pack(side="left")
         self.map_style_var = self._var("move.map_style", "normal")
-        style_normal = ttk.Radiobutton(
+        ttk.Radiobutton(
             style_row,
             text=self.t["map_style_normal"],
             value="normal",
             variable=self.map_style_var,
-        )
-        live_i18n.tag(style_normal, "map_style_normal")
-        style_normal.pack(side="left", padx=(8, 4))
-        style_dungeon = ttk.Radiobutton(
+        ).pack(side="left", padx=(8, 4))
+        ttk.Radiobutton(
             style_row,
             text=self.t["map_style_dungeon"],
             value="dungeon",
             variable=self.map_style_var,
-        )
-        live_i18n.tag(style_dungeon, "map_style_dungeon")
-        style_dungeon.pack(side="left", padx=4)
+        ).pack(side="left", padx=4)
         self.map_style_var.trace_add(
             "write", lambda *_args: self._on_map_style_changed()
         )
@@ -1087,33 +1390,33 @@ class UnifiedTaskEditor(ttk.Frame):
         self.map_hint = ttk.Label(
             settings, text=self.t["map_setup_hint"], wraplength=ui_theme.scaled(360, 180), justify="left",
         )
-        live_i18n.tag(self.map_hint, "map_setup_hint")
-        self.map_hint.pack(anchor="w", pady=(6, 2))
+        self.map_hint.pack(anchor="w", fill="x", pady=(6, 2))
+
+        def _fit_map_hint(event: tk.Event) -> None:
+            self.map_hint.configure(wraplength=max(240, int(event.width) - 24))
+
+        settings.bind("<Configure>", _fit_map_hint)
         self._farm_schedule_loading = False
 
-        self.areas_group = group(page, self.t["farms"], i18n_key="farms")
-        self.areas_group.grid(row=0, column=1, sticky="nsew")
+        self.areas_group = group(page, self.t["farms"])
+        self.areas_group.grid(row=1, column=0, sticky="nsew")
         farm_buttons = ttk.Frame(self.areas_group)
         farm_buttons.pack(side="bottom", fill="x", pady=(6, 0))
         self.btn_select_all_farms = ttk.Button(
             farm_buttons, text=self.t["select_all"], command=self._select_all_farms,
         )
-        live_i18n.tag(self.btn_select_all_farms, "select_all")
         self.btn_select_all_farms.pack(side="left")
         self.btn_deselect_all_farms = ttk.Button(
             farm_buttons, text=self.t["deselect_all"], command=self._clear_farms,
         )
-        live_i18n.tag(self.btn_deselect_all_farms, "deselect_all")
         self.btn_deselect_all_farms.pack(side="left", padx=(4, 0))
         self.btn_farm_up = ttk.Button(
             farm_buttons, text=self.t["up"], command=lambda: self._move_farm_row(-1),
         )
-        live_i18n.tag(self.btn_farm_up, "up")
         self.btn_farm_up.pack(side="left", padx=(8, 0))
         self.btn_farm_down = ttk.Button(
             farm_buttons, text=self.t["down"], command=lambda: self._move_farm_row(1),
         )
-        live_i18n.tag(self.btn_farm_down, "down")
         self.btn_farm_down.pack(side="left", padx=(4, 0))
         farm_wrap = ttk.Frame(self.areas_group)
         farm_wrap.pack(fill="both", expand=True)
@@ -1127,27 +1430,22 @@ class UnifiedTaskEditor(ttk.Frame):
             style="Map.Treeview",
         )
         self.farm_tree.heading("#0", text=self.t["area_use"], anchor="center")
-        live_i18n.tag_tree_heading(self.farm_tree, "#0", "area_use")
         self.farm_tree.column("#0", width=72, minwidth=56, stretch=False, anchor="center")
         self.farm_tree.heading("name", text=self.t["area_name"], anchor="center")
-        live_i18n.tag_tree_heading(self.farm_tree, "name", "area_name")
         self.farm_tree.column("name", width=140, minwidth=90, stretch=False, anchor="center")
         self.farm_tree.heading("order", text=self.t["farm_order"], anchor="center")
-        live_i18n.tag_tree_heading(self.farm_tree, "order", "farm_order")
         self.farm_tree.column("order", width=56, minwidth=48, stretch=False, anchor="center")
         self.farm_tree.heading("stay", text=self.t["farm_stay"], anchor="center")
-        live_i18n.tag_tree_heading(self.farm_tree, "stay", "farm_stay")
         self.farm_tree.column("stay", width=80, minwidth=64, stretch=False, anchor="center")
         self.farm_tree.heading("memo", text=self.t["notes"], anchor="center")
-        live_i18n.tag_tree_heading(self.farm_tree, "memo", "notes")
         self.farm_tree.column("memo", width=180, minwidth=100, stretch=True, anchor="center")
         self.farm_tree.bind("<ButtonRelease-1>", self._on_farm_tree_click)
         self.farm_tree.bind("<Double-1>", self._on_farm_tree_click)
         _mount_vertical_scroll(farm_wrap, self.farm_tree)
         _enable_bbox_grid(self.farm_tree)
 
-        info = group(page, self.t["selection_info"], i18n_key="selection_info")
-        info.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        info = group(page, self.t["selection_info"])
+        info.grid(row=2, column=0, sticky="ew", pady=(8, 0))
         self.map_selected_label = ttk.Label(info, text="")
         self.map_registered_label = ttk.Label(info, text="")
         self.map_checked_label = ttk.Label(info, text="")
@@ -1161,15 +1459,18 @@ class UnifiedTaskEditor(ttk.Frame):
             label.pack(anchor="w")
         self._sync_map_areas_ui()
 
-    def _attack_card(self, parent: ttk.Frame, key: str) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(
+    def _attack_card(self, parent: ttk.Frame, title: str) -> ttk.LabelFrame:
+        return ttk.LabelFrame(
             parent,
-            text=self.t[key],
-            padding=(ui_theme.scaled(10), ui_theme.scaled(6)),
+            text=title,
+            padding=(
+                ui_theme.scaled(10),
+                ui_theme.scaled(10),
+                ui_theme.scaled(10),
+                ui_theme.scaled(6),
+            ),
             style="Card.TLabelframe",
         )
-        live_i18n.tag(frame, key)
-        return frame
 
     def _attack_flag(self, parent: tk.Misc, text: str, name: str, default: bool) -> tk.BooleanVar:
         variable = self._var(name, default, "bool")
@@ -1177,13 +1478,13 @@ class UnifiedTaskEditor(ttk.Frame):
         row.pack(fill="x", pady=2)
         button = ttk.Checkbutton(row, variable=variable)
         button.pack(side="left", anchor="n")
-        label = ttk.Label(row, text=text, justify="left", wraplength=360)
+        label = ttk.Label(row, text=text, justify="left", wraplength=160)
         label.pack(side="left", fill="x", expand=True, padx=(4, 0))
         label.bind("<Button-1>", lambda _event: variable.set(not bool(variable.get())))
         self._remember(name, button)
 
         def fit(event: tk.Event) -> None:
-            label.configure(wraplength=max(220, int(event.width) - 28))
+            label.configure(wraplength=max(48, int(event.width) - 28))
 
         row.bind("<Configure>", fit)
         return variable  # type: ignore[return-value]
@@ -1291,8 +1592,8 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _attack_note(self, parent: tk.Misc, text: str) -> None:
         hint = ttk.Label(parent, text=text, justify="left")
-        hint.pack(fill="x", padx=(22, 0), pady=(0, 4))
-        _bind_wraplength(hint, parent, pad=24, minimum=240)
+        hint.pack(fill="x", padx=(22, 4), pady=(0, 4))
+        _bind_wraplength(hint, parent, pad=36, minimum=48)
 
     def _attack_stack(
         self,
@@ -1311,13 +1612,13 @@ class UnifiedTaskEditor(ttk.Frame):
         head.pack(fill="x")
         button = ttk.Checkbutton(head, variable=variable)
         button.pack(side="left", anchor="n")
-        title = ttk.Label(head, text=label, justify="left", wraplength=280)
+        title = ttk.Label(head, text=label, justify="left", wraplength=160)
         title.pack(side="left", fill="x", expand=True, padx=(4, 0))
         title.bind("<Button-1>", lambda _event: variable.set(not bool(variable.get())))
         self._remember(name, button)
 
         def fit(event: tk.Event) -> None:
-            title.configure(wraplength=max(220, int(event.width) - 28))
+            title.configure(wraplength=max(48, int(event.width) - 28))
 
         head.bind("<Configure>", fit)
         for parts in field_rows:
@@ -1398,8 +1699,8 @@ class UnifiedTaskEditor(ttk.Frame):
         right.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
         left = _mount_scroll_column(left_host)
 
-        combat = self._attack_card(left, "attack_method")
-        combat.pack(fill="x", pady=(0, 8))
+        combat = self._attack_card(left, self.t["attack_method"])
+        combat.pack(fill="both", expand=True, pady=(0, 8))
         mode = self._var("hunt.attack_mode", "ranged")
         modes = ttk.Frame(combat)
         modes.pack(fill="x", pady=(0, 2))
@@ -1423,29 +1724,8 @@ class UnifiedTaskEditor(ttk.Frame):
             ],
         )
 
-        priority = self._attack_card(left, "target_priority")
-        priority.pack(fill="x", pady=(0, 8))
-        priority_flags = (
-            ("prefer_nearest", "hunt.prefer_nearest", True),
-            ("prefer_aggressor", "hunt.prefer_aggressor", True),
-            ("prefer_strong", "hunt.prefer_strong", False),
-            ("ignore_weak", "hunt.ignore_weak", True),
-            ("prefer_caster", "hunt.prefer_caster", True),
-            ("prefer_low_hp", "hunt.prefer_low_hp", True),
-            ("exclude_busy", "hunt.exclude_busy", True),
-            ("stick_target", "hunt.stick_target", True),
-        )
-        priority_grid = ttk.Frame(priority)
-        priority_grid.pack(fill="x")
-        priority_grid.columnconfigure(0, weight=1)
-        priority_grid.columnconfigure(1, weight=1)
-        for index, (key, name, default) in enumerate(priority_flags):
-            cell = ttk.Frame(priority_grid)
-            cell.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0, 4))
-            self._attack_flag(cell, self.t[key], name, default)
-
-        assist = self._attack_card(left, "combat_assist")
-        assist.pack(fill="x")
+        assist = self._attack_card(left, self.t["combat_assist"])
+        assist.pack(fill="both", expand=True, pady=(0, 8))
         self._attack_flag(assist, self.t["antidote_auto"], "hunt.antidote_auto", False)
         self._attack_stack(
             assist,
@@ -1473,9 +1753,18 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         self._attack_note(assist, self.t["target_delay_hint"])
 
-        magic = self._attack_card(middle, "magic_use")
-        magic.pack(fill="x", pady=(0, 8))
-        self._attack_flag(magic, self.t["magic_success"], "hunt.mp_spell_enabled", False)
+        abandon = self._attack_card(left, self.t["abandon_target"])
+        abandon.pack(fill="both", expand=True)
+        self._attack_inline(
+            abandon, "hunt.abandon_same", False, [
+                ("check", self.t["abandon_prefix"]),
+                ("spin", ("hunt.abandon_seconds", 20, 1, 600)),
+                ("text", self.t["abandon_suffix"]),
+            ],
+        )
+
+        magic = self._attack_card(middle, self.t["magic_use"])
+        magic.pack(fill="both", expand=True, pady=(0, 8))
         self._attack_value_row(
             magic, self.t["mp_above"], "hunt.mp_spell_above", 80, 0, 100, "[%]",
         )
@@ -1490,21 +1779,31 @@ class UnifiedTaskEditor(ttk.Frame):
         self._attack_value_row(
             magic, "MP <", "hunt.fallback_mp_below", 20, 0, 100, "[%]",
         )
-        self._bind_gate("hunt.mp_spell_enabled", "hunt.mp_spell_above", "hunt.spell_count")
         self._bind_gate("hunt.fallback_melee", "hunt.fallback_mp_below")
 
-        abandon = self._attack_card(middle, "abandon_target")
-        abandon.pack(fill="x", pady=(0, 8))
-        self._attack_inline(
-            abandon, "hunt.abandon_same", False, [
-                ("check", self.t["abandon_prefix"]),
-                ("spin", ("hunt.abandon_seconds", 30, 1, 600)),
-                ("text", self.t["abandon_suffix"]),
-            ],
+        priority = self._attack_card(middle, self.t["target_priority"])
+        priority.pack(fill="both", expand=True, pady=(0, 8))
+        priority_flags = (
+            ("prefer_nearest", "hunt.prefer_nearest", True),
+            ("prefer_aggressor", "hunt.prefer_aggressor", True),
+            ("prefer_strong", "hunt.prefer_strong", False),
+            ("ignore_weak", "hunt.ignore_weak", True),
+            ("prefer_caster", "hunt.prefer_caster", True),
+            ("prefer_low_hp", "hunt.prefer_low_hp", True),
+            ("exclude_busy", "hunt.exclude_busy", True),
+            ("stick_target", "hunt.stick_target", True),
         )
+        priority_grid = ttk.Frame(priority)
+        priority_grid.pack(fill="x")
+        priority_grid.columnconfigure(0, weight=1)
+        priority_grid.columnconfigure(1, weight=1)
+        for index, (key, name, default) in enumerate(priority_flags):
+            cell = ttk.Frame(priority_grid)
+            cell.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0, 4))
+            self._attack_flag(cell, self.t[key], name, default)
 
-        area = self._attack_card(middle, "area_switch")
-        area.pack(fill="x")
+        area = self._attack_card(middle, self.t["area_switch"])
+        area.pack(fill="both", expand=True)
         self._attack_inline(
             area, "hunt.area_empty", False, [
                 ("check", ""),
@@ -1537,7 +1836,7 @@ class UnifiedTaskEditor(ttk.Frame):
             ],
         )
 
-        summary = self._attack_card(right, "settings_summary")
+        summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.attack_summary = tk.Text(
             summary, wrap="word", height=ui_theme.scaled(18, 8), relief="flat", borderwidth=0,
@@ -1545,8 +1844,7 @@ class UnifiedTaskEditor(ttk.Frame):
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.attack_summary.pack(fill="both", expand=True)
-        self.attack_summary.tag_configure("mark", foreground="#3a82f6")
-        self.attack_summary.tag_configure("body", foreground="#1f2328", spacing1=3)
+        _configure_summary_text(self.attack_summary)
         self.attack_summary.configure(state="disabled")
         for name, variable in self.vars.items():
             if name.startswith("hunt."):
@@ -1583,10 +1881,8 @@ class UnifiedTaskEditor(ttk.Frame):
         if self._summary_on("hunt.keep_distance"):
             tiles = self._summary_number("hunt.keep_distance_tiles", 3)
             lines.append(f"{self.t['keep_distance']}: {tiles} {self.t['tiles']}")
-        if self._summary_on("hunt.mp_spell_enabled"):
-            lines.append(f"{self.t['magic_success']}: {self.t['summary_on']}")
-            above = self._summary_number("hunt.mp_spell_above", 80)
-            lines.append(f"{self.t['mp_above']}: {above}%")
+        above = self._summary_number("hunt.mp_spell_above", 80)
+        lines.append(f"{self.t['mp_above']}: {above}%")
         lines.append(
             f"{self.t['spell_count']}: {self._summary_number('hunt.spell_count', 1)}{self.t['times']}"
         )
@@ -1614,7 +1910,7 @@ class UnifiedTaskEditor(ttk.Frame):
         if priorities:
             lines.append(f"{self.t['target_priority']}: {', '.join(priorities)}")
         if self._summary_on("hunt.abandon_same"):
-            seconds = self._summary_number("hunt.abandon_seconds", 30)
+            seconds = self._summary_number("hunt.abandon_seconds", 20)
             lines.append(
                 f"{self.t['abandon_prefix']} {seconds} {self.t['abandon_suffix']}"
             )
@@ -1650,8 +1946,7 @@ class UnifiedTaskEditor(ttk.Frame):
         box.configure(state="normal", height=max(len(lines), 1))
         box.delete("1.0", "end")
         for line in lines:
-            box.insert("end", "●  ", "mark")
-            box.insert("end", line + "\n", "body")
+            _insert_summary_bullet(box, line)
         box.configure(state="disabled")
 
     def _build_hunt(self) -> None:
@@ -1740,6 +2035,7 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         ttk.Label(filter_row, text=self.t["filter_region"]).grid(row=0, column=4, sticky="w")
         self.species_region_var = tk.StringVar(self, value=self.t["filter_all"])
+        self._species_region_user_set = False
         self.species_region_combo = ttk.Combobox(
             filter_row,
             state="readonly",
@@ -1750,7 +2046,7 @@ class UnifiedTaskEditor(ttk.Frame):
         self.species_region_combo.grid(row=0, column=5, sticky="ew", padx=(4, 0))
         self.species_region_combo.bind(
             "<<ComboboxSelected>>",
-            lambda _event: (self._refresh_species_rows(), self._refresh_monsters_summary()),
+            self._on_species_region_selected,
         )
 
         species_mode = ttk.Frame(left)
@@ -1797,17 +2093,13 @@ class UnifiedTaskEditor(ttk.Frame):
             selectmode="extended",
             style="Hunt.Treeview",
         )
-        _configure_hunt_icon_column(self.species_tree)
+        _configure_hunt_icon_column(self.species_tree, heading=self.t["species_image"])
         self.species_tree.heading("name", text=self.t["species_name"])
-        live_i18n.tag_tree_heading(self.species_tree, "name", "species_name")
         self.species_tree.heading("level", text=self.t["species_level"])
-        live_i18n.tag_tree_heading(self.species_tree, "level", "species_level")
         self.species_tree.heading("allow", text=self.t["allowed"])
-        live_i18n.tag_tree_heading(self.species_tree, "allow", "allowed")
-        self.species_tree.heading("region", text=self.t["species_regions"])
-        live_i18n.tag_tree_heading(self.species_tree, "region", "species_regions")
-        self.species_tree.column("name", width=160, minwidth=100, stretch=False)
-        self.species_tree.column("level", width=70, minwidth=50, anchor="center", stretch=False)
+        self.species_tree.heading("region", text=self.t["species_regions"], anchor="w")
+        self.species_tree.column("name", width=140, minwidth=88, stretch=False)
+        self.species_tree.column("level", width=56, minwidth=44, anchor="center", stretch=False)
         self.species_tree.column("allow", width=90, minwidth=70, anchor="center", stretch=False)
         self.species_tree.column("region", width=220, minwidth=120, stretch=True)
         self.species_tree.bind("<Double-1>", self._edit_species_cell)
@@ -1818,7 +2110,7 @@ class UnifiedTaskEditor(ttk.Frame):
         _mount_tree_scrolls(species_wrap, self.species_tree)
         _enable_bbox_grid(self.species_tree)
 
-        summary = self._attack_card(right, "settings_summary")
+        summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.monsters_summary = tk.Text(
             summary, wrap="word", height=ui_theme.scaled(16, 8), relief="flat", borderwidth=0,
@@ -1826,8 +2118,7 @@ class UnifiedTaskEditor(ttk.Frame):
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.monsters_summary.pack(fill="both", expand=True)
-        self.monsters_summary.tag_configure("mark", foreground="#3a82f6")
-        self.monsters_summary.tag_configure("body", foreground="#1f2328", spacing1=2)
+        _configure_summary_text(self.monsters_summary)
         self.monsters_summary.configure(state="disabled")
         self._refresh_monsters_summary()
 
@@ -1877,14 +2168,18 @@ class UnifiedTaskEditor(ttk.Frame):
             lambda _event: (self._refresh_item_rows(), self._refresh_items_summary()),
         )
         ttk.Label(filter_row, text=self.t["filter_category"]).grid(row=0, column=2, sticky="w")
-        self.item_category_var = tk.StringVar(self, value=self.t["filter_all"])
+        default_category = self._default_item_category_label()
+        self.item_category_var = tk.StringVar(self, value=default_category)
+        initial_categories = [self.t["filter_all"]]
+        if default_category not in initial_categories:
+            initial_categories.append(default_category)
         self.item_category_combo = ttk.Combobox(
             filter_row,
             state="readonly",
-            values=[self.t["filter_all"]],
+            values=initial_categories,
             textvariable=self.item_category_var,
         )
-        _size_readonly_combo(self.item_category_combo, [self.t["filter_all"]], fit=False)
+        _size_readonly_combo(self.item_category_combo, initial_categories, fit=False)
         self.item_category_combo.grid(row=0, column=3, sticky="ew", padx=(4, 0))
         self.item_category_combo.bind(
             "<<ComboboxSelected>>",
@@ -1927,13 +2222,10 @@ class UnifiedTaskEditor(ttk.Frame):
             selectmode="extended",
             style="Hunt.Treeview",
         )
-        _configure_hunt_icon_column(self.item_tree)
+        _configure_hunt_icon_column(self.item_tree, heading=self.t["species_image"])
         self.item_tree.heading("name", text=self.t["item_name"])
-        live_i18n.tag_tree_heading(self.item_tree, "name", "item_name")
         self.item_tree.heading("category", text=self.t["filter_category"])
-        live_i18n.tag_tree_heading(self.item_tree, "category", "filter_category")
         self.item_tree.heading("allow", text=self.t["allowed"])
-        live_i18n.tag_tree_heading(self.item_tree, "allow", "allowed")
         self.item_tree.column("name", width=200, minwidth=120, stretch=True)
         self.item_tree.column("category", width=140, minwidth=90, stretch=False)
         self.item_tree.column("allow", width=90, minwidth=70, anchor="center", stretch=False)
@@ -1945,7 +2237,7 @@ class UnifiedTaskEditor(ttk.Frame):
         _mount_tree_scrolls(item_wrap, self.item_tree)
         _enable_bbox_grid(self.item_tree)
 
-        summary = self._attack_card(right, "settings_summary")
+        summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.items_summary = tk.Text(
             summary, wrap="word", height=ui_theme.scaled(16, 8), relief="flat", borderwidth=0,
@@ -1953,8 +2245,7 @@ class UnifiedTaskEditor(ttk.Frame):
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.items_summary.pack(fill="both", expand=True)
-        self.items_summary.tag_configure("mark", foreground="#3a82f6")
-        self.items_summary.tag_configure("body", foreground="#1f2328", spacing1=2)
+        _configure_summary_text(self.items_summary)
         self.items_summary.configure(state="disabled")
         self._refresh_items_summary()
 
@@ -1969,8 +2260,7 @@ class UnifiedTaskEditor(ttk.Frame):
         box.configure(state="normal")
         box.delete("1.0", "end")
         for line in lines:
-            box.insert("end", "●  ", "mark")
-            box.insert("end", line + "\n", "body")
+            _insert_summary_bullet(box, line)
         if section:
             box.insert("end", "\n")
             box.insert("end", section + "\n", "body")
@@ -1978,8 +2268,7 @@ class UnifiedTaskEditor(ttk.Frame):
             if not section:
                 box.insert("end", "\n")
             for name in bullets:
-                box.insert("end", "●  ", "mark")
-                box.insert("end", name + "\n", "body")
+                _insert_summary_bullet(box, name)
         box.configure(state="disabled")
 
     def _refresh_monsters_summary(self, *_args: object) -> None:
@@ -2079,10 +2368,59 @@ class UnifiedTaskEditor(ttk.Frame):
         self._load_item_names()
         self._refresh_items_summary()
 
-    def _gate_row(
+    def _fix_open(self, parent: tk.Misc) -> dict[str, Any]:
+        """Aligned form: checkbox, wrapping label, spin, suffix."""
+        sheet = ttk.Frame(parent)
+        sheet.pack(fill="x")
+        sheet.columnconfigure(1, weight=1)
+        state: dict[str, Any] = {
+            "sheet": sheet,
+            "row": 0,
+            "titles": [],
+            "suffixes": [],
+        }
+
+        def fit(event: tk.Event) -> None:
+            suffix_w = 0
+            for label in state["suffixes"]:
+                try:
+                    suffix_w = max(suffix_w, int(label.winfo_reqwidth()))
+                except tk.TclError:
+                    pass
+            width = max(0, int(event.width))
+            meter_wrap = max(88, width - suffix_w - 116)
+            flag_wrap = max(120, width - 40)
+            for title, kind in state["titles"]:
+                if kind == "stack":
+                    continue
+                try:
+                    title.configure(
+                        wraplength=meter_wrap if kind == "meter" else flag_wrap,
+                    )
+                except tk.TclError:
+                    pass
+
+        sheet.bind("<Configure>", fit)
+        return state
+
+    def _fix_take_row(self, state: dict[str, Any]) -> int:
+        row = int(state["row"])
+        state["row"] = row + 1
+        return row
+
+    def _fix_note(self, parent: tk.Misc, text: str) -> None:
+        hint = ttk.Label(
+            parent,
+            text=text,
+            justify="left",
+            foreground=ui_theme.TEXT_MUTED,
+        )
+        hint.pack(fill="x", anchor="w", pady=(0, 6))
+        _bind_wraplength(hint, parent, pad=4, minimum=160)
+
+    def _fix_meter(
         self,
-        parent: ttk.Frame,
-        row: int,
+        state: dict[str, Any],
         *,
         gate: str,
         gate_default: bool,
@@ -2092,53 +2430,113 @@ class UnifiedTaskEditor(ttk.Frame):
         suffix: str,
         low: int = 0,
         high: int = 100,
-        extras: tuple[tuple[str, str, bool], ...] = (),
-    ) -> None:
-        line = ttk.Frame(parent)
-        line.grid(row=row, column=0, columnspan=8, sticky="w", pady=2)
-        gate_check = ttk.Checkbutton(
-            line, variable=self._var(gate, gate_default, "bool"),
+        indent: int = 0,
+        bind: bool = True,
+        stack: bool = False,
+    ) -> tk.BooleanVar:
+        sheet: ttk.Frame = state["sheet"]
+        row = self._fix_take_row(state)
+        variable = self._var(gate, gate_default, "bool")
+        button = ttk.Checkbutton(sheet, variable=variable)
+        button.grid(row=row, column=0, sticky="nw", pady=(3, 0) if stack else 3)
+        self._remember(gate, button)
+        title = ttk.Label(
+            sheet,
+            text=label,
+            justify="left",
+            anchor="w",
+            wraplength=220 if stack else 140,
         )
-        gate_check.pack(side="left")
-        self._remember(gate, gate_check)
-        ttk.Label(line, text=label).pack(side="left", padx=(4, 6))
+        if stack:
+            title.grid(
+                row=row, column=1, columnspan=3, sticky="ew",
+                padx=(4 + indent, 0), pady=(3, 0),
+            )
+        else:
+            title.grid(row=row, column=1, sticky="ew", padx=(4 + indent, 8), pady=3)
+        title.bind(
+            "<Button-1>",
+            lambda _event, var=variable: var.set(not bool(var.get())),
+        )
+        state["titles"].append((title, "stack" if stack else "meter"))
+        if stack:
+            def _fit_stack(event: tk.Event, label_widget: ttk.Label = title) -> None:
+                label_widget.configure(wraplength=max(48, int(event.width)))
+
+            title.bind("<Configure>", _fit_stack, add="+")
         spin = ttk.Spinbox(
-            line, from_=low, to=high, width=6,
+            sheet, from_=low, to=high, width=5,
             textvariable=self._var(name, default, "int"),
         )
-        spin.pack(side="left")
         self._remember(name, spin)
-        ttk.Label(line, text=suffix).pack(side="left", padx=(4, 0))
-        for text, key, checked in extras:
-            extra = ttk.Checkbutton(
-                line, text=text, variable=self._var(key, checked, "bool"),
+        suffix_label = ttk.Label(sheet, text=suffix, anchor="w")
+        if stack:
+            value_row = self._fix_take_row(state)
+            spin.grid(
+                row=value_row, column=1, sticky="w",
+                padx=(4 + indent, 0), pady=(2, 4),
             )
-            extra.pack(side="left", padx=(10, 0))
-            self._remember(key, extra)
+            suffix_label.grid(
+                row=value_row, column=2, columnspan=2, sticky="w",
+                padx=(6, 0), pady=(2, 4),
+            )
+        else:
+            spin.grid(row=row, column=2, sticky="e", pady=3)
+            suffix_label.grid(row=row, column=3, sticky="w", padx=(6, 0), pady=3)
+            state["suffixes"].append(suffix_label)
+        if bind:
+            self._bind_gate(gate, name)
+        return variable  # type: ignore[return-value]
 
-    def _spin_row(
+    def _fix_flag(
         self,
-        parent: ttk.Frame,
-        row: int,
+        state: dict[str, Any],
+        label: str,
+        name: str,
+        default: bool,
         *,
+        indent: int = 0,
+    ) -> tk.BooleanVar:
+        sheet: ttk.Frame = state["sheet"]
+        row = self._fix_take_row(state)
+        variable = self._var(name, default, "bool")
+        button = ttk.Checkbutton(sheet, variable=variable)
+        button.grid(row=row, column=0, sticky="nw", pady=2)
+        self._remember(name, button)
+        title = ttk.Label(
+            sheet, text=label, justify="left", anchor="w", wraplength=200,
+        )
+        title.grid(row=row, column=1, columnspan=3, sticky="ew", padx=(4 + indent, 0), pady=2)
+        title.bind(
+            "<Button-1>",
+            lambda _event, var=variable: var.set(not bool(var.get())),
+        )
+        state["titles"].append((title, "flag"))
+        return variable  # type: ignore[return-value]
+
+    def _fix_value(
+        self,
+        state: dict[str, Any],
         label: str,
         name: str,
         default: int,
-        suffix: str,
+        *,
         low: int = 0,
-        high: int = 100,
+        high: int = 999,
     ) -> None:
-        """Label + spinbox row without an enable checkbox."""
-        line = ttk.Frame(parent)
-        line.grid(row=row, column=0, columnspan=8, sticky="w", pady=2)
-        ttk.Label(line, text=label).pack(side="left", padx=(0, 6))
+        sheet: ttk.Frame = state["sheet"]
+        row = self._fix_take_row(state)
+        title = ttk.Label(
+            sheet, text=label, justify="left", anchor="w", wraplength=140,
+        )
+        title.grid(row=row, column=1, sticky="ew", padx=(4, 8), pady=3)
+        state["titles"].append((title, "meter"))
         spin = ttk.Spinbox(
-            line, from_=low, to=high, width=6,
+            sheet, from_=low, to=high, width=5,
             textvariable=self._var(name, default, "int"),
         )
-        spin.pack(side="left")
+        spin.grid(row=row, column=2, sticky="e", pady=3)
         self._remember(name, spin)
-        ttk.Label(line, text=suffix).pack(side="left", padx=(4, 0))
 
     def _build_recovery(self) -> None:
         pages = self._nested(
@@ -2152,17 +2550,12 @@ class UnifiedTaskEditor(ttk.Frame):
         page.configure(style="Page.TFrame")
         body = ttk.Frame(page, style="Page.TFrame")
         body.pack(fill="both", expand=True)
-        body.columnconfigure(0, weight=5, minsize=ui_theme.scaled(520, 180))
-        body.columnconfigure(1, weight=3, minsize=ui_theme.scaled(340, 140))
-        body.columnconfigure(2, weight=1, minsize=ui_theme.scaled(168, 100))
-        body.rowconfigure(0, weight=1)
-
-        left = ttk.Frame(body, style="Page.TFrame")
-        middle = ttk.Frame(body, style="Page.TFrame")
-        right = ttk.Frame(body, style="Page.TFrame")
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
-        middle.grid(row=0, column=1, sticky="nsew", padx=6)
-        right.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
+        for column in range(3):
+            body.columnconfigure(
+                column, weight=1, uniform="fixopt", minsize=ui_theme.scaled(240, 160),
+            )
+        body.rowconfigure(0, weight=1, uniform="fixrow")
+        body.rowconfigure(1, weight=1, uniform="fixrow")
 
         # Hidden legacy keys — kept so old schedules still load/save.
         self._var("recovery.hp_recover_enabled", True, "bool")
@@ -2175,63 +2568,51 @@ class UnifiedTaskEditor(ttk.Frame):
         self._var("hunt.return_then_resume", True, "bool")
         self._var("hunt.recover_before_hunt", True, "bool")
 
-        session = self._attack_card(left, "fix_recovery")
-        session.pack(fill="x", pady=(0, 8))
-        self._gate_row(
-            session, 0,
+        session = self._attack_card(body, self.t["fix_recovery"])
+        session.grid(row=0, column=0, sticky="nsew", padx=4, pady=(0, 4))
+        recover = self._fix_open(session)
+        self._fix_meter(
+            recover,
             gate="recovery.mp_recover_enabled", gate_default=False,
             label="MP", name="recovery.mp_potion_below", default=30,
             suffix=self.t["pct_or_less"],
-            extras=((self.t["use_mp_potion"], "recovery.use_mp_potion", False),),
         )
-        self._bind_gate(
-            "recovery.mp_recover_enabled",
-            "recovery.mp_potion_below",
-            "recovery.use_mp_potion",
+        self._fix_flag(
+            recover, self.t["use_mp_potion"], "recovery.use_mp_potion", False, indent=18,
         )
-        self._check(session, 1, self.t["resurrect"], "recovery.resurrect_if_dead", True)
-        self._check(session, 2, self.t["resume_login"], "recovery.resume_after_relogin", True)
-        self._row(session, 3, self.t["retries"], "recovery.max_retries", 3, "int")
+        self._bind_gate("recovery.mp_recover_enabled", "recovery.use_mp_potion")
+        self._fix_flag(recover, self.t["resurrect"], "recovery.resurrect_if_dead", True)
+        self._fix_flag(recover, self.t["resume_login"], "recovery.resume_after_relogin", True)
+        self._fix_value(recover, self.t["retries"], "recovery.max_retries", 3, low=0, high=999)
 
-        returning = self._attack_card(left, "fix_return")
-        returning.pack(fill="x")
-        self._check(returning, 0, self.t["return_mp"], "hunt.return_mp_enabled", True)
-        self._spin_row(
-            returning, 1,
-            label="MP", name="hunt.return_mp_below", default=15, suffix=self.t["pct_or_less"],
+        returning = self._attack_card(body, self.t["fix_return"])
+        returning.grid(row=1, column=0, sticky="nsew", padx=4, pady=(4, 0))
+        back = self._fix_open(returning)
+        self._fix_meter(
+            back,
+            gate="hunt.return_mp_enabled", gate_default=True,
+            label=self.t["return_mp"], name="hunt.return_mp_below", default=15,
+            suffix=self.t["pct_or_less"],
         )
-        idle_enabled = self._check(
-            returning, 2, self.t["return_idle"], "hunt.return_idle_enabled", False,
-        )
-        self._spin_row(
-            returning, 3,
+        self._fix_meter(
+            back,
+            gate="hunt.return_idle_enabled", gate_default=False,
             label=self.t["return_idle"], name="hunt.return_idle_seconds", default=60,
             suffix=self.t["seconds_when"], low=1, high=3600,
         )
-        mp_enabled = self.vars["hunt.return_mp_enabled"]
 
-        def _sync_return_mp(*_a: object) -> None:
-            self._set_inputs(("hunt.return_mp_below",), bool(mp_enabled.get()))
-
-        def _sync_return_idle(*_a: object) -> None:
-            self._set_inputs(("hunt.return_idle_seconds",), bool(idle_enabled.get()))
-
-        mp_enabled.trace_add("write", _sync_return_mp)
-        idle_enabled.trace_add("write", _sync_return_idle)
-        _sync_return_mp()
-        _sync_return_idle()
-
-        teleport = self._attack_card(middle, "fix_teleport")
-        teleport.pack(fill="x", pady=(0, 8))
-        ttk.Label(
-            teleport, text=self.t["fix_teleport_note"], justify="left", wraplength=360,
-        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 4))
-        teleport_enabled = self._check(
-            teleport, 1, self.t["random_teleport"], "recovery.random_teleport_enabled", False,
+        teleport = self._attack_card(body, self.t["fix_teleport"])
+        teleport.grid(row=0, column=1, sticky="nsew", padx=4, pady=(0, 4))
+        self._fix_note(teleport, self.t["fix_teleport_note"])
+        warp = self._fix_open(teleport)
+        teleport_enabled = self._fix_flag(
+            warp, self.t["random_teleport"], "recovery.random_teleport_enabled", False,
         )
-        self._check(teleport, 2, self.t["teleport_player"], "recovery.teleport_on_player", False)
-        self._gate_row(
-            teleport, 3,
+        self._fix_flag(
+            warp, self.t["teleport_player"], "recovery.teleport_on_player", False, indent=18,
+        )
+        self._fix_meter(
+            warp,
             gate="recovery.teleport_when_surrounded", gate_default=False,
             label=self.t["teleport_surrounded"],
             name="recovery.teleport_surround_count",
@@ -2239,6 +2620,9 @@ class UnifiedTaskEditor(ttk.Frame):
             suffix=self.t["teleport_surround_count_suffix"],
             low=2,
             high=20,
+            indent=18,
+            bind=False,
+            stack=True,
         )
         _teleport_fields = (
             "recovery.teleport_on_player",
@@ -2259,62 +2643,81 @@ class UnifiedTaskEditor(ttk.Frame):
         self.vars["recovery.teleport_when_surrounded"].trace_add("write", _sync_teleport)
         _sync_teleport()
 
-        supplies = self._attack_card(middle, "fix_return_supplies")
-        supplies.pack(fill="x")
-        self._gate_row(
-            supplies, 0,
+        supplies = self._attack_card(body, self.t["fix_return_supplies"])
+        supplies.grid(row=1, column=1, sticky="nsew", padx=4, pady=(4, 0))
+        stock = self._fix_open(supplies)
+        self._fix_meter(
+            stock,
             gate="hunt.return_potion_enabled", gate_default=True,
             label=self.t["return_potion_count"], name="hunt.return_potion_count",
             default=20, suffix=self.t["count_or_fewer"], low=0, high=999,
         )
-        self._gate_row(
-            supplies, 1,
+        self._fix_meter(
+            stock,
             gate="hunt.return_arrow_enabled", gate_default=True,
             label=self.t["return_arrow_count"], name="hunt.return_arrow_count",
             default=300, suffix=self.t["count_or_fewer"], low=0, high=9999,
         )
-        self._gate_row(
-            supplies, 2,
+        self._fix_meter(
+            stock,
             gate="hunt.return_depoison_enabled", gate_default=True,
             label=self.t["return_depoison_count"], name="hunt.return_depoison_count",
             default=1, suffix=self.t["count_or_fewer"], low=0, high=999,
         )
-        self._gate_row(
-            supplies, 3,
+        self._fix_meter(
+            stock,
             gate="hunt.return_satiety_enabled", gate_default=True,
             label=self.t["return_satiety"], name="hunt.return_satiety_below",
             default=25, suffix=self.t["pct_or_less"],
         )
-        self._gate_row(
-            supplies, 4,
+        self._fix_meter(
+            stock,
             gate="hunt.return_weight_enabled", gate_default=True,
             label=self.t["weight_gauge"], name="hunt.return_weight_above",
             default=85, suffix=self.t["pct_or_more"],
         )
-        self._check(supplies, 5, self.t["return_supplies"], "hunt.return_no_supplies", True)
-        for gate, field in (
-            ("hunt.return_potion_enabled", "hunt.return_potion_count"),
-            ("hunt.return_arrow_enabled", "hunt.return_arrow_count"),
-            ("hunt.return_depoison_enabled", "hunt.return_depoison_count"),
-            ("hunt.return_satiety_enabled", "hunt.return_satiety_below"),
-            ("hunt.return_weight_enabled", "hunt.return_weight_above"),
-        ):
-            def _sync_gate(*_a: object, g: str = gate, f: str = field) -> None:
-                self._set_inputs((f,), bool(self.vars[g].get()))
+        self._fix_flag(stock, self.t["return_supplies"], "hunt.return_no_supplies", True)
 
-            self.vars[gate].trace_add("write", _sync_gate)
-            _sync_gate()
-
-        summary = self._attack_card(right, "settings_summary")
-        summary.pack(fill="both", expand=True)
+        summary = self._attack_card(body, self.t["settings_summary"])
+        summary.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=4)
+        summary.rowconfigure(0, weight=1)
+        summary.columnconfigure(0, weight=1)
+        summary_wrap = ttk.Frame(summary)
+        summary_wrap.grid(row=0, column=0, sticky="nsew")
+        summary_wrap.rowconfigure(0, weight=1)
+        summary_wrap.columnconfigure(0, weight=1)
         self.fix_summary = tk.Text(
-            summary, wrap="word", width=22, height=ui_theme.scaled(22, 10), relief="flat", borderwidth=0,
-            highlightthickness=0, background="#ffffff", foreground="#1f2328",
-            font=FONT_BODY, padx=4, pady=4, cursor="arrow",
+            summary_wrap, wrap="word", width=1, height=6, relief="flat", borderwidth=0,
+            highlightthickness=0, background=ui_theme.SURFACE, foreground=ui_theme.TEXT,
+            font=FONT_BODY, padx=2, pady=2, cursor="arrow",
         )
-        self.fix_summary.pack(fill="both", expand=True)
-        self.fix_summary.tag_configure("mark", foreground="#3a82f6")
-        self.fix_summary.tag_configure("body", foreground="#1f2328", spacing1=3)
+        self.fix_summary.grid(row=0, column=0, sticky="nsew")
+        summary_scroll = ttk.Scrollbar(summary_wrap, command=self.fix_summary.yview)
+
+        def _summary_scroll(*args: str) -> None:
+            summary_scroll.set(*args)
+            try:
+                first = float(args[0])
+                last = float(args[1])
+            except (IndexError, TypeError, ValueError):
+                return
+            if last - first < 0.995:
+                summary_scroll.grid(row=0, column=1, sticky="ns")
+            else:
+                summary_scroll.grid_remove()
+
+        self.fix_summary.configure(yscrollcommand=_summary_scroll)
+        self.fix_summary.bind(
+            "<MouseWheel>",
+            lambda event: self.fix_summary.yview_scroll(int(-event.delta / 120), "units"),
+        )
+        _configure_summary_text(self.fix_summary)
+        head_font = FONT_BODY
+        if isinstance(head_font, tuple) and len(head_font) >= 2:
+            head_font = (head_font[0], head_font[1], "bold")
+        self.fix_summary.tag_configure(
+            "head", foreground=ui_theme.TEXT, font=head_font, spacing1=2, spacing3=2,
+        )
         self.fix_summary.configure(state="disabled")
         for name, variable in self.vars.items():
             if name.startswith("recovery.") or name.startswith("hunt.return_"):
@@ -2335,7 +2738,7 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _build_hp_action_order(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
-        card = self._attack_card(page, "hp_action_order")
+        card = self._attack_card(page, self.t["hp_action_order"])
         card.pack(fill="both", expand=True)
         ttk.Label(
             card, text=self.t["hp_action_note"], justify="left", wraplength=420,
@@ -2372,7 +2775,7 @@ class UnifiedTaskEditor(ttk.Frame):
 
     def _build_fix_inventory(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
-        card = self._attack_card(page, "fix_inventory")
+        card = self._attack_card(page, self.t["fix_inventory"])
         card.pack(fill="both", expand=True)
         ttk.Label(
             card, text=self.t["inventory_live_note"], wraplength=360, justify="left",
@@ -3061,78 +3464,109 @@ class UnifiedTaskEditor(ttk.Frame):
         def state(name: str) -> str:
             return self.t["summary_on"] if self._summary_on(name) else self.t["summary_off"]
 
-        lines: list[str] = []
-        if getattr(self, "_hp_actions", None):
-            ordered = []
-            for row in self._hp_actions:
-                if not row.get("enabled"):
-                    continue
-                ordered.append(
-                    f"{self._hp_action_label(str(row.get('id')))} ≤ {int(row.get('hp_below', 0))}%"
-                )
-            if ordered:
-                lines.append(f"{self.t['hp_action_order']}: {' → '.join(ordered)}")
-        if self._summary_on("recovery.mp_recover_enabled"):
-            mp = self._summary_number("recovery.mp_potion_below", 30)
-            mp_parts = [f"MP ≤ {mp}%"]
-            if self._summary_on("recovery.use_mp_potion"):
-                mp_parts.append(self.t["use_mp_potion"])
-            lines.append(f"{self.t['fix_recovery']}: {', '.join(mp_parts)}")
-        lines.append(f"{self.t['resurrect']}: {state('recovery.resurrect_if_dead')}")
-        lines.append(f"{self.t['resume_login']}: {state('recovery.resume_after_relogin')}")
-        lines.append(
-            f"{self.t['retries']}: {self._summary_number('recovery.max_retries', 3)}"
-        )
+        def gate_line(label: str, gate: str, detail: str) -> str:
+            if self._summary_on(gate):
+                return f"{label}  {detail}"
+            return f"{label}: {self.t['summary_off']}"
 
-        lines.append(
-            f"{self.t['fix_return']} MP: {state('hunt.return_mp_enabled')} "
-            f"≤ {self._summary_number('hunt.return_mp_below', 15)}%"
-        )
-        lines.append(
-            f"{self.t['return_idle']}: {state('hunt.return_idle_enabled')} "
-            f"{self._summary_number('hunt.return_idle_seconds', 60)} {self.t['seconds_when']}"
-        )
-        lines.append(
-            f"{self.t['return_potion_count']}: "
-            f"≤ {self._summary_number('hunt.return_potion_count', 20)}"
-        )
-        lines.append(
-            f"{self.t['return_arrow_count']}: "
-            f"≤ {self._summary_number('hunt.return_arrow_count', 300)}"
-        )
-        lines.append(
-            f"{self.t['return_depoison_count']}: "
-            f"≤ {self._summary_number('hunt.return_depoison_count', 1)}"
-        )
-        lines.append(
-            f"{self.t['return_satiety']}: "
-            f"≤ {self._summary_number('hunt.return_satiety_below', 25)}%"
-        )
-        lines.append(
-            f"{self.t['weight_gauge']}: "
-            f"≥ {self._summary_number('hunt.return_weight_above', 85)}%"
-        )
-        lines.append(f"{self.t['return_supplies']}: {state('hunt.return_no_supplies')}")
+        blocks: list[tuple[str, list[str]]] = []
 
-        lines.append(f"{self.t['fix_teleport']}: {state('recovery.random_teleport_enabled')}")
+        actions = list(getattr(self, "_hp_actions", None) or [])
+        hp_lines = [
+            f"{self._hp_action_label(str(row.get('id')))}  ≤ {int(row.get('hp_below', 0))}%"
+            for row in actions
+            if row.get("enabled")
+        ]
+        if actions and not hp_lines:
+            hp_lines.append(self.t["summary_off"])
+        if hp_lines:
+            blocks.append((self.t["hp_action_order"], hp_lines))
+
+        mp_detail = f"≤ {self._summary_number('recovery.mp_potion_below', 30)}%"
+        if self._summary_on("recovery.use_mp_potion"):
+            mp_detail = f"{mp_detail} · {self.t['use_mp_potion']}"
+        blocks.append((
+            self.t["fix_recovery"],
+            [
+                gate_line("MP", "recovery.mp_recover_enabled", mp_detail),
+                f"{self.t['resurrect']}: {state('recovery.resurrect_if_dead')}",
+                f"{self.t['resume_login']}: {state('recovery.resume_after_relogin')}",
+                f"{self.t['retries']}: {self._summary_number('recovery.max_retries', 3)}",
+            ],
+        ))
+        blocks.append((
+            self.t["fix_return"],
+            [
+                gate_line(
+                    self.t["return_mp"],
+                    "hunt.return_mp_enabled",
+                    f"≤ {self._summary_number('hunt.return_mp_below', 15)}%",
+                ),
+                gate_line(
+                    self.t["return_idle"],
+                    "hunt.return_idle_enabled",
+                    f"{self._summary_number('hunt.return_idle_seconds', 60)} {self.t['seconds_when']}",
+                ),
+            ],
+        ))
+        blocks.append((
+            self.t["fix_return_supplies"],
+            [
+                gate_line(
+                    self.t["return_potion_count"],
+                    "hunt.return_potion_enabled",
+                    f"≤ {self._summary_number('hunt.return_potion_count', 20)}",
+                ),
+                gate_line(
+                    self.t["return_arrow_count"],
+                    "hunt.return_arrow_enabled",
+                    f"≤ {self._summary_number('hunt.return_arrow_count', 300)}",
+                ),
+                gate_line(
+                    self.t["return_depoison_count"],
+                    "hunt.return_depoison_enabled",
+                    f"≤ {self._summary_number('hunt.return_depoison_count', 1)}",
+                ),
+                gate_line(
+                    self.t["return_satiety"],
+                    "hunt.return_satiety_enabled",
+                    f"≤ {self._summary_number('hunt.return_satiety_below', 25)}%",
+                ),
+                gate_line(
+                    self.t["weight_gauge"],
+                    "hunt.return_weight_enabled",
+                    f"≥ {self._summary_number('hunt.return_weight_above', 85)}%",
+                ),
+                f"{self.t['return_supplies']}: {state('hunt.return_no_supplies')}",
+            ],
+        ))
+        teleport_lines = [
+            f"{self.t['random_teleport']}: {state('recovery.random_teleport_enabled')}",
+        ]
         if self._summary_on("recovery.random_teleport_enabled"):
-            lines.append(f"{self.t['teleport_player']}: {state('recovery.teleport_on_player')}")
-            if self._summary_on("recovery.teleport_when_surrounded"):
-                lines.append(
-                    f"{self.t['teleport_surrounded']} "
-                    f"{self._summary_number('recovery.teleport_surround_count', 4)} "
-                    f"{self.t['teleport_surround_count_suffix']}"
+            teleport_lines.append(
+                f"{self.t['teleport_player']}: {state('recovery.teleport_on_player')}"
+            )
+            teleport_lines.append(
+                gate_line(
+                    self.t["teleport_surrounded"],
+                    "recovery.teleport_when_surrounded",
+                    (
+                        f"{self._summary_number('recovery.teleport_surround_count', 4)} "
+                        f"{self.t['teleport_surround_count_suffix']}"
+                    ),
                 )
-            else:
-                lines.append(
-                    f"{self.t['teleport_surrounded']}: {self.t['summary_off']}"
-                )
+            )
+        blocks.append((self.t["fix_teleport"], teleport_lines))
 
         box.configure(state="normal")
         box.delete("1.0", "end")
-        for line in lines:
-            box.insert("end", "●  ", "mark")
-            box.insert("end", line + "\n", "body")
+        for index, (title, lines) in enumerate(blocks):
+            if index:
+                box.insert("end", "\n", "body")
+            box.insert("end", title + "\n", "head")
+            for line in lines:
+                _insert_summary_bullet(box, line)
         box.configure(state="disabled")
         box.yview_moveto(0)
 
@@ -3161,15 +3595,15 @@ class UnifiedTaskEditor(ttk.Frame):
         page.configure(style="Page.TFrame")
         body = ttk.Frame(page, style="Page.TFrame")
         body.pack(fill="both", expand=True)
-        body.columnconfigure(0, weight=3)
-        body.columnconfigure(1, weight=2)
+        body.columnconfigure(0, weight=3, minsize=ui_theme.scaled(480, 260))
+        body.columnconfigure(1, weight=1, minsize=ui_theme.scaled(220, 160))
         body.rowconfigure(0, weight=1)
         left = ttk.Frame(body, style="Page.TFrame")
         right = ttk.Frame(body, style="Page.TFrame")
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         right.grid(row=0, column=1, sticky="nsew")
 
-        general = self._attack_card(left, "magic_general_settings")
+        general = self._attack_card(left, self.t["magic_general_settings"])
         general.pack(fill="x", pady=(0, 8))
         self._magic_percent_row(general, self.t["heal_until"], "magic.heal_until_hp_pct", 50)
         self._magic_percent_row(general, self.t["reserve_mp"], "magic.spell_reserve_pct", 20)
@@ -3180,7 +3614,7 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         self._bind_gate("magic.stop_below_mp", "magic.stop_below_mp_pct")
 
-        extra = self._attack_card(left, "magic_extra")
+        extra = self._attack_card(left, self.t["magic_extra"])
         extra.pack(fill="x")
         self._attack_flag(extra, self.t["buff_after_death"], "magic.buff_after_death", True)
         self._attack_inline(
@@ -3195,16 +3629,15 @@ class UnifiedTaskEditor(ttk.Frame):
         self._attack_flag(extra, self.t["buff_after_combat"], "magic.buff_after_combat", True)
         self._attack_flag(extra, self.t["town_general_only"], "magic.town_general_only", True)
 
-        summary = self._attack_card(right, "settings_summary")
+        summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.magic_summary = tk.Text(
-            summary, wrap="word", height=ui_theme.scaled(16, 8), relief="flat", borderwidth=0,
+            summary, wrap="word", width=24, height=ui_theme.scaled(16, 8), relief="flat", borderwidth=0,
             highlightthickness=0, background="#ffffff", foreground="#1f2328",
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.magic_summary.pack(fill="both", expand=True)
-        self.magic_summary.tag_configure("mark", foreground="#1f2328")
-        self.magic_summary.tag_configure("body", foreground="#1f2328", spacing1=3)
+        _configure_summary_text(self.magic_summary)
         self.magic_summary.configure(state="disabled")
         for name, variable in self.vars.items():
             if name.startswith("magic.") and not name.startswith("magic.skill_"):
@@ -3239,8 +3672,7 @@ class UnifiedTaskEditor(ttk.Frame):
         box.configure(state="normal", height=max(len(lines), 1))
         box.delete("1.0", "end")
         for line in lines:
-            box.insert("end", "●  ", "mark")
-            box.insert("end", line + "\n", "body")
+            _insert_summary_bullet(box, line)
         box.configure(state="disabled")
 
     def _magic_icon(self, icon: Path | None, key: str) -> tk.PhotoImage:
@@ -3393,7 +3825,7 @@ class UnifiedTaskEditor(ttk.Frame):
         ):
             ttk.Button(tools, text=text, command=command).pack(side="left", padx=(0, 4))
 
-        summary = self._attack_card(right, "settings_summary")
+        summary = self._attack_card(right, self.t["settings_summary"])
         summary.pack(fill="both", expand=True)
         self.magic_pick_summary = tk.Text(
             summary, wrap="word", height=ui_theme.scaled(12, 7), relief="flat", borderwidth=0,
@@ -3401,8 +3833,7 @@ class UnifiedTaskEditor(ttk.Frame):
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.magic_pick_summary.pack(fill="both", expand=True)
-        self.magic_pick_summary.tag_configure("mark", foreground="#1f2328")
-        self.magic_pick_summary.tag_configure("body", foreground="#1f2328", spacing1=2)
+        _configure_summary_text(self.magic_pick_summary)
         self.magic_pick_summary.configure(state="disabled")
         self._select_magic_category("attack_buff")
 
@@ -3687,8 +4118,7 @@ class UnifiedTaskEditor(ttk.Frame):
         box.insert("end", "\n")
         if selected:
             for name in selected:
-                box.insert("end", "●  ", "mark")
-                box.insert("end", name + "\n", "body")
+                _insert_summary_bullet(box, name)
         box.configure(state="disabled")
 
     def _build_slot_tree(self, parent: ttk.Frame) -> None:
@@ -4159,15 +4589,15 @@ class UnifiedTaskEditor(ttk.Frame):
         buy_page.configure(style="Page.TFrame")
         buy_body = ttk.Frame(buy_page, style="Page.TFrame")
         buy_body.pack(fill="both", expand=True)
-        buy_body.columnconfigure(0, weight=3)
-        buy_body.columnconfigure(1, weight=2)
-        buy_body.rowconfigure(0, weight=1)
+        buy_body.columnconfigure(0, weight=1, uniform="buy")
+        buy_body.columnconfigure(1, weight=1, uniform="buy")
+        buy_body.rowconfigure(0, weight=0)
         buy_left = ttk.Frame(buy_body, style="Page.TFrame")
         buy_right = ttk.Frame(buy_body, style="Page.TFrame")
-        buy_left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-        buy_right.grid(row=0, column=1, sticky="nsew")
+        buy_left.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
+        buy_right.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
 
-        arrows = self._attack_card(buy_left, "buy_arrows")
+        arrows = self._attack_card(buy_left, self.t["buy_arrows"])
         arrows.pack(fill="x", pady=(0, 8))
         buy_arrows = self._check(arrows, 0, self.t["buy_arrows"], "equipment.buy_arrows", True)
         self._var("equipment.buy_normal_arrows", True, "bool")
@@ -4191,7 +4621,7 @@ class UnifiedTaskEditor(ttk.Frame):
             "equipment.silver_arrow_quantity", 200, "int",
         )
 
-        portions = self._attack_card(buy_left, "buy_portion")
+        portions = self._attack_card(buy_left, self.t["buy_portion"])
         portions.pack(fill="x")
         self._check(
             portions, 0, self.t["restock"], "equipment.restock_potions", True,
@@ -4255,16 +4685,15 @@ class UnifiedTaskEditor(ttk.Frame):
             if name in self.vars:
                 self.vars[name].trace_add("write", self._refresh_buy_summary)
 
-        buy_summary = self._attack_card(buy_right, "settings_summary")
+        buy_summary = self._attack_card(buy_right, self.t["settings_summary"])
         buy_summary.pack(fill="both", expand=True)
         self.buy_summary = tk.Text(
-            buy_summary, wrap="word", height=ui_theme.scaled(16, 8), relief="flat", borderwidth=0,
+            buy_summary, wrap="word", width=1, height=1, relief="flat", borderwidth=0,
             highlightthickness=0, background="#ffffff", foreground="#1f2328",
             font=FONT_BODY, padx=4, pady=4, cursor="arrow",
         )
         self.buy_summary.pack(fill="both", expand=True)
-        self.buy_summary.tag_configure("mark", foreground="#3a82f6")
-        self.buy_summary.tag_configure("body", foreground="#1f2328", spacing1=3)
+        _configure_summary_text(self.buy_summary)
         self.buy_summary.configure(state="disabled")
 
         _apply_arrow_choice()
@@ -4309,7 +4738,7 @@ class UnifiedTaskEditor(ttk.Frame):
         sell_inner.bind("<Configure>", _fit_sell)
         sell_canvas.bind("<Configure>", _fit_sell_width)
 
-        settings = group(sell_inner, self.t["sell_settings"], i18n_key="sell_settings")
+        settings = group(sell_inner, self.t["sell_settings"])
         settings.pack(fill="x", pady=(0, 6))
         mode = self._var("equipment.sell_mode", "sell_except_keep")
         mode.set("sell_except_keep")
@@ -4320,7 +4749,7 @@ class UnifiedTaskEditor(ttk.Frame):
             settings, 1, self.t["store_after_sell"], "equipment.store_after_sell", False,
         )
 
-        items = group(sell_inner, self.t["sell_items"], i18n_key="sell_items")
+        items = group(sell_inner, self.t["sell_items"])
         items.pack(fill="both", expand=True)
         self.sell_filter_panel = SellFilterPanel(
             items, self.t, language=self.app.language,
@@ -4390,8 +4819,7 @@ class UnifiedTaskEditor(ttk.Frame):
         box.configure(state="normal", height=max(len(lines), 1))
         box.delete("1.0", "end")
         for line in lines:
-            box.insert("end", "●  ", "mark")
-            box.insert("end", line + "\n", "body")
+            _insert_summary_bullet(box, line)
         box.configure(state="disabled")
 
     def _npc_field(
@@ -4466,7 +4894,7 @@ class UnifiedTaskEditor(ttk.Frame):
         dialog.grab_set()
 
     def _build_routing(self, page: ttk.Frame) -> None:
-        box = group(page, self.t["routing"], i18n_key="routing")
+        box = group(page, self.t["routing"])
         box.pack(fill="x")
         self.loot_var = self._var("other.loot_mode", "all_items")
         ttk.Radiobutton(
@@ -4550,7 +4978,7 @@ class UnifiedTaskEditor(ttk.Frame):
         page.columnconfigure(0, weight=3)
         page.columnconfigure(1, weight=2)
         page.rowconfigure(1, weight=1)
-        status = self._attack_card(page, "diag_status")
+        status = self._attack_card(page, self.t["diag_status"])
         status.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         row = ttk.Frame(status)
         row.pack(fill="x")
@@ -4584,7 +5012,7 @@ class UnifiedTaskEditor(ttk.Frame):
             self._status_states[key] = state
             self._status_values[key] = detail
 
-        log_card = self._attack_card(page, "exec_log")
+        log_card = self._attack_card(page, self.t["exec_log"])
         log_card.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
         toolbar = ttk.Frame(log_card)
         toolbar.pack(fill="x", pady=(0, 4))
@@ -4634,7 +5062,7 @@ class UnifiedTaskEditor(ttk.Frame):
         side.grid(row=1, column=1, sticky="nsew")
         side.rowconfigure(1, weight=1)
         side.columnconfigure(0, weight=1)
-        tools = self._attack_card(side, "diag_tools")
+        tools = self._attack_card(side, self.t["diag_tools"])
         tools.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         for title, hint, command in (
             (self.t["copy_diagnostics"], self.t["copy_diag_hint"], self.app.copy_diagnostics),
@@ -4642,7 +5070,7 @@ class UnifiedTaskEditor(ttk.Frame):
             (self.t["clear_log"], self.t["clear_log_hint"], self._clear_log_view),
         ):
             self._action_row(tools, title, hint, command).pack(fill="x", pady=3)
-        alerts = self._attack_card(side, "recent_alerts")
+        alerts = self._attack_card(side, self.t["recent_alerts"])
         alerts.grid(row=1, column=0, sticky="nsew")
         self.alert_title = tk.Label(
             alerts, text=self.t["no_alerts"], background=SURFACE, foreground=TEXT,
@@ -4786,7 +5214,7 @@ class UnifiedTaskEditor(ttk.Frame):
         page.columnconfigure(0, weight=1)
         page.columnconfigure(1, weight=1)
         page.rowconfigure(1, weight=1)
-        save_card = self._attack_card(page, "save_current")
+        save_card = self._attack_card(page, self.t["save_current"])
         save_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
         ttk.Label(save_card, text=self.t["save_current_hint"], wraplength=360).pack(anchor="w")
         form = ttk.Frame(save_card)
@@ -4803,7 +5231,7 @@ class UnifiedTaskEditor(ttk.Frame):
             command=self._save_profile_from_entry,
         ).pack(side="left")
 
-        load_card = self._attack_card(page, "load_settings")
+        load_card = self._attack_card(page, self.t["load_settings"])
         load_card.grid(row=1, column=0, sticky="nsew", padx=(0, 8))
         ttk.Label(load_card, text=self.t["load_settings_hint"], wraplength=360).pack(anchor="w")
         # Pack actions first (bottom) so the expanding list cannot hide the buttons.
@@ -4834,7 +5262,7 @@ class UnifiedTaskEditor(ttk.Frame):
         profile_scroll.pack(side="right", fill="y")
         self.profile_tree.bind("<<TreeviewSelect>>", lambda _event: self._show_selected_profile())
 
-        backup = self._attack_card(page, "backup_exchange")
+        backup = self._attack_card(page, self.t["backup_exchange"])
         backup.grid(row=0, column=1, sticky="nsew", pady=(0, 8))
         ttk.Label(backup, text=self.t["backup_hint"], wraplength=360).pack(anchor="w", pady=(0, 6))
         self._action_row(
@@ -4846,7 +5274,7 @@ class UnifiedTaskEditor(ttk.Frame):
             self._import_profile_file,
         ).pack(fill="x", pady=3)
 
-        info = self._attack_card(page, "selected_profile")
+        info = self._attack_card(page, self.t["selected_profile"])
         info.grid(row=1, column=1, sticky="nsew")
         self.profile_info = {}
         for key, label in (
@@ -4979,7 +5407,7 @@ class UnifiedTaskEditor(ttk.Frame):
         page.columnconfigure(0, weight=3)
         page.columnconfigure(1, weight=2)
         page.rowconfigure(0, weight=1)
-        settings = self._attack_card(page, "hotkey_settings")
+        settings = self._attack_card(page, self.t["hotkey_settings"])
         settings.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         header = ttk.Frame(settings)
         header.pack(fill="x", pady=(0, 4))
@@ -5010,7 +5438,7 @@ class UnifiedTaskEditor(ttk.Frame):
         side.grid(row=0, column=1, sticky="nsew")
         side.rowconfigure(1, weight=1)
         side.columnconfigure(0, weight=1)
-        options = self._attack_card(side, "hotkey_options")
+        options = self._attack_card(side, self.t["hotkey_options"])
         options.grid(row=0, column=0, sticky="ew", pady=(0, 8))
         ttk.Label(options, text=self.t["hotkey_global_note"], wraplength=280).pack(anchor="w", pady=2)
         ttk.Label(options, text=self.t["hotkey_duplicate_note"], wraplength=280).pack(anchor="w", pady=2)
@@ -5025,7 +5453,7 @@ class UnifiedTaskEditor(ttk.Frame):
         ttk.Button(
             options, text=self.t["hotkey_apply"], command=self._apply_hotkey_fields,
         ).pack(fill="x", pady=(8, 0))
-        howto = self._attack_card(side, "hotkey_howto")
+        howto = self._attack_card(side, self.t["hotkey_howto"])
         howto.grid(row=1, column=0, sticky="nsew")
         ttk.Label(
             howto, text=self.t["hotkey_howto_body"], justify="left", wraplength=280,
@@ -5085,11 +5513,11 @@ class UnifiedTaskEditor(ttk.Frame):
         if cache is None:
             self._hunt_photos = {}
             cache = self._hunt_photos
-        cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_HUNT_CELL)
+        cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_hunt_icon_box())
         photo = cache.get(cache_key)
         if photo is None:
             image = pil_image if pil_image is not None else _filled_icon(
-                path, _HUNT_CELL, enabled=allowed,
+                path, _hunt_icon_box(), enabled=allowed,
             )
             photo = ImageTk.PhotoImage(image, master=self)
             cache[cache_key] = photo
@@ -5170,7 +5598,7 @@ class UnifiedTaskEditor(ttk.Frame):
         def worker() -> None:
             try:
                 prepared = prepare_hunt_icons(
-                    jobs, size=_HUNT_CELL, filled_icon=_filled_icon,
+                    jobs, size=_hunt_icon_box(), filled_icon=_filled_icon,
                 )
                 self._icon_warmup_q.put((kind, token, prepared))
             except Exception:
@@ -5213,7 +5641,7 @@ class UnifiedTaskEditor(ttk.Frame):
             except tk.TclError:
                 return
             allowed = bool(allowed_map.get(key, True))
-            cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_HUNT_CELL)
+            cache_key = hunt_icon_cache_key(key, allowed=allowed, size=_hunt_icon_box())
             pil_image = prepared.get(cache_key)
             try:
                 photo = self._hunt_photo(
@@ -5278,6 +5706,18 @@ class UnifiedTaskEditor(ttk.Frame):
         self.item_tree.focus(current)
         self.item_tree.see(current)
 
+    def _default_item_category_label(
+        self,
+        categories: list[str] | None = None,
+        language: str | None = None,
+    ) -> str:
+        """Initial 분류 value: armor (갑옷), in the label the item rows use."""
+        language = language or self._catalog_language()
+        label = item_category_display_name("갑옷", language) or "갑옷"
+        if categories is not None and label not in categories:
+            return self.t["filter_all"]
+        return label
+
     def _load_item_names(self) -> None:
         if not hasattr(self, "item_tree"):
             return
@@ -5320,10 +5760,15 @@ class UnifiedTaskEditor(ttk.Frame):
             ),
         ]
         if hasattr(self, "item_category_combo"):
-            current = str(self.item_category_var.get() or self.t["filter_all"])
+            default_category = self._default_item_category_label(categories, language)
+            current = str(self.item_category_var.get() or default_category)
             _size_readonly_combo(self.item_category_combo, categories, fit=False)
             if current not in categories:
-                current = self.t["filter_all"]
+                current = (
+                    default_category
+                    if default_category in categories
+                    else self.t["filter_all"]
+                )
             self.item_category_var.set(current)
         self._item_order = []
         self._item_allowed = {}
@@ -5401,6 +5846,7 @@ class UnifiedTaskEditor(ttk.Frame):
             _fit_tree_columns(self.item_tree, include_tree=True, stretch_last=False)
             self.item_tree.column("name", stretch=True)
             self.item_tree.column("allow", stretch=False, anchor="center")
+            _configure_hunt_icon_column(self.item_tree, heading=self.t["species_image"])
         _refresh_cell_grid(self.item_tree)
 
     def load(self, task: ScheduleTask) -> None:
@@ -5424,6 +5870,7 @@ class UnifiedTaskEditor(ttk.Frame):
             "other.game_language",
             "hunt.species_sort",
         }
+        self._repeat_guard = True
         for name, var in self.vars.items():
             if name in skip_vars:
                 continue
@@ -5516,6 +5963,8 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         for day, variable in enumerate(self.weekday_vars):
             variable.set(day in self.task.weekdays)
+        self._repeat_guard = False
+        self._align_repeat_daily_checkbox()
         self.notes.delete("1.0", "end")
         self.notes.insert("1.0", str(self._value("other", "notes", "")))
         self._load_accounts()
@@ -5650,12 +6099,15 @@ class UnifiedTaskEditor(ttk.Frame):
             account.display_name or account.username: account for account in accounts
         }
         self._account_ids = {a.display_name or a.username: a.account_id for a in accounts}
-        values = [""] + list(self._account_ids)
+        values = [name for name in self._account_ids if str(name).strip()]
         current = self.task.account_id if self.task else None
         current_name = next(
             (n for n, i in self._account_ids.items() if i == current), ""
         )
         show_combobox_value(self.account_combo, current_name, values)
+        schedule_combo = getattr(self, "schedule_account_combo", None)
+        if schedule_combo is not None:
+            show_combobox_value(schedule_combo, current_name, values)
         self._show_account_details()
 
     def _account_changed(self, _event=None) -> None:
@@ -5704,6 +6156,7 @@ class UnifiedTaskEditor(ttk.Frame):
         show_combobox_value(self.map_combo, current, list(self._map_ids))
         if current:
             self.map_var.set(current)
+        self._sync_species_region_to_map()
 
     def _map_id(self) -> str:
         return self._map_ids.get(str(self.map_var.get()), str(self.map_var.get()))
@@ -5714,6 +6167,57 @@ class UnifiedTaskEditor(ttk.Frame):
     def _on_map_combo(self) -> None:
         self._sync_map_areas_ui()
         self._load_move_areas()
+        self._sync_species_region_to_map()
+
+    def _on_species_region_selected(self, _event: object = None) -> None:
+        self._species_region_user_set = True
+        self._refresh_species_rows()
+        self._refresh_monsters_summary()
+
+    def _matching_map_region(self, region_values: list[str] | tuple[str, ...]) -> str:
+        """Catalog region for the map selected on the Map tab, if one exists."""
+        selected = str(self.map_var.get() or "").strip() if hasattr(self, "map_var") else ""
+        map_id = ""
+        if hasattr(self, "_map_ids") and selected:
+            map_id = str(self._map_ids.get(selected, "") or "")
+        known = {str(value) for value in region_values}
+        all_label = self.t["filter_all"]
+        for name in monster_region_candidates(map_id, self._catalog_language()):
+            if name in known and name != all_label:
+                return name
+        if selected in known and selected != all_label:
+            return selected
+        return ""
+
+    def _species_region_choice(self, region_values: list[str]) -> str:
+        label = self._matching_map_region(region_values)
+        if not getattr(self, "_species_region_user_set", False) and label:
+            return label
+        current = str(self.species_region_var.get() or "").strip()
+        if current in region_values:
+            return current
+        if label:
+            return label
+        return self.t["filter_all"]
+
+    def _sync_species_region_to_map(self) -> None:
+        """Point the monster region filter at the map chosen on the Map tab."""
+        if not hasattr(self, "species_region_var") or not hasattr(self, "species_region_combo"):
+            return
+        self._species_region_user_set = False
+        try:
+            values = [str(value) for value in (self.species_region_combo.cget("values") or [])]
+        except tk.TclError:
+            return
+        if len(values) <= 1:
+            return
+        label = self._matching_map_region(values)
+        chosen = label or self.t["filter_all"]
+        if str(self.species_region_var.get() or "") != chosen:
+            self.species_region_var.set(chosen)
+        if getattr(self, "_species_view_loaded", False):
+            self._refresh_species_rows()
+            self._refresh_monsters_summary()
 
     def _on_map_style_changed(self) -> None:
         if not hasattr(self, "farm_tree"):
@@ -5725,18 +6229,18 @@ class UnifiedTaskEditor(ttk.Frame):
     def _sync_map_areas_ui(self) -> None:
         dungeon = self._is_dungeon_style()
         if hasattr(self, "map_hint"):
-            hint_key = "map_setup_hint_dungeon" if dungeon else "map_setup_hint"
-            self.map_hint.configure(text=self.t[hint_key])
-            live_i18n.tag(self.map_hint, hint_key)
+            self.map_hint.configure(
+                text=self.t["map_setup_hint_dungeon"] if dungeon else self.t["map_setup_hint"]
+            )
         if hasattr(self, "btn_edit_map"):
-            edit_key = "edit_patrol" if dungeon else "edit_map"
-            self.btn_edit_map.configure(text=self.t[edit_key])
-            live_i18n.tag(self.btn_edit_map, edit_key)
+            self.btn_edit_map.configure(
+                text=self.t["edit_patrol"] if dungeon else self.t["edit"]
+            )
         if hasattr(self, "areas_group"):
-            areas_key = "patrol_points" if dungeon else "farms"
             try:
-                self.areas_group.configure(text=self.t[areas_key])
-                live_i18n.tag(self.areas_group, areas_key)
+                self.areas_group.configure(
+                    text=self.t["patrol_points"] if dungeon else self.t["farms"]
+                )
             except tk.TclError:
                 pass
         if hasattr(self, "btn_select_all_farms"):
@@ -5750,28 +6254,18 @@ class UnifiedTaskEditor(ttk.Frame):
         if hasattr(self, "farm_tree"):
             if dungeon:
                 self.farm_tree.heading("#0", text="#")
-                live_i18n.clear_tree_heading_tag(self.farm_tree, "#0")
                 self.farm_tree.heading("name", text=self.t["patrol_name"])
-                live_i18n.tag_tree_heading(self.farm_tree, "name", "patrol_name")
                 self.farm_tree.heading("order", text="")
-                live_i18n.clear_tree_heading_tag(self.farm_tree, "order")
                 self.farm_tree.heading("stay", text="")
-                live_i18n.clear_tree_heading_tag(self.farm_tree, "stay")
                 self.farm_tree.heading("memo", text=self.t["patrol_coords"])
-                live_i18n.tag_tree_heading(self.farm_tree, "memo", "patrol_coords")
                 self.farm_tree.column("order", width=1, minwidth=0, stretch=False)
                 self.farm_tree.column("stay", width=1, minwidth=0, stretch=False)
             else:
                 self.farm_tree.heading("#0", text=self.t["area_use"])
-                live_i18n.tag_tree_heading(self.farm_tree, "#0", "area_use")
                 self.farm_tree.heading("name", text=self.t["area_name"])
-                live_i18n.tag_tree_heading(self.farm_tree, "name", "area_name")
                 self.farm_tree.heading("order", text=self.t["farm_order"])
-                live_i18n.tag_tree_heading(self.farm_tree, "order", "farm_order")
                 self.farm_tree.heading("stay", text=self.t["farm_stay"])
-                live_i18n.tag_tree_heading(self.farm_tree, "stay", "farm_stay")
                 self.farm_tree.heading("memo", text=self.t["notes"])
-                live_i18n.tag_tree_heading(self.farm_tree, "memo", "notes")
                 self.farm_tree.column("order", width=56, minwidth=48, stretch=False)
                 self.farm_tree.column("stay", width=80, minwidth=64, stretch=False)
 
@@ -6031,11 +6525,9 @@ class UnifiedTaskEditor(ttk.Frame):
             catalog = {item.key: item for item in list_monster_rows()}
             region_values = [self.t["filter_all"], *monster_region_labels(self._catalog_language())]
             if hasattr(self, "species_region_combo"):
-                current = str(self.species_region_var.get() or self.t["filter_all"])
+                chosen = self._species_region_choice(region_values)
                 _size_readonly_combo(self.species_region_combo, region_values, fit=False)
-                if current not in region_values:
-                    current = self.t["filter_all"]
-                self.species_region_var.set(current)
+                self.species_region_var.set(chosen)
         except Exception:
             rows = sorted((key, value) for key, value in levels.items())
             catalog = {}
@@ -6135,6 +6627,8 @@ class UnifiedTaskEditor(ttk.Frame):
             self.species_tree.column("allow", stretch=False, anchor="center")
             self.species_tree.column("level", stretch=False, anchor="center")
             self.species_tree.column("region", stretch=True)
+            _narrow_species_columns(self.species_tree)
+            _lock_hunt_icon_column(self.species_tree)
         _refresh_cell_grid(self.species_tree)
 
     def _toggle_species(self) -> None:
@@ -6361,160 +6855,12 @@ class UnifiedTaskEditor(ttk.Frame):
             return None
 
     def set_commit_mode(self, editing: bool) -> None:
-        key = "edit_schedule" if editing else "task_details"
-        self.identity_box.configure(text=self.t[key])
-        live_i18n.tag(self.identity_box, key)
-        commit_key = "update_schedule" if editing else "add_schedule"
-        self.commit_button.configure(text=self.t[commit_key])
-        live_i18n.tag(self.commit_button, commit_key)
-
-    def refresh_i18n(self) -> None:
-        """Rebuild translated label maps and summaries after ``self.t`` changes."""
-        self.s = ui_strings(self.app.language)
-        self._rebuild_label_maps()
-        for name in (
-            "_refresh_form_summary",
-            "_refresh_attack_summary",
-            "_refresh_monsters_summary",
-            "_refresh_items_summary",
-            "_refresh_magic_summary",
-            "_refresh_magic_pick_summary",
-            "_refresh_buy_summary",
-        ):
-            method = getattr(self, name, None)
-            if callable(method):
-                try:
-                    method()
-                except Exception:
-                    pass
-        sync_map = getattr(self, "_sync_map_areas_ui", None)
-        if callable(sync_map):
-            try:
-                sync_map()
-            except Exception:
-                pass
-        editing = bool(self.app._editing_id) and not self.app._creating_new
-        self.set_commit_mode(editing)
-
-    def _rebuild_label_maps(self) -> None:
-        def _id_from(mapping: dict, current: str, fallback: str) -> str:
-            return mapping.get(str(current).strip(), fallback)
-
-        if hasattr(self, "_character_ids"):
-            current = _id_from(
-                self._character_ids,
-                str(self.character_var.get() if hasattr(self, "character_var") else ""),
-                "mage",
-            )
-            self._character_ids = {
-                self.t[key]: key for key in ("royal", "knight", "elf", "mage")
-            }
-            if hasattr(self, "character_var"):
-                label = next(
-                    (lab for lab, cid in self._character_ids.items() if cid == current),
-                    self.t["mage"],
-                )
-                self.character_var.set(label)
-
-        if hasattr(self, "_sort_ids") and hasattr(self, "species_sort_var"):
-            current = _id_from(self._sort_ids, str(self.species_sort_var.get()), "name")
-            self._sort_ids = {
-                self.t["sort_name"]: "name",
-                self.t["sort_level"]: "level",
-            }
-            label = next(
-                (lab for lab, sid in self._sort_ids.items() if sid == current),
-                self.t["sort_name"],
-            )
-            show_combobox_value(
-                self.species_sort_combo, label, list(self._sort_ids),
-            )
-            self.species_sort_var.set(label)
-
-        if hasattr(self, "_species_show_ids") and hasattr(self, "species_show_var"):
-            current = _id_from(
-                self._species_show_ids, str(self.species_show_var.get()), "all",
-            )
-            self._species_show_ids = {
-                self.t["filter_all"]: "all",
-                self.t["filter_allowed"]: "allowed",
-                self.t["filter_unallowed"]: "unallowed",
-            }
-            label = next(
-                (lab for lab, sid in self._species_show_ids.items() if sid == current),
-                self.t["filter_all"],
-            )
-            show_combobox_value(
-                self.species_show_combo, label, list(self._species_show_ids),
-            )
-            self.species_show_var.set(label)
-
-        if hasattr(self, "_item_show_ids") and hasattr(self, "item_show_var"):
-            current = _id_from(
-                self._item_show_ids, str(self.item_show_var.get()), "all",
-            )
-            self._item_show_ids = {
-                self.t["filter_all"]: "all",
-                self.t["filter_allowed"]: "allowed",
-                self.t["filter_unallowed"]: "unallowed",
-            }
-            label = next(
-                (lab for lab, sid in self._item_show_ids.items() if sid == current),
-                self.t["filter_all"],
-            )
-            show_combobox_value(
-                self.item_show_combo, label, list(self._item_show_ids),
-            )
-            self.item_show_var.set(label)
-
-        if hasattr(self, "_magic_class_ids") and hasattr(self, "magic_class_combo"):
-            current = _id_from(
-                self._magic_class_ids, str(self.magic_class_combo.get()), "elf",
-            )
-            self._magic_class_ids = {
-                self.t[name]: name for name in ("elf", "mage", "knight", "royal")
-            }
-            label = next(
-                (lab for lab, cid in self._magic_class_ids.items() if cid == current),
-                self.t["elf"],
-            )
-            show_combobox_value(
-                self.magic_class_combo, label, list(self._magic_class_ids),
-            )
-
-        if hasattr(self, "_game_language_ids") and hasattr(self, "game_language_combo"):
-            current = _id_from(
-                self._game_language_ids, str(self.game_language_combo.get()), "ko",
-            )
-            self._game_language_ids = {
-                self.t["game_korean"]: "ko",
-                self.t["game_chinese"]: "zh",
-            }
-            # Fall back if keys differ — rebuild from known pattern used at build
-            if len(self._game_language_ids) < 2:
-                # Keep whatever build originally used
-                pass
-            label = next(
-                (lab for lab, lid in self._game_language_ids.items() if lid == current),
-                next(iter(self._game_language_ids), ""),
-            )
-            if label:
-                show_combobox_value(
-                    self.game_language_combo, label, list(self._game_language_ids),
-                )
-
-        if hasattr(self, "species_region_var"):
-            # Region list includes live game labels; keep "all" translated.
-            try:
-                current = str(self.species_region_var.get() or "")
-                if current in (
-                    tr("en")["filter_all"],
-                    tr("ko")["filter_all"],
-                    tr("zh")["filter_all"],
-                ):
-                    self.species_region_var.set(self.t["filter_all"])
-            except Exception:
-                pass
+        self.identity_box.configure(
+            text=self.t["edit_schedule"] if editing else self.t["task_details"]
+        )
+        self.commit_button.configure(
+            text=self.t["update_schedule"] if editing else self.t["add_schedule"]
+        )
 
     def begin_new(self) -> None:
         """Clear the form so the next commit creates a schedule."""
@@ -6631,6 +6977,60 @@ class UnifiedTaskEditor(ttk.Frame):
         self.commit()
 
 
+# Header status strip. Inactive stays gray; a live probe or a running bot is green.
+# Pause keeps a warm tone so it does not read as stopped.
+_STRIP_OFF = ("#e6e9ee", "#5c6570")
+_STRIP_ON = ("#128a43", "#ffffff")
+_STRIP_HOLD = ("#f4e4c4", "#8a5a00")
+
+
+def _strip_colors(mode: str) -> tuple[str, str]:
+    if mode == "on":
+        return _STRIP_ON
+    if mode == "hold":
+        return _STRIP_HOLD
+    return _STRIP_OFF
+
+
+def _game_chip_text(detail: str, lamp: Lamp, texts: dict[str, str]) -> str:
+    if lamp == Lamp.GREEN:
+        return texts["chip_game_on"]
+    text = str(detail or "")
+    if text == "Game window is minimized":
+        return texts["chip_game_min"]
+    if text == "Game is not in focus":
+        return texts["chip_game_focus"]
+    if text == "Cursor is outside the game window":
+        return texts["chip_game_cursor"]
+    if text.startswith("Game probe failed"):
+        return texts["chip_game_error"]
+    return texts["chip_game_off"]
+
+
+def _memory_chip_text(detail: str, lamp: Lamp, texts: dict[str, str]) -> str:
+    if lamp == Lamp.GREEN:
+        return texts["chip_mem_on"]
+    if "waiting for player" in str(detail or ""):
+        return texts["chip_mem_wait"]
+    return texts["chip_mem_off"]
+
+
+def _map_chip_text(map_probe, texts: dict[str, str], selected_farms: list[str]) -> str:
+    if map_probe.lamp == Lamp.GREEN:
+        if map_probe.dungeon:
+            count = int(map_probe.patrol_count or 0)
+        else:
+            names = set(map_probe.farm_names or [])
+            count = len([name for name in selected_farms if name in names])
+        title = str(map_probe.map_name or "").strip() or texts["chip_map_on"]
+        return texts["chip_place"].format(title=title, n=count)
+    if map_probe.dungeon:
+        return texts["chip_patrol_off"]
+    if not str(map_probe.map_name or "").strip():
+        return texts["chip_map_off"]
+    return texts["chip_farm_off"]
+
+
 class ScheduleWindow(tk.Tk):
     """Exactly one application root containing schedule and operator controls."""
 
@@ -6646,7 +7046,8 @@ class ScheduleWindow(tk.Tk):
         ensure_userdata()
         self.profile = profile or load_profile()
         self.store = store or ScheduleStore()
-        self.language = self.profile.language if self.profile.language in ("en", "ko", "zh") else "en"
+        self.language = ui_language(self.profile.language)
+        self.profile.language = self.language
         load_bundled_fonts(self.language)
         self.t = tr(self.language)
         self.tasks = self.store.load()
@@ -6672,10 +7073,12 @@ class ScheduleWindow(tk.Tk):
         self._apply_brand_icon()
         self.configure(background=BG)
         self.resizable(True, True)
+        _disable_window_maximize(self)
         self._place_window()
         self._ui_scale = ui_theme.UI_SCALE
         self._scale_job = ""
         self.bind("<Configure>", self._on_window_configure)
+        self.bind("<Map>", self._on_window_map, add="+")
         self.attributes("-topmost", bool(self.profile.always_on_top))
         self.coordinator = self._open_coordinator()
         self._build()
@@ -6702,6 +7105,7 @@ class ScheduleWindow(tk.Tk):
             self.lift()
         except tk.TclError:
             pass
+        _disable_window_maximize(self)
         self._window_revealed = True
 
     @staticmethod
@@ -6711,8 +7115,31 @@ class ScheduleWindow(tk.Tk):
         FONT_BODY = ui_theme.FONT_BODY
         FONT_SECTION = ui_theme.FONT_SECTION
 
+    def _on_window_map(self, _event: tk.Event | None = None) -> None:
+        _disable_window_maximize(self)
+
+    def _undo_maximize(self) -> bool:
+        """Return True when the window was maximized and has been restored."""
+        try:
+            zoomed = str(self.state()) == "zoomed"
+        except tk.TclError:
+            return False
+        if not zoomed:
+            return False
+        if getattr(self, "_undoing_maximize", False):
+            return True
+        self._undoing_maximize = True
+        try:
+            self.state("normal")
+        except tk.TclError:
+            pass
+        finally:
+            self._undoing_maximize = False
+        _disable_window_maximize(self)
+        return True
+
     def _place_window(self) -> None:
-        """Open at 1187×806, centered, and allow the user to drag-resize."""
+        """Open at 1187×806, centered. Drag-resize stays on; maximize does not."""
         width = ui_theme.DEFAULT_WIDTH
         height = ui_theme.DEFAULT_HEIGHT
         work_w = self.winfo_screenwidth()
@@ -6737,6 +7164,8 @@ class ScheduleWindow(tk.Tk):
 
     def _on_window_configure(self, event: tk.Event) -> None:
         if event.widget is not self:
+            return
+        if self._undo_maximize():
             return
         # Ignore size events while hidden / before reveal (stale 200x200 configs).
         if not getattr(self, "_window_revealed", False):
@@ -6775,8 +7204,9 @@ class ScheduleWindow(tk.Tk):
     def _apply_scaled_metrics(self) -> None:
         """Keep tables, summaries, and row heights in step with the window."""
         style = ttk.Style(self)
-        hunt = ui_theme.scaled(_HUNT_CELL, 20)
-        style.configure("Hunt.Treeview", rowheight=hunt, font=ui_theme.FONT_BODY)
+        style.configure(
+            "Hunt.Treeview", rowheight=_hunt_row_height(), font=ui_theme.FONT_BODY,
+        )
         style.configure("Map.Treeview", rowheight=ui_theme.scaled(30, 18), indent=0)
         style.configure(
             "Accounts.Treeview",
@@ -6804,11 +7234,15 @@ class ScheduleWindow(tk.Tk):
                 continue
             try:
                 widget.configure(font=body)
+                _configure_summary_text(widget)
             except tk.TclError:
                 pass
-        if hasattr(self, "state_label"):
+        for name in ("state_label", "game_lamp", "memory_lamp", "map_lamp"):
+            widget = getattr(self, name, None)
+            if widget is None:
+                continue
             try:
-                self.state_label.configure(font=(body[0], body[1], "bold"))
+                widget.configure(font=body)
             except tk.TclError:
                 pass
 
@@ -6821,7 +7255,7 @@ class ScheduleWindow(tk.Tk):
             return
         if width < 80:
             return
-        left_min = max(140, ui_theme.scaled(360, 140))
+        left_min = max(520, ui_theme.scaled(720, 520))
         right_min = max(240, width - left_min)
         try:
             self.paned.paneconfigure(self.paned.panes()[0], minsize=left_min)
@@ -6859,76 +7293,71 @@ class ScheduleWindow(tk.Tk):
         except Exception:
             pass
 
+    def _status_segment(self, parent: tk.Misc, *, last: bool = False) -> tk.Label:
+        """One flat cell in the header status strip."""
+        label = tk.Label(
+            parent,
+            text="",
+            background=_STRIP_OFF[0],
+            foreground=_STRIP_OFF[1],
+            font=FONT_BODY,
+            padx=10,
+            pady=3,
+            anchor="center",
+            borderwidth=0,
+            highlightthickness=0,
+        )
+        label.pack(side="left", padx=(1, 1 if last else 0), pady=1)
+        return label
+
+    def _paint_status_chip(self, label: tk.Label, text: str, mode: str) -> None:
+        background, foreground = _strip_colors(mode)
+        try:
+            label.configure(text=text, background=background, foreground=foreground)
+        except tk.TclError:
+            pass
+
     def _build(self) -> None:
         header = ttk.Frame(self, padding=6, style="Chrome.TFrame")
         header.pack(fill="x")
-        self.game_lamp = ttk.Label(header, style="Chrome.TLabel")
-        self.memory_lamp = ttk.Label(header, style="Chrome.TLabel")
-        self.map_lamp = ttk.Label(header, style="Chrome.TLabel")
-        for widget in (self.game_lamp, self.memory_lamp, self.map_lamp):
-            widget.pack(side="left", padx=(0, 12))
-        status_box = tk.Frame(header, background=CHROME)
-        status_box.pack(side="left", before=self.game_lamp, padx=(2, 14))
-        self.state_dot = tk.Canvas(
-            status_box,
-            width=13,
-            height=13,
-            background=CHROME,
-            highlightthickness=0,
-        )
-        self.state_dot.pack(side="left", padx=(0, 4))
-        self.state_dot_item = self.state_dot.create_oval(
-            2, 2, 11, 11, fill="#dc2626", outline="#991b1b"
-        )
-        self.state_label = tk.Label(
-            status_box,
-            width=9,
-            anchor="w",
-            background=CHROME,
-            foreground=TEXT,
-            font=(FONT_BODY[0], FONT_BODY[1], "bold"),
-        )
-        self.state_label.pack(side="left")
+        status_strip = tk.Frame(header, background=BORDER, highlightthickness=0)
+        status_strip.pack(side="left", padx=(2, 14), pady=1)
+        self.state_label = self._status_segment(status_strip)
+        self.game_lamp = self._status_segment(status_strip)
+        self.memory_lamp = self._status_segment(status_strip)
+        self.map_lamp = self._status_segment(status_strip, last=True)
         self.power_btn = ttk.Button(
             header, text=self.t["start"], image=self._run_glyph("start"),
             compound="left", command=self._toggle_run,
         )
-        live_i18n.tag(self.power_btn, "start")
         self.stop_btn = ttk.Button(
             header, text=self.t["stop"], image=self._run_glyph("stop"),
             compound="left", command=self.coordinator.stop,
         )
-        live_i18n.tag(self.stop_btn, "stop")
         header_buttons = [self.stop_btn, self.power_btn]
         self.debug_btn = None
         if not is_portable():
             self.debug_btn = ttk.Button(header, text=self.t["debug"], command=self.open_debug)
-            live_i18n.tag(self.debug_btn, "debug")
             header_buttons.append(self.debug_btn)
         for button in header_buttons:
             button.pack(side="right", padx=2)
         self.topmost_var = tk.BooleanVar(self, value=self.profile.always_on_top)
-        topmost_btn = ttk.Checkbutton(
+        ttk.Checkbutton(
             header,
             text=self.t["always_on_top"],
             variable=self.topmost_var,
             command=self._toggle_topmost,
             style="Chrome.TCheckbutton",
-        )
-        live_i18n.tag(topmost_btn, "always_on_top")
-        topmost_btn.pack(side="right", padx=6)
+        ).pack(side="right", padx=6)
         language = ttk.Combobox(header, state="readonly", width=11, values=list(LANGUAGES))
-        self._language_combo = language
         language.pack(side="right", padx=8)
         show_combobox_value(language, LANGUAGE_NAMES[self.language], list(LANGUAGES))
         language.bind("<<ComboboxSelected>>", lambda _e: self._set_language(LANGUAGES[language.get()]))
-        accounts_btn = ttk.Button(
+        ttk.Button(
             header,
             text=self.t["manage_accounts"],
             command=self.open_accounts,
-        )
-        live_i18n.tag(accounts_btn, "manage_accounts")
-        accounts_btn.pack(side="right", padx=4)
+        ).pack(side="right", padx=4)
 
         paned = ttk.Panedwindow(self, orient="horizontal")
         self.paned = paned
@@ -6968,9 +7397,9 @@ class ScheduleWindow(tk.Tk):
         if total < 80:
             self.after(50, self._balance_panes)
             return
-        # Narrow left schedule list, about 22% of the current window.
-        left_min = max(140, ui_theme.scaled(360, 140))
-        left_width = int(round(total * 0.22))
+        # Room for the time controls and the account form side by side.
+        left_min = max(520, ui_theme.scaled(720, 520))
+        left_width = int(round(total * 0.52))
         left_width = min(max(left_width, left_min), max(left_min, total - 240))
         self.paned.sashpos(0, left_width)
         self._panes_balanced = True
@@ -6979,21 +7408,14 @@ class ScheduleWindow(tk.Tk):
     def _flow_buttons(
         self,
         parent: ttk.Frame,
-        items: tuple[tuple[str, object], ...] | tuple[tuple[str, object, str], ...],
+        items: tuple[tuple[str, object], ...],
         *,
         columns: int | None = None,
     ) -> None:
         """Keep every toolbar button fully visible, wrapping onto extra rows."""
         buttons = []
-        for item in items:
-            if len(item) == 3:
-                text, command, key = item  # type: ignore[misc]
-            else:
-                text, command = item  # type: ignore[misc]
-                key = None
+        for text, command in items:
             button = ttk.Button(parent, text=text, command=command, padding=(6, 2))
-            if key:
-                live_i18n.tag(button, str(key))
             buttons.append(button)
 
         forced = max(1, int(columns)) if columns else None
@@ -7032,8 +7454,11 @@ class ScheduleWindow(tk.Tk):
         parent.after_idle(reflow)
 
     def _build_schedule(self, parent) -> None:
-        box = group(parent, self.t["master_schedules"], i18n_key="master_schedules")
+        box = group(parent, self.t["master_schedules"])
         box.pack(fill="both", expand=True)
+        self.schedule_timing_host = ttk.Frame(box)
+        self.schedule_timing_host.pack(fill="x", padx=2, pady=(2, 0))
+        ttk.Separator(box, orient="horizontal").pack(fill="x", pady=(4, 6))
         table = ttk.Frame(box)
         table.pack(fill="both", expand=True)
         table.rowconfigure(0, weight=1)
@@ -7048,8 +7473,6 @@ class ScheduleWindow(tk.Tk):
         )
         for col, heading, width in _SCHEDULE_COLUMNS:
             self.tree.heading(col, text=self.t.get(heading, heading), anchor="center")
-            if heading in self.t:
-                live_i18n.tag_tree_heading(self.tree, col, heading)
             anchor = "center" if col == "enabled" else "w"
             self.tree.column(col, width=width, minwidth=48 if col == "enabled" else 56, stretch=False, anchor=anchor)
         y_scroll = ttk.Scrollbar(table, orient="vertical")
@@ -7088,18 +7511,16 @@ class ScheduleWindow(tk.Tk):
             (
                 ("▲", lambda: self._move(-1)),
                 ("▼", lambda: self._move(1)),
-                (self.t["new"], self._new, "new"),
-                (self.t["edit"], self.edit_selected_task, "edit"),
-                (self.t["duplicate"], self._duplicate, "duplicate"),
-                (self.t["delete"], self._delete, "delete"),
+                (self.t["new"], self._new),
+                (self.t["edit"], self.edit_selected_task),
+                (self.t["duplicate"], self._duplicate),
+                (self.t["delete"], self._delete),
             ),
             columns=3,
         )
         clock = ttk.Frame(box)
         clock.pack(fill="x", pady=(1, 3))
-        current_time_label = ttk.Label(clock, text=self.t["current_time"])
-        live_i18n.tag(current_time_label, "current_time")
-        current_time_label.pack(side="left")
+        ttk.Label(clock, text=self.t["current_time"]).pack(side="left")
         self.current_time_var = tk.StringVar(self, value=datetime.now().strftime("%H:%M:%S"))
         ttk.Label(
             clock,
@@ -7109,32 +7530,15 @@ class ScheduleWindow(tk.Tk):
         ).pack(side="left", padx=3)
         self._start_clock()
         self.randomize_var = tk.BooleanVar(self, value=bool(self.store.randomize_enabled))
-        randomize_btn = ttk.Checkbutton(
+        ttk.Checkbutton(
             clock, text=self.t["randomize"], variable=self.randomize_var
-        )
-        live_i18n.tag(randomize_btn, "randomize")
-        randomize_btn.pack(side="left", padx=(5, 1))
+        ).pack(side="left", padx=(5, 1))
         self.random_minutes_var = tk.IntVar(self, value=int(self.store.randomize_minutes or 0))
         ttk.Spinbox(
             clock, from_=0, to=120, width=4, textvariable=self.random_minutes_var
         ).pack(side="left")
         self.randomize_var.trace_add("write", self._save_randomize)
         self.random_minutes_var.trace_add("write", self._save_randomize)
-        daily = group(parent, self.t["daily_plan"], i18n_key="daily_plan")
-        daily.pack(fill="x", pady=(4, 0))
-        self.daily_tree = ttk.Treeview(
-            daily,
-            columns=("task", "time"),
-            show="headings",
-            height=6,
-            style="Grid.Treeview",
-        )
-        self.daily_tree.heading("task", text=self.t["task"])
-        live_i18n.tag_tree_heading(self.daily_tree, "task", "task")
-        self.daily_tree.heading("time", text=self.t["time"])
-        live_i18n.tag_tree_heading(self.daily_tree, "time", "time")
-        self.daily_tree.pack(fill="x")
-        _enable_cell_grid(self.daily_tree)
 
     def _start_clock(self) -> None:
         """Refresh the local clock. A new build cancels the previous timer."""
@@ -7166,7 +7570,6 @@ class ScheduleWindow(tk.Tk):
     def _refresh(self, select: int | None = None) -> None:
         self._clear_power_buttons()
         self.tree.delete(*self.tree.get_children())
-        self.daily_tree.delete(*self.daily_tree.get_children())
         self._map_labels = {
             map_id: label for map_id, label, _dungeon in list_map_choices(self.language)
         }
@@ -7176,11 +7579,6 @@ class ScheduleWindow(tk.Tk):
             accounts = []
         self._accounts_by_id = {account.account_id: account for account in accounts}
         for index, task in enumerate(self.tasks):
-            timing = (
-                f"{task.start_time}~{task.end_time}"
-                if task.time_mode == "window"
-                else f"{task.duration_minutes}m"
-            )
             self.tree.insert(
                 "",
                 "end",
@@ -7190,8 +7588,6 @@ class ScheduleWindow(tk.Tk):
                     for column, _heading, _width in _SCHEDULE_COLUMNS
                 ),
             )
-            if task.enabled:
-                self.daily_tree.insert("", "end", values=(task.name, timing))
         if self.tasks:
             index = select if select is not None and 0 <= select < len(self.tasks) else 0
             self._nav_lock += 1
@@ -7202,7 +7598,6 @@ class ScheduleWindow(tk.Tk):
             finally:
                 self._nav_lock -= 1
         _refresh_cell_grid(self.tree)
-        _refresh_cell_grid(self.daily_tree)
         _fit_tree_columns(self.tree)
         self._layout_power_buttons()
         self._refresh_operator()
@@ -8037,6 +8432,7 @@ class ScheduleWindow(tk.Tk):
         self.attributes("-topmost", self.profile.always_on_top)
 
     def _refresh_operator(self) -> None:
+        self._paint_run_status()
         state = self.coordinator.controller.state
         scheduled = self._session.armed or self._session.switching
         try:
@@ -8059,33 +8455,35 @@ class ScheduleWindow(tk.Tk):
             editor = getattr(self, "editor", None)
             if editor is not None and hasattr(editor, "_show_status"):
                 editor._show_status(game, memory, map_probe)
-            def lamp(label, result):
-                mark = "●" if result.lamp == Lamp.GREEN else (
-                    "◐" if result.lamp == Lamp.YELLOW else "○"
-                )
-                label.configure(
-                    text=f"{mark} {localize_probe_detail(result.detail, self.language)}"
-                )
-            lamp(self.game_lamp, game)
-            lamp(self.memory_lamp, memory)
-            lamp(self.map_lamp, map_probe)
+            selected = [str(name) for name in (self.profile.selected_farms or [])]
+            self._paint_status_chip(
+                self.game_lamp,
+                _game_chip_text(game.detail, game.lamp, self.t),
+                "on" if game.lamp == Lamp.GREEN else "off",
+            )
+            self._paint_status_chip(
+                self.memory_lamp,
+                _memory_chip_text(memory.detail, memory.lamp, self.t),
+                "on" if memory.lamp == Lamp.GREEN else "off",
+            )
+            self._paint_status_chip(
+                self.map_lamp,
+                _map_chip_text(map_probe, self.t, selected),
+                "on" if map_probe.lamp == Lamp.GREEN else "off",
+            )
         except Exception:
             pass
-        state_colors = {
-            RunState.STOPPED: ("#dc2626", "#991b1b"),
-            RunState.RUNNING: ("#16a34a", "#166534"),
-            RunState.PAUSED: ("#f59e0b", "#b45309"),
-        }
-        fill, outline = state_colors.get(state, ("#dc2626", "#991b1b"))
-        self.state_dot.itemconfigure(
-            self.state_dot_item, fill=fill, outline=outline
-        )
+
+    def _paint_run_status(self) -> None:
+        """Header status strip. Always follows the controller, including hotkeys."""
+        if not hasattr(self, "state_label"):
+            return
+        state = self.coordinator.controller.state
+        scheduled = self._session.armed or self._session.switching
         reason = str(getattr(self.coordinator.controller, "reason", "") or "").strip()
         state_text = self.t.get(state.value, state.value)
         if state == RunState.STOPPED and reason and reason != "cancelled":
             pretty = self._start_error_text(reason)
-            if pretty and pretty not in state_text:
-                state_text = pretty
             if pretty and pretty != getattr(self, "_shown_start_reason", ""):
                 self._shown_start_reason = pretty
                 self.append_log(pretty)
@@ -8093,7 +8491,13 @@ class ScheduleWindow(tk.Tk):
                     self.footer_status.configure(text=pretty)
         elif state != RunState.STOPPED:
             self._shown_start_reason = ""
-        self.state_label.configure(text=state_text)
+        if state == RunState.RUNNING:
+            mode = "on"
+        elif state == RunState.PAUSED:
+            mode = "hold"
+        else:
+            mode = "off"
+        self._paint_status_chip(self.state_label, state_text, mode)
         if state == RunState.RUNNING:
             label, glyph, enabled = self.t["pause"], "pause", True
         elif state == RunState.PAUSED:
@@ -8290,27 +8694,20 @@ class ScheduleWindow(tk.Tk):
             tree.column(
                 col,
                 width=width,
-                minwidth=72,
+                minwidth=40,
                 stretch=False,
                 anchor=anchor,
             )
         y_scroll = ttk.Scrollbar(table, orient="vertical")
-        x_scroll = ttk.Scrollbar(table, orient="horizontal")
 
         def yset(*args: str) -> None:
             y_scroll.set(*args)
             _refresh_cell_grid(tree)
 
-        def xset(*args: str) -> None:
-            x_scroll.set(*args)
-            _refresh_cell_grid(tree)
-
         y_scroll.configure(command=tree.yview)
-        x_scroll.configure(command=tree.xview)
-        tree.configure(yscrollcommand=yset, xscrollcommand=xset)
+        tree.configure(yscrollcommand=yset)
         tree.grid(row=0, column=0, sticky="nsew")
         y_scroll.grid(row=0, column=1, sticky="ns")
-        x_scroll.grid(row=1, column=0, sticky="ew")
         _enable_bbox_grid(tree)
         store = AccountStore()
         recovery_prompted = False
@@ -8328,6 +8725,52 @@ class ScheduleWindow(tk.Tk):
             self.t["elf"]: "elf",
             self.t["mage"]: "mage",
         }
+        full_paths: dict[str, tuple[str, str]] = {}
+        layout_state = {"pending": None, "busy": False, "width": -1}
+
+        def account_viewport() -> int:
+            top.update_idletasks()
+            window = top.winfo_width()
+            if window < 80:
+                return 0
+            bar = y_scroll.winfo_width()
+            if bar < 8:
+                bar = 18
+            return max(80, window - 16 - bar - 4)
+
+        def layout_accounts() -> None:
+            if not tree.winfo_exists():
+                return
+            _fit_account_columns(tree, full_paths, account_viewport())
+            _refresh_cell_grid(tree)
+
+        def run_layout() -> None:
+            layout_state["pending"] = None
+            if layout_state["busy"] or not top.winfo_exists():
+                return
+            width = top.winfo_width()
+            if width < 80 or width == layout_state["width"]:
+                return
+            layout_state["busy"] = True
+            layout_state["width"] = width
+            try:
+                layout_accounts()
+            finally:
+                layout_state["busy"] = False
+
+        def schedule_layout(_event=None) -> None:
+            if layout_state["busy"]:
+                return
+            pending = layout_state["pending"]
+            if pending is not None:
+                try:
+                    tree.after_cancel(pending)
+                except tk.TclError:
+                    pass
+            try:
+                layout_state["pending"] = tree.after_idle(run_layout)
+            except tk.TclError:
+                layout_state["pending"] = None
 
         def account_row(account: Account) -> tuple:
             return (
@@ -8346,8 +8789,13 @@ class ScheduleWindow(tk.Tk):
         def reload():
             nonlocal recovery_prompted
             tree.delete(*tree.get_children())
+            full_paths.clear()
             try:
                 for account in store.load():
+                    full_paths[account.account_id] = (
+                        account.purple_launcher_path or "",
+                        account.game_path or "",
+                    )
                     tree.insert(
                         "",
                         "end",
@@ -8382,8 +8830,7 @@ class ScheduleWindow(tk.Tk):
                 messagebox.showerror(self.t["title"], str(exc), parent=top)
             if tree.get_children() and not tree.selection():
                 tree.selection_set(tree.get_children()[0])
-            _fit_tree_columns(tree)
-            _refresh_cell_grid(tree)
+            layout_accounts()
 
         def edit_account(account: Account | None = None) -> None:
             form = tk.Toplevel(top)
@@ -8615,8 +9062,9 @@ class ScheduleWindow(tk.Tk):
 
             buttons = ttk.Frame(form)
             buttons.grid(row=len(fields), column=0, columnspan=2, sticky="e", padx=7, pady=7)
+            action_label = self.t["account_add"] if account is None else self.t["save"]
             ttk.Button(
-                buttons, text=self.t["save"], command=save_account, style="Accent.TButton",
+                buttons, text=action_label, command=save_account, style="Accent.TButton",
             ).pack(
                 side="left", padx=2
             )
@@ -8694,7 +9142,11 @@ class ScheduleWindow(tk.Tk):
 
         tree.bind("<Double-1>", open_selected)
         tree.bind("<Return>", lambda _event: edit_selected())
+        top.bind("<Configure>", schedule_layout, add="+")
         reload()
+        top.geometry("1180x460")
+        top.update_idletasks()
+        layout_accounts()
         _center_dialog(top, self)
         top.protocol("WM_DELETE_WINDOW", close_accounts)
         top.grab_set()
@@ -8800,7 +9252,7 @@ class ScheduleWindow(tk.Tk):
 
     def apply_profile(self, profile: Profile) -> None:
         """Compatibility callback used by the existing setup wizard."""
-        language = profile.language if profile.language in ("en", "ko", "zh") else "en"
+        language = ui_language(profile.language)
         self.profile.__dict__.update(profile.__dict__)
         save_profile(self.profile)
         self.coordinator.profile = self.profile
@@ -9072,63 +9524,31 @@ class ScheduleWindow(tk.Tk):
             os.startfile(str(LOG_DIR))
 
     def _set_language(self, language: str) -> None:
+        language = ui_language(language)
         if language == self.language:
             return
         self._close_debug()
         self.profile.language = language
         save_profile(self.profile)
-        previous = self.language
-        self.language = language
-        self.t = tr(language)
-        load_bundled_fonts(language)
-        ui_theme.use_ui_fonts(language, getattr(self, "_ui_scale", None))
-        self._sync_font_aliases()
-        self.title(self.t["console_title"])
-        if hasattr(self, "editor") and self.editor is not None:
-            self.editor.t = self.t
-        updated = live_i18n.apply(self, self.t)
-        if hasattr(self, "editor") and self.editor is not None:
-            try:
-                self.editor.refresh_i18n()
-            except Exception:
-                # Fall back to full rebuild only if live refresh fails.
-                self._set_language_rebuild(language, previous)
-                return
-        combo = getattr(self, "_language_combo", None)
-        if combo is not None:
-            try:
-                show_combobox_value(
-                    combo, LANGUAGE_NAMES[self.language], list(LANGUAGES),
-                )
-            except tk.TclError:
-                pass
-        self._apply_scaled_metrics()
-        self._refresh_operator()
-        if hasattr(self, "footer_status"):
-            try:
-                self.footer_status.configure(text="")
-            except tk.TclError:
-                pass
-        _ = updated  # live apply count (debug-friendly)
-
-    def _set_language_rebuild(self, language: str, previous: str) -> None:
-        """Legacy full rebuild used only if live refresh raises."""
-        self.language = language
-        self.t = tr(language)
+        self._session.disarm()
+        self._clear_power_buttons()
+        self.coordinator.close()
+        # Rebuild while withdrawn so the user never sees a blank/torn layout
+        # between destroy() and the restored editor form.
         self._window_revealed = False
         try:
             self.withdraw()
         except tk.TclError:
             pass
-        self._session.disarm()
-        self._clear_power_buttons()
-        self.coordinator.close()
         for child in self.winfo_children():
             child.destroy()
+        self.language = language
+        self.t = tr(language)
         apply_classic_style(self, language)
         self._sync_font_aliases()
         self.title(self.t["console_title"])
         self.resizable(True, True)
+        _disable_window_maximize(self)
         self.minsize(ui_theme.MIN_WIDTH, ui_theme.MIN_HEIGHT)
         self.coordinator = self._open_coordinator()
         self._build()

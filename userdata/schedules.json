@@ -4,13 +4,13 @@
   "randomize_minutes": 0,
   "tasks": [
     {
-      "name": "brgxfc",
+      "name": "condra",
       "id": "b10a01bf25b44122a8c11a83022d1a6f",
       "enabled": true,
-      "account_id": "a805e76b-f705-4f76-bb76-31b8fef1132f",
-      "server": "飛馬珀伽索斯",
+      "account_id": "d2759608-38e3-4077-aae9-7c974fcecf27",
+      "server": "데포로쥬",
       "character_slot": 1,
-      "character": "elf",
+      "character": "royal",
       "role": "",
       "start_time": "00:00:00",
       "end_time": "23:59:59",
@@ -28,7 +28,7 @@
       ],
       "settings": {
         "move": {
-          "map_id": "talking_island",
+          "map_id": "mainland",
           "map_style": "normal",
           "selected_farms": [
             "area_1",
