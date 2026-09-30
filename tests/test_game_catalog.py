@@ -3,11 +3,15 @@ from __future__ import annotations
 
 from app._03_world.game_catalog import (
     hp_restore_item,
+    is_dungeon_region,
+    is_mainland_region,
     item_by_key,
     list_hp_restore_items,
     list_item_rows,
     list_monster_rows,
+    mainland_filter_label,
     monster_by_key,
+    monster_region_labels,
     resolve_item_key,
     resolve_monster_key,
 )
@@ -110,6 +114,72 @@ def test_hp_restore_catalog_lists_consumable_potions():
     assert 15 in orange.ids
     assert hp_restore_item("엔트의 열매") is not None
     assert all("요정" not in row.name_ko for row in list_hp_restore_items())
+
+
+def test_mainland_region_excludes_talking_island_and_dungeons():
+    assert mainland_filter_label("ko") == "본토"
+    assert mainland_filter_label("en") == "본토"
+    assert mainland_filter_label("zh") == "大陆"
+    assert not is_mainland_region("말하는 섬")
+    assert not is_mainland_region("말하는 섬 던전 1층")
+    assert not is_mainland_region("글루디오 던전 7층")
+    assert not is_mainland_region("결속의 던전: 어둠")
+    assert not is_mainland_region("说话之岛")
+    assert not is_mainland_region("说话之岛地监1楼")
+    assert not is_mainland_region("沙漠地监1楼")
+    assert is_mainland_region("글루디오")
+    assert is_mainland_region("요정 숲")
+    assert is_mainland_region("오만의 탑 10층")
+    assert is_mainland_region("얼음 수정 동굴 3층")
+    assert is_mainland_region("아덴 대륙")
+
+    labels = monster_region_labels("ko")
+    assert "본토" not in labels
+    assert "말하는 섬" in labels
+    excluded = [name for name in labels if not is_mainland_region(name)]
+    assert excluded
+    assert all(name == "말하는 섬" or "던전" in name for name in excluded)
+    kept = [name for name in labels if is_mainland_region(name)]
+    assert "글루디오" in kept
+    assert all("던전" not in name and not name.startswith("말하는 섬") for name in kept)
+
+    zh_labels = monster_region_labels("zh")
+    assert "说话之岛" in zh_labels
+    assert "大陆" not in zh_labels
+    assert all(
+        not is_mainland_region(name)
+        for name in zh_labels
+        if name.startswith("说话之岛") or "地监" in name or "地下城" in name
+    )
+
+    kurtz = monster_by_key("monster_커츠")
+    assert kurtz is not None
+    assert kurtz.regions_ko == ("말하는 섬",)
+    assert not any(is_mainland_region(name) for name in kurtz.regions_ko)
+    orc = monster_by_key("monster_오크")
+    assert orc is not None
+    assert any(is_mainland_region(name) for name in orc.regions_ko)
+    assert any(not is_mainland_region(name) for name in orc.regions_ko)
+
+
+def test_region_labels_list_towns_before_dungeons():
+    labels = list(monster_region_labels("ko"))
+    split = next(index for index, name in enumerate(labels) if is_dungeon_region(name))
+    towns, dungeons = labels[:split], labels[split:]
+    assert towns and dungeons
+    assert towns == sorted(towns)
+    assert dungeons == sorted(dungeons)
+    assert all(not is_dungeon_region(name) for name in towns)
+    assert all(is_dungeon_region(name) for name in dungeons)
+    assert labels.index("글루디오") < labels.index("글루디오 던전 1층")
+    assert labels.index("말하는 섬") < labels.index("말하는 섬 던전 1층")
+    assert "오만의 탑 10층" in towns
+
+    zh_labels = list(monster_region_labels("zh"))
+    zh_split = next(index for index, name in enumerate(zh_labels) if is_dungeon_region(name))
+    assert all(not is_dungeon_region(name) for name in zh_labels[:zh_split])
+    assert all(is_dungeon_region(name) for name in zh_labels[zh_split:])
+    assert zh_labels.index("古鲁丁") < zh_labels.index("古鲁丁地监1楼")
 
 
 def test_catalogs_are_non_empty():

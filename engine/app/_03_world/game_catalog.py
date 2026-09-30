@@ -428,13 +428,55 @@ def resolve_item_key(display: str) -> str | None:
     return None
 
 
+# Talking Island and every dungeon floor stay out of the synthetic 본토 filter.
+_TALKING_ISLAND_REGIONS = ("말하는 섬", "说话之岛", "說話之島")
+_DUNGEON_MARKERS = ("던전", "地监", "地監", "地下城")
+
+
+def mainland_filter_label(language: str | None) -> str:
+    """Dropdown label for the mainland group. Matches the Map tab name."""
+    lang = str(language or "").strip().lower()
+    if lang.startswith("zh"):
+        return "大陆"
+    return "본토"
+
+
+def is_dungeon_region(name: str) -> bool:
+    """True when the catalog name is a dungeon floor, in Korean or Chinese."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    return any(marker in text for marker in _DUNGEON_MARKERS)
+
+
+def is_mainland_region(name: str) -> bool:
+    """True for a catalog region that belongs in 본토.
+
+    Excluded: Talking Island (``말하는 섬`` / ``说话之岛``) and any dungeon,
+    including Talking Island dungeon floors. Towers, caves, and other
+    non-dungeon areas stay in.
+    """
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if text in _TALKING_ISLAND_REGIONS or text.startswith(_TALKING_ISLAND_REGIONS):
+        return False
+    return not is_dungeon_region(text)
+
+
 def monster_region_labels(language: str | None) -> tuple[str, ...]:
+    """Region dropdown order: field and town names, then dungeons.
+
+    Each group stays alphabetical. ``전체`` and ``본토`` are added by the UI.
+    """
     labels: list[str] = []
     for row in list_monster_rows():
         for name in row.display_regions(language):
             if name not in labels:
                 labels.append(name)
-    return tuple(sorted(labels))
+    towns = sorted(name for name in labels if not is_dungeon_region(name))
+    dungeons = sorted(name for name in labels if is_dungeon_region(name))
+    return tuple([*towns, *dungeons])
 
 
 def item_category_labels(language: str | None) -> tuple[str, ...]:

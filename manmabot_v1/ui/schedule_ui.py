@@ -306,27 +306,20 @@ _JITTER_VAR_NAMES = (
 
 
 def _mount_scroll_column(parent: ttk.Frame) -> ttk.Frame:
-    """Vertical scroll host so a stacked card column can show every row.
-
-    When the cards are shorter than the page, the inner frame grows to the
-    viewport so expanding cards fill the column the way the summary card does.
-    """
+    """Vertical scroll host so a stacked card column can show every row."""
     style = ttk.Style(parent)
     background = str(style.lookup("Page.TFrame", "background") or "#ffffff")
     canvas = tk.Canvas(parent, highlightthickness=0, bd=0, background=background)
     bar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
     inner = ttk.Frame(canvas, style="Page.TFrame")
     window = canvas.create_window((0, 0), window=inner, anchor="nw")
-    fitted = {"width": 0, "height": 0}
+    fitted = {"width": 0}
 
     def _fit(_event: tk.Event | None = None) -> None:
         width = max(1, int(canvas.winfo_width()))
-        view_h = max(1, int(canvas.winfo_height()))
-        need_h = max(inner.winfo_reqheight(), view_h)
-        if fitted["width"] != width or fitted["height"] != need_h:
+        if fitted["width"] != width:
             fitted["width"] = width
-            fitted["height"] = need_h
-            canvas.itemconfigure(window, width=width, height=need_h)
+            canvas.itemconfigure(window, width=width)
         canvas.configure(scrollregion=canvas.bbox("all") or (0, 0, 0, 0))
 
     inner.bind("<Configure>", _fit)
@@ -1700,7 +1693,7 @@ class UnifiedTaskEditor(ttk.Frame):
         left = _mount_scroll_column(left_host)
 
         combat = self._attack_card(left, self.t["attack_method"])
-        combat.pack(fill="both", expand=True, pady=(0, 8))
+        combat.pack(fill="x", pady=(0, 8))
         mode = self._var("hunt.attack_mode", "ranged")
         modes = ttk.Frame(combat)
         modes.pack(fill="x", pady=(0, 2))
@@ -1725,7 +1718,7 @@ class UnifiedTaskEditor(ttk.Frame):
         )
 
         assist = self._attack_card(left, self.t["combat_assist"])
-        assist.pack(fill="both", expand=True, pady=(0, 8))
+        assist.pack(fill="x", pady=(0, 8))
         self._attack_flag(assist, self.t["antidote_auto"], "hunt.antidote_auto", False)
         self._attack_stack(
             assist,
@@ -1754,7 +1747,7 @@ class UnifiedTaskEditor(ttk.Frame):
         self._attack_note(assist, self.t["target_delay_hint"])
 
         abandon = self._attack_card(left, self.t["abandon_target"])
-        abandon.pack(fill="both", expand=True)
+        abandon.pack(fill="x")
         self._attack_inline(
             abandon, "hunt.abandon_same", False, [
                 ("check", self.t["abandon_prefix"]),
@@ -1764,7 +1757,7 @@ class UnifiedTaskEditor(ttk.Frame):
         )
 
         magic = self._attack_card(middle, self.t["magic_use"])
-        magic.pack(fill="both", expand=True, pady=(0, 8))
+        magic.pack(fill="x", pady=(0, 8))
         self._attack_value_row(
             magic, self.t["mp_above"], "hunt.mp_spell_above", 80, 0, 100, "[%]",
         )
@@ -1782,7 +1775,7 @@ class UnifiedTaskEditor(ttk.Frame):
         self._bind_gate("hunt.fallback_melee", "hunt.fallback_mp_below")
 
         priority = self._attack_card(middle, self.t["target_priority"])
-        priority.pack(fill="both", expand=True, pady=(0, 8))
+        priority.pack(fill="x", pady=(0, 8))
         priority_flags = (
             ("prefer_nearest", "hunt.prefer_nearest", True),
             ("prefer_aggressor", "hunt.prefer_aggressor", True),
@@ -1795,15 +1788,15 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         priority_grid = ttk.Frame(priority)
         priority_grid.pack(fill="x")
-        priority_grid.columnconfigure(0, weight=1)
-        priority_grid.columnconfigure(1, weight=1)
+        priority_grid.columnconfigure(0, weight=1, uniform="target_priority")
+        priority_grid.columnconfigure(1, weight=1, uniform="target_priority")
         for index, (key, name, default) in enumerate(priority_flags):
             cell = ttk.Frame(priority_grid)
             cell.grid(row=index // 2, column=index % 2, sticky="ew", padx=(0, 4))
             self._attack_flag(cell, self.t[key], name, default)
 
         area = self._attack_card(middle, self.t["area_switch"])
-        area.pack(fill="both", expand=True)
+        area.pack(fill="x")
         self._attack_inline(
             area, "hunt.area_empty", False, [
                 ("check", ""),
@@ -2082,6 +2075,8 @@ class UnifiedTaskEditor(ttk.Frame):
         self._species_search: dict[str, str] = {}
         self._species_region_text: dict[str, str] = {}
         self._species_region_values: dict[str, tuple[str, ...]] = {}
+        self._species_on_mainland: dict[str, bool] = {}
+        self._species_mainland_label = ""
         self._species_icons: dict[str, Path | None] = {}
         species_wrap = ttk.Frame(left)
         species_wrap.grid(row=4, column=0, sticky="nsew")
@@ -6519,11 +6514,23 @@ class UnifiedTaskEditor(ttk.Frame):
             if str(root) not in sys.path:
                 sys.path.insert(0, str(root))
             from app._03_world.constants import list_species_catalog
-            from app._03_world.game_catalog import list_monster_rows, monster_region_labels
+            from app._03_world.game_catalog import (
+                is_mainland_region,
+                list_monster_rows,
+                mainland_filter_label,
+                monster_region_labels,
+            )
 
             rows = list_species_catalog()
             catalog = {item.key: item for item in list_monster_rows()}
-            region_values = [self.t["filter_all"], *monster_region_labels(self._catalog_language())]
+            language = self._catalog_language()
+            mainland_label = mainland_filter_label(language)
+            self._species_mainland_label = mainland_label
+            region_names = [
+                name for name in monster_region_labels(language)
+                if name != mainland_label
+            ]
+            region_values = [self.t["filter_all"], mainland_label, *region_names]
             if hasattr(self, "species_region_combo"):
                 chosen = self._species_region_choice(region_values)
                 _size_readonly_combo(self.species_region_combo, region_values, fit=False)
@@ -6551,6 +6558,7 @@ class UnifiedTaskEditor(ttk.Frame):
         self._species_search = {}
         self._species_region_text = {}
         self._species_region_values = {}
+        self._species_on_mainland = {}
         self._species_icons = {}
         for key, default in rows:
             allowed = key in wanted if mode == "whitelist" else key not in blocked
@@ -6563,12 +6571,17 @@ class UnifiedTaskEditor(ttk.Frame):
                 species_search_names(key, row=row)
             ).lower()
             if row is not None:
+                regions = row.display_regions(language)
                 self._species_region_text[key] = row.region_text(language)
-                self._species_region_values[key] = row.display_regions(language)
+                self._species_region_values[key] = regions
+                self._species_on_mainland[key] = any(
+                    is_mainland_region(name) for name in regions
+                )
                 self._species_icons[key] = row.image_path()
             else:
                 self._species_region_text[key] = ""
                 self._species_region_values[key] = ()
+                self._species_on_mainland[key] = False
                 self._species_icons[key] = None
         self._species_view_loaded = True
         self._refresh_species_rows(fit=True, with_icons=False)
@@ -6584,6 +6597,7 @@ class UnifiedTaskEditor(ttk.Frame):
         region = self.t["filter_all"]
         if hasattr(self, "species_region_var"):
             region = str(self.species_region_var.get() or self.t["filter_all"]).strip()
+        mainland = str(getattr(self, "_species_mainland_label", "") or "")
         needle = ""
         if hasattr(self, "species_search_var"):
             needle = str(self.species_search_var.get() or "")
@@ -6595,7 +6609,10 @@ class UnifiedTaskEditor(ttk.Frame):
             if show == "unallowed" and allowed:
                 continue
             if region and region != self.t["filter_all"]:
-                if region not in (self._species_region_values.get(key) or ()):
+                if region == mainland:
+                    if not self._species_on_mainland.get(key, False):
+                        continue
+                elif region not in (self._species_region_values.get(key) or ()):
                     continue
             label = self._species_labels.get(
                 key, species_display_name_ui(key, self._catalog_language())
