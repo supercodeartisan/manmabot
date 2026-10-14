@@ -1,0 +1,9 @@
+id: island_of_dreams_dungeon
+name: "Island of Dreams"
+# From obstacle_tiles_raw map_303.png (1 px = 1 tile).
+raw_map: "303"
+origin_x: 32512
+origin_y: 32512
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

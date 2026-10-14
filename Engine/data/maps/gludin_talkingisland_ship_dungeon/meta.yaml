@@ -1,0 +1,9 @@
+id: gludin_talkingisland_ship_dungeon
+name: "Gludin-TalkingIsland Ship"
+# From obstacle_tiles_raw map_6.png (1 px = 1 tile).
+raw_map: "6"
+origin_x: 32704
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

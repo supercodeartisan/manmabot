@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "provider_id": "meta.gaps",
+  "kind": "meta",
+  "replaceable": true,
+  "source": "manual",
+  "note": "Known missing measurements. Closing a gap = edit/add a provider, then rebuild.",
+  "count": 5,
+  "gaps": [
+    {
+      "id": "ant_caves_ground",
+      "family": "개미굴",
+      "issue": "No named entermap GROUND; desert oasis walk-ins (server SC_MAP).",
+      "hint": "areaId 15617 ~[33036-33153, 33304-33442]",
+      "fill_with": "providers/30_edges_ground_enter.json append or new 30b_*.json"
+    },
+    {
+      "id": "elven_forest_ground",
+      "family": "요정 숲 던전",
+      "issue": "No entermap; field walk-in south of elven forest.",
+      "fill_with": "new ground_enter edge when measured"
+    },
+    {
+      "id": "desert_dungeon",
+      "family": "사막 던전",
+      "issue": "mapIds unsettled.",
+      "fill_with": "dungeon_families + ground_enter"
+    },
+    {
+      "id": "oren_forsaken_dest",
+      "family": "오렌 무너진 동굴",
+      "issue": "GROUND known; dest map/entry open.",
+      "fill_with": "patch edge to in ground_enter provider"
+    },
+    {
+      "id": "ship_unused",
+      "family": "배",
+      "issue": "Ship edges exist in 31_edges_ship.json but policy disables ships forever.",
+      "fill_with": "none — leave provider enabled=false"
+    }
+  ]
+}

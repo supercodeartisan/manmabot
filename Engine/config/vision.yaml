@@ -1,0 +1,11 @@
+# =============================================================================
+# vision.yaml — ObjectType confidence gates only (farm YOLO removed).
+# Used by: configure_classification_thresholds
+# Login/shop/cursor image paths live outside this file.
+# =============================================================================
+
+vision:
+  # Below these confidences a handoff row is treated as OTHER (not farmed/looted).
+  # Memory rows typically set confidence to 1.0.
+  coarse_class_conf_min: 0.5
+  detail_class_conf_min: 0.5

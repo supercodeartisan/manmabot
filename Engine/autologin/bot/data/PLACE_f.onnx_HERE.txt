@@ -1,0 +1,5 @@
+Place captcha ONNX model here as:
+
+  f.onnx
+
+Without it, captcha solve may be unavailable; fixed-click Purple login can still work.

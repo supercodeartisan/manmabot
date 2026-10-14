@@ -1,0 +1,34 @@
+# =============================================================================
+# memory.yaml — Player + entity memory (signed-driver DLLs in this process)
+# Used by: open_monitor_from_config, LiveEntitySweep / print_state
+# =============================================================================
+# Bag fill comes from weight/maxWeight on the player snapshot.
+# Farm YOLO / weight_hud image recognition were removed.
+
+memory:
+  # false = skip player memory (config navigation.origin_* used).
+  enabled: true
+
+  # Kept for older tools that still open the named pipe. The bot does not use it.
+  pipe: "\\\\.\\pipe\\realtime_monitor"
+
+  # How many times to try opening the pipe at startup.
+  connect_retries: 30
+
+  # Seconds between startup connect attempts.
+  connect_delay: 0.2
+
+  # While running, if the pipe drops, retry at most this often (seconds).
+  reconnect_interval_s: 2.5
+
+  # Entity clicks always use print_state. Legacy hybrid/vision values are ignored.
+  entity_source: memory
+  entity_log_interval_s: 5.0
+  # Bag memory is not polled on a timer. The bot reads it at startup,
+  # when a shop trip starts, and when a buy or sell finishes.
+  # The sell-filter Reload button reads the bag on its own.
+  #
+  # Stand registry (9.30 SSOT): analysis/lc930/registry/LC930_REGISTRY.txt
+  # Buff: extra/lbuff.h BuffSubsystem map walk (buff_listen.dll).
+  # Buff/uidialog: each capture_tick sync DLL reads on two parallel threads.
+  # Does not recast skills. Esc unexpected OPEN; 3s OPEN gate for shop/etc.

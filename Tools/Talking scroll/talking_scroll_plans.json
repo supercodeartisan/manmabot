@@ -1,0 +1,1129 @@
+{
+  "version": 1,
+  "_comment": "Talking Scroll teleport plans. click.x/y are pixel coords on the snapshot images.",
+  "_comment_snapshot_size": "All snapshots share this resolution. Convert click to UV with: u = click.x / snapshot_size.width, v = click.y / snapshot_size.height",
+  "snapshot_size": {
+    "width": 800,
+    "height": 600
+  },
+  "folder": "D:\\ManmabotV1_final_final_final\\Tools\\Talking scroll",
+  "snapshots": [
+    {
+      "file": "1.png",
+      "scroll_times": 0
+    },
+    {
+      "file": "2.png",
+      "scroll_times": 18
+    },
+    {
+      "file": "3.png",
+      "scroll_times": 36
+    },
+    {
+      "file": "4.png",
+      "scroll_times": 54
+    },
+    {
+      "file": "5.png",
+      "scroll_times": 73
+    }
+  ],
+  "plans": [
+    {
+      "name": "창고지기",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 52,
+        "y": 102
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32573,
+        "y": 32946
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 30,
+        "y": 118
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32599,
+        "y": 32931
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 39,
+        "y": 131
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32580,
+        "y": 32929
+      }
+    },
+    {
+      "name": "잡화상인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 43,
+        "y": 146
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32642,
+        "y": 32949
+      }
+    },
+    {
+      "name": "마법서 상인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 64,
+        "y": 160
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32560,
+        "y": 33088
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 54,
+        "y": 175
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32447,
+        "y": 32993
+      }
+    },
+    {
+      "name": "말하는 섬 선착장",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 72,
+        "y": 189
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32632,
+        "y": 32962
+      }
+    },
+    {
+      "name": "허수아비 수련장",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 55,
+        "y": 203
+      },
+      "region": "말하는 섬",
+      "map": "말하는 섬",
+      "coordinates": {
+        "x": 32525,
+        "y": 32832
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 51,
+        "y": 247
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33427,
+        "y": 32816
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 36,
+        "y": 263
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33430,
+        "y": 32789
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 34,
+        "y": 276
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33437,
+        "y": 32798
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 46,
+        "y": 289
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32444,
+        "y": 32822
+      }
+    },
+    {
+      "name": "무기 상인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 47,
+        "y": 304
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33388,
+        "y": 32672
+      }
+    },
+    {
+      "name": "방어구 상인",
+      "snapshot": "1.png",
+      "scroll_times": 0,
+      "click": {
+        "x": 55,
+        "y": 318
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33427,
+        "y": 32755
+      }
+    },
+    {
+      "name": "물약 상인",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 36,
+        "y": 53
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33374,
+        "y": 32731
+      }
+    },
+    {
+      "name": "북편 시장",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 38,
+        "y": 66
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33474,
+        "y": 32743
+      }
+    },
+    {
+      "name": "동편 시장",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 40,
+        "y": 81
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33479,
+        "y": 32810
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 44,
+        "y": 94
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33343,
+        "y": 32721
+      }
+    },
+    {
+      "name": "대장장이",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 28,
+        "y": 110
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33470,
+        "y": 32778
+      }
+    },
+    {
+      "name": "마법 연금술사",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 52,
+        "y": 125
+      },
+      "region": "기란 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33397,
+        "y": 32834
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 35,
+        "y": 182
+      },
+      "region": "글루딘 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32603,
+        "y": 32767
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 30,
+        "y": 196
+      },
+      "region": "글루딘 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32629,
+        "y": 32751
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 30,
+        "y": 210
+      },
+      "region": "글루딘 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32614,
+        "y": 32729
+      }
+    },
+    {
+      "name": "잡화상인",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 33,
+        "y": 224
+      },
+      "region": "글루딘 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32600,
+        "y": 32751
+      }
+    },
+    {
+      "name": "슬라임 경기장",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 36,
+        "y": 240
+      },
+      "region": "글루딘 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32613,
+        "y": 32699
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 37,
+        "y": 281
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34052,
+        "y": 32285
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 29,
+        "y": 296
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34063,
+        "y": 32256
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "2.png",
+      "scroll_times": 18,
+      "click": {
+        "x": 32,
+        "y": 311
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34061,
+        "y": 32280
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "2.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 39,
+        "y": 44
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34055,
+        "y": 32297
+      }
+    },
+    {
+      "name": "무기 방어구 상인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 33,
+        "y": 58
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34064,
+        "y": 32307
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 35,
+        "y": 74
+      },
+      "region": "오렌 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34076,
+        "y": 32296
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 29,
+        "y": 117
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32074,
+        "y": 33402
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 31,
+        "y": 131
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33113,
+        "y": 33381
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 33,
+        "y": 147
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33077,
+        "y": 33388
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 33,
+        "y": 159
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33094,
+        "y": 33391
+      }
+    },
+    {
+      "name": "무기 방어구 상인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 34,
+        "y": 174
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33092,
+        "y": 33407
+      }
+    },
+    {
+      "name": "게라드",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 33,
+        "y": 187
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33098,
+        "y": 33360
+      }
+    },
+    {
+      "name": "허수아비 수련장",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 35,
+        "y": 202
+      },
+      "region": "은기사 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33104,
+        "y": 33332
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 32,
+        "y": 246
+      },
+      "region": "켄트 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33058,
+        "y": 32785
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 33,
+        "y": 260
+      },
+      "region": "켄트 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33053,
+        "y": 32780
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 35,
+        "y": 274
+      },
+      "region": "켄트 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33062,
+        "y": 32739
+      }
+    },
+    {
+      "name": "무기 방어구 상인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 32,
+        "y": 288
+      },
+      "region": "켄트 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33066,
+        "y": 32760
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "3.png",
+      "scroll_times": 36,
+      "click": {
+        "x": 35,
+        "y": 303
+      },
+      "region": "켄트 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33040,
+        "y": 32749
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 42,
+        "y": 65
+      },
+      "region": "우드벡 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32624,
+        "y": 33183
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 28,
+        "y": 79
+      },
+      "region": "우드벡 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32619,
+        "y": 33174
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 29,
+        "y": 93
+      },
+      "region": "우드벡 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32644,
+        "y": 33200
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 35,
+        "y": 107
+      },
+      "region": "우드벡 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32629,
+        "y": 33200
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 41,
+        "y": 123
+      },
+      "region": "우드벡 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32607,
+        "y": 33199
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 39,
+        "y": 165
+      },
+      "region": "화전민 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32737,
+        "y": 32446
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 37,
+        "y": 180
+      },
+      "region": "화전민 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32752,
+        "y": 32432
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 35,
+        "y": 195
+      },
+      "region": "화전민 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32772,
+        "y": 32450
+      }
+    },
+    {
+      "name": "축복의 땅",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 36,
+        "y": 209
+      },
+      "region": "화전민 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 32760,
+        "y": 32451
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 49,
+        "y": 252
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33601,
+        "y": 33231
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 31,
+        "y": 266
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33596,
+        "y": 33276
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 35,
+        "y": 280
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33614,
+        "y": 33252
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 36,
+        "y": 296
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33637,
+        "y": 33287
+      }
+    },
+    {
+      "name": "무기 방어구 상인",
+      "snapshot": "4.png",
+      "scroll_times": 54,
+      "click": {
+        "x": 34,
+        "y": 311
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33622,
+        "y": 33287
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "4.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 36,
+        "y": 31
+      },
+      "region": "하이네 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33646,
+        "y": 33410
+      }
+    },
+    {
+      "name": "창고지기",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 45,
+        "y": 72
+      },
+      "region": "웰던 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33726,
+        "y": 33487
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 46,
+        "y": 86
+      },
+      "region": "웰던 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33707,
+        "y": 32497
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 40,
+        "y": 100
+      },
+      "region": "웰던 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33738,
+        "y": 32496
+      }
+    },
+    {
+      "name": "무기 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 51,
+        "y": 114
+      },
+      "region": "웰던 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33710,
+        "y": 32518
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 63,
+        "y": 129
+      },
+      "region": "웰던 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33692,
+        "y": 32501
+      }
+    },
+    {
+      "name": "아덴 광장",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 57,
+        "y": 171
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33928,
+        "y": 33341
+      }
+    },
+    {
+      "name": "여관",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 36,
+        "y": 186
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33988,
+        "y": 33314
+      }
+    },
+    {
+      "name": "텔레포터",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 44,
+        "y": 201
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33961,
+        "y": 33256
+      }
+    },
+    {
+      "name": "잡화 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 49,
+        "y": 215
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34150,
+        "y": 33129
+      }
+    },
+    {
+      "name": "무기 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 47,
+        "y": 228
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34004,
+        "y": 33119
+      }
+    },
+    {
+      "name": "방어구 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 52,
+        "y": 243
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34151,
+        "y": 33114
+      }
+    },
+    {
+      "name": "물약 상인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 46,
+        "y": 257
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 34122,
+        "y": 33149
+      }
+    },
+    {
+      "name": "펫 관리인",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 53,
+        "y": 273
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33921,
+        "y": 33177
+      }
+    },
+    {
+      "name": "성당",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 35,
+        "y": 286
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33957,
+        "y": 33364
+      }
+    },
+    {
+      "name": "집시촌",
+      "snapshot": "5.png",
+      "scroll_times": 73,
+      "click": {
+        "x": 40,
+        "y": 301
+      },
+      "region": "아덴 마을",
+      "map": "본토",
+      "coordinates": {
+        "x": 33979,
+        "y": 32927
+      }
+    }
+  ]
+}

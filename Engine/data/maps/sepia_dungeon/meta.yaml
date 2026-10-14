@@ -1,0 +1,9 @@
+id: sepia_dungeon
+name: "Sepia Dungeon"
+# From obstacle_tiles_raw map_302.png (1 px = 1 tile).
+raw_map: "302"
+origin_x: 32704
+origin_y: 32832
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

@@ -1,0 +1,22 @@
+First click after Purple launch + resize:
+
+  username_email.png   ← 用户名/电子邮箱 placeholder (seeded)
+
+Match that text, click it, paste ID, then Next. Harvest may fill:
+
+  next.png / next_btn.png
+  address_tab.png / email_tab.png   (optional)
+
+Harvest will NOT overwrite username_email.png. Do not use OCR for
+the first ID/email click.
+
+Crop from a 1642x1026 Purple capture when possible. Multi-scale match
+handles other sizes.
+
+Other optional names:
+
+  password.png / password_field.png
+  login.png / login_btn.png
+  lineage_nav.png
+  lineage_card.png   (or bot/data/lineage_classic_card.png)
+  start_game.png / run_game.png

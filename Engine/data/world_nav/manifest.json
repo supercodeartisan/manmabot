@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "purpose": "Top-level world navigation — hubs/catalog here; map transitions from data/world/map_transitions.json",
+  "how_to_extend": [
+    "Edit engine/data/world/map_transitions.json for ground_enter / floor_ladder (manual overrides preferred)",
+    "Talking-scroll hubs: edit providers/20_hubs_talking_scroll.json and keep enabled in manifest",
+    "Keep edge shape in map_transitions: id, kind, from{mapId,x,y}, to{mapId,x,y}, meta",
+    "Provider 30_/32_ edge files are fallback only if map_transitions.json is missing"
+  ],
+  "costs": {
+    "talking_scroll_tiles": 10,
+    "same_map_walk": "manhattan",
+    "map_transition_extra_tiles": 0
+  },
+  "providers": [
+    {
+      "file": "00_maps.json",
+      "provider_id": "catalog.maps",
+      "kind": "catalog",
+      "enabled": true
+    },
+    {
+      "file": "10_towns.json",
+      "provider_id": "catalog.towns.mainland",
+      "kind": "catalog",
+      "enabled": true
+    },
+    {
+      "file": "15_dungeon_families.json",
+      "provider_id": "catalog.dungeon_families",
+      "kind": "catalog",
+      "enabled": true
+    },
+    {
+      "file": "20_hubs_talking_scroll.json",
+      "provider_id": "hubs.talking_scroll",
+      "kind": "hubs",
+      "enabled": true,
+      "completeness": "complete"
+    },
+    {
+      "file": "30_edges_ground_enter.json",
+      "provider_id": "edges.ground_enter",
+      "kind": "edges",
+      "enabled": true
+    },
+    {
+      "file": "31_edges_ship.json",
+      "provider_id": "edges.ship",
+      "kind": "edges",
+      "enabled": false,
+      "completeness": "unused",
+      "note": "Ships not used for world nav (policy: never)."
+    },
+    {
+      "file": "32_edges_floor_ladder.json",
+      "provider_id": "edges.floor_ladder",
+      "kind": "edges",
+      "enabled": true,
+      "note": "Floor ladders = inter-map edges (each floor is its own mapId)."
+    },
+    {
+      "file": "40_nodes_dungeon_entry.json",
+      "provider_id": "nodes.dungeon_entry",
+      "kind": "nodes",
+      "enabled": true
+    },
+    {
+      "file": "50_interior_teleporters.json",
+      "provider_id": "edges.interior_teleport_refs",
+      "kind": "reference",
+      "enabled": false,
+      "note": "Off for top-level planner; turn on for dungeon-interior nav later."
+    },
+    {
+      "file": "90_gaps.json",
+      "provider_id": "meta.gaps",
+      "kind": "meta",
+      "enabled": true
+    }
+  ]
+}

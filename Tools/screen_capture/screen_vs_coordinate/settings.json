@@ -1,0 +1,8 @@
+{
+  "window_process": "LC.exe",
+  "window_title": null,
+  "region": null,
+  "fps": 20,
+  "content_aspect": [4, 3],
+  "pipe": "\\\\.\\pipe\\realtime_monitor"
+}

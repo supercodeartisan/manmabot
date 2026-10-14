@@ -1,0 +1,27 @@
+# =============================================================================
+# capture.yaml — Live bot screen capture
+# Used by: main.py → create_capture_from_config / ScreenCapture
+# =============================================================================
+# Captures the Lineage Classic client window (or a manual region), then crops
+# to the game canvas aspect so vision/clicks stay on the playfield, not desktop
+# letterboxing.
+
+capture:
+  # Process name of the game client (matched case-insensitively).
+  window_process: "LC.exe"
+
+  # Optional window-title substring filter. null = process name only.
+  window_title: null
+
+  # Manual capture box {left, top, width, height} in desktop pixels.
+  # null = use the tracked game window client area.
+  region: null
+
+  # Target capture rate (frames per second). Lower = less CPU; higher = snappier
+  # tracking. Decision still runs on whatever frames arrive.
+  fps: 20
+
+  # Crop the captured frame to this width:height ratio (game canvas).
+  # Lineage Classic content is 4:3; fullscreen on wide monitors adds side bars
+  # that must be removed before UV/click mapping.
+  content_aspect: [4, 3]

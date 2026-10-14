@@ -1,0 +1,66 @@
+# Top-level names under python/Lib/site-packages that must NOT ship.
+# Prefix match also drops NAME-*.dist-info / NAME.py variants.
+
+# ML / training
+torch
+torchvision
+torchgen
+functorch
+ultralytics
+ultralytics_thop
+thop
+lap
+sympy
+mpmath
+isympy.py
+networkx
+jinja2
+markupsafe
+fsspec
+filelock
+pynvml.py
+nvidia_ml_py
+
+# viz / augmentation leftovers
+matplotlib
+mpl_toolkits
+contourpy
+cycler
+fontTools
+fonttools
+kiwisolver
+pyparsing
+pylab.py
+
+# build / tests
+nuitka
+ordered_set
+zstandard
+PyInstaller
+pyinstaller
+_pyinstaller_hooks_contrib
+altgraph
+pefile.py
+pefile
+peutils.py
+ordlookup
+pytest
+_pytest
+iniconfig
+pluggy
+py.py
+pygments
+win32ctypes
+pywin32_ctypes
+
+# unused extras
+customtkinter
+darkdetect
+polars
+_polars_runtime_32
+polars_runtime_32
+
+# ultralytics leftovers
+omegaconf
+antlr4
+example.py

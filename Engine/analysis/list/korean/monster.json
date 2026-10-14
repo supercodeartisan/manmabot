@@ -1,0 +1,8484 @@
+{
+  "contents": [
+    {
+      "id": 535,
+      "name": "말미잘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/535.png",
+      "favorite": false,
+      "formName": "",
+      "level": 1,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 536,
+      "name": "말미잘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/536.png",
+      "favorite": false,
+      "formName": "",
+      "level": 1,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 723,
+      "name": "얼음 여왕",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/723.png",
+      "favorite": false,
+      "formName": "",
+      "level": 1,
+      "regionNames": [
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 0,
+      "name": "오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/0.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "사막 던전 1층",
+        "은기사 지역",
+        "글루디오",
+        "요정 숲",
+        "켄트",
+        "아덴 대륙",
+        "글루디오 던전 1층"
+      ],
+      "rewordNames": [
+        "오크족 검",
+        "오크족 고리 갑옷",
+        "동물가죽",
+        "아데나",
+        "오크족 단검",
+        "오크족 투구",
+        "오크족 창"
+      ]
+    },
+    {
+      "id": 156,
+      "name": "오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/156.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "요정숲 던전 1층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "저주받은오크족 고리 갑옷",
+        "사파이어",
+        "정령옥",
+        "오크족 투구",
+        "미스릴 원석",
+        "저주받은오크족 단검",
+        "오크족 검",
+        "오크족 고리 갑옷",
+        "변신 주문서",
+        "오크족 단검",
+        "단풍나무 막대",
+        "화살",
+        "저주받은오크족 투구",
+        "오크족 창"
+      ]
+    },
+    {
+      "id": 245,
+      "name": "고블린",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/245.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "글루디오",
+        "켄트",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "짧은 부츠",
+        "아데나",
+        "넓은 검",
+        "투구",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 521,
+      "name": "물고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/521.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 522,
+      "name": "물고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/522.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 523,
+      "name": "물고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/523.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 524,
+      "name": "물고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/524.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 525,
+      "name": "물고기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/525.png",
+      "favorite": false,
+      "formName": "",
+      "level": 2,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 1,
+      "name": "오크 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙",
+        "글루디오 던전 1층"
+      ],
+      "rewordNames": [
+        "오크족 고리 갑옷",
+        "오크족 망토",
+        "동물가죽",
+        "아데나",
+        "오크족 투구",
+        "오크족 활",
+        "오크족 사슬 갑옷"
+      ]
+    },
+    {
+      "id": 147,
+      "name": "오크 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/147.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "요정숲 던전 1층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "오크족 망토",
+        "저주받은오크족 고리 갑옷",
+        "정령옥",
+        "저주받은오크족 활",
+        "오크족 투구",
+        "은 화살",
+        "오크족 사슬 갑옷",
+        "빨간 물약",
+        "오크족 고리 갑옷",
+        "변신 주문서",
+        "저주받은오크족 사슬 갑옷",
+        "화살",
+        "비취 물약",
+        "오크족 활"
+      ]
+    },
+    {
+      "id": 249,
+      "name": "코볼트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/249.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "글루디오",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "짧은 부츠",
+        "동물가죽",
+        "불투명 물약",
+        "아데나",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 2381,
+      "name": "오염된 딥플라워",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2381.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2384,
+      "name": "오염된 땅의 정기",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2384.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2388,
+      "name": "오염된 인간 투사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2388.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2396,
+      "name": "오염된 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2396.png",
+      "favorite": false,
+      "formName": "",
+      "level": 3,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 144,
+      "name": "펑거스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/144.png",
+      "favorite": false,
+      "formName": "",
+      "level": 4,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정숲 던전 3층",
+        "요정 숲",
+        "켄트",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층"
+      ],
+      "rewordNames": [
+        "버섯포자의 즙"
+      ]
+    },
+    {
+      "id": 155,
+      "name": "늑대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/155.png",
+      "favorite": false,
+      "formName": "",
+      "level": 4,
+      "regionNames": [
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "정령옥",
+        "화살"
+      ]
+    },
+    {
+      "id": 293,
+      "name": "아이들론",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/293.png",
+      "favorite": false,
+      "formName": "",
+      "level": 4,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 294,
+      "name": "그렘린",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/294.png",
+      "favorite": false,
+      "formName": "",
+      "level": 4,
+      "regionNames": [
+        "윈다우드",
+        "켄트",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "사파이어",
+        "루비",
+        "다이아몬드"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "난쟁이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/4.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "글루디오",
+        "켄트",
+        "용의 계곡",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "난쟁이족 검",
+        "난쟁이족 망토",
+        "미스릴",
+        "난쟁이족 철 투구",
+        "변신 주문서",
+        "아데나",
+        "난쟁이족 둥근 방패",
+        "철괴"
+      ]
+    },
+    {
+      "id": 145,
+      "name": "브롭",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/145.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정숲 던전 3층",
+        "사막 던전 2층"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 163,
+      "name": "난쟁이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/163.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "불투명 물약",
+        "마력의 돌",
+        "정령옥",
+        "철괴",
+        "미스릴 원석",
+        "은 화살"
+      ]
+    },
+    {
+      "id": 176,
+      "name": "세인트버나드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/176.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "국경 요새",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 178,
+      "name": "콜리",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/178.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "국경 요새",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 179,
+      "name": "세퍼드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/179.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 180,
+      "name": "비글",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/180.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 295,
+      "name": "임프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/295.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "켄트",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 465,
+      "name": "여우",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/465.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 516,
+      "name": "곰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/516.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 706,
+      "name": "허스키",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/706.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "국경 요새",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 1387,
+      "name": "열혈토끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1387.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 1388,
+      "name": "고양이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1388.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "엘모어 격전지",
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 2214,
+      "name": "라쿤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2214.png",
+      "favorite": false,
+      "formName": "",
+      "level": 5,
+      "regionNames": [
+        "오렌 설벽",
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 9,
+      "name": "늑대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/9.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽"
+      ]
+    },
+    {
+      "id": 27,
+      "name": "좀비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/27.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 6,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "사막 던전 2층",
+        "엘모어 격전지",
+        "은기사 지역",
+        "글루디오",
+        "오렌",
+        "아덴 대륙",
+        "글루디오 던전 1층",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "윈다우드 성 던전 1층"
+      ],
+      "rewordNames": [
+        "부활 주문서",
+        "아데나",
+        "축복받은순간이동 주문서",
+        "마법서 (뱀파이어릭 터치)",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 164,
+      "name": "좀비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/164.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 6,
+      "regionNames": [
+        "요정숲 던전 1층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "부활 주문서",
+        "정령옥",
+        "화살",
+        "마법서 (뱀파이어릭 터치)",
+        "미스릴 원석",
+        "정령의 수정 (블러드 투 소울)"
+      ]
+    },
+    {
+      "id": 177,
+      "name": "도베르만",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/177.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 190,
+      "name": "멧돼지",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/190.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "요정 숲",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고기",
+        "동물가죽",
+        "아데나"
+      ]
+    },
+    {
+      "id": 296,
+      "name": "임프 장로",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/296.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "켄트",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "고급피혁",
+        "동물가죽",
+        "아데나",
+        "마력의 돌",
+        "파란 물약",
+        "마법서 (어스 재일)"
+      ]
+    },
+    {
+      "id": 2382,
+      "name": "오염된 물의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2382.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2389,
+      "name": "오염된 인간 도끼병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2389.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2393,
+      "name": "오염된 엔트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2393.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2397,
+      "name": "오염된 오크 도끼병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2397.png",
+      "favorite": false,
+      "formName": "",
+      "level": 6,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "괴물 눈",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/11.png",
+      "favorite": false,
+      "formName": "",
+      "level": 7,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "윈다우드",
+        "아덴 대륙",
+        "글루디오 던전 6층"
+      ],
+      "rewordNames": [
+        "괴물 눈 고기",
+        "마력의 돌"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "오크 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2.png",
+      "favorite": false,
+      "formName": "",
+      "level": 8,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "사막 던전 1층",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙",
+        "글루디오 던전 1층"
+      ],
+      "rewordNames": [
+        "저주받은우럭하이 방패",
+        "오크족 고리 갑옷",
+        "오크족 망토",
+        "등잔",
+        "아데나",
+        "저주받은오크족 사슬 갑옷",
+        "사슬 갑옷",
+        "우럭하이 방패",
+        "오크족 투구",
+        "오크족 사슬 갑옷"
+      ]
+    },
+    {
+      "id": 64,
+      "name": "크로울링 크로",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/64.png",
+      "favorite": false,
+      "formName": "",
+      "level": 8,
+      "regionNames": [
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "파워 글로브",
+        "장갑",
+        "아데나",
+        "마력의 돌"
+      ]
+    },
+    {
+      "id": 148,
+      "name": "오크 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/148.png",
+      "favorite": false,
+      "formName": "",
+      "level": 8,
+      "regionNames": [
+        "요정숲 던전 1층",
+        "요정숲 던전 2층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "저주받은우럭하이 방패",
+        "오크족 고리 갑옷",
+        "오크족 망토",
+        "등잔",
+        "정령옥",
+        "화살",
+        "사슬 갑옷",
+        "우럭하이 방패",
+        "오크족 투구",
+        "오크족 사슬 갑옷"
+      ]
+    },
+    {
+      "id": 459,
+      "name": "놀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/459.png",
+      "favorite": false,
+      "formName": "",
+      "level": 8,
+      "regionNames": [
+        "은기사 지역",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "아데나",
+        "사파이어",
+        "마력의 돌",
+        "루비",
+        "랜턴",
+        "다이아몬드"
+      ]
+    },
+    {
+      "id": 512,
+      "name": "실라칸스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/512.png",
+      "favorite": false,
+      "formName": "",
+      "level": 8,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "늑대인간",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/8.png",
+      "favorite": false,
+      "formName": "",
+      "level": 9,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "용의 계곡",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "장검",
+        "저주받은사슬 갑옷",
+        "마법서 (인챈트 덱스터리티)",
+        "저주받은징박힌 가죽 갑옷",
+        "철퇴",
+        "저주받은짧은 부츠",
+        "짧은 부츠",
+        "아데나",
+        "도리깨",
+        "저주받은비늘 갑옷",
+        "작은 방패",
+        "마법서 (뱀파이어릭 터치)",
+        "징박힌 가죽 갑옷",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 154,
+      "name": "늑대인간",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/154.png",
+      "favorite": false,
+      "formName": "",
+      "level": 9,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "장검",
+        "마법서 (인챈트 덱스터리티)",
+        "비늘 갑옷",
+        "정령옥",
+        "사슬 갑옷",
+        "저주받은징박힌 가죽 갑옷",
+        "철퇴",
+        "저주받은짧은 부츠",
+        "짧은 부츠",
+        "불투명 물약",
+        "도리깨",
+        "화살",
+        "마법서 (뱀파이어릭 터치)",
+        "징박힌 가죽 갑옷",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 324,
+      "name": "난쟁이족 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/324.png",
+      "favorite": false,
+      "formName": "",
+      "level": 9,
+      "regionNames": [
+        "은기사 지역",
+        "윈다우드",
+        "켄트",
+        "용의 계곡",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "난쟁이족 검",
+        "난쟁이족 망토",
+        "난쟁이족 철 투구",
+        "초록 물약",
+        "아데나",
+        "난쟁이족 도끼",
+        "난쟁이족 둥근 방패",
+        "강화 초록 물약",
+        "철괴"
+      ]
+    },
+    {
+      "id": 514,
+      "name": "해파리",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/514.png",
+      "favorite": false,
+      "formName": "",
+      "level": 9,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 515,
+      "name": "해파리",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/515.png",
+      "favorite": false,
+      "formName": "",
+      "level": 9,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "해골",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/25.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 10,
+      "regionNames": [
+        "말하는 섬 던전 2층"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "소나무 막대",
+        "초록 물약",
+        "아데나",
+        "마력의 돌",
+        "큰 방패",
+        "축복받은순간이동 주문서",
+        "투구",
+        "강화 초록 물약",
+        "창",
+        "축복받은언월도",
+        "은회색 열쇠"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "해골",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/29.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 10,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "사막 던전 3층",
+        "은기사 지역",
+        "글루디오",
+        "아덴 대륙",
+        "글루디오 던전 1층",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "윈다우드 성 던전 1층"
+      ],
+      "rewordNames": [
+        "저주받은투구",
+        "초록 물약",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "저주받은마법 망토",
+        "해골의 두개골",
+        "아데나",
+        "언월도",
+        "큰 방패",
+        "마법 망토",
+        "투구",
+        "저주받은언월도",
+        "언데드의 열쇠",
+        "강화 초록 물약",
+        "뼈조각"
+      ]
+    },
+    {
+      "id": 94,
+      "name": "간디 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/94.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "간디 오크 마법서",
+        "아데나",
+        "마력의 돌",
+        "간디의 토템",
+        "양초"
+      ]
+    },
+    {
+      "id": 152,
+      "name": "간디 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/152.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "정령옥",
+        "마력의 돌",
+        "화살",
+        "양초"
+      ]
+    },
+    {
+      "id": 299,
+      "name": "오크 좀비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/299.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 10,
+      "regionNames": [
+        "기란 던전 1층",
+        "기란 던전 2층",
+        "기란 던전 3층"
+      ],
+      "rewordNames": [
+        "오크족 고리 갑옷",
+        "순간이동 주문서",
+        "부활 주문서",
+        "악운의 단검",
+        "아데나",
+        "우럭하이 방패",
+        "오크족 투구",
+        "오크족 사슬 갑옷"
+      ]
+    },
+    {
+      "id": 472,
+      "name": "악어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/472.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "지하 수로 1층",
+        "지하 수로 2층",
+        "지하 수로 3층",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "에메랄드",
+        "마법서 (콜 라이트닝)",
+        "아데나",
+        "마법의 투구: 치유"
+      ]
+    },
+    {
+      "id": 972,
+      "name": "얼음 여왕의 시녀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/972.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "마법서 (매스 텔레포트)",
+        "신비한 주머니",
+        "마법서 (라이트닝 스톰)"
+      ]
+    },
+    {
+      "id": 2383,
+      "name": "오염된 불의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2383.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2391,
+      "name": "오염된 인간 검사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2391.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2394,
+      "name": "오염된 판",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2394.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2399,
+      "name": "오염된 오크 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2399.png",
+      "favorite": false,
+      "formName": "",
+      "level": 10,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 235,
+      "name": "거대 개미",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/235.png",
+      "favorite": false,
+      "formName": "",
+      "level": 12,
+      "regionNames": [
+        "윈다우드",
+        "아덴 대륙",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 2층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "에메랄드",
+        "초록 물약",
+        "아데나",
+        "축복받은순간이동 주문서",
+        "마법의 투구: 치유",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 274,
+      "name": "오크 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/274.png",
+      "favorite": false,
+      "formName": "",
+      "level": 12,
+      "regionNames": [
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (선 버스트)",
+        "아데나",
+        "마력의 돌",
+        "파란 물약",
+        "마법서 (그레이터 힐)",
+        "힘의 지팡이",
+        "마법사의 지팡이",
+        "참나무 지팡이"
+      ]
+    },
+    {
+      "id": 276,
+      "name": "해골궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/276.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 12,
+      "regionNames": [
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "사막 던전 3층",
+        "글루디오",
+        "아덴 대륙",
+        "글루디오 던전 1층",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "마법 망토",
+        "투구",
+        "활",
+        "강화 초록 물약",
+        "뼈조각"
+      ]
+    },
+    {
+      "id": 500,
+      "name": "바쿡",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/500.png",
+      "favorite": false,
+      "formName": "",
+      "level": 12,
+      "regionNames": [
+        "지하 수로 1층",
+        "지하 수로 2층",
+        "지하 수로"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "초록 물약",
+        "아데나",
+        "투구",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "돌 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/5.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "은기사 지역",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아탐",
+        "아데나",
+        "마력의 돌",
+        "파란 물약",
+        "도리깨",
+        "마법서 (어스 재일)",
+        "흑단 막대",
+        "미스릴 원석",
+        "생명의 비밀",
+        "도끼",
+        "몽둥이",
+        "최고급 루비"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "돌 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/6.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "말하는 섬 던전 1층",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "글루디오 던전 3층"
+      ],
+      "rewordNames": [
+        "돌 장갑",
+        "아데나",
+        "마력의 돌",
+        "파란 물약",
+        "도리깨",
+        "마법서 (어스 재일)",
+        "흑단 막대",
+        "미스릴 원석",
+        "도끼",
+        "몽둥이",
+        "최고급 루비"
+      ]
+    },
+    {
+      "id": 95,
+      "name": "로바 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/95.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "로바의 토템",
+        "사슬 갑옷",
+        "루비",
+        "랜턴용 기름",
+        "강화 초록 물약",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 153,
+      "name": "로바 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/153.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "에메랄드",
+        "초록 물약",
+        "정령옥",
+        "사슬 갑옷",
+        "랜턴용 기름",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 162,
+      "name": "돌 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/162.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아탐",
+        "마력의 돌",
+        "정령옥",
+        "파란 물약",
+        "도리깨",
+        "화살",
+        "고급 다이아몬드",
+        "철퇴",
+        "흑단 막대",
+        "미스릴 원석",
+        "도끼",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 277,
+      "name": "해골도끼병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/277.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 13,
+      "regionNames": [
+        "말하는 섬 던전 2층",
+        "사막 던전 3층",
+        "글루디오 던전 5층",
+        "윈다우드 성 던전 1층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "초록 물약",
+        "아데나",
+        "마력의 돌",
+        "마법 망토",
+        "투구",
+        "강화 초록 물약",
+        "도끼",
+        "뼈조각"
+      ]
+    },
+    {
+      "id": 278,
+      "name": "해골창병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/278.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 13,
+      "regionNames": [
+        "말하는 섬 던전 2층",
+        "사막 던전 3층",
+        "글루디오 던전 2층",
+        "글루디오 던전 5층",
+        "윈다우드 성 던전 1층"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "마법 망토",
+        "투구",
+        "강화 초록 물약",
+        "창",
+        "뼈조각"
+      ]
+    },
+    {
+      "id": 2386,
+      "name": "오염된 어둠의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2386.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2390,
+      "name": "오염된 인간 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2390.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2395,
+      "name": "오염된 아라크네",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2395.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2398,
+      "name": "오염된 오크 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2398.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2402,
+      "name": "스피리드의 소환물",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2402.png",
+      "favorite": false,
+      "formName": "",
+      "level": 13,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 17,
+      "name": "셸로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/17.png",
+      "favorite": false,
+      "formName": "",
+      "level": 14,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 2층",
+        "사막 던전 1층",
+        "글루디오",
+        "켄트",
+        "기란",
+        "하이네",
+        "아덴 대륙",
+        "글루디오 던전 2층",
+        "글루디오 던전 4층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "마법서 (슬로우)",
+        "초록 물약",
+        "아데나",
+        "축복받은순간이동 주문서",
+        "셸로브 발톱",
+        "강화 초록 물약",
+        "흑단 막대",
+        "마법서 (이럽션)"
+      ]
+    },
+    {
+      "id": 116,
+      "name": "오크 스카우트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/116.png",
+      "favorite": false,
+      "formName": "",
+      "level": 14,
+      "regionNames": [
+        "오크 숲"
+      ],
+      "rewordNames": [
+        "아데나",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 323,
+      "name": "홉고블린",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/323.png",
+      "favorite": false,
+      "formName": "",
+      "level": 14,
+      "regionNames": [
+        "은기사 지역",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "등잔",
+        "초록 물약",
+        "아데나",
+        "넓은 검",
+        "투구",
+        "철괴",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 91,
+      "name": "아투바 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/91.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "다마스커스 검",
+        "아데나",
+        "우럭하이 방패",
+        "투구",
+        "청동 판금 갑옷",
+        "루비",
+        "아투바 오크 마법서",
+        "아투바의 토템",
+        "오크족 사슬 갑옷",
+        "오크 투사의 목걸이",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 93,
+      "name": "두다-마라 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/93.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "초록 물약",
+        "두다-마라의 토템",
+        "아데나",
+        "두다 마라 오크 마법서",
+        "마력의 돌",
+        "지혜의 물약",
+        "우럭하이 방패",
+        "투구",
+        "강화 초록 물약",
+        "오크 투사의 목걸이",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 149,
+      "name": "아투바 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/149.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "요정숲 던전 3층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "다마스커스 검",
+        "초록 물약",
+        "정령옥",
+        "화살",
+        "우럭하이 방패",
+        "투구",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "오크족 사슬 갑옷",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 151,
+      "name": "두다-마라 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/151.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "요정숲 던전 2층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "초록 물약",
+        "정령옥",
+        "마력의 돌",
+        "화살",
+        "우럭하이 방패",
+        "투구",
+        "강화 초록 물약",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 298,
+      "name": "아울베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/298.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "기란 던전 1층",
+        "기란 던전 2층",
+        "기란 던전 3층",
+        "기란 던전 4층",
+        "켄트",
+        "기란",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "고급피혁",
+        "아데나"
+      ]
+    },
+    {
+      "id": 331,
+      "name": "리자드맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/331.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "지하 수로 1층",
+        "윈다우드",
+        "기란",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "초록 물약",
+        "아데나",
+        "사파이어",
+        "큰 방패",
+        "은검",
+        "투구",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 506,
+      "name": "혈거인간",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/506.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "지하 수로 1층"
+      ],
+      "rewordNames": [
+        "미늘 갑옷",
+        "대형 도끼",
+        "아데나",
+        "전투 도끼",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 568,
+      "name": "혈거인간",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/568.png",
+      "favorite": false,
+      "formName": "",
+      "level": 15,
+      "regionNames": [
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "미늘 갑옷",
+        "대형 도끼",
+        "아데나",
+        "전투 도끼",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "흑기사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/15.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "말하는 섬",
+        "은기사 지역",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "축복받은기병창",
+        "사파이어",
+        "파란 물약",
+        "낡은 거래 문서",
+        "루비",
+        "청동 판금 갑옷",
+        "티셔츠",
+        "파르티잔",
+        "다이아몬드",
+        "짧은 부츠",
+        "용기의 물약",
+        "흑기사의 서약서",
+        "삼지창",
+        "아데나",
+        "보호 망토",
+        "부츠",
+        "투구",
+        "양손검",
+        "축복받은미늘창"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "구울",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/28.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 16,
+      "regionNames": [
+        "요정숲 던전 3층",
+        "사막 던전 2층",
+        "사막 던전 3층",
+        "기란 던전 1층",
+        "기란 던전 2층",
+        "엘모어 격전지",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "오렌",
+        "아덴 대륙",
+        "글루디오 던전 1층",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "구울의 손톱",
+        "부활 주문서",
+        "아데나",
+        "축복받은순간이동 주문서",
+        "구울의 이빨",
+        "마법서 (버서커스)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "스파토이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/30.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 16,
+      "regionNames": [
+        "말하는 섬 던전 2층",
+        "요정숲 던전 3층",
+        "사막 던전 2층",
+        "사막 던전 3층",
+        "용의 계곡 던전 1층",
+        "기란 던전 1층",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "용의 계곡",
+        "아덴 대륙",
+        "글루디오 던전 1층",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "언월도",
+        "마력의 돌",
+        "큰 방패",
+        "단풍나무 막대",
+        "투구",
+        "청동 판금 갑옷",
+        "강화 초록 물약",
+        "축복받은언월도"
+      ]
+    },
+    {
+      "id": 504,
+      "name": "크랩맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/504.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "지하 수로 2층",
+        "지하 수로 3층",
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "아데나",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "마법서 (인챈트 마이티)"
+      ]
+    },
+    {
+      "id": 511,
+      "name": "머맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/511.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "아데나",
+        "찢어진 조사서 조각(3)"
+      ]
+    },
+    {
+      "id": 518,
+      "name": "상어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/518.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "고급 사파이어",
+        "낡은 영혼의 벨트",
+        "최고급 사파이어",
+        "초록 물약",
+        "아데나",
+        "사파이어",
+        "단풍나무 막대",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 750,
+      "name": "흑기사 수색대",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/750.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "글루디오",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "축복받은기병창",
+        "사파이어",
+        "파란 물약",
+        "루비",
+        "청동 판금 갑옷",
+        "티셔츠",
+        "파르티잔",
+        "다이아몬드",
+        "짧은 부츠",
+        "용기의 물약",
+        "수색문서",
+        "삼지창",
+        "아데나",
+        "보호 망토",
+        "부츠",
+        "투구",
+        "양손검",
+        "축복받은미늘창"
+      ]
+    },
+    {
+      "id": 2392,
+      "name": "오염된 요정 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2392.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2400,
+      "name": "오염된 오크 창병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2400.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 2401,
+      "name": "오염된 빛의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2401.png",
+      "favorite": false,
+      "formName": "",
+      "level": 16,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 92,
+      "name": "네루가 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/92.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "저주받은그라디우스",
+        "초록 물약",
+        "우럭하이 방패",
+        "루비",
+        "오크족 사슬 갑옷",
+        "오크 투사의 목걸이",
+        "랜턴",
+        "다마스커스 검",
+        "네루가의 토템",
+        "네루가 오크 마법서",
+        "아데나",
+        "저주받은양손검",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 150,
+      "name": "네루가 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/150.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "요정숲 던전 3층",
+        "요정 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "다마스커스 검",
+        "저주받은그라디우스",
+        "초록 물약",
+        "정령옥",
+        "화살",
+        "우럭하이 방패",
+        "루비",
+        "저주받은양손검",
+        "강화 초록 물약",
+        "오크족 사슬 갑옷",
+        "랜턴"
+      ]
+    },
+    {
+      "id": 280,
+      "name": "라이칸스로프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/280.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "기란 던전 2층",
+        "은기사 지역",
+        "오크 숲",
+        "글루디오",
+        "윈다우드",
+        "켄트",
+        "용의 계곡",
+        "기란",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (슬로우)",
+        "아데나",
+        "전투 도끼",
+        "마법서 (인챈트 덱스터리티)",
+        "정령옥",
+        "비늘 갑옷",
+        "부츠",
+        "큰 방패",
+        "마법서 (뱀파이어릭 터치)",
+        "포챠드",
+        "징박힌 가죽 갑옷",
+        "다이아몬드"
+      ]
+    },
+    {
+      "id": 10001,
+      "name": "타락한 바람의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10001.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10006,
+      "name": "타락한 간디 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10006.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10014,
+      "name": "타락한 페어리",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10014.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10015,
+      "name": "타락한 인간 투사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10015.png",
+      "favorite": false,
+      "formName": "",
+      "level": 17,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 31,
+      "name": "웅골리언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/31.png",
+      "favorite": false,
+      "formName": "",
+      "level": 18,
+      "regionNames": [
+        "용의 계곡 던전 1층",
+        "켄트",
+        "기란",
+        "하이네",
+        "아덴 대륙",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (테이밍 몬스터)",
+        "마법서 (슬로우)",
+        "초록 물약",
+        "아데나",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "마법서 (어스 재일)",
+        "비취 물약",
+        "강화 초록 물약",
+        "흑단 막대",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 560,
+      "name": "도펠겡어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/560.png",
+      "favorite": false,
+      "formName": "",
+      "level": 19,
+      "regionNames": [
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "변신 주문서",
+        "아데나",
+        "파란 물약"
+      ]
+    },
+    {
+      "id": 236,
+      "name": "거대 병정 개미",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/236.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "아덴 대륙",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 1층",
+        "개미굴 던전 2층"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "용기의 물약",
+        "최고급 에메랄드",
+        "에메랄드",
+        "초록 물약",
+        "마법의 투구: 힘",
+        "축복받은순간이동 주문서",
+        "루비",
+        "청동 판금 갑옷",
+        "강화 초록 물약",
+        "최고급 루비",
+        "고급 에메랄드"
+      ]
+    },
+    {
+      "id": 505,
+      "name": "랫맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/505.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "지하 수로 1층",
+        "지하 수로 2층",
+        "지하 수로 3층"
+      ],
+      "rewordNames": [
+        "미늘 갑옷",
+        "초록 물약",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "축복받은순간이동 주문서",
+        "강화 초록 물약",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 519,
+      "name": "아스테",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/519.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "초록 물약",
+        "아데나",
+        "마법서 (콘 오브 콜드)",
+        "축복받은순간이동 주문서",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 10002,
+      "name": "타락한 물의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10002.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10009,
+      "name": "타락한 오크 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10009.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10010,
+      "name": "타락한 요정 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10010.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10017,
+      "name": "타락한 인간 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10017.png",
+      "favorite": false,
+      "formName": "",
+      "level": 20,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "장로",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/7.png",
+      "favorite": false,
+      "formName": "",
+      "level": 21,
+      "regionNames": [
+        "말하는 섬",
+        "말하는 섬",
+        "말하는 섬 던전 1층",
+        "글루디오",
+        "켄트",
+        "아덴 대륙",
+        "글루디오 던전 6층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "마법서 (콜 라이트닝)",
+        "마력의 돌",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "순간이동 주문서",
+        "아데나",
+        "보호 망토",
+        "마법서 (그레이터 힐)",
+        "지혜의 물약",
+        "단풍나무 막대",
+        "확인 주문서",
+        "신비한 지혜의 물약"
+      ]
+    },
+    {
+      "id": 115,
+      "name": "가스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/115.png",
+      "favorite": false,
+      "formName": "",
+      "level": 21,
+      "regionNames": [
+        "요정숲 던전 3층",
+        "기란 던전 3층",
+        "기란 던전 4층",
+        "오크 숲",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "대형 도끼",
+        "전투 도끼",
+        "아데나",
+        "파란 물약",
+        "마법서 (서먼 몬스터)",
+        "비취 물약",
+        "고급 에메랄드"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/33.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "사막 던전 2층",
+        "사막 던전 3층",
+        "사막 던전 4층",
+        "글루디오",
+        "아덴 대륙",
+        "글루디오 던전 2층",
+        "글루디오 던전 3층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "미늘 갑옷",
+        "마법서 (선 버스트)",
+        "대형 도끼",
+        "마법서 (파이어볼)",
+        "아데나",
+        "전투 도끼",
+        "정령의 수정 (리턴 투 네이처)",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "비밀방 열쇠",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 501,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/501.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "지하 수로"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "아데나",
+        "빛나는 비늘",
+        "축복받은순간이동 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 502,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/502.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "지하 수로"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "아데나",
+        "빛나는 비늘",
+        "축복받은순간이동 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 562,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/562.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "지하 수로 1층",
+        "지하 수로 2층",
+        "지하 수로 3층",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "아데나",
+        "빛나는 비늘",
+        "축복받은순간이동 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 563,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/563.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "지하 수로 1층",
+        "지하 수로 2층",
+        "지하 수로 3층",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "아데나",
+        "빛나는 비늘",
+        "축복받은순간이동 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10000,
+      "name": "타락한 빛의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10000.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10005,
+      "name": "타락한 두다-마라 오크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10005.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10011,
+      "name": "타락한 만드라고라",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10011.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10016,
+      "name": "타락한 인간 도적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10016.png",
+      "favorite": false,
+      "formName": "",
+      "level": 22,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 182,
+      "name": "켈베로스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/182.png",
+      "favorite": false,
+      "formName": "",
+      "level": 24,
+      "regionNames": [
+        "사막 던전 4층",
+        "기란 던전 4층",
+        "글루디오 던전 4층",
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "고급 루비",
+        "용기의 물약",
+        "마법서 (이뮨 투 함)",
+        "마법서 (파이어볼)",
+        "아데나",
+        "마력의 돌",
+        "정령옥",
+        "축복받은순간이동 주문서",
+        "루비",
+        "마력의 지팡이",
+        "최고급 루비"
+      ]
+    },
+    {
+      "id": 503,
+      "name": "시댄서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/503.png",
+      "favorite": false,
+      "formName": "",
+      "level": 24,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "마법서 (아이스 랜스)",
+        "정령의 수정 (네이쳐스 블레싱)",
+        "고급 사파이어",
+        "최고급 사파이어",
+        "마법서 (슬로우)",
+        "정령의 수정 (네이쳐스 터치)",
+        "아데나",
+        "사파이어",
+        "정령의 수정 (폴루트 워터)",
+        "파란 물약",
+        "마법서 (콘 오브 콜드)"
+      ]
+    },
+    {
+      "id": 520,
+      "name": "터틀 드래곤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/520.png",
+      "favorite": false,
+      "formName": "",
+      "level": 24,
+      "regionNames": [
+        "은기사 지역",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "아데나",
+        "마법서 (콘 오브 콜드)",
+        "터틀 드래곤의 껍질",
+        "마법서 (캔슬레이션)",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 246,
+      "name": "스콜피온",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/246.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법의 투구: 신속",
+        "용기의 물약",
+        "마법서 (콜 라이트닝)",
+        "초록 물약",
+        "아데나",
+        "마법서 (캔슬레이션)",
+        "축복받은순간이동 주문서",
+        "마법서 (어스 재일)",
+        "마법서 (어스 퀘이크)",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 252,
+      "name": "하피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/252.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "윈다우드",
+        "켄트",
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "마력의 돌",
+        "정령옥",
+        "파란 물약",
+        "축복받은띠 갑옷",
+        "축복받은무기 마법 주문서",
+        "정령의 수정 (아이 오브 스톰)",
+        "축복받은순간이동 주문서",
+        "마법서 (홀리 워크)",
+        "마법서 (그레이터 헤이스트)",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 567,
+      "name": "터틀 드래곤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/567.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [],
+      "rewordNames": [
+        "용기의 물약",
+        "아데나",
+        "마법서 (콘 오브 콜드)",
+        "마법서 (캔슬레이션)",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 10003,
+      "name": "타락한 땅의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10003.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10007,
+      "name": "타락한 오크 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10007.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10012,
+      "name": "타락한 요정 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10012.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10019,
+      "name": "타락한 인간 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10019.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10021,
+      "name": "타락한 스피리드의 소환물",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10021.png",
+      "favorite": false,
+      "formName": "",
+      "level": 26,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 288,
+      "name": "해골저격병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/288.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 27,
+      "regionNames": [
+        "용의 계곡 던전 1층",
+        "용의 계곡 던전 2층",
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층",
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "축복받은활",
+        "마법서 (테이밍 몬스터)",
+        "낡은 민첩의 목걸이",
+        "초록 물약",
+        "축복받은투구",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "축복받은큰 방패",
+        "민첩의 목걸이",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 290,
+      "name": "해골근위병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/290.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 27,
+      "regionNames": [
+        "용의 계곡 던전 1층",
+        "용의 계곡 던전 2층",
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층",
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "마법서 (테이밍 몬스터)",
+        "초록 물약",
+        "축복받은투구",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "축복받은큰 방패",
+        "축복받은넓은 창",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 297,
+      "name": "다크 엘프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/297.png",
+      "favorite": false,
+      "formName": "",
+      "level": 27,
+      "regionNames": [
+        "기란 던전 4층",
+        "오크 숲",
+        "용의 계곡",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (토네이도)",
+        "마법서 (메디테이션)",
+        "요정족 망토",
+        "미스릴 화살",
+        "요정족 활",
+        "아데나",
+        "정령옥",
+        "파란 물약",
+        "정령의 수정 (리턴 투 네이처)",
+        "마법서 (인비지블리티)",
+        "요정족 흉갑",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 223,
+      "name": "오우거",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/223.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "오크 숲",
+        "글루디오",
+        "켄트",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "미늘 갑옷",
+        "용기의 물약",
+        "오우거의 벨트",
+        "대형 도끼",
+        "아데나",
+        "전투 도끼",
+        "마법의 투구: 힘",
+        "오우거의 피",
+        "광전사의 도끼",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 279,
+      "name": "트롤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/279.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "용의 계곡 던전 1층",
+        "용의 계곡 던전 2층",
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "미늘 갑옷",
+        "대형 도끼",
+        "마법서 (힐 올)",
+        "전투 도끼",
+        "마법서 (그레이터 힐)",
+        "광전사의 도끼",
+        "저주받은미늘 갑옷",
+        "마법의 투구: 치유",
+        "트롤의 벨트"
+      ]
+    },
+    {
+      "id": 464,
+      "name": "페이퍼 맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/464.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "상아탑 4층",
+        "상아탑 5층"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "귀환 주문서",
+        "변신 주문서",
+        "아데나",
+        "확인 주문서"
+      ]
+    },
+    {
+      "id": 507,
+      "name": "일렉카둠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/507.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "낡은 신체의 벨트",
+        "최고급 다이아몬드",
+        "마법서 (콜 라이트닝)",
+        "정령의 수정 (네이쳐스 터치)",
+        "파란 물약",
+        "다이아몬드",
+        "용기의 물약",
+        "아데나",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "마법서 (콘 오브 콜드)",
+        "마법서 (라이트닝 스톰)",
+        "축복받은순간이동 주문서",
+        "고급 다이아몬드",
+        "흑단 막대",
+        "뇌신검"
+      ]
+    },
+    {
+      "id": 701,
+      "name": "눈사람",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/701.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "오렌 설벽",
+        "국경 요새",
+        "오렌",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층"
+      ],
+      "rewordNames": [
+        "변신 주문서",
+        "아데나",
+        "정령의 수정 (리턴 투 네이처)",
+        "찢어진 조사서 조각(1)",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 735,
+      "name": "페이퍼 맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/735.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "상아탑 4층",
+        "상아탑 5층"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "귀환 주문서",
+        "변신 주문서",
+        "아데나",
+        "확인 주문서"
+      ]
+    },
+    {
+      "id": 879,
+      "name": "산적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/879.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "모닝스타",
+        "빨간 물약",
+        "도난당한 목걸이",
+        "초록 물약",
+        "아데나",
+        "투구",
+        "맑은 물약",
+        "징박힌 가죽 갑옷",
+        "강화 초록 물약",
+        "주홍 물약",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 10219,
+      "name": "오우거",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10219.png",
+      "favorite": false,
+      "formName": "",
+      "level": 28,
+      "regionNames": [
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "미늘 갑옷",
+        "용기의 물약",
+        "오우거의 벨트",
+        "대형 도끼",
+        "아데나",
+        "전투 도끼",
+        "마법의 투구: 힘",
+        "오우거의 피",
+        "광전사의 도끼",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 289,
+      "name": "해골돌격병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/289.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 29,
+      "regionNames": [
+        "용의 계곡 던전 1층",
+        "용의 계곡 던전 2층",
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층",
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "초록 물약",
+        "축복받은투구",
+        "아데나",
+        "낡은 체력의 목걸이",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "축복받은큰 방패",
+        "기술서 (솔리드 캐리지)",
+        "축복받은전투 도끼",
+        "강화 초록 물약",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 513,
+      "name": "크러스트시안",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/513.png",
+      "favorite": false,
+      "formName": "",
+      "level": 29,
+      "regionNames": [
+        "에바왕국"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "최고급 다이아몬드",
+        "마법서 (위크니스)",
+        "아데나",
+        "갑옷 마법 주문서",
+        "고급 다이아몬드",
+        "낡은 정신의 벨트",
+        "다이아몬드",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 592,
+      "name": "폭탄 꽃",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/592.png",
+      "favorite": false,
+      "formName": "",
+      "level": 29,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (포그 오브 슬리핑)",
+        "아데나",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 212,
+      "name": "킹 버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/212.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "사막 던전 4층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층",
+        "윈다우드 성 던전 1층",
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "마법서 (파이어볼)",
+        "전투 도끼",
+        "파란 물약",
+        "광전사의 도끼",
+        "기술서 (쇼크 스턴)",
+        "마법서 (리무브 커스)",
+        "무기 마법 주문서",
+        "마법서 (웨폰 브레이크)",
+        "용기의 물약",
+        "미늘 갑옷",
+        "대형 도끼",
+        "마법의 투구: 힘",
+        "아데나",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "마법서 (디지즈)",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 281,
+      "name": "무리안",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/281.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "용의 계곡 던전 2층",
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층",
+        "용의 계곡 던전 5층"
+      ],
+      "rewordNames": [
+        "귀환 주문서",
+        "변신 주문서",
+        "마법서 (슬로우)",
+        "보호 망토",
+        "파란 물약",
+        "축복받은무기 마법 주문서",
+        "마법서 (그레이터 힐)",
+        "갑옷 마법 주문서",
+        "저주 풀기 주문서",
+        "마법서 (리무브 커스)",
+        "축복받은갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 708,
+      "name": "좀비 엘모어 병사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/708.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 30,
+      "regionNames": [
+        "오렌 설벽",
+        "엘모어 격전지",
+        "국경 요새",
+        "화룡의 둥지",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "짧은 부츠",
+        "용기의 물약",
+        "혹한의 창",
+        "장갑",
+        "크림슨 랜스",
+        "아데나",
+        "갑옷 마법 주문서",
+        "징박힌 가죽 갑옷",
+        "포챠드"
+      ]
+    },
+    {
+      "id": 709,
+      "name": "아이스 맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/709.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "국경 요새",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층",
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "전투 도끼",
+        "파란 물약",
+        "마력의 돌",
+        "정령옥",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 882,
+      "name": "산적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/882.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "가죽투구",
+        "초록 물약",
+        "사냥꾼 활",
+        "주홍 물약",
+        "작은 활",
+        "빨간 물약",
+        "도난당한 목걸이",
+        "아데나",
+        "활 골무",
+        "투구",
+        "맑은 물약",
+        "징박힌 가죽 갑옷",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 899,
+      "name": "젤라틴 큐브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/899.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "지하 수로"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "부활 주문서",
+        "아데나",
+        "지혜의 물약"
+      ]
+    },
+    {
+      "id": 2403,
+      "name": "스피리드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2403.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "오염된 축복의 땅"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10004,
+      "name": "타락한 어둠의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10004.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10008,
+      "name": "타락한 오크 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10008.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10013,
+      "name": "타락한 요정 검사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10013.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10018,
+      "name": "타락한 인간 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10018.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10257,
+      "name": "펑거스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10257.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10258,
+      "name": "꿈의 혼령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10258.png",
+      "favorite": false,
+      "formName": "",
+      "level": 30,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "바다의 망토",
+        "순간이동 주문서",
+        "변신 주문서",
+        "귀환 주문서",
+        "아데나",
+        "낡은 매력의 목걸이",
+        "갑옷 마법 주문서",
+        "황금 지휘봉",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 333,
+      "name": "그리폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/333.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "마법서 (토네이도)",
+        "마법서 (카운터 매직)",
+        "마력의 돌",
+        "고급 에메랄드",
+        "고급 사파이어",
+        "축복받은띠 갑옷",
+        "정령의 수정 (리턴 투 네이처)",
+        "정령의 수정 (아이 오브 스톰)",
+        "축복받은순간이동 주문서",
+        "축복받은초록 물약",
+        "고급 다이아몬드",
+        "강화 초록 물약",
+        "정령의 수정 (윈드 워크)"
+      ]
+    },
+    {
+      "id": 460,
+      "name": "미믹",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/460.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [
+        "상아탑 4층",
+        "상아탑 5층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "지혜의 물약",
+        "투구",
+        "강화 초록 물약",
+        "주홍 물약"
+      ]
+    },
+    {
+      "id": 703,
+      "name": "좀비 엘모어 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/703.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 31,
+      "regionNames": [
+        "오렌 설벽",
+        "엘모어 격전지",
+        "국경 요새",
+        "화룡의 둥지",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "천사의 지팡이",
+        "아데나",
+        "낡은 지식의 목걸이",
+        "파란 물약",
+        "마법서 (콘 오브 콜드)",
+        "마법서 (블레스 웨폰)",
+        "축복받은순간이동 주문서",
+        "마법서 (마나 드레인)",
+        "마법서 (풀 힐)",
+        "정령의 수정 (워터 라이프)",
+        "무기 마법 주문서",
+        "마력의 지팡이"
+      ]
+    },
+    {
+      "id": 881,
+      "name": "산적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/881.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "도난당한 목걸이",
+        "대형 도끼",
+        "초록 물약",
+        "아데나",
+        "전투 도끼",
+        "비늘 갑옷",
+        "광전사의 도끼",
+        "투구",
+        "맑은 물약",
+        "강화 초록 물약",
+        "주홍 물약"
+      ]
+    },
+    {
+      "id": 10125,
+      "name": "오염된 물의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10125.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [],
+      "rewordNames": [
+        "오염된 정령의 수정(물)"
+      ]
+    },
+    {
+      "id": 10126,
+      "name": "오염된 불의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10126.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [],
+      "rewordNames": [
+        "오염된 정령의 수정(불)"
+      ]
+    },
+    {
+      "id": 10127,
+      "name": "오염된 땅의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10127.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [],
+      "rewordNames": [
+        "오염된 정령의 수정(땅)"
+      ]
+    },
+    {
+      "id": 10128,
+      "name": "오염된 바람의 정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10128.png",
+      "favorite": false,
+      "formName": "",
+      "level": 31,
+      "regionNames": [],
+      "rewordNames": [
+        "오염된 정령의 수정(바람)"
+      ]
+    },
+    {
+      "id": 463,
+      "name": "아이스 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/463.png",
+      "favorite": false,
+      "formName": "",
+      "level": 32,
+      "regionNames": [
+        "오렌 설벽",
+        "국경 요새",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층",
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "수정 장갑",
+        "마법서 (아이스 랜스)",
+        "용기의 물약",
+        "돌 장갑",
+        "정령의 수정 (네이쳐스 터치)",
+        "아데나",
+        "지혜의 물약",
+        "마법서 (콘 오브 콜드)",
+        "은도끼",
+        "흑단 막대",
+        "철퇴"
+      ]
+    },
+    {
+      "id": 471,
+      "name": "크로코다일",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/471.png",
+      "favorite": false,
+      "formName": "",
+      "level": 32,
+      "regionNames": [
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "에메랄드",
+        "마법서 (콜 라이트닝)",
+        "아데나",
+        "갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 880,
+      "name": "산적",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/880.png",
+      "favorite": false,
+      "formName": "",
+      "level": 32,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "다마스커스 검",
+        "도난당한 목걸이",
+        "그라디우스",
+        "초록 물약",
+        "아데나",
+        "사슬 갑옷",
+        "투구",
+        "맑은 물약",
+        "강화 초록 물약",
+        "주홍 물약"
+      ]
+    },
+    {
+      "id": 129,
+      "name": "가스트 로드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/129.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "오크 숲",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "최고급 에메랄드",
+        "대형 도끼",
+        "전투 도끼",
+        "아데나",
+        "파란 물약",
+        "광전사의 도끼",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "마법의 투구: 치유",
+        "마법서 (디지즈)",
+        "무기 마법 주문서",
+        "고급 에메랄드"
+      ]
+    },
+    {
+      "id": 286,
+      "name": "비홀더",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/286.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "지하 수로 2층",
+        "지하 수로 3층",
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급 사파이어",
+        "최고급 사파이어",
+        "저주받은무기 마법 주문서",
+        "마법서 (위크니스)",
+        "아데나",
+        "사파이어",
+        "정령의 수정 (리턴 투 네이처)",
+        "정령의 수정 (트리플 애로우)",
+        "지혜의 물약",
+        "마법서 (캔슬레이션)",
+        "마법서 (커스: 패럴라이즈)",
+        "마법서 (디지즈)"
+      ]
+    },
+    {
+      "id": 473,
+      "name": "리빙아머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/473.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "상아탑 4층",
+        "상아탑 5층"
+      ],
+      "rewordNames": [
+        "마법서 (이뮨 투 함)",
+        "마법서 (위크니스)",
+        "전투 도끼",
+        "청동 판금 갑옷",
+        "주홍 물약",
+        "빨간 물약",
+        "용기의 물약",
+        "달빛의 정기",
+        "마법서 (힐 올)",
+        "아데나",
+        "띠 갑옷",
+        "맑은 물약",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 595,
+      "name": "드래곤 플라이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/595.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "초록 물약",
+        "아데나",
+        "축복받은무기 마법 주문서",
+        "마법서 (뱀파이어릭 터치)",
+        "강화 초록 물약",
+        "축복받은갑옷 마법 주문서",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 702,
+      "name": "샤벨 타이거",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/702.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "오렌 설벽",
+        "국경 요새",
+        "오렌",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층",
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "혹한의 창",
+        "초록 물약",
+        "아데나",
+        "마력의 돌",
+        "정령옥",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 704,
+      "name": "에티",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/704.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "오렌 설벽",
+        "국경 요새",
+        "오렌",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층",
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "수정 장갑",
+        "용기의 물약",
+        "루선해머",
+        "혹한의 창",
+        "마법서 (포그 오브 슬리핑)",
+        "마법서 (어드밴스 스피릿)",
+        "아데나",
+        "낡은 체력의 목걸이",
+        "정령옥",
+        "검은 혈흔"
+      ]
+    },
+    {
+      "id": 884,
+      "name": "도펠갱어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/884.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "변신 주문서",
+        "아데나",
+        "파란 물약"
+      ]
+    },
+    {
+      "id": 12091,
+      "name": "도마뱀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12091.png",
+      "favorite": false,
+      "formName": "",
+      "level": 33,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급피혁",
+        "초록 물약",
+        "아데나",
+        "다이아몬드"
+      ]
+    },
+    {
+      "id": 248,
+      "name": "코카트리스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/248.png",
+      "favorite": false,
+      "formName": "",
+      "level": 34,
+      "regionNames": [
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "정령의 수정 (인탱글)",
+        "마법서 (슬로우)",
+        "초록 물약",
+        "마법서 (리무브 커스)",
+        "마법서 (어스 퀘이크)",
+        "마법서 (커스: 패럴라이즈)",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "아데나",
+        "마법서 (그레이터 힐)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "축복받은순간이동 주문서",
+        "마법서 (어스 재일)",
+        "강화 초록 물약",
+        "흑단 막대",
+        "마법서 (그레이터 헤이스트)",
+        "마법서 (이럽션)",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 287,
+      "name": "에틴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/287.png",
+      "favorite": false,
+      "formName": "",
+      "level": 35,
+      "regionNames": [
+        "용의 계곡 던전 3층",
+        "용의 계곡 던전 4층",
+        "용의 계곡 던전 5층",
+        "용의 계곡 던전 6층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "낡은 매력의 목걸이",
+        "축복받은루선해머",
+        "마법서 (어스 재일)",
+        "마법서 (인챈트 마이티)",
+        "마법서 (어스 퀘이크)",
+        "마법서 (그레이터 헤이스트)",
+        "마법서 (이럽션)",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 587,
+      "name": "불타는 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/587.png",
+      "favorite": false,
+      "formName": "",
+      "level": 35,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "화염의 검",
+        "장검",
+        "초록 물약",
+        "아데나",
+        "큰 방패",
+        "띠 갑옷",
+        "검은 혈흔",
+        "투구",
+        "낡은 완력의 목걸이",
+        "강화 초록 물약",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 705,
+      "name": "좀비 엘모어 장군",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/705.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 35,
+      "regionNames": [
+        "오렌 설벽",
+        "엘모어 격전지",
+        "화룡의 둥지",
+        "오렌",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "비늘 갑옷",
+        "기술서 (쇼크 스턴)",
+        "낡은 완력의 목걸이",
+        "청동 판금 갑옷",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "강철 원석",
+        "장갑",
+        "아데나",
+        "대검",
+        "부츠",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)",
+        "양손검",
+        "강화 초록 물약",
+        "기술서 (리덕션 아머)"
+      ]
+    },
+    {
+      "id": 707,
+      "name": "아이언 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/707.png",
+      "favorite": false,
+      "formName": "",
+      "level": 35,
+      "regionNames": [
+        "오렌 설벽",
+        "국경 요새",
+        "아덴 대륙",
+        "얼음 수정 동굴 1층",
+        "얼음 수정 동굴 2층",
+        "상아탑 4층",
+        "상아탑 5층"
+      ],
+      "rewordNames": [
+        "마법서 (위크니스)",
+        "파란 물약",
+        "찢어진 조사서 조각(2)",
+        "저주 풀기 주문서",
+        "정령의 수정 (아이언 스킨)",
+        "마법서 (인챈트 마이티)",
+        "낡은 지혜의 목걸이",
+        "철괴",
+        "미스릴 원석",
+        "정령의 수정 (블러드 투 소울)",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "강철 원석",
+        "돌 장갑",
+        "아데나",
+        "갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 883,
+      "name": "산적 두목",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/883.png",
+      "favorite": false,
+      "formName": "",
+      "level": 35,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "최고급 에메랄드",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "초록 물약",
+        "일본도",
+        "주홍 물약",
+        "고급 에메랄드",
+        "빨간 물약",
+        "고급 사파이어",
+        "아데나",
+        "보호 망토",
+        "띠 갑옷",
+        "투구",
+        "맑은 물약",
+        "축복받은순간이동 주문서",
+        "고급 다이아몬드",
+        "강화 초록 물약",
+        "최고급 루비",
+        "은장검"
+      ]
+    },
+    {
+      "id": 247,
+      "name": "바실리스크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/247.png",
+      "favorite": false,
+      "formName": "",
+      "level": 36,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (슬로우)",
+        "최고급 다이아몬드",
+        "마법서 (캔슬레이션)",
+        "마법서 (리무브 커스)",
+        "마법서 (어스 퀘이크)",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "바실리스크의 비늘",
+        "용기의 물약",
+        "마법서 (그레이터 힐)",
+        "정령의 수정 (리턴 투 네이처)",
+        "갑옷 마법 주문서",
+        "마법서 (어스 재일)",
+        "고급 다이아몬드",
+        "마법서 (이럽션)"
+      ]
+    },
+    {
+      "id": 593,
+      "name": "불타는 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/593.png",
+      "favorite": false,
+      "formName": "",
+      "level": 36,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "낡은 민첩의 목걸이",
+        "마법서 (슬로우)",
+        "아데나",
+        "마법서 (인챈트 덱스터리티)",
+        "고리 갑옷",
+        "부츠",
+        "사냥꾼 활",
+        "투구",
+        "화염의 활",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 975,
+      "name": "흑기사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/975.png",
+      "favorite": false,
+      "formName": "",
+      "level": 36,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 2782,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2782.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 36,
+      "regionNames": [
+        "버림받은 자들의 땅"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 2784,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2784.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 36,
+      "regionNames": [
+        "버림받은 자들의 땅"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 2785,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2785.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 36,
+      "regionNames": [
+        "버림받은 자들의 땅"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 2786,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2786.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 36,
+      "regionNames": [
+        "버림받은 자들의 땅"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 284,
+      "name": "서큐버스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/284.png",
+      "favorite": false,
+      "formName": "",
+      "level": 37,
+      "regionNames": [
+        "용의 계곡 던전 4층",
+        "용의 계곡 던전 5층",
+        "용의 계곡 던전 6층"
+      ],
+      "rewordNames": [
+        "마법서 (아이스 랜스)",
+        "변신 조종 반지",
+        "마법서 (블리자드)",
+        "마법서 (디케이 포션)",
+        "정령의 수정 (네이쳐스 터치)",
+        "파란 물약",
+        "정령의 수정 (트리플 애로우)",
+        "낡은 지혜의 목걸이",
+        "마법서 (서먼 몬스터)",
+        "정령의 수정 (리턴 투 네이처)",
+        "지혜의 물약",
+        "마법서 (콘 오브 콜드)",
+        "도난당한 반지",
+        "마법서 (풀 힐)"
+      ]
+    },
+    {
+      "id": 2787,
+      "name": "보초병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2787.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 37,
+      "regionNames": [],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10272,
+      "name": "어둠의 해골 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10272.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 37,
+      "regionNames": [
+        "결속의 던전: 어둠"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "마법 망토",
+        "투구",
+        "활",
+        "강화 초록 물약",
+        "뼈조각"
+      ]
+    },
+    {
+      "id": 534,
+      "name": "사라만다",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/534.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "고급 루비",
+        "강철 원석",
+        "초록 물약",
+        "아데나",
+        "기술서 (쇼크 스턴)",
+        "정령의 수정 (아이 오브 스톰)",
+        "축복받은순간이동 주문서",
+        "강화 초록 물약",
+        "정령의 수정 (이레이즈 매직)",
+        "고급 에메랄드",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 2783,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2783.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 38,
+      "regionNames": [
+        "버림받은 자들의 땅"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10245,
+      "name": "사라만다",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10245.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "대형 도끼",
+        "아데나",
+        "갑옷 마법 주문서",
+        "마법서 (홀리 워크)",
+        "양손검",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10247,
+      "name": "아이스 맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10247.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "낡은 지식의 목걸이",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10250,
+      "name": "킬러비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10250.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "낡은 민첩의 목걸이",
+        "아데나",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10253,
+      "name": "열혈토끼",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10253.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "아데나",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10260,
+      "name": "어둠의 버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10260.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "결속의 던전: 어둠"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "미늘 갑옷",
+        "마법서 (선 버스트)",
+        "대형 도끼",
+        "마법서 (파이어볼)",
+        "전투 도끼",
+        "정령의 수정 (리턴 투 네이처)",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10262,
+      "name": "어둠의 켈베로스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10262.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "결속의 던전: 어둠"
+      ],
+      "rewordNames": [
+        "마법서 (웨폰 브레이크)",
+        "고급 루비",
+        "용기의 물약",
+        "마법서 (이뮨 투 함)",
+        "마법서 (파이어볼)",
+        "마력의 돌",
+        "정령옥",
+        "축복받은순간이동 주문서",
+        "루비",
+        "마력의 지팡이",
+        "최고급 루비"
+      ]
+    },
+    {
+      "id": 10271,
+      "name": "어둠의 해골",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10271.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 38,
+      "regionNames": [
+        "결속의 던전: 어둠"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "소나무 막대",
+        "초록 물약",
+        "마력의 돌",
+        "큰 방패",
+        "축복받은순간이동 주문서",
+        "투구",
+        "강화 초록 물약",
+        "창",
+        "축복받은언월도"
+      ]
+    },
+    {
+      "id": 12087,
+      "name": "밀림 호랑이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12087.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "고급피혁",
+        "초록 물약",
+        "아데나"
+      ]
+    },
+    {
+      "id": 12181,
+      "name": "놀",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12181.png",
+      "favorite": false,
+      "formName": "",
+      "level": 38,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "모닝스타",
+        "아데나",
+        "다이아몬드"
+      ]
+    },
+    {
+      "id": 591,
+      "name": "파이어 에그",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/591.png",
+      "favorite": false,
+      "formName": "",
+      "level": 39,
+      "regionNames": [
+        "화룡의 둥지",
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "변신 주문서",
+        "귀환 주문서",
+        "마법서 (파이어볼)",
+        "아데나",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "저주 풀기 주문서",
+        "마법서 (리무브 커스)",
+        "화룡 비늘",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 2807,
+      "name": "순찰병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/2807.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 39,
+      "regionNames": [],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10204,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10204.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 39,
+      "regionNames": [
+        "버림받은 자들의 땅:심연"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10206,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10206.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 39,
+      "regionNames": [
+        "버림받은 자들의 땅:심연"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10207,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10207.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 39,
+      "regionNames": [
+        "버림받은 자들의 땅:심연"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10208,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10208.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 39,
+      "regionNames": [
+        "버림받은 자들의 땅:심연"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10244,
+      "name": "파이어 에그",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10244.png",
+      "favorite": false,
+      "formName": "",
+      "level": 39,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "변신 주문서",
+        "귀환 주문서",
+        "아데나",
+        "갑옷 마법 주문서",
+        "낡은 완력의 목걸이",
+        "마법서 (리무브 커스)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10248,
+      "name": "아이스 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10248.png",
+      "favorite": false,
+      "formName": "",
+      "level": 39,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "부활 주문서",
+        "아데나",
+        "갑옷 마법 주문서",
+        "은도끼",
+        "정령의 수정 (블러드 투 소울)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10251,
+      "name": "볼 라이트닝",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10251.png",
+      "favorite": false,
+      "formName": "",
+      "level": 39,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "아데나",
+        "갑옷 마법 주문서",
+        "마법서 (라이트닝 스톰)",
+        "마법의 투구: 치유",
+        "마법서 (홀리 워크)",
+        "무기 마법 주문서",
+        "뇌신검"
+      ]
+    },
+    {
+      "id": 10254,
+      "name": "가디언 아머",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10254.png",
+      "favorite": false,
+      "formName": "",
+      "level": 39,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "기술서 (카운터 배리어)",
+        "초록 물약",
+        "아데나",
+        "낡은 체력의 목걸이",
+        "대검",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)",
+        "청동 판금 갑옷",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 325,
+      "name": "사이클롭스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/325.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "기란",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "정령의 수정 (인탱글)",
+        "사이클롭스의 피",
+        "마법서 (위크니스)",
+        "마법서 (사일런스)",
+        "마법서 (인챈트 마이티)",
+        "마법서 (어스 퀘이크)",
+        "정령의 수정 (블레스 오브 어스)",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "마법의 투구: 힘",
+        "마법서 (서먼 몬스터)",
+        "저주받은띠 갑옷",
+        "갑옷 마법 주문서",
+        "마법서 (어스 재일)"
+      ]
+    },
+    {
+      "id": 753,
+      "name": "리자드맨",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/753.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 로브",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 758,
+      "name": "악어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/758.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "검은 혈흔",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 771,
+      "name": "늑대인간",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/771.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 772,
+      "name": "아울베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/772.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 773,
+      "name": "셸로브",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/773.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "마법서 (포그 오브 슬리핑)",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 10209,
+      "name": "보초병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10209.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 40,
+      "regionNames": [],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10255,
+      "name": "나이트메어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10255.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "정령의 수정 (트리플 애로우)",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "엘릭서(WIS)",
+        "양손검",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10259,
+      "name": "꿈의 혼령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10259.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "변신 주문서",
+        "귀환 주문서",
+        "바다의 망토",
+        "아데나",
+        "마력의 돌",
+        "갑옷 마법 주문서",
+        "황금 지휘봉",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10261,
+      "name": "어둠의 킹 버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10261.png",
+      "favorite": false,
+      "formName": "",
+      "level": 40,
+      "regionNames": [
+        "결속의 던전: 어둠"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "마법서 (파이어볼)",
+        "전투 도끼",
+        "파란 물약",
+        "광전사의 도끼",
+        "기술서 (쇼크 스턴)",
+        "마법서 (리무브 커스)",
+        "무기 마법 주문서",
+        "마법서 (웨폰 브레이크)",
+        "용기의 물약",
+        "미늘 갑옷",
+        "대형 도끼",
+        "마법의 투구: 힘",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "마법서 (디지즈)",
+        "몽둥이"
+      ]
+    },
+    {
+      "id": 10311,
+      "name": "화염의 해골저격병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10311.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 40,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "축복받은활",
+        "마법서 (테이밍 몬스터)",
+        "낡은 민첩의 목걸이",
+        "초록 물약",
+        "축복받은투구",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "축복받은큰 방패",
+        "민첩의 목걸이",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 285,
+      "name": "서큐버스 퀸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/285.png",
+      "favorite": false,
+      "formName": "",
+      "level": 41,
+      "regionNames": [
+        "용의 계곡 던전 5층",
+        "용의 계곡 던전 6층"
+      ],
+      "rewordNames": [
+        "마법서 (아이스 랜스)",
+        "마법서 (매스 텔레포트)",
+        "정령의 수정 (네이쳐스 터치)",
+        "파란 물약",
+        "마법서 (서먼 몬스터)",
+        "지혜의 물약",
+        "마법서 (콘 오브 콜드)",
+        "서큐버스 퀸의 신비한 지팡이",
+        "순간이동 조종 반지",
+        "마법서 (마나 드레인)"
+      ]
+    },
+    {
+      "id": 469,
+      "name": "실루엣",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/469.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 41,
+      "regionNames": [
+        "상아탑 6층",
+        "상아탑 7층",
+        "상아탑 8층"
+      ],
+      "rewordNames": [
+        "빨간 물약",
+        "마법서 (카운터 매직)",
+        "낡은 영혼의 벨트",
+        "아데나",
+        "축복받은빨간 물약",
+        "축복받은맑은 물약",
+        "파란 물약",
+        "마법서 (콘 오브 콜드)",
+        "영혼의 벨트",
+        "축복받은주홍 물약",
+        "강화 초록 물약",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 761,
+      "name": "버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/761.png",
+      "favorite": false,
+      "formName": "",
+      "level": 41,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 로브",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 774,
+      "name": "웅골리언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/774.png",
+      "favorite": false,
+      "formName": "",
+      "level": 41,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 776,
+      "name": "가스트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/776.png",
+      "favorite": false,
+      "formName": "",
+      "level": 41,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 976,
+      "name": "흑기사 대장",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/976.png",
+      "favorite": false,
+      "formName": "",
+      "level": 41,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": []
+    },
+    {
+      "id": 10205,
+      "name": "선택받지 못한 자",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10205.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 41,
+      "regionNames": [
+        "버림받은 자들의 땅:심연"
+      ],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 10310,
+      "name": "화염의 해골돌격병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10310.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 41,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "축복받은마법 망토",
+        "초록 물약",
+        "축복받은투구",
+        "낡은 체력의 목걸이",
+        "마법서 (인챈트 덱스터리티)",
+        "마력의 돌",
+        "축복받은큰 방패",
+        "기술서 (솔리드 캐리지)",
+        "축복받은전투 도끼",
+        "강화 초록 물약",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "세마",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/37.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "글루디오 던전 3층",
+        "글루디오 던전 4층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "마법서 (위크니스)",
+        "최고급 다이아몬드",
+        "마법서 (인챈트 덱스터리티)",
+        "파란 물약",
+        "마력의 돌",
+        "저주 풀기 주문서",
+        "다이아몬드",
+        "세마의 모자",
+        "완력의 목걸이",
+        "보호 망토",
+        "부츠",
+        "축복받은무기 마법 주문서",
+        "단풍나무 막대",
+        "정령의 수정 (아이 오브 스톰)",
+        "축복받은순간이동 주문서",
+        "고급 다이아몬드",
+        "마법서 (그레이터 헤이스트)",
+        "축복받은갑옷 마법 주문서",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 580,
+      "name": "유령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/580.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 42,
+      "regionNames": [
+        "상아탑 6층",
+        "상아탑 7층",
+        "상아탑 8층"
+      ],
+      "rewordNames": [
+        "수정 장갑",
+        "정령의 수정 (에어리어 오브 사일런스)",
+        "마법서 (카운터 매직)",
+        "마법서 (위크니스)",
+        "마나 수정구",
+        "초록 물약",
+        "축복받은빨간 물약",
+        "낡은 지식의 목걸이",
+        "낡은 완력의 목걸이",
+        "사이하의 활",
+        "빨간 물약",
+        "달빛의 정기",
+        "순간이동 주문서",
+        "아데나",
+        "무명 로브",
+        "축복받은맑은 물약",
+        "축복받은주홍 물약",
+        "강화 초록 물약"
+      ]
+    },
+    {
+      "id": 764,
+      "name": "코카트리스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/764.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "잊혀진 검",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 10129,
+      "name": "네크로맨서",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10129.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "글루디오 던전 6층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "마법서 (위크니스)",
+        "최고급 다이아몬드",
+        "마법서 (인챈트 덱스터리티)",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "다이아몬드",
+        "완력의 목걸이",
+        "보호 망토",
+        "부츠",
+        "축복받은무기 마법 주문서",
+        "단풍나무 막대",
+        "정령의 수정 (아이 오브 스톰)",
+        "축복받은순간이동 주문서",
+        "고급 다이아몬드",
+        "마법서 (그레이터 헤이스트)",
+        "축복받은갑옷 마법 주문서",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 10210,
+      "name": "순찰병",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10210.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 42,
+      "regionNames": [],
+      "rewordNames": [
+        "날이 빠진 무기"
+      ]
+    },
+    {
+      "id": 12173,
+      "name": "리자드맨 검사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12173.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "엘모어 격전지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "순간이동 주문서",
+        "초록 물약",
+        "아데나",
+        "비늘 갑옷",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 12175,
+      "name": "리자드맨 마법사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12175.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "엘모어 격전지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "파란 물약",
+        "지혜의 물약",
+        "힘의 지팡이",
+        "멸마의 반지",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 12182,
+      "name": "독침 킬러비",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12182.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "에메랄드",
+        "정령의 수정 (윈드 워크)"
+      ]
+    },
+    {
+      "id": 12183,
+      "name": "하피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12183.png",
+      "favorite": false,
+      "formName": "",
+      "level": 42,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "지혜의 물약",
+        "사슬 갑옷",
+        "마법서 (홀리 워크)"
+      ]
+    },
+    {
+      "id": 34,
+      "name": "발터자르",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/34.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "글루디오 던전 3층",
+        "글루디오 던전 4층"
+      ],
+      "rewordNames": [
+        "정령의 수정 (인탱글)",
+        "최고급 에메랄드",
+        "소나무 막대",
+        "변신 조종 반지",
+        "에메랄드",
+        "파란 물약",
+        "마력의 돌",
+        "저주 풀기 주문서",
+        "마법서 (캔슬레이션)",
+        "마법서 (어스 퀘이크)",
+        "정령의 수정 (블레스 오브 어스)",
+        "고급 에메랄드",
+        "보호 망토",
+        "부츠",
+        "축복받은무기 마법 주문서",
+        "지식의 목걸이",
+        "단풍나무 막대",
+        "발터자르의 모자",
+        "축복받은순간이동 주문서",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 581,
+      "name": "유령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/581.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 43,
+      "regionNames": [
+        "상아탑 6층",
+        "상아탑 7층",
+        "상아탑 8층"
+      ],
+      "rewordNames": [
+        "수정 장갑",
+        "정령의 수정 (에어리어 오브 사일런스)",
+        "마나 수정구",
+        "축복받은빨간 물약",
+        "낡은 지식의 목걸이",
+        "파란 물약",
+        "낡은 완력의 목걸이",
+        "빨간 물약",
+        "달빛의 정기",
+        "순간이동 주문서",
+        "아데나",
+        "무명 로브",
+        "축복받은맑은 물약",
+        "지혜의 물약",
+        "축복받은주홍 물약",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 586,
+      "name": "라바 골렘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/586.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "루선해머",
+        "용기의 물약",
+        "마법서 (슬로우)",
+        "대형 도끼",
+        "돌 장갑",
+        "아데나",
+        "정령의 수정 (트리플 애로우)",
+        "마법서 (인챈트 마이티)",
+        "양손검",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 754,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/754.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 로브",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 755,
+      "name": "라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/755.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 767,
+      "name": "하피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/767.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 10243,
+      "name": "불의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10243.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "퓨어 엘릭서",
+        "신성한 유니콘의 뿔",
+        "부활 주문서",
+        "초록 물약",
+        "아데나",
+        "엘릭서(STR)",
+        "축복받은무기 마법 주문서",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "사슬 갑옷",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10246,
+      "name": "물의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10246.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "엘릭서(INT)",
+        "퓨어 엘릭서",
+        "신성한 유니콘의 뿔",
+        "부활 주문서",
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "사슬 갑옷",
+        "축복받은갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10249,
+      "name": "바람의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10249.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "퓨어 엘릭서",
+        "신성한 유니콘의 뿔",
+        "부활 주문서",
+        "초록 물약",
+        "아데나",
+        "축복받은무기 마법 주문서",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "사슬 갑옷",
+        "엘릭서(DEX)",
+        "무기 마법 주문서",
+        "뇌신검"
+      ]
+    },
+    {
+      "id": 10252,
+      "name": "땅의 대정령",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10252.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "엘릭서(CON)",
+        "퓨어 엘릭서",
+        "신성한 유니콘의 뿔",
+        "부활 주문서",
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "사슬 갑옷",
+        "축복받은갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10256,
+      "name": "유니콘",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10256.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "몽환의 섬"
+      ],
+      "rewordNames": [
+        "루선해머",
+        "신성한 유니콘의 뿔",
+        "순간이동 주문서",
+        "변신 주문서",
+        "귀환 주문서",
+        "아데나",
+        "엘릭서(CHA)",
+        "갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10300,
+      "name": "화염의 불타는 궁수",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10300.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "낡은 민첩의 목걸이",
+        "마법서 (슬로우)",
+        "마법서 (인챈트 덱스터리티)",
+        "고리 갑옷",
+        "부츠",
+        "사냥꾼 활",
+        "투구",
+        "화염의 활",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 10301,
+      "name": "화염의 드래곤 플라이",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10301.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "순간이동 주문서",
+        "초록 물약",
+        "축복받은무기 마법 주문서",
+        "마법서 (뱀파이어릭 터치)",
+        "강화 초록 물약",
+        "축복받은갑옷 마법 주문서",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 12184,
+      "name": "페르페르",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12184.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "힘의 지팡이"
+      ]
+    },
+    {
+      "id": 12185,
+      "name": "펠리컬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12185.png",
+      "favorite": false,
+      "formName": "",
+      "level": 43,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "아데나",
+        "정령의 수정 (아이 오브 스톰)",
+        "청동 판금 갑옷",
+        "무기 마법 주문서",
+        "고급 에메랄드"
+      ]
+    },
+    {
+      "id": 35,
+      "name": "카스파",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/35.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "글루디오 던전 3층",
+        "글루디오 던전 4층"
+      ],
+      "rewordNames": [
+        "고급 루비",
+        "마법서 (선 버스트)",
+        "소나무 막대",
+        "변신 조종 반지",
+        "마나 수정구",
+        "마법서 (파이어볼)",
+        "파란 물약",
+        "마력의 돌",
+        "저주 풀기 주문서",
+        "루비",
+        "정령의 수정 (브레스 오브 파이어)",
+        "카스파의 모자",
+        "완력의 목걸이",
+        "보호 망토",
+        "부츠",
+        "축복받은무기 마법 주문서",
+        "정령의 수정 (어스 바인드)",
+        "단풍나무 막대",
+        "축복받은순간이동 주문서",
+        "축복받은갑옷 마법 주문서",
+        "최고급 루비"
+      ]
+    },
+    {
+      "id": 757,
+      "name": "그리폰",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/757.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 보우건",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 로브",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 762,
+      "name": "킹 버그베어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/762.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "검은 혈흔",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 770,
+      "name": "라이칸스로프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/770.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 775,
+      "name": "트롤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/775.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "트롤의 벨트",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 10299,
+      "name": "화염의 불타는 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10299.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "화염의 검",
+        "장검",
+        "초록 물약",
+        "큰 방패",
+        "띠 갑옷",
+        "검은 혈흔",
+        "투구",
+        "낡은 완력의 목걸이",
+        "강화 초록 물약",
+        "화룡 비늘"
+      ]
+    },
+    {
+      "id": 12174,
+      "name": "리자드맨 전사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12174.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "엘모어 격전지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "아데나",
+        "갑옷 마법 주문서",
+        "사슬 갑옷",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 12177,
+      "name": "자이언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12177.png",
+      "favorite": false,
+      "formName": "",
+      "level": 44,
+      "regionNames": [
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "갑옷 마법 주문서",
+        "청동 판금 갑옷"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "메르키오르",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/36.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "글루디오 던전 3층",
+        "글루디오 던전 4층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "최고급 사파이어",
+        "메르키오르의 모자",
+        "정령의 수정 (네이쳐스 터치)",
+        "사파이어",
+        "파란 물약",
+        "마력의 돌",
+        "저주 풀기 주문서",
+        "순간이동 조종 반지",
+        "정령의 수정 (블러드 투 소울)",
+        "완력의 목걸이",
+        "고급 사파이어",
+        "보호 망토",
+        "부츠",
+        "축복받은무기 마법 주문서",
+        "단풍나무 막대",
+        "축복받은순간이동 주문서",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 579,
+      "name": "데스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/579.png",
+      "favorite": false,
+      "formName": "언데드",
+      "level": 45,
+      "regionNames": [
+        "상아탑 6층",
+        "상아탑 7층",
+        "상아탑 8층"
+      ],
+      "rewordNames": [
+        "정령의 수정 (스톰 샷)",
+        "미늘창",
+        "파란 물약",
+        "데스 블레이드",
+        "낡은 지혜의 목걸이",
+        "무기 마법 주문서",
+        "미늘 갑옷",
+        "달빛의 정기",
+        "순간이동 주문서",
+        "부활 주문서",
+        "대형 도끼",
+        "정령의 수정 (스트라이커 게일)",
+        "아데나",
+        "갑옷 마법 주문서",
+        "달의 장궁",
+        "마법서 (디지즈)"
+      ]
+    },
+    {
+      "id": 596,
+      "name": "아시타지오",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/596.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (파이어볼)",
+        "초록 물약",
+        "마법서 (인챈트 덱스터리티)",
+        "마법서 (인챈트 마이티)",
+        "화룡 비늘",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "아데나",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "아시타지오의 재",
+        "흑단 막대",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 765,
+      "name": "사이클롭스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/765.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "잊혀진 대검",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "강철 원석",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 10302,
+      "name": "화염의 아시타지오",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10302.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "마법서 (파이어볼)",
+        "초록 물약",
+        "마법서 (인챈트 덱스터리티)",
+        "마법서 (인챈트 마이티)",
+        "화룡 비늘",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "아시타지오의 재",
+        "흑단 막대",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "마법서 (헤이스트)"
+      ]
+    },
+    {
+      "id": 10303,
+      "name": "화염의 혼 켈베로스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10303.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "결속의 던전: 화염"
+      ],
+      "rewordNames": [
+        "마법서 (이뮨 투 함)",
+        "초록 물약",
+        "기술서 (쇼크 스턴)",
+        "검은 혈흔",
+        "무기 마법 주문서",
+        "화룡 비늘",
+        "부활 주문서",
+        "대검",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "강화 초록 물약",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)",
+        "정령의 수정 (소울 오브 프레임)"
+      ]
+    },
+    {
+      "id": 12186,
+      "name": "블루 하피",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12186.png",
+      "favorite": false,
+      "formName": "",
+      "level": 45,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "정령의 수정 (스톰 샷)",
+        "초록 물약",
+        "아데나",
+        "띠 갑옷",
+        "마법서 (홀리 워크)"
+      ]
+    },
+    {
+      "id": 588,
+      "name": "이프리트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/588.png",
+      "favorite": false,
+      "formName": "",
+      "level": 46,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "마법서 (선 버스트)",
+        "마법서 (파이어볼)",
+        "정령의 수정 (트리플 애로우)",
+        "사슬 갑옷",
+        "마법서 (캔슬레이션)",
+        "마법서 (인챈트 마이티)",
+        "일본도",
+        "축복받은일본도",
+        "고급 사파이어",
+        "아데나",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "화염의 활",
+        "최고급 루비",
+        "고급 루비",
+        "최고급 에메랄드",
+        "화염의 검",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "마법서 (인챈트 덱스터리티)",
+        "파란 물약",
+        "무기 마법 주문서",
+        "고급 에메랄드",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)"
+      ]
+    },
+    {
+      "id": 777,
+      "name": "가스트 로드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/777.png",
+      "favorite": false,
+      "formName": "",
+      "level": 46,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "강철 원석",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 12179,
+      "name": "자이언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12179.png",
+      "favorite": false,
+      "formName": "",
+      "level": 46,
+      "regionNames": [
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "파란 물약",
+        "지혜의 물약",
+        "마법서 (블레스 웨폰)",
+        "마법서 (마나 드레인)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 12187,
+      "name": "마이노",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12187.png",
+      "favorite": false,
+      "formName": "",
+      "level": 46,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "대형 도끼",
+        "초록 물약",
+        "아데나",
+        "갑옷 마법 주문서",
+        "고급 다이아몬드"
+      ]
+    },
+    {
+      "id": 589,
+      "name": "혼 켈베로스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/589.png",
+      "favorite": false,
+      "formName": "",
+      "level": 47,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (이뮨 투 함)",
+        "초록 물약",
+        "기술서 (쇼크 스턴)",
+        "검은 혈흔",
+        "무기 마법 주문서",
+        "화룡 비늘",
+        "부활 주문서",
+        "아데나",
+        "대검",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "강화 초록 물약",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)",
+        "정령의 수정 (소울 오브 프레임)"
+      ]
+    },
+    {
+      "id": 759,
+      "name": "크로코다일",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/759.png",
+      "favorite": false,
+      "formName": "",
+      "level": 47,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "검은 혈흔",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 760,
+      "name": "에틴",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/760.png",
+      "favorite": false,
+      "formName": "",
+      "level": 47,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "잊혀진 대검",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "강철 원석",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 827,
+      "name": "다크 엘프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/827.png",
+      "favorite": false,
+      "formName": "",
+      "level": 47,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 12188,
+      "name": "와이번",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12188.png",
+      "favorite": false,
+      "formName": "",
+      "level": 47,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "최고급 에메랄드",
+        "정령의 수정 (스트라이커 게일)",
+        "초록 물약",
+        "아데나",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "정령의 수정 (윈드 워크)"
+      ]
+    },
+    {
+      "id": 250,
+      "name": "드레이크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/250.png",
+      "favorite": false,
+      "formName": "",
+      "level": 48,
+      "regionNames": [
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "정령의 수정 (트리플 애로우)",
+        "마법서 (홀리 워크)",
+        "루비",
+        "고급 사파이어",
+        "정령의 수정 (아이 오브 스톰)",
+        "고급 다이아몬드",
+        "강화 초록 물약",
+        "최고급 루비",
+        "고급 루비",
+        "최고급 에메랄드",
+        "에메랄드",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "저주받은무기 마법 주문서",
+        "사파이어",
+        "마력의 돌",
+        "파란 물약",
+        "마법서 (어스 퀘이크)",
+        "다이아몬드",
+        "고급 에메랄드",
+        "용기의 물약",
+        "저주받은갑옷 마법 주문서",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "지혜의 물약",
+        "축복받은변신 주문서",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)"
+      ]
+    },
+    {
+      "id": 756,
+      "name": "도펠갱어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/756.png",
+      "favorite": false,
+      "formName": "",
+      "level": 48,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "검은 혈흔",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 763,
+      "name": "바실리스크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/763.png",
+      "favorite": false,
+      "formName": "",
+      "level": 48,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "잊혀진 검",
+        "잊혀진 로브",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼"
+      ]
+    },
+    {
+      "id": 768,
+      "name": "미노타우르스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/768.png",
+      "favorite": false,
+      "formName": "",
+      "level": 48,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "저주 풀기 주문서",
+        "잊혀진 비늘 갑옷",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "강철 원석",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 12178,
+      "name": "자이언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12178.png",
+      "favorite": false,
+      "formName": "",
+      "level": 48,
+      "regionNames": [
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "초록 물약",
+        "아데나",
+        "기술서 (쇼크 스턴)",
+        "기술서 (바운스 어택)",
+        "갑옷 마법 주문서",
+        "판금 갑옷",
+        "기술서 (리덕션 아머)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 766,
+      "name": "드레이크",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/766.png",
+      "favorite": false,
+      "formName": "",
+      "level": 49,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "잊혀진 가죽 갑옷",
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "검은 혈흔",
+        "저주 풀기 주문서",
+        "잊혀진 보우건",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "부활 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "소환 조종 반지",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "흑단 막대",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 769,
+      "name": "미노타우르스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/769.png",
+      "favorite": false,
+      "formName": "",
+      "level": 49,
+      "regionNames": [
+        "잊혀진 섬"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "파란 물약",
+        "고대의 주문서",
+        "저주 풀기 주문서",
+        "주홍 물약",
+        "무기 마법 주문서",
+        "빨간 물약",
+        "용기의 물약",
+        "강철 원석",
+        "부활 주문서",
+        "잊혀진 판금 갑옷",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "맑은 물약",
+        "확인 주문서",
+        "항마의 반지",
+        "비취 물약",
+        "강화 초록 물약",
+        "엘븐 와퍼",
+        "멸마의 반지"
+      ]
+    },
+    {
+      "id": 12191,
+      "name": "유니 드래곤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12191.png",
+      "favorite": false,
+      "formName": "",
+      "level": 49,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "아데나",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "풍룡 비늘",
+        "축복받은갑옷 마법 주문서",
+        "고급 에메랄드",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "바포메트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/24.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "말하는 섬 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (카운터 매직)",
+        "마법서 (테이밍 몬스터)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "저주받은판금 갑옷",
+        "일본도",
+        "매력의 목걸이",
+        "축복받은일본도",
+        "금빛 열쇠",
+        "신체의 벨트",
+        "고급 사파이어",
+        "장갑",
+        "아데나",
+        "영혼의 벨트",
+        "마법서 (어스 재일)",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "투명 망토",
+        "바포메트의 지팡이",
+        "낡은 신체의 벨트",
+        "최고급 에메랄드",
+        "에메랄드",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "마법서 (위크니스)",
+        "마력의 돌",
+        "정령옥",
+        "마법서 (블레스 웨폰)",
+        "마법서 (어스 퀘이크)",
+        "정령의 수정 (브레스 오브 파이어)",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "고급 에메랄드",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 216,
+      "name": "베레스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/216.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "윈다우드 성 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (선 버스트)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "루비",
+        "지혜의 목걸이",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "신체의 벨트",
+        "아데나",
+        "마법서 (그레이터 힐)",
+        "베레스의 지팡이",
+        "정령의 수정 (아이 오브 스톰)",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "최고급 루비",
+        "낡은 신체의 벨트",
+        "고급 루비",
+        "최고급 다이아몬드",
+        "파란 물약",
+        "마력의 돌",
+        "정령옥",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 282,
+      "name": "흑장로",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/282.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "용의 계곡",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (테이밍 몬스터)",
+        "저주받은무기 마법 주문서",
+        "마나 수정구",
+        "마법서 (콜 라이트닝)",
+        "정령의 수정 (네이쳐스 터치)",
+        "파란 물약",
+        "마력의 돌",
+        "정령옥",
+        "저주 풀기 주문서",
+        "흑장로의 샌달",
+        "마법서 (인챈트 마이티)",
+        "정령의 수정 (블러드 투 소울)",
+        "축복받은장갑",
+        "정신의 벨트",
+        "저주받은갑옷 마법 주문서",
+        "축복받은저주 풀기 주문서",
+        "마법서 (콘 오브 콜드)",
+        "마법 망토",
+        "단풍나무 막대",
+        "흑장로의 로브",
+        "축복받은순간이동 주문서"
+      ]
+    },
+    {
+      "id": 885,
+      "name": "도펠겡어 보스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/885.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "하이네",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "마법서 (파이어볼)",
+        "청동 판금 갑옷",
+        "마법서 (인챈트 마이티)",
+        "변신 주문서",
+        "아데나",
+        "단풍나무 막대",
+        "마법 망토",
+        "힘의 지팡이",
+        "마법사의 지팡이",
+        "강화 초록 물약",
+        "기술서 (리덕션 아머)",
+        "마법서 (헤이스트)",
+        "파란 물약",
+        "기술서 (쇼크 스턴)",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "마법서 (서먼 몬스터)",
+        "기술서 (솔리드 캐리지)",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)"
+      ]
+    },
+    {
+      "id": 10020,
+      "name": "타락한 스피리드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10020.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "타락한 축복의 땅의 여름"
+      ],
+      "rewordNames": [
+        "아데나"
+      ]
+    },
+    {
+      "id": 10266,
+      "name": "어둠의 바포메트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10266.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (카운터 매직)",
+        "마법서 (테이밍 몬스터)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "저주받은판금 갑옷",
+        "일본도",
+        "매력의 목걸이",
+        "축복받은일본도",
+        "신체의 벨트",
+        "고급 사파이어",
+        "장갑",
+        "영혼의 벨트",
+        "마법서 (어스 재일)",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "투명 망토",
+        "바포메트의 지팡이",
+        "낡은 신체의 벨트",
+        "최고급 에메랄드",
+        "에메랄드",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "마법서 (위크니스)",
+        "마력의 돌",
+        "정령옥",
+        "마법서 (블레스 웨폰)",
+        "마법서 (어스 퀘이크)",
+        "정령의 수정 (브레스 오브 파이어)",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "고급 에메랄드",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 10267,
+      "name": "어둠의 베레스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10267.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (선 버스트)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "루비",
+        "지혜의 목걸이",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "신체의 벨트",
+        "마법서 (그레이터 힐)",
+        "베레스의 지팡이",
+        "정령의 수정 (아이 오브 스톰)",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "최고급 루비",
+        "낡은 신체의 벨트",
+        "고급 루비",
+        "최고급 다이아몬드",
+        "파란 물약",
+        "마력의 돌",
+        "정령옥",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 12192,
+      "name": "테라 드래곤",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12192.png",
+      "favorite": false,
+      "formName": "",
+      "level": 50,
+      "regionNames": [
+        "풍룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (토네이도)",
+        "최고급 에메랄드",
+        "아데나",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "풍룡 비늘",
+        "축복받은갑옷 마법 주문서",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "커츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/16.png",
+      "favorite": false,
+      "formName": "",
+      "level": 51,
+      "regionNames": [
+        "말하는 섬"
+      ],
+      "rewordNames": [
+        "커츠의 투구",
+        "청동 판금 갑옷",
+        "커츠의 갑옷",
+        "티셔츠",
+        "일본도",
+        "장갑",
+        "순간이동 주문서",
+        "커츠의 장갑",
+        "아데나",
+        "보호 망토",
+        "큰 방패",
+        "마법서 (버서커스)",
+        "기술서 (리덕션 아머)",
+        "축복받은청동 판금 갑옷",
+        "장검",
+        "커츠의 부츠",
+        "파란 물약",
+        "기술서 (쇼크 스턴)",
+        "반사 방패",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "은기사의 방패",
+        "부활 주문서",
+        "부츠",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)"
+      ]
+    },
+    {
+      "id": 10264,
+      "name": "어둠의 커츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10264.png",
+      "favorite": false,
+      "formName": "",
+      "level": 51,
+      "regionNames": [],
+      "rewordNames": [
+        "커츠의 투구",
+        "청동 판금 갑옷",
+        "커츠의 갑옷",
+        "티셔츠",
+        "일본도",
+        "장갑",
+        "순간이동 주문서",
+        "커츠의 장갑",
+        "보호 망토",
+        "큰 방패",
+        "마법서 (버서커스)",
+        "기술서 (리덕션 아머)",
+        "축복받은청동 판금 갑옷",
+        "장검",
+        "커츠의 부츠",
+        "파란 물약",
+        "기술서 (쇼크 스턴)",
+        "반사 방패",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "은기사의 방패",
+        "부활 주문서",
+        "부츠",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)"
+      ]
+    },
+    {
+      "id": 63,
+      "name": "데스나이트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/63.png",
+      "favorite": false,
+      "formName": "",
+      "level": 52,
+      "regionNames": [
+        "글루디오 던전 5층",
+        "글루디오 던전 6층",
+        "글루디오 던전 7층"
+      ],
+      "rewordNames": [
+        "마법서 (토네이도)",
+        "마법서 (선 버스트)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "데스나이트의 갑옷",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "데스나이트의 투구",
+        "데스나이트의 장갑",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "완력의 목걸이",
+        "장갑",
+        "마법서 (어드밴스 스피릿)",
+        "아데나",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "데스나이트의 부츠",
+        "최고급 다이아몬드",
+        "마력의 돌",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "다이아몬드",
+        "마법서 (크리에이트 좀비)",
+        "용기의 물약",
+        "저주받은악운의 단검",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 10263,
+      "name": "어둠의 데스나이트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10263.png",
+      "favorite": false,
+      "formName": "",
+      "level": 52,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (토네이도)",
+        "마법서 (선 버스트)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "데스나이트의 갑옷",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "데스나이트의 투구",
+        "데스나이트의 장갑",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "완력의 목걸이",
+        "장갑",
+        "마법서 (어드밴스 스피릿)",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "데스나이트의 부츠",
+        "최고급 다이아몬드",
+        "마력의 돌",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "다이아몬드",
+        "마법서 (크리에이트 좀비)",
+        "용기의 물약",
+        "저주받은악운의 단검",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 891,
+      "name": "키메라",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/891.png",
+      "favorite": false,
+      "formName": "",
+      "level": 53,
+      "regionNames": [
+        "오만의 탑 3층",
+        "오만의 탑 4층",
+        "오만의 탑 5층",
+        "오만의 탑 7층",
+        "오만의 탑 8층",
+        "오만의 탑 9층",
+        "오만의 탑 10층"
+      ],
+      "rewordNames": [
+        "오만의 탑 11층 이동 주문서",
+        "초록 물약",
+        "빈 주문서(레벨 1)",
+        "빈 주문서(레벨 3)",
+        "저주 풀기 주문서",
+        "빈 주문서(레벨 2)",
+        "마법서 (마나 드레인)",
+        "주홍 물약",
+        "빨간 물약",
+        "용기의 물약",
+        "오만의 탑 1층 이동 주문서",
+        "부활 주문서",
+        "지혜의 물약",
+        "맑은 물약",
+        "확인 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 1025,
+      "name": "변종 웅골리언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1025.png",
+      "favorite": false,
+      "formName": "",
+      "level": 55,
+      "regionNames": [
+        "오만의 탑 2층",
+        "오만의 탑 3층",
+        "오만의 탑 4층"
+      ],
+      "rewordNames": [
+        "오만의 탑 1층 이동 주문서",
+        "오만의 탑 11층 이동 주문서",
+        "초록 물약",
+        "갑옷 마법 주문서",
+        "축복받은순간이동 주문서",
+        "비취 물약",
+        "강화 초록 물약",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 1026,
+      "name": "변종 라미아",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1026.png",
+      "favorite": false,
+      "formName": "",
+      "level": 55,
+      "regionNames": [
+        "오만의 탑 2층",
+        "오만의 탑 3층",
+        "오만의 탑 4층"
+      ],
+      "rewordNames": [
+        "오만의 탑 1층 이동 주문서",
+        "부활 주문서",
+        "오만의 탑 11층 이동 주문서",
+        "빛나는 비늘",
+        "파란 물약",
+        "저주 풀기 주문서",
+        "축복받은순간이동 주문서",
+        "비취 물약",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10307,
+      "name": "화염의 바포메트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10307.png",
+      "favorite": false,
+      "formName": "",
+      "level": 55,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (카운터 매직)",
+        "마법서 (테이밍 몬스터)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "저주받은판금 갑옷",
+        "일본도",
+        "매력의 목걸이",
+        "축복받은일본도",
+        "신체의 벨트",
+        "고급 사파이어",
+        "장갑",
+        "영혼의 벨트",
+        "마법서 (어스 재일)",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "투명 망토",
+        "바포메트의 지팡이",
+        "낡은 신체의 벨트",
+        "최고급 에메랄드",
+        "에메랄드",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "마법서 (위크니스)",
+        "마력의 돌",
+        "정령옥",
+        "마법서 (블레스 웨폰)",
+        "마법서 (어스 퀘이크)",
+        "정령의 수정 (브레스 오브 파이어)",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "고급 에메랄드",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 10308,
+      "name": "화염의 베레스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10308.png",
+      "favorite": false,
+      "formName": "",
+      "level": 55,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (선 버스트)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "루비",
+        "지혜의 목걸이",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "신체의 벨트",
+        "마법서 (그레이터 힐)",
+        "베레스의 지팡이",
+        "정령의 수정 (아이 오브 스톰)",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "최고급 루비",
+        "낡은 신체의 벨트",
+        "고급 루비",
+        "최고급 다이아몬드",
+        "파란 물약",
+        "마력의 돌",
+        "정령옥",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 710,
+      "name": "얼음 여왕",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/710.png",
+      "favorite": false,
+      "formName": "",
+      "level": 56,
+      "regionNames": [
+        "얼음 수정 동굴 3층"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "마법서 (카운터 매직)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "정령의 수정 (네이쳐스 터치)",
+        "마법서 (사일런스)",
+        "정령의 수정 (폴루트 워터)",
+        "순간이동 조종 반지",
+        "사슬 갑옷",
+        "지혜의 목걸이",
+        "정령의 수정 (워터 라이프)",
+        "아데나",
+        "지식의 목걸이",
+        "축복받은순간이동 주문서",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "강화 초록 물약",
+        "정령의 수정 (윈드 워크)",
+        "투명 망토",
+        "수정 장갑",
+        "마나 수정구",
+        "마력의 돌",
+        "정령옥",
+        "파란 물약",
+        "정령의 수정 (아이언 스킨)",
+        "마법서 (인비지블리티)",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "다이아몬드",
+        "정령의 수정 (네이쳐스 블레싱)",
+        "부활 주문서",
+        "얼음 여왕의 지팡이",
+        "마법서 (매스 텔레포트)",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 897,
+      "name": "메두사",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/897.png",
+      "favorite": false,
+      "formName": "",
+      "level": 56,
+      "regionNames": [
+        "오만의 탑 2층",
+        "오만의 탑 3층",
+        "오만의 탑 4층",
+        "오만의 탑 5층",
+        "오만의 탑 7층",
+        "오만의 탑 8층",
+        "오만의 탑 9층",
+        "오만의 탑 10층"
+      ],
+      "rewordNames": [
+        "소나무 막대",
+        "저주받은무기 마법 주문서",
+        "마법서 (이뮨 투 함)",
+        "마법서 (위크니스)",
+        "오만의 탑 11층 이동 주문서",
+        "반사 방패",
+        "저주 풀기 주문서",
+        "마법서 (캔슬레이션)",
+        "매력의 목걸이",
+        "무기 마법 주문서",
+        "미늘 갑옷",
+        "저주받은갑옷 마법 주문서",
+        "오만의 탑 1층 이동 주문서",
+        "순간이동 주문서",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "지혜의 물약",
+        "갑옷 마법 주문서",
+        "메두사 방패",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 10305,
+      "name": "화염의 커츠",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10305.png",
+      "favorite": false,
+      "formName": "",
+      "level": 56,
+      "regionNames": [],
+      "rewordNames": [
+        "커츠의 투구",
+        "청동 판금 갑옷",
+        "커츠의 갑옷",
+        "티셔츠",
+        "일본도",
+        "장갑",
+        "순간이동 주문서",
+        "커츠의 장갑",
+        "보호 망토",
+        "큰 방패",
+        "마법서 (버서커스)",
+        "기술서 (리덕션 아머)",
+        "축복받은청동 판금 갑옷",
+        "장검",
+        "커츠의 부츠",
+        "파란 물약",
+        "기술서 (쇼크 스턴)",
+        "반사 방패",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "은기사의 방패",
+        "부활 주문서",
+        "부츠",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "기술서 (바운스 어택)"
+      ]
+    },
+    {
+      "id": 454,
+      "name": "거대 여왕 개미",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/454.png",
+      "favorite": false,
+      "formName": "",
+      "level": 57,
+      "regionNames": [
+        "개미굴 던전 2층"
+      ],
+      "rewordNames": [
+        "마법서 (테이밍 몬스터)",
+        "초록 물약",
+        "사슬 갑옷",
+        "루비",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "신체의 벨트",
+        "아데나",
+        "마법서 (그레이터 힐)",
+        "마법서 (어스 재일)",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "최고급 루비",
+        "낡은 신체의 벨트",
+        "고급 루비",
+        "체력의 목걸이",
+        "최고급 에메랄드",
+        "에메랄드",
+        "마법서 (디케이 포션)",
+        "마력의 돌",
+        "정령옥",
+        "파란 물약",
+        "무기 마법 주문서",
+        "고급 에메랄드",
+        "용기의 물약",
+        "마법서 (힐 올)",
+        "마법의 투구: 힘",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "마법서 (그레이터 헤이스트)",
+        "축복받은갑옷 마법 주문서",
+        "정령의 수정 (이레이즈 매직)",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 10304,
+      "name": "화염의 데스나이트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10304.png",
+      "favorite": false,
+      "formName": "",
+      "level": 57,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (토네이도)",
+        "마법서 (선 버스트)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "데스나이트의 갑옷",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "데스나이트의 투구",
+        "데스나이트의 장갑",
+        "일본도",
+        "축복받은판금 갑옷",
+        "축복받은일본도",
+        "완력의 목걸이",
+        "장갑",
+        "마법서 (어드밴스 스피릿)",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "데스나이트의 부츠",
+        "최고급 다이아몬드",
+        "마력의 돌",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "다이아몬드",
+        "마법서 (크리에이트 좀비)",
+        "용기의 물약",
+        "저주받은악운의 단검",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "기술서 (솔리드 캐리지)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "양손검",
+        "저주받은양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 1331,
+      "name": "코카트리스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1331.png",
+      "favorite": false,
+      "formName": "",
+      "level": 58,
+      "regionNames": [
+        "오만의 탑 5층",
+        "오만의 탑 7층",
+        "오만의 탑 8층",
+        "오만의 탑 9층",
+        "오만의 탑 10층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "강철 원석",
+        "오만의 탑 1층 이동 주문서",
+        "오만의 탑 11층 이동 주문서",
+        "초록 물약",
+        "지혜의 물약",
+        "빈 주문서(레벨 3)",
+        "기술서 (바운스 어택)",
+        "축복받은순간이동 주문서",
+        "강화 초록 물약",
+        "흑단 막대"
+      ]
+    },
+    {
+      "id": 12180,
+      "name": "에이션트 자이언트",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/12180.png",
+      "favorite": false,
+      "formName": "",
+      "level": 58,
+      "regionNames": [
+        "황혼의 산맥",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (카운터 매직)",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "마법서 (사일런스)",
+        "지혜의 목걸이",
+        "일본도",
+        "축복받은판금 갑옷",
+        "에이션트 자이언트의 반지",
+        "축복받은일본도",
+        "장갑",
+        "아데나",
+        "대검",
+        "타이탄의 벨트",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "기술서 (리덕션 아머)",
+        "마법서 (메디테이션)",
+        "정령의 수정 (인탱글)",
+        "최고급 다이아몬드",
+        "파란 물약",
+        "정령의 수정 (아이언 스킨)",
+        "마법서 (마나 드레인)",
+        "정령의 수정 (블레스 오브 어스)",
+        "낡은 지혜의 목걸이",
+        "다이아몬드",
+        "무기 마법 주문서",
+        "용기의 물약",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "기술서 (바운스 어택)",
+        "축복받은대검",
+        "마법서 (그레이터 헤이스트)",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 590,
+      "name": "피닉스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/590.png",
+      "favorite": false,
+      "formName": "",
+      "level": 59,
+      "regionNames": [
+        "화룡의 둥지",
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "마법서 (선 버스트)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "축복받은낡은 정신의 벨트",
+        "사슬 갑옷",
+        "일본도",
+        "축복받은일본도",
+        "완력의 목걸이",
+        "정령의 수정 (스트라이커 게일)",
+        "아데나",
+        "영혼의 벨트",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "화염의 활",
+        "투명 망토",
+        "최고급 루비",
+        "화염의 검",
+        "마법서 (이뮨 투 함)",
+        "마법서 (포그 오브 슬리핑)",
+        "마법서 (미티어 스트라이크)",
+        "파란 물약",
+        "정령의 수정 (브레스 오브 파이어)",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "민첩의 목걸이",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 1028,
+      "name": "사악한 미믹",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1028.png",
+      "favorite": false,
+      "formName": "",
+      "level": 59,
+      "regionNames": [
+        "오만의 탑 11층",
+        "오만의 탑 12층",
+        "오만의 탑 13층",
+        "오만의 탑 14층",
+        "오만의 탑 15층"
+      ],
+      "rewordNames": [
+        "용기의 물약",
+        "오만의 탑 11층 이동 주문서",
+        "초록 물약",
+        "마법서 (인챈트 덱스터리티)",
+        "빈 주문서(레벨 1)",
+        "파란 물약",
+        "갑옷 마법 주문서",
+        "빈 주문서(레벨 2)",
+        "투구",
+        "마법서 (인챈트 마이티)"
+      ]
+    },
+    {
+      "id": 1410,
+      "name": "서큐버스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1410.png",
+      "favorite": false,
+      "formName": "",
+      "level": 59,
+      "regionNames": [
+        "오만의 탑 11층",
+        "오만의 탑 12층",
+        "오만의 탑 13층",
+        "오만의 탑 14층",
+        "오만의 탑 15층",
+        "오만의 탑 17층",
+        "오만의 탑 18층",
+        "오만의 탑 19층",
+        "오만의 탑 20층"
+      ],
+      "rewordNames": [
+        "마법서 (크리에이트 좀비)",
+        "마법서 (아이스 랜스)",
+        "변신 조종 반지",
+        "오만의 탑 11층 이동 주문서",
+        "정령의 수정 (네이쳐스 터치)",
+        "마법서 (서먼 몬스터)",
+        "마법서 (콘 오브 콜드)",
+        "빈 주문서(레벨 4)"
+      ]
+    },
+    {
+      "id": 10309,
+      "name": "화염의 피닉스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10309.png",
+      "favorite": false,
+      "formName": "",
+      "level": 59,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "마법서 (선 버스트)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "축복받은낡은 정신의 벨트",
+        "사슬 갑옷",
+        "일본도",
+        "축복받은일본도",
+        "완력의 목걸이",
+        "정령의 수정 (스트라이커 게일)",
+        "영혼의 벨트",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "화염의 활",
+        "투명 망토",
+        "최고급 루비",
+        "화염의 검",
+        "마법서 (이뮨 투 함)",
+        "마법서 (포그 오브 슬리핑)",
+        "마법서 (미티어 스트라이크)",
+        "파란 물약",
+        "정령의 수정 (브레스 오브 파이어)",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "민첩의 목걸이",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 1039,
+      "name": "제니스 퀸",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1039.png",
+      "favorite": false,
+      "formName": "",
+      "level": 60,
+      "regionNames": [
+        "오만의 탑 10층"
+      ],
+      "rewordNames": [
+        "봉인된 오만의 탑 1층 이동 부적",
+        "마법서 (슬로우)",
+        "초록 물약",
+        "제니스의 반지",
+        "정령의 수정 (트리플 애로우)",
+        "사슬 갑옷",
+        "일본도",
+        "축복받은판금 갑옷",
+        "마법서 (어드밴스 스피릿)",
+        "아데나",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "수정 갑옷",
+        "마법서 (디케이 포션)",
+        "마법서 (위크니스)",
+        "마법서 (포그 오브 슬리핑)",
+        "파란 물약",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "파워 글로브",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트",
+        "마법서 (다크니스)"
+      ]
+    },
+    {
+      "id": 332,
+      "name": "데몬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/332.png",
+      "favorite": false,
+      "formName": "",
+      "level": 61,
+      "regionNames": [
+        "상아탑 8층"
+      ],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "사슬 갑옷",
+        "일본도",
+        "사이하의 활",
+        "축복받은판금 갑옷",
+        "완력의 목걸이",
+        "악운의 단검",
+        "아데나",
+        "정령의 수정 (버닝 웨폰)",
+        "지식의 목걸이",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "최고급 루비",
+        "정령의 수정 (소울 오브 프레임)",
+        "소나무 막대",
+        "최고급 다이아몬드",
+        "마법서 (이뮨 투 함)",
+        "데몬의 지팡이",
+        "파란 물약",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "파워 글로브",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "달의 장궁",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 895,
+      "name": "댄싱 소드",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/895.png",
+      "favorite": false,
+      "formName": "",
+      "level": 61,
+      "regionNames": [
+        "오만의 탑 17층",
+        "오만의 탑 18층",
+        "오만의 탑 19층",
+        "오만의 탑 20층"
+      ],
+      "rewordNames": [
+        "오만의 탑 11층 이동 주문서",
+        "언월도",
+        "지혜의 물약",
+        "정령의 수정 (아이 오브 스톰)",
+        "빈 주문서(레벨 4)",
+        "정령의 수정 (블러드 투 소울)"
+      ]
+    },
+    {
+      "id": 1027,
+      "name": "사악한 비홀더",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1027.png",
+      "favorite": false,
+      "formName": "",
+      "level": 61,
+      "regionNames": [
+        "오만의 탑 15층",
+        "오만의 탑 17층",
+        "오만의 탑 18층",
+        "오만의 탑 19층",
+        "오만의 탑 20층"
+      ],
+      "rewordNames": [
+        "저주받은무기 마법 주문서",
+        "마법서 (위크니스)",
+        "오만의 탑 11층 이동 주문서",
+        "파란 물약",
+        "정령의 수정 (리턴 투 네이처)",
+        "지혜의 물약",
+        "마법서 (라이트닝 스톰)",
+        "마법서 (디지즈)",
+        "무기 마법 주문서"
+      ]
+    },
+    {
+      "id": 10265,
+      "name": "어둠의 데몬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10265.png",
+      "favorite": false,
+      "formName": "",
+      "level": 61,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "사슬 갑옷",
+        "일본도",
+        "사이하의 활",
+        "축복받은판금 갑옷",
+        "완력의 목걸이",
+        "악운의 단검",
+        "정령의 수정 (버닝 웨폰)",
+        "지식의 목걸이",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "최고급 루비",
+        "정령의 수정 (소울 오브 프레임)",
+        "소나무 막대",
+        "최고급 다이아몬드",
+        "마법서 (이뮨 투 함)",
+        "데몬의 지팡이",
+        "파란 물약",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "파워 글로브",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "달의 장궁",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 1041,
+      "name": "시어",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/1041.png",
+      "favorite": false,
+      "formName": "",
+      "level": 62,
+      "regionNames": [
+        "오만의 탑 20층"
+      ],
+      "rewordNames": [
+        "초록 물약",
+        "일본도",
+        "축복받은판금 갑옷",
+        "고급 사파이어",
+        "아데나",
+        "정령의 수정 (버닝 웨폰)",
+        "봉인된 오만의 탑 11층 이동 부적",
+        "지식의 목걸이",
+        "마법서 (라이트닝 스톰)",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "수정 갑옷",
+        "정령의 수정 (스톰 샷)",
+        "최고급 사파이어",
+        "마법서 (이뮨 투 함)",
+        "사파이어",
+        "파란 물약",
+        "마법서 (마나 드레인)",
+        "정령의 수정 (블러드 투 소울)",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "파워 글로브",
+        "용기의 물약",
+        "부활 주문서",
+        "시어의 심안",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "마법서 (뱀파이어릭 터치)",
+        "양손검",
+        "마법서 (디지즈)",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 889,
+      "name": "다이어울프",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/889.png",
+      "favorite": false,
+      "formName": "",
+      "level": 64,
+      "regionNames": [
+        "오만의 탑 11층",
+        "오만의 탑 12층",
+        "오만의 탑 13층",
+        "오만의 탑 14층",
+        "오만의 탑 15층",
+        "오만의 탑 17층",
+        "오만의 탑 18층",
+        "오만의 탑 19층",
+        "오만의 탑 20층"
+      ],
+      "rewordNames": [
+        "오만의 탑 11층 이동 주문서",
+        "초록 물약",
+        "파란 물약",
+        "기술서 (솔리드 캐리지)",
+        "지혜의 물약",
+        "맑은 물약",
+        "축복받은순간이동 주문서",
+        "강화 초록 물약",
+        "기술서 (리덕션 아머)"
+      ]
+    },
+    {
+      "id": 10306,
+      "name": "화염의 데몬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/10306.png",
+      "favorite": false,
+      "formName": "",
+      "level": 66,
+      "regionNames": [],
+      "rewordNames": [
+        "마법서 (파이어 스톰)",
+        "변신 조종 반지",
+        "낡은 영혼의 벨트",
+        "초록 물약",
+        "사슬 갑옷",
+        "일본도",
+        "사이하의 활",
+        "축복받은판금 갑옷",
+        "완력의 목걸이",
+        "악운의 단검",
+        "정령의 수정 (버닝 웨폰)",
+        "지식의 목걸이",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "최고급 루비",
+        "정령의 수정 (소울 오브 프레임)",
+        "소나무 막대",
+        "최고급 다이아몬드",
+        "마법서 (이뮨 투 함)",
+        "데몬의 지팡이",
+        "파란 물약",
+        "무기 마법 주문서",
+        "정신의 벨트",
+        "축복받은부활 주문서",
+        "파워 글로브",
+        "용기의 물약",
+        "부활 주문서",
+        "축복받은무기 마법 주문서",
+        "축복받은양손검",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "달의 장궁",
+        "축복받은갑옷 마법 주문서",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 902,
+      "name": "케레니스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/902.png",
+      "favorite": false,
+      "formName": "",
+      "level": 72,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "풍령의 반지",
+        "수령의 반지",
+        "지혜의 목걸이",
+        "정신의 벨트",
+        "반왕의 건틀릿",
+        "지식의 목걸이",
+        "케레니스의 로브",
+        "마법 망토",
+        "마법사 옷",
+        "화령의 반지",
+        "지령의 반지",
+        "마법사 모자",
+        "케레니스의 장갑",
+        "투명 망토"
+      ]
+    },
+    {
+      "id": 971,
+      "name": "켄 라우헬",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/971.png",
+      "favorite": false,
+      "formName": "",
+      "level": 75,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "체력의 목걸이",
+        "수정 갑옷",
+        "케레니스의 부츠",
+        "사각 방패",
+        "티셔츠",
+        "마법의 투구: 신속",
+        "완력의 목걸이",
+        "신체의 벨트",
+        "반왕의 갑옷",
+        "장갑",
+        "마법의 투구: 힘",
+        "보호 망토",
+        "부츠",
+        "싸울아비 장검",
+        "마법의 투구: 치유",
+        "반왕의 부츠"
+      ]
+    },
+    {
+      "id": 327,
+      "name": "안타라스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/327.png",
+      "favorite": false,
+      "formName": "",
+      "level": 93,
+      "regionNames": [
+        "용의 계곡 던전 7층"
+      ],
+      "rewordNames": [
+        "변신 조종 반지",
+        "축복받은투명 망토",
+        "낡은 영혼의 벨트",
+        "마법서 (인챈트 마이티)",
+        "신체의 벨트",
+        "장갑",
+        "아데나",
+        "지룡 비늘",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "마법서 (이럽션)",
+        "투명 망토",
+        "낡은 신체의 벨트",
+        "체력의 목걸이",
+        "최고급 에메랄드",
+        "소나무 막대",
+        "최고급 다이아몬드",
+        "마력의 돌",
+        "정신의 벨트",
+        "고급 에메랄드",
+        "마법서 (웨폰 브레이크)",
+        "기술서 (카운터 배리어)",
+        "마법서 (힐 올)",
+        "마법서 (매스 텔레포트)",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "싸울아비 장검",
+        "축복받은갑옷 마법 주문서",
+        "마법서 (테이밍 몬스터)",
+        "마법서 (슬로우)",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "일본도",
+        "지혜의 목걸이",
+        "지룡 비늘 갑옷",
+        "축복받은일본도",
+        "단풍나무 막대",
+        "영혼의 벨트",
+        "축복받은싸울아비 장검",
+        "에메랄드",
+        "저주받은무기 마법 주문서",
+        "파란 물약",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "저주받은갑옷 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 499,
+      "name": "파푸리온",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/499.png",
+      "favorite": false,
+      "formName": "",
+      "level": 93,
+      "regionNames": [
+        "파푸리온 둥지"
+      ],
+      "rewordNames": [
+        "변신 조종 반지",
+        "마법서 (블리자드)",
+        "축복받은투명 망토",
+        "낡은 영혼의 벨트",
+        "마법서 (슬로우)",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "마법서 (리무브 커스)",
+        "일본도",
+        "축복받은판금 갑옷",
+        "매력의 목걸이",
+        "수룡 비늘",
+        "축복받은일본도",
+        "신체의 벨트",
+        "고급 사파이어",
+        "장갑",
+        "아데나",
+        "정령의 수정 (레지스트 엘리멘트)",
+        "단풍나무 막대",
+        "영혼의 벨트",
+        "고급 다이아몬드",
+        "강화 초록 물약",
+        "축복받은싸울아비 장검",
+        "투명 망토",
+        "낡은 신체의 벨트",
+        "소나무 막대",
+        "저주받은무기 마법 주문서",
+        "최고급 다이아몬드",
+        "최고급 사파이어",
+        "수룡 비늘 갑옷",
+        "사파이어",
+        "마력의 돌",
+        "파란 물약",
+        "정신의 벨트",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "저주받은갑옷 마법 주문서",
+        "마법서 (힐 올)",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "싸울아비 장검",
+        "민첩의 목걸이",
+        "낡은 정신의 벨트",
+        "축복받은갑옷 마법 주문서"
+      ]
+    },
+    {
+      "id": 621,
+      "name": "발라카스",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/621.png",
+      "favorite": false,
+      "formName": "",
+      "level": 95,
+      "regionNames": [],
+      "rewordNames": [
+        "변신 조종 반지",
+        "축복받은투명 망토",
+        "낡은 영혼의 벨트",
+        "마법서 (파이어볼)",
+        "마법서 (인챈트 마이티)",
+        "신체의 벨트",
+        "완력의 목걸이",
+        "장갑",
+        "아데나",
+        "고급 다이아몬드",
+        "판금 갑옷",
+        "강화 초록 물약",
+        "투명 망토",
+        "최고급 루비",
+        "마법서 (헤이스트)",
+        "낡은 신체의 벨트",
+        "소나무 막대",
+        "최고급 다이아몬드",
+        "마력의 돌",
+        "화룡 비늘",
+        "정신의 벨트",
+        "축복받은무기 마법 주문서",
+        "마법서 (서먼 몬스터)",
+        "싸울아비 장검",
+        "축복받은갑옷 마법 주문서",
+        "마법서 (테이밍 몬스터)",
+        "마법서 (슬로우)",
+        "마법서 (리절렉션)",
+        "초록 물약",
+        "순간이동 조종 반지",
+        "루비",
+        "일본도",
+        "축복받은일본도",
+        "지식의 목걸이",
+        "화룡 비늘 갑옷",
+        "단풍나무 막대",
+        "영혼의 벨트",
+        "축복받은싸울아비 장검",
+        "고급 루비",
+        "저주받은무기 마법 주문서",
+        "파란 물약",
+        "마법서 (인비지블리티)",
+        "무기 마법 주문서",
+        "다이아몬드",
+        "용기의 물약",
+        "저주받은갑옷 마법 주문서",
+        "갑옷 마법 주문서",
+        "지혜의 물약",
+        "낡은 정신의 벨트"
+      ]
+    },
+    {
+      "id": 900,
+      "name": "린드비오르",
+      "image": "https://assets.playnccdn.com/static-lineageclassic-gamedata/resources/NPCIcon/900.png",
+      "favorite": false,
+      "formName": "",
+      "level": 99,
+      "regionNames": [
+        "아덴 대륙"
+      ],
+      "rewordNames": [
+        "싸울아비 장검",
+        "풍룡 비늘 갑옷",
+        "풍룡 비늘",
+        "투명 망토"
+      ]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 2000,
+    "lastPage": 1,
+    "total": 343,
+    "limit": 10000
+  }
+}

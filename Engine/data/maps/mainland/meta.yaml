@@ -1,0 +1,12 @@
+# Mainland walkability pack (nav tiles relative to origin).
+# Active terrain: nav.png (fence_bw display, pixel_scale 4). Unused images under legacy/.
+id: mainland
+name: "Main Land"
+origin_x: 32448
+origin_y: 32128
+pixel_scale: 4
+terrain: nav.png
+default_region: mainland
+farms: farms.yaml
+safe: safe.yaml
+home: home.yaml

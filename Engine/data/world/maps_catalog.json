@@ -1,0 +1,4811 @@
+{
+  "schema_version": 1,
+  "kind": "maps_catalog",
+  "status": "draft",
+  "generated_at": "2026-10-03T05:10:40Z",
+  "note": "Sibling index of mapId -> names/rect. Same maps object as map_transitions.json.",
+  "count": 179,
+  "maps": {
+    "0": {
+      "mapId": 0,
+      "kr": "말하는 섬",
+      "en": "Talking Island",
+      "complex": "말하는 섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "portal_count": 8,
+      "region_count": 2,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      }
+    },
+    "1": {
+      "mapId": 1,
+      "kr": "말하는 섬 던전 1층",
+      "en": "Talking Island Dungeon Floor 1",
+      "complex": "말하는 섬 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "2": {
+      "mapId": 2,
+      "kr": "말하는 섬 던전 2층",
+      "en": "Talking Island Dungeon Floor 2",
+      "complex": "말하는 섬 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 10,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      }
+    },
+    "3": {
+      "mapId": 3,
+      "kr": "군터의 집",
+      "en": "Gunters House",
+      "complex": "군터의 집",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "4": {
+      "mapId": 4,
+      "kr": "아덴 대륙",
+      "en": "Mainland Aden",
+      "complex": "아덴 대륙",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32448,
+        "y0": 32128,
+        "x1": 34367,
+        "y1": 33599
+      },
+      "portal_count": 135,
+      "region_count": 47,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32448,
+        "y0": 32128,
+        "x1": 34367,
+        "y1": 33599
+      }
+    },
+    "5": {
+      "mapId": 5,
+      "kr": "글루딘행 배",
+      "en": "TalkingIsland-Gludin Ship",
+      "complex": "글루딘행 배",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "말하는 섬↔글루딘 배"
+    },
+    "6": {
+      "mapId": 6,
+      "kr": "말하는 섬행 배",
+      "en": "Gludin-TalkingIsland Ship",
+      "complex": "말하는 섬행 배",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "kr_world_nav": "글루딘↔말하는 섬 배"
+    },
+    "7": {
+      "mapId": 7,
+      "kr": "글루디오 던전 1층",
+      "en": "Gludio Dungeon Floor 1",
+      "complex": "글루디오 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "8": {
+      "mapId": 8,
+      "kr": "글루디오 던전 2층",
+      "en": "Gludio Dungeon Floor 2",
+      "complex": "글루디오 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 10,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "9": {
+      "mapId": 9,
+      "kr": "글루디오 던전 3층",
+      "en": "Gludio Dungeon Floor 3",
+      "complex": "글루디오 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "10": {
+      "mapId": 10,
+      "kr": "글루디오 던전 4층",
+      "en": "Gludio Dungeon Floor 4",
+      "complex": "글루디오 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "11": {
+      "mapId": 11,
+      "kr": "글루디오 던전 5층",
+      "en": "Gludio Dungeon Floor 5",
+      "complex": "글루디오 던전",
+      "floor": 5,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "12": {
+      "mapId": 12,
+      "kr": "글루디오 던전 6층",
+      "en": "Gludio Dungeon Floor 6",
+      "complex": "글루디오 던전",
+      "floor": 6,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "13": {
+      "mapId": 13,
+      "kr": "글루디오 던전 7층",
+      "en": "Gludio Dungeon Floor 7",
+      "complex": "글루디오 던전",
+      "floor": 7,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 10,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "14": {
+      "mapId": 14,
+      "kr": "지하 통로",
+      "en": "Underground Passageway",
+      "complex": "지하 통로",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32448,
+        "y0": 32704,
+        "x1": 33087,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32448,
+        "y0": 32704,
+        "x1": 33087,
+        "y1": 32895
+      }
+    },
+    "15": {
+      "mapId": 15,
+      "kr": "켄트 내성",
+      "en": "Kent Inner Castle",
+      "complex": "켄트 내성",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      }
+    },
+    "16": {
+      "mapId": 16,
+      "kr": "하딘의 연구소",
+      "en": "Hardins Laboratory",
+      "complex": "하딘의 연구소",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "17": {
+      "mapId": 17,
+      "kr": "네루파의 동굴",
+      "en": "Nerupas Cave",
+      "complex": "네루파의 동굴",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "네루파 동굴"
+    },
+    "18": {
+      "mapId": 18,
+      "kr": "이름 미등록 지도",
+      "en": "Dupelgenon Dungeon",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "듀펠게논 던전"
+    },
+    "19": {
+      "mapId": 19,
+      "kr": "요정숲 던전 1층",
+      "en": "Elven Forest Dungeon Floor 1",
+      "complex": "요정숲 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "요정 숲 던전 1층"
+    },
+    "20": {
+      "mapId": 20,
+      "kr": "요정숲 던전 2층",
+      "en": "Elven Forest Dungeon Floor 2",
+      "complex": "요정숲 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "요정 숲 던전 2층"
+    },
+    "21": {
+      "mapId": 21,
+      "kr": "요정숲 던전 3층",
+      "en": "Elven Forest Dungeon Floor 3",
+      "complex": "요정숲 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 9,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "요정 숲 던전 3층"
+    },
+    "23": {
+      "mapId": 23,
+      "kr": "윈다우드 성 던전 1층",
+      "en": "Windawood Castle Dungeon 1F",
+      "complex": "윈다우드 성 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "윈다우드성 던전 1층"
+    },
+    "24": {
+      "mapId": 24,
+      "kr": "윈다우드 성 던전 2층",
+      "en": "Windawood Castle Dungeon 2F",
+      "complex": "윈다우드 성 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "윈다우드성 던전 2층"
+    },
+    "25": {
+      "mapId": 25,
+      "kr": "사막 던전 1층",
+      "en": "Training Dungeon Floor 1",
+      "complex": "사막 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "Training 던전 1층"
+    },
+    "26": {
+      "mapId": 26,
+      "kr": "사막 던전 2층",
+      "en": "Training Dungeon Floor 2",
+      "complex": "사막 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "Training 던전 2층"
+    },
+    "27": {
+      "mapId": 27,
+      "kr": "사막 던전 3층",
+      "en": "Training Dungeon Floor 3",
+      "complex": "사막 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "Training 던전 3층"
+    },
+    "28": {
+      "mapId": 28,
+      "kr": "사막 던전 4층",
+      "en": "Training Dungeon Floor 4",
+      "complex": "사막 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "Training 던전 4층"
+    },
+    "29": {
+      "mapId": 29,
+      "kr": "윈다우드 내성",
+      "en": "Windawood Inner Castle",
+      "complex": "윈다우드 내성",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      }
+    },
+    "30": {
+      "mapId": 30,
+      "kr": "용의 계곡 던전 1층",
+      "en": "Dragon Valley Dungeon Floor 1",
+      "complex": "용의 계곡 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 12,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "31": {
+      "mapId": 31,
+      "kr": "용의 계곡 던전 2층",
+      "en": "Dragon Valley Dungeon Floor 2",
+      "complex": "용의 계곡 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 9,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      }
+    },
+    "32": {
+      "mapId": 32,
+      "kr": "용의 계곡 던전 3층",
+      "en": "Dragon Valley Dungeon Floor 3",
+      "complex": "용의 계곡 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 5,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "33": {
+      "mapId": 33,
+      "kr": "용의 계곡 던전 4층",
+      "en": "Dragon Valley Dungeon Floor 4",
+      "complex": "용의 계곡 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "35": {
+      "mapId": 35,
+      "kr": "용의 계곡 던전 5층",
+      "en": "Dragon Valley Dungeon Floor 5",
+      "complex": "용의 계곡 던전",
+      "floor": 5,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "36": {
+      "mapId": 36,
+      "kr": "용의 계곡 던전 6층",
+      "en": "Dragon Valley Dungeon Floor 6",
+      "complex": "용의 계곡 던전",
+      "floor": 6,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "37": {
+      "mapId": 37,
+      "kr": "용의 계곡 던전 7층",
+      "en": "Lair of Antharas",
+      "complex": "용의 계곡 던전",
+      "floor": 7,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "안타라스의 소굴"
+    },
+    "43": {
+      "mapId": 43,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 1F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 1층"
+    },
+    "44": {
+      "mapId": 44,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 2F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 2층"
+    },
+    "45": {
+      "mapId": 45,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 3F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 3층"
+    },
+    "46": {
+      "mapId": 46,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 4F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 4층"
+    },
+    "47": {
+      "mapId": 47,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 5F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 5층"
+    },
+    "48": {
+      "mapId": 48,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 6F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 6층"
+    },
+    "49": {
+      "mapId": 49,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 7F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 7층"
+    },
+    "50": {
+      "mapId": 50,
+      "kr": "개미굴 던전 1층",
+      "en": "Ant Caves 8F",
+      "complex": "개미굴 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴 8층"
+    },
+    "51": {
+      "mapId": 51,
+      "kr": "개미굴 던전 2층",
+      "en": "Ant Caves 9F",
+      "complex": "개미굴 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "kr_world_nav": "개미굴 9층"
+    },
+    "52": {
+      "mapId": 52,
+      "kr": "기란 내성",
+      "en": "Giran Inner Castle",
+      "complex": "기란 내성",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      }
+    },
+    "53": {
+      "mapId": 53,
+      "kr": "기란 던전 1층",
+      "en": "Giran Prison Floor 1",
+      "complex": "기란 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "기란 감옥 1층"
+    },
+    "54": {
+      "mapId": 54,
+      "kr": "기란 던전 2층",
+      "en": "Giran Prison Floor 2",
+      "complex": "기란 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 5,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "기란 감옥 2층"
+    },
+    "55": {
+      "mapId": 55,
+      "kr": "기란 던전 3층",
+      "en": "Giran Prison Floor 3",
+      "complex": "기란 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "기란 감옥 3층"
+    },
+    "56": {
+      "mapId": 56,
+      "kr": "기란 던전 4층",
+      "en": "Giran Prison Floor 4",
+      "complex": "기란 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "기란 감옥 4층"
+    },
+    "59": {
+      "mapId": 59,
+      "kr": "지하 수로 1층",
+      "en": "Eva Kingdom Dungeon Floor 1",
+      "complex": "지하 수로",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "Eva Kingdom 던전 1층"
+    },
+    "60": {
+      "mapId": 60,
+      "kr": "지하 수로 2층",
+      "en": "Eva Kingdom Dungeon Floor 2",
+      "complex": "지하 수로",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "Eva Kingdom 던전 2층"
+    },
+    "61": {
+      "mapId": 61,
+      "kr": "지하 수로 3층",
+      "en": "Eva Kingdom Dungeon Floor 3",
+      "complex": "지하 수로",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "Eva Kingdom 던전 3층"
+    },
+    "62": {
+      "mapId": 62,
+      "kr": "에바의 성지",
+      "en": "Sanctuary of Eva",
+      "complex": "에바의 성지",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "에바 성소"
+    },
+    "63": {
+      "mapId": 63,
+      "kr": "에바왕국",
+      "en": "Kingdom of Eva",
+      "complex": "에바왕국",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 3,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32959
+      }
+    },
+    "64": {
+      "mapId": 64,
+      "kr": "하이네 내성",
+      "en": "Heine Inner Castle",
+      "complex": "하이네 내성",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32768,
+        "x1": 32639,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32768,
+        "x1": 32639,
+        "y1": 32895
+      }
+    },
+    "65": {
+      "mapId": 65,
+      "kr": "파푸리온 둥지",
+      "en": "Lair of Fafurion",
+      "complex": "파푸리온 둥지",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "파퓨리온의 소굴"
+    },
+    "66": {
+      "mapId": 66,
+      "kr": "지저성",
+      "en": "Iron Gate Guild Inner Castle",
+      "complex": "지저성",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "kr_world_nav": "철문 길드 내성"
+    },
+    "67": {
+      "mapId": 67,
+      "kr": "발라카스 둥지",
+      "en": "Lair of Valakas",
+      "complex": "발라카스 둥지",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "발라카스의 소굴"
+    },
+    "70": {
+      "mapId": 70,
+      "kr": "잊혀진 섬",
+      "en": "Forgotten Island",
+      "complex": "잊혀진 섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 33023,
+        "y1": 33087
+      }
+    },
+    "72": {
+      "mapId": 72,
+      "kr": "얼음 수정 동굴 1층",
+      "en": "Ice Crystal Cave",
+      "complex": "얼음 수정 동굴",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "kr_world_nav": "얼음 수정 동굴"
+    },
+    "73": {
+      "mapId": 73,
+      "kr": "얼음 수정 동굴 2층",
+      "en": "Ice Queens Castle 2F",
+      "complex": "얼음 수정 동굴",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "kr_world_nav": "얼음 여왕성 2층"
+    },
+    "74": {
+      "mapId": 74,
+      "kr": "얼음 수정 동굴 3층",
+      "en": "Ice Queens Castle 3F",
+      "complex": "얼음 수정 동굴",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32895,
+        "y1": 33023
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32895,
+        "y1": 33023
+      },
+      "kr_world_nav": "얼음 여왕성 3층"
+    },
+    "75": {
+      "mapId": 75,
+      "kr": "상아탑 1층",
+      "en": "Oren Ivory Tower Floor 1",
+      "complex": "상아탑",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32959
+      }
+    },
+    "76": {
+      "mapId": 76,
+      "kr": "상아탑 2층",
+      "en": "Oren Ivory Tower Floor 2",
+      "complex": "상아탑",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "77": {
+      "mapId": 77,
+      "kr": "상아탑 3층",
+      "en": "Oren Ivory Tower Floor 3",
+      "complex": "상아탑",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "78": {
+      "mapId": 78,
+      "kr": "상아탑 4층",
+      "en": "Oren Ivory Tower Floor 4",
+      "complex": "상아탑",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32832,
+        "y0": 32704,
+        "x1": 32959,
+        "y1": 32831
+      },
+      "portal_count": 10,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32832,
+        "y0": 32704,
+        "x1": 32959,
+        "y1": 32831
+      }
+    },
+    "79": {
+      "mapId": 79,
+      "kr": "상아탑 5층",
+      "en": "Oren Ivory Tower Floor 5",
+      "complex": "상아탑",
+      "floor": 5,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 16,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "80": {
+      "mapId": 80,
+      "kr": "상아탑 6층",
+      "en": "Oren Ivory Tower Floor 6",
+      "complex": "상아탑",
+      "floor": 6,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 16,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "81": {
+      "mapId": 81,
+      "kr": "상아탑 7층",
+      "en": "Oren Ivory Tower Floor 7",
+      "complex": "상아탑",
+      "floor": 7,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 16,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      }
+    },
+    "82": {
+      "mapId": 82,
+      "kr": "상아탑 8층",
+      "en": "Oren Ivory Tower Floor 8",
+      "complex": "상아탑",
+      "floor": 8,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32895
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32895
+      }
+    },
+    "83": {
+      "mapId": 83,
+      "kr": "잊혀진 섬행 배",
+      "en": "unnamed",
+      "complex": "잊혀진 섬행 배",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "84": {
+      "mapId": 84,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 4,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "89": {
+      "mapId": 89,
+      "kr": "무한대전",
+      "en": "Giran Colosseum A",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "kr_world_nav": "기란 투기장"
+    },
+    "90": {
+      "mapId": 90,
+      "kr": "무한대전",
+      "en": "Giran Colosseum B",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "기란 투기장"
+    },
+    "91": {
+      "mapId": 91,
+      "kr": "무한대전",
+      "en": "Talking Island Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "말하는 섬 투기장"
+    },
+    "92": {
+      "mapId": 92,
+      "kr": "무한대전",
+      "en": "Gludio Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "글루디오 투기장"
+    },
+    "93": {
+      "mapId": 93,
+      "kr": "무한대전",
+      "en": "Kent Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "켄트 투기장"
+    },
+    "94": {
+      "mapId": 94,
+      "kr": "무한대전",
+      "en": "Windawood Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "윈다우드 투기장"
+    },
+    "95": {
+      "mapId": 95,
+      "kr": "무한대전",
+      "en": "Silver Knight Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "실버 나이트 투기장"
+    },
+    "96": {
+      "mapId": 96,
+      "kr": "무한대전",
+      "en": "Lair of Valakas Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "Lair of Valakas 투기장"
+    },
+    "97": {
+      "mapId": 97,
+      "kr": "무한대전",
+      "en": "Heine Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "하이네 투기장"
+    },
+    "98": {
+      "mapId": 98,
+      "kr": "무한대전",
+      "en": "Werldern Colosseum",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "웰던 투기장"
+    },
+    "99": {
+      "mapId": 99,
+      "kr": "무한대전",
+      "en": "Unknown-99",
+      "complex": "무한대전",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 33408,
+        "y0": 32640,
+        "x1": 33599,
+        "y1": 32831
+      },
+      "kr_world_nav": "미지의 99"
+    },
+    "101": {
+      "mapId": 101,
+      "kr": "오만의 탑 1층",
+      "en": "Tower of Insolence 1F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "102": {
+      "mapId": 102,
+      "kr": "오만의 탑 2층",
+      "en": "Tower of Insolence 2F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "103": {
+      "mapId": 103,
+      "kr": "오만의 탑 3층",
+      "en": "Tower of Insolence 3F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "104": {
+      "mapId": 104,
+      "kr": "오만의 탑 4층",
+      "en": "Tower of Insolence 4F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "105": {
+      "mapId": 105,
+      "kr": "오만의 탑 5층",
+      "en": "Tower of Insolence 5F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "106": {
+      "mapId": 106,
+      "kr": "오만의 탑 6층",
+      "en": "Tower of Insolence 6F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "107": {
+      "mapId": 107,
+      "kr": "오만의 탑 7층",
+      "en": "Tower of Insolence 7F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "108": {
+      "mapId": 108,
+      "kr": "오만의 탑 8층",
+      "en": "Tower of Insolence 8F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "109": {
+      "mapId": 109,
+      "kr": "오만의 탑 9층",
+      "en": "Tower of Insolence 9F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "110": {
+      "mapId": 110,
+      "kr": "오만의 탑 10층",
+      "en": "Tower of Insolence 10F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "111": {
+      "mapId": 111,
+      "kr": "오만의 탑 11층",
+      "en": "Tower of Insolence 11F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "112": {
+      "mapId": 112,
+      "kr": "오만의 탑 12층",
+      "en": "Tower of Insolence 12F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "113": {
+      "mapId": 113,
+      "kr": "오만의 탑 13층",
+      "en": "Tower of Insolence 13F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "114": {
+      "mapId": 114,
+      "kr": "오만의 탑 14층",
+      "en": "Tower of Insolence 14F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "115": {
+      "mapId": 115,
+      "kr": "오만의 탑 15층",
+      "en": "Tower of Insolence 15F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "116": {
+      "mapId": 116,
+      "kr": "오만의 탑 16층",
+      "en": "Tower of Insolence 16F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "117": {
+      "mapId": 117,
+      "kr": "오만의 탑 17층",
+      "en": "Tower of Insolence 17F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "118": {
+      "mapId": 118,
+      "kr": "오만의 탑 18층",
+      "en": "Tower of Insolence 18F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "119": {
+      "mapId": 119,
+      "kr": "오만의 탑 19층",
+      "en": "Tower of Insolence 19F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "120": {
+      "mapId": 120,
+      "kr": "오만의 탑 20층",
+      "en": "Tower of Insolence 20F",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "201": {
+      "mapId": 201,
+      "kr": "언데드의 던전",
+      "en": "Mage Quest Dungeon",
+      "complex": "언데드의 던전",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 33023,
+        "y1": 33023
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 33023,
+        "y1": 33023
+      },
+      "kr_world_nav": "마법사 퀘스트 던전"
+    },
+    "209": {
+      "mapId": 209,
+      "kr": "가짜 다크마르 은신처",
+      "en": "Darkelf Dungeon",
+      "complex": "가짜 다크마르 은신처",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "다크엘프 던전"
+    },
+    "213": {
+      "mapId": 213,
+      "kr": "다크마르 은신처",
+      "en": "Darkelf Dungeon",
+      "complex": "다크마르 은신처",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "다크엘프 던전"
+    },
+    "217": {
+      "mapId": 217,
+      "kr": "변종 거대 개미 던전",
+      "en": "Mutant Ant Dungeon",
+      "complex": "변종 거대 개미 던전",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 32895
+      },
+      "kr_world_nav": "개미굴"
+    },
+    "221": {
+      "mapId": 221,
+      "kr": "시련의 던전",
+      "en": "Gerard Test Dungeon",
+      "complex": "시련의 던전",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "게라드 테스트 던전"
+    },
+    "237": {
+      "mapId": 237,
+      "kr": "비밀의 방",
+      "en": "Jim Dungeon",
+      "complex": "비밀의 방",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "짐 던전"
+    },
+    "238": {
+      "mapId": 238,
+      "kr": "정령의 심연",
+      "en": "unnamed",
+      "complex": "정령의 심연",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "244": {
+      "mapId": 244,
+      "kr": "오염된 축복의 땅",
+      "en": "Polluted Land of Blessing",
+      "complex": "오염된 축복의 땅",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "더럽혀진 축복의 땅"
+    },
+    "245": {
+      "mapId": 245,
+      "kr": "타락한 축복의 땅의 여름",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 여름",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "246": {
+      "mapId": 246,
+      "kr": "오염된 축복의 땅(PC)",
+      "en": "unnamed",
+      "complex": "오염된 축복의 땅",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "247": {
+      "mapId": 247,
+      "kr": "타락한 축복의 땅의 여름(PC)",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 여름",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "300": {
+      "mapId": 300,
+      "kr": "아덴 내성",
+      "en": "Aden Inner Castle",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32832,
+        "y0": 32512,
+        "x1": 32959,
+        "y1": 32639
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "301": {
+      "mapId": 301,
+      "kr": "오만의 탑 지하로",
+      "en": "Tower of Insolence Underground Path",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33023
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "302": {
+      "mapId": 302,
+      "kr": "이름 미등록 지도",
+      "en": "Sepia Dungeon",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 32895
+      },
+      "kr_world_nav": "세피아 던전"
+    },
+    "303": {
+      "mapId": 303,
+      "kr": "몽환의 섬",
+      "en": "Island of Dreams",
+      "complex": "몽환의 섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32512,
+        "x1": 32959,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32512,
+        "x1": 32959,
+        "y1": 32959
+      }
+    },
+    "620": {
+      "mapId": 620,
+      "kr": "픽시의 하늘정원",
+      "en": "unnamed",
+      "complex": "픽시의 하늘정원",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "666": {
+      "mapId": 666,
+      "kr": "지옥",
+      "en": "Hell",
+      "complex": "지옥",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32959
+      }
+    },
+    "667": {
+      "mapId": 667,
+      "kr": "감옥",
+      "en": "unnamed",
+      "complex": "감옥",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "668": {
+      "mapId": 668,
+      "kr": "운영자의 방",
+      "en": "unnamed",
+      "complex": "운영자의 방",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "777": {
+      "mapId": 777,
+      "kr": "버림받은 자들의 땅",
+      "en": "Land of the Abandoned",
+      "complex": "버림받은 자들의 땅",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 33023,
+        "y1": 33343
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 33023,
+        "y1": 33343
+      },
+      "kr_world_nav": "유기자들의 땅"
+    },
+    "778": {
+      "mapId": 778,
+      "kr": "버림받은 자들의 땅(PC)",
+      "en": "Fallen Cave",
+      "complex": "버림받은 자들의 땅",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 33023,
+        "y1": 33343
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 33023,
+        "y1": 33343
+      },
+      "kr_world_nav": "추락한 동굴"
+    },
+    "779": {
+      "mapId": 779,
+      "kr": "버림받은 자들의 땅:심연",
+      "en": "Fallen Cave Underwater",
+      "complex": "버림받은 자들의 땅:심연",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 33087
+      },
+      "kr_world_nav": "수중 추락 동굴"
+    },
+    "780": {
+      "mapId": 780,
+      "kr": "버림받은 자들의 땅:심연(PC)",
+      "en": "Thebes Desert",
+      "complex": "버림받은 자들의 땅:심연",
+      "floor": null,
+      "is_dungeon": true,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32512,
+        "y0": 32832,
+        "x1": 32767,
+        "y1": 33087
+      },
+      "kr_world_nav": "테베 사막"
+    },
+    "997": {
+      "mapId": 997,
+      "kr": "이름 미등록 지도",
+      "en": "Empty Black Castle DeathMatch",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "블랙 캐슬 데스매치"
+    },
+    "2450": {
+      "mapId": 2450,
+      "kr": "타락한 축복의 땅의 봄",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 봄",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "2451": {
+      "mapId": 2451,
+      "kr": "타락한 축복의 땅의 봄(PC)",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 봄",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "2452": {
+      "mapId": 2452,
+      "kr": "타락한 축복의 땅의 가을",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 가을",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "2453": {
+      "mapId": 2453,
+      "kr": "타락한 축복의 땅의 가을(PC)",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 가을",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "2454": {
+      "mapId": 2454,
+      "kr": "타락한 축복의 땅의 겨울",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 겨울",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "2455": {
+      "mapId": 2455,
+      "kr": "타락한 축복의 땅의 겨울(PC)",
+      "en": "unnamed",
+      "complex": "타락한 축복의 땅의 겨울",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": false,
+      "rect": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33151
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "7770": {
+      "mapId": 7770,
+      "kr": "말하는 섬 던전 1층(PC)",
+      "en": "unnamed",
+      "complex": "말하는 섬 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "kr_world_nav": "말하는 섬 던전 1층"
+    },
+    "7771": {
+      "mapId": 7771,
+      "kr": "말하는 섬 던전 2층(PC)",
+      "en": "unnamed",
+      "complex": "말하는 섬 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "portal_count": 9,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32704,
+        "x1": 32895,
+        "y1": 32959
+      },
+      "kr_world_nav": "말하는 섬 던전 2층"
+    },
+    "7772": {
+      "mapId": 7772,
+      "kr": "글루디오 던전 1층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 1층"
+    },
+    "7773": {
+      "mapId": 7773,
+      "kr": "글루디오 던전 2층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 10,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 2층"
+    },
+    "7774": {
+      "mapId": 7774,
+      "kr": "글루디오 던전 3층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 3층"
+    },
+    "7775": {
+      "mapId": 7775,
+      "kr": "글루디오 던전 4층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32831,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 4층"
+    },
+    "7776": {
+      "mapId": 7776,
+      "kr": "글루디오 던전 5층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 5,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 8,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 5층"
+    },
+    "7777": {
+      "mapId": 7777,
+      "kr": "글루디오 던전 6층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 6,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 6,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 6층"
+    },
+    "7778": {
+      "mapId": 7778,
+      "kr": "글루디오 던전 7층(PC)",
+      "en": "unnamed",
+      "complex": "글루디오 던전",
+      "floor": 7,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 7,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 7층"
+    },
+    "7779": {
+      "mapId": 7779,
+      "kr": "사막 던전 1층(PC)",
+      "en": "unnamed",
+      "complex": "사막 던전",
+      "floor": 1,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 1층"
+    },
+    "7780": {
+      "mapId": 7780,
+      "kr": "사막 던전 2층(PC)",
+      "en": "unnamed",
+      "complex": "사막 던전",
+      "floor": 2,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "글루디오 던전 2층"
+    },
+    "7781": {
+      "mapId": 7781,
+      "kr": "사막 던전 3층(PC)",
+      "en": "Air Temple of Fairies",
+      "complex": "사막 던전",
+      "floor": 3,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "요정의 공중사원"
+    },
+    "7782": {
+      "mapId": 7782,
+      "kr": "사막 던전 4층(PC)",
+      "en": "Air Temple of Fairies 2",
+      "complex": "사막 던전",
+      "floor": 4,
+      "is_dungeon": true,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32640,
+        "y0": 32640,
+        "x1": 32895,
+        "y1": 32895
+      },
+      "kr_world_nav": "요정의 공중사원 2"
+    },
+    "10001": {
+      "mapId": 10001,
+      "kr": "습격당한 성장의 섬",
+      "en": "event-10001",
+      "complex": "습격당한 성장의 섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "kr_world_nav": "이벤트맵 10001"
+    },
+    "10002": {
+      "mapId": 10002,
+      "kr": "습격당한 성장의 섬(PC)",
+      "en": "event-10002",
+      "complex": "습격당한 성장의 섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32256,
+        "y0": 32704,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "kr_world_nav": "이벤트맵 10002"
+    },
+    "10003": {
+      "mapId": 10003,
+      "kr": "설탕요정의 놀이터",
+      "en": "event-10003",
+      "complex": "설탕요정의 놀이터",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10003"
+    },
+    "10004": {
+      "mapId": 10004,
+      "kr": "설탕요정의 놀이터",
+      "en": "event-10004",
+      "complex": "설탕요정의 놀이터",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10004"
+    },
+    "10005": {
+      "mapId": 10005,
+      "kr": "설탕요정의 놀이터",
+      "en": "event-10005",
+      "complex": "설탕요정의 놀이터",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10005"
+    },
+    "10006": {
+      "mapId": 10006,
+      "kr": "설탕요정의 놀이터",
+      "en": "event-10006",
+      "complex": "설탕요정의 놀이터",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32576,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10006"
+    },
+    "10007": {
+      "mapId": 10007,
+      "kr": "린델의 꿈나라",
+      "en": "event-10007",
+      "complex": "린델의 꿈나라",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10007"
+    },
+    "10008": {
+      "mapId": 10008,
+      "kr": "린델의 꿈나라(PC)",
+      "en": "event-10008",
+      "complex": "린델의 꿈나라",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10008"
+    },
+    "10009": {
+      "mapId": 10009,
+      "kr": "린델의 깊은 꿈나라",
+      "en": "event-10009",
+      "complex": "린델의 깊은 꿈나라",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10009"
+    },
+    "10010": {
+      "mapId": 10010,
+      "kr": "린델의 깊은 꿈나라(PC)",
+      "en": "event-10010",
+      "complex": "린델의 깊은 꿈나라",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33087
+      },
+      "kr_world_nav": "이벤트맵 10010"
+    },
+    "10011": {
+      "mapId": 10011,
+      "kr": "미리가는 해적섬",
+      "en": "event-10011",
+      "complex": "미리가는 해적섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32256,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32256,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "kr_world_nav": "이벤트맵 10011"
+    },
+    "10012": {
+      "mapId": 10012,
+      "kr": "미리가는 해적섬(PC)",
+      "en": "event-10012",
+      "complex": "미리가는 해적섬",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32256,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32256,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 33279
+      },
+      "kr_world_nav": "이벤트맵 10012"
+    },
+    "10014": {
+      "mapId": 10014,
+      "kr": "이벤트맵 10014",
+      "en": "event-10014",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32832,
+        "x1": 32831,
+        "y1": 32959
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "20001": {
+      "mapId": 20001,
+      "kr": "unnamed",
+      "en": "unnamed",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32832,
+        "y0": 32064,
+        "x1": 32959,
+        "y1": 32447
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "20300": {
+      "mapId": 20300,
+      "kr": "unnamed",
+      "en": "unnamed",
+      "complex": null,
+      "floor": null,
+      "is_dungeon": null,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 33023,
+        "y1": 33215
+      },
+      "portal_count": null,
+      "region_count": null,
+      "sources": {
+        "tmo_10_3": false,
+        "world_nav_00_maps": true
+      }
+    },
+    "30000": {
+      "mapId": 30000,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30200": {
+      "mapId": 30200,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30250": {
+      "mapId": 30250,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30450": {
+      "mapId": 30450,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30500": {
+      "mapId": 30500,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30700": {
+      "mapId": 30700,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30750": {
+      "mapId": 30750,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "30950": {
+      "mapId": 30950,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31000": {
+      "mapId": 31000,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31200": {
+      "mapId": 31200,
+      "kr": "여관",
+      "en": "unnamed",
+      "complex": "여관",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31250": {
+      "mapId": 31250,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31450": {
+      "mapId": 31450,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31500": {
+      "mapId": 31500,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31700": {
+      "mapId": 31700,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 0,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31750": {
+      "mapId": 31750,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "31950": {
+      "mapId": 31950,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 1,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    },
+    "32766": {
+      "mapId": 32766,
+      "kr": "이름 미등록 지도",
+      "en": "unnamed",
+      "complex": "이름 미등록 지도",
+      "floor": null,
+      "is_dungeon": false,
+      "pc_clone": true,
+      "rect": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "portal_count": 2,
+      "region_count": 0,
+      "sources": {
+        "tmo_10_3": true,
+        "world_nav_00_maps": true
+      },
+      "rect_world_nav": {
+        "x0": 32704,
+        "y0": 32768,
+        "x1": 32767,
+        "y1": 32831
+      },
+      "kr_world_nav": "unnamed"
+    }
+  }
+}

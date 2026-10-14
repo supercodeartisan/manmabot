@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "provider_id": "edges.ship",
+  "kind": "edges",
+  "replaceable": true,
+  "source": "talking_scroll hub + teleport_master ship maps 5/6",
+  "note": "UNUSED — ships disabled forever for world nav.",
+  "count": 2,
+  "edges": [
+    {
+      "id": "ship:ti_to_gludin",
+      "type": "ship",
+      "status": "partial",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 0,
+        "x": 32632,
+        "y": 32962,
+        "region": "말하는 섬",
+        "name": "말하는 섬 선착장"
+      },
+      "to": {
+        "mapId": 4,
+        "region": "글루딘 마을",
+        "note": "본토 글루딘 측 하선"
+      },
+      "action": {
+        "op": "board_ship",
+        "via": {
+          "mapId": 5,
+          "x": 32736,
+          "y": 32798,
+          "kr": "말하는 섬↔글루딘 배"
+        }
+      },
+      "meta": {
+        "direction": "ti->mainland"
+      },
+      "endpoints_complete": false
+    },
+    {
+      "id": "ship:gludin_to_ti",
+      "type": "ship",
+      "status": "partial",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "region": "글루딘 마을",
+        "note": "글루딘 선착장 좌표 미확정"
+      },
+      "to": {
+        "mapId": 0,
+        "region": "말하는 섬"
+      },
+      "action": {
+        "op": "board_ship",
+        "via": {
+          "mapId": 6,
+          "x": 32733,
+          "y": 32794,
+          "kr": "글루딘↔말하는 섬 배"
+        }
+      },
+      "meta": {
+        "direction": "mainland->ti"
+      },
+      "endpoints_complete": false
+    }
+  ]
+}

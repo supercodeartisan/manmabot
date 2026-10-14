@@ -1,0 +1,129 @@
+pid=29708 base=7FF7A9B10000 size=3F1D000
+me=2B60B605C00
+[0] INIT cell=(32632, 33230) cmd=AttackCommand body=AttackAction
+[431] cell=(32632, 33230) cmd=MoveCommand body=AttackAction
+[1100] cell=(32632, 33230) cmd=MoveCommand body=MovingAction  (prev body AttackAction 1100ms)
+[3821] cell=(32628, 33226) cmd=0 body=ChangeDirection  (prev body MovingAction 2721ms)
+[4440] cell=(32628, 33226) cmd=0 body=BreathAction  (prev body ChangeDirection 619ms)
+[5620] cell=(32628, 33226) cmd=MoveCommand body=MovingAction  (prev body BreathAction 1180ms)
+[9497] cell=(32623, 33228) cmd=0 body=MovingAction
+[9975] cell=(32623, 33228) cmd=0 body=BreathAction  (prev body MovingAction 4355ms)
+[41711] cell=(32623, 33228) cmd=MoveCommand body=MovingAction  (prev body BreathAction 31736ms)
+[42875] cell=(32625, 33230) cmd=0 body=MovingAction
+[43321] cell=(32625, 33230) cmd=0 body=BreathAction  (prev body MovingAction 1610ms)
+[47711] cell=(32625, 33230) cmd=MoveCommand body=MovingAction  (prev body BreathAction 4390ms)
+[49546] cell=(32624, 33227) cmd=0 body=MovingAction
+[49706] cell=(32624, 33227) cmd=0 body=ChangeDirection  (prev body MovingAction 1995ms)
+[49978] cell=(32624, 33227) cmd=0 body=ActionBase  (prev body ChangeDirection 272ms)
+    act=2B606610890 vft=11C1418
+    act+00 7FF7AACD1418 mod+11C1418
+    act+08 2B609809450 ActionComponent
+    act+10 FFFFFFFF0000000F
+    act+18 400000006
+    act+20 20000000001 0
+    act+28 41C00000
+    act+30 FFFFFFFF
+    act+38 2B641C00000 0
+    act+40 2B6050A3D30 0
+    act+48 2B6050A3D40 0
+    act+50 2B6050A3D40 0
+    act+58 2B6050A3AF0 0
+    act+60 2B6050A3B04 0
+    act+68 2B6050A3B04 0
+    act+70 4180000000000004
+    act+78 20000000000 0
+    ac+08 MyPlayer
+    ac+C0 ActionBase
+[51240] cell=(32624, 33227) cmd=0 body=BreathAction  (prev body ActionBase 1262ms)
+[52930] cell=(32624, 33227) cmd=MoveCommand body=MovingAction  (prev body BreathAction 1690ms)
+[54256] cell=(32622, 33229) cmd=0 body=ChangeDirection  (prev body MovingAction 1326ms)
+[54272] cell=(32622, 33229) cmd=0 body=ActionBase  (prev body ChangeDirection 16ms)
+    act=2B606618C30 vft=11C1418
+    act+00 7FF7AACD1418 mod+11C1418
+    act+08 2B609809450 ActionComponent
+    act+10 FFFFFFFF0000000F
+    act+18 400000005
+    act+20 20000000001 0
+    act+28 41C00000
+    act+30 FFFFFFFF
+    act+38 2B541C00000 0
+    act+40 2B6050A7EF0 0
+    act+48 2B6050A7F00 0
+    act+50 2B6050A7F00 0
+    act+58 2B6050A7970 0
+    act+60 2B6050A7984 0
+    act+68 2B6050A7984 0
+    act+70 4180000000000004
+    act+78 20000000000 0
+    ac+08 MyPlayer
+    ac+C0 ActionBase
+[55292] cell=(32622, 33229) cmd=0 body=ChangeDirection  (prev body ActionBase 1020ms)
+[55851] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ChangeDirection 559ms)
+[56074] cell=(32622, 33229) cmd=0 body=ActionBase  (prev body BreathAction 223ms)
+    act=2B60660EF40 vft=11C1418
+    act+00 7FF7AACD1418 mod+11C1418
+    act+08 2B609809450 ActionComponent
+    act+10 FFFFFFFF0000000F
+    act+18 400000000
+    act+20 20000000001 0
+    act+28 41C00000
+    act+30 FFFFFFFF
+    act+38 2B541C00000 0
+    act+40 2B6050A7E50 0
+    act+48 2B6050A7E60 0
+    act+50 2B6050A7E60 0
+    act+58 2B6050A7A90 0
+    act+60 2B6050A7AA4 0
+    act+68 2B6050A7AA4 0
+    act+70 4180000000000004
+    act+78 20000000000 0
+    ac+08 MyPlayer
+    ac+C0 ActionBase
+[57321] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ActionBase 1247ms)
+[59668] cell=(32622, 33229) cmd=0 body=ChangeDirection  (prev body BreathAction 2347ms)
+[60258] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ChangeDirection 590ms)
+[60466] cell=(32622, 33229) cmd=0 body=ActionBase  (prev body BreathAction 208ms)
+    act=2B60661F3B0 vft=11C1418
+    act+00 7FF7AACD1418 mod+11C1418
+    act+08 2B609809450 ActionComponent
+    act+10 FFFFFFFF0000000F
+    act+18 400000003
+    act+20 20000000001 0
+    act+28 41C00000
+    act+30 FFFFFFFF
+    act+38 2B541C00000 0
+    act+40 2B6050A8030 0
+    act+48 2B6050A8040 0
+    act+50 2B6050A8040 0
+    act+58 2B6050A7F90 0
+    act+60 2B6050A7FA4 0
+    act+68 2B6050A7FA4 0
+    act+70 4180000000000004
+    act+78 20000000000 0
+    ac+08 MyPlayer
+    ac+C0 ActionBase
+[61727] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ActionBase 1261ms)
+[64314] cell=(32622, 33229) cmd=0 body=ChangeDirection  (prev body BreathAction 2587ms)
+[64891] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ChangeDirection 577ms)
+[64922] cell=(32622, 33229) cmd=0 body=ActionBase  (prev body BreathAction 31ms)
+    act=2B606617640 vft=11C1418
+    act+00 7FF7AACD1418 mod+11C1418
+    act+08 2B609809450 ActionComponent
+    act+10 FFFFFFFF0000000F
+    act+18 400000002
+    act+20 20000000001 0
+    act+28 41C00000
+    act+30 FFFFFFFF
+    act+38 2B541C00000 0
+    act+40 2B6050A83D0 0
+    act+48 2B6050A83E0 0
+    act+50 2B6050A83E0 0
+    act+58 2B6050A8850 0
+    act+60 2B6050A8864 0
+    act+68 2B6050A8864 0
+    act+70 4180000000000004
+    act+78 20000000000 0
+    ac+08 MyPlayer
+    ac+C0 ActionBase
+[66187] cell=(32622, 33229) cmd=0 body=BreathAction  (prev body ActionBase 1265ms)
+DONE actionbase=5

@@ -1,0 +1,9 @@
+id: heine_inner_castle_dungeon
+name: "Heine Inner Castle"
+# From obstacle_tiles_raw map_64.png (1 px = 1 tile).
+raw_map: "64"
+origin_x: 32512
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

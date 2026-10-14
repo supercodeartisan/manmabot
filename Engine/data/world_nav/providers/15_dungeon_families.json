@@ -1,0 +1,380 @@
+{
+  "schema_version": 2,
+  "provider_id": "catalog.dungeon_families",
+  "kind": "catalog",
+  "replaceable": true,
+  "source": "10_2/data/dungeon_mapids.csv + dungeon_ladders.tsv",
+  "note": "",
+  "count": 9,
+  "families": [
+    {
+      "family": "말하는 섬 던전",
+      "floors": "1~2F",
+      "mapIds": [
+        1,
+        2
+      ],
+      "status": "ok",
+      "evidence": "entermap island-dungeon (map 0, 32478/32853)"
+    },
+    {
+      "family": "요정 숲 던전",
+      "floors": "1~3F",
+      "mapIds": [
+        19,
+        20,
+        21
+      ],
+      "status": "ok",
+      "evidence": "entermap 없음 - 필드(요정숲 남쪽)에서 도보 진입"
+    },
+    {
+      "family": "글루디오 던전",
+      "floors": "1~7F",
+      "mapIds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "status": "ok",
+      "evidence": "entermap gludin-dungeon (map 4, 32726/32921)"
+    },
+    {
+      "family": "개미굴",
+      "floors": "1~2F",
+      "mapIds": [
+        43,
+        44
+      ],
+      "status": "ok",
+      "evidence": "entermap 없음 - 사막 오아시스 기준 8개 입구 도보 진입"
+    },
+    {
+      "family": "사막 던전",
+      "floors": "1~4F",
+      "mapIds": [],
+      "status": "open",
+      "evidence": "entermap 없음 - 은기사 마을 남쪽 도보 진입. 후보 16/17/18 또는 45~48"
+    },
+    {
+      "family": "기란 던전(기란감옥)",
+      "floors": "1~4F",
+      "mapIds": [
+        53,
+        54,
+        55,
+        56
+      ],
+      "status": "ok",
+      "evidence": "entermap giran-Gdungeon (map 4, 33314/33062)"
+    },
+    {
+      "family": "용의 계곡 던전",
+      "floors": "1~7F",
+      "mapIds": [
+        30,
+        31,
+        32,
+        33,
+        35,
+        36
+      ],
+      "status": "ok",
+      "evidence": "entermap giran-dragonvalley (map 4, 33433/32515)"
+    },
+    {
+      "family": "에바 왕국",
+      "floors": "1~3F + 보스",
+      "mapIds": [
+        59,
+        60,
+        61,
+        63,
+        65
+      ],
+      "status": "ok",
+      "evidence": "entermap heine-Hdungeon (map 4, 33620/33501)"
+    },
+    {
+      "family": "잊혀진 섬",
+      "floors": "-",
+      "mapIds": [
+        70
+      ],
+      "status": "ok",
+      "evidence": "entermap forgotten-island (map 4, 33412/33475)"
+    }
+  ],
+  "ladders": [
+    {
+      "family": "글루디오",
+      "mapIds": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "spots": [
+        {
+          "mapId": 7,
+          "x": 32812,
+          "y": 32727
+        },
+        {
+          "mapId": 8,
+          "x": 32750,
+          "y": 32799
+        },
+        {
+          "mapId": 9,
+          "x": 32798,
+          "y": 32754
+        },
+        {
+          "mapId": 10,
+          "x": 32764,
+          "y": 32774
+        },
+        {
+          "mapId": 11,
+          "x": 32729,
+          "y": 32724
+        }
+      ]
+    },
+    {
+      "family": "요정 숲",
+      "mapIds": [
+        19,
+        20,
+        21
+      ],
+      "spots": [
+        {
+          "mapId": 19,
+          "x": 32804,
+          "y": 32725
+        },
+        {
+          "mapId": 20,
+          "x": 32766,
+          "y": 32797
+        },
+        {
+          "mapId": 21,
+          "x": 32729,
+          "y": 32736
+        }
+      ]
+    },
+    {
+      "family": "용의 계곡",
+      "mapIds": [
+        30,
+        31,
+        32,
+        33,
+        35,
+        36
+      ],
+      "spots": [
+        {
+          "mapId": 30,
+          "x": 32725,
+          "y": 32726
+        },
+        {
+          "mapId": 31,
+          "x": 32761,
+          "y": 32751
+        },
+        {
+          "mapId": 32,
+          "x": 32706,
+          "y": 32820
+        },
+        {
+          "mapId": 33,
+          "x": 32667,
+          "y": 32869
+        },
+        {
+          "mapId": 35,
+          "x": 32745,
+          "y": 32800
+        },
+        {
+          "mapId": 36,
+          "x": 32665,
+          "y": 32847
+        }
+      ]
+    },
+    {
+      "family": "개미굴 1층",
+      "mapIds": [
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ],
+      "spots": [
+        {
+          "mapId": 43,
+          "x": 32786,
+          "y": 32749
+        },
+        {
+          "mapId": 44,
+          "x": 32800,
+          "y": 32752
+        },
+        {
+          "mapId": 45,
+          "x": 32778,
+          "y": 32730
+        },
+        {
+          "mapId": 46,
+          "x": 32789,
+          "y": 32794
+        },
+        {
+          "mapId": 47,
+          "x": 32795,
+          "y": 32744
+        },
+        {
+          "mapId": 48,
+          "x": 32796,
+          "y": 32743
+        },
+        {
+          "mapId": 49,
+          "x": 32802,
+          "y": 32781
+        },
+        {
+          "mapId": 50,
+          "x": 32770,
+          "y": 32803
+        }
+      ]
+    },
+    {
+      "family": "기란 감옥 1층",
+      "mapIds": [
+        53,
+        54,
+        55,
+        56
+      ],
+      "spots": [
+        {
+          "mapId": 53,
+          "x": 32808,
+          "y": 32732
+        },
+        {
+          "mapId": 54,
+          "x": 32808,
+          "y": 32794
+        },
+        {
+          "mapId": 55,
+          "x": 32734,
+          "y": 32730
+        },
+        {
+          "mapId": 56,
+          "x": 32768,
+          "y": 32733
+        }
+      ]
+    },
+    {
+      "family": "Eva Kingdom",
+      "mapIds": [
+        59,
+        60,
+        61
+      ],
+      "spots": [
+        {
+          "mapId": 59,
+          "x": 32711,
+          "y": 32789
+        },
+        {
+          "mapId": 60,
+          "x": 32744,
+          "y": 32859
+        },
+        {
+          "mapId": 61,
+          "x": 32727,
+          "y": 32808
+        }
+      ]
+    },
+    {
+      "family": "Training",
+      "mapIds": [
+        25,
+        26,
+        27,
+        28
+      ],
+      "spots": [
+        {
+          "mapId": 25,
+          "x": 32807,
+          "y": 32809
+        },
+        {
+          "mapId": 26,
+          "x": 32804,
+          "y": 32813
+        },
+        {
+          "mapId": 27,
+          "x": 32808,
+          "y": 32811
+        },
+        {
+          "mapId": 28,
+          "x": 32799,
+          "y": 32798
+        }
+      ]
+    },
+    {
+      "family": "오만의 탑 1층",
+      "mapIds": [
+        101,
+        111
+      ],
+      "spots": [
+        {
+          "mapId": 101,
+          "x": 32726,
+          "y": 32798
+        },
+        {
+          "mapId": 111,
+          "x": 32669,
+          "y": 32814
+        }
+      ]
+    }
+  ]
+}

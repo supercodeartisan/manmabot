@@ -1,0 +1,112 @@
+{
+  "schema_version": 2,
+  "provider_id": "catalog.towns.mainland",
+  "kind": "catalog",
+  "replaceable": true,
+  "source": "10_2/2_map_region/mainland_towns_subregion.tsv",
+  "note": "Mainland (map 4) town centers for region heuristics.",
+  "count": 10,
+  "towns": [
+    {
+      "id": "gludin",
+      "kr": "글루디오 마을",
+      "mapId": 4,
+      "center": {
+        "x": 32835,
+        "y": 32843
+      },
+      "anchorPoints": 10
+    },
+    {
+      "id": "giran",
+      "kr": "기란 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33541,
+        "y": 32813
+      },
+      "anchorPoints": 10
+    },
+    {
+      "id": "kent",
+      "kr": "켄트 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33139,
+        "y": 32906
+      },
+      "anchorPoints": 9
+    },
+    {
+      "id": "aden",
+      "kr": "아덴 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33931,
+        "y": 33350
+      },
+      "anchorPoints": 7
+    },
+    {
+      "id": "heine",
+      "kr": "하이네 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33480,
+        "y": 33287
+      },
+      "anchorPoints": 4
+    },
+    {
+      "id": "silver",
+      "kr": "실버 나이트 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33150,
+        "y": 33274
+      },
+      "anchorPoints": 9
+    },
+    {
+      "id": "sadun",
+      "kr": "사둔 마을",
+      "mapId": 4,
+      "center": {
+        "x": 32980,
+        "y": 33505
+      },
+      "anchorPoints": 1
+    },
+    {
+      "id": "ashur",
+      "kr": "아슈르 마을",
+      "mapId": 4,
+      "center": {
+        "x": 32874,
+        "y": 33240
+      },
+      "anchorPoints": 2
+    },
+    {
+      "id": "oren",
+      "kr": "오렌 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33969,
+        "y": 32480
+      },
+      "anchorPoints": 8
+    },
+    {
+      "id": "werldern",
+      "kr": "웰던 마을",
+      "mapId": 4,
+      "center": {
+        "x": 33704,
+        "y": 32502
+      },
+      "anchorPoints": 2
+    }
+  ],
+  "mapId": 4
+}

@@ -1,0 +1,10 @@
+{
+  "product": "ManmabotV1",
+  "stage": 0,
+  "packaging": {
+    "compile": "nuitka-module-in-place",
+    "tools_in_customer_pack": false,
+    "preserve_dev_tree": true
+  },
+  "notes": "Stage 0 skeleton — BUILD.json is rewritten by build_release.py"
+}

@@ -1,0 +1,9 @@
+id: jim_dungeon
+name: "Jim Dungeon"
+# From obstacle_tiles_raw map_237.png (1 px = 1 tile).
+raw_map: "237"
+origin_x: 32640
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

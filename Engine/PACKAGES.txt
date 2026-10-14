@@ -1,0 +1,18 @@
+Engine Python packages (bot product glue)
+=========================================
+app/         perception(read) → world(merge) → _02_state → decision → action
+             _01_perception = sensors API (tick + on-demand)
+             _02_state = GameState/Player/WorldObject/geometry (data only)
+             _03_world = merge only + space/catalog/debug
+             _05_action owns window geometry / preview grabs
+session/     run lifecycle (BotController, paths, probes, drivers)
+settings/    UserData profile/schedule/accounts/overlays
+shop/        live shopping (not Tools/shopping editors)
+hotbar/      live hotbar match (not Tools/hotbar_tool inspector)
+i18n/        strings + localized names
+login/       autologin_service adapter → Engine/autologin/
+autologin/   full Purple/game login product tree
+config/      YAML tunables
+data/        maps, cursors, world_nav, catalog
+analysis/    memory DLLs + offsets
+manmabot_v1/ DEPRECATED shim (raises ImportError)

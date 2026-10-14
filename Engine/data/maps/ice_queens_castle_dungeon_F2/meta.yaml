@@ -1,0 +1,9 @@
+id: ice_queens_castle_dungeon_F2
+name: "Ice Queens Castle Dungeon F2"
+# From obstacle_tiles_raw map_73.png (1 px = 1 tile).
+raw_map: "73"
+origin_x: 32640
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

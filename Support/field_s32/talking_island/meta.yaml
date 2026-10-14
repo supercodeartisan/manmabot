@@ -1,0 +1,6 @@
+# s32 input folder only (not a deployable map pack).
+# Runtime pack: Engine/data/maps/talking_island/ (nav.png + nav_prebuild).
+id: talking_island
+name: "Talking Island"
+origin_x: 32256
+origin_y: 32704

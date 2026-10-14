@@ -1,0 +1,732 @@
+{
+  "schema_version": 2,
+  "provider_id": "edges.interior_teleport_refs",
+  "kind": "reference",
+  "replaceable": true,
+  "source": "10_2 master#TELEPORT",
+  "note": "NOT ground entry. Optional mid-level; disabled in top-level planner by default.",
+  "count": 103,
+  "teleporters": [
+    {
+      "name": "Talking Island Dungeon Floor 1",
+      "mapId": 1,
+      "x": 32669,
+      "y": 32811,
+      "teleid": 16736
+    },
+    {
+      "name": "Talking Island Dungeon Floor 2",
+      "mapId": 2,
+      "x": 32745,
+      "y": 32843,
+      "teleid": 16737
+    },
+    {
+      "name": "Gludio Dungeon Floor 1",
+      "mapId": 7,
+      "x": 32802,
+      "y": 32727,
+      "teleid": 16741
+    },
+    {
+      "name": "Gludio Dungeon Floor 1",
+      "mapId": 7,
+      "x": 32812,
+      "y": 32727,
+      "teleid": 16741
+    },
+    {
+      "name": "Gludio Dungeon Floor 2",
+      "mapId": 8,
+      "x": 32736,
+      "y": 32777,
+      "teleid": 16742
+    },
+    {
+      "name": "Gludio Dungeon Floor 2",
+      "mapId": 8,
+      "x": 32750,
+      "y": 32799,
+      "teleid": 16742
+    },
+    {
+      "name": "Gludio Dungeon Floor 3",
+      "mapId": 9,
+      "x": 32751,
+      "y": 32739,
+      "teleid": 16743
+    },
+    {
+      "name": "Gludio Dungeon Floor 3",
+      "mapId": 9,
+      "x": 32798,
+      "y": 32754,
+      "teleid": 16743
+    },
+    {
+      "name": "Gludio Dungeon Floor 4",
+      "mapId": 10,
+      "x": 32764,
+      "y": 32774,
+      "teleid": 16744
+    },
+    {
+      "name": "Gludio Dungeon Floor 4",
+      "mapId": 10,
+      "x": 32793,
+      "y": 32764,
+      "teleid": 16744
+    },
+    {
+      "name": "Gludio Dungeon Floor 5",
+      "mapId": 11,
+      "x": 32729,
+      "y": 32724,
+      "teleid": 16745
+    },
+    {
+      "name": "Gludio Dungeon Floor 5",
+      "mapId": 11,
+      "x": 32743,
+      "y": 32765,
+      "teleid": 16745
+    },
+    {
+      "name": "Gludio Dungeon Floor 6",
+      "mapId": 12,
+      "x": 32802,
+      "y": 32728,
+      "teleid": 16746
+    },
+    {
+      "name": "Gludio Dungeon Floor 7",
+      "mapId": 13,
+      "x": 32724,
+      "y": 32786,
+      "teleid": 16747
+    },
+    {
+      "name": "Kent Inner Castle",
+      "mapId": 15,
+      "x": 32738,
+      "y": 32783,
+      "teleid": 16748
+    },
+    {
+      "name": "Hardins Laboratory",
+      "mapId": 16,
+      "x": 32730,
+      "y": 32788,
+      "teleid": 16749
+    },
+    {
+      "name": "Nerupas Cave",
+      "mapId": 17,
+      "x": 32741,
+      "y": 32787,
+      "teleid": 16750
+    },
+    {
+      "name": "Dupelgenon Dungeon",
+      "mapId": 18,
+      "x": 32729,
+      "y": 32806,
+      "teleid": 16751
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 1",
+      "mapId": 19,
+      "x": 32767,
+      "y": 32767,
+      "teleid": 16752
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 1",
+      "mapId": 19,
+      "x": 32804,
+      "y": 32725,
+      "teleid": 15543
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 2",
+      "mapId": 20,
+      "x": 32766,
+      "y": 32797,
+      "teleid": 15544
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 2",
+      "mapId": 20,
+      "x": 32767,
+      "y": 32767,
+      "teleid": 16753
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 3",
+      "mapId": 21,
+      "x": 32729,
+      "y": 32736,
+      "teleid": 15545
+    },
+    {
+      "name": "Elven Forest Dungeon Floor 3",
+      "mapId": 21,
+      "x": 32767,
+      "y": 32767,
+      "teleid": 16754
+    },
+    {
+      "name": "Training Dungeon Floor 1",
+      "mapId": 25,
+      "x": 32767,
+      "y": 32768,
+      "teleid": 16755
+    },
+    {
+      "name": "Training Dungeon Floor 1",
+      "mapId": 25,
+      "x": 32807,
+      "y": 32809,
+      "teleid": 15546
+    },
+    {
+      "name": "Training Dungeon Floor 2",
+      "mapId": 26,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16756
+    },
+    {
+      "name": "Training Dungeon Floor 2",
+      "mapId": 26,
+      "x": 32804,
+      "y": 32813,
+      "teleid": 15547
+    },
+    {
+      "name": "Training Dungeon Floor 3",
+      "mapId": 27,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16757
+    },
+    {
+      "name": "Training Dungeon Floor 3",
+      "mapId": 27,
+      "x": 32808,
+      "y": 32811,
+      "teleid": 15548
+    },
+    {
+      "name": "Training Dungeon Floor 4",
+      "mapId": 28,
+      "x": 32799,
+      "y": 32798,
+      "teleid": 15549
+    },
+    {
+      "name": "Training Dungeon Floor 4",
+      "mapId": 28,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16758
+    },
+    {
+      "name": "Windawood Inner Castle",
+      "mapId": 29,
+      "x": 32737,
+      "y": 32783,
+      "teleid": 16759
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 1",
+      "mapId": 30,
+      "x": 32725,
+      "y": 32726,
+      "teleid": 16760
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 1",
+      "mapId": 30,
+      "x": 32735,
+      "y": 32735,
+      "teleid": 16760
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 2",
+      "mapId": 31,
+      "x": 32735,
+      "y": 32735,
+      "teleid": 16761
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 2",
+      "mapId": 31,
+      "x": 32761,
+      "y": 32751,
+      "teleid": 16761
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 3",
+      "mapId": 32,
+      "x": 32671,
+      "y": 32799,
+      "teleid": 16762
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 3",
+      "mapId": 32,
+      "x": 32706,
+      "y": 32820,
+      "teleid": 16762
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 4",
+      "mapId": 33,
+      "x": 32667,
+      "y": 32869,
+      "teleid": 16763
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 4",
+      "mapId": 33,
+      "x": 32671,
+      "y": 32799,
+      "teleid": 16763
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 5",
+      "mapId": 35,
+      "x": 32671,
+      "y": 32799,
+      "teleid": 16764
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 5",
+      "mapId": 35,
+      "x": 32745,
+      "y": 32800,
+      "teleid": 16764
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 6",
+      "mapId": 36,
+      "x": 32665,
+      "y": 32847,
+      "teleid": 16765
+    },
+    {
+      "name": "Dragon Valley Dungeon Floor 6",
+      "mapId": 36,
+      "x": 32671,
+      "y": 32799,
+      "teleid": 16765
+    },
+    {
+      "name": "Ant Caves 1F",
+      "mapId": 43,
+      "x": 32767,
+      "y": 32767,
+      "teleid": 16766
+    },
+    {
+      "name": "Ant Caves 1F",
+      "mapId": 43,
+      "x": 32786,
+      "y": 32749,
+      "teleid": 16848
+    },
+    {
+      "name": "Ant Caves 2F",
+      "mapId": 44,
+      "x": 32800,
+      "y": 32752,
+      "teleid": 16849
+    },
+    {
+      "name": "Ant Caves 3F",
+      "mapId": 45,
+      "x": 32778,
+      "y": 32730,
+      "teleid": 16850
+    },
+    {
+      "name": "Ant Caves 4F",
+      "mapId": 46,
+      "x": 32789,
+      "y": 32794,
+      "teleid": 16851
+    },
+    {
+      "name": "Ant Caves 5F",
+      "mapId": 47,
+      "x": 32795,
+      "y": 32744,
+      "teleid": 16852
+    },
+    {
+      "name": "Ant Caves 6F",
+      "mapId": 48,
+      "x": 32796,
+      "y": 32743,
+      "teleid": 16853
+    },
+    {
+      "name": "Ant Caves 7F",
+      "mapId": 49,
+      "x": 32802,
+      "y": 32781,
+      "teleid": 16854
+    },
+    {
+      "name": "Ant Caves 8F",
+      "mapId": 50,
+      "x": 32770,
+      "y": 32803,
+      "teleid": 16855
+    },
+    {
+      "name": "Ant Caves 9F",
+      "mapId": 51,
+      "x": 32671,
+      "y": 32799,
+      "teleid": 16767
+    },
+    {
+      "name": "Giran Inner Castle",
+      "mapId": 52,
+      "x": 32732,
+      "y": 32789,
+      "teleid": 16768
+    },
+    {
+      "name": "Giran Prison Floor 1",
+      "mapId": 53,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16769
+    },
+    {
+      "name": "Giran Prison Floor 1",
+      "mapId": 53,
+      "x": 32808,
+      "y": 32732,
+      "teleid": 15559
+    },
+    {
+      "name": "Giran Prison Floor 2",
+      "mapId": 54,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16770
+    },
+    {
+      "name": "Giran Prison Floor 2",
+      "mapId": 54,
+      "x": 32808,
+      "y": 32794,
+      "teleid": 15560
+    },
+    {
+      "name": "Giran Prison Floor 3",
+      "mapId": 55,
+      "x": 32734,
+      "y": 32730,
+      "teleid": 15561
+    },
+    {
+      "name": "Giran Prison Floor 3",
+      "mapId": 55,
+      "x": 32735,
+      "y": 32735,
+      "teleid": 16771
+    },
+    {
+      "name": "Giran Prison Floor 4",
+      "mapId": 56,
+      "x": 32768,
+      "y": 32733,
+      "teleid": 15562
+    },
+    {
+      "name": "Giran Prison Floor 4",
+      "mapId": 56,
+      "x": 32799,
+      "y": 32799,
+      "teleid": 16772
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 1",
+      "mapId": 59,
+      "x": 32711,
+      "y": 32789,
+      "teleid": 16773
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 1",
+      "mapId": 59,
+      "x": 32736,
+      "y": 32862,
+      "teleid": 16773
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 2",
+      "mapId": 60,
+      "x": 32736,
+      "y": 32862,
+      "teleid": 16774
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 2",
+      "mapId": 60,
+      "x": 32744,
+      "y": 32859,
+      "teleid": 16774
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 3",
+      "mapId": 61,
+      "x": 32727,
+      "y": 32808,
+      "teleid": 16775
+    },
+    {
+      "name": "Eva Kingdom Dungeon Floor 3",
+      "mapId": 61,
+      "x": 32736,
+      "y": 32862,
+      "teleid": 16775
+    },
+    {
+      "name": "Lair of Fafurion",
+      "mapId": 65,
+      "x": 32795,
+      "y": 32813,
+      "teleid": 16778
+    },
+    {
+      "name": "Iron Gate Guild Inner Castle",
+      "mapId": 66,
+      "x": 32865,
+      "y": 32808,
+      "teleid": 17179
+    },
+    {
+      "name": "Lair of Valakas",
+      "mapId": 67,
+      "x": 32705,
+      "y": 32828,
+      "teleid": 17180
+    },
+    {
+      "name": "Ice Crystal Cave",
+      "mapId": 72,
+      "x": 32767,
+      "y": 32831,
+      "teleid": 17181
+    },
+    {
+      "name": "Ice Queens Castle 2F",
+      "mapId": 73,
+      "x": 32767,
+      "y": 32831,
+      "teleid": 17182
+    },
+    {
+      "name": "Ice Queens Castle 3F",
+      "mapId": 74,
+      "x": 32767,
+      "y": 32895,
+      "teleid": 17183
+    },
+    {
+      "name": "Oren Ivory Tower Floor 1",
+      "mapId": 75,
+      "x": 32765,
+      "y": 32866,
+      "teleid": 17184
+    },
+    {
+      "name": "Oren Ivory Tower Floor 2",
+      "mapId": 76,
+      "x": 32793,
+      "y": 32811,
+      "teleid": 17185
+    },
+    {
+      "name": "Oren Ivory Tower Floor 3",
+      "mapId": 77,
+      "x": 32769,
+      "y": 32796,
+      "teleid": 17186
+    },
+    {
+      "name": "Oren Ivory Tower Floor 4",
+      "mapId": 78,
+      "x": 32894,
+      "y": 32776,
+      "teleid": 15891
+    },
+    {
+      "name": "Oren Ivory Tower Floor 4",
+      "mapId": 78,
+      "x": 32895,
+      "y": 32767,
+      "teleid": 17187
+    },
+    {
+      "name": "Oren Ivory Tower Floor 5",
+      "mapId": 79,
+      "x": 32767,
+      "y": 32831,
+      "teleid": 17188
+    },
+    {
+      "name": "Oren Ivory Tower Floor 6",
+      "mapId": 80,
+      "x": 32767,
+      "y": 32831,
+      "teleid": 17189
+    },
+    {
+      "name": "Oren Ivory Tower Floor 7",
+      "mapId": 81,
+      "x": 32767,
+      "y": 32831,
+      "teleid": 17190
+    },
+    {
+      "name": "Oren Ivory Tower Floor 8",
+      "mapId": 82,
+      "x": 32703,
+      "y": 32832,
+      "teleid": 17191
+    },
+    {
+      "name": "Lair of Valakas Colosseum",
+      "mapId": 96,
+      "x": 32688,
+      "y": 32884,
+      "teleid": 16786
+    },
+    {
+      "name": "Tower of Insolence 1F",
+      "mapId": 101,
+      "x": 32726,
+      "y": 32798,
+      "teleid": 17795
+    },
+    {
+      "name": "Tower of Insolence 11F",
+      "mapId": 111,
+      "x": 32669,
+      "y": 32814,
+      "teleid": 17805
+    },
+    {
+      "name": "Mage Quest Dungeon",
+      "mapId": 201,
+      "x": 32873,
+      "y": 32912,
+      "teleid": 16790
+    },
+    {
+      "name": "Darkelf Dungeon",
+      "mapId": 209,
+      "x": 32736,
+      "y": 32797,
+      "teleid": 16791
+    },
+    {
+      "name": "Darkelf Dungeon",
+      "mapId": 213,
+      "x": 32727,
+      "y": 32790,
+      "teleid": 16792
+    },
+    {
+      "name": "Mutant Ant Dungeon",
+      "mapId": 217,
+      "x": 32740,
+      "y": 32795,
+      "teleid": 16793
+    },
+    {
+      "name": "Gerard Test Dungeon",
+      "mapId": 221,
+      "x": 32775,
+      "y": 32777,
+      "teleid": 16794
+    },
+    {
+      "name": "Jim Dungeon",
+      "mapId": 237,
+      "x": 32745,
+      "y": 32806,
+      "teleid": 16795
+    },
+    {
+      "name": "Sepia Dungeon",
+      "mapId": 302,
+      "x": 32742,
+      "y": 32872,
+      "teleid": 17201
+    },
+    {
+      "name": "Island of Dreams",
+      "mapId": 303,
+      "x": 32635,
+      "y": 32817,
+      "teleid": 17300
+    },
+    {
+      "name": "Island of Dreams",
+      "mapId": 303,
+      "x": 32667,
+      "y": 32637,
+      "teleid": 17301
+    },
+    {
+      "name": "Island of Dreams",
+      "mapId": 303,
+      "x": 32730,
+      "y": 32750,
+      "teleid": 17303
+    },
+    {
+      "name": "Island of Dreams",
+      "mapId": 303,
+      "x": 32797,
+      "y": 32843,
+      "teleid": 17202
+    },
+    {
+      "name": "Island of Dreams",
+      "mapId": 303,
+      "x": 32840,
+      "y": 32762,
+      "teleid": 17302
+    },
+    {
+      "name": "Hell",
+      "mapId": 666,
+      "x": 32776,
+      "y": 32759,
+      "teleid": 16801
+    },
+    {
+      "name": "Fallen Cave",
+      "mapId": 778,
+      "x": 32554,
+      "y": 32952,
+      "teleid": 17279
+    },
+    {
+      "name": "Fallen Cave Underwater",
+      "mapId": 779,
+      "x": 32554,
+      "y": 32952,
+      "teleid": 17305
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "schema_version": 2,
+  "provider_id": "nodes.dungeon_entry",
+  "kind": "nodes",
+  "replaceable": true,
+  "source": "10_2/1_dungeon/all_dungeon_entrances_master.tsv#ENTRY",
+  "note": "Arrival cells after enter. Distinct from interior TELEPORT.",
+  "count": 13,
+  "nodes": [
+    {
+      "id": "entry:PC-Talkingiland-Dungeon-1F",
+      "kind": "dungeon_entry",
+      "mapId": 1,
+      "x": 32668,
+      "y": 32805,
+      "source_mapId": 7770,
+      "name": "PC-Talkingiland-Dungeon-1F",
+      "dest_name": "Talking Island Dungeon Floor 1"
+    },
+    {
+      "id": "entry:PC-Talkingiland-Dungeon-2F",
+      "kind": "dungeon_entry",
+      "mapId": 2,
+      "x": 32665,
+      "y": 32790,
+      "source_mapId": 7771,
+      "name": "PC-Talkingiland-Dungeon-2F",
+      "dest_name": "Talking Island Dungeon Floor 2"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-1F",
+      "kind": "dungeon_entry",
+      "mapId": 7,
+      "x": 32812,
+      "y": 32725,
+      "source_mapId": 7772,
+      "name": "PC-Gludio-Dungeon-1F",
+      "dest_name": "Gludio Dungeon Floor 1"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-2F",
+      "kind": "dungeon_entry",
+      "mapId": 8,
+      "x": 32750,
+      "y": 32799,
+      "source_mapId": 7773,
+      "name": "PC-Gludio-Dungeon-2F",
+      "dest_name": "Gludio Dungeon Floor 2"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-3F",
+      "kind": "dungeon_entry",
+      "mapId": 9,
+      "x": 32801,
+      "y": 32755,
+      "source_mapId": 7774,
+      "name": "PC-Gludio-Dungeon-3F",
+      "dest_name": "Gludio Dungeon Floor 3"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-4F",
+      "kind": "dungeon_entry",
+      "mapId": 10,
+      "x": 32764,
+      "y": 32774,
+      "source_mapId": 7775,
+      "name": "PC-Gludio-Dungeon-4F",
+      "dest_name": "Gludio Dungeon Floor 4"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-5F",
+      "kind": "dungeon_entry",
+      "mapId": 11,
+      "x": 32729,
+      "y": 32724,
+      "source_mapId": 7776,
+      "name": "PC-Gludio-Dungeon-5F",
+      "dest_name": "Gludio Dungeon Floor 5"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-6F",
+      "kind": "dungeon_entry",
+      "mapId": 12,
+      "x": 32805,
+      "y": 32726,
+      "source_mapId": 7777,
+      "name": "PC-Gludio-Dungeon-6F",
+      "dest_name": "Gludio Dungeon Floor 6"
+    },
+    {
+      "id": "entry:PC-Gludio-Dungeon-7F",
+      "kind": "dungeon_entry",
+      "mapId": 13,
+      "x": 32727,
+      "y": 32726,
+      "source_mapId": 7778,
+      "name": "PC-Gludio-Dungeon-7F",
+      "dest_name": "Gludio Dungeon Floor 7"
+    },
+    {
+      "id": "entry:PC-Desert-Dungeon-1F",
+      "kind": "dungeon_entry",
+      "mapId": 7,
+      "x": 32806,
+      "y": 32810,
+      "source_mapId": 7779,
+      "name": "PC-Desert-Dungeon-1F",
+      "dest_name": "Gludio Dungeon Floor 1"
+    },
+    {
+      "id": "entry:PC-Desert-Dungeon-2F",
+      "kind": "dungeon_entry",
+      "mapId": 8,
+      "x": 32802,
+      "y": 32813,
+      "source_mapId": 7780,
+      "name": "PC-Desert-Dungeon-2F",
+      "dest_name": "Gludio Dungeon Floor 2"
+    },
+    {
+      "id": "entry:PC-Desert-Dungeon-3F",
+      "kind": "dungeon_entry",
+      "mapId": 9,
+      "x": 32806,
+      "y": 32811,
+      "source_mapId": 7781,
+      "name": "PC-Desert-Dungeon-3F",
+      "dest_name": "Gludio Dungeon Floor 3"
+    },
+    {
+      "id": "entry:PC-Desert-Dungeon-4F",
+      "kind": "dungeon_entry",
+      "mapId": 10,
+      "x": 32799,
+      "y": 32798,
+      "source_mapId": 7782,
+      "name": "PC-Desert-Dungeon-4F",
+      "dest_name": "Gludio Dungeon Floor 4"
+    }
+  ]
+}

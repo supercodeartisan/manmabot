@@ -1,0 +1,1386 @@
+# NPC behaviors — buy/sell/store/teleporter (travel + dialog UVs).
+# npc_world: absolute game coordinates (memory monitor space).
+# scroll_spot: talking-scroll spot id (hubs usage rules; wheels live on the spot).
+# click_offset_uv: optional [du, dv] added to computed NPC content UV when opening.
+#   When set → single click at (A + offset). When unset → cursor-search open.
+# adena_cost: teleporter fare in adena (affordability gate vs walk path); 0 = free/unset.
+# destination_dungeon: teleporter target LC mapId (ground_enter.to). Same NPC can have
+#   one behavior per dungeon (e.g. Giran → 30 vs 53). 0 = unset (not used in world-nav).
+# world_nav: true → world-nav planner may use this teleporter (Shopping Practice checkbox).
+# ui.*: content-normalized UVs [u, v] on the perception capture (0..1).
+# item_index: 0-based index in the full merchant list (7 rows visible) — buy only.
+# sell_mode: sell_only_garbage | sell_except_keep (sell/store).
+# Prefer sell_except_keep: keep_list = names to retain; all other sell-tab rows sell.
+# garbage_list / keep_list: shared item-name filters for ALL sell behaviors (file-level).
+# Live sell/store: shop_listen memory list + list scroll (item_index rule: scroll = max(0,n-6)).
+# store: warehouse keeper (e.g. give_goods); same dialog UVs as sell for now.
+# teleporter: option + confirm only (no slot/qty); dungeon-entry shortcut via NPC.
+# Engine data: Engine/data/npc_behaviors.yaml (not inside maps/, not UserData).
+# Edited by Shopping Practice / bot_data_editors tools.
+#
+behaviors:
+- action: buy
+  default_qty: 2
+  id: buy_normal_arrows_ch_talking
+  item_index: 2
+  map: talking_island
+  name: Buy normal arrows_talking
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  ui:
+    buy_button:
+    - 0.10613207547169812
+    - 0.4075471698113208
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.18820754716981133
+    - 0.4037735849056604
+- action: buy
+  default_qty: 1
+  id: buy_silver_arrows_mainland
+  item_index: 1
+  map: mainland
+  name: Buy silver arrows_mainland
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: buy
+  default_qty: 1
+  id: buy_hp_potions_mainland
+  item_index: 11
+  map: mainland
+  name: Buy HP potions_mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: buy
+  default_qty: 1
+  id: buy_depoison_potions_mainland
+  item_index: 14
+  map: mainland
+  name: Buy depoison potions_mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: sell
+  default_qty: 999
+  id: sell_garbage
+  item_index: 0
+  map: talking_island
+  name: Sell garbage
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: sell
+  default_qty: 999
+  id: sell_garbage_weapon
+  item_index: 0
+  map: mainland
+  name: Sell garbage weapon
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: buy
+  default_qty: 1
+  id: buy_hp_potions_ch_mainland
+  item_index: 11
+  map: mainland
+  name: Buy HP potions Chinese_mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  ui:
+    buy_button:
+    - 0.10294117647058823
+    - 0.40305010893246185
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19444444444444445
+    - 0.4008714596949891
+- action: buy
+  default_qty: 200
+  id: buy_normal_arrows_talking
+  item_index: 2
+  map: talking_island
+  name: Buy normal arrows Chinese_talking
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  ui:
+    buy_button:
+    - 0.10613207547169812
+    - 0.4528301886792453
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19952830188679246
+    - 0.4528301886792453
+- action: buy
+  default_qty: 200
+  id: buy_silver_arrows_ch_mainland
+  item_index: 1
+  map: mainland
+  name: Buy silver arrows Chinese_mainland
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: buy
+  default_qty: 1
+  id: buy_depoison_potions_ch_mainland
+  item_index: 14
+  map: mainland
+  name: Buy depoison potions Chinese_mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  ui:
+    buy_button:
+    - 0.09967320261437909
+    - 0.40305010893246185
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.1977124183006536
+    - 0.40305010893246185
+- action: buy
+  default_qty: 1
+  id: buy_hp_potions_talking
+  item_index: 27
+  map: talking_island
+  name: Buy hp potion_talking
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: buy
+  default_qty: 1
+  id: buy_hp_potions_talking_ch
+  item_index: 27
+  map: talking_island
+  name: Buy hp potion_talking Chinese
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  ui:
+    buy_button:
+    - 0.09967320261437909
+    - 0.4074074074074074
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19281045751633988
+    - 0.40305010893246185
+- action: sell
+  default_qty: 999
+  id: sell_except_keep
+  item_index: 0
+  map: talking_island
+  name: Sell keep
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: sell
+  default_qty: 999
+  id: sell_except_keep_weapon
+  item_index: 0
+  map: mainland
+  name: Sell keep weapon
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: sell
+  default_qty: 999
+  id: sell_garbage_ch
+  item_index: 0
+  map: talking_island
+  name: Sell garbage Chinese
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.1025
+    - 0.405
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19875
+    - 0.40166666666666667
+- action: sell
+  default_qty: 999
+  id: sell_garbage_weapon_ch
+  item_index: 0
+  map: mainland
+  name: Sell garbage weapon Chinese
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10919540229885058
+    - 0.4559386973180077
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20114942528735633
+    - 0.4521072796934866
+- action: sell
+  default_qty: 999
+  id: sell_except_keep_ch
+  item_index: 0
+  map: talking_island
+  name: Sell keep Chinese
+  npc_world:
+  - 32642
+  - 32946
+  scroll_spot: ti_general_goods
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.109375
+    - 0.4036458333333333
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.197265625
+    - 0.4036458333333333
+- action: sell
+  default_qty: 999
+  id: sell_except_keep_weapon_ch
+  item_index: 0
+  map: mainland
+  name: Sell keep weapon Chinese
+  npc_world:
+  - 33398
+  - 32669
+  scroll_spot: giran_weapon
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.10344827586206896
+    - 0.4521072796934866
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20402298850574713
+    - 0.4521072796934866
+- action: sell
+  default_qty: 300
+  id: sell_garbage_mainland_ch
+  item_index: 0
+  map: mainland
+  name: Sell Garbage Mainland Chinese
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.09967320261437909
+    - 0.40305010893246185
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.1977124183006536
+    - 0.40305010893246185
+- action: sell
+  default_qty: 300
+  id: sell_garbage_mainland
+  item_index: 0
+  map: mainland
+  name: Sell Garbage Mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10256968641114983
+    - 0.4547038327526132
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19664634146341464
+    - 0.4529616724738676
+- action: sell
+  default_qty: 300
+  id: sell_except_keep_mainland_ch
+  item_index: 0
+  map: mainland
+  name: Sell Except Keep Mainland Chinese
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.09967320261437909
+    - 0.40305010893246185
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.1977124183006536
+    - 0.40305010893246185
+- action: sell
+  default_qty: 300
+  id: sell_except_keep_mainland
+  item_index: 0
+  map: mainland
+  name: Sell Except Keep Mainland
+  npc_world:
+  - 33455
+  - 32820
+  scroll_spot: giran_general_goods
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.1089622641509434
+    - 0.4528301886792453
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.19103773584905662
+    - 0.4490566037735849
+- action: sell
+  default_qty: 300
+  id: sell_garbage_armor_mainland_ch
+  item_index: 0
+  map: mainland
+  name: Sell Garbage Armor Mainland Chinese
+  npc_world:
+  - 33436
+  - 32751
+  scroll_spot: giran_armor
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10057471264367816
+    - 0.42528735632183906
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20114942528735633
+    - 0.42528735632183906
+- action: sell
+  default_qty: 300
+  id: sell_garbage_armor_mainland
+  item_index: 0
+  map: mainland
+  name: Sell Garbage Armor Mainland
+  npc_world:
+  - 33436
+  - 32751
+  scroll_spot: giran_armor
+  sell_mode: sell_only_garbage
+  ui:
+    buy_button:
+    - 0.10057471264367816
+    - 0.42528735632183906
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20114942528735633
+    - 0.42528735632183906
+- action: sell
+  default_qty: 300
+  id: sell_except_keep_armor_mainland_ch
+  item_index: 0
+  map: mainland
+  name: Sell Except Keep Armor Mainland Chinese
+  npc_world:
+  - 33436
+  - 32751
+  scroll_spot: giran_armor
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.10057471264367816
+    - 0.42528735632183906
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20114942528735633
+    - 0.42528735632183906
+- action: sell
+  default_qty: 300
+  id: sell_except_keep_armor_mainland
+  item_index: 0
+  map: mainland
+  name: Sell Except Keep Armor Mainland
+  npc_world:
+  - 33436
+  - 32751
+  scroll_spot: giran_armor
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.10047169811320755
+    - 0.45660377358490567
+    confirm_button:
+    - 0.22745644599303133
+    - 0.5770034843205575
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.20235849056603775
+    - 0.4528301886792453
+- action: store
+  default_qty: 999
+  id: give_goods
+  item_index: 0
+  map: talking_island
+  name: Give Goods
+  npc_world:
+  - 32575
+  - 32946
+  scroll_spot: ti_warehouse
+  sell_mode: sell_except_keep
+  ui:
+    buy_button:
+    - 0.07216981132075471
+    - 0.4528301886792453
+    confirm_button:
+    - 0.23066037735849057
+    - 0.5735849056603773
+    item_rows:
+    - - 0.25152439024390244
+      - 0.08885017421602788
+    - - 0.25021777003484325
+      - 0.15505226480836237
+    - - 0.2508710801393728
+      - 0.22466898954703832
+    - - 0.2517073170731707
+      - 0.2926829268292683
+    - - 0.2508710801393728
+      - 0.35958188153310106
+    - - 0.2517073170731707
+      - 0.4253658536585366
+    - - 0.2508710801393728
+      - 0.49449477351916377
+    list_scroll_point:
+    - 0.13915505226480837
+    - 0.28222996515679444
+    sell_button:
+    - 0.07471698113207546
+    - 0.23849056603773586
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 1
+  id: teleport_talking_island
+  map: talking_island
+  name: Teleport talking island
+  npc_world:
+  - 32584
+  - 32925
+  scroll_spot: ti_teleporter
+  ui:
+    buy_button:
+    - 0.13422509225092252
+    - 0.16236162361623616
+    confirm_button:
+    - 0.08717712177121771
+    - 0.19557195571955718
+  world_nav: true
+- action: teleporter
+  adena_cost: 330
+  destination_dungeon: 53
+  id: teleport_giran
+  map: mainland
+  name: Teleport Giran
+  npc_world:
+  - 33437
+  - 32795
+  scroll_spot: giran_teleporter
+  ui:
+    buy_button:
+    - 0.10378228782287824
+    - 0.35424354243542433
+    confirm_button:
+    - 0.08440959409594097
+    - 0.31365313653136534
+  world_nav: true
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 7
+  id: teleport_gludin_ch
+  map: mainland
+  name: Teleport Gludin ch
+  npc_world:
+  - 32611
+  - 32732
+  scroll_spot: hub_22
+  ui:
+    buy_button:
+    - 0.06795959547169811
+    - 0.2623418445283019
+    confirm_button:
+    - 0.04380664652567976
+    - 0.26686807653575023
+  world_nav: true
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 75
+  id: teleport_oren
+  map: mainland
+  name: Teleport Oren
+  npc_world:
+  - 34063
+  - 32278
+  scroll_spot: hub_27
+  ui:
+    buy_button:
+    - 0.13720688596594802
+    - 0.3584905660377358
+    confirm_button:
+    - 0.06223817507733724
+    - 0.2641509433962264
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 7779
+  id: teleport_silver
+  map: mainland
+  name: Teleport Silver
+  npc_world:
+  - 33080
+  - 33385
+  scroll_spot: hub_33
+  ui:
+    buy_button:
+    - 0.14309433962264154
+    - 0.3320754716981132
+    confirm_button:
+    - 0.07790128301886794
+    - 0.2881110943396226
+  world_nav: true
+- action: teleporter
+  adena_cost: 77
+  click_offset_uv:
+  - -0.003164875590551175
+  - -0.05885887217177593
+  destination_dungeon: 7779
+  id: teleport_kent_rawful
+  map: mainland
+  name: Teleport Kent To Rawful
+  npc_world:
+  - 33050
+  - 32783
+  scroll_spot: hub_39
+  ui:
+    buy_button:
+    - 0.14309433962264154
+    - 0.3320754716981132
+    confirm_button:
+    - 0.10607094339622641
+    - 0.2627622641509434
+  world_nav: true
+- action: teleporter
+  adena_cost: 55
+  click_offset_uv:
+  - -0.003164875590551175
+  - -0.05885887217177593
+  destination_dungeon: 7779
+  id: teleport_kent_caotic
+  map: mainland
+  name: Teleport Kent To Caotic
+  npc_world:
+  - 33050
+  - 32783
+  scroll_spot: hub_39
+  ui:
+    buy_button:
+    - 0.14309433962264154
+    - 0.3320754716981132
+    confirm_button:
+    - 0.0886822641509434
+    - 0.29058415094339624
+  world_nav: true
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 1
+  id: teleport_talking_island_ch
+  map: talking_island
+  name: Teleport talking island ch
+  npc_world:
+  - 32584
+  - 32925
+  scroll_spot: ti_teleporter
+  ui:
+    buy_button:
+    - 0.07887453874538745
+    - 0.16605166051660517
+    confirm_button:
+    - 0.139760147601476
+    - 0.16605166051660517
+  world_nav: true
+- action: teleporter
+  adena_cost: 330
+  destination_dungeon: 53
+  id: teleport_giran_ch
+  map: mainland
+  name: Teleport Giran ch
+  npc_world:
+  - 33437
+  - 32795
+  scroll_spot: giran_teleporter
+  ui:
+    buy_button:
+    - 0.07344978113207548
+    - 0.26214400000000004
+    confirm_button:
+    - 0.05935335849056604
+    - 0.28687456603773587
+  world_nav: true
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 75
+  id: teleport_oren_ch
+  map: mainland
+  name: Teleport Oren ch
+  npc_world:
+  - 34063
+  - 32278
+  scroll_spot: hub_27
+  ui:
+    buy_button:
+    - 0.09129056603773586
+    - 0.2617962264150943
+    confirm_button:
+    - 0.056571169811320765
+    - 0.23864996226415094
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 7779
+  id: teleport_silver_ch
+  map: mainland
+  name: Teleport Silver ch
+  npc_world:
+  - 33080
+  - 33385
+  scroll_spot: hub_33
+  ui:
+    buy_button:
+    - 0.06028075471698114
+    - 0.2633805283018868
+    confirm_button:
+    - 0.05430832301886792
+    - 0.23860050113207548
+  world_nav: true
+- action: teleporter
+  adena_cost: 77
+  click_offset_uv:
+  - -0.003164875590551175
+  - -0.05885887217177593
+  destination_dungeon: 7779
+  id: teleport_kent_rawful_ch
+  map: mainland
+  name: Teleport Kent To Rawful ch
+  npc_world:
+  - 33050
+  - 32783
+  scroll_spot: hub_39
+  ui:
+    buy_button:
+    - 0.06120815094339623
+    - 0.262144
+    confirm_button:
+    - 0.06213554716981133
+    - 0.23864996226415094
+  world_nav: true
+- action: teleporter
+  adena_cost: 55
+  click_offset_uv:
+  - -0.003164875590551175
+  - -0.05885887217177593
+  destination_dungeon: 7779
+  id: teleport_kent_caotic_ch
+  map: mainland
+  name: Teleport Kent To Caotic ch
+  npc_world:
+  - 33050
+  - 32783
+  scroll_spot: hub_39
+  ui:
+    buy_button:
+    - 0.07419169811320755
+    - 0.2633805283018868
+    confirm_button:
+    - 0.051934188679245284
+    - 0.26511166792452834
+  world_nav: true
+- action: teleporter
+  adena_cost: 220
+  destination_dungeon: 7
+  id: teleport_gludin
+  map: mainland
+  name: Teleport Gludin
+  npc_world:
+  - 32611
+  - 32732
+  scroll_spot: hub_22
+  ui:
+    buy_button:
+    - 0.09931034482758619
+    - 0.33226053639846737
+    confirm_button:
+    - 0.10075218390804598
+    - 0.2862491954022989
+  world_nav: true
+garbage_list: []
+keep_list:
+- 2단 가속 선택 주머니
+- 60레벨 변신 주문서
+- 간디 오크 마법서
+- 간디의 토템
+- 갑옷 마법 주문서
+- 강철 부츠
+- 괴물 눈 고기
+- 난쟁이족 망토
+- 달과자
+- 드워프의 톱니바퀴(1시간)
+- 마력의 돌
+- 마법 방어 투구
+- 마법서 (뱀파이어릭 터치)
+- 말하는 두루마리
+- 말하는 두루마리 상자
+- 맑은 물약
+- 메티스의 2단 가속 선택 주머니
+- 메티스의 디저트 박스
+- 변신 주문서
+- 보호 망토
+- 부활 주문서
+- 사슬 갑옷
+- 상쾌한 간식 바구니
+- 상쾌한 귀환 주문서
+- 상쾌한 변신 주문서
+- 상쾌한 빨간 물약
+- 상쾌한 소모품 주머니
+- 상쾌한 순간 이동 주문서
+- 상쾌한 초록 물약
+- 속죄의 성서
+- 송편
+- 순간이동 주문서
+- '시공의 파편 : 버림받은 자들의 땅'
+- 쑥송편
+- '어떤 의용군: 대단하십니다!'
+- 엘븐 와퍼
+- 오크족 활
+- 요정족 사슬 갑옷
+- 은 화살
+- 정령옥
+- 청명한 소모품 주머니
+- 청명한 초록 물약
+- 체력 회복제
+- 초록 물약
+- 크로스 보우
+- 티셔츠
+- '페어리: 나랑 놀아줘야 해!'
+- 펫 목걸이
+- 화살
+- 활 골무

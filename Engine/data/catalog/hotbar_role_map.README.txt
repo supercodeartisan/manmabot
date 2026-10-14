@@ -1,0 +1,15 @@
+# Fill the `role` column in hotbar_role_map.csv with one of:
+#
+#   power_up
+#   armor_up
+#   light
+#   heal
+#   hp_potion
+#   teleport
+#   mage_attack
+#   talking_scroll
+#   mother_tree
+#   hp_to_mp
+#
+# Leave blank to ignore that icon. Multiple icons may share one role;
+# the first detected slot (box 1→3, F5→F12) wins.

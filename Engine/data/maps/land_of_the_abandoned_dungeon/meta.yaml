@@ -1,0 +1,9 @@
+id: land_of_the_abandoned_dungeon
+name: "Land of the Abandoned"
+# From obstacle_tiles_raw map_777.png (1 px = 1 tile).
+raw_map: "777"
+origin_x: 32512
+origin_y: 32832
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

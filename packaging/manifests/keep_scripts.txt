@@ -1,0 +1,12 @@
+# Scripts that must remain as .py after Stage 2 compile (relative to portable root).
+# Keep them THIN: product logic belongs in sibling modules that Stage 2 compiles.
+# Policy check: packaging/verify_shims.py
+#
+# Bodies (compiled, not listed here):
+#   Engine/session/run_entry.py          ← run.py
+#   Engine/autologin/bot/bot2_core.py    ← bot2.py
+# launcher_manmabot.py stays self-contained (exe bootstrap only).
+
+run.py
+launcher_manmabot.py
+Engine/autologin/bot/bot2.py

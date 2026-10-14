@@ -1,0 +1,9 @@
+id: fallen_cave_dungeon
+name: "Fallen Cave"
+# From obstacle_tiles_raw map_778.png (1 px = 1 tile).
+raw_map: "778"
+origin_x: 32512
+origin_y: 32832
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

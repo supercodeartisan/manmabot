@@ -1,0 +1,9 @@
+# Requirements used only on the build machine for Stage 2+.
+# Install into the bundled interpreter:
+#   python\python.exe -m pip install -r packaging\requirements-build.txt
+#
+# Runtime customer packs do not need these packages.
+
+nuitka>=2.0
+ordered-set>=4.1
+zstandard>=0.22

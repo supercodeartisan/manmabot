@@ -1,0 +1,794 @@
+{
+  "schema_version": 2,
+  "provider_id": "edges.floor_ladder",
+  "kind": "edges",
+  "replaceable": true,
+  "source": "10_2/1_dungeon/dungeon_ladders.tsv",
+  "note": "Mid-level after ground enter. Not required for pure ground hubs.",
+  "count": 27,
+  "edges": [
+    {
+      "id": "floor_ladder:글루디오:7->8",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 7,
+        "x": 32812,
+        "y": 32727
+      },
+      "to": {
+        "mapId": 8,
+        "x": 32750,
+        "y": 32799
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "글루디오",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:글루디오:8->9",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 8,
+        "x": 32750,
+        "y": 32799
+      },
+      "to": {
+        "mapId": 9,
+        "x": 32798,
+        "y": 32754
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "글루디오",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:글루디오:9->10",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 9,
+        "x": 32798,
+        "y": 32754
+      },
+      "to": {
+        "mapId": 10,
+        "x": 32764,
+        "y": 32774
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "글루디오",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:글루디오:10->11",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 10,
+        "x": 32764,
+        "y": 32774
+      },
+      "to": {
+        "mapId": 11,
+        "x": 32729,
+        "y": 32724
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "글루디오",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:요정 숲:19->20",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 19,
+        "x": 32804,
+        "y": 32725
+      },
+      "to": {
+        "mapId": 20,
+        "x": 32766,
+        "y": 32797
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "요정 숲",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:요정 숲:20->21",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 20,
+        "x": 32766,
+        "y": 32797
+      },
+      "to": {
+        "mapId": 21,
+        "x": 32729,
+        "y": 32736
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "요정 숲",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:용의 계곡:30->31",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 30,
+        "x": 32725,
+        "y": 32726
+      },
+      "to": {
+        "mapId": 31,
+        "x": 32761,
+        "y": 32751
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "용의 계곡",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:용의 계곡:31->32",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 31,
+        "x": 32761,
+        "y": 32751
+      },
+      "to": {
+        "mapId": 32,
+        "x": 32706,
+        "y": 32820
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "용의 계곡",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:용의 계곡:32->33",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 32,
+        "x": 32706,
+        "y": 32820
+      },
+      "to": {
+        "mapId": 33,
+        "x": 32667,
+        "y": 32869
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "용의 계곡",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:용의 계곡:33->35",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 33,
+        "x": 32667,
+        "y": 32869
+      },
+      "to": {
+        "mapId": 35,
+        "x": 32745,
+        "y": 32800
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "용의 계곡",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:용의 계곡:35->36",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 35,
+        "x": 32745,
+        "y": 32800
+      },
+      "to": {
+        "mapId": 36,
+        "x": 32665,
+        "y": 32847
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "용의 계곡",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:43->44",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 43,
+        "x": 32786,
+        "y": 32749
+      },
+      "to": {
+        "mapId": 44,
+        "x": 32800,
+        "y": 32752
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:44->45",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 44,
+        "x": 32800,
+        "y": 32752
+      },
+      "to": {
+        "mapId": 45,
+        "x": 32778,
+        "y": 32730
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:45->46",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 45,
+        "x": 32778,
+        "y": 32730
+      },
+      "to": {
+        "mapId": 46,
+        "x": 32789,
+        "y": 32794
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:46->47",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 46,
+        "x": 32789,
+        "y": 32794
+      },
+      "to": {
+        "mapId": 47,
+        "x": 32795,
+        "y": 32744
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:47->48",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 47,
+        "x": 32795,
+        "y": 32744
+      },
+      "to": {
+        "mapId": 48,
+        "x": 32796,
+        "y": 32743
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:48->49",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 48,
+        "x": 32796,
+        "y": 32743
+      },
+      "to": {
+        "mapId": 49,
+        "x": 32802,
+        "y": 32781
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:개미굴 1층:49->50",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 49,
+        "x": 32802,
+        "y": 32781
+      },
+      "to": {
+        "mapId": 50,
+        "x": 32770,
+        "y": 32803
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "개미굴 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:기란 감옥 1층:53->54",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 53,
+        "x": 32808,
+        "y": 32732
+      },
+      "to": {
+        "mapId": 54,
+        "x": 32808,
+        "y": 32794
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "기란 감옥 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:기란 감옥 1층:54->55",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 54,
+        "x": 32808,
+        "y": 32794
+      },
+      "to": {
+        "mapId": 55,
+        "x": 32734,
+        "y": 32730
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "기란 감옥 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:기란 감옥 1층:55->56",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 55,
+        "x": 32734,
+        "y": 32730
+      },
+      "to": {
+        "mapId": 56,
+        "x": 32768,
+        "y": 32733
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "기란 감옥 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:Eva Kingdom:59->60",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 59,
+        "x": 32711,
+        "y": 32789
+      },
+      "to": {
+        "mapId": 60,
+        "x": 32744,
+        "y": 32859
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "Eva Kingdom",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:Eva Kingdom:60->61",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 60,
+        "x": 32744,
+        "y": 32859
+      },
+      "to": {
+        "mapId": 61,
+        "x": 32727,
+        "y": 32808
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "Eva Kingdom",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:Training:25->26",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 25,
+        "x": 32807,
+        "y": 32809
+      },
+      "to": {
+        "mapId": 26,
+        "x": 32804,
+        "y": 32813
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "Training",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:Training:26->27",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 26,
+        "x": 32804,
+        "y": 32813
+      },
+      "to": {
+        "mapId": 27,
+        "x": 32808,
+        "y": 32811
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "Training",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:Training:27->28",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 27,
+        "x": 32808,
+        "y": 32811
+      },
+      "to": {
+        "mapId": 28,
+        "x": 32799,
+        "y": 32798
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "Training",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "floor_ladder:오만의 탑 1층:101->111",
+      "type": "floor_ladder",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 101,
+        "x": 32726,
+        "y": 32798
+      },
+      "to": {
+        "mapId": 111,
+        "x": 32669,
+        "y": 32814
+      },
+      "action": {
+        "op": "use_floor_transition",
+        "require_near_from": true
+      },
+      "meta": {
+        "family": "오만의 탑 1층",
+        "bidirectional_assumed": false
+      },
+      "endpoints_complete": true
+    }
+  ]
+}

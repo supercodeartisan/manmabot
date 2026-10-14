@@ -1,0 +1,15 @@
+# Local runtime / caches (not required to move the package)
+.venv/
+__pycache__/
+*.pyc
+*.log
+bot/live_*.log
+bot/bot2_*.log
+bot/dbg_*.png
+bot/*_dump.png
+bot/last_click.png
+bot/purple_login_live_test.json
+bot/purple_login_*.json
+!bot/purple_login.json
+!bot/purple_login.example.json
+bot/purple_session_backup/device_token.json

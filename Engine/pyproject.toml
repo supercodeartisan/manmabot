@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "manmabot"
+version = "0.1.0"
+description = "LineageBot - Game AI agent system and dataset tooling."
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+include = ["tool*", "app*"]

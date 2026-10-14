@@ -1,0 +1,316 @@
+{
+  "schema_version": 2,
+  "provider_id": "edges.ground_enter",
+  "kind": "edges",
+  "replaceable": true,
+  "source": "10_2/1_dungeon/all_dungeon_entrances_master.tsv#GROUND + GROUND_DEST enrich",
+  "note": "Append new GROUND rows here (or add 30b_*.json in manifest) as measured.",
+  "count": 10,
+  "edges": [
+    {
+      "id": "ground_enter:island-dungeon",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 0,
+        "x": 32478,
+        "y": 32853
+      },
+      "to": {
+        "mapId": 1,
+        "x": 32668,
+        "y": 32805,
+        "kr": "말하는 섬 던전 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "말하는 섬 던전",
+        "ground_key": "island-dungeon"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:gludin-dungeon",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 32726,
+        "y": 32921
+      },
+      "to": {
+        "mapId": 7,
+        "x": 32812,
+        "y": 32725,
+        "kr": "글루디오 던전 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "글루디오 던전",
+        "ground_key": "gludin-dungeon"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:giran-Gdungeon",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 33314,
+        "y": 33062
+      },
+      "to": {
+        "mapId": 53,
+        "x": 32808,
+        "y": 32732,
+        "kr": "기란 감옥 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "기란 감옥",
+        "ground_key": "giran-Gdungeon"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:forgotten-island",
+      "type": "ground_enter",
+      "status": "open",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 33412,
+        "y": 33475
+      },
+      "to": {
+        "mapId": 70,
+        "kr": "잊혀진 섬"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "잊혀진 섬",
+        "ground_key": "forgotten-island"
+      },
+      "endpoints_complete": false
+    },
+    {
+      "id": "ground_enter:giran-dragonvalley",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 33433,
+        "y": 32515
+      },
+      "to": {
+        "mapId": 30,
+        "x": 32725,
+        "y": 32726,
+        "kr": "용의 계곡 던전 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "용의 계곡 던전",
+        "ground_key": "giran-dragonvalley"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:heine-Hdungeon",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 33620,
+        "y": 33501
+      },
+      "to": {
+        "mapId": 59,
+        "x": 32711,
+        "y": 32789,
+        "kr": "Eva Kingdom 던전 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "에바 왕국",
+        "ground_key": "heine-Hdungeon"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:oren-ivory",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 34041,
+        "y": 32158
+      },
+      "to": {
+        "mapId": 75,
+        "x": 32765,
+        "y": 32866,
+        "kr": "상아탑 1층"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "오렌 상아탑",
+        "ground_key": "oren-ivory"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:oren-forsakengate",
+      "type": "ground_enter",
+      "status": "open",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 4,
+        "x": 34263,
+        "y": 32190
+      },
+      "to": {
+        "kr": "오렌 무너진 동굴(?)"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "오렌 무너진 동굴",
+        "ground_key": "oren-forsakengate"
+      },
+      "endpoints_complete": false
+    },
+    {
+      "id": "ground_enter:dark-elf-dungen",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 209,
+        "x": 32725,
+        "y": 32790
+      },
+      "to": {
+        "mapId": 209,
+        "x": 32725,
+        "y": 32790,
+        "kr": "다크엘프 던전"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "다크엘프 던전",
+        "ground_key": "dark-elf-dungen"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "ground_enter:phantasm-island",
+      "type": "ground_enter",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 0,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "mapId": 303,
+        "x": 32731,
+        "y": 32750
+      },
+      "to": {
+        "mapId": 303,
+        "x": 32731,
+        "y": 32750,
+        "kr": "꿈의 섬"
+      },
+      "action": {
+        "op": "enter_at_cell",
+        "require_near_from": true,
+        "radius_cells": 1
+      },
+      "meta": {
+        "family": "꿈의 섬",
+        "ground_key": "phantasm-island"
+      },
+      "endpoints_complete": true
+    }
+  ]
+}

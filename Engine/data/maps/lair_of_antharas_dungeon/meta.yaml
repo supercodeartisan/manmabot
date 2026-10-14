@@ -1,0 +1,9 @@
+id: lair_of_antharas_dungeon
+name: "Lair of Antharas"
+# From obstacle_tiles_raw map_37.png (1 px = 1 tile).
+raw_map: "37"
+origin_x: 32576
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

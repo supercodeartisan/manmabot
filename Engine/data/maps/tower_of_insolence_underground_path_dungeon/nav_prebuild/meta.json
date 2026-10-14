@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "cluster": 32,
+  "width": 192,
+  "height": 320,
+  "clearance_tiles": 2,
+  "wall_penalty": 4,
+  "source_name": "nav.png",
+  "source_sha256": "e7268183bf553c23c77cbdffb1e5b58631be606c140d99c023455e200794ccec",
+  "node_count": 51
+}

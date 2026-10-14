@@ -1,0 +1,68 @@
+"""World navigation wired to schedule UI routines (battle/break)."""
+
+from __future__ import annotations
+
+from .hooks import (
+    SCRATCH_NAV_GATE_WARN,
+    SCRATCH_NEED_WORLD_NAV,
+    SCRATCH_ROUTINE,
+    SCRATCH_ROUTINE_KIND,
+    SCRATCH_RUNTIME_CONFIG,
+    SCRATCH_WORLD_NAV,
+    SCRATCH_WORLD_NAV_GATE,
+    SCRATCH_WORLD_NAV_PAUSE,
+    apply_gate_result,
+    apply_npc_teleporter_result,
+    apply_routine_entry_runtime,
+    arm_world_nav,
+    begin_world_nav,
+    clear_nav_gate_warn,
+    clear_world_nav_run,
+    ensure_world_nav_mode,
+    init_routine_on_blackboard,
+    leave_world_nav_mode_if_idle,
+    request_world_nav,
+    set_nav_gate_warn,
+    take_next_routine_if_due,
+    tick_world_nav,
+)
+from .overlays import (
+    SCRATCH_MAP_OVERLAYS,
+    farm_rects_selected,
+    is_dungeon_pack,
+    patrol_entries,
+    set_map_overlays,
+)
+from .routine import RoutineCursor, goal_for_entry
+
+__all__ = [
+    "RoutineCursor",
+    "SCRATCH_MAP_OVERLAYS",
+    "SCRATCH_NAV_GATE_WARN",
+    "SCRATCH_NEED_WORLD_NAV",
+    "SCRATCH_ROUTINE",
+    "SCRATCH_ROUTINE_KIND",
+    "SCRATCH_RUNTIME_CONFIG",
+    "SCRATCH_WORLD_NAV",
+    "SCRATCH_WORLD_NAV_GATE",
+    "SCRATCH_WORLD_NAV_PAUSE",
+    "apply_gate_result",
+    "apply_npc_teleporter_result",
+    "apply_routine_entry_runtime",
+    "arm_world_nav",
+    "begin_world_nav",
+    "clear_nav_gate_warn",
+    "clear_world_nav_run",
+    "ensure_world_nav_mode",
+    "farm_rects_selected",
+    "goal_for_entry",
+    "init_routine_on_blackboard",
+    "is_dungeon_pack",
+    "leave_world_nav_mode_if_idle",
+    "patrol_entries",
+    "request_world_nav",
+    "set_map_overlays",
+    "set_nav_gate_warn",
+    "take_next_routine_if_due",
+    "tick_world_nav",
+]

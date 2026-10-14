@@ -1,0 +1,17 @@
+# Top-level packages compiled with Nuitka --module inside release/portable.
+# Paths are relative to the package parent on sys.path (Engine/ or UI/).
+# Format: <parent_dir> <package_name>
+#
+# Stage 2 compiles these in the release tree only. The development repo is untouched.
+
+Engine app
+Engine session
+Engine settings
+Engine shop
+Engine hotbar
+Engine i18n
+Engine login
+Engine autologin
+Engine tool
+UI ui_qt
+UI ui

@@ -1,0 +1,4689 @@
+{
+  "schema_version": 2,
+  "provider_id": "hubs.talking_scroll",
+  "kind": "hubs",
+  "replaceable": true,
+  "source": "Talking scroll/talking_scroll_plans.json",
+  "note": "COMPLETE dataset. Lookup by (region,name) or index.",
+  "count": 73,
+  "hubs": [
+    {
+      "index": 0,
+      "name": "창고지기",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32573,
+      "y": 32946,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 52,
+          "y": 102
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 1,
+      "name": "여관",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32599,
+      "y": 32931,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 30,
+          "y": 118
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 2,
+      "name": "텔레포터",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32580,
+      "y": 32929,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 39,
+          "y": 131
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 3,
+      "name": "잡화상인",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32642,
+      "y": 32949,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 43,
+          "y": 146
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 4,
+      "name": "마법서 상인",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32560,
+      "y": 33088,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 64,
+          "y": 160
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 5,
+      "name": "펫 관리인",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32447,
+      "y": 32993,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 54,
+          "y": 175
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 6,
+      "name": "말하는 섬 선착장",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32632,
+      "y": 32962,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 72,
+          "y": 189
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 7,
+      "name": "허수아비 수련장",
+      "region": "말하는 섬",
+      "map_label": "말하는 섬",
+      "mapId": 0,
+      "x": 32525,
+      "y": 32832,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 55,
+          "y": 203
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 8,
+      "name": "창고지기",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33427,
+      "y": 32816,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 51,
+          "y": 247
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 9,
+      "name": "여관",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33430,
+      "y": 32789,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 36,
+          "y": 263
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 10,
+      "name": "텔레포터",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33437,
+      "y": 32798,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 34,
+          "y": 276
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 11,
+      "name": "잡화 상인",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32444,
+      "y": 32822,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 46,
+          "y": 289
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 12,
+      "name": "무기 상인",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33388,
+      "y": 32672,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 47,
+          "y": 304
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 13,
+      "name": "방어구 상인",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33427,
+      "y": 32755,
+      "ui": {
+        "scroll_times": 0,
+        "click": {
+          "x": 55,
+          "y": 318
+        },
+        "snapshot": "1.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 14,
+      "name": "물약 상인",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33374,
+      "y": 32731,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 36,
+          "y": 53
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 15,
+      "name": "북편 시장",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33474,
+      "y": 32743,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 38,
+          "y": 66
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 16,
+      "name": "동편 시장",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33479,
+      "y": 32810,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 40,
+          "y": 81
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 17,
+      "name": "펫 관리인",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33343,
+      "y": 32721,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 44,
+          "y": 94
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 18,
+      "name": "대장장이",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33470,
+      "y": 32778,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 28,
+          "y": 110
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 19,
+      "name": "마법 연금술사",
+      "region": "기란 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33397,
+      "y": 32834,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 52,
+          "y": 125
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 20,
+      "name": "창고지기",
+      "region": "글루딘 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32603,
+      "y": 32767,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 35,
+          "y": 182
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 21,
+      "name": "여관",
+      "region": "글루딘 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32629,
+      "y": 32751,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 30,
+          "y": 196
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 22,
+      "name": "텔레포터",
+      "region": "글루딘 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32614,
+      "y": 32729,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 30,
+          "y": 210
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 23,
+      "name": "잡화상인",
+      "region": "글루딘 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32600,
+      "y": 32751,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 33,
+          "y": 224
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 24,
+      "name": "슬라임 경기장",
+      "region": "글루딘 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32613,
+      "y": 32699,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 36,
+          "y": 240
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 25,
+      "name": "창고지기",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34052,
+      "y": 32285,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 37,
+          "y": 281
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 26,
+      "name": "여관",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34063,
+      "y": 32256,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 29,
+          "y": 296
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 27,
+      "name": "텔레포터",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34061,
+      "y": 32280,
+      "ui": {
+        "scroll_times": 18,
+        "click": {
+          "x": 32,
+          "y": 311
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 28,
+      "name": "잡화 상인",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34055,
+      "y": 32297,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 39,
+          "y": 44
+        },
+        "snapshot": "2.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 29,
+      "name": "무기 방어구 상인",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34064,
+      "y": 32307,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 33,
+          "y": 58
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 30,
+      "name": "펫 관리인",
+      "region": "오렌 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34076,
+      "y": 32296,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 35,
+          "y": 74
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 31,
+      "name": "창고지기",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32074,
+      "y": 33402,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 29,
+          "y": 117
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 32,
+      "name": "여관",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33113,
+      "y": 33381,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 31,
+          "y": 131
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 33,
+      "name": "텔레포터",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33077,
+      "y": 33388,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 33,
+          "y": 147
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 34,
+      "name": "잡화 상인",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33094,
+      "y": 33391,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 33,
+          "y": 159
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 35,
+      "name": "무기 방어구 상인",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33092,
+      "y": 33407,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 34,
+          "y": 174
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 36,
+      "name": "게라드",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33098,
+      "y": 33360,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 33,
+          "y": 187
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 37,
+      "name": "허수아비 수련장",
+      "region": "은기사 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33104,
+      "y": 33332,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 35,
+          "y": 202
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 38,
+      "name": "창고지기",
+      "region": "켄트 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33058,
+      "y": 32785,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 32,
+          "y": 246
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 39,
+      "name": "텔레포터",
+      "region": "켄트 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33053,
+      "y": 32780,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 33,
+          "y": 260
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 40,
+      "name": "잡화 상인",
+      "region": "켄트 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33062,
+      "y": 32739,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 35,
+          "y": 274
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 41,
+      "name": "무기 방어구 상인",
+      "region": "켄트 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33066,
+      "y": 32760,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 32,
+          "y": 288
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 42,
+      "name": "펫 관리인",
+      "region": "켄트 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33040,
+      "y": 32749,
+      "ui": {
+        "scroll_times": 36,
+        "click": {
+          "x": 35,
+          "y": 303
+        },
+        "snapshot": "3.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 43,
+      "name": "창고지기",
+      "region": "우드벡 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32624,
+      "y": 33183,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 42,
+          "y": 65
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 44,
+      "name": "여관",
+      "region": "우드벡 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32619,
+      "y": 33174,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 28,
+          "y": 79
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 45,
+      "name": "텔레포터",
+      "region": "우드벡 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32644,
+      "y": 33200,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 29,
+          "y": 93
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 46,
+      "name": "잡화 상인",
+      "region": "우드벡 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32629,
+      "y": 33200,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 35,
+          "y": 107
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 47,
+      "name": "펫 관리인",
+      "region": "우드벡 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32607,
+      "y": 33199,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 41,
+          "y": 123
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 48,
+      "name": "창고지기",
+      "region": "화전민 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32737,
+      "y": 32446,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 39,
+          "y": 165
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 49,
+      "name": "잡화 상인",
+      "region": "화전민 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32752,
+      "y": 32432,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 37,
+          "y": 180
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 50,
+      "name": "펫 관리인",
+      "region": "화전민 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32772,
+      "y": 32450,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 35,
+          "y": 195
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 51,
+      "name": "축복의 땅",
+      "region": "화전민 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 32760,
+      "y": 32451,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 36,
+          "y": 209
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 52,
+      "name": "창고지기",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33601,
+      "y": 33231,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 49,
+          "y": 252
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 53,
+      "name": "여관",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33596,
+      "y": 33276,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 31,
+          "y": 266
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 54,
+      "name": "텔레포터",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33614,
+      "y": 33252,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 35,
+          "y": 280
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 55,
+      "name": "잡화 상인",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33637,
+      "y": 33287,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 36,
+          "y": 296
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 56,
+      "name": "무기 방어구 상인",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33622,
+      "y": 33287,
+      "ui": {
+        "scroll_times": 54,
+        "click": {
+          "x": 34,
+          "y": 311
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 57,
+      "name": "펫 관리인",
+      "region": "하이네 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33646,
+      "y": 33410,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 36,
+          "y": 31
+        },
+        "snapshot": "4.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 58,
+      "name": "창고지기",
+      "region": "웰던 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33726,
+      "y": 33487,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 45,
+          "y": 72
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 59,
+      "name": "텔레포터",
+      "region": "웰던 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33707,
+      "y": 32497,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 46,
+          "y": 86
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 60,
+      "name": "잡화 상인",
+      "region": "웰던 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33738,
+      "y": 32496,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 40,
+          "y": 100
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 61,
+      "name": "무기 상인",
+      "region": "웰던 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33710,
+      "y": 32518,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 51,
+          "y": 114
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 62,
+      "name": "펫 관리인",
+      "region": "웰던 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33692,
+      "y": 32501,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 63,
+          "y": 129
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 63,
+      "name": "아덴 광장",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33928,
+      "y": 33341,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 57,
+          "y": 171
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 64,
+      "name": "여관",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33988,
+      "y": 33314,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 36,
+          "y": 186
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 65,
+      "name": "텔레포터",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33961,
+      "y": 33256,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 44,
+          "y": 201
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 66,
+      "name": "잡화 상인",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34150,
+      "y": 33129,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 49,
+          "y": 215
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 67,
+      "name": "무기 상인",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34004,
+      "y": 33119,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 47,
+          "y": 228
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 68,
+      "name": "방어구 상인",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34151,
+      "y": 33114,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 52,
+          "y": 243
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 69,
+      "name": "물약 상인",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 34122,
+      "y": 33149,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 46,
+          "y": 257
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 70,
+      "name": "펫 관리인",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33921,
+      "y": 33177,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 53,
+          "y": 273
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 71,
+      "name": "성당",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33957,
+      "y": 33364,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 35,
+          "y": 286
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    {
+      "index": 72,
+      "name": "집시촌",
+      "region": "아덴 마을",
+      "map_label": "본토",
+      "mapId": 4,
+      "x": 33979,
+      "y": 32927,
+      "ui": {
+        "scroll_times": 73,
+        "click": {
+          "x": 40,
+          "y": 301
+        },
+        "snapshot": "5.png",
+        "snapshot_size": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    }
+  ],
+  "map_label_to_mapId": {
+    "말하는 섬": 0,
+    "본토": 4
+  },
+  "edges": [
+    {
+      "id": "talking_scroll:0:말하는 섬/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32573,
+        "y": 32946,
+        "region": "말하는 섬",
+        "name": "창고지기",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 0,
+        "region": "말하는 섬",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 52,
+            "y": 102
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:1:말하는 섬/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32599,
+        "y": 32931,
+        "region": "말하는 섬",
+        "name": "여관",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 1,
+        "region": "말하는 섬",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 30,
+            "y": 118
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:2:말하는 섬/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32580,
+        "y": 32929,
+        "region": "말하는 섬",
+        "name": "텔레포터",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 2,
+        "region": "말하는 섬",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 39,
+            "y": 131
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:3:말하는 섬/잡화상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32642,
+        "y": 32949,
+        "region": "말하는 섬",
+        "name": "잡화상인",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 3,
+        "region": "말하는 섬",
+        "name": "잡화상인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 43,
+            "y": 146
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:4:말하는 섬/마법서 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32560,
+        "y": 33088,
+        "region": "말하는 섬",
+        "name": "마법서 상인",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 4,
+        "region": "말하는 섬",
+        "name": "마법서 상인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 64,
+            "y": 160
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:5:말하는 섬/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32447,
+        "y": 32993,
+        "region": "말하는 섬",
+        "name": "펫 관리인",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 5,
+        "region": "말하는 섬",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 54,
+            "y": 175
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:6:말하는 섬/말하는 섬 선착장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32632,
+        "y": 32962,
+        "region": "말하는 섬",
+        "name": "말하는 섬 선착장",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 6,
+        "region": "말하는 섬",
+        "name": "말하는 섬 선착장",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 72,
+            "y": 189
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:7:말하는 섬/허수아비 수련장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 0,
+        "x": 32525,
+        "y": 32832,
+        "region": "말하는 섬",
+        "name": "허수아비 수련장",
+        "map_label": "말하는 섬"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 7,
+        "region": "말하는 섬",
+        "name": "허수아비 수련장",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 55,
+            "y": 203
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:8:기란 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33427,
+        "y": 32816,
+        "region": "기란 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 8,
+        "region": "기란 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 51,
+            "y": 247
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:9:기란 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33430,
+        "y": 32789,
+        "region": "기란 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 9,
+        "region": "기란 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 36,
+            "y": 263
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:10:기란 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33437,
+        "y": 32798,
+        "region": "기란 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 10,
+        "region": "기란 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 34,
+            "y": 276
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:11:기란 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32444,
+        "y": 32822,
+        "region": "기란 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 11,
+        "region": "기란 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 46,
+            "y": 289
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:12:기란 마을/무기 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33388,
+        "y": 32672,
+        "region": "기란 마을",
+        "name": "무기 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 12,
+        "region": "기란 마을",
+        "name": "무기 상인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 47,
+            "y": 304
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:13:기란 마을/방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33427,
+        "y": 32755,
+        "region": "기란 마을",
+        "name": "방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 13,
+        "region": "기란 마을",
+        "name": "방어구 상인",
+        "ui": {
+          "scroll_times": 0,
+          "click": {
+            "x": 55,
+            "y": 318
+          },
+          "snapshot": "1.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:14:기란 마을/물약 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33374,
+        "y": 32731,
+        "region": "기란 마을",
+        "name": "물약 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 14,
+        "region": "기란 마을",
+        "name": "물약 상인",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 36,
+            "y": 53
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:15:기란 마을/북편 시장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33474,
+        "y": 32743,
+        "region": "기란 마을",
+        "name": "북편 시장",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 15,
+        "region": "기란 마을",
+        "name": "북편 시장",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 38,
+            "y": 66
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:16:기란 마을/동편 시장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33479,
+        "y": 32810,
+        "region": "기란 마을",
+        "name": "동편 시장",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 16,
+        "region": "기란 마을",
+        "name": "동편 시장",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 40,
+            "y": 81
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:17:기란 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33343,
+        "y": 32721,
+        "region": "기란 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 17,
+        "region": "기란 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 44,
+            "y": 94
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:18:기란 마을/대장장이",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33470,
+        "y": 32778,
+        "region": "기란 마을",
+        "name": "대장장이",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 18,
+        "region": "기란 마을",
+        "name": "대장장이",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 28,
+            "y": 110
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:19:기란 마을/마법 연금술사",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33397,
+        "y": 32834,
+        "region": "기란 마을",
+        "name": "마법 연금술사",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 19,
+        "region": "기란 마을",
+        "name": "마법 연금술사",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 52,
+            "y": 125
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:20:글루딘 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32603,
+        "y": 32767,
+        "region": "글루딘 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 20,
+        "region": "글루딘 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 35,
+            "y": 182
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:21:글루딘 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32629,
+        "y": 32751,
+        "region": "글루딘 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 21,
+        "region": "글루딘 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 30,
+            "y": 196
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:22:글루딘 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32614,
+        "y": 32729,
+        "region": "글루딘 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 22,
+        "region": "글루딘 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 30,
+            "y": 210
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:23:글루딘 마을/잡화상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32600,
+        "y": 32751,
+        "region": "글루딘 마을",
+        "name": "잡화상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 23,
+        "region": "글루딘 마을",
+        "name": "잡화상인",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 33,
+            "y": 224
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:24:글루딘 마을/슬라임 경기장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32613,
+        "y": 32699,
+        "region": "글루딘 마을",
+        "name": "슬라임 경기장",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 24,
+        "region": "글루딘 마을",
+        "name": "슬라임 경기장",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 36,
+            "y": 240
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:25:오렌 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34052,
+        "y": 32285,
+        "region": "오렌 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 25,
+        "region": "오렌 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 37,
+            "y": 281
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:26:오렌 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34063,
+        "y": 32256,
+        "region": "오렌 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 26,
+        "region": "오렌 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 29,
+            "y": 296
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:27:오렌 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34061,
+        "y": 32280,
+        "region": "오렌 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 27,
+        "region": "오렌 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 18,
+          "click": {
+            "x": 32,
+            "y": 311
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:28:오렌 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34055,
+        "y": 32297,
+        "region": "오렌 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 28,
+        "region": "오렌 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 39,
+            "y": 44
+          },
+          "snapshot": "2.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:29:오렌 마을/무기 방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34064,
+        "y": 32307,
+        "region": "오렌 마을",
+        "name": "무기 방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 29,
+        "region": "오렌 마을",
+        "name": "무기 방어구 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 33,
+            "y": 58
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:30:오렌 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34076,
+        "y": 32296,
+        "region": "오렌 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 30,
+        "region": "오렌 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 35,
+            "y": 74
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:31:은기사 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32074,
+        "y": 33402,
+        "region": "은기사 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 31,
+        "region": "은기사 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 29,
+            "y": 117
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:32:은기사 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33113,
+        "y": 33381,
+        "region": "은기사 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 32,
+        "region": "은기사 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 31,
+            "y": 131
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:33:은기사 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33077,
+        "y": 33388,
+        "region": "은기사 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 33,
+        "region": "은기사 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 33,
+            "y": 147
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:34:은기사 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33094,
+        "y": 33391,
+        "region": "은기사 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 34,
+        "region": "은기사 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 33,
+            "y": 159
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:35:은기사 마을/무기 방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33092,
+        "y": 33407,
+        "region": "은기사 마을",
+        "name": "무기 방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 35,
+        "region": "은기사 마을",
+        "name": "무기 방어구 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 34,
+            "y": 174
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:36:은기사 마을/게라드",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33098,
+        "y": 33360,
+        "region": "은기사 마을",
+        "name": "게라드",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 36,
+        "region": "은기사 마을",
+        "name": "게라드",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 33,
+            "y": 187
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:37:은기사 마을/허수아비 수련장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33104,
+        "y": 33332,
+        "region": "은기사 마을",
+        "name": "허수아비 수련장",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 37,
+        "region": "은기사 마을",
+        "name": "허수아비 수련장",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 35,
+            "y": 202
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:38:켄트 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33058,
+        "y": 32785,
+        "region": "켄트 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 38,
+        "region": "켄트 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 32,
+            "y": 246
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:39:켄트 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33053,
+        "y": 32780,
+        "region": "켄트 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 39,
+        "region": "켄트 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 33,
+            "y": 260
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:40:켄트 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33062,
+        "y": 32739,
+        "region": "켄트 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 40,
+        "region": "켄트 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 35,
+            "y": 274
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:41:켄트 마을/무기 방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33066,
+        "y": 32760,
+        "region": "켄트 마을",
+        "name": "무기 방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 41,
+        "region": "켄트 마을",
+        "name": "무기 방어구 상인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 32,
+            "y": 288
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:42:켄트 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33040,
+        "y": 32749,
+        "region": "켄트 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 42,
+        "region": "켄트 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 36,
+          "click": {
+            "x": 35,
+            "y": 303
+          },
+          "snapshot": "3.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:43:우드벡 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32624,
+        "y": 33183,
+        "region": "우드벡 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 43,
+        "region": "우드벡 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 42,
+            "y": 65
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:44:우드벡 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32619,
+        "y": 33174,
+        "region": "우드벡 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 44,
+        "region": "우드벡 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 28,
+            "y": 79
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:45:우드벡 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32644,
+        "y": 33200,
+        "region": "우드벡 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 45,
+        "region": "우드벡 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 29,
+            "y": 93
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:46:우드벡 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32629,
+        "y": 33200,
+        "region": "우드벡 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 46,
+        "region": "우드벡 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 35,
+            "y": 107
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:47:우드벡 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32607,
+        "y": 33199,
+        "region": "우드벡 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 47,
+        "region": "우드벡 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 41,
+            "y": 123
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:48:화전민 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32737,
+        "y": 32446,
+        "region": "화전민 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 48,
+        "region": "화전민 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 39,
+            "y": 165
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:49:화전민 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32752,
+        "y": 32432,
+        "region": "화전민 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 49,
+        "region": "화전민 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 37,
+            "y": 180
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:50:화전민 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32772,
+        "y": 32450,
+        "region": "화전민 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 50,
+        "region": "화전민 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 35,
+            "y": 195
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:51:화전민 마을/축복의 땅",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 32760,
+        "y": 32451,
+        "region": "화전민 마을",
+        "name": "축복의 땅",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 51,
+        "region": "화전민 마을",
+        "name": "축복의 땅",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 36,
+            "y": 209
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:52:하이네 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33601,
+        "y": 33231,
+        "region": "하이네 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 52,
+        "region": "하이네 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 49,
+            "y": 252
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:53:하이네 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33596,
+        "y": 33276,
+        "region": "하이네 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 53,
+        "region": "하이네 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 31,
+            "y": 266
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:54:하이네 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33614,
+        "y": 33252,
+        "region": "하이네 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 54,
+        "region": "하이네 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 35,
+            "y": 280
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:55:하이네 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33637,
+        "y": 33287,
+        "region": "하이네 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 55,
+        "region": "하이네 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 36,
+            "y": 296
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:56:하이네 마을/무기 방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33622,
+        "y": 33287,
+        "region": "하이네 마을",
+        "name": "무기 방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 56,
+        "region": "하이네 마을",
+        "name": "무기 방어구 상인",
+        "ui": {
+          "scroll_times": 54,
+          "click": {
+            "x": 34,
+            "y": 311
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:57:하이네 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33646,
+        "y": 33410,
+        "region": "하이네 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 57,
+        "region": "하이네 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 36,
+            "y": 31
+          },
+          "snapshot": "4.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:58:웰던 마을/창고지기",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33726,
+        "y": 33487,
+        "region": "웰던 마을",
+        "name": "창고지기",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 58,
+        "region": "웰던 마을",
+        "name": "창고지기",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 45,
+            "y": 72
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:59:웰던 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33707,
+        "y": 32497,
+        "region": "웰던 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 59,
+        "region": "웰던 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 46,
+            "y": 86
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:60:웰던 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33738,
+        "y": 32496,
+        "region": "웰던 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 60,
+        "region": "웰던 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 40,
+            "y": 100
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:61:웰던 마을/무기 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33710,
+        "y": 32518,
+        "region": "웰던 마을",
+        "name": "무기 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 61,
+        "region": "웰던 마을",
+        "name": "무기 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 51,
+            "y": 114
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:62:웰던 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33692,
+        "y": 32501,
+        "region": "웰던 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 62,
+        "region": "웰던 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 63,
+            "y": 129
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:63:아덴 마을/아덴 광장",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33928,
+        "y": 33341,
+        "region": "아덴 마을",
+        "name": "아덴 광장",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 63,
+        "region": "아덴 마을",
+        "name": "아덴 광장",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 57,
+            "y": 171
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:64:아덴 마을/여관",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33988,
+        "y": 33314,
+        "region": "아덴 마을",
+        "name": "여관",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 64,
+        "region": "아덴 마을",
+        "name": "여관",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 36,
+            "y": 186
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:65:아덴 마을/텔레포터",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33961,
+        "y": 33256,
+        "region": "아덴 마을",
+        "name": "텔레포터",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 65,
+        "region": "아덴 마을",
+        "name": "텔레포터",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 44,
+            "y": 201
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:66:아덴 마을/잡화 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34150,
+        "y": 33129,
+        "region": "아덴 마을",
+        "name": "잡화 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 66,
+        "region": "아덴 마을",
+        "name": "잡화 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 49,
+            "y": 215
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:67:아덴 마을/무기 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34004,
+        "y": 33119,
+        "region": "아덴 마을",
+        "name": "무기 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 67,
+        "region": "아덴 마을",
+        "name": "무기 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 47,
+            "y": 228
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:68:아덴 마을/방어구 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34151,
+        "y": 33114,
+        "region": "아덴 마을",
+        "name": "방어구 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 68,
+        "region": "아덴 마을",
+        "name": "방어구 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 52,
+            "y": 243
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:69:아덴 마을/물약 상인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 34122,
+        "y": 33149,
+        "region": "아덴 마을",
+        "name": "물약 상인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 69,
+        "region": "아덴 마을",
+        "name": "물약 상인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 46,
+            "y": 257
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:70:아덴 마을/펫 관리인",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33921,
+        "y": 33177,
+        "region": "아덴 마을",
+        "name": "펫 관리인",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 70,
+        "region": "아덴 마을",
+        "name": "펫 관리인",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 53,
+            "y": 273
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:71:아덴 마을/성당",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33957,
+        "y": 33364,
+        "region": "아덴 마을",
+        "name": "성당",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 71,
+        "region": "아덴 마을",
+        "name": "성당",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 35,
+            "y": 286
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    },
+    {
+      "id": "talking_scroll:72:아덴 마을/집시촌",
+      "type": "talking_scroll",
+      "status": "ok",
+      "cost_tiles": {
+        "talking_scroll": 10,
+        "transition_extra": 0,
+        "walk": "sum of Manhattan (later A*) along walk segments"
+      },
+      "from": {
+        "scope": "any_with_talking_scroll"
+      },
+      "to": {
+        "mapId": 4,
+        "x": 33979,
+        "y": 32927,
+        "region": "아덴 마을",
+        "name": "집시촌",
+        "map_label": "본토"
+      },
+      "action": {
+        "op": "use_talking_scroll",
+        "plan_index": 72,
+        "region": "아덴 마을",
+        "name": "집시촌",
+        "ui": {
+          "scroll_times": 73,
+          "click": {
+            "x": 40,
+            "y": 301
+          },
+          "snapshot": "5.png",
+          "snapshot_size": {
+            "width": 800,
+            "height": 600
+          }
+        }
+      },
+      "meta": {
+        "provider": "hubs.talking_scroll"
+      },
+      "endpoints_complete": true
+    }
+  ]
+}

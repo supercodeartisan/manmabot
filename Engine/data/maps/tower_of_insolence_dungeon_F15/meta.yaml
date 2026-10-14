@@ -1,0 +1,9 @@
+id: tower_of_insolence_dungeon_F15
+name: "Tower of Insolence Dungeon F15"
+# From obstacle_tiles_raw map_115.png (1 px = 1 tile).
+raw_map: "115"
+origin_x: 32576
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

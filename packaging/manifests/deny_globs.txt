@@ -1,0 +1,73 @@
+# Deny patterns for customer portable builds.
+# Matched against the path relative to the product root, using forward slashes.
+# Rules:
+#   - line ending with /  → directory prefix
+#   - line containing *   → glob (fnmatch) against full relative path or basename
+#   - otherwise           → exact relative path OR prefix if it looks like a dir stem
+
+# --- never ship developer / research trees ---
+Tools/
+Research/
+Docs/
+Others/
+.cursor/
+.pytest_cache/
+packaging/
+
+# --- root launchers excluded from customer pack ---
+Bot_Manmabot_Debug.bat
+Tool_Dungeon_Combat.bat
+Tool_Dungeon_Patrol_Editor.bat
+Tool_Hotbar_Inspector.bat
+Tool_Memory_Bench.bat
+Tool_Memory_Watch.bat
+Tool_Npc_Click_Offset.bat
+Tool_Screen_vs_Coordinate.bat
+Tool_Screen_vs_Coordinate_Admin.bat
+Tool_Shopping_Practice.bat
+Tool_Shopping_Practice_Admin.bat
+
+# --- caches / bytecode / editor junk ---
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/*.orig
+**/*~
+
+# --- analysis build sources & debris (keep DLLs / offset data) ---
+*.c
+*.h
+*.obj
+*.exp
+*.lib
+*.pdb
+*.ilk
+*.new.dll
+**/build_*.bat
+build_*.bat
+install_930_dlls.bat
+
+# --- runtime logs must not ship from the build machine ---
+Engine/logs/
+UI/logs/
+
+# --- operator secrets / live UserData (release seeds empty UserData separately) ---
+UserData/accounts.json
+UserData/accounts.locked-*.json
+UserData/logs/
+UserData/autologin_runs/
+UserData/schedules/
+UserData/trial/
+UserData/maps/
+UserData/tools/
+UserData/profiles/
+UserData/app.json
+UserData/timeline.json
+UserData/profile.json.bak
+UserData/schedules.json.bak
+UserData/_hp_check.txt
+UserData/dungeon_combat_hp.json
+UserData/hotbar_slot_layout.json
+UserData/shop_sell_slot_layout.json
+UserData/shop_sell_ui_prefs.json

@@ -1,0 +1,20 @@
+# Compatible with ManmabotV1 bundled Python 3.14.
+# Prefer: ManmabotV1\python\python.exe -m pip install -r requirements.txt
+numpy>=2.5.1
+onnxruntime>=1.29.0
+opencv-python>=5.0.0.93
+pillow>=12.3.0
+psutil>=7.2.2
+pywin32>=312
+# 1.4.4 has no Python 3.14 wheel; 1.2.3 works with current RapidOCR usage.
+rapidocr-onnxruntime>=1.2.3
+rapidocr>=3.9.2
+shapely>=2.1.2
+uiautomation>=2.0.29
+winrt-runtime>=3.2.1
+winrt-Windows.Foundation>=3.2.1
+winrt-Windows.Foundation.Collections>=3.2.1
+winrt-Windows.Globalization>=3.2.1
+winrt-Windows.Graphics.Imaging>=3.2.1
+winrt-Windows.Media.Ocr>=3.2.1
+winrt-Windows.Storage.Streams>=3.2.1

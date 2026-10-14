@@ -1,0 +1,141 @@
+{
+  "_note": "v2 분류기의 표. main 머리부는 5부류 고정이고 fine 머리부는 잎폴더 하나에 갈래 하나이다. '_'로 시작하는 키는 설명이므로 적재할 때 무시된다.",
+  "version": 2,
+  "main_classes": [
+    "BACKGROUND",
+    "ITEM",
+    "MONSTER",
+    "NPC",
+    "PLAYER"
+  ],
+  "_main_dir_map": "자료기지 첫층 폴더 -> 5부류. window는 BACKGROUND로 접힌다.",
+  "main_dir_map": {
+    "background": "BACKGROUND",
+    "window": "BACKGROUND",
+    "grounditem": "ITEM",
+    "monster": "MONSTER",
+    "npc": "NPC",
+    "player": "PLAYER"
+  },
+  "_species_level": "폴더이름의 끝수에서 자동으로 채워진다. 여기 값이 폴더이름보다 우선한다.",
+  "species_level": {
+    "monster_가스트": 21,
+    "monster_거대 개미": 12,
+    "monster_거대 병정 개미": 20,
+    "monster_고블린": 2,
+    "monster_괴물 눈": 7,
+    "monster_그렘린": 4,
+    "monster_난쟁이": 5,
+    "monster_난쟁이족 전사": 9,
+    "monster_네루가 오크": 17,
+    "monster_놀":8,
+    "monster_눈사람": 28,
+    "monster_늑대": 6,
+    "monster_늑대인간": 9,
+    "monster_다크엘프": 27,
+    "monster_도베르만": 6,
+    "monster_돌 골렘": 13,
+    "monster_두다-마라 오크": 15,
+    "monster_드래곤 플라이": 33,
+    "monster_라미아": 22,
+    "monster_라바 골렘": 43,
+    "monster_라이칸스로프": 17,
+    "monster_로바오크": 13,
+    "monster_리자드맨": 15,
+    "monster_버그베어": 22,
+    "monster_불타는 궁수": 36,
+    "monster_샤벨 타이거": 33,
+    "monster_세퍼드": 5,
+    "monster_셸로브": 14,
+    "monster_스콜피온": 26,
+    "monster_스파토이": 16,
+    "monster_아울베어": 15,
+    "monster_아투바 오크": 15,
+    "monster_에티": 33,
+    "monster_오우거": 28,
+    "monster_오크": 2,
+    "monster_오크 궁수": 3,
+    "monster_오크 마법사": 12,
+    "monster_오크전사": 8,
+    "monster_웅골리언트": 18,
+    "monster_임프": 5,
+    "monster_장로": 21,
+    "monster_좀비": 6,
+    "monster_좀비 엘모어 마법사": 31,
+    "monster_좀비 엘모어 병사": 30,
+    "monster_좀비 엘모어 장군": 35,
+    "monster_코볼트": 3,
+    "monster_코카트리스": 34,
+    "monster_터틀 드래곤": 24,
+    "monster_하피": 26,
+    "monster_해골": 10,
+    "monster_해골궁수": 12,
+    "monster_허스키": 5,
+    "monster_홉고블린": 14,
+    "monster_흑기사": 16
+  },
+  "_level_override": "급수를 급히 바로잡는 자리. species_level보다 우선한다. 폴더 이름을 건드리지 않고 고칠 수 있다.",
+  "level_override": {},
+  "_item_kind": "ITEM 세부갈래 -> money | equipment",
+  "item_kind": {
+    "grounditem_아데나": "money",
+    "grounditem_장비": "equipment"
+  },
+  "_groups": "mode=train 이면 표식을 실제로 합쳐 fine 갈래 수가 줄고, mode=infer 이면 갈래는 그대로 두고 추론에서 확률만 더한다. 묶음의 급수는 성원들의 반올림 평균이다. 한두 급 차이는 무시한다.",
+  "groups": [
+    {
+      "name": "monster_개과",
+      "mode": "train",
+      "members": [
+        "monster_세퍼드",
+        "monster_늑대",
+        "monster_도베르만",
+        "monster_허스키"
+      ],
+      "note": "급수가 둘 다 5 -> 손해 0. 색만 다른 거의 같은 그림이고 16/17장으로 둘 다 마름."
+    },
+    {
+      "name": "monster_오크뜸물",
+      "mode": "train",
+      "members": [
+        "monster_두다-마라 오크",
+        "monster_아투바 오크",
+        "monster_로바오크",
+        "monster_네루가 오크"
+      ],
+      "note": "급수가 둘 다 15 -> 손해 0. 20/24장."
+    }
+  ],
+  "_suggested_groups": "적용되지 않는 후보. 그림이 실제로 헷갈리는지, 조종수 급수가 손해구간에 드는지 확인한 뒤 'groups'로 옮겨라.",
+  "suggested_groups_unused": [
+    {
+      "name": "monster_6급 개과",
+      "mode": "train",
+      "members": [
+        "monster_세퍼드",
+        "monster_허스키",
+        "monster_도베르만"
+      ],
+      "note": "위 5급 개과에 도베르만(6급)까지 넣는 안. 평균 급수는 5. 세 그림이 실제로 헷갈리는지 확인한 뒤 위 'monster_5급 개과'를 이것으로 갈아치울 것."
+    },
+    {
+      "name": "monster_좀비 엘모어",
+      "mode": "train",
+      "members": [
+        "monster_좀비 엘모어 병사",
+        "monster_좀비 엘모어 마법사",
+        "monster_좀비 엘모어 장군"
+      ],
+      "note": "116/87/43장으로 자료는 넉넉하니 먼저 그냥 훈련해 보고, 혼동표에서 셋이 서로 심하게 섞이면 이 묶음을 쓸 것. 평균 급수는 32. 섞이지 않으면 mode를 infer로 바꾸는 편이 낫다."
+    },
+    {
+      "name": "monster_해골류",
+      "mode": "train",
+      "members": [
+        "monster_해골",
+        "monster_해골궁수"
+      ],
+      "note": "평균 급수는 11. 해골이 174장으로 흔한 초반 사냥감이므로 조종수가 10급 전후인 동안에는 쓰지 말 것."
+    }
+  ]
+}

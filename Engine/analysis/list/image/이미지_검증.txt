@@ -1,0 +1,5 @@
+몬스터    want=343 have=343 missing=0 non-png=0 bytes=3274089
+아이템    want=568 have=568 missing=0 non-png=0 bytes=3462991
+마법     want=110 have=110 missing=0 non-png=0 bytes=1151770
+TOTAL files=1021 bytes=7888850 (7.5 MiB)
+manifest rows=1021 unique_urls=893 urls_shared_by_multiple=54

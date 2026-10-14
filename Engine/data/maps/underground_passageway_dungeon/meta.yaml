@@ -1,0 +1,9 @@
+id: underground_passageway_dungeon
+name: "Underground Passageway"
+# From obstacle_tiles_raw map_14.png (1 px = 1 tile).
+raw_map: "14"
+origin_x: 32448
+origin_y: 32704
+pixel_scale: 1
+terrain: nav.png
+patrol: patrol.yaml

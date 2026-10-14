@@ -1,0 +1,7 @@
+# Top-level directories copied into the customer portable folder.
+# Tools / Research / Docs / Others are intentionally omitted.
+
+Engine
+UI
+Drivers
+python
