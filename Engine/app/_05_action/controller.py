@@ -218,7 +218,7 @@ class ActionExecutor:
             elif side.action is ActionType.USE_MP_POTION:
                 self._use_mp_potion()
             elif side.action is ActionType.USE_DEPOISON:
-                self._use_depoison()
+                self._use_depoison(side)
 
     def _execute_loot_sides(
         self,
@@ -401,7 +401,7 @@ class ActionExecutor:
                 self._use_mp_potion()
 
             elif action.action == ActionType.USE_DEPOISON:
-                self._use_depoison()
+                self._use_depoison(action)
 
             elif action.action == ActionType.HEAL:
                 self._heal(bounds, action)
@@ -602,6 +602,7 @@ class ActionExecutor:
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
+        hunt_walk = str(getattr(action, "reason", "") or "") == "world nav walk"
         for content in dests:
             x, y = self._screen_point(content.x, content.y, bounds)
             probes += 1
@@ -626,6 +627,17 @@ class ActionExecutor:
                 category = getattr(match, "category", None)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
+            if hunt_walk and self._arm_dungeon_cursor_engage(content, label):
+                self.last_travel_cursor_stats = {
+                    "ok": False,
+                    "probes": probes,
+                    "dialog_seen": dialog_seen,
+                    "labels_seen": seen_labels,
+                    "click_label": label,
+                    "intent_reason": str(getattr(action, "reason", "") or ""),
+                    "cursor_engage": True,
+                }
+                return
         self.last_travel_click_failed = True
         self.last_travel_cursor_stats = {
             "ok": False,
@@ -694,6 +706,51 @@ class ActionExecutor:
         self._loot_click_gap = self._sample_loot_gap()
         self.last_loot_target_id = action.target_id
 
+    def _arm_dungeon_cursor_engage(self, content: object, label: str) -> bool:
+        """Stop a dungeon hunt walk when the client cursor is already attack.
+
+        Shop, return, and field walks keep sliding to a normal cursor.
+        ``arrow_lack`` stays a failed ground probe so the shop path still runs.
+        No eligible monster means the ring continues.
+        """
+        from app._05_action.cursor_catalog import ATTACK_OK_LABELS
+
+        if str(label or "") not in ATTACK_OK_LABELS:
+            return False
+        from app._04_decision.dungeon import is_dungeon_map
+
+        if not is_dungeon_map():
+            return False
+        blackboard = getattr(self, "_blackboard", None)
+        world = getattr(self, "_world", None)
+        if blackboard is None or world is None:
+            return False
+        try:
+            from app._04_decision.combat_query import (
+                arm_cursor_engage_pending,
+                monster_under_travel_cursor,
+            )
+
+            obj = monster_under_travel_cursor(
+                world,
+                blackboard,
+                float(getattr(content, "x", 0.0) or 0.0),
+                float(getattr(content, "y", 0.0) or 0.0),
+            )
+        except Exception:
+            return False
+        if obj is None:
+            return False
+        arm_cursor_engage_pending(blackboard, int(obj.track_id))
+        from app.bot_log import get_logger
+
+        get_logger("combat").info(
+            "cursor engage arm id=%s label=%s",
+            int(obj.track_id),
+            label,
+        )
+        return True
+
     def _travel(self, action: ActionIntent, bounds: WindowBounds) -> None:
         """Move toward destination (same as search for now)."""
         self._search(action, bounds)
@@ -739,8 +796,13 @@ class ActionExecutor:
         """MP potion item — press once or twice per slot cast setting."""
         self._press_assigned_skill("mp_potion")
 
-    def _use_depoison(self) -> None:
+    def _use_depoison(self, action: ActionIntent | None = None) -> None:
         """Antidote item — press the bound hotbar slot."""
+        box = getattr(action, "hotbar_box", None) if action is not None else None
+        key = str(getattr(action, "hotbar_key", "") or "").strip().lower()
+        if box in (1, 2, 3) and key:
+            self._press_box_skill(int(box), key)
+            return
         self._press_assigned_skill("depoison")
 
     def _live_or_assigned_slot(self, name: str) -> tuple[int | None, str]:
@@ -761,6 +823,21 @@ class ActionExecutor:
             assigned = sb.slot_press("haste") if sb.slot_is_enabled("haste") else None
             found = resolve_haste_press_slot(
                 item_key=HASTE_POTION_ITEM,
+                assigned_slot=assigned,
+                live_snap=snap if isinstance(snap, dict) else None,
+            )
+            if found is None:
+                return None, ""
+            return found
+        if str(name) == "depoison":
+            from app._04_decision.spells import ANTIDOTE_POTION_ITEM
+            from settings.antidote_potion import resolve_antidote_press_slot
+
+            assigned = (
+                sb.slot_press("depoison") if sb.slot_is_enabled("depoison") else None
+            )
+            found = resolve_antidote_press_slot(
+                item_key=ANTIDOTE_POTION_ITEM,
                 assigned_slot=assigned,
                 live_snap=snap if isinstance(snap, dict) else None,
             )

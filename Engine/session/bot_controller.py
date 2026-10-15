@@ -116,6 +116,10 @@ class BotController:
         # "user" = hotkey pause (needs Resume / hotkey; Resume arms pending).
         self._pause_kind: Optional[str] = None
         self._resume_pending: bool = False
+        # Read-only label for the income cards. Does not change shop clicks.
+        self._shop_lock = threading.Lock()
+        self._shop_kind = ""
+        self._buy_until = 0.0
         self._preview_enabled = threading.Event()
         self._preview_q: queue.Queue[bytes] = queue.Queue(maxsize=1)
         self._last_pause_preview_t: float = 0.0
@@ -491,6 +495,7 @@ class BotController:
         """Bind F-key slots from a memory scan and push them to the operator UI."""
         from app._05_action.spell_box import configure_spell_box
         from hotbar.inspect import merge_detected_spell_slots
+        from settings.antidote_potion import apply_antidote_potion_to_spell_slots
         from settings.haste_potion import apply_haste_potion_to_spell_slots
         from settings.hp_actions import apply_recovery_to_spell_slots
         from settings.profile import save_profile
@@ -511,12 +516,20 @@ class BotController:
             getattr(profile, "hp_actions", None),
         )
         profile.spell_slots = spell_slot_bindings(
-            apply_haste_potion_to_spell_slots(
-                merged,
-                use=bool(getattr(profile, "use_haste_potion", False)),
-                item_key=str(getattr(profile, "haste_potion_item", "") or ""),
-                box=getattr(profile, "haste_potion_box", 0),
-                key=getattr(profile, "haste_potion_key", ""),
+            apply_antidote_potion_to_spell_slots(
+                apply_haste_potion_to_spell_slots(
+                    merged,
+                    use=bool(getattr(profile, "use_haste_potion", False)),
+                    item_key=str(getattr(profile, "haste_potion_item", "") or ""),
+                    box=getattr(profile, "haste_potion_box", 0),
+                    key=getattr(profile, "haste_potion_key", ""),
+                    layout=profile.hotbar_layout,
+                    world=world,
+                ),
+                use=bool(getattr(profile, "use_antidote_potion", False)),
+                item_key=str(getattr(profile, "antidote_potion_item", "") or ""),
+                box=getattr(profile, "antidote_potion_box", 0),
+                key=getattr(profile, "antidote_potion_key", ""),
                 layout=profile.hotbar_layout,
                 world=world,
             )
@@ -703,6 +716,40 @@ class BotController:
             hint = f"{ui.reason[pr]} {ui.reason['resume_hint']}"
             self._set_state(RunState.PAUSED, hint)
             self._log_ui("resume_wait")
+
+    def note_shop_action(self, action) -> None:
+        """Remember a buy while that shop click sequence is running.
+
+        The income cards ignore an Adena drop only during a buy. Selling stays
+        a normal gain. This does not change what the shop click does.
+        """
+        kind = ""
+        if action is not None:
+            token = getattr(action, "action", None)
+            label = str(
+                getattr(token, "value", None)
+                or getattr(token, "name", None)
+                or token
+                or ""
+            ).lower()
+            if label == "shop_run":
+                if bool(getattr(action, "shop_use_recover", False)):
+                    kind = "buy"
+                else:
+                    kind = str(getattr(action, "shop_kind", "") or "").strip().lower()
+        with self._shop_lock:
+            self._shop_kind = kind
+            if kind == "buy":
+                self._buy_until = time.monotonic() + 8.0
+
+    def purchase_in_progress(self) -> bool:
+        """True while a buy is clicking, and for a short time after it returns."""
+        with self._shop_lock:
+            kind = self._shop_kind
+            until = self._buy_until
+        if kind == "buy":
+            return True
+        return kind == "" and time.monotonic() < until
 
     def pause_user(self) -> None:
         with self._lock:
@@ -968,6 +1015,8 @@ class BotController:
             if isinstance(area, dict)
         ]
         farm["loot_adena_weight_ratio"] = float(profile.loot_adena_weight_ratio)
+        farm["ignore_small_adena"] = bool(getattr(profile, "ignore_small_adena", False))
+        farm["ignore_small_adena_qty"] = int(getattr(profile, "ignore_small_adena_qty", 10))
         farm["area_empty"] = bool(getattr(profile, "area_empty", False))
         farm["area_empty_seconds"] = int(getattr(profile, "area_empty_seconds", 60))
         farm["area_low_yield"] = bool(getattr(profile, "area_low_yield", False))
@@ -1024,7 +1073,10 @@ class BotController:
         combat_cfg["target_delay_min_ms"] = max(10, min(50, int(getattr(profile, "target_delay_min_ms", 20))))
         combat_cfg["target_delay_max_ms"] = max(10, min(50, int(getattr(profile, "target_delay_max_ms", 50))))
         combat_cfg["abandon_same"] = False
-        combat_cfg["antidote_auto"] = False
+        combat_cfg["use_antidote_potion"] = bool(
+            getattr(profile, "use_antidote_potion", False)
+        )
+        combat_cfg["antidote_auto"] = combat_cfg["use_antidote_potion"]
         decision_cfg["combat"] = combat_cfg
         shop = dict(decision_cfg.get("shop") or {})
         shop["arrow_qty"] = int(profile.arrow_buy_qty)
@@ -1094,6 +1146,9 @@ class BotController:
         )
         spells_cfg["haste_potion_item"] = str(
             getattr(profile, "haste_potion_item", "") or ""
+        ).strip()
+        spells_cfg["antidote_potion_item"] = str(
+            getattr(profile, "antidote_potion_item", "") or ""
         ).strip()
         decision_cfg["hp"] = hp
         decision_cfg["mp"] = mp
@@ -1526,15 +1581,19 @@ class BotController:
                         continue
                 except Exception as gate_exc:
                     self.log(f"World nav pause check: {gate_exc}")
-                executor.execute(
-                    world,
-                    action,
-                    bounds=content_bounds,
-                    side_intents=list(
-                        getattr(decision.blackboard, "side_intents", None) or []
-                    ),
-                    blackboard=decision.blackboard,
-                )
+                self.note_shop_action(action)
+                try:
+                    executor.execute(
+                        world,
+                        action,
+                        bounds=content_bounds,
+                        side_intents=list(
+                            getattr(decision.blackboard, "side_intents", None) or []
+                        ),
+                        blackboard=decision.blackboard,
+                    )
+                finally:
+                    self.note_shop_action(None)
                 t_act = time.perf_counter()
                 if action.action is ActionType.GATE:
                     try:

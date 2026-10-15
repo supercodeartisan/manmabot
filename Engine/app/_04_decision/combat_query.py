@@ -676,6 +676,44 @@ def count_monsters_within_tiles(
     return total
 
 
+def _named_adena(obj: WorldObject) -> bool:
+    """True only when a label actually says adena.
+
+    Empty names stay false. ``_is_adena`` still treats those piles as adena
+    for the weight gate and adena priority.
+    """
+    detail = (obj.detail_classification or "").strip().lower()
+    species = (obj.species_name or "").strip().lower()
+    name = ""
+    if obj.identity is not None and getattr(obj.identity, "name", None):
+        name = str(obj.identity.name).strip().lower()
+    blob = f"{detail} {species} {name}"
+    return (
+        "adena" in blob
+        or "아데나" in blob
+        or "金幣" in blob
+        or "金币" in blob
+    )
+
+
+def small_adena_ignored(obj: WorldObject) -> bool:
+    """True when a named adena pile is at or below the UI qty.
+
+    Unnamed piles are not subject to this gate. Feet F4 does not call it.
+    """
+    if not pm.IGNORE_SMALL_ADENA:
+        return False
+    if not _named_adena(obj):
+        return False
+    qty = getattr(obj, "loot_qty", None)
+    if qty is None:
+        return False
+    try:
+        return int(qty) <= int(pm.IGNORE_SMALL_ADENA_QTY)
+    except (TypeError, ValueError):
+        return False
+
+
 def _is_adena(obj: WorldObject) -> bool:
     detail = (obj.detail_classification or "").strip().lower()
     species = (obj.species_name or "").strip().lower()
@@ -710,6 +748,128 @@ def object_absolute_tile(
         return cell
     rel = content_to_world(obj.position.x, obj.position.y)
     return relative_to_absolute(rel.x, rel.y, origin)
+
+
+# Walk probe that showed an attack cursor. The next decision tick may lock
+# this monster. Line of sight is not required — the client cursor already
+# resolved the hit. Cleared when the sticky engage state is reset.
+CURSOR_ENGAGE_TILES = 3
+SCRATCH_CURSOR_ENGAGE_PENDING = "cursor_engage_pending"
+SCRATCH_CURSOR_ENGAGE = "cursor_engage_id"
+
+
+def arm_cursor_engage_pending(blackboard: object, track_id: int) -> None:
+    """Remember a dungeon walk probe that landed on an attack cursor."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    scratch[SCRATCH_CURSOR_ENGAGE_PENDING] = {
+        "id": int(track_id),
+        "tick": int(getattr(blackboard, "tick_count", 0) or 0),
+    }
+
+
+def pop_cursor_engage_pending(blackboard: object) -> int | None:
+    """Return the pending id only on the decision tick after it was armed."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return None
+    raw = scratch.pop(SCRATCH_CURSOR_ENGAGE_PENDING, None)
+    if not isinstance(raw, dict):
+        return None
+    try:
+        tid = int(raw.get("id"))
+        stored = int(raw.get("tick"))
+        now = int(getattr(blackboard, "tick_count", 0) or 0)
+    except (TypeError, ValueError):
+        return None
+    if now != stored + 1:
+        return None
+    return tid
+
+
+def cursor_engage_holds(blackboard: object, target_id: object) -> bool:
+    """True when this sticky was armed from a client attack cursor."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return False
+    held = scratch.get(SCRATCH_CURSOR_ENGAGE)
+    try:
+        return held is not None and int(held) == int(target_id)
+    except (TypeError, ValueError):
+        return False
+
+
+def cursor_engage_target(
+    game_state: GameState,
+    blackboard: object,
+    track_id: int,
+) -> WorldObject | None:
+    """Re-check a pending cursor target. Line of sight stays out of this."""
+    try:
+        tid = int(track_id)
+    except (TypeError, ValueError):
+        return None
+    obj = game_state.get_object(tid)
+    if obj is None or not object_on_screen(obj):
+        return None
+    from app._04_decision.attack_feedback import excluded_target_ids
+    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
+
+    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
+    allowed = {
+        int(cand.track_id)
+        for cand in _attack_candidates(game_state, exclude=exclude)
+    }
+    if tid not in allowed:
+        return None
+    if is_contested_monster(game_state, obj):
+        return None
+    return obj
+
+
+def monster_under_travel_cursor(
+    game_state: GameState,
+    blackboard: object,
+    content_x: float,
+    content_y: float,
+) -> WorldObject | None:
+    """Nearest eligible on-screen monster within ``CURSOR_ENGAGE_TILES``.
+
+    The content point is a walk probe where the client showed an attack
+    cursor. Contested, bait, blacklist, and give-up cooldown are excluded.
+    A blocked terrain line does not exclude the monster.
+    """
+    origin = getattr(blackboard, "world_origin", None)
+    if origin is None:
+        return None
+    from app._04_decision.attack_feedback import excluded_target_ids
+    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
+
+    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
+    rel = content_to_world(float(content_x), float(content_y))
+    probe = relative_to_absolute(rel.x, rel.y, origin)
+    px, py = int(probe[0]), int(probe[1])
+    best: WorldObject | None = None
+    best_d = int(CURSOR_ENGAGE_TILES) + 1
+    for obj in _attack_candidates(game_state, exclude=exclude):
+        if not object_on_screen(obj):
+            continue
+        if is_contested_monster(game_state, obj):
+            continue
+        try:
+            tile = object_absolute_tile(obj, origin)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        dist = int(tile_chebyshev(px, py, int(tile[0]), int(tile[1])))
+        tid = int(getattr(obj, "track_id", 0) or 0)
+        best_id = int(getattr(best, "track_id", 0) or 0) if best is not None else 0
+        if dist < best_d or (dist == best_d and best is not None and tid < best_id):
+            best = obj
+            best_d = dist
+    if best is None or best_d > int(CURSOR_ENGAGE_TILES):
+        return None
+    return best
 
 
 _PATH_OK_CACHE: "OrderedDict[tuple, bool]" = OrderedDict()
@@ -843,7 +1003,9 @@ def list_lootable(
     locked is not filtered here. Island / non-dungeon ignores path length.
 
     ``ownership_filter`` (default True): main-intent loot keeps only FREE
-    piles or contrib > 30. Side-intent F4 passes False to skip this gate.
+    piles or contrib > 50. Side-intent F4 passes False to skip this gate.
+    The same main-only path drops named adena at or below
+    ``IGNORE_SMALL_ADENA_QTY`` when that checkbox is on. Feet F4 keeps them.
     """
     skip = exclude or set()
     # Live memory entities are the loot list. Drop GameState ghosts the same
@@ -867,6 +1029,8 @@ def list_lootable(
         from app._04_decision.ground_loot import loot_ownership_allowed
 
         candidates = [o for o in candidates if loot_ownership_allowed(o)]
+        # Feet F4 passes ownership_filter=False and must still pick small adena.
+        candidates = [o for o in candidates if not small_adena_ignored(o)]
     if farm is not None and origin is not None:
         candidates = [
             o
@@ -977,6 +1141,44 @@ def _player_world_xy(game_state: GameState) -> tuple[int, int] | None:
         return None
 
 
+_attacks_me_cell_logged: dict[str, tuple] = {}
+
+
+def _note_attacks_me_cell(
+    ent: str,
+    cell: tuple[int, int] | None,
+    *,
+    screen_id: int | None = None,
+    synthetic_id: int | None = None,
+) -> None:
+    """Record the cell attacks_me read, and whether it bound the screen monster.
+
+    Does not change matching. Repeats of the same ent/cell/id are skipped.
+    """
+    from app.bot_log import get_logger
+
+    key = (cell, screen_id, synthetic_id)
+    if _attacks_me_cell_logged.get(ent) == key:
+        return
+    _attacks_me_cell_logged[ent] = key
+    if len(_attacks_me_cell_logged) > 64:
+        _attacks_me_cell_logged.pop(next(iter(_attacks_me_cell_logged)))
+    log = get_logger("combat")
+    if cell is None:
+        log.info("attacks_me actor id=%s cell=absent", ent)
+        return
+    log.info("attacks_me actor id=%s cell=(%s,%s)", ent, int(cell[0]), int(cell[1]))
+    if screen_id is not None:
+        log.info("matched screen monster id=%s attacked_me=true", int(screen_id))
+    elif synthetic_id is not None:
+        log.info(
+            "attacks_me synthetic id=%s cell=(%s,%s)",
+            int(synthetic_id),
+            int(cell[0]),
+            int(cell[1]),
+        )
+
+
 def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
     """Upsert attacks_me attackers into GameState; mark dropped synthetics dead.
 
@@ -1015,6 +1217,7 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
         live_ents.add(ent.lower())
         cell = _attacks_me_cell(row)
         if cell is None:
+            _note_attacks_me_cell(ent, None)
             continue
         name = str(row.get("name") or "").strip()
         matched: WorldObject | None = None
@@ -1031,6 +1234,7 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
                 continue
             matched.attacked_me = True
             game_state.touch_object(matched.track_id)
+            _note_attacks_me_cell(ent, cell, screen_id=int(matched.track_id))
             out.append(matched)
             continue
 
@@ -1061,6 +1265,7 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
             existing.attacked_me = not is_bait
             game_state.upsert_object(existing)
             if not is_bait:
+                _note_attacks_me_cell(ent, cell, synthetic_id=int(existing.track_id))
                 out.append(existing)
             continue
         obj = WorldObject(
@@ -1084,6 +1289,7 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
         )
         game_state.upsert_object(obj)
         if not is_bait:
+            _note_attacks_me_cell(ent, cell, synthetic_id=int(obj.track_id))
             out.append(obj)
 
     # Force synthetics no longer attacking me, or bait → dead (finish_kill
@@ -1363,6 +1569,7 @@ __all__ = [
     "object_on_screen",
     "object_absolute_tile",
     "is_adena",
+    "small_adena_ignored",
 ]
 
 from app._04_decision.decide_spans import traced

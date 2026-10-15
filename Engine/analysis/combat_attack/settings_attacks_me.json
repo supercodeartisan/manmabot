@@ -8,6 +8,8 @@
   "off_atk_owner": "0x80",
   "off_atk_tgt": "0x88",
   "off_ent_guid": "0x18",
+  "off_ent_cell_x": "0x50",
+  "off_ent_cell_y": "0x54",
   "vft_self": "0x11E12A8",
   "vft_player": "0x11E1270",
   "vft_monster": "0x11E1160",

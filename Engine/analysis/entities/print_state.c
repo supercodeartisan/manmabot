@@ -651,10 +651,15 @@ static int followComp(uint64_t q, uint32_t* rvaOut, uint64_t* entOut) {
 }
 static uint64_t findPres(uint64_t ent, uint32_t want) {
     uint64_t H = 0;
+    uint8_t tab[0x180];
+    int haveTab;
     if (!ent || !rm(ent + 0x20, &H, 8) || !isHeap(H)) return 0;
+    haveTab = rm(H, tab, sizeof(tab));
     for (uint32_t off = 0; off < 0x180; off += 8) {
         uint64_t p = 0;
-        if (!rm(H + off, &p, 8) || !isHeap(p)) continue;
+        if (haveTab) memcpy(&p, tab + off, 8);
+        else if (!rm(H + off, &p, 8)) continue;
+        if (!isHeap(p)) continue;
         uint32_t r = vrva(p);
         if (r == want) return p;
         if (want == g_vftPresB) {

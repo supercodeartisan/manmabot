@@ -359,6 +359,7 @@ class OtherTab(QWidget):
         merged_slots = slots if isinstance(slots, dict) else {}
         try:
             from hotbar.inspect import merge_detected_spell_slots
+            from settings.antidote_potion import apply_antidote_potion_to_spell_slots
             from settings.haste_potion import apply_haste_potion_to_spell_slots
             from settings.hp_actions import apply_recovery_to_spell_slots
 
@@ -391,6 +392,31 @@ class OtherTab(QWidget):
                 item_key=haste_item,
                 box=haste_box,
                 key=haste_key,
+                layout=stamped,
+            )
+            use_antidote = bool(getattr(self.profile, "use_antidote_potion", False))
+            antidote_item = str(getattr(self.profile, "antidote_potion_item", "") or "")
+            antidote_box = getattr(self.profile, "antidote_potion_box", 0)
+            antidote_key = getattr(self.profile, "antidote_potion_key", "")
+            if self.bag is not None:
+                use_antidote = self.bag.get_bool(
+                    "hunt", "use_antidote_potion", use_antidote
+                )
+                antidote_item = self.bag.get_str(
+                    "hunt", "antidote_potion_item", antidote_item
+                )
+                antidote_box = self.bag.get_int(
+                    "hunt", "antidote_potion_box", int(antidote_box or 0)
+                )
+                antidote_key = self.bag.get_str(
+                    "hunt", "antidote_potion_key", str(antidote_key or "")
+                )
+            merged_slots = apply_antidote_potion_to_spell_slots(
+                merged_slots,
+                use=use_antidote,
+                item_key=antidote_item,
+                box=antidote_box,
+                key=antidote_key,
                 layout=stamped,
             )
         except Exception:

@@ -2722,6 +2722,58 @@ class UnifiedTaskEditor(ttk.Frame):
         self.haste_potion_hotbar.pack(fill="x", padx=(22, 4), pady=(0, 2))
         _bind_wraplength(self.haste_potion_hotbar, parent, pad=36, minimum=48)
 
+        antidote_var = self._var("hunt.use_antidote_potion", False, "bool")
+        ahead = ttk.Frame(parent)
+        ahead.pack(fill="x", pady=(6, 0))
+        abutton = ttk.Checkbutton(ahead, variable=antidote_var)
+        abutton.pack(side="left", anchor="n")
+        atitle = ttk.Label(
+            ahead,
+            text=self.t.get("use_antidote_potion", "Use antidote"),
+            justify="left",
+            wraplength=160,
+        )
+        atitle.pack(side="left", fill="x", expand=True, padx=(4, 0))
+        atitle.bind(
+            "<Button-1>", lambda _event: antidote_var.set(not bool(antidote_var.get()))
+        )
+        self._remember("hunt.use_antidote_potion", abutton)
+        self._attack_note(parent, self.t.get("use_antidote_potion_hint", ""))
+        self.antidote_potion_item_var = self._var(
+            "hunt.antidote_potion_item",
+            str(self._value("hunt", "antidote_potion_item", "") or ""),
+            "str",
+        )
+        try:
+            antidote_box_default = int(
+                self._value("hunt", "antidote_potion_box", 0) or 0
+            )
+        except (TypeError, ValueError):
+            antidote_box_default = 0
+        self.antidote_potion_box_var = self._var(
+            "hunt.antidote_potion_box", antidote_box_default, "int"
+        )
+        self.antidote_potion_key_var = self._var(
+            "hunt.antidote_potion_key",
+            str(self._value("hunt", "antidote_potion_key", "") or ""),
+            "str",
+        )
+        self.antidote_potion_summary = ttk.Label(
+            parent,
+            text=self._antidote_potion_summary_text(),
+            justify="left",
+        )
+        self.antidote_potion_summary.pack(fill="x", padx=(22, 4), pady=(0, 2))
+        _bind_wraplength(self.antidote_potion_summary, parent, pad=36, minimum=48)
+        self.antidote_potion_hotbar = ttk.Label(
+            parent,
+            text=self._antidote_potion_hotbar_text(),
+            justify="left",
+        )
+        self.antidote_potion_hotbar.pack(fill="x", padx=(22, 4), pady=(0, 2))
+        _bind_wraplength(self.antidote_potion_hotbar, parent, pad=36, minimum=48)
+        antidote_var.trace_add("write", lambda *_a: self._sync_antidote_spell_slot_from_ui())
+
         btns = ttk.Frame(parent)
         btns.pack(fill="x", padx=(22, 4), pady=(0, 4))
         ttk.Button(
@@ -2733,6 +2785,16 @@ class UnifiedTaskEditor(ttk.Frame):
             btns,
             text=self.t.get("haste_potion_clear", "Clear"),
             command=self._clear_haste_potion_item,
+        ).pack(side="left", padx=(6, 0))
+        ttk.Button(
+            btns,
+            text=self.t.get("antidote_potion_assign", "Assign as antidote"),
+            command=self._assign_antidote_from_hotbar,
+        ).pack(side="left", padx=(6, 0))
+        ttk.Button(
+            btns,
+            text=self.t.get("antidote_potion_clear", "Clear"),
+            command=self._clear_antidote_potion_item,
         ).pack(side="left", padx=(6, 0))
         ttk.Button(
             btns,
@@ -2858,6 +2920,87 @@ class UnifiedTaskEditor(ttk.Frame):
         if hasattr(self, "haste_potion_hotbar"):
             self.haste_potion_hotbar.configure(text=self._haste_potion_hotbar_text())
 
+    def _antidote_potion_summary_text(self) -> str:
+        key = str(self._value("hunt", "antidote_potion_item", "") or "").strip()
+        if hasattr(self, "antidote_potion_item_var"):
+            key = str(self.antidote_potion_item_var.get() or "").strip() or key
+        if not key:
+            return self.t.get("antidote_potion_none", "No potion selected")
+        return self.t.get("antidote_potion_selected", "Potion: {name}").format(name=key)
+
+    def _antidote_potion_hotbar_text(self) -> str:
+        none = self.t.get("hp_action_hotbar_none", "Not on hotbar")
+        try:
+            from app._04_decision.hp_actions import format_hotbar_binding
+            from settings.antidote_potion import assigned_antidote_slot
+        except Exception:
+            return none
+        item = str(self._value("hunt", "antidote_potion_item", "") or "").strip()
+        box = self._value("hunt", "antidote_potion_box", 0)
+        key = str(self._value("hunt", "antidote_potion_key", "") or "")
+        if hasattr(self, "antidote_potion_item_var"):
+            item = str(self.antidote_potion_item_var.get() or "").strip() or item
+        if hasattr(self, "antidote_potion_box_var"):
+            box = self.antidote_potion_box_var.get()
+        if hasattr(self, "antidote_potion_key_var"):
+            key = str(self.antidote_potion_key_var.get() or "")
+        slot = assigned_antidote_slot(
+            self._value("magic", "spell_slots", {}) or {},
+            item_key=item,
+            box=box,
+            key=key,
+        )
+        shown = format_hotbar_binding(slot)
+        if shown:
+            return self.t.get("antidote_potion_hotbar", "Hotbar: {slot}").format(
+                slot=shown
+            )
+        return none
+
+    def _sync_antidote_spell_slot_from_ui(self) -> None:
+        from settings.antidote_potion import apply_antidote_potion_to_spell_slots
+
+        use = bool(self._value("hunt", "use_antidote_potion", False))
+        item = str(self._value("hunt", "antidote_potion_item", "") or "").strip()
+        box = self._value("hunt", "antidote_potion_box", 0)
+        key = str(self._value("hunt", "antidote_potion_key", "") or "").strip()
+        hunt = self.task.settings.setdefault("hunt", {})
+        if hasattr(self, "antidote_potion_item_var"):
+            item = str(self.antidote_potion_item_var.get() or "").strip()
+        if hasattr(self, "antidote_potion_box_var"):
+            try:
+                box = int(self.antidote_potion_box_var.get() or 0)
+            except (TypeError, ValueError, tk.TclError):
+                box = 0
+        if hasattr(self, "antidote_potion_key_var"):
+            key = str(self.antidote_potion_key_var.get() or "").strip()
+        hunt["antidote_potion_item"] = item
+        hunt["antidote_potion_box"] = box
+        hunt["antidote_potion_key"] = key
+        hunt["use_antidote_potion"] = use
+        layout = self._value("magic", "hotbar_layout", {}) or {}
+        if not isinstance(layout, dict):
+            layout = {}
+        previous = self._value("magic", "spell_slots", {}) or {}
+        if not isinstance(previous, dict):
+            previous = {}
+        synced = apply_antidote_potion_to_spell_slots(
+            previous,
+            use=use,
+            item_key=item,
+            box=box,
+            key=key,
+            layout=layout,
+        )
+        magic = self.task.settings.setdefault("magic", {})
+        magic["spell_slots"] = copy.deepcopy(synced)
+        if hasattr(self, "antidote_potion_summary"):
+            self.antidote_potion_summary.configure(
+                text=self._antidote_potion_summary_text()
+            )
+        if hasattr(self, "antidote_potion_hotbar"):
+            self.antidote_potion_hotbar.configure(text=self._antidote_potion_hotbar_text())
+
     def _clear_haste_potion_item(self) -> None:
         if hasattr(self, "haste_potion_item_var"):
             self.haste_potion_item_var.set("")
@@ -2898,8 +3041,107 @@ class UnifiedTaskEditor(ttk.Frame):
         hunt["haste_potion_item"] = name
         hunt["haste_potion_box"] = box
         hunt["haste_potion_key"] = key
+        self._drop_antidote_if_same_cell(box, key)
         self._sync_haste_spell_slot_from_ui()
+        self._sync_antidote_spell_slot_from_ui()
         msg = self.t.get("haste_potion_assigned", "Assigned: {name}").format(name=name)
+        if hasattr(self, "haste_hotbar_status"):
+            self.haste_hotbar_status.configure(text=msg)
+
+    def _drop_haste_if_same_cell(self, box: int, key: str) -> None:
+        from settings.antidote_potion import same_hotbar_cell
+
+        other_box = 0
+        other_key = ""
+        if hasattr(self, "haste_potion_box_var"):
+            try:
+                other_box = int(self.haste_potion_box_var.get() or 0)
+            except (TypeError, ValueError, tk.TclError):
+                other_box = 0
+        if hasattr(self, "haste_potion_key_var"):
+            other_key = str(self.haste_potion_key_var.get() or "")
+        if not same_hotbar_cell(box, key, other_box, other_key):
+            return
+        if hasattr(self, "haste_potion_item_var"):
+            self.haste_potion_item_var.set("")
+        if hasattr(self, "haste_potion_box_var"):
+            self.haste_potion_box_var.set(0)
+        if hasattr(self, "haste_potion_key_var"):
+            self.haste_potion_key_var.set("")
+        hunt = self.task.settings.setdefault("hunt", {})
+        hunt["haste_potion_item"] = ""
+        hunt["haste_potion_box"] = 0
+        hunt["haste_potion_key"] = ""
+        self._sync_haste_spell_slot_from_ui()
+
+    def _drop_antidote_if_same_cell(self, box: int, key: str) -> None:
+        from settings.antidote_potion import same_hotbar_cell
+
+        other_box = 0
+        other_key = ""
+        if hasattr(self, "antidote_potion_box_var"):
+            try:
+                other_box = int(self.antidote_potion_box_var.get() or 0)
+            except (TypeError, ValueError, tk.TclError):
+                other_box = 0
+        if hasattr(self, "antidote_potion_key_var"):
+            other_key = str(self.antidote_potion_key_var.get() or "")
+        if not same_hotbar_cell(box, key, other_box, other_key):
+            return
+        if hasattr(self, "antidote_potion_item_var"):
+            self.antidote_potion_item_var.set("")
+        if hasattr(self, "antidote_potion_box_var"):
+            self.antidote_potion_box_var.set(0)
+        if hasattr(self, "antidote_potion_key_var"):
+            self.antidote_potion_key_var.set("")
+        hunt = self.task.settings.setdefault("hunt", {})
+        hunt["antidote_potion_item"] = ""
+        hunt["antidote_potion_box"] = 0
+        hunt["antidote_potion_key"] = ""
+
+    def _clear_antidote_potion_item(self) -> None:
+        if hasattr(self, "antidote_potion_item_var"):
+            self.antidote_potion_item_var.set("")
+        if hasattr(self, "antidote_potion_box_var"):
+            self.antidote_potion_box_var.set(0)
+        if hasattr(self, "antidote_potion_key_var"):
+            self.antidote_potion_key_var.set("")
+        hunt = self.task.settings.setdefault("hunt", {})
+        hunt["antidote_potion_item"] = ""
+        hunt["antidote_potion_box"] = 0
+        hunt["antidote_potion_key"] = ""
+        self._sync_antidote_spell_slot_from_ui()
+
+    def _assign_antidote_from_hotbar(self) -> None:
+        item = self._selected_haste_hotbar_cell()
+        if item is None:
+            if hasattr(self, "haste_hotbar_status"):
+                self.haste_hotbar_status.configure(
+                    text=self.t.get("antidote_potion_select_slot", "")
+                )
+            return
+        name = str(item.get("name") or "").strip()
+        if not name:
+            if hasattr(self, "haste_hotbar_status"):
+                self.haste_hotbar_status.configure(
+                    text=self.t.get("antidote_potion_empty_cell", "")
+                )
+            return
+        box = int(item.get("box") or 0)
+        key = str(item.get("key") or "").strip().lower()
+        self._drop_haste_if_same_cell(box, key)
+        if hasattr(self, "antidote_potion_item_var"):
+            self.antidote_potion_item_var.set(name)
+        if hasattr(self, "antidote_potion_box_var"):
+            self.antidote_potion_box_var.set(box)
+        if hasattr(self, "antidote_potion_key_var"):
+            self.antidote_potion_key_var.set(key)
+        hunt = self.task.settings.setdefault("hunt", {})
+        hunt["antidote_potion_item"] = name
+        hunt["antidote_potion_box"] = box
+        hunt["antidote_potion_key"] = key
+        self._sync_antidote_spell_slot_from_ui()
+        msg = self.t.get("antidote_potion_assigned", "Assigned: {name}").format(name=name)
         if hasattr(self, "haste_hotbar_status"):
             self.haste_hotbar_status.configure(text=msg)
 
@@ -2996,6 +3238,12 @@ class UnifiedTaskEditor(ttk.Frame):
             self.haste_potion_summary.configure(text=self._haste_potion_summary_text())
         if hasattr(self, "haste_potion_hotbar"):
             self.haste_potion_hotbar.configure(text=self._haste_potion_hotbar_text())
+        if hasattr(self, "antidote_potion_summary"):
+            self.antidote_potion_summary.configure(
+                text=self._antidote_potion_summary_text()
+            )
+        if hasattr(self, "antidote_potion_hotbar"):
+            self.antidote_potion_hotbar.configure(text=self._antidote_potion_hotbar_text())
 
     def _attack_stack(
         self,
@@ -6457,6 +6705,7 @@ class UnifiedTaskEditor(ttk.Frame):
         merged_slots = slots if isinstance(slots, dict) else {}
         try:
             from hotbar.inspect import merge_detected_spell_slots
+            from settings.antidote_potion import apply_antidote_potion_to_spell_slots
             from settings.haste_potion import apply_haste_potion_to_spell_slots
             from settings.hp_actions import apply_recovery_to_spell_slots
 
@@ -6489,6 +6738,27 @@ class UnifiedTaskEditor(ttk.Frame):
                 item_key=haste_item,
                 box=haste_box,
                 key=haste_key,
+                layout=stamped,
+            )
+            use_antidote = bool(getattr(self.app.profile, "use_antidote_potion", False))
+            antidote_item = str(
+                getattr(self.app.profile, "antidote_potion_item", "") or ""
+            )
+            antidote_box = getattr(self.app.profile, "antidote_potion_box", 0)
+            antidote_key = getattr(self.app.profile, "antidote_potion_key", "")
+            if isinstance(hunt, dict):
+                use_antidote = bool(hunt.get("use_antidote_potion", use_antidote))
+                antidote_item = str(
+                    hunt.get("antidote_potion_item", antidote_item) or ""
+                )
+                antidote_box = hunt.get("antidote_potion_box", antidote_box)
+                antidote_key = hunt.get("antidote_potion_key", antidote_key)
+            merged_slots = apply_antidote_potion_to_spell_slots(
+                merged_slots,
+                use=use_antidote,
+                item_key=antidote_item,
+                box=antidote_box,
+                key=antidote_key,
                 layout=stamped,
             )
         except Exception:

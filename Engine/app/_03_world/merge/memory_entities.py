@@ -429,6 +429,12 @@ def entities_to_handoff(
                 row["loot_contrib"] = int(contrib_raw)
             except (TypeError, ValueError):
                 pass
+        qty_raw = raw.get("qty")
+        if qty_raw is not None and qty_raw != -1:
+            try:
+                row["loot_qty"] = int(qty_raw)
+            except (TypeError, ValueError):
+                pass
         row.update(extra)
         rows.append(row)
     if tracks is not None:

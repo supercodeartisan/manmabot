@@ -92,23 +92,43 @@ static int lbuff_poll(LBuff*out,int max,DWORD now){
     if(!isHeap(bsub)) return 0;
     uint64_t map=B_R64(bsub+B_MAPOFF);
     if(!isHeap(map)) return 0;
-    uint64_t vec=B_R64(map+B_VECOFF), mask=B_R64(map+B_MASKOFF), end=B_R64(map+B_ENDOFF);
+    /* end/vec/mask sit in one map header. Same fields as the three reads. */
+    uint32_t lo=B_ENDOFF, hi=B_MASKOFF+8;
+    uint8_t mh[0x80];
+    uint64_t vec, mask, end;
+    if(hi<lo || hi-lo>sizeof mh || B_VECOFF<lo || B_VECOFF+8>hi) return 0;
+    if(!B_R(map+lo,mh,hi-lo)) return 0;
+    end =*(uint64_t*)(mh+(B_ENDOFF-lo));
+    vec =*(uint64_t*)(mh+(B_VECOFF-lo));
+    mask=*(uint64_t*)(mh+(B_MASKOFF-lo));
     /* mask 0 is a one-bucket map (bucket_count-1). Walking i=0..0 is valid. */
     if(!isHeap(vec)||mask>0x100000) return 0;
     uint64_t seenAddr[512]; int nsa=0;
-    for(uint64_t i=0;i<=mask;i++){
-        uint64_t node=B_R64(vec+16*i+B_NODE_PTR);
+    uint64_t nbuck=mask+1;
+    #define BUFF_BCAP 256
+    static uint8_t bvec[BUFF_BCAP*16];
+    for(uint64_t b0=0; b0<nbuck; ){
+        uint32_t cnt=(uint32_t)((nbuck-b0>BUFF_BCAP)?BUFF_BCAP:(nbuck-b0));
+        uint32_t bi;
+        if(!B_R(vec+16*b0,bvec,cnt*16)) break;
+        for(bi=0; bi<cnt; bi++){
+        uint64_t node=*(uint64_t*)(bvec+16*bi+B_NODE_PTR);
         for(int g=0; g<8192 && isHeap(node) && node!=end; g++){
-            uint64_t rep=B_R64(node+B_NODE_REP);
-            uint64_t next=B_R64(node+B_NODE_NEXT);
-            uint64_t obj=B_R64(node+0x18);
-            (void)obj;
+            uint8_t nh[0x30];
+            uint64_t rep, next;
+            if(B_NODE_REP+8>sizeof nh || B_NODE_NEXT+8>sizeof nh || !B_R(node,nh,sizeof nh)) break;
+            rep =*(uint64_t*)(nh+B_NODE_REP);
+            next=*(uint64_t*)(nh+B_NODE_NEXT);
             if(isHeap(rep) && vrva(rep)==B_recrva){
                 int dup=0; for(int k=0;k<nsa;k++) if(seenAddr[k]==rep){dup=1;break;}
                 if(!dup && nsa<512){ seenAddr[nsa++]=rep;
-                    if(B_R32(rep+B_REFCOUNT)==0) { node=next; continue; }   /* 고아 제어블록 */
-                    uint32_t str=B_R32(rep+B_STRID), sk=B_R32(rep+B_SKILL), dur=B_R32(rep+B_DUR);
-                    float rem=0; B_R(rep+B_REMAIN,&rem,4);
+                    uint8_t rh[0x88];
+                    uint32_t str, sk, dur; float rem;
+                    if(B_REFCOUNT+4>sizeof rh || B_STRID+4>sizeof rh || B_SKILL+4>sizeof rh
+                       || B_DUR+4>sizeof rh || B_REMAIN+4>sizeof rh || !B_R(rep,rh,sizeof rh)){ node=next; continue; }
+                    if(*(uint32_t*)(rh+B_REFCOUNT)==0) { node=next; continue; }   /* 고아 제어블록 */
+                    str=*(uint32_t*)(rh+B_STRID); sk=*(uint32_t*)(rh+B_SKILL); dur=*(uint32_t*)(rh+B_DUR);
+                    rem=*(float*)(rh+B_REMAIN);
                     const char*nm=bname(str);
                     if(nm){
                         int perpet=(dur==0xFFFFFFFFu)||(dur>1000000u);
@@ -126,6 +146,8 @@ static int lbuff_poll(LBuff*out,int max,DWORD now){
             }
             node=next;
         }
+        }
+        b0 += cnt;
     }
     B_ncache=nsa;
     return n;

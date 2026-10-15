@@ -146,6 +146,7 @@ class PerceptionObject:
     # print_state ground-item drop claim (extra_ent contrib/own).
     loot_contrib: int | None = None
     loot_own: str | None = None
+    loot_qty: int | None = None
     memory_guid: str | None = None
 
     @classmethod
@@ -162,6 +163,14 @@ class PerceptionObject:
             loot_contrib = None
         own_raw = data.get("loot_own")
         loot_own = str(own_raw).strip() if own_raw not in (None, "") else None
+        qty_raw = data.get("loot_qty")
+        if qty_raw is None or qty_raw == "" or qty_raw == -1:
+            loot_qty = None
+        else:
+            try:
+                loot_qty = int(qty_raw)
+            except (TypeError, ValueError):
+                loot_qty = None
         guid_raw = data.get("memory_guid")
         memory_guid = str(guid_raw).strip() if guid_raw not in (None, "") else None
         return cls(
@@ -204,6 +213,7 @@ class PerceptionObject:
             bait=bool(data.get("bait", False)),
             loot_contrib=loot_contrib,
             loot_own=loot_own,
+            loot_qty=loot_qty,
             memory_guid=memory_guid,
         )
 
@@ -262,6 +272,7 @@ class WorldObject:
     # Ground-item drop claim from print_state (extra_ent contrib/own).
     loot_contrib: int | None = None
     loot_own: str | None = None
+    loot_qty: int | None = None
     memory_guid: str | None = None
 
     @classmethod
@@ -299,6 +310,7 @@ class WorldObject:
             bait=bool(getattr(perception, "bait", False)),
             loot_contrib=getattr(perception, "loot_contrib", None),
             loot_own=getattr(perception, "loot_own", None),
+            loot_qty=getattr(perception, "loot_qty", None),
             memory_guid=getattr(perception, "memory_guid", None),
             first_seen=now,
             last_seen=now,
@@ -337,6 +349,7 @@ class WorldObject:
         self.bait = bool(getattr(perception, "bait", False))
         self.loot_contrib = getattr(perception, "loot_contrib", None)
         self.loot_own = getattr(perception, "loot_own", None)
+        self.loot_qty = getattr(perception, "loot_qty", None)
         self.memory_guid = getattr(perception, "memory_guid", None)
         self.last_seen = time.time()
         key = _label_hold_key(

@@ -55,15 +55,21 @@ def _side_depoison(
     state: "GameState", blackboard: "Blackboard"
 ) -> ActionIntent | None:
     from app._04_decision import player_mode as pm
-    from app._04_decision.behaviors.mode_actions import player_is_poisoned
-    from app._04_decision.spells import mark_slot_used, slot_ready
-    from app._05_action.spell_box import slot_is_enabled
+    from app._04_decision.behaviors.mode_actions import player_should_drink_antidote
+    from app._04_decision.spells import (
+        ANTIDOTE_POTION_ITEM,
+        _live_hotbar_snap,
+        mark_slot_used,
+        slot_ready,
+    )
+    from app._05_action.spell_box import slot_is_enabled, slot_press
+    from settings.antidote_potion import resolve_antidote_press_slot
 
     if not pm.ANTIDOTE_AUTO:
         return None
-    if not player_is_poisoned(state):
+    if not player_should_drink_antidote(state):
         return None
-    if not slot_is_enabled("depoison") or not slot_ready(blackboard, "depoison"):
+    if not slot_ready(blackboard, "depoison"):
         return None
     player = getattr(state, "player", None)
     inv = getattr(player, "inventory", None) if player is not None else None
@@ -75,11 +81,22 @@ def _side_depoison(
             return None
     if any(s.action is ActionType.USE_DEPOISON for s in blackboard.side_intents):
         return None
+    assigned = slot_press("depoison") if slot_is_enabled("depoison") else None
+    found = resolve_antidote_press_slot(
+        item_key=ANTIDOTE_POTION_ITEM,
+        assigned_slot=assigned,
+        live_snap=_live_hotbar_snap(state, blackboard),
+    )
+    if found is None:
+        return None
     mark_slot_used(blackboard, "depoison")
     return ActionIntent(
         action=ActionType.USE_DEPOISON,
         priority=0.93,
         reason="poisoned",
+        item_key=str(ANTIDOTE_POTION_ITEM or "").strip() or None,
+        hotbar_box=int(found[0]),
+        hotbar_key=str(found[1]).strip().lower() or None,
     )
 
 

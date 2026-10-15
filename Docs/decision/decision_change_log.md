@@ -3,7 +3,74 @@
 이 문서는 **한 곳의 텔레포트/회복/이동 규칙을 고치면 다른 모드가 같이 바뀌는** 이유를 기록한다.
 이후 로직 수정은 이 문서의 **영향 고지 → 사용자 동의 → 구현 → 결과 기록** 순서로만 한다.
 
-마지막 갱신: 2026-10-14 (수색 홉 우회 + 재클릭)
+마지막 갱신: 2026-10-16 (던전 사냥 걸음의 공격 커서 락, attacks_me 셀 직접 읽기)
+
+---
+
+## 2026-10-16 — 던전 사냥 걸음은 공격 커서가 나온 몬스터를 잡는다
+
+의도: 말하는 섬 던전에서 `world nav walk` 프로브가 공격 커서면 바닥 클릭 고리를 멈추고, 그 화면 몬스터를 기존 스티키 해제가 나올 때까지 때린다. 지형 직선이 막혀도 이 락은 `dungeon-wall`로 풀지 않는다.
+공유: `ActionExecutor._search`, `_arm_dungeon_cursor_engage`. `monster_under_travel_cursor`, `farm_loot_or_combat`, `continue_or_start_combat`. `can_engage_target`은 목록 선택에 그대로다. `travel_click`은 이동 커서만 클릭한다.
+영향: 던전 사냥 중 월드 내비 걸음. 그 킬이 끝나기 전에 바닥 루팅은 기다린다. 필드 우회, 순찰, 상점·귀환, `arrow_lack`, 경합, 블랙리스트, 포기 쿨다운은 락을 만들지 않는다.
+동의: 사용자.
+결과: 구현.
+
+## 2026-10-15 — attacks_me는 엔티티 셀을 직접 읽는다
+
+의도: 공격자 행의 월드 셀은 print_state와 같이 `ent + off_ent_cell_x/y`다. 읽기 실패나 범위 밖은 `world`에 `(0,0)`을 넣지 않는다.
+공유: `attacks_me.c` `readEntCell`, `pushActor`, `emitActorTail`. 오프셋은 `settings_print_state.json`. `sync_attacks_me_force_targets`는 셀 로그만 추가. 매칭, 스티키, LOS, ring click은 그대로다.
+영향: `attacked_me`가 붙는 몬스터. 셀이 없는 행은 기존에 `world`가 없을 때 건너뛰는 경로를 탄다.
+동의: 사용자 (전투 쪽에서 (0,0)을 거르지 말고 attacks_me 셀 읽기만 고친다).
+결과: 구현. 이 소스 기준으로 `attacks_me.dll` 재빌드.
+
+## 2026-10-15 — 드라이버 읽기는 dist 배치, 주기는 이 프로젝트
+
+의도: 같은 값을 여러 번 읽는 드라이버 호출만 줄인다. 고정 앵커·고정 체인·한 블록 읽기·서브시스템 vft 캐시·액션 블록 지문·포인터 청크를 표본으로 삼는다. 틱 간격, HP·좌표·맵·print_state 빠른 PRES는 매 호출 그대로다. 공격·경합 엔티티의 구조 스윕만 print_state와 같은 로스터 시계(100ms, 이동 8타일 초과)로 틱과 분리하고, 그 사이 틱은 직전 JSON을 쓴다.
+공유: `realtime_monitor_full.c`, `lcore.h`, `lbuff.h`, `attacks_me.c`, `contested_mobs.c`, `print_state.c` `findPres`, `uidialog_listen.c`. 의사결정·이동·전투·HP 행동 코드는 그대로다.
+영향: 라이브 메모리 읽기. `attacks_me`·`contested` 목록은 최대 100ms 또는 8타일 이동 전까지 이전 스윕이다. 모니터 DLL은 64KB 힙 탐색을 시작하지 않으며 `entities`는 빈 배열이다. 클릭 명단은 print_state다. 버프는 `BuffListBase`다. 단독 exe의 탐색 스레드는 그대로다.
+정합: 영구 버프는 `dur==0xFFFFFFFF || dur>1000000`. 서브시스템·버프 vft는 레지스트리 값. 나를 치는 판정과 아무 대상 타격은 슬롯을 따로 기억한다. 액터 벡터가 0이면 셀맵이다.
+동의: 사용자 (dist의 호출 절감만 적용, 주기 논리는 이 프로젝트, 틱과 엔티티 구조 스윕의 강제 일치는 재고).
+결과: 구현. 정형 `Docs/architecture/MEMORY_READ_CANON.md`. DLL 재빌드 성공 (`realtime_monitor`, `print_state`, `attacks_me`, `contested_mobs`, `buff_listen`, `uidialog_listen`).
+
+## 2026-10-15 — 이동 중 후퇴가 선택 맵에서 끝나도 월드 내비로 복귀
+
+의도: 후퇴 종료 시 `resume_mode`가 `TRAVELING`이고 선택 맵 위로 보여도, 저장한 `nav_goal`로 걷지 않는다. 라이브 위치에서 루틴 커서의 현재 행까지 기존 월드 내비(`post_retreat`)가 경로를 고른다.
+공유: `finish_retreat`. 상점 재개, 사망 후 `post_respawn`, 사냥 맵 밖 복귀, 농장 안 파밍 복귀는 그대로다.
+영향: 이동 중 세계수·같은 맵 후퇴가 끝날 때의 복귀. 던전 순찰 칸을 이어서 걷던 경우도 이 경로로 바뀐다. 전투·로그인·HP 사다리 불변.
+동의: 사용자 (이 분기도 월드 내비와 같은 복귀를 탄다).
+결과: 구현. `Others/tests/test_dungeon_farming.py`.
+
+## 2026-10-15 — 해독 물약: 석화(마비)일 때만, 핫바 칸은 강화와 공유
+
+의도: 사냥 보조에 해독 물약 체크를 둔다. 활성 버프가 `커스-페럴라이즈: 석화 상태(진행 중)`(문자열 212·291, 중국어 `你的身體漸漸麻痺`)이거나 기존 독 판정이면 지정 칸을 누른다. `석화 상태(마비)`(111·213, `你的身體慢慢石化`)이면 이미 늦어서 누르지 않는다. 칸 표는 강화 물약과 하나이고, 같은 칸은 한 역할만 가진다.
+공유: `player_should_drink_antidote`, `_side_depoison`, `_use_depoison`, `apply_antidote_potion_to_spell_slots`. `ANTIDOTE_AUTO`는 `use_antidote_potion`에서만 켜진다. 옛 `antidote_auto`만 있는 일정은 그대로 꺼진 채다.
+영향: 사냥·공격 중 해독 옆 채널. 강화 물약, HP, 후퇴, 이동, 로그인, 해독 구매는 그대로다.
+동의: 사용자 (같은 핫바 표, 마비/진행 중 구분, 중국어 문구).
+결과: 구현. `Others/tests/test_hunt_attack_settings.py`.
+
+## 2026-10-15 — 수량 이하 아데나는 접근하지 않음
+
+의도: 일정 아이템/루팅의 체크가 켜져 있으면, 이름이 아데나인 더미의 수량이 입력값 이하일 때 접근하지 않는다. 이름이 비어 있으면 이 규칙을 적용하지 않는다. 이미 줍기 거리 안이면 F4는 수량과 관계없이 낸다. 기본은 체크 해제, 칸의 값은 10. 비교는 이하(<=).
+공유: `small_adena_ignored`, `list_lootable`(메인 경로), 사거리 밖 스티키, 클릭 후 재접근.
+영향: 사냥·후퇴·농장 진입의 루팅 접근. 발밑 F4·전투 조준·후퇴 이동·로그인·HP 불변. 체크가 꺼진 일정은 지금과 같다.
+동의: 사용자. 절차는 `D:\md\pending_specs.md` 2번, 이후 발밑 F4 유지와 이름 없는 더미 제외.
+결과: 구현. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — 메인 루팅 기여도 문턱 50
+
+의도: 메인 루팅의 MINE 하한을 contrib>30에서 contrib>50으로 올린다. 50은 거절, 51부터 허용. FREE와 사이드 F4는 그대로다.
+공유: `LOOT_CONTRIB_MIN`, `loot_ownership_allowed`. `list_lootable`과 스티키 재검사는 이 상수를 본다.
+영향: 사냥 메인 루팅의 접근과 줍기. 기여도 31–50인 MINE은 더 이상 걸어가지 않는다. 전투·후퇴·로그인·HP 불변.
+동의: 사용자 (“현재는 50으로 하자”). 절차는 `D:\md\pending_specs.md` 3번.
+결과: 구현. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — 공격 조준을 화면 위 0.2타일로
+
+의도: 공격 커서의 첫 점과 0.1타일 고리 중심만 iscr 발밑에서 화면 위 0.2타일로 옮긴다. 고리 반지름, 커서 합격 기준, 포기 규칙은 그대로다.
+공유: `content_screen_up`, `object_attack_screen_points`, `ATTACK_AIM_SCREEN_UP_TILES`.
+영향: 기사·요정·마법사 공격 조준. 루팅 클릭과 이동 클릭은 그대로다.
+동의: 사용자. 절차는 `D:\md\pending_specs.md` 1번.
+결과: 구현. `Others/tests/test_attack_cursor_search.py`.
 
 ---
 

@@ -40,6 +40,8 @@ BUFF_ORDER = (BUFF_ARMOR, BUFF_HASTE, BUFF_POWER)
 USE_HASTE_POTION = False
 # Optional bag item key imported from inventory (matches hotbar by name).
 HASTE_POTION_ITEM = ""
+# Hunt assist: name of the hotbar cell assigned as the antidote.
+ANTIDOTE_POTION_ITEM = ""
 
 # Recast holy weapon / shell this often after the first cast (timer fallback).
 BUFF_COOLDOWN_S = 20.0 * 60.0

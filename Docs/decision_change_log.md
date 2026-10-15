@@ -1,5 +1,53 @@
 # Decision change log
 
+## 2026-10-16 — dungeon hunt walk locks the monster under the attack cursor
+
+Intent: a Talking Island dungeon world-nav hop whose probe shows an attack cursor stops the ground-click ring and fights that on-screen monster until the existing sticky release. A blocked terrain line does not drop this lock.
+Shared: `ActionExecutor._search` / `_arm_dungeon_cursor_engage` (reason `world nav walk` and dungeon only). `monster_under_travel_cursor`, `farm_loot_or_combat` cursor branch, `continue_or_start_combat` dungeon-wall skip. `can_engage_target` still filters the candidate list. `travel_click` still requires a normal cursor. Shop, return, field walks, `arrow_lack`, contested, blacklist, and give-up cooldown do not arm the lock.
+Affects: dungeon hunting while a world-nav walk is in progress. Ground loot waits until that kill ends. Field wall detour, patrol, and shop travel keep sliding off an attack cursor.
+Consent: user (analyze conflicts, then implement this handoff).
+Result: implemented.
+
+## 2026-10-15 — attacks_me reads the entity cell, not a (0,0) placeholder
+
+Intent: an attacker row carries the same world cell print_state reads from the entity. A failed read omits `world` instead of publishing cell (0, 0).
+Shared: `attacks_me.c` `readEntCell` / `pushActor` / `emitActorTail`. Offsets `off_ent_cell_x` / `off_ent_cell_y` come from `settings_print_state.json`. `sync_attacks_me_force_targets` only gained a cell log; match, sticky, LOS, and ring click are unchanged.
+Affects: which monster `attacked_me` latches onto. A row with no cell is skipped by the existing missing-world path.
+Consent: user (fix the cell read in attacks_me only; do not filter the symptom in combat).
+Result: implemented. `attacks_me.dll` rebuilt after this source.
+
+## 2026-10-15 — memory reads follow dist batching, this project's clocks
+
+Intent: cut repeated driver reads of the same bytes. Fixed anchors, one-block field reads, vft subsystem cache, action-block fingerprints, and pointer chunks. Tick timing, HP, pose, map id, and print_state fast PRES stay on every call. attacks_me and contested structure sweeps use the print_state roster clock (100ms, or a move over 8 tiles) and return the previous JSON in between.
+Shared readers: `realtime_monitor_full.c`, `lcore.h`, `lbuff.h`, `attacks_me.c`, `contested_mobs.c`, `print_state.c` `findPres`, `uidialog_listen.c`. Decision, movement, combat, and HP action code stay as they are.
+Affects: live memory reads. Attack and contested lists can be up to 100ms old. The monitor DLL does not start the 64KB heap scan, so its `entities` array is empty; clicks still come from print_state. Buffs come from `BuffListBase`.
+Consent: user (apply only the call reductions; keep this project's timing; reconsider locking the entity sweep to the decision tick).
+Result: implemented. Canon: `Docs/architecture/MEMORY_READ_CANON.md`. DLLs rebuilt.
+
+## 2026-10-15 — ignore named adena at or below a UI qty
+
+Intent: when the schedule loot checkbox is on, named adena with loot_qty <= the entered value is not approached. Unnamed piles are not subject to this gate. Adena already within pickup range is still F4'd, including side pickup. Default is off, and the spin shows 10.
+Shared: `small_adena_ignored`, `list_lootable` (main path only), loot sticky when out of range, pending re-approach.
+Affects: loot approach in hunt, retreat, and farm entry. Feet F4, combat aim, retreat movement, login, and HP stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 2, plus the later feet-F4 and unnamed-name amendments.
+Result: implemented. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — main loot contrib floor is 50
+
+Intent: main-intent MINE loot requires contrib above 50. 50 is rejected, 51 is allowed. FREE and side F4 are unchanged.
+Shared: `LOOT_CONTRIB_MIN`, `loot_ownership_allowed`.
+Affects: hunt main-intent approach and pickup. Combat, retreat, login, and HP stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 3.
+Result: implemented. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — attack aim starts 0.2 tiles screen-up
+
+Intent: the attack cursor's first point and the 0.1-tile ring center move from the iscr feet point to 0.2 tiles screen-up. Ring radius, cursor pass score, and give-up rules stay as they are.
+Shared: `content_screen_up`, `object_attack_screen_points`, `ATTACK_AIM_SCREEN_UP_TILES`.
+Affects: knight, elf, and mage attack aim. Loot clicks and movement clicks stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 1.
+Result: implemented. `Others/tests/test_attack_cursor_search.py`.
+
 ## 2026-10-14.8 — search hops use plan_body_click + 0.1s reclick
 
 Consent: user asked for phase 1+2 on search hops only.

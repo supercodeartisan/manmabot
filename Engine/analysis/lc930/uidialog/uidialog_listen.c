@@ -356,18 +356,45 @@ static char g_regPath[MAX_PATH * 2] = {0};
 static const char* g_src = "none"; /* "cont" | "cache" | "bfs" | "none" */
 static uint64_t g_ui = 0;
 
-static int windowsVftAliveCount(void) {
-    int n = 0;
-    for (int i = 0; i < g_nwin; i++) {
+/* One 0x78 header per window for this snapshot. Alive-check and both JSON
+ * loops share it, so a dialog is not read three times. */
+static uint8_t g_winHb[MAXWATCH][0x78];
+static int g_winHbOk[MAXWATCH];
+static int g_winHbReady = 0;
+
+static void loadWinHeaders(void) {
+    int i, n = g_nwin;
+    if (n > MAXWATCH) n = MAXWATCH;
+    for (i = 0; i < n; i++) {
         uint64_t o = g_win[i].inst;
-        uint8_t hb[0x78];
-        if (o && rm(o, hb, sizeof(hb)) && *(uint64_t*)hb == g_base + g_win[i].vft) n++;
+        g_winHbOk[i] = (o && rm(o, g_winHb[i], 0x78)) ? 1 : 0;
     }
+    g_winHbReady = 1;
+}
+
+static int winHeaderAlive(int i, uint32_t* vis) {
+    if (vis) *vis = 0;
+    if (!g_winHbReady) loadWinHeaders();
+    if (i < 0 || i >= g_nwin || i >= MAXWATCH || !g_winHbOk[i]) return 0;
+    if (*(uint64_t*)g_winHb[i] != g_base + g_win[i].vft) return 0;
+    if (vis) {
+        if (RG_VIS + 4 <= 0x78) *vis = *(uint32_t*)(g_winHb[i] + RG_VIS);
+        else rm(g_win[i].inst + RG_VIS, vis, 4);
+    }
+    return 1;
+}
+
+static int windowsVftAliveCount(void) {
+    int n = 0, i;
+    g_winHbReady = 0;
+    loadWinHeaders();
+    for (i = 0; i < g_nwin; i++) if (winHeaderAlive(i, NULL)) n++;
     return n;
 }
 
 /* Bot realtime: container walk only. Poll is writeUidlgJson on every snapshot. */
 static void runDiscover(uint64_t ui) {
+    g_winHbReady = 0;
     if (g_ncont > 0) {
         containerScan(ui);
         g_src = "cont";
@@ -607,12 +634,10 @@ static int writeUidlgJson(FILE* f) {
             "\"src\":\"%s\",\"layouts\":%d,\"watched\":%d,\"windows\":{",
             (unsigned long long)g_pid, (unsigned long long)g_base,
             (unsigned long long)g_ui, g_src ? g_src : "none", g_nall, g_nwin);
+    if (!g_winHbReady) loadWinHeaders();
     for (int i = 0; i < g_nwin; i++) {
-        uint64_t o = g_win[i].inst;
-        uint8_t hb[0x78];
-        int alive = o && rm(o, hb, sizeof(hb)) && *(uint64_t*)hb == g_base + g_win[i].vft;
-        uint32_t vis = alive ? *(uint32_t*)(hb + RG_VIS) : 0u;
-        alive = alive && (vis & RG_VISMASK) == RG_VISOPEN;
+        uint32_t vis = 0;
+        int alive = winHeaderAlive(i, &vis) && (vis & RG_VISMASK) == RG_VISOPEN;
         if (!first) fputc(',', f);
         first = 0;
         fprintf(f, "\"%s\":%s", g_win[i].label, alive ? "true" : "false");
@@ -630,11 +655,8 @@ static int writeUidlgJson(FILE* f) {
     fprintf(f, "},\"open\":[");
     first = 1;
     for (int i = 0; i < g_nwin; i++) {
-        uint64_t o = g_win[i].inst;
-        uint8_t hb[0x78];
-        int alive = o && rm(o, hb, sizeof(hb)) && *(uint64_t*)hb == g_base + g_win[i].vft;
-        uint32_t vis = alive ? *(uint32_t*)(hb + RG_VIS) : 0u;
-        alive = alive && (vis & RG_VISMASK) == RG_VISOPEN;
+        uint32_t vis = 0;
+        int alive = winHeaderAlive(i, &vis) && (vis & RG_VISMASK) == RG_VISOPEN;
         if (!alive) continue;
         if (!first) fputc(',', f);
         first = 0;

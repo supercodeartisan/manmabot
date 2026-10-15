@@ -98,6 +98,9 @@ def clear_engage_state(blackboard: "Blackboard") -> None:
     blackboard.scratch.pop(SCRATCH_BLOCK_SIDESTEP, None)
     blackboard.sticky_attacked_me = False
     reset_attack_still(blackboard)
+    from app._04_decision.combat_query import SCRATCH_CURSOR_ENGAGE
+
+    blackboard.scratch.pop(SCRATCH_CURSOR_ENGAGE, None)
 
 
 def reset_attack_still(blackboard: "Blackboard") -> None:
@@ -368,6 +371,22 @@ def _player_tiles(obj: object) -> int:
         return 10_000
 
 
+def _carry_cursor_engage(
+    blackboard: "Blackboard",
+    old_id: int | None,
+    new_id: int,
+) -> None:
+    """Keep the client-cursor lock when the same mob gets a new track id."""
+    from app._04_decision.combat_query import SCRATCH_CURSOR_ENGAGE
+
+    held = blackboard.scratch.get(SCRATCH_CURSOR_ENGAGE)
+    try:
+        if held is not None and old_id is not None and int(held) == int(old_id):
+            blackboard.scratch[SCRATCH_CURSOR_ENGAGE] = int(new_id)
+    except (TypeError, ValueError):
+        return
+
+
 def rebind_sticky_target(state: "GameState", blackboard: "Blackboard") -> object | None:
     """Keep the current kill: 2-tile rematch, else nearest same species.
 
@@ -402,6 +421,7 @@ def rebind_sticky_target(state: "GameState", blackboard: "Blackboard") -> object
             _arm_finish_kill(blackboard, found, int(found.track_id))
         if not blackboard.target_engage_started:
             blackboard.target_engage_started = time.time()
+        _carry_cursor_engage(blackboard, old, int(found.track_id))
         return found
     if species_death_signal(state, blackboard):
         try:

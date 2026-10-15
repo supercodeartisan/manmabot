@@ -59,12 +59,29 @@ static uint32_t g_vftMonster = 0x11818A8u;
 static uint32_t g_vftSummon = 0x1181E58u;
 static int g_intervalMs = 200;
 static int g_once = 0;
+/* Roster clock already used by print_state (slow_ms=100, resweep after 8 tiles).
+ * The decision tick still calls snapshot every time; a fresh driver sweep runs
+ * only when that clock says the roster is due. Not dist's 200/50. */
+static uint32_t g_offPlayerX = 0x16DED30u, g_offPlayerY = 0x16DED34u;
+static int g_rosterMs = 100, g_moveTiles = 8;
+static uint32_t g_actorVecOff = 0x8A8u, g_actorVecEnd = 0x8B0u;
+static uint64_t g_actorCache = 0;
+
+typedef struct { uint64_t ent, fp, owner, tgt; int has, hit; } AcMemo;
+static AcMemo g_acMe[MAXENT], g_acSt[MAXENT];
+static int g_acMeN = 0, g_acStN = 0;
+
+static char g_snapCache[OUT_CAP];
+static int g_snapN = 0;
+static DWORD g_snapAt = 0;
+static int32_t g_snapX = 0, g_snapY = 0;
 
 typedef struct {
     uint64_t ent;
     uint64_t guid;
     uint32_t vft;
     int32_t cx, cy;
+    int haveCell; /* 1 only after a direct in-range read of ent+off_ent_cell_* */
     char name[NAME_CAP];
 } Ent;
 
@@ -192,8 +209,14 @@ static int followComp(uint64_t q, uint32_t* outVft, uint64_t* outEnt) {
 static uint64_t actionComp(uint64_t e) {
     /* Component vector at e+0x20 .. +0x28; ActionComponent at index 2. */
     uint64_t tb, te, ac;
-    tb = rq(e + g_offCompTable);
-    te = rq(e + g_offCompTable + 8);
+    uint8_t span[16];
+    if (rm(e + g_offCompTable, span, sizeof(span))) {
+        memcpy(&tb, span, 8);
+        memcpy(&te, span + 8, 8);
+    } else {
+        tb = rq(e + g_offCompTable);
+        te = rq(e + g_offCompTable + 8);
+    }
     if (!isHeap(tb) || te <= tb || (te - tb) >= 0x2000 ||
         (te - tb) < (uint64_t)(g_actIdx + 1) * 8)
         return 0;
@@ -202,68 +225,177 @@ static uint64_t actionComp(uint64_t e) {
     return ac;
 }
 
-static int attacksMe(uint64_t e, uint64_t meGuid, uint64_t* outOwner, uint64_t* outTgt) {
-    uint64_t ac;
+static AcMemo* acSlot(AcMemo* tab, int* n, uint64_t ent) {
+    int i;
+    for (i = 0; i < *n; i++) if (tab[i].ent == ent) return &tab[i];
+    if (*n >= MAXENT) return NULL;
+    memset(&tab[*n], 0, sizeof(tab[0]));
+    tab[*n].ent = ent;
+    return &tab[(*n)++];
+}
+
+/* One 0x140 block. Slot vfts are re-read only when the pointer fingerprint changes.
+ * requireMe keeps attacks_me (tgt==me) distinct from strikes (any tgt). */
+static int acAttack(uint64_t e, uint64_t meGuid, int requireMe, AcMemo* tab, int* nTab,
+                    uint64_t* outOwner, uint64_t* outTgt) {
+    uint64_t ac, fp;
     uint32_t o;
-    if (!e || !meGuid) return 0;
+    uint8_t ab[0x140];
+    int nheap = 0, hit = 0;
+    AcMemo* memo;
+    uint64_t owner = 0, tgt = 0;
+    if (!e || (requireMe && !meGuid)) return 0;
     ac = actionComp(e);
-    if (!ac) return 0;
-    for (o = 0; o + 8 <= 0x140; o += 8) {
-        uint64_t w = rq(ac + o);
-        uint64_t owner, tgt;
+    if (!ac || !rm(ac, ab, sizeof(ab))) return 0;
+    fp = 1469598103934665603ull;
+    for (o = 0; o + 8 <= sizeof(ab); o += 8) {
+        uint64_t w;
+        memcpy(&w, ab + o, 8);
+        if (!isHeap(w)) continue;
+        fp ^= w * 1099511628211ull;
+        nheap++;
+    }
+    memo = acSlot(tab, nTab, e);
+    if (memo && memo->has && nheap > 0 && memo->fp == fp) {
+        if (!memo->hit) return 0;
+        if (outOwner) *outOwner = memo->owner;
+        if (outTgt) *outTgt = memo->tgt;
+        return 1;
+    }
+    for (o = 0; o + 8 <= sizeof(ab); o += 8) {
+        uint64_t w;
+        memcpy(&w, ab + o, 8);
         if (!isHeap(w) || vrva(w) != g_attackActVft) continue;
         owner = rq(w + g_offAtkOwner);
         tgt = rq(w + g_offAtkTgt);
-        if (tgt != meGuid) continue;
-        if (outOwner) *outOwner = owner;
-        if (outTgt) *outTgt = tgt;
-        return 1;
+        if (requireMe) {
+            if (tgt != meGuid) continue;
+        } else if (!tgt) continue;
+        hit = 1;
+        break;
     }
-    return 0;
+    if (memo) {
+        memo->fp = fp;
+        memo->has = nheap > 0;
+        memo->hit = hit;
+        memo->owner = owner;
+        memo->tgt = tgt;
+    }
+    if (!hit) return 0;
+    if (outOwner) *outOwner = owner;
+    if (outTgt) *outTgt = tgt;
+    return 1;
+}
+
+static int attacksMe(uint64_t e, uint64_t meGuid, uint64_t* outOwner, uint64_t* outTgt) {
+    return acAttack(e, meGuid, 1, g_acMe, &g_acMeN, outOwner, outTgt);
 }
 
 /* Any live AttackAction. Follow-tool uses tgt guid to see who a mob is hitting. */
 static int readStrike(uint64_t e, uint64_t* outOwner, uint64_t* outTgt) {
-    uint64_t ac;
-    uint32_t o;
-    if (!e) return 0;
-    ac = actionComp(e);
-    if (!ac) return 0;
-    for (o = 0; o + 8 <= 0x140; o += 8) {
-        uint64_t w = rq(ac + o);
-        uint64_t owner, tgt;
-        if (!isHeap(w) || vrva(w) != g_attackActVft) continue;
-        owner = rq(w + g_offAtkOwner);
-        tgt = rq(w + g_offAtkTgt);
-        if (!tgt) continue;
-        if (outOwner) *outOwner = owner;
-        if (outTgt) *outTgt = tgt;
-        return 1;
+    return acAttack(e, 0, 0, g_acSt, &g_acStN, outOwner, outTgt);
+}
+
+/* Same band as print_state appendLiveEnt. A miss is "no cell", not (0,0). */
+static int cellInRange(int32_t v) {
+    return v > 1000 && v < 60000;
+}
+
+/* Direct read of ent+off_ent_cell_x / ent+off_ent_cell_y. The 0x50 header
+ * passed by sweepVector does not contain these fields. */
+static int readEntCell(uint64_t ent, int32_t* cx, int32_t* cy) {
+    int32_t ecx = 0, ecy = 0;
+    if (!ent || !cx || !cy) return 0;
+    if (!rm(ent + g_offCellX, &ecx, 4) || !rm(ent + g_offCellY, &ecy, 4))
+        return 0;
+    if (!cellInRange(ecx) || !cellInRange(ecy)) return 0;
+    *cx = ecx;
+    *cy = ecy;
+    return 1;
+}
+
+static int pushActor(int n, uint64_t ent, uint32_t rva, int32_t cx, int32_t cy, const uint8_t* hdr) {
+    int i;
+    Ent* E;
+    (void)cx;
+    (void)cy;
+    if (n >= MAXENT || !ent) return n;
+    for (i = 0; i < n; i++) if (g_ents[i].ent == ent) return n;
+    E = &g_ents[n];
+    memset(E, 0, sizeof(*E));
+    E->ent = ent;
+    E->vft = rva;
+    if (hdr && g_offEntGuid + 8 <= 0x50) memcpy(&E->guid, hdr + g_offEntGuid, 8);
+    else E->guid = rq(ent + g_offEntGuid);
+    if (readEntCell(ent, &E->cx, &E->cy)) E->haveCell = 1;
+    readName(ent, E->name, NAME_CAP);
+    return n + 1;
+}
+
+/* Flat actor vector. 0 means the caller keeps the cell map. Pairs: Actor*, Comp*. */
+static int sweepVector(uint64_t actor) {
+    uint64_t beg, end, slots, i;
+    int n = 0;
+    static uint64_t chunk[512];
+    if (!g_actorVecOff || !g_actorVecEnd) return 0;
+    beg = rq(actor + g_actorVecOff);
+    end = rq(actor + g_actorVecEnd);
+    if (!isHeap(beg) || !isHeap(end) || end <= beg) return 0;
+    if (((end - beg) % 8) != 0 || (end - beg) > (16ull << 20)) return 0;
+    slots = (end - beg) / 8;
+    if (slots < 2) return 0;
+    for (i = 0; i < slots && n < MAXENT; ) {
+        int cc = (slots - i > 512) ? 512 : (int)(slots - i);
+        int j;
+        if (!rm(beg + i * 8, chunk, (uint32_t)(cc * 8))) return 0;
+        for (j = 0; j < cc && n < MAXENT; j += 2) {
+            uint64_t e = chunk[j];
+            uint8_t hb[0x50];
+            uint64_t vftp, self;
+            uint32_t rva;
+            if (!isHeap(e) || !rm(e, hb, sizeof(hb))) continue;
+            memcpy(&vftp, hb, 8);
+            if (g_offEntSelf + 8 > sizeof(hb)) continue;
+            memcpy(&self, hb + g_offEntSelf, 8);
+            if (g_offEntSelf && self != e) continue;
+            if (!g_base || vftp < g_base || vftp - g_base > g_modSize) continue;
+            rva = (uint32_t)(vftp - g_base);
+            if (!isEntityVft(rva)) continue;
+            n = pushActor(n, e, rva, 0, 0, hb);
+        }
+        i += (uint64_t)cc;
     }
-    return 0;
+    return n;
 }
 
 static int sweep(void) {
     int n = 0;
-    uint64_t mgr = rq(g_base + g_offEntMgr);
-    uint64_t holder, bgn, end, best = 0;
+    uint64_t mgr, holder, bgn, end, best = 0;
     int hi;
     g_nEnts = 0;
-    if (!isHeap(mgr)) return 0;
-    holder = rq(mgr + g_offHolder);
-    if (!isHeap(holder)) return 0;
-    bgn = rq(holder + g_offSubBeg);
-    end = rq(holder + g_offSubEnd);
-    if (!isHeap(bgn) || end <= bgn || (end - bgn) > 0x2000) return 0;
-    for (uint64_t e = bgn; e + 16 <= end; e += 16) {
-        uint64_t obj = rq(e);
-        if (!isHeap(obj)) continue;
-        if (vrva(obj) == g_gridVft) {
-            best = obj;
-            break;
+    if (g_actorCache && vrva(g_actorCache) == g_gridVft) best = g_actorCache;
+    if (!best) {
+        mgr = rq(g_base + g_offEntMgr);
+        if (!isHeap(mgr)) return 0;
+        holder = rq(mgr + g_offHolder);
+        if (!isHeap(holder)) return 0;
+        bgn = rq(holder + g_offSubBeg);
+        end = rq(holder + g_offSubEnd);
+        if (!isHeap(bgn) || end <= bgn || (end - bgn) > 0x2000) return 0;
+        for (uint64_t e = bgn; e + 16 <= end; e += 16) {
+            uint64_t obj = rq(e);
+            if (!isHeap(obj)) continue;
+            if (vrva(obj) == g_gridVft) {
+                best = obj;
+                break;
+            }
         }
     }
-    if (!best) return 0;
+    if (!best) { g_actorCache = 0; return 0; }
+    g_actorCache = best;
+    n = sweepVector(best);
+    if (n > 0) { g_nEnts = n; return n; }
+    n = 0;
     for (hi = 0; hi < g_nh; hi++) {
         uint64_t sent = rq(best + g_heads[hi] + 8);
         uint64_t cur;
@@ -271,41 +403,37 @@ static int sweep(void) {
         if (!isHeap(sent)) continue;
         cur = rq(sent + g_offNodeNext);
         while (cur && cur != sent && isHeap(cur) && n < MAXENT && hops++ < 1100) {
-            uint64_t next = rq(cur + g_offNodeNext);
-            int32_t cx = (int32_t)rd32(cur + g_offNodeCx);
-            int32_t cy = (int32_t)rd32(cur + g_offNodeCy);
-            uint64_t vb = rq(cur + g_offNodeBeg);
-            uint64_t ve = rq(cur + g_offNodeEnd);
+            uint8_t nb[0x28];
+            uint64_t next, vb, ve;
+            int32_t cx, cy;
+            static uint64_t ptrs[512];
+            if (g_offNodeNext + 8 > sizeof(nb) || g_offNodeCx + 4 > sizeof(nb) ||
+                g_offNodeCy + 4 > sizeof(nb) || g_offNodeBeg + 8 > sizeof(nb) ||
+                g_offNodeEnd + 8 > sizeof(nb))
+                break;
+            if (!rm(cur, nb, sizeof(nb))) break;
+            memcpy(&next, nb + g_offNodeNext, 8);
+            memcpy(&cx, nb + g_offNodeCx, 4);
+            memcpy(&cy, nb + g_offNodeCy, 4);
+            memcpy(&vb, nb + g_offNodeBeg, 8);
+            memcpy(&ve, nb + g_offNodeEnd, 8);
             cur = next;
             if (!isHeap(vb) || ve < vb || (ve - vb) > 0x1000) continue;
-            for (uint64_t p = vb; p + 8 <= ve && n < MAXENT; p += 8) {
-                uint64_t q = rq(p), ent = 0;
-                uint32_t rva = 0;
-                int dup, i;
-                if (!isHeap(q) || !followComp(q, &rva, &ent)) continue;
-                if (g_offEntSelf && rq(ent + g_offEntSelf) != ent) continue;
-                for (i = 0, dup = 0; i < n; i++)
-                    if (g_ents[i].ent == ent) {
-                        dup = 1;
-                        break;
+            {
+                uint64_t left = (ve - vb) / 8;
+                uint64_t pi = 0;
+                while (pi < left && n < MAXENT) {
+                    int cc = (left - pi > 512) ? 512 : (int)(left - pi);
+                    int j;
+                    if (!rm(vb + pi * 8, ptrs, (uint32_t)(cc * 8))) break;
+                    for (j = 0; j < cc && n < MAXENT; j++) {
+                        uint64_t q = ptrs[j], ent = 0;
+                        uint32_t rva = 0;
+                        if (!isHeap(q) || !followComp(q, &rva, &ent)) continue;
+                        if (g_offEntSelf && rq(ent + g_offEntSelf) != ent) continue;
+                        n = pushActor(n, ent, rva, cx, cy, NULL);
                     }
-                if (dup) continue;
-                {
-                    Ent* E = &g_ents[n++];
-                    int32_t ecx, ecy;
-                    memset(E, 0, sizeof(*E));
-                    E->ent = ent;
-                    E->vft = rva;
-                    E->guid = rq(ent + g_offEntGuid);
-                    E->cx = cx;
-                    E->cy = cy;
-                    ecx = (int32_t)rd32(ent + g_offCellX);
-                    ecy = (int32_t)rd32(ent + g_offCellY);
-                    if (ecx > 1000 && ecx < 60000 && ecy > 1000 && ecy < 60000) {
-                        E->cx = ecx;
-                        E->cy = ecy;
-                    }
-                    readName(ent, E->name, NAME_CAP);
+                    pi += (uint64_t)cc;
                 }
             }
         }
@@ -365,17 +493,49 @@ static uint32_t hexU32(const char* s, uint32_t defv) {
     return (uint32_t)strtoul(s, NULL, 0);
 }
 
-static void applyJsonHex(const char* key, uint32_t* dst) {
+static void applyHexInText(const char* json, const char* key, uint32_t* dst) {
     char pat[96];
-    char* p;
+    const char* p;
+    if (!json || !key || !dst) return;
     sprintf(pat, "\"%s\"", key);
-    p = strstr(g_cfg, pat);
+    p = strstr(json, pat);
     if (!p) return;
     p = strchr(p + strlen(pat), ':');
     if (!p) return;
     p++;
     while (*p == ' ' || *p == '\t' || *p == '"') p++;
     *dst = hexU32(p, *dst);
+}
+
+static void applyJsonHex(const char* key, uint32_t* dst) {
+    applyHexInText(g_cfg, key, dst);
+}
+
+/* print_state's settings_print_state.json is the cell-offset source.
+ * attacks_me.json is only a fallback when that file is not beside this cfg. */
+static void loadPrintStateCellOffsets(const char* attacksCfg) {
+    char dir[MAX_PATH];
+    char path[MAX_PATH];
+    static char text[CFG_CAP];
+    FILE* f;
+    size_t n, cut;
+    const char* slash;
+    if (!attacksCfg || !attacksCfg[0]) return;
+    strncpy(dir, attacksCfg, MAX_PATH - 1);
+    dir[MAX_PATH - 1] = 0;
+    slash = strrchr(dir, '\\');
+    if (!slash) slash = strrchr(dir, '/');
+    if (!slash) return;
+    cut = (size_t)(slash - dir);
+    dir[cut] = 0;
+    snprintf(path, sizeof(path), "%s\\..\\entities\\settings_print_state.json", dir);
+    f = fopen(path, "rb");
+    if (!f) return;
+    n = fread(text, 1, CFG_CAP - 1, f);
+    fclose(f);
+    text[n] = 0;
+    applyHexInText(text, "off_ent_cell_x", &g_offCellX);
+    applyHexInText(text, "off_ent_cell_y", &g_offCellY);
 }
 
 static void loadSettings(const char* path) {
@@ -415,6 +575,9 @@ static void loadSettings(const char* path) {
     applyJsonHex("off_atk_owner", &g_offAtkOwner);
     applyJsonHex("off_atk_tgt", &g_offAtkTgt);
     applyJsonHex("off_ent_guid", &g_offEntGuid);
+    applyJsonHex("off_ent_cell_x", &g_offCellX);
+    applyJsonHex("off_ent_cell_y", &g_offCellY);
+    loadPrintStateCellOffsets(path);
 }
 
 static int attach(const char* cfgPath) {
@@ -439,6 +602,28 @@ static void detach(void) {
     SignedClose();
     g_attached = 0;
     g_nEnts = 0;
+    g_actorCache = 0;
+    g_snapN = 0;
+    g_acMeN = 0;
+    g_acStN = 0;
+}
+
+static int rosterFresh(int32_t* x, int32_t* y) {
+    int32_t dx, dy;
+    if (!rm(g_base + g_offPlayerX, x, 4) || !rm(g_base + g_offPlayerY, y, 4)) return 0;
+    if (!g_snapN) return 0;
+    if ((int)(GetTickCount() - g_snapAt) >= g_rosterMs) return 0;
+    dx = *x > g_snapX ? *x - g_snapX : g_snapX - *x;
+    dy = *y > g_snapY ? *y - g_snapY : g_snapY - *y;
+    return dx <= g_moveTiles && dy <= g_moveTiles;
+}
+
+static void emitActorTail(JOut* jo, const Ent* E) {
+    jputs(jo, ",\"name\":");
+    jescape(jo, E->name);
+    if (E->haveCell)
+        jputf(jo, ",\"world\":{\"cx\":%d,\"cy\":%d}", E->cx, E->cy);
+    jputc(jo, '}');
 }
 
 static int buildSnapshot(char* out, int outCap) {
@@ -447,8 +632,15 @@ static int buildSnapshot(char* out, int outCap) {
     int first = 1;
     int i;
     int nAtk = 0;
+    int n;
+    int32_t px = 0, py = 0;
     if (!out || outCap < 64) return -1;
     if (!g_attached) return -1;
+    if (rosterFresh(&px, &py) && g_snapN < outCap) {
+        memcpy(out, g_snapCache, (size_t)g_snapN);
+        out[g_snapN] = 0;
+        return g_snapN;
+    }
     sweep();
     meGuid = pickMeGuid();
     jo.p = out;
@@ -472,9 +664,7 @@ static int buildSnapshot(char* out, int outCap) {
               (unsigned long long)E->ent, (unsigned long long)E->guid,
               (unsigned long long)owner, (unsigned long long)tgt, E->vft);
         jescape(&jo, classOf(E->vft));
-        jputs(&jo, ",\"name\":");
-        jescape(&jo, E->name);
-        jputf(&jo, ",\"world\":{\"cx\":%d,\"cy\":%d}}", E->cx, E->cy);
+        emitActorTail(&jo, E);
     }
     /* Monster/summon swings at anyone. attacks_me above stays tgt==me only. */
     jputs(&jo, "],\"strikes\":[");
@@ -492,14 +682,20 @@ static int buildSnapshot(char* out, int outCap) {
               (unsigned long long)E->ent, (unsigned long long)E->guid,
               (unsigned long long)owner, (unsigned long long)tgt, E->vft);
         jescape(&jo, classOf(E->vft));
-        jputs(&jo, ",\"name\":");
-        jescape(&jo, E->name);
-        jputf(&jo, ",\"world\":{\"cx\":%d,\"cy\":%d}}", E->cx, E->cy);
+        emitActorTail(&jo, E);
     }
     jputf(&jo, "],\"count\":%d}", nAtk);
     if (jo.p >= jo.end - 1) return -1;
     *jo.p = 0;
-    return (int)(jo.p - out);
+    n = (int)(jo.p - out);
+    if (n > 0 && n < (int)sizeof(g_snapCache)) {
+        memcpy(g_snapCache, out, (size_t)n);
+        g_snapN = n;
+        g_snapAt = GetTickCount();
+        g_snapX = px;
+        g_snapY = py;
+    }
+    return n;
 }
 
 #ifdef ATTACKS_ME_DLL

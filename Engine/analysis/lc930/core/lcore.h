@@ -64,6 +64,8 @@ static int isHeap(uint64_t a) { return a >= 0x10000000000ULL && a < 0x8000000000
 static int isMod(uint64_t a)  { return a >= g_base && a < g_base + (uint64_t)g_modSize; }
 static uint32_t vrva(uint64_t o) { uint64_t v = q64(o); return isMod(v) ? (uint32_t)(v - g_base) : 0; }
 
+static void lc_dropAnchor(void);
+
 static int getModule(uint64_t *base, uint32_t *size)
 {
     uint64_t peb = 0, ldr = 0, head = 0, cur = 0;
@@ -90,7 +92,13 @@ static int lc_attach(void)
     CloseHandle(snap);
     if (!pid) { fprintf(stderr, "LC.exe not running\n"); return 1; }
     if (!SignedOpen()) { fprintf(stderr, "driver open failed (WinNotify)\n"); return 2; }
-    SignedSetTarget(pid); g_pid = pid;
+    SignedSetTarget(pid);
+    /* Same process: the image base does not move. Skip the PEB walk. */
+    if (g_pid == (uint64_t)pid && g_base && g_modSize) return 0;
+    g_pid = pid;
+    g_base = 0;
+    g_modSize = 0;
+    lc_dropAnchor();
     if (!getModule(&g_base, &g_modSize)) { fprintf(stderr, "module base fail\n"); return 3; }
     return 0;
 }
@@ -399,26 +407,67 @@ static unsigned long long lc_sweepCount = 0;
  */
 #define LC_SUBIDX 64
 static uint64_t lc_subs = 0;      /* subsystem array base (16-byte stride)  */
+static uint32_t lc_subsCacheV[256];
+static uint64_t lc_subsCacheP[256];
+static int lc_subsCacheN = 0;
+static int lc_subsCursor = 0;
+
+static void lc_dropAnchor(void)
+{
+    lc_subs = 0;
+    lc_actor = 0;
+    lc_subsCacheN = 0;
+    lc_subsCursor = 0;
+}
+
+static void lc_subsCacheAdd(uint32_t v, uint64_t s)
+{
+    int i;
+    if (!v || lc_subsCacheN >= 256) return;
+    for (i = 0; i < lc_subsCacheN; i++) if (lc_subsCacheV[i] == v) return;
+    lc_subsCacheV[lc_subsCacheN] = v;
+    lc_subsCacheP[lc_subsCacheN] = s;
+    lc_subsCacheN++;
+}
+
+/* vft→pointer cache. A later lookup of a subsystem already walked is one
+ * cache hit, not another pass over sub[]. Identification stays by vft. */
 static uint64_t lc_subsGet(uint32_t wantVft)
 {
+    int c;
+    for (c = 0; c < lc_subsCacheN; c++)
+        if (lc_subsCacheV[c] == wantVft && isHeap(lc_subsCacheP[c])) return lc_subsCacheP[c];
     if (!lc_subs) return 0;
-    for (int i = 0; i < (int)LC_SUBCOUNT_V; i++) {
+    while (lc_subsCursor < (int)LC_SUBCOUNT_V) {
+        int i = lc_subsCursor++;
         uint64_t s = q64(lc_subs + (uint64_t)LC_SUB_STRIDE_V * i);
+        uint32_t v1, v2;
         if (!isHeap(s)) continue;
-        if (vrva(s) == wantVft || vrva(s + 8) == wantVft) return s;
+        v1 = vrva(s);
+        lc_subsCacheAdd(v1, s);
+        if (v1 == wantVft) return s;
+        v2 = vrva(s + 8);
+        if (v2 != v1) lc_subsCacheAdd(v2, s);
+        if (v2 == wantVft) return s;
     }
     return 0;
 }
 static int lc_anchor(void)
 {
-    uint64_t mgr = q64(g_base + LC_MGR_V);
+    uint64_t mgr, holder, subs, actor;
+    /* Held actor still has its vft: the chain has not moved. One check. */
+    if (lc_actor && lc_subs && vrva(lc_actor) == LC_VFT_ACTORSUBS) return 1;
+    lc_dropAnchor();
+    mgr = q64(g_base + LC_MGR_V);
     if (!isHeap(mgr)) return 0;
-    uint64_t holder = q64(mgr + LC_HOLDER_V);
+    holder = q64(mgr + LC_HOLDER_V);
     if (!isHeap(holder)) return 0;
-    uint64_t subs = q64(holder + LC_SUBB_V);
+    subs = q64(holder + LC_SUBB_V);
     if (!isHeap(subs)) return 0;
     lc_subs = subs;
-    uint64_t actor = lc_subsGet(LC_VFT_ACTORSUBS);
+    lc_subsCursor = 0;
+    lc_subsCacheN = 0;
+    actor = lc_subsGet(LC_VFT_ACTORSUBS);
     if (!actor) return 0;
     lc_actor = actor;
     return 1;

@@ -229,6 +229,76 @@ def player_is_poisoned(state: "GameState") -> bool:
     return False
 
 
+# Curse-paralyze string ids from data_string.csv.
+# 212 / 291 = 석화 상태(진행 중) / 你的身體漸漸麻痺 — drink.
+# 111 / 213 = 석화 상태(마비) / 你的身體慢慢石化 — too late.
+_CURE_PARALYZE_STR_IDS = frozenset({212, 291})
+_CURE_PARALYZE_NEEDLES = (
+    "석화 상태(진행 중)",
+    "석화상태(진행 중)",
+    "석화상태(진행중)",
+    "你的身體漸漸麻痺",
+    "你的身体渐渐麻痹",
+)
+_LOCKED_PARALYZE_STR_IDS = frozenset({111, 213})
+_LOCKED_PARALYZE_NEEDLES = (
+    "석화 상태(마비)",
+    "석화상태(마비)",
+    "你的身體慢慢石化",
+    "你的身体慢慢石化",
+)
+
+
+def _effect_str_id(effect: object) -> int:
+    try:
+        return int(getattr(effect, "str_id", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _player_effects(state: "GameState") -> list[object]:
+    player = getattr(state, "player", None)
+    if player is None:
+        return []
+    effects = list(getattr(player, "buffs", None) or [])
+    effects.extend(getattr(player, "debuffs", None) or [])
+    return effects
+
+
+def _effect_matches(effect: object, str_ids: frozenset[int], needles: tuple[str, ...]) -> bool:
+    if _effect_str_id(effect) in str_ids:
+        return True
+    blob = _effect_blob(effect)
+    return bool(blob and any(needle.lower() in blob for needle in needles))
+
+
+def player_has_locked_paralyze(state: "GameState") -> bool:
+    """True for petrify-(마비). The antidote no longer works."""
+    return any(
+        _effect_matches(effect, _LOCKED_PARALYZE_STR_IDS, _LOCKED_PARALYZE_NEEDLES)
+        for effect in _player_effects(state)
+    )
+
+
+def player_has_curable_paralyze(state: "GameState") -> bool:
+    """True for petrify in progress. Locked petrify does not match."""
+    if player_has_locked_paralyze(state):
+        return False
+    return any(
+        _effect_matches(effect, _CURE_PARALYZE_STR_IDS, _CURE_PARALYZE_NEEDLES)
+        for effect in _player_effects(state)
+    )
+
+
+def player_should_drink_antidote(state: "GameState") -> bool:
+    """In-progress petrify, or poison. Locked petrify (마비) is too late."""
+    if player_has_locked_paralyze(state):
+        return False
+    if player_has_curable_paralyze(state):
+        return True
+    return player_is_poisoned(state)
+
+
 def maybe_use_antidote(
     state: "GameState",
     blackboard: "Blackboard",
@@ -1442,12 +1512,24 @@ def continue_or_start_combat(
             tid = blackboard.current_target_id
             obj = state.get_object(tid) if tid is not None else None
             if obj is not None:
-                from app._04_decision.combat_query import can_engage_target
+                from app._04_decision.combat_query import (
+                    can_engage_target,
+                    cursor_engage_holds,
+                )
 
                 if not can_engage_target(obj, origin):
                     from app._04_decision.dungeon import is_dungeon_map
 
-                    if is_dungeon_map():
+                    if is_dungeon_map() and cursor_engage_holds(blackboard, tid):
+                        # Client attack cursor armed this lock. A blocked
+                        # terrain line must not drop it back onto a walk hop.
+                        from app.bot_log import get_logger
+
+                        get_logger("combat").info(
+                            "cursor engage keep id=%s (los blocked)",
+                            tid,
+                        )
+                    elif is_dungeon_map():
                         # No wall detour in dungeons — release sticky without
                         # give-up cooldown so the mob stays selectable when LOS
                         # clears. nearest_attackable already skips no-LOS.
@@ -1630,6 +1712,22 @@ def continue_or_start_loot(
 
                 if not loot_ownership_allowed(sticky):
                     drop = True
+            if not drop:
+                from app._04_decision.behaviors.loot_hop import _in_pickup_range
+                from app._04_decision.combat_query import (
+                    object_absolute_tile,
+                    small_adena_ignored,
+                )
+
+                if small_adena_ignored(sticky) and (
+                    origin is None
+                    or not _in_pickup_range(
+                        origin,
+                        sticky,
+                        object_absolute_tile(sticky, origin),
+                    )
+                ):
+                    drop = True
             # Adena on the loot list beats sticky non-adena (approach/pickup).
             if not drop and not is_adena(sticky):
                 from app._04_decision.combat_query import list_lootable
@@ -1715,7 +1813,9 @@ def farm_loot_or_combat(
        there is nothing left to loot.
     5. After a pickup click, while that pile remains in memory re-click or
        walk back (do not roam). Short timeout (~0.8s) then continue.
-    6. Else engage the nearest on-screen monster.
+    6. Else a dungeon world-nav probe that already showed an attack cursor
+       locks that monster ahead of ground loot.
+    7. Else engage the nearest on-screen monster.
     """
     from app.bot_log import event
     from app._04_decision.combat_query import tile_distance_from_player
@@ -1731,6 +1831,9 @@ def farm_loot_or_combat(
 
     if is_hp_zero(state):
         return None
+    from app._04_decision.combat_query import pop_cursor_engage_pending
+
+    pending_cursor_id = pop_cursor_engage_pending(blackboard)
     origin = blackboard.world_origin
     exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
     # Refresh synthetic attacks_me targets before sticky so list-missing
@@ -1798,6 +1901,30 @@ def farm_loot_or_combat(
             chosen=attacker,
             reason="attacks_me engage",
         )
+
+    if pending_cursor_id is not None:
+        from app._04_decision.combat_query import (
+            SCRATCH_CURSOR_ENGAGE,
+            cursor_engage_target,
+        )
+
+        hovered = cursor_engage_target(state, blackboard, pending_cursor_id)
+        if hovered is not None:
+            event(
+                "combat",
+                "farm branch=cursor_engage id=%s dist=%s",
+                hovered.track_id,
+                _dist(hovered),
+            )
+            begin_engage(state, blackboard, int(hovered.track_id))
+            blackboard.scratch[SCRATCH_CURSOR_ENGAGE] = int(hovered.track_id)
+            return continue_or_start_combat(
+                state,
+                blackboard,
+                allow_new=False,
+                chosen=hovered,
+                reason="cursor engage",
+            )
 
     loot = continue_or_start_loot(
         state,
@@ -1896,6 +2023,8 @@ __all__ = [
     "maybe_heal_mp_to_hp_at_tree",
     "emit_mp_potion",
     "player_is_poisoned",
+    "player_has_curable_paralyze",
+    "player_should_drink_antidote",
     "maybe_use_antidote",
     "should_drink_hp_potion",
     "should_drink_hp_potion_in_retreat",

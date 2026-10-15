@@ -26,6 +26,15 @@ def _opt_cell(value: Any) -> int | None:
         return None
 
 
+def _opt_loot_qty(value: Any) -> int | None:
+    if value is None or value == "" or value == -1:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _opt_loot_contrib(value: Any) -> int | None:
     if value is None or value == "" or value == -1:
         return None
@@ -132,6 +141,7 @@ def handoff_to_perception(handoff_rows: list[dict[str, Any]]) -> list[Perception
             world_ry=_opt_cell(v.get("world_ry")),
             bait=bool(v.get("bait", False)),
             loot_contrib=_opt_loot_contrib(v.get("loot_contrib")),
+            loot_qty=_opt_loot_qty(v.get("loot_qty")),
             loot_own=_opt_loot_own(v.get("loot_own")),
             memory_guid=_opt_guid(v.get("memory_guid")),
         ))

@@ -21,6 +21,10 @@ _HUNT_UI_DEFAULTS: dict[str, Any] = {
     "haste_potion_item": "",
     "haste_potion_box": 0,
     "haste_potion_key": "",
+    "use_antidote_potion": False,
+    "antidote_potion_item": "",
+    "antidote_potion_box": 0,
+    "antidote_potion_key": "",
 }
 
 _MAGIC_UI_DEFAULTS: dict[str, Any] = {

@@ -55,6 +55,8 @@ class Profile:
     character: str = "mage"
     loot_mode: str = "all_items"
     loot_adena_weight_ratio: float = 0.30
+    ignore_small_adena: bool = False
+    ignore_small_adena_qty: int = 10
     active_map: str = DEFAULT_MAP_ID
     # ``normal`` = farm rectangles; ``dungeon`` = patrol midpoints.
     map_style: str = "normal"
@@ -125,6 +127,11 @@ class Profile:
     haste_potion_item: str = ""
     haste_potion_box: int = 0
     haste_potion_key: str = ""
+    # Combat assist: antidote on curable petrify / poison (opt-in).
+    use_antidote_potion: bool = False
+    antidote_potion_item: str = ""
+    antidote_potion_box: int = 0
+    antidote_potion_key: str = ""
     abandon_same: bool = False
     abandon_seconds: int = 30
     antidote_auto: bool = False
@@ -319,6 +326,7 @@ class Profile:
             "attack_jitter",
             "target_delay",
             "use_haste_potion",
+            "use_antidote_potion",
             "abandon_same",
             "antidote_auto",
             "area_empty",

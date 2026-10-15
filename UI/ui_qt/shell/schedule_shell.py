@@ -531,6 +531,10 @@ class ScheduleShell(QMainWindow):
                 pass
             self._debug_win = None
         self._poll_timer.stop()
+        editor = getattr(self, "editor", None)
+        bar = getattr(editor, "income_bar", None) if editor is not None else None
+        if bar is not None:
+            bar.shutdown()
         self.language = language
         self.t = merge_ui_strings(language, tr(language))
         from PySide6.QtWidgets import QApplication
@@ -1403,6 +1407,9 @@ class ScheduleShell(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self._closing = True
+        bar = getattr(self.editor, "income_bar", None)
+        if bar is not None:
+            bar.shutdown()
         self._poll_timer.stop()
         self.schedule_list._clock.stop()
         self._close_debug()
