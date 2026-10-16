@@ -68,7 +68,7 @@ Live bot starts SignedDriver through `session.monitor_launch.driver_script_path(
 
 ## Docs topics
 
-- `Docs/architecture/` — layout, `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`
+- `Docs/architecture/` — layout, `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`, `SENSOR_PRE_TIDY.md` (pre-sensor split; docs-only)
 - `Docs/decision/` — decision change log
 - `Docs/combat/` — combat design / CODEX notes
 - `Docs/prompt/` — master prompt + fragments
