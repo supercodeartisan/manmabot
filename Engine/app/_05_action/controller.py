@@ -711,7 +711,8 @@ class ActionExecutor:
 
         Shop, return, and field walks keep sliding to a normal cursor.
         ``arrow_lack`` stays a failed ground probe so the shop path still runs.
-        No eligible monster means the ring continues.
+        No eligible monster, including one behind a blocked line, means the
+        ring continues.
         """
         from app._05_action.cursor_catalog import ATTACK_OK_LABELS
 

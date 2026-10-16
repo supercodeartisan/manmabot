@@ -1512,24 +1512,12 @@ def continue_or_start_combat(
             tid = blackboard.current_target_id
             obj = state.get_object(tid) if tid is not None else None
             if obj is not None:
-                from app._04_decision.combat_query import (
-                    can_engage_target,
-                    cursor_engage_holds,
-                )
+                from app._04_decision.combat_query import can_engage_target
 
                 if not can_engage_target(obj, origin):
                     from app._04_decision.dungeon import is_dungeon_map
 
-                    if is_dungeon_map() and cursor_engage_holds(blackboard, tid):
-                        # Client attack cursor armed this lock. A blocked
-                        # terrain line must not drop it back onto a walk hop.
-                        from app.bot_log import get_logger
-
-                        get_logger("combat").info(
-                            "cursor engage keep id=%s (los blocked)",
-                            tid,
-                        )
-                    elif is_dungeon_map():
+                    if is_dungeon_map():
                         # No wall detour in dungeons — release sticky without
                         # give-up cooldown so the mob stays selectable when LOS
                         # clears. nearest_attackable already skips no-LOS.
@@ -1814,7 +1802,8 @@ def farm_loot_or_combat(
     5. After a pickup click, while that pile remains in memory re-click or
        walk back (do not roam). Short timeout (~0.8s) then continue.
     6. Else a dungeon world-nav probe that already showed an attack cursor
-       locks that monster ahead of ground loot.
+       locks that monster ahead of ground loot when the straight line is
+       clear. A blocked line does not lock and does not keep the shot.
     7. Else engage the nearest on-screen monster.
     """
     from app.bot_log import event

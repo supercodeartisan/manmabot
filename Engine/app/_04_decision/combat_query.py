@@ -751,8 +751,8 @@ def object_absolute_tile(
 
 
 # Walk probe that showed an attack cursor. The next decision tick may lock
-# this monster. Line of sight is not required — the client cursor already
-# resolved the hit. Cleared when the sticky engage state is reset.
+# this monster only when the straight line is clear. Cleared when the sticky
+# engage state is reset. A later blocked line uses the dungeon wall skip.
 CURSOR_ENGAGE_TILES = 3
 SCRATCH_CURSOR_ENGAGE_PENDING = "cursor_engage_pending"
 SCRATCH_CURSOR_ENGAGE = "cursor_engage_id"
@@ -789,7 +789,10 @@ def pop_cursor_engage_pending(blackboard: object) -> int | None:
 
 
 def cursor_engage_holds(blackboard: object, target_id: object) -> bool:
-    """True when this sticky was armed from a client attack cursor."""
+    """True when this sticky was armed from a client attack cursor.
+
+    The flag does not keep the shot after the straight line blocks.
+    """
     scratch = getattr(blackboard, "scratch", None)
     if not isinstance(scratch, dict):
         return False
@@ -805,7 +808,7 @@ def cursor_engage_target(
     blackboard: object,
     track_id: int,
 ) -> WorldObject | None:
-    """Re-check a pending cursor target. Line of sight stays out of this."""
+    """Re-check a pending cursor target. A blocked line does not lock."""
     try:
         tid = int(track_id)
     except (TypeError, ValueError):
@@ -825,6 +828,9 @@ def cursor_engage_target(
         return None
     if is_contested_monster(game_state, obj):
         return None
+    origin = getattr(blackboard, "world_origin", None)
+    if origin is None or not can_engage_target(obj, origin):
+        return None
     return obj
 
 
@@ -838,7 +844,8 @@ def monster_under_travel_cursor(
 
     The content point is a walk probe where the client showed an attack
     cursor. Contested, bait, blacklist, and give-up cooldown are excluded.
-    A blocked terrain line does not exclude the monster.
+    The nearest monster is the cursor target. A blocked straight line
+    returns None and does not substitute a farther monster.
     """
     origin = getattr(blackboard, "world_origin", None)
     if origin is None:
@@ -868,6 +875,8 @@ def monster_under_travel_cursor(
             best = obj
             best_d = dist
     if best is None or best_d > int(CURSOR_ENGAGE_TILES):
+        return None
+    if not can_engage_target(best, origin):
         return None
     return best
 

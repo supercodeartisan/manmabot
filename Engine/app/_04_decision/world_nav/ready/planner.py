@@ -208,8 +208,15 @@ class WorldNavPlanner:
             goal_keys.add((goal.map_id, int(goal.x), int(goal.y)))
 
         transitions_from: dict[NodeKey, list[Transition]] = {}
+        dungeon_floors: set[int] = set()
         for t in g.transitions:
             transitions_from.setdefault(t.from_key, []).append(t)
+            if t.from_floor is not None:
+                dungeon_floors.add(int(t.from_map))
+            if t.to_floor is not None:
+                dungeon_floors.add(int(t.to_map))
+        # Once the search is on this map, leaving it cannot help a hunt there.
+        goal_is_dungeon_floor = int(goal.map_id) in dungeon_floors
 
         teleporters_from: dict[NodeKey, list[Any]] = {}
         for link in tp_links:
@@ -306,9 +313,17 @@ class WorldNavPlanner:
                         )
                         heapq.heappush(pq, (nc, v))
 
-            # Leaving the goal map is never useful when start is already there.
+            # Start already on the goal map: no transition off it.
+            # Goal is a dungeon floor and this node is already there: same ban.
+            # Ladders that climb toward a deeper goal still expand, because
+            # those nodes are not on the goal map yet.
             if not same_map:
+                on_goal_floor = (
+                    goal_is_dungeon_floor and int(u[0]) == int(goal.map_id)
+                )
                 for t in transitions_from.get(u, []):
+                    if on_goal_floor and int(t.to_map) != int(u[0]):
+                        continue
                     v = t.to_key
                     w = 0
                     nc = cost + w
@@ -378,6 +393,7 @@ class WorldNavPlanner:
             "use_npc_teleporters": use_npc_teleporters,
             "allow_npc_teleporters": allow_npc_tp,
             "same_map_no_intermap": same_map,
+            "stay_on_goal_dungeon_floor": goal_is_dungeon_floor,
             "near_entrance_no_teleporter": near_entrance,
             "near_entrance_radius": NEAR_ENTRANCE_NO_TELEPORTER_TILES,
             "npc_teleporter_links": len(tp_links),
