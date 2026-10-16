@@ -1,124 +1,76 @@
 # Decision change log
 
-## 2026-10-16 — party travel/stop bands + combat close-in + loot gate
+## 2026-10-16 — paused schedule update reaches the running logic
 
-Intent: mode-aware follow — travel leash (`follow_tiles`), settle to `stop_tiles` when leader pose is stable, combat assist with short close-in when out of range, loot only when leader not farming and within stop band.
-Shared: `policy` (`leader_farming` / `leader_stopped` / `CLOSE_IN`), `assist_in_attack_range`, `plan_close_in_intent`, Party tab follow+stop spins, profile/runtime. Solo DecisionManager farming columns unchanged.
-Affects: party-member follow/assist/loot only.
-Consent: user (“implement” after band design).
-Result: travel vs stop vs combat step-in; loot gated off mid-fight.
+Intent: Alt+A pause, then "update schedule", copies that schedule onto the live profile and the worker re-applies the Start configure path before the next decision tick. Resume uses the new settings. A running bot still does not apply. Map, routine, or farm-list changes restart the routine cursor and the in-farm timer. Stay-time and HP edits keep that timer.
+Shared: `publish_paused_task`, `install_profile_runtime`, `restart_paused_routine`, `_consume_paused_settings`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `apply_inplace_hp_support`, and login clicks stay as they are. Account, character class, the memory monitor, and the perception capture still change only on stop/start.
+Affects: hunt, travel goal, return, loot, shop restock, HP potion/heal/escape thresholds, teleport, farm rotation, and routine after a paused update. The character stays where they are. A route change makes the next resume walk the new goal.
+Consent: user (apply paused schedule updates to the running logic; keep account, class, and capture on stop/start).
+Result: implemented. Qt and classic "update current" both publish while paused.
 
-## 2026-10-16 — party follow single 3-tile + no synthetic assist cast
+## 2026-10-16 — dungeon cursor lock requires a clear line
 
-Intent: logs showed follow re-clicking ~5×/s on the same tile, and mage_attack skill-press with no live monster (synthetic/off-screen assist) → cursor thrash. Follow uses one threshold (default 3): farther → follow, else assist/hold. No start/stop hysteresis. Assist only live local monsters; mage Esc after failed aim search.
-Shared: `follow_kind` / `PartyMemberConfig.follow_tiles`, `plan_follow_intent` (idle in-transit / at approach), `assist` (no combat synthetics), `mage.py` Esc on aim fail, Party tab one spin. Solo DecisionManager farming columns unchanged except safer mage Esc.
-Affects: party follow smoothness; party assist; mage cast cancel on miss.
-Consent: user (check 10min logs; no start/stop; follow if out of 3; improve following; cursor rush / no target skill).
-Result: single follow distance; live-only assist; cast aim thrash cancelled.
-
-## 2026-10-16 — party loot roles + Party tab (Item right)
-
-Intent: Party settings live in their own tab (right of Item). Random loot ON → every member may loot nearby drops (no ownership gate). Random OFF → `loot_role` none vs responsible (ownership gate on). Side F4 while near; primary approach only on HOLD.
-Shared: `UI/ui_qt/editors/party_tab.py`; Hunt party card removed; `app._06_party.loot` + `PartyMemberConfig.random_loot` / `loot_role`; profile / task_runtime / BotController. Solo DecisionManager farming columns unchanged.
-Affects: party-member HOLD loot + side pickup; schedule Party tab.
-Consent: user (“go” after random ON all / OFF role architecture).
-Result: Party tab wired; loot gates applied in member decide.
-
-## 2026-10-16 — party heal/buff via solo helpers (no retreat)
-
-Intent: party member uses solo heal skill + buff + potion sides; never retreat / mother-tree / escape.
-Shared: `app._06_party.support.apply_party_support` → `emit_heal` / `maybe_cast_buff` / `arm_potion_side_intents` with `retreat_starters=False`. `BotController` always passes blackboard side_intents in party mode. Solo DecisionManager columns unchanged.
-Affects: party-member primary HEAL/BUFF before follow/assist; potion sides parallel.
-Consent: user (“go” after approach choice: party brain owns call site, reuse solo helpers).
-Result: heal/buff/potions on; retreat paths not called.
-
-## 2026-10-16 — party follow: shortest of walk vs WORLD_NAV (scroll/TP)
-
-Intent: when the leader teleports far, member was only TRAVELING (blind walk). Pick the cheaper of local walk vs WORLD_NAV (talking scroll / TP / gate).
-Shared: `app._06_party.follow_route.choose_follow_route`, `PartyMemberManager` FOLLOW → `PartyJoinNav` when WORLD_NAV wins (`follow_nav`). Solo DecisionManager unchanged.
-Affects: party-member FOLLOW when dist ≥ 24 and scroll/TP beats walk.
-Consent: user (must use winner of shortest path, not blind walk).
-Result: same-map long chase can scroll/TP; short chase still walks.
-
-## 2026-10-16 — fix: party follow idle (game xy → nav) + OFF_UI banner
-
-Intent: screenshot showed kind=follow action=idle while leader OFF_UI with party xy ~32k. Follow A* uses nav tiles; party xy was raw game → no_path/idle. Banner did not show IN_UI/OFF_UI or SAME_MAP.
-Shared: `_party_tile` → `game_to_nav`; Party monitor `[OFF_UI|SAME_MAP]` + `why=`. Solo unchanged.
-Affects: party-member same-map FOLLOW travel intent; Party etview status line.
-Consent: user (see UI — not finding / never showing not in UI).
-Result: party pose converted to nav; banner shows OFF_UI/SAME_MAP and follow fail reason.
-
-## 2026-10-16 — fix: lose leader must still FOLLOW (party pose)
-
-Intent: when the entity sweep loses the leader, the member was HOLD/WAIT and never chased. Drive movement from PartySubsystem pose; UI only gates assist.
-Shared: `decide_policy` (off-UI → always FOLLOW), sticky pose 15s/45s, `BotController` always `set_local_map_id` on live mapId. Solo unchanged.
-Affects: party-member off-UI chase + same-map detection.
-Consent: user (check and fix — lose leader never follows).
-Result: off-UI always follows party/sticky tile; local mapId updates every tick.
-
-## 2026-10-16 — party UI detect → off-UI follow → other-map WORLD_NAV join
-
-Intent: detect whether the leader is in the current UI (entity sweep); if not, go to PartySubsystem xy; if other map, WORLD_NAV (scroll/gate/teleporter) to leader map near their pose, then resume follow/assist.
-Shared: `app._06_party.policy` (`leader_in_ui` / `JOIN_MAP`), `join_map.PartyJoinNav` + session Blackboard stash, `PartyMemberManager`, `BotController` join-path scroll/gate/TP. Solo DecisionManager farming columns untouched.
-Affects: party-member only — assist requires leader in UI; other-map no longer WAIT.
-Consent: user (“alright, go” after scope including other-map teleport).
-Result: off-UI same-map FOLLOW; other-map join via WorldNavSession; then follow/assist.
-
-## 2026-10-16 — off-screen follow via PartySubsystem xy/mapId
-
-Intent: when the party leader leaves the local UI/entity sweep, the member still follows using `party_listen` / realtime_party pose (xy + mapId), not screen entities.
-Shared: `app._06_party.leader.resolve_leader` (prefer PartySubsystem tile), `PartyMemberManager._apply_sticky_party_pose` (3s sticky on 0,0 glitch). Solo DecisionManager untouched.
-Affects: party-member FOLLOW when leader is off-screen; WAIT on other mapId (unchanged).
-Consent: user (“implement” after Ask-mode off-screen follow confirm).
-Result: party xy is follow truth; brief missing/0,0 reads reuse last same-map pose.
-
-## 2026-10-16 — Party button opens etview-style overlay
-
-Intent: Party toolbar button shows etview.exe core UI (BitBlt underlay + circle/cross markers + ATK orange line / red X) combined with party status/decisions.
-Shared: `session.etview_probe` (print_state + contested), `ui_qt.debug.party_etview.PartyEtView`, `PartyMonitorWindow` splitter. Solo DecisionManager untouched.
-Affects: Party monitor window only.
-Consent: user (bring etview core into Party button UI).
-Result: Party window = etview canvas (leader ring + ATK target) over live capture + existing party panel.
-
-## 2026-10-16 — party assist knows leader ATK target (etview)
-
-Intent: party UI/module monitor the leader the way etview does — AttackAction owner→tgt — and assist that monster (not only “farming” with no who).
-Shared: `app._06_party.assist` (`describe_leader_target`, materialize off-screen contested tgt), `leader` / `manager` / `state` target fields; Party monitor TARGET line. No solo DecisionManager.
-Affects: party-member ASSIST when leader is attacking; Debug/Party banner shows target name/guid.
-Consent: user (check etview; fix assist who-target).
-Result: contested leader row → local or synthetic WorldObject; UI shows `ATK → name`.
-
-## 2026-10-16 — sticky leader ent/guid track + UI leader highlight
-
-Intent: keep tracking the party leader via sticky `ent`/`guid`/`track_id` whether farming or idle; show farming/visible/off-screen state in Party monitor.
-Shared: `app._06_party.leader` / `manager` / `state` / `config`; Party monitor banner only. No solo DecisionManager changes.
-Affects: party-member reacquire + assist proxy when entity blinks; Debug/Party UI leader highlight.
-Consent: user (ent-track while farming; highlight leader status).
+Intent: a dungeon world-nav attack cursor locks the monster under the probe only when the straight line is clear. A line that blocks later releases that lock with the existing dungeon wall skip, without a give-up cooldown.
+Shared: `monster_under_travel_cursor`, `cursor_engage_target`, `continue_or_start_combat` dungeon-wall skip. The nearest monster stays the cursor target; a blocked line does not substitute another monster within 3 tiles. `can_engage_target` on the normal list, attacks_me, path cap, field wall detour, and travel clicks that need a normal cursor stay as they are.
+Affects: dungeon hunting during a world-nav walk. A fenced sprite no longer keeps the attack clicks. A clear-line cursor lock still fights ahead of ground loot. One-tick line flicker can drop the lock and allow one ground hop before screen combat reselects.
+Consent: user (apply the proposed gate; check it does not disturb other dungeon attack paths).
 Result: implemented.
 
-## 2026-10-16 — party assist tracks leader attack (contested_mobs)
+## 2026-10-16 — stay on the goal dungeon floor
 
-Intent: when the party leader is attacking a monster, the member assists that mob (not only mobs hitting the leader).
-Shared: `app._06_party.assist` only — `resolve_leader_attack_target` + `pick_assist_target` order `leader_attack` then `leader_strike`. No sensor/DecisionManager/UI changes.
-Affects: party-member ASSIST when near leader and `assist_leader_strikes` is on.
-Consent: user (leader attack tracking; never touch other modules).
+Intent: when the hunt goal is a dungeon floor, the planner does not expand a transition whose destination map differs once the search node is already on that floor. Entering the floor, and ladders used while the node is still short of the goal floor, stay.
+Shared: `WorldNavPlanner.plan` transition expansion. `Transition.from_floor` / `to_floor` copy the cell `floor`. Gate circle, NPC teleporter settle, scroll, combat, retreat, HP, and login stay as they are.
+Affects: world-nav plans whose goal map is a dungeon floor. A same-floor point goal no longer detours through the next floor via a ladder beside the entrance. A deeper-floor goal still climbs. A retreat whose goal is town can still leave. If the entrance and the patrol are not connected by a walk on that floor, the plan fails.
+Consent: user (dungeon movement only; cover the same detour in other dungeons; do not collide with other logic).
 Result: implemented.
 
-## 2026-10-16 — party member uses memory leader (no typed name)
+## 2026-10-16 — dungeon hunt walk locks the monster under the attack cursor
 
-Intent: Hunt UI no longer asks for leader character name. Party-member Start needs only the checkbox; after join, `party_listen` supplies the game party leader.
-Shared: `party_member_block` / `resolve_leader`, `BotController` `party_mode`, `task_runtime` party apply, Hunt tab party card. Solo decide path unchanged.
-Affects: party-member enable and leader resolve only.
-Consent: user (remove leader name; get leader from memory after join).
+Intent: a Talking Island dungeon world-nav hop whose probe shows an attack cursor stops the ground-click ring and fights that on-screen monster until the existing sticky release. A blocked terrain line does not drop this lock.
+Shared: `ActionExecutor._search` / `_arm_dungeon_cursor_engage` (reason `world nav walk` and dungeon only). `monster_under_travel_cursor`, `farm_loot_or_combat` cursor branch, `continue_or_start_combat` dungeon-wall skip. `can_engage_target` still filters the candidate list. `travel_click` still requires a normal cursor. Shop, return, field walks, `arrow_lack`, contested, blacklist, and give-up cooldown do not arm the lock.
+Affects: dungeon hunting while a world-nav walk is in progress. Ground loot waits until that kill ends. Field wall detour, patrol, and shop travel keep sliding off an attack cursor.
+Consent: user (analyze conflicts, then implement this handoff).
 Result: implemented.
 
-## 2026-10-16 — party-member sensor for leader stats (solo unchanged)
+## 2026-10-15 — attacks_me reads the entity cell, not a (0,0) placeholder
 
-Intent: when Hunt UI “Run as party member” is on, read PartySubsystem via an independent `party_listen` sensor and use leader name/HP/MP/xy/mapId for follow when the leader entity is not nearby. Solo Start never loads the party DLL and never calls `PartyMemberManager`.
-Shared: `PerceptionSensors.capture_tick(party=…)`, `PartyListenReader`, `resolve_leader` / `LeaderView`, `PartyMemberManager.decide`. Solo `DecisionManager`, retreat, shop, HP columns, login, and world-nav stay as they are.
-Affects: party-member follow when the leader is out of entity range (memory coords); wait on other mapId; assist still requires a visible leader entity.
-Consent: user (party logic must not affect current solo; only after UI party-member check).
-Result: implemented. Build `Engine/analysis/party/build_party_listen_dll.bat` before live reads.
+Intent: an attacker row carries the same world cell print_state reads from the entity. A failed read omits `world` instead of publishing cell (0, 0).
+Shared: `attacks_me.c` `readEntCell` / `pushActor` / `emitActorTail`. Offsets `off_ent_cell_x` / `off_ent_cell_y` come from `settings_print_state.json`. `sync_attacks_me_force_targets` only gained a cell log; match, sticky, LOS, and ring click are unchanged.
+Affects: which monster `attacked_me` latches onto. A row with no cell is skipped by the existing missing-world path.
+Consent: user (fix the cell read in attacks_me only; do not filter the symptom in combat).
+Result: implemented. `attacks_me.dll` rebuilt after this source.
+
+## 2026-10-15 — memory reads follow dist batching, this project's clocks
+
+Intent: cut repeated driver reads of the same bytes. Fixed anchors, one-block field reads, vft subsystem cache, action-block fingerprints, and pointer chunks. Tick timing, HP, pose, map id, and print_state fast PRES stay on every call. attacks_me and contested structure sweeps use the print_state roster clock (100ms, or a move over 8 tiles) and return the previous JSON in between.
+Shared readers: `realtime_monitor_full.c`, `lcore.h`, `lbuff.h`, `attacks_me.c`, `contested_mobs.c`, `print_state.c` `findPres`, `uidialog_listen.c`. Decision, movement, combat, and HP action code stay as they are.
+Affects: live memory reads. Attack and contested lists can be up to 100ms old. The monitor DLL does not start the 64KB heap scan, so its `entities` array is empty; clicks still come from print_state. Buffs come from `BuffListBase`.
+Consent: user (apply only the call reductions; keep this project's timing; reconsider locking the entity sweep to the decision tick).
+Result: implemented. Canon: `Docs/architecture/MEMORY_READ_CANON.md`. DLLs rebuilt.
+
+## 2026-10-15 — ignore named adena at or below a UI qty
+
+Intent: when the schedule loot checkbox is on, named adena with loot_qty <= the entered value is not approached. Unnamed piles are not subject to this gate. Adena already within pickup range is still F4'd, including side pickup. Default is off, and the spin shows 10.
+Shared: `small_adena_ignored`, `list_lootable` (main path only), loot sticky when out of range, pending re-approach.
+Affects: loot approach in hunt, retreat, and farm entry. Feet F4, combat aim, retreat movement, login, and HP stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 2, plus the later feet-F4 and unnamed-name amendments.
+Result: implemented. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — main loot contrib floor is 50
+
+Intent: main-intent MINE loot requires contrib above 50. 50 is rejected, 51 is allowed. FREE and side F4 are unchanged.
+Shared: `LOOT_CONTRIB_MIN`, `loot_ownership_allowed`.
+Affects: hunt main-intent approach and pickup. Combat, retreat, login, and HP stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 3.
+Result: implemented. `Others/tests/test_ground_loot.py`.
+
+## 2026-10-15 — attack aim starts 0.2 tiles screen-up
+
+Intent: the attack cursor's first point and the 0.1-tile ring center move from the iscr feet point to 0.2 tiles screen-up. Ring radius, cursor pass score, and give-up rules stay as they are.
+Shared: `content_screen_up`, `object_attack_screen_points`, `ATTACK_AIM_SCREEN_UP_TILES`.
+Affects: knight, elf, and mage attack aim. Loot clicks and movement clicks stay as they are.
+Consent: user. Procedure: `D:\md\pending_specs.md` section 1.
+Result: implemented. `Others/tests/test_attack_cursor_search.py`.
 
 ## 2026-10-14.8 — search hops use plan_body_click + 0.1s reclick
 

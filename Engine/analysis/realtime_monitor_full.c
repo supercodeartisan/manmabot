@@ -52,7 +52,7 @@ static uint64_t offPosX         = 0x1668640ULL;  // PosXAbs (module-relative, 9.
 static uint64_t offPosY         = 0x1668644ULL;  // PosYAbs (9.30)
 static uint64_t offPosZ         = 0x1668648ULL;  // PosZAbs (9.30)
 static uint64_t offTick         = 0x1668638ULL;  // ServerTick (u64 ms, 9.30)
-static uint64_t offExpPct       = 0x15A8BC0ULL;  // ExperiencePct64 (live f64, rediscovered 9/16; lag copy +0x10)
+static uint64_t offExpPct       = 0x1636BD0ULL;  // ExperiencePct64 (moving f64, 26.10.14.2; twin at -0x10 stays behind)
 static uint64_t offSkills       = 0;             // SkillListBase (stale, zeroed)
 static uint64_t offParty        = 0;             // PartyBase (stale, zeroed)
 static uint64_t offBuffList     = 0;             // BuffListBase (stale, zeroed)
@@ -416,36 +416,35 @@ static uint32_t decodeAt(uint64_t obj, uint32_t off, int* ok) {
     return u8 - (k * g_chKMul ^ g_chKXor);
 }
 
-static uint64_t findCharDataSubsystem(void) {
+static uint64_t g_cachedChar = 0, g_cachedMap = 0;
+
+static uint64_t findSubsystem(uint32_t wantVft, uint64_t* cache) {
     uint64_t mgr, holder, bgn, end, e;
-    if (!g_base || !g_chMgr) return 0;
+    if (cache && *cache && chVrva(*cache) == wantVft) return *cache;
+    if (cache) *cache = 0;
+    if (!g_base || !g_chMgr || !wantVft) return 0;
     mgr = rd64(g_base + g_chMgr);
     if (!mgr) return 0;
     holder = rd64(mgr + g_chHolder);
     if (!holder) return 0;
     bgn = rd64(holder + g_chSubBeg);
     end = rd64(holder + g_chSubEnd);
-    for (e = bgn; e + 16 <= end; e += 16) {
+    for (e = bgn; e + 16 <= end && e + 16 >= bgn; e += 16) {
         uint64_t sub = rd64(e);
-        if (sub && chVrva(sub) == g_chCdVft) return sub;
+        if (sub && chVrva(sub) == wantVft) {
+            if (cache) *cache = sub;
+            return sub;
+        }
     }
     return 0;
 }
 
+static uint64_t findCharDataSubsystem(void) {
+    return findSubsystem(g_chCdVft, &g_cachedChar);
+}
+
 static uint64_t findMapSubsystem(void) {
-    uint64_t mgr, holder, bgn, end, e;
-    if (!g_base || !g_chMgr || !g_mapSubVft) return 0;
-    mgr = rd64(g_base + g_chMgr);
-    if (!mgr) return 0;
-    holder = rd64(mgr + g_chHolder);
-    if (!holder) return 0;
-    bgn = rd64(holder + g_chSubBeg);
-    end = rd64(holder + g_chSubEnd);
-    for (e = bgn; e + 16 <= end; e += 16) {
-        uint64_t sub = rd64(e);
-        if (sub && chVrva(sub) == g_mapSubVft) return sub;
-    }
-    return 0;
+    return findSubsystem(g_mapSubVft, &g_cachedMap);
 }
 
 /* Live current map id: MapSubsystem + MapIdOff (pair at MapIdPairOff).
@@ -456,8 +455,16 @@ static uint32_t readCurrentMapId(int* ok) {
     uint32_t a, b;
     if (ok) *ok = 0;
     if (!msub) return 0;
-    a = rd32(msub + g_mapIdOff);
-    b = rd32(msub + g_mapIdPairOff);
+    /* Map id and its pair are adjacent dwords. One read, same two values. */
+    if (g_mapIdPairOff == g_mapIdOff + 4) {
+        uint32_t pair[2] = {0, 0};
+        readMem(msub + g_mapIdOff, pair, 8);
+        a = pair[0];
+        b = pair[1];
+    } else {
+        a = rd32(msub + g_mapIdOff);
+        b = rd32(msub + g_mapIdPairOff);
+    }
     (void)b; /* locator flags pair-mismatch; primary field is still +0x718 */
     if (ok) *ok = 1;
     return a;
@@ -543,25 +550,91 @@ static uint64_t playerBase(void) {
     return b;
 }
 
+static int u32at(const uint8_t* b, uint32_t n, uint32_t off, uint32_t* out) {
+    if (off + 4 > n) return 0;
+    memcpy(out, b + off, 4);
+    return 1;
+}
+
+/* Same triple as decodeAt, from a block already read. */
+static int decodeBuf(const uint8_t* b, uint32_t n, uint32_t off, uint32_t* out) {
+    uint32_t k, mid, c, u8;
+    if (!b || off + 12 > n) return 0;
+    memcpy(&k, b + off, 4);
+    memcpy(&mid, b + off + 4, 4);
+    memcpy(&c, b + off + 8, 4);
+    u8 = mid ^ k;
+    if (c != ((k + g_chKXor) ^ ~u8)) return 0;
+    *out = u8 - (k * g_chKMul ^ g_chKXor);
+    return 1;
+}
+
 static void readPlayer(PlayerData* p) {
     memset(p, 0, sizeof(*p));
     uint64_t pb = playerBase();
-    readMem(pb + oHp, &p->hp, 4);
-    readMem(pb + oMaxHp, &p->maxHp, 4);
-    readMem(pb + oMp, &p->mp, 4);
-    readMem(pb + oMaxMp, &p->maxMp, 4);
-    readMem(pb + oSp, &p->sp, 4);
-    readMem(pb + oLevel, &p->level, 4);
-    readMem(pb + oClass, &p->classId, 4);
+    /* HUD fields through SP, plus the plain stat dwords, sit in one player block. */
+    {
+        uint32_t span = 0x24;
+        uint8_t blk[0x200];
+        int i;
+        if (oSp + 4 > span && oSp + 4 <= sizeof(blk)) span = oSp + 4;
+        if (oOnline + 1 > span && oOnline + 1 <= sizeof(blk)) span = oOnline + 1;
+        if (oIsGm + 1 > span && oIsGm + 1 <= sizeof(blk)) span = oIsGm + 1;
+        if (oChaotic + 1 > span && oChaotic + 1 <= sizeof(blk)) span = oChaotic + 1;
+        for (i = 0; i < 6; i++)
+            if (g_offStats[i] >= 0 && (uint32_t)g_offStats[i] + 4 > span &&
+                (uint32_t)g_offStats[i] + 4 <= sizeof(blk))
+                span = (uint32_t)g_offStats[i] + 4;
+        if (readMem(pb, blk, span)) {
+            u32at(blk, span, oHp, &p->hp);
+            u32at(blk, span, oMaxHp, &p->maxHp);
+            u32at(blk, span, oMp, &p->mp);
+            u32at(blk, span, oMaxMp, &p->maxMp);
+            u32at(blk, span, oSp, &p->sp);
+            u32at(blk, span, oLevel, &p->level);
+            u32at(blk, span, oClass, &p->classId);
+            if (oOnline + 1 <= span) p->online = blk[oOnline];
+            if (oIsGm + 1 <= span) p->isGm = blk[oIsGm];
+            if (oChaotic + 1 <= span) p->isChaotic = blk[oChaotic];
+            for (i = 0; i < 6; i++)
+                if (g_offStats[i] >= 0 && u32at(blk, span, (uint32_t)g_offStats[i], &p->stats[i]))
+                    p->statsOk[i] = 1;
+        } else {
+            readMem(pb + oHp, &p->hp, 4);
+            readMem(pb + oMaxHp, &p->maxHp, 4);
+            readMem(pb + oMp, &p->mp, 4);
+            readMem(pb + oMaxMp, &p->maxMp, 4);
+            readMem(pb + oSp, &p->sp, 4);
+            readMem(pb + oLevel, &p->level, 4);
+            readMem(pb + oClass, &p->classId, 4);
+            readMem(pb + oOnline, &p->online, 1);
+            readMem(pb + oIsGm, &p->isGm, 1);
+            readMem(pb + oChaotic, &p->isChaotic, 1);
+            for (i = 0; i < 6; i++)
+                if (g_offStats[i] >= 0) { p->statsOk[i] = 1; readMem(pb + g_offStats[i], &p->stats[i], 4); }
+        }
+    }
     p->mapId = readCurrentMapId(&p->mapIdOk);
-    readMem(pb + oOnline, &p->online, 1);
-    readMem(pb + oIsGm, &p->isGm, 1);
-    readMem(pb + oChaotic, &p->isChaotic, 1);
     p->instanceId = p->mapId;
-    readMem(g_base + offPosX, &p->posX, 4);
-    readMem(g_base + offPosY, &p->posY, 4);
-    readMem(g_base + offPosZ, &p->posZ, 4);
-    readMem(g_base + offTick, &p->tickMs, 8);
+    {
+        int posed = 0;
+        if (offPosX == offTick + 8 && offPosY == offPosX + 4 && offPosZ == offPosY + 4) {
+            uint8_t pose[0x14];
+            if (readMem(g_base + offTick, pose, sizeof(pose))) {
+                memcpy(&p->tickMs, pose, 8);
+                memcpy(&p->posX, pose + 8, 4);
+                memcpy(&p->posY, pose + 12, 4);
+                memcpy(&p->posZ, pose + 16, 4);
+                posed = 1;
+            }
+        }
+        if (!posed) {
+            readMem(g_base + offPosX, &p->posX, 4);
+            readMem(g_base + offPosY, &p->posY, 4);
+            readMem(g_base + offPosZ, &p->posZ, 4);
+            readMem(g_base + offTick, &p->tickMs, 8);
+        }
+    }
     readMem(g_base + offExpPct, &p->expPct, 8);
     // Lawful/Weight/MaxWeight/Food from offsets.json are module-relative globals
     // (large offsets >= 0x400000); discovered ones are player-relative (small).
@@ -573,39 +646,74 @@ static void readPlayer(PlayerData* p) {
     if (weightA) { p->weightOk = 1; readMem(weightA, &p->weight, 4); }
     if (maxWtA)  { p->maxWeightOk = 1; readMem(maxWtA, &p->maxWeight, 4); }
     if (foodA)   { p->foodOk = 1;   readMem(foodA, &p->food, 4); }
-    for (int i = 0; i < 6; i++)
-        if (g_offStats[i] >= 0) { p->statsOk[i] = 1; readMem(pb + g_offStats[i], &p->stats[i], 4); }
     {
         uint64_t st = anchorStatus();
         int ok = 0;
         g_charOk = st != 0;
         if (st) {
             uint32_t v;
-            v = decodeAt(st, g_chStr, &ok); if (ok) { p->statsOk[0] = 1; p->stats[0] = v; }
-            v = decodeAt(st, g_chDex, &ok); if (ok) { p->statsOk[1] = 1; p->stats[1] = v; }
-            v = decodeAt(st, g_chCon, &ok); if (ok) { p->statsOk[2] = 1; p->stats[2] = v; }
-            v = decodeAt(st, g_chInt, &ok); if (ok) { p->statsOk[3] = 1; p->stats[3] = v; }
-            v = decodeAt(st, g_chWis, &ok); if (ok) { p->statsOk[4] = 1; p->stats[4] = v; }
-            v = decodeAt(st, g_chCha, &ok); if (ok) { p->statsOk[5] = 1; p->stats[5] = v; }
-            v = decodeAt(st, g_chLevel, &ok); if (ok && v) p->level = v;
-            v = decodeAt(st, g_chHp, &ok); if (ok && v) p->hp = v;
-            v = decodeAt(st, g_chMp, &ok); if (ok) p->mp = v;
-            v = decodeAt(st, g_chMaxMp, &ok); if (ok && v) p->maxMp = v;
-            v = decodeAt(st, g_chFood, &ok); if (ok) { p->foodOk = 1; p->food = (int32_t)v; }
-            v = decodeAt(st, g_chLawful, &ok); if (ok) { p->lawfulOk = 1; p->lawful = (int32_t)v; }
-            v = decodeAt(st, g_chAc, &ok); if (ok) { p->acOk = 1; p->ac = (int32_t)v; }
-            /* WEIGHT at 0x300 is the bag percent. CUR/MAX stay raw and can be noisy. */
-            v = decodeAt(st, g_chWeight, &ok); if (ok) { p->weightPctOk = 1; p->weightPct = (int32_t)v; }
-            p->weight = (int32_t)rd32(st + g_chWeightCur);
-            p->maxWeight = (int32_t)rd32(st + g_chWeightMax);
+            uint32_t need = 0x40;
+            uint8_t stb[0x800];
+            uint32_t offs[16];
+            int ni = 0, i;
+            offs[ni++] = g_chStr; offs[ni++] = g_chDex; offs[ni++] = g_chCon;
+            offs[ni++] = g_chInt; offs[ni++] = g_chWis; offs[ni++] = g_chCha;
+            offs[ni++] = g_chLevel; offs[ni++] = g_chHp; offs[ni++] = g_chMp;
+            offs[ni++] = g_chMaxMp; offs[ni++] = g_chFood; offs[ni++] = g_chLawful;
+            offs[ni++] = g_chAc; offs[ni++] = g_chWeight;
+            for (i = 0; i < ni; i++) if (offs[i] + 12 > need) need = offs[i] + 12;
+            if (g_chWeightCur + 4 > need) need = g_chWeightCur + 4;
+            if (g_chWeightMax + 4 > need) need = g_chWeightMax + 4;
+            if (need > sizeof(stb)) need = (uint32_t)sizeof(stb);
+            if (readMem(st, stb, need)) {
+                if (decodeBuf(stb, need, g_chStr, &v)) { p->statsOk[0] = 1; p->stats[0] = v; }
+                if (decodeBuf(stb, need, g_chDex, &v)) { p->statsOk[1] = 1; p->stats[1] = v; }
+                if (decodeBuf(stb, need, g_chCon, &v)) { p->statsOk[2] = 1; p->stats[2] = v; }
+                if (decodeBuf(stb, need, g_chInt, &v)) { p->statsOk[3] = 1; p->stats[3] = v; }
+                if (decodeBuf(stb, need, g_chWis, &v)) { p->statsOk[4] = 1; p->stats[4] = v; }
+                if (decodeBuf(stb, need, g_chCha, &v)) { p->statsOk[5] = 1; p->stats[5] = v; }
+                if (decodeBuf(stb, need, g_chLevel, &v) && v) p->level = v;
+                if (decodeBuf(stb, need, g_chHp, &v) && v) p->hp = v;
+                if (decodeBuf(stb, need, g_chMp, &v)) p->mp = v;
+                if (decodeBuf(stb, need, g_chMaxMp, &v) && v) p->maxMp = v;
+                if (decodeBuf(stb, need, g_chFood, &v)) { p->foodOk = 1; p->food = (int32_t)v; }
+                if (decodeBuf(stb, need, g_chLawful, &v)) { p->lawfulOk = 1; p->lawful = (int32_t)v; }
+                if (decodeBuf(stb, need, g_chAc, &v)) { p->acOk = 1; p->ac = (int32_t)v; }
+                /* WEIGHT at 0x300 is the bag percent. CUR/MAX stay raw and can be noisy. */
+                if (decodeBuf(stb, need, g_chWeight, &v)) { p->weightPctOk = 1; p->weightPct = (int32_t)v; }
+                if (u32at(stb, need, g_chWeightCur, &v)) p->weight = (int32_t)v;
+                if (u32at(stb, need, g_chWeightMax, &v)) p->maxWeight = (int32_t)v;
+            } else {
+                v = decodeAt(st, g_chStr, &ok); if (ok) { p->statsOk[0] = 1; p->stats[0] = v; }
+                v = decodeAt(st, g_chDex, &ok); if (ok) { p->statsOk[1] = 1; p->stats[1] = v; }
+                v = decodeAt(st, g_chCon, &ok); if (ok) { p->statsOk[2] = 1; p->stats[2] = v; }
+                v = decodeAt(st, g_chInt, &ok); if (ok) { p->statsOk[3] = 1; p->stats[3] = v; }
+                v = decodeAt(st, g_chWis, &ok); if (ok) { p->statsOk[4] = 1; p->stats[4] = v; }
+                v = decodeAt(st, g_chCha, &ok); if (ok) { p->statsOk[5] = 1; p->stats[5] = v; }
+                v = decodeAt(st, g_chLevel, &ok); if (ok && v) p->level = v;
+                v = decodeAt(st, g_chHp, &ok); if (ok && v) p->hp = v;
+                v = decodeAt(st, g_chMp, &ok); if (ok) p->mp = v;
+                v = decodeAt(st, g_chMaxMp, &ok); if (ok && v) p->maxMp = v;
+                v = decodeAt(st, g_chFood, &ok); if (ok) { p->foodOk = 1; p->food = (int32_t)v; }
+                v = decodeAt(st, g_chLawful, &ok); if (ok) { p->lawfulOk = 1; p->lawful = (int32_t)v; }
+                v = decodeAt(st, g_chAc, &ok); if (ok) { p->acOk = 1; p->ac = (int32_t)v; }
+                v = decodeAt(st, g_chWeight, &ok); if (ok) { p->weightPctOk = 1; p->weightPct = (int32_t)v; }
+                p->weight = (int32_t)rd32(st + g_chWeightCur);
+                p->maxWeight = (int32_t)rd32(st + g_chWeightMax);
+            }
             if (p->maxWeight > 0) { p->weightOk = 1; p->maxWeightOk = 1; }
-            if (!p->hp && g_stBlock) p->hp = rd32(g_base + g_stBlock + g_stHp);
-            if (!p->maxHp && g_stBlock) p->maxHp = rd32(g_base + g_stBlock + g_stMaxHp);
-            if (!p->mp && g_stBlock) p->mp = rd32(g_base + g_stBlock + g_stMp);
-            if (!p->maxMp && g_stBlock) p->maxMp = rd32(g_base + g_stBlock + g_stMaxMp);
-            if (!p->level && g_stBlock) p->level = rd32(g_base + g_stBlock + g_stLevel);
-            if (!p->posX && g_stBlock) p->posX = rd32(g_base + g_stBlock + g_stX);
-            if (!p->posY && g_stBlock) p->posY = rd32(g_base + g_stBlock + g_stY);
+            if (g_stBlock && (!p->hp || !p->maxHp || !p->mp || !p->maxMp || !p->level || !p->posX || !p->posY)) {
+                uint8_t hud[0x40];
+                if (readMem(g_base + g_stBlock, hud, sizeof(hud))) {
+                    if (!p->hp) u32at(hud, sizeof(hud), g_stHp, &p->hp);
+                    if (!p->maxHp) u32at(hud, sizeof(hud), g_stMaxHp, &p->maxHp);
+                    if (!p->mp) u32at(hud, sizeof(hud), g_stMp, &p->mp);
+                    if (!p->maxMp) u32at(hud, sizeof(hud), g_stMaxMp, &p->maxMp);
+                    if (!p->level) u32at(hud, sizeof(hud), g_stLevel, &p->level);
+                    if (!p->posX) u32at(hud, sizeof(hud), g_stX, &p->posX);
+                    if (!p->posY) u32at(hud, sizeof(hud), g_stY, &p->posY);
+                }
+            }
         }
     }
     if (p->hp > p->maxHp * 2) p->hp = 0, p->maxHp = 0;
@@ -658,12 +766,17 @@ static int readParty(PartyData* members, int max) {
 
 // Read active buffs from the (discovered) 11-slot buff array.
 static int readBuffs(BuffData* buffs, int max, uint64_t buffArray) {
-    if (!buffArray) return 0;
+    if (!buffArray || !oBuffStruct) return 0;
     int n = 0;
+    uint32_t bytes = (uint32_t)BUFF_SLOTS * oBuffStruct;
+    uint8_t* span = (uint8_t*)malloc(bytes);
+    int haveSpan = span && oBuffDataPtr + 8 <= oBuffStruct && readMem(buffArray, span, bytes);
     for (int i = 0; i < BUFF_SLOTS && n < max; i++) {
         uint64_t slot = buffArray + (uint64_t)i * oBuffStruct;
         uint64_t tagged = 0;
-        if (!readMem(slot + oBuffDataPtr, &tagged, 8) || !tagged) continue;
+        if (haveSpan) memcpy(&tagged, span + (size_t)i * oBuffStruct + oBuffDataPtr, 8);
+        else if (!readMem(slot + oBuffDataPtr, &tagged, 8)) continue;
+        if (!tagged) continue;
         uint64_t real = tagged & 0xFFFFFFFFFFFULL;
         if (!real) continue;
         BuffData* b = &buffs[n];
@@ -675,6 +788,7 @@ static int readBuffs(BuffData* buffs, int max, uint64_t buffArray) {
         readMem(real + oBuffStacks, &b->stacks, 4);
         n++;
     }
+    free(span);
     return n;
 }
 
@@ -1283,7 +1397,11 @@ static void buildSnapshot(FILE* out, int frame, double ts,
     readPlayer(&p);
     int nSkills = readSkills(skills, MAX_SKILLS);
     int nParty = readParty(party, MAX_PARTY);
-    snapshotDiscovery(buffArray, refs, nRefs);
+    if (g_discStarted) snapshotDiscovery(buffArray, refs, nRefs);
+    else { *buffArray = 0; *nRefs = 0; }
+    /* Fixed BuffListBase wins over a heap-scan guess. Same address discovery
+     * already preferred when the offset is set. */
+    if (offBuffList) *buffArray = g_base + offBuffList;
     int nBuffs = readBuffs(buffs, MAX_BUFFS, *buffArray);
     int nEnts = *nRefs ? refreshEntities(refs, *nRefs, ents, MAX_ENTITIES, &p) : 0;
     nEnts = finalizeEnts(ents, nEnts);
@@ -1389,6 +1507,8 @@ static void monitorDetach(void) {
     if (g_monAttached) SignedClose();
     g_monAttached = 0;
     g_pid = 0;
+    g_cachedChar = 0;
+    g_cachedMap = 0;
 }
 
 static int monitorEnsure(const char* offsetsPath) {
@@ -1417,7 +1537,9 @@ static int monitorEnsure(const char* offsetsPath) {
     SignedSetTarget(g_pid);
     if (!getModuleBase(&g_base)) { SignedClose(); g_pid = 0; return 0; }
     g_monAttached = 1;
-    startDiscovery();
+    /* The bot roster is print_state's actor vector. This DLL does not start
+     * the 64KB heap sweep; buffs come from BuffListBase. The standalone exe
+     * still calls startDiscovery itself. */
     return 1;
 }
 

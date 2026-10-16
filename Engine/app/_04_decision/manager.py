@@ -407,6 +407,117 @@ class DecisionManager:
             bool(self.blackboard.loot_approach_active),
         )
 
+    def _click_feedback_origin(self, executor: object):
+        """Origin the ground click was aimed with, else the live origin."""
+        pinned = getattr(executor, "last_travel_click_origin", None)
+        if pinned is None:
+            return self.blackboard.world_origin
+        from app._02_state.geometry import WorldOrigin
+
+        return WorldOrigin(x=int(pinned[0]), y=int(pinned[1]))
+
+    def _ground_click_shift_reason(
+        self,
+        planned: tuple[int, int],
+        clicked: tuple[int, int],
+        state: object | None,
+        kind: str,
+        origin: object | None = None,
+    ) -> str | None:
+        """Why ``clicked`` must not become the arrival tile.
+
+        The cursor ring may land on a neighbor. A tile past that ring, a wall,
+        or a straight line the client cannot walk is an origin shift, not a
+        real click. A travel neighbor farther from ``nav_goal`` than the
+        planned tile keeps the planned arrival point (``back``). ``None``
+        means the tile may replace the planned hop.
+        """
+        from app._03_world.space.world_coords import tile_chebyshev
+        from app._04_decision import player_mode as pm
+        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.nav_config import get_terrain_map
+
+        px, py = int(planned[0]), int(planned[1])
+        cx, cy = int(clicked[0]), int(clicked[1])
+        if tile_chebyshev(px, py, cx, cy) > int(pm.TRAVEL_CURSOR_FALLBACK_RADIUS):
+            return "far"
+        terrain = get_terrain_map()
+        if terrain is None:
+            return None
+        if not terrain.is_walkable(cx, cy):
+            return "wall"
+        if origin is None:
+            origin = self.blackboard.world_origin
+        start = (int(origin.x), int(origin.y))
+        bodies = collect_body_tiles(state, origin) if state is not None else set()
+        if not click_clear(terrain, bodies, start, (cx, cy)):
+            return "line"
+        if kind == "travel":
+            goal = getattr(self.blackboard, "nav_goal", None)
+            if goal is not None and len(goal) >= 2:
+                gx, gy = int(goal[0]), int(goal[1])
+                if tile_chebyshev(cx, cy, gx, gy) > tile_chebyshev(px, py, gx, gy):
+                    return "back"
+        return None
+
+    def _adopt_ground_click_tile(
+        self,
+        kind: str,
+        planned: tuple[int, int] | None,
+        clicked: tuple[int, int],
+        state: object | None,
+        origin: object | None = None,
+    ) -> bool:
+        """Store ``clicked`` as the arrival tile, or drop the hop.
+
+        Returns True when the planned hop stays active.
+        """
+        if planned is not None:
+            reason = self._ground_click_shift_reason(
+                planned, clicked, state, kind, origin
+            )
+            if reason is not None:
+                from app.bot_log import event
+
+                event(
+                    "avoid",
+                    "click tile rejected kind=%s planned=%s got=%s reason=%s",
+                    kind,
+                    (int(planned[0]), int(planned[1])),
+                    (int(clicked[0]), int(clicked[1])),
+                    reason,
+                )
+                # Farther from the goal: the mouse already landed, but the
+                # arrival tile stays the planned hop.
+                if reason == "back":
+                    return True
+                return False
+        if kind == "travel":
+            self.blackboard.nav_waypoint = clicked
+        elif kind == "search":
+            self.blackboard.search_waypoint = clicked
+        elif kind == "loot":
+            self.blackboard.loot_approach_waypoint = clicked
+        return True
+
+    def _drop_travel_click_hop(self) -> None:
+        self.blackboard.travel_hop_active = False
+        self.blackboard.nav_waypoint = None
+        self.blackboard.travel_destination = None
+        self.blackboard.travel_unstick_active = False
+
+    def _drop_search_click_hop(self) -> None:
+        self.blackboard.search_hop_active = False
+        self.blackboard.search_waypoint = None
+        self.blackboard.search_destination = None
+        self.blackboard.search_leg_goal = None
+        self.blackboard.search_click_at = 0.0
+
+    def _drop_loot_click_hop(self) -> None:
+        self.blackboard.loot_approach_active = False
+        self.blackboard.loot_approach_waypoint = None
+        self.blackboard.loot_approach_destination = None
+
     def apply_cursor_verify_feedback(
         self, executor: object, state: object | None = None
     ) -> None:
@@ -536,17 +647,25 @@ class DecisionManager:
 
         rel = getattr(executor, "last_travel_click_relative", None)
         if rel is not None:
-            ax, ay = relative_to_absolute(
-                rel[0], rel[1], self.blackboard.world_origin
-            )
+            origin = self._click_feedback_origin(executor)
+            ax, ay = relative_to_absolute(rel[0], rel[1], origin)
             abs_tile = (ax, ay)
-            # Keep arrival waits aligned with the tile that actually clicked.
-            if self.blackboard.travel_hop_active:
-                self.blackboard.nav_waypoint = abs_tile
-            if self.blackboard.search_hop_active:
-                self.blackboard.search_waypoint = abs_tile
-            if self.blackboard.loot_approach_active:
-                self.blackboard.loot_approach_waypoint = abs_tile
+            # Cursor-ring neighbors stay. A shifted or walled tile is not
+            # the arrival point; the next tick plans a new hop. The origin
+            # is the one used to aim the click, so a later pose pulse does
+            # not slide that tile onto a wall.
+            if self.blackboard.travel_hop_active and not self._adopt_ground_click_tile(
+                "travel", self.blackboard.nav_waypoint, abs_tile, state, origin
+            ):
+                self._drop_travel_click_hop()
+            if self.blackboard.search_hop_active and not self._adopt_ground_click_tile(
+                "search", self.blackboard.search_waypoint, abs_tile, state, origin
+            ):
+                self._drop_search_click_hop()
+            if self.blackboard.loot_approach_active and not self._adopt_ground_click_tile(
+                "loot", self.blackboard.loot_approach_waypoint, abs_tile, state, origin
+            ):
+                self._drop_loot_click_hop()
             self._log_travel_cursor_outcome(executor, ok=True, abs_tile=abs_tile)
             return
 

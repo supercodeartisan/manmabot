@@ -15,7 +15,7 @@ from app._04_decision.behaviors.unstick import (
     try_movement_unstick,
     walkable_around,
 )
-from app._04_decision.combat_query import object_absolute_tile
+from app._04_decision.combat_query import object_absolute_tile, small_adena_ignored
 from app._04_decision.nav_config import get_terrain_map
 from app._04_decision import player_mode as pm
 
@@ -140,7 +140,12 @@ def try_finish_pending_pickup(
 
     origin = blackboard.world_origin
     item_tile = object_absolute_tile(obj, origin)
-    if _in_pickup_range(origin, obj, item_tile):
+    in_range = _in_pickup_range(origin, obj, item_tile)
+    # Named small adena is not walked back to. A pile already underfoot still F4s.
+    if small_adena_ignored(obj) and not in_range:
+        clear_loot_await(blackboard)
+        return None
+    if in_range:
         event("loot", "pickup retry id=%s (await still listed)", tid)
         _emit_pickup(
             blackboard,
@@ -462,7 +467,7 @@ def tick_loot_item(
         elif dest is not None and _loot_click_still_open(
             state, origin, wp, terrain=get_terrain_map()
         ):
-            from app._04_decision.avoidance import classify_ground_reclick
+            from app._04_decision.avoidance import classify_ground_reclick, log_ground_pause
             from app._05_action.body_pose import body_is_moving
 
             if try_movement_unstick(
@@ -485,11 +490,23 @@ def tick_loot_item(
                 if blackboard.scratch.pop(SCRATCH_ESCAPED, None):
                     clear_loot_hop(blackboard)
                 return Status.SUCCESS
+            moving = body_is_moving()
+            now = time.time()
+            clicked_at = float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0)
             follow = classify_ground_reclick(
-                body_is_moving(),
-                float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0),
-                now=time.time(),
+                moving,
+                clicked_at,
+                now=now,
             )
+            if follow == "repeat":
+                log_ground_pause(
+                    "loot",
+                    wp,
+                    moving,
+                    clicked_at,
+                    now,
+                    "walk onto item",
+                )
             _emit_approach(
                 blackboard,
                 destination=dest,

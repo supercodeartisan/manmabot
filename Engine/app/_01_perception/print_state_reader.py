@@ -4,7 +4,7 @@ The DLL keeps a roster across calls (slow grid sweep ~100ms, fast PRES_B poll
 every snapshot) and adds ``iscr`` (A→B interpolated screen). The player
 object and each live entity also carry ``iso`` (A/B and age) when PRES_B has a step.
 ``entities[]`` includes ``guid``, item ``contrib``/``own`` (extra_ent drop claim), ``qty``,
-``bait``, ``screen``/``iscr``. Offsets come from settings_print_state.json,
+``bait``, AttackAction ``atk``/``owner``/``tgt``, ``screen``/``iscr``. Offsets come from settings_print_state.json,
 then entity_offsets.txt in the same folder (TXT wins).
 """
 from __future__ import annotations

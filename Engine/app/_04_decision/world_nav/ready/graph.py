@@ -50,6 +50,8 @@ class Transition:
     to_x: int
     to_y: int
     meta: dict[str, Any] = field(default_factory=dict)
+    from_floor: int | None = None
+    to_floor: int | None = None
 
     @property
     def from_key(self) -> tuple[int, int, int]:
@@ -80,6 +82,17 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _cell_ok(d: dict[str, Any]) -> bool:
     return d.get("mapId") is not None and d.get("x") is not None and d.get("y") is not None
+
+
+def _cell_floor(d: dict[str, Any]) -> int | None:
+    """Dungeon floors carry an int. Mainland and unlabeled cells are None."""
+    raw = d.get("floor")
+    if raw is None or raw == "":
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def _edge_kind(e: dict[str, Any]) -> str:
@@ -139,6 +152,8 @@ def load_transitions_from_map_file(
                 to_x=int(to["x"]),
                 to_y=int(to["y"]),
                 meta=meta,
+                from_floor=_cell_floor(frm),
+                to_floor=_cell_floor(to),
             )
         )
     return transitions, map_names
@@ -240,6 +255,8 @@ def load_graph(
                             to_x=int(to["x"]),
                             to_y=int(to["y"]),
                             meta=dict(e.get("meta") or {}),
+                            from_floor=_cell_floor(frm),
+                            to_floor=_cell_floor(to),
                         )
                     )
 

@@ -450,6 +450,13 @@ class ScheduleListPane(QWidget):
             return None
         return int(rows[0].row())
 
+    def clear_selection(self) -> None:
+        """Drop the highlighted row and its routine preview."""
+        self._suppress_select = True
+        self.table.clearSelection()
+        self._suppress_select = False
+        self._paint_routine(None)
+
     def selected_task(self) -> ScheduleTask | None:
         index = self.selected_index()
         if index is None or index < 0 or index >= len(self.tasks):

@@ -13,14 +13,10 @@ from typing import Callable, Optional
 from session.paths import (
     ensure_userdata,
     manmabot_root,
-    overlay_farms_path,
-    overlay_patrol_path,
-    overlay_safe_path,
 )
 from session.probes import (
     Lamp,
     bring_game_to_front,
-    load_selected_farm_rects,
     pause_reason_from_game,
     probe_game,
     probe_memory,
@@ -144,6 +140,11 @@ class BotController:
         # Schedule Start may begin while the console still owns focus.
         # Later focus loss still pauses; see auto_pause_tick.
         self._unattended = False
+        # Paused "update schedule" bumps the epoch. The worker applies it
+        # before the next decision tick. Start resets both counters.
+        self._settings_epoch = 0
+        self._settings_applied = 0
+        self._route_identity: tuple | None = None
 
     def _ui(self):
         return ui_strings(getattr(self._profile, "language", None))
@@ -183,6 +184,59 @@ class BotController:
         mouse = getattr(executor, "mouse", None)
         if mouse is not None:
             mouse.humanize_move = bool(on)
+
+    def _push_executor_profile(self, profile, world, executor) -> None:
+        """Spell slots and humanize flags. Does not change character class."""
+        from app._05_action.spell_box import configure_spell_box
+
+        layout = getattr(profile, "hotbar_layout", None) or {}
+        if world is not None:
+            world.hotbar_layout = layout
+        if executor is not None:
+            executor.hotbar_layout = layout
+            executor.humanize = bool(getattr(profile, "humanize", True))
+            mouse = getattr(executor, "mouse", None)
+            if mouse is not None:
+                mouse.humanize = bool(getattr(profile, "humanize", True))
+                mouse.humanize_move = bool(getattr(profile, "humanize_move", True))
+            keyboard = getattr(executor, "keyboard", None)
+            if keyboard is not None:
+                keyboard.humanize = bool(getattr(profile, "humanize", True))
+        configure_spell_box(getattr(profile, "spell_slots", None))
+
+    def _consume_paused_settings(self, config, decision, world, executor) -> None:
+        """Apply a paused schedule update before the next decision tick."""
+        from session.runtime_settings import (
+            install_profile_runtime,
+            restart_paused_routine,
+            route_identity,
+            snapshot_profile,
+        )
+
+        with self._lock:
+            epoch = self._settings_epoch
+            if epoch == self._settings_applied:
+                return
+            snap = snapshot_profile(self._profile)
+        reset_route = False
+        try:
+            new_route = route_identity(snap)
+            reset_route = new_route != self._route_identity
+            install_profile_runtime(snap, config, navigation=reset_route)
+            if decision is not None:
+                decision.blackboard.scratch["runtime_config"] = config
+                if reset_route:
+                    restart_paused_routine(snap, config, decision.blackboard)
+            self._push_executor_profile(snap, world, executor)
+            self._route_identity = new_route
+            if reset_route:
+                self.log("Paused settings applied; routine restarted")
+            else:
+                self.log("Paused settings applied")
+        except Exception:
+            self.log("Paused settings reload failed:\n" + traceback.format_exc())
+        with self._lock:
+            self._settings_applied = epoch
 
     def set_preview_enabled(self, on: bool) -> None:
         if on:
@@ -760,6 +814,9 @@ class BotController:
             if err:
                 return err
             self._profile = profile
+            self._settings_epoch = 0
+            self._settings_applied = 0
+            self._route_identity = None
             self._unattended = bool(unattended)
             self._stop_event.clear()
             self._resume_pending = False
@@ -1006,20 +1063,9 @@ class BotController:
         from session.perception_capture import open_perception_capture
         from app._02_state import ActionType, CharacterType
         from app._03_world.merge.track import create_game_state
-        from app._03_world.space.battle_area import configure_battle_area
-        from app._03_world.constants import (
-            configure_classification_thresholds,
-            configure_species_filter,
-            configure_species_level_overrides,
-        )
         from app._03_world.merge.memory_sync import world_origin_from_snapshot
-        from app._04_decision.configure import (
-            apply_action_executor_options,
-            configure_action,
-            configure_decision,
-        )
+        from app._04_decision.configure import apply_action_executor_options
         from app._04_decision.manager import DecisionManager
-        from app._04_decision.nav_config import configure_navigation, get_terrain_map, set_loot_mode
         from app._04_decision.talking_scroll import (
             apply_mother_tree_mainland_stay,
             apply_talking_scroll_arrival,
@@ -1093,236 +1139,20 @@ class BotController:
             profile.selected_farms,
             session_log,
         )
-        nav = dict(config.get("navigation") or {})
-        nav["active_map"] = profile.active_map
-        from session.probes import map_style_is_dungeon
-        from app._04_decision.dungeon import set_dungeon_mode_override
-
-        dungeon = map_style_is_dungeon(
-            profile.active_map, getattr(profile, "map_style", None)
-        )
-        set_dungeon_mode_override(dungeon)
-        if dungeon:
-            nav.pop("farm_areas", None)
-            nav.pop("farm_areas_file", None)
-        else:
-            overlay_farms = overlay_farms_path(profile.active_map)
-            if overlay_farms.is_file():
-                nav["farm_areas_file"] = str(overlay_farms)
-            farms = load_selected_farm_rects(
-                profile.selected_farms, map_id=profile.active_map
-            )
-            if farms:
-                nav["farm_areas"] = farms
-                nav.pop("farm_areas_file", None)
-        overlay_safe = overlay_safe_path(profile.active_map)
-        if overlay_safe.is_file():
-            nav["safe_areas_file"] = str(overlay_safe)
-        config["navigation"] = nav
-
-        configure_species_level_overrides(profile.species_levels)
-        configure_species_filter(
-            getattr(profile, "species_filter_mode", "blacklist"),
-            profile.species_blacklist,
-            getattr(profile, "species_whitelist", []),
+        from session.runtime_settings import (
+            install_profile_runtime,
+            route_identity,
+            snapshot_profile,
         )
 
-        from hotbar.inspect import HotbarInspectError, inspect_hotbars
+        with self._lock:
+            seen_epoch = self._settings_epoch
+            profile_snap = snapshot_profile(profile)
+        world_origin = install_profile_runtime(profile_snap, config, navigation=True)
+        self._route_identity = route_identity(profile_snap)
+        with self._lock:
+            self._settings_applied = seen_epoch
 
-        # Survival overrides into decision block
-        decision_cfg = dict(config.get("decision") or {})
-        hp = dict(decision_cfg.get("hp") or {})
-        mp = dict(decision_cfg.get("mp") or {})
-        farm = dict(decision_cfg.get("farm") or {})
-        spells_cfg = dict(decision_cfg.get("spells") or {})
-        hp["low_ratio"] = float(profile.hp_potion_ratio)
-        hp["critical_ratio"] = float(profile.hp_escape_ratio)
-        hp["recover_enabled"] = bool(getattr(profile, "hp_recover_enabled", True))
-        hp["use_potion"] = bool(getattr(profile, "use_hp_potion", True))
-        hp["use_heal"] = bool(getattr(profile, "use_heal", True))
-        from settings.hp_actions import to_engine_actions
-
-        hp["actions"] = to_engine_actions(getattr(profile, "hp_actions", None))
-        mp["low_ratio"] = float(profile.mp_escape_ratio)
-        mp["escape_enabled"] = False
-        mp["potion_ratio"] = float(getattr(profile, "mp_potion_ratio", 0.30))
-        mp["recover_enabled"] = bool(getattr(profile, "mp_recover_enabled", False))
-        mp["use_potion"] = bool(getattr(profile, "use_mp_potion", False))
-        mp["spell_reserve_ratio"] = float(profile.spell_reserve_ratio)
-        farm["duration_limit_s"] = float(profile.farm_rotate_s)
-        from settings.farm_schedule import stay_seconds_for
-
-        stay_map = getattr(profile, "farm_stays_s", None) or {}
-        farm["duration_limits_s"] = [
-            stay_seconds_for(
-                str(area.get("name") or ""),
-                stay_map,
-                profile.farm_rotate_s,
-            )
-            for area in (nav.get("farm_areas") or [])
-            if isinstance(area, dict)
-        ]
-        farm["loot_adena_weight_ratio"] = float(profile.loot_adena_weight_ratio)
-        farm["ignore_small_adena"] = bool(getattr(profile, "ignore_small_adena", False))
-        farm["ignore_small_adena_qty"] = int(getattr(profile, "ignore_small_adena_qty", 10))
-        farm["area_empty"] = bool(getattr(profile, "area_empty", False))
-        farm["area_empty_seconds"] = int(getattr(profile, "area_empty_seconds", 60))
-        farm["area_low_yield"] = bool(getattr(profile, "area_low_yield", False))
-        farm["area_low_yield_adena"] = int(getattr(profile, "area_low_yield_adena", 1000))
-        farm["area_low_yield_seconds"] = int(getattr(profile, "area_low_yield_seconds", 180))
-        farm["area_players"] = bool(getattr(profile, "area_players", False))
-        farm["area_player_count"] = int(getattr(profile, "area_player_count", 3))
-        returning = dict(decision_cfg.get("return") or {})
-        returning["hp_enabled"] = bool(getattr(profile, "return_hp_enabled", True))
-        returning["hp_ratio"] = float(getattr(profile, "return_hp_ratio", 0.30))
-        returning["mp_enabled"] = bool(getattr(profile, "return_mp_enabled", True))
-        returning["mp_ratio"] = float(getattr(profile, "return_mp_ratio", 0.15))
-        returning["idle_enabled"] = bool(getattr(profile, "return_idle_enabled", False))
-        returning["idle_seconds"] = float(getattr(profile, "return_idle_seconds", 60.0))
-        returning["hunt_map"] = str(profile.active_map or "talking_island")
-        decision_cfg["return"] = returning
-        tree_cfg = dict(decision_cfg.get("mother_tree") or {})
-        tree_cfg["hp_to_mp_enabled"] = bool(
-            getattr(profile, "mother_tree_hp_to_mp_enabled", True)
-        )
-        tree_cfg["hp_to_mp_hp_ratio"] = float(
-            getattr(profile, "mother_tree_hp_to_mp_hp_ratio", 0.85)
-        )
-        tree_cfg["hp_to_mp_mp_ratio"] = float(
-            getattr(profile, "mother_tree_hp_to_mp_mp_ratio", 0.80)
-        )
-        tree_cfg["heal_enabled"] = bool(
-            getattr(profile, "mother_tree_heal_enabled", True)
-        )
-        tree_cfg["heal_hp_ratio"] = float(
-            getattr(profile, "mother_tree_heal_hp_ratio", 0.40)
-        )
-        tree_cfg["heal_mp_ratio"] = float(
-            getattr(profile, "mother_tree_heal_mp_ratio", 0.80)
-        )
-        decision_cfg["mother_tree"] = tree_cfg
-        teleport_cfg = dict(decision_cfg.get("teleport") or {})
-        teleport_cfg["enabled"] = bool(getattr(profile, "random_teleport_enabled", False))
-        teleport_cfg["on_player"] = bool(getattr(profile, "teleport_on_player", False))
-        teleport_cfg["when_surrounded"] = bool(
-            getattr(profile, "teleport_when_surrounded", False)
-        )
-        teleport_cfg["surround_count"] = max(
-            2, int(getattr(profile, "teleport_surround_count", 10) or 10)
-        )
-        decision_cfg["teleport"] = teleport_cfg
-        death_cfg = dict(decision_cfg.get("death") or {})
-        death_cfg["resurrect"] = bool(getattr(profile, "resurrect_if_dead", True))
-        decision_cfg["death"] = death_cfg
-        combat_cfg = dict(decision_cfg.get("combat") or {})
-        combat_cfg["attack_jitter"] = bool(getattr(profile, "attack_jitter", False))
-        combat_cfg["attack_jitter_ms"] = max(10, min(50, int(getattr(profile, "attack_jitter_ms", 35))))
-        combat_cfg["target_delay"] = bool(getattr(profile, "target_delay", False))
-        combat_cfg["target_delay_min_ms"] = max(10, min(50, int(getattr(profile, "target_delay_min_ms", 20))))
-        combat_cfg["target_delay_max_ms"] = max(10, min(50, int(getattr(profile, "target_delay_max_ms", 50))))
-        combat_cfg["abandon_same"] = False
-        combat_cfg["use_antidote_potion"] = bool(
-            getattr(profile, "use_antidote_potion", False)
-        )
-        combat_cfg["antidote_auto"] = combat_cfg["use_antidote_potion"]
-        decision_cfg["combat"] = combat_cfg
-        shop = dict(decision_cfg.get("shop") or {})
-        shop["arrow_qty"] = int(profile.arrow_buy_qty)
-        shop["silver_arrow_qty"] = int(getattr(profile, "silver_arrow_buy_qty", 200))
-        shop["hp_potion_qty"] = int(getattr(profile, "hp_potion_buy_qty", 100))
-        shop["depoison_qty"] = int(getattr(profile, "depoison_buy_qty", 1))
-        shop["buy_normal_arrows"] = bool(getattr(profile, "buy_normal_arrows", True))
-        shop["buy_silver_arrows"] = bool(getattr(profile, "buy_silver_arrows", False))
-        if shop["buy_normal_arrows"] and shop["buy_silver_arrows"]:
-            shop["buy_silver_arrows"] = False
-        shop["restock_potions"] = bool(getattr(profile, "restock_potions", True))
-        shop["buy_depoison"] = bool(getattr(profile, "buy_depoison", False))
-        shop_locale = ""
-        try:
-            from settings.accounts import AccountStore
-
-            account = AccountStore().get(profile.selected_account_id or "")
-            if account is not None and getattr(account, "locale", None):
-                shop_locale = str(account.locale).strip().lower()
-        except Exception:
-            shop_locale = ""
-        if not shop_locale:
-            shop_locale = str(getattr(profile, "shop_locale", "") or "").strip().lower()
-        if not shop_locale:
-            shop_locale = str(profile.game_language or "ko")
-        shop["shop_locale"] = "zh" if shop_locale.startswith("zh") else "ko"
-        shop["hp_potion_npc"] = str(getattr(profile, "hp_potion_npc", "") or "")
-        shop["return_potion_enabled"] = bool(
-            getattr(profile, "return_potion_enabled", True)
-        )
-        shop["return_potion_count"] = int(getattr(profile, "return_potion_count", 20))
-        shop["return_arrow_enabled"] = bool(
-            getattr(profile, "return_arrow_enabled", True)
-        )
-        shop["return_arrow_count"] = int(getattr(profile, "return_arrow_count", 300))
-        shop["return_depoison_enabled"] = bool(
-            getattr(profile, "return_depoison_enabled", False)
-        )
-        shop["return_depoison_count"] = int(
-            getattr(profile, "return_depoison_count", 1)
-        )
-        shop["return_weight_enabled"] = bool(
-            getattr(profile, "return_weight_enabled", True)
-        )
-        from settings.profile import (
-            DEFAULT_RETURN_WEIGHT_ABOVE,
-            snap_return_weight_above,
-        )
-
-        weight_pct = snap_return_weight_above(
-            getattr(profile, "return_weight_above", DEFAULT_RETURN_WEIGHT_ABOVE),
-            DEFAULT_RETURN_WEIGHT_ABOVE,
-        )
-        shop["sell_weight_ratio"] = float(weight_pct) / 100.0
-        sell_mode = str(
-            getattr(profile, "sell_mode", "sell_except_keep") or "sell_except_keep"
-        ).strip().lower()
-        shop["sell_mode"] = (
-            "sell_only_garbage"
-            if sell_mode in ("sell_only_garbage", "only_garbage", "garbage")
-            else "sell_except_keep"
-        )
-        shop["potion_suppress_s"] = 600.0
-        spells_cfg["heal_until_hp_ratio"] = float(profile.heal_until_hp_ratio)
-        spells_cfg["use_haste_potion"] = bool(
-            getattr(profile, "use_haste_potion", False)
-        )
-        spells_cfg["haste_potion_item"] = str(
-            getattr(profile, "haste_potion_item", "") or ""
-        ).strip()
-        spells_cfg["antidote_potion_item"] = str(
-            getattr(profile, "antidote_potion_item", "") or ""
-        ).strip()
-        decision_cfg["hp"] = hp
-        decision_cfg["mp"] = mp
-        decision_cfg["farm"] = farm
-        decision_cfg["shop"] = shop
-        decision_cfg["spells"] = spells_cfg
-        decision_cfg["game_language"] = profile.game_language
-        config["decision"] = decision_cfg
-
-        configure_battle_area(config)
-        configure_classification_thresholds(config)
-        configure_decision(config)
-        configure_action(config)
-        world_origin = configure_navigation(config)
-        set_loot_mode(profile.loot_mode)
-        from app._04_decision.ground_loot import configure_ground_loot
-
-        configure_ground_loot(profile.item_pickup_mode, profile.item_pickup_names)
-
-        from app._04_decision.patrol import configure_patrol_waypoints
-
-        overlay_patrol = overlay_patrol_path(profile.active_map)
-        if overlay_patrol.is_file():
-            configure_patrol_waypoints(
-                path=overlay_patrol, terrain=get_terrain_map()
-            )
 
         character = CharacterType(profile.character)
         capture = open_perception_capture(config)
@@ -1502,6 +1332,8 @@ class BotController:
         except Exception as exc:
             self.log(f"Input capture failed: {exc}")
 
+        from hotbar.inspect import HotbarInspectError, inspect_hotbars
+
         self._log_ui("hotbar_reading")
         self._publish_debug(loop={"note": "hotbar_scan"})
 
@@ -1634,10 +1466,12 @@ class BotController:
                     if not mouse_dropped:
                         executor.drop_mouse()
                         mouse_dropped = True
+                    self._consume_paused_settings(config, decision, world, executor)
                     self._set_preview_hold("Bot paused")
                     publish("paused")
                     time.sleep(0.05)
 
+                self._consume_paused_settings(config, decision, world, executor)
                 mouse_dropped = False
                 if self._stop_event.is_set():
                     break
@@ -1818,20 +1652,18 @@ class BotController:
                     try:
                         from app._04_decision.world_nav import SCRATCH_WORLD_NAV_PAUSE
 
-                        if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
-                            # Legacy flag: world-nav fail_skip no longer stops the bot.
-                            # Clear and continue so a stale scratch cannot halt Start.
-                            self.log(
-                                "World nav pause flag ignored — continuing routine"
-                            )
-                            publish("world_nav_continue")
-                            continue
-                    except Exception as gate_exc:
-                        self.log(f"World nav pause check: {gate_exc}")
+                    if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
+                        # Legacy flag: world-nav fail_skip no longer stops the bot.
+                        # Clear and continue so a stale scratch cannot halt Start.
+                        self.log(
+                            "World nav pause flag ignored — continuing routine"
+                        )
+                        publish("world_nav_continue")
+                        continue
+                except Exception as gate_exc:
+                    self.log(f"World nav pause check: {gate_exc}")
                 self.note_shop_action(action)
                 try:
-                    # Party uses the same blackboard for heal/buff cooldowns,
-                    # potion sides, and WORLD_NAV join — never solo mode columns.
                     executor.execute(
                         world,
                         action,

@@ -239,15 +239,36 @@ def _follow_body_click(
     if moving is not True and state is not None:
         bodies = collect_body_tiles(state, origin)
         if not click_clear(terrain, bodies, start, waypoint):
+            from app.bot_log import event
+
+            event(
+                "avoid",
+                "line closed kind=search wp=%s bodies=%d from=%s",
+                waypoint,
+                len(bodies),
+                start,
+            )
             blackboard.search_hop_active = False
             blackboard.search_destination = None
             blackboard.search_waypoint = None
             return False
+    now = time.time()
     follow = classify_ground_reclick(
         moving,
         float(blackboard.search_click_at or 0.0),
-        now=time.time(),
+        now=now,
     )
+    if follow == "repeat":
+        from app._04_decision.avoidance import log_ground_pause
+
+        log_ground_pause(
+            "search",
+            waypoint,
+            moving,
+            float(blackboard.search_click_at or 0.0),
+            now,
+            reason,
+        )
     content = blackboard.search_destination
     if content is None:
         content = waypoint_to_content(waypoint, origin)

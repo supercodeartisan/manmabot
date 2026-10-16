@@ -39,6 +39,7 @@ from i18n.localized_names import (
 from shop.behaviors import ShoppingSellFilters, load_behaviors, load_sell_filters, save_behaviors
 from ui_qt.editors.form_helpers import (
     add_check,
+    add_check_spin,
     add_spin_row,
     bind_gate,
     card,
@@ -793,6 +794,19 @@ class EquipmentTab(QWidget):
         self._adena_weight = add_spin_row(
             b, self.bag, "other", "loot_adena_weight_pct",
             self.t.get("adena_weight", "Adena weight"), 30, 1, 95, "%",
+        )
+        add_check_spin(
+            b,
+            self.bag,
+            "ignore_small_adena",
+            False,
+            self.t.get("ignore_small_adena_qty", "수량이"),
+            "ignore_small_adena_qty",
+            10,
+            1,
+            99999,
+            self.t.get("ignore_small_adena_suffix", "이하인 아데나 무시"),
+            section="other",
         )
         add_check(
             b, self.bag, "equipment", "use_potion_on_pickup",

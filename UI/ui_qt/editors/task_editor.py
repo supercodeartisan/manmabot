@@ -22,6 +22,7 @@ from settings.farm_schedule import normalize_routine
 from settings.profile import Profile
 from settings.schedule import ScheduleTask
 from ui_qt.editors.equipment_tab import EquipmentTab
+from ui_qt.shell.live_income_bar import LiveIncomeBar
 from ui_qt.editors.hunt_tab import HuntTab
 from ui_qt.editors.magic_tab import MagicTab
 from ui_qt.editors.move_tab import MoveTab
@@ -89,10 +90,32 @@ class TaskEditor(QWidget):
         self.other_tab: OtherTab | None = None
         self._build()
 
+    def _project_running(self) -> bool:
+        try:
+            from session.bot_controller import RunState
+
+            return self.bridge.controller.state == RunState.RUNNING
+        except Exception:
+            return False
+
+    def _purchase_open(self) -> bool:
+        try:
+            return bool(self.bridge.controller.purchase_in_progress())
+        except Exception:
+            return False
+
     def _build(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
+
+        self.income_bar = LiveIncomeBar(
+            self,
+            language=self.language,
+            running=self._project_running,
+            buying=self._purchase_open,
+        )
+        layout.addWidget(self.income_bar)
 
         self.identity_box = QGroupBox(self.t.get("task_details", "Task"))
         id_row = QHBoxLayout(self.identity_box)
@@ -351,7 +374,13 @@ class TaskEditor(QWidget):
                 if hasattr(tab, attr):
                     setattr(tab, attr, False)
 
-    def load_task(self, task: ScheduleTask, *, editing: bool) -> None:
+    def load_task(
+        self,
+        task: ScheduleTask,
+        *,
+        editing: bool,
+        inherit_profile_routine: bool = True,
+    ) -> None:
         self.task = copy.deepcopy(task)
         self.bag.load_task(self.task)
         if self.recovery_tab is not None:
@@ -359,7 +388,10 @@ class TaskEditor(QWidget):
         if self.party_tab is not None:
             self.party_tab.reload_from_bag()
         if self.move_tab is not None:
-            self.move_tab.load_from_move_settings(self.task.settings.get("move"))
+            self.move_tab.load_from_move_settings(
+                self.task.settings.get("move"),
+                inherit_profile=inherit_profile_routine,
+            )
         self._invalidate_lazy_tabs()
         self.set_commit_mode(editing)
         self.refresh_accounts(select_id=self.task.account_id)
@@ -375,6 +407,10 @@ class TaskEditor(QWidget):
             self.equipment_tab._refresh_buy_summary()
 
     def collect_settings(self) -> dict:
+        if self.hunt_tab is not None and hasattr(
+            self.hunt_tab, "flush_potion_assist_to_bag"
+        ):
+            self.hunt_tab.flush_potion_assist_to_bag()
         if self.hunt_tab is not None and getattr(self.hunt_tab, "_monsters_built", False):
             self.hunt_tab._write_species_to_bag()
         if self.hunt_tab is not None and getattr(self.hunt_tab, "_items_built", False):

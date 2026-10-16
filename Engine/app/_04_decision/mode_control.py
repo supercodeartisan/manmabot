@@ -559,11 +559,11 @@ def retreat_exit_ready(blackboard: "Blackboard", state: "GameState") -> bool:
 
 
 def finish_retreat(blackboard: "Blackboard") -> None:
-    """Exit retreat. Off the hunt map, world nav returns to the routine.
+    """Exit retreat. A saved walk cell is not resumed.
 
-    A saved walk is resumed only while the character is still on the hunt
-    map. Mother tree, teleport, and scroll landings are another map, so the
-    saved cell is dropped and ``begin_world_nav(..., "post_retreat")`` runs.
+    World nav plans from the live pose to the active routine row. That
+    includes a traveling retreat whose landing is still judged on the
+    selected map. Shop resume and post-respawn stay on their own branches.
     """
     from app.bot_log import get_logger
 
@@ -598,7 +598,7 @@ def finish_retreat(blackboard: "Blackboard") -> None:
         stash_purpose,
     )
 
-    from app._04_decision.behaviors.travel import clear_travel, start_travel
+    from app._04_decision.behaviors.travel import clear_travel
 
     clear_travel(blackboard)
 
@@ -629,15 +629,15 @@ def finish_retreat(blackboard: "Blackboard") -> None:
         return
 
     on_hunt = player_on_selected_map(blackboard)
-    # Same-map trip: the saved cell is still on this terrain.
+    # Traveling resume used to walk the saved cell on this terrain. That cell
+    # is the old trip's destination, so return through world nav instead.
     if on_hunt and resume is PlayerMode.TRAVELING and stash is not None:
-        start_travel(
-            blackboard,
+        get_logger("hp").info(
+            "retreat on hunt map — world nav return dropped stash=%s purpose=%s",
             stash,
-            reason=str(blackboard.scratch.get("travel_reason") or "resume trip"),
+            stash_purpose,
         )
-        blackboard.travel_purpose = stash_purpose
-        set_mode(blackboard, PlayerMode.TRAVELING)
+        begin_world_nav(blackboard, "post_retreat")
         return
 
     # Mother tree / teleport / scroll: the saved cell belongs to the map we left.

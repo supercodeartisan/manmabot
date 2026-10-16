@@ -14,11 +14,21 @@ def _show_crash(text: str) -> None:
         if sys.platform == "win32":
             import ctypes
 
-            ctypes.windll.user32.MessageBoxW(0, text[-2500:], "Manmabot v1", 0x10)
+            ctypes.windll.user32.MessageBoxW(0, text[-2500:], "ZF", 0x10)
             return
     except Exception:
         pass
     print(text, file=sys.stderr)
+
+
+def _show_startup_splash() -> None:
+    """Loading window for the operator console, after UAC has been answered."""
+    try:
+        from session.startup_splash import open_until_main_window
+
+        open_until_main_window()
+    except Exception:
+        pass
 
 
 def main() -> int:
@@ -73,13 +83,21 @@ def main() -> int:
             except (ValueError, IndexError):
                 toolkit = "qt"
             if toolkit in ("tk", "ttk", "classic"):
+                _show_startup_splash()
                 from ui.schedule_ui import run_schedule_app
 
                 return int(run_schedule_app())
         # Default / --operator: Qt schedule console.
+        _show_startup_splash()
         from ui_qt.app import run_schedule_app
 
         return int(run_schedule_app())
     except Exception:
+        try:
+            from session.startup_splash import close_startup_splash
+
+            close_startup_splash()
+        except Exception:
+            pass
         _show_crash(traceback.format_exc())
         return 1

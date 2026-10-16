@@ -2817,7 +2817,7 @@ class MainWindow(ctk.CTk):
             map_style=getattr(self.profile, "map_style", None),
         )
         text = (
-            f"Manmabot v1\n"
+            f"ZF\n"
             f"manmabot={manmabot_root()}\n"
             f"game={g.detail}\n"
             f"memory={m.detail}\n"

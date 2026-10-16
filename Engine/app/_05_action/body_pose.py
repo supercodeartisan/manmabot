@@ -2,11 +2,14 @@
 
 Standing is BreathAction (0x11E02F8). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
-CharacterData status used when that decode succeeds.
+CharacterData status used when that decode succeeds. Level uses that same
+status (LEVEL), then the HUD ST_LEVEL. Exp percent is the module f64
+ExperiencePct64.
 """
 from __future__ import annotations
 
 import ctypes
+import json
 import struct
 import time
 from ctypes import wintypes
@@ -267,6 +270,8 @@ _HUD = {
     "HOLDER_OFF": 0xD0,
     "SUBLIST_BEG": 0x180,
     "SUBLIST_END": 0x188,
+    "ST_LEVEL": 0x2C,
+    "LEVEL": 0x248,
     "HP": 0x2B8,
     "MP": 0x2D0,
     "MAXMP": 0x2DC,
@@ -274,6 +279,8 @@ _HUD = {
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
+_EXP_RVA = 0x1636BD0
+_exp_ready = False
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
 
@@ -393,3 +400,55 @@ def read_vitals() -> dict | None:
         "mp": mp,
         "max_mp": max_mp,
     }
+
+
+def _load_exp_rva() -> None:
+    global _exp_ready, _EXP_RVA
+    if _exp_ready:
+        return
+    path = _ANALYSIS / "offsets.json"
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            value = data.get("ExperiencePct64")
+            if isinstance(value, int) and value > 0:
+                _EXP_RVA = value
+        except (OSError, ValueError):
+            pass
+    _exp_ready = True
+
+
+def _level_ok(value: int | None) -> int | None:
+    if value is None or not (1 <= int(value) <= 255):
+        return None
+    return int(value)
+
+
+def read_progress() -> dict | None:
+    """Live level and exp percent (0–100). None when the game driver is not open.
+
+    Level prefers the encoded CharacterData field, then the HUD block.
+    Exp percent is the live ExperiencePct64 double.
+    """
+    if not _ensure():
+        return None
+    _load_hud()
+    _load_exp_rva()
+    level = None
+    block = _read(_pid, _base + _HUD["ST_BLOCK"], 0x40)
+    if block:
+        level = _level_ok(_hud_u32(block, _HUD["ST_LEVEL"]))
+    status = _find_status()
+    if status:
+        decoded = _level_ok(_decode(status, _HUD["LEVEL"]))
+        if decoded is not None:
+            level = decoded
+    exp = None
+    blob = _read(_pid, _base + _EXP_RVA, 8)
+    if blob:
+        value = struct.unpack("<d", blob)[0]
+        # A stale address can be a subnormal that still falls inside 0..100
+        # and then prints as 0.00%. Exact 0 is a real empty bar.
+        if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
+            exp = float(value)
+    return {"level": level, "exp_percent": exp}

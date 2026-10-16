@@ -147,6 +147,10 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             spell_mod.HASTE_POTION_ITEM = str(
                 spells_cfg.get("haste_potion_item") or ""
             ).strip()
+        if "antidote_potion_item" in spells_cfg:
+            spell_mod.ANTIDOTE_POTION_ITEM = str(
+                spells_cfg.get("antidote_potion_item") or ""
+            ).strip()
 
     elf_cfg = root.get("elf") or {}
     if "mother_tree" in elf_cfg:
@@ -216,6 +220,13 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
 
     if "loot_adena_weight_ratio" in farm:
         pm.LOOT_ADENA_WEIGHT_RATIO = float(farm["loot_adena_weight_ratio"])
+    if "ignore_small_adena" in farm:
+        pm.IGNORE_SMALL_ADENA = bool(farm["ignore_small_adena"])
+    if "ignore_small_adena_qty" in farm:
+        try:
+            pm.IGNORE_SMALL_ADENA_QTY = max(1, min(99999, int(farm["ignore_small_adena_qty"])))
+        except (TypeError, ValueError):
+            pm.IGNORE_SMALL_ADENA_QTY = 10
     if "loot_max_tiles" in farm:
         pm.LOOT_MAX_TILES = int(farm["loot_max_tiles"])
     if "loot_engage_max_tiles" in farm:
@@ -419,10 +430,10 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
         pm.TARGET_DELAY_MAX_MS = max(10, min(50, int(combat["target_delay_max_ms"])))
     if pm.TARGET_DELAY_MAX_MS < pm.TARGET_DELAY_MIN_MS:
         pm.TARGET_DELAY_MAX_MS = pm.TARGET_DELAY_MIN_MS
-    # Hunt UI no longer offers these. Keep them off even if an old schedule
-    # still stores them.
+    # Hunt UI no longer offers abandon-same. Keep it off even if an old
+    # schedule still stores it. Antidote follows the hunt toggle only.
     combat_beh.ABANDON_SAME_ENABLED = False
-    pm.ANTIDOTE_AUTO = False
+    pm.ANTIDOTE_AUTO = bool(combat.get("use_antidote_potion", False))
 
     if "confirm_seconds" in death:
         mode_control.DEATH_CONFIRM_SECONDS = float(death["confirm_seconds"])

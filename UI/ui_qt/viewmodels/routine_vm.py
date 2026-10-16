@@ -54,12 +54,22 @@ class RoutineViewModel:
         self.rows = routine
         self.selected_id = self.rows[0]["id"] if self.rows else None
 
-    def load_from_move_settings(self, move: dict[str, Any] | None, profile) -> None:
+    def load_from_move_settings(
+        self,
+        move: dict[str, Any] | None,
+        profile,
+        *,
+        inherit_profile: bool = True,
+    ) -> None:
         move = dict(move or {})
         routine = normalize_routine(move.get("routine"))
         if routine:
             self.rows = routine
             self.selected_id = self.rows[0]["id"] if self.rows else None
+            return
+        if not inherit_profile:
+            self.rows = []
+            self.selected_id = None
             return
         self.load_from_profile(profile)
 

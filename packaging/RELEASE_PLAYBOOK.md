@@ -1,6 +1,8 @@
 # Manmabot V1 — Release playbook
 
-This is the only document required to ship the next version. Follow it from top to bottom on the **updated product folder**. Do not paste that folder over an older tree, and do not invent extra packaging steps.
+This is the document for the **first** customer folder. Follow it from top to bottom on the **updated product folder**. Do not paste that folder over an older tree, and do not invent extra packaging steps.
+
+When `release\portable\ManmabotV1` already exists, do not run this full copy again. Stage 1 refuses to wipe it. Update that folder with [`INCREMENTAL_RELEASE.md`](INCREMENTAL_RELEASE.md). `--force-full` is only for a broken folder or a python/manifest change that the incremental updater cannot apply.
 
 The customer receives one folder: `release\portable\ManmabotV1`.  
 `Engine\data` in that folder is a normal directory (maps, catalog, cursors). It is **not** left as `data.pack`.  
@@ -355,39 +357,25 @@ Accounts are encrypted with Windows DPAPI for the user who saved them. Copying `
 
 ---
 
-## 6. Repeat build when only the game code changed
+## 6. Later releases — changed files only
 
-On the updated root, with `packaging\` and the section 2 merges already present:
+After the first portable exists, update it. Do not run Stage 1 again. Stage 1 stops if that folder is already there.
 
 ```bat
 cd /d <product-root>
-set MANMABOT_BUILD_PYTHON=C:\Users\<you>\AppData\Local\Python\pythoncore-3.14-64\python.exe
-python\python.exe packaging\verify_shims.py
-python\python.exe packaging\build_release.py --stage 1 --skip-python --no-checksums
-python\python.exe packaging\verify_shims.py --portable
-python\python.exe packaging\build_release.py --stage 2 --no-checksums
-python\python.exe packaging\verify_stage2.py
-python\python.exe packaging\build_release.py --stage 3 --no-checksums
-python\python.exe packaging\build_release.py --stage 5 --no-checksums
-python\python.exe packaging\verify_stage5.py
-python\python.exe packaging\unpack_customer_data.py
-release\portable\ManmabotV1\python\python.exe packaging\smoke_portable.py
-python\python.exe packaging\build_release.py --stage 4 --skip-sign
-python\python.exe packaging\verify_checksums.py
+python\python.exe packaging\incremental_release.py --dry-run
+python\python.exe packaging\incremental_release.py
 ```
 
-Stage 1 wipes the old portable. Always run Stage 2 again. Do not reuse another folder’s `.pyd` files.
-Always run `verify_shims` before Stage 2 so keep-scripts / `__init__.py` did not grow fat again.
+The updater hashes the source files that would ship, including gitignored `*.png`, `*.dll`, `*.exe`, and `*.bat`. `git diff` is not used. A changed file is copied, or compiled when it is a Nuitka module. Unchanged `.pyd` files stay. Details: `packaging\INCREMENTAL_RELEASE.md`.
 
-If Stage 2 fails on one module, fix that module and rerun Stage 2. The builder stops on the first failure and does not delete the `.py` for a failed compile.
-
-To throw away a bad portable and keep the source:
+`--force-full` on Stage 1 deletes the customer folder and starts the first-release copy again. Use it only when the portable folder is missing or unusable, or when the bundled `python\` layout or the compile/deny manifests change in a way the updater reports it cannot apply. Throwing the folder away is:
 
 ```bat
-rmdir /s /q release
+rmdir /s /q release\portable
 ```
 
-Then start at Stage 0 again.
+Then start at Stage 0 again. Do not reuse another folder’s `.pyd` files.
 
 ---
 
@@ -511,7 +499,10 @@ Or `MANMABOT_SIGN_THUMBPRINT` instead of a PFX. Optional: `MANMABOT_SIGNTOOL`, `
 
 | File | Role |
 |------|------|
-| `packaging\build_release.py` | Stages 0–5 |
+| `packaging\build_release.py` | Stages 0–5. Stage 1 refuses when a customer folder already exists |
+| `packaging\incremental_release.py` | Later releases: copy or compile only changed files |
+| `packaging\release_snapshot.py` | Hash record of shippable inputs, including gitignored files |
+| `packaging\INCREMENTAL_RELEASE.md` | How to run an update after the first release |
 | `packaging\compile_inplace.py` | Stage 2 |
 | `packaging\prune_python.py` | Stage 3 |
 | `packaging\pack_assets.py` | Stage 5 |

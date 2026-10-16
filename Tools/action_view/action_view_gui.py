@@ -2,8 +2,8 @@
 
 The picture is the memory read of ActionComponent+0xC0.
 A small mark under the figure is ActorController+0x58.
-Above the figure: HP/MP bars and Adena.
-Start, Pause, and Stop count Adena from the moment Start is clicked.
+Above the figure: HP/MP bars, Adena, and level with exp percent.
+Start, Pause, and Stop count Adena and exp percent from the moment Start is clicked.
 """
 import math
 import sys
@@ -17,13 +17,18 @@ from PySide6.QtWidgets import QApplication, QWidget
 from app._05_action import body_pose as pose
 
 W = 300
-FIGURE_DY = 112
-H = 400
+FIGURE_DY = 160
+H = 448
 _BAR_X = 46
 _BAR_W = W - _BAR_X - 12
-_BTN_Y = 78
+_BTN_Y = 96
 _BTN_H = 24
 _CLOCK_W = 64
+_ADENA_Y = 54
+_LEVEL_Y = 72
+_ADENA_RATE_Y = 124
+_EXP_RATE_Y = 140
+_RATE_SEC = 1.0
 
 
 def _btn_rects() -> list[QRectF]:
@@ -44,6 +49,23 @@ def apply_counter(gain: int, last: int | None, current: int | None) -> tuple[int
     if last is None:
         return gain, current
     return gain + (int(current) - int(last)), int(current)
+
+
+def apply_exp(
+    gain: float,
+    last: tuple[int, float] | None,
+    level: int | None,
+    pct: float | None,
+) -> tuple[float, tuple[int, float] | None]:
+    """Add exp-percent change. A level-up keeps the rest of the previous bar."""
+    if level is None or pct is None:
+        return gain, last
+    current = (int(level), float(pct))
+    if last is None:
+        return gain, current
+    prev_level, prev_pct = last
+    delta = (current[0] - int(prev_level)) * 100.0 + (current[1] - float(prev_pct))
+    return gain + delta, current
 
 
 def _clock(seconds: float) -> str:
@@ -79,6 +101,10 @@ class ActionView(QWidget):
         self.max_mp = None
         self.adena = None
         self.adena_ok = False
+        self.level = None
+        self.exp_percent = None
+        self._rate_at = 0.0
+        self._income_cache = ("Adena  —", "", "#8e96a3", "Exp  —", "", "#8e96a3")
         self._rec = None
         self._hover = None
         self._font = QFont("Segoe UI", 9)
@@ -139,8 +165,20 @@ class ActionView(QWidget):
             self.max_hp = vitals["max_hp"]
             self.mp = vitals["mp"]
             self.max_mp = vitals["max_mp"]
-        self._advance_record()
+        now = time.monotonic()
+        if now - self._rate_at >= _RATE_SEC:
+            self._rate_at = now
+            self._sample_rates()
         self.update()
+
+    def _sample_rates(self):
+        """Read exp and fold adena/exp into the hourly figures once a second."""
+        progress = pose.read_progress()
+        if progress:
+            self.level = progress["level"]
+            self.exp_percent = progress["exp_percent"]
+        self._advance_record()
+        self._income_cache = self._income_snapshot()
 
     def _elapsed(self, rec: dict) -> float:
         extra = 0.0
@@ -156,6 +194,11 @@ class ActionView(QWidget):
         rec["adena_gain"], rec["last_adena"] = apply_counter(
             rec["adena_gain"], rec["last_adena"], adena
         )
+        level = int(self.level) if self.level is not None else None
+        pct = float(self.exp_percent) if self.exp_percent is not None else None
+        rec["exp_gain"], rec["last_exp"] = apply_exp(
+            rec["exp_gain"], rec["last_exp"], level, pct
+        )
 
     def _start_record(self):
         rec = self._rec
@@ -169,6 +212,12 @@ class ActionView(QWidget):
             "t_mark": time.monotonic(),
             "adena_gain": 0,
             "last_adena": int(self.adena) if self.adena_ok and self.adena is not None else None,
+            "exp_gain": 0.0,
+            "last_exp": (
+                (int(self.level), float(self.exp_percent))
+                if self.level is not None and self.exp_percent is not None
+                else None
+            ),
         }
 
     def _pause_record(self):
@@ -205,14 +254,17 @@ class ActionView(QWidget):
             hit = self._hit_button(event.position())
             if hit == 0:
                 self._start_record()
+                self._income_cache = self._income_snapshot()
                 self.update()
                 return
             if hit == 1:
                 self._pause_record()
+                self._income_cache = self._income_snapshot()
                 self.update()
                 return
             if hit == 2:
                 self._stop_record()
+                self._income_cache = self._income_snapshot()
                 self.update()
                 return
         super().mousePressEvent(event)
@@ -287,8 +339,9 @@ class ActionView(QWidget):
         p.setPen(QColor("#ffe08a"))
         adena = f"{int(self.adena):,}" if self.adena_ok and self.adena is not None else "—"
         p.setFont(self._font)
-        p.drawText(QRectF(12, 54, 70, 18), Qt.AlignVCenter | Qt.AlignLeft, "Adena")
-        p.drawText(QRectF(82, 54, W - 94, 18), Qt.AlignVCenter | Qt.AlignRight, adena)
+        p.drawText(QRectF(12, _ADENA_Y, 70, 18), Qt.AlignVCenter | Qt.AlignLeft, "Adena")
+        p.drawText(QRectF(82, _ADENA_Y, W - 94, 18), Qt.AlignVCenter | Qt.AlignRight, adena)
+        self._level_line(p)
         self._record_buttons(p)
         self._income(p)
 
@@ -347,9 +400,23 @@ class ActionView(QWidget):
                 _clock(self._elapsed(self._rec)),
             )
 
-    def _income(self, p):
-        p.setFont(self._font_sm)
+    def _level_line(self, p):
+        p.setFont(self._font)
+        p.setPen(QColor("#9ad7ff"))
+        if self.level is None:
+            label = "Lv  —"
+        else:
+            label = f"Lv {int(self.level)}"
+        if self.exp_percent is None:
+            pct = "—"
+        else:
+            pct = f"{float(self.exp_percent):.2f}%"
+        p.drawText(QRectF(12, _LEVEL_Y, 70, 18), Qt.AlignVCenter | Qt.AlignLeft, label)
+        p.drawText(QRectF(82, _LEVEL_Y, W - 94, 18), Qt.AlignVCenter | Qt.AlignRight, pct)
+
+    def _income_snapshot(self):
         adena_text, adena_rate, adena_color = "Adena  —", "", "#8e96a3"
+        exp_text, exp_rate, exp_color = "Exp  —", "", "#8e96a3"
         rec = self._rec
         if rec is not None:
             elapsed = self._elapsed(rec)
@@ -360,9 +427,24 @@ class ActionView(QWidget):
                 adena_text = f"Adena  {gained:+,}"
                 adena_rate = _rate(gained, elapsed)
                 adena_color = "#7dffb0" if gained >= 0 else "#ff8a7a"
+            if rec["last_exp"] is None and rec["state"] == "run":
+                exp_text = "Exp  …"
+            else:
+                gained_pct = float(rec["exp_gain"])
+                exp_text = f"Exp  {gained_pct:+.2f}%"
+                exp_rate = _rate(gained_pct, elapsed, places=2, unit="%/h")
+                exp_color = "#7dffb0" if gained_pct >= 0 else "#ff8a7a"
+        return (adena_text, adena_rate, adena_color, exp_text, exp_rate, exp_color)
+
+    def _income(self, p):
+        p.setFont(self._font_sm)
+        adena_text, adena_rate, adena_color, exp_text, exp_rate, exp_color = self._income_cache
         p.setPen(QColor(adena_color))
-        p.drawText(QRectF(12, 106, 176, 16), Qt.AlignVCenter | Qt.AlignLeft, adena_text)
-        p.drawText(QRectF(176, 106, W - 188, 16), Qt.AlignVCenter | Qt.AlignRight, adena_rate)
+        p.drawText(QRectF(12, _ADENA_RATE_Y, 176, 16), Qt.AlignVCenter | Qt.AlignLeft, adena_text)
+        p.drawText(QRectF(176, _ADENA_RATE_Y, W - 188, 16), Qt.AlignVCenter | Qt.AlignRight, adena_rate)
+        p.setPen(QColor(exp_color))
+        p.drawText(QRectF(12, _EXP_RATE_Y, 176, 16), Qt.AlignVCenter | Qt.AlignLeft, exp_text)
+        p.drawText(QRectF(176, _EXP_RATE_Y, W - 188, 16), Qt.AlignVCenter | Qt.AlignRight, exp_rate)
 
     def _head(self, p, x, y, r=18):
         p.drawEllipse(QPointF(x, y), r, r)

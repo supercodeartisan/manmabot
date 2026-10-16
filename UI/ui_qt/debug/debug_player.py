@@ -44,7 +44,7 @@ class DebugPlayerWindow(QMainWindow):
         self._log_lines: list[str] = []
         self._closing = False
 
-        self.setWindowTitle(self.t.get("debug_player_title", "Manmabot debug player"))
+        self.setWindowTitle(self.t.get("debug_player_title", "ZF"))
         self.resize(1100, 720)
         self.setMinimumSize(860, 540)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -217,15 +217,20 @@ def run_debug_player() -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                "Manmabot.Version1"
-            )
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ZF")
         except Exception:
             pass
 
+    from PySide6.QtGui import QIcon
+
+    from settings.map_previews import brand_icon_path
+
     ensure_userdata()
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("Manmabot Debug")
+    app.setApplicationName("ZF")
+    logo = brand_icon_path()
+    if logo is not None:
+        app.setWindowIcon(QIcon(str(logo)))
     profile = load_profile()
     language = ui_language(profile.language)
     from ui_qt.theme import tokens

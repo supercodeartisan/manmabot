@@ -145,6 +145,7 @@ def apply_routine_entry_runtime(
     from app._04_decision.world_nav.overlays import (
         farm_rects_selected,
         is_dungeon_pack,
+        safe_rects_selected,
     )
 
     dungeon = is_dungeon_pack(blackboard, pack_id)
@@ -155,18 +156,23 @@ def apply_routine_entry_runtime(
         return
     nav = dict(cfg.get("navigation") or {})
     nav["active_map"] = pack_id
+    names = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
     rects: list = []
+    safe_rects: list = []
     if dungeon or kind == "break":
         nav.pop("farm_areas", None)
         if dungeon:
             nav.pop("farm_areas_file", None)
+        if kind == "break" and not dungeon and names:
+            safe_rects = safe_rects_selected(blackboard, pack_id, names)
     else:
-        farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
-        if farms:
-            rects = farm_rects_selected(blackboard, pack_id, farms)
+        if names:
+            rects = farm_rects_selected(blackboard, pack_id, names)
         if rects:
             nav["farm_areas"] = rects
             nav.pop("farm_areas_file", None)
+    # Drop a previous break row's subset before pack sync reloads areas.
+    nav.pop("safe_areas", None)
     cfg["navigation"] = nav
     blackboard.scratch[SCRATCH_RUNTIME_CONFIG] = cfg
     ensure_navigation_for_pack_id(blackboard, cfg, pack_id)
@@ -175,6 +181,7 @@ def apply_routine_entry_runtime(
     if rects:
         nav["farm_areas"] = rects
         nav.pop("farm_areas_file", None)
+    nav.pop("safe_areas", None)
     try:
         from session.probes import apply_userdata_area_files
 
@@ -185,6 +192,8 @@ def apply_routine_entry_runtime(
         )
     except Exception as exc:
         get_logger("nav").warning("area overlay skipped: %s", exc)
+    if safe_rects:
+        nav["safe_areas"] = safe_rects
     cfg["navigation"] = nav
     try:
         from app._04_decision import nav_config as nc
@@ -198,11 +207,12 @@ def apply_routine_entry_runtime(
     blackboard.farm_area_index = 0
     blackboard.patrol_index = 0
     get_logger("nav").info(
-        "routine apply map=%s kind=%s dungeon=%s farms=%s",
+        "routine apply map=%s kind=%s dungeon=%s farms=%s safe=%s",
         pack_id,
         kind,
         dungeon,
-        len(entry.get("selected_farms") or []),
+        len(rects),
+        len(safe_rects),
     )
 
 
@@ -230,6 +240,19 @@ def _drop_world_nav_session(blackboard: Any) -> None:
         clear_travel(blackboard)
     except Exception:
         pass
+
+
+def _break_row_has_rest_goal(blackboard: Any, entry: dict[str, Any]) -> bool:
+    """True when a break row has at least one checked rest area on this pack."""
+    if str(entry.get("kind") or "").strip().lower() != "break":
+        return False
+    names = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
+    if not names:
+        return False
+    from app._04_decision.world_nav.overlays import safe_rects_selected
+
+    pack_id = str(entry.get("map_id") or "").strip()
+    return bool(safe_rects_selected(blackboard, pack_id, names))
 
 
 def take_next_routine_if_due(blackboard: Any) -> bool:
@@ -265,7 +288,9 @@ def take_next_routine_if_due(blackboard: Any) -> bool:
             on_hunt = bool(player_on_selected_map(blackboard))
         except Exception:
             on_hunt = False
-        if not on_hunt:
+        # Same map still walks when the new row is a checked rest area.
+        walk_to_rest = _break_row_has_rest_goal(blackboard, entry)
+        if not on_hunt or walk_to_rest:
             request_world_nav(blackboard, "routine_duration")
             arm_world_nav(blackboard, "routine_duration")
     elif entry is not None:

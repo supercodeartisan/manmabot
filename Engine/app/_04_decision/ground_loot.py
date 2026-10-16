@@ -151,7 +151,7 @@ def ground_item_allowed(obj: Any) -> bool:
 
 
 # Main-intent loot: FREE piles, or my damage share strictly above this.
-LOOT_CONTRIB_MIN = 30
+LOOT_CONTRIB_MIN = 50
 
 
 def loot_ownership_allowed(obj: Any) -> bool:

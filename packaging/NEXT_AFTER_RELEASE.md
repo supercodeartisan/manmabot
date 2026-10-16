@@ -79,15 +79,15 @@ yaml과 json은 코드가 아니다. 맵과 카탈로그는 `data.pack`, 오프�
 
 고객 zip에 `UserData`를 넣을 필요가 없다. 시작 시 `ensure_userdata()`가 프로필, 로그, 스케줄, trial 폴더를 만든다. 빌드 PC의 `accounts.json`, 로그, 스케줄은 넣지 않는다. 계정은 그 Windows 사용자 DPAPI라서 다른 PC로 복사해도 풀리지 않는다.
 
-## 7. 바뀐 파일만 다시 컴파일
+## 7. 바뀐 파일만 다시 릴리스
 
-파일마다 `.pyd` 하나이므로, 이전 `release\portable\ManmabotV1`을 지우지 않으면 고친 `.py`만 다시 컴파일할 수 있다. Stage 1은 그 폴더를 통째로 지우므로, 부분 컴파일과 함께 쓰면 안 된다.
+구현됨. 절차는 `packaging/INCREMENTAL_RELEASE.md`.
 
-순서는 이전 portable 유지, 바뀐 `.py`만 같은 경로에 덮어쓰기, 그 파일만 Nuitka, 데이터만 바뀌었으면 컴파일 생략, 마지막에 Stage 4로 체크섬 전체 갱신. git diff로 파일 목록을 골라 주는 기능은 아직 없다. `--stage 2 --packages session`은 그 패키지 전체이다.
+첫 고객 폴더만 Stage 1부터 통째로 만든다. 그 폴더가 있으면 Stage 1은 지우지 않고 멈춘다. 이후에는 `incremental_release.py`가 소스 파일 해시로 바뀐 것만 복사하거나 다시 컴파일한다. `git diff`는 쓰지 않는다. `.gitignore`에 있는 png, dll, exe, bat도 해시가 다르면 릴리스에 넣는다.
 
-전체를 다시 하는 경우: 첫 릴리스, `python` 구성 변경, 컴파일/제외 목록 변경, portable 폴더가 없을 때.
+전체를 다시 지우고 만드는 경우는 portable 폴더가 없거나 쓸 수 없을 때, 또는 `--force-full`을 일부러 줄 때뿐이다.
 
-`.gitignore` 때문에 `*.png`, `*.dll`, `*.exe`, `*.bat`, `*.pyd`, `python\`, `UserData\`, `release\` 변경은 `git diff`에 나오지 않는다.
+이미지 암호화(`data.pack`을 고객 폴더에 남기기, `*.masset`)는 아직 하지 않는다.
 
 ## 8. 아직 하지 않는 것
 

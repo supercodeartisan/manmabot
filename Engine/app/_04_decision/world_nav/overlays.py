@@ -1,7 +1,7 @@
 """Injected map overlay data for world_nav (no session/settings I/O here).
 
 Session/Start builds ``SCRATCH_MAP_OVERLAYS`` via ``set_map_overlays``.
-Decision only reads dicts: farm areas, patrol tiles, dungeon flag.
+Decision only reads dicts: farm areas, rest areas, patrol tiles, dungeon flag.
 """
 from __future__ import annotations
 
@@ -33,15 +33,13 @@ def is_dungeon_pack(blackboard: Any, pack_id: str) -> bool:
     return "dungeon" in str(pack_id or "").lower()
 
 
-def farm_rects_selected(
-    blackboard: Any,
-    pack_id: str,
+def _rects_in_selection_order(
+    areas: Any,
     selected: list[str] | tuple[str, ...] | None,
 ) -> list[dict[str, Any]]:
-    """Return injected area dicts in selection order (pure filter)."""
-    areas = get_map_overlay(blackboard, pack_id).get("areas") or []
+    """Return area dicts in the operator's selection order."""
     by_name: dict[str, dict[str, Any]] = {}
-    for area in areas:
+    for area in areas or []:
         if not isinstance(area, dict):
             continue
         name = str(area.get("name") or "").strip()
@@ -56,6 +54,26 @@ def farm_rects_selected(
         if area is not None:
             out.append(area)
     return out
+
+
+def farm_rects_selected(
+    blackboard: Any,
+    pack_id: str,
+    selected: list[str] | tuple[str, ...] | None,
+) -> list[dict[str, Any]]:
+    """Return injected farm area dicts in selection order (pure filter)."""
+    areas = get_map_overlay(blackboard, pack_id).get("areas") or []
+    return _rects_in_selection_order(areas, selected)
+
+
+def safe_rects_selected(
+    blackboard: Any,
+    pack_id: str,
+    selected: list[str] | tuple[str, ...] | None,
+) -> list[dict[str, Any]]:
+    """Return injected rest-area dicts in selection order (pure filter)."""
+    areas = get_map_overlay(blackboard, pack_id).get("safe_areas") or []
+    return _rects_in_selection_order(areas, selected)
 
 
 def patrol_entries(
@@ -80,5 +98,6 @@ __all__ = [
     "get_map_overlay",
     "is_dungeon_pack",
     "farm_rects_selected",
+    "safe_rects_selected",
     "patrol_entries",
 ]

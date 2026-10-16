@@ -3,8 +3,11 @@
 개발 저장소(이 폴더 전체)는 **그대로 유지**합니다.  
 고객용 산출물은 `release/` 아래에만 생성됩니다.
 
-**다른 노트북 / 업데이트 코드베이스에서 전체 절차가 필요하면:**  
-→ [`RELEASE_PLAYBOOK.md`](RELEASE_PLAYBOOK.md) 를 사용하세요.
+**첫 고객 폴더:**  
+→ [`RELEASE_PLAYBOOK.md`](RELEASE_PLAYBOOK.md)
+
+**이미 고객 폴더가 있을 때 (바뀐 파일만):**  
+→ [`INCREMENTAL_RELEASE.md`](INCREMENTAL_RELEASE.md)
 
 **패키징 버그 수정 이력 (수동 패치 없이 재빌드만):**  
 → [`RELEASE_BUGFIX_LOG.md`](RELEASE_BUGFIX_LOG.md)

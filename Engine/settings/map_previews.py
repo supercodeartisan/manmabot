@@ -74,7 +74,15 @@ def map_preview_path(map_id: str) -> Optional[Path]:
 
 
 def brand_icon_path() -> Optional[Path]:
-    """``images/icon.png`` (or ``icon.ico``) for the Version 1 window and header."""
+    """Product logo for the window and taskbar (``Engine/data/logo.png``)."""
+    try:
+        from session.paths import data_root
+
+        logo = data_root() / "logo.png"
+        if logo.is_file():
+            return logo
+    except Exception:
+        pass
     images = app_root() / "images"
     if not images.is_dir():
         return None

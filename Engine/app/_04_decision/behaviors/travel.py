@@ -197,8 +197,10 @@ def _follow_body_click(
     """Hold or repeat the current click. False asks the caller to replan.
 
     A walking body is left alone. A body that is not walking gets the same
-    click again every 0.1s. An unread action slot holds. A blocked click
-    line returns False so the next interim waypoint can be chosen.
+    absolute tile again every 0.1s. Hold and repeat both rebuild the screen
+    point from the absolute tile and the current origin. A blocked click
+    line returns False so the next interim waypoint can be chosen. Walls are
+    checked even when ``state`` is missing; living bodies need ``state``.
     """
     from app._04_decision.avoidance import (
         classify_ground_reclick,
@@ -210,22 +212,44 @@ def _follow_body_click(
     origin = blackboard.world_origin
     start = (int(origin.x), int(origin.y))
     moving = body_is_moving()
-    if moving is not True and state is not None:
-        bodies = collect_body_tiles(state, origin)
+    if moving is not True:
+        bodies = collect_body_tiles(state, origin) if state is not None else set()
         if not click_clear(terrain, bodies, start, waypoint):
+            from app.bot_log import event
+
+            event(
+                "avoid",
+                "line closed kind=travel wp=%s bodies=%d from=%s",
+                waypoint,
+                len(bodies),
+                start,
+            )
             blackboard.travel_hop_active = False
             blackboard.travel_destination = None
             blackboard.nav_waypoint = None
             blackboard.travel_unstick_active = False
             return False
+    now = time.time()
     follow = classify_ground_reclick(
         moving,
         float(blackboard.travel_click_at or 0.0),
-        now=time.time(),
+        now=now,
     )
-    content = blackboard.travel_destination
-    if content is None:
-        content = waypoint_to_content(waypoint, origin)
+    if follow == "repeat":
+        from app._04_decision.avoidance import log_ground_pause
+
+        log_ground_pause(
+            "travel",
+            waypoint,
+            moving,
+            float(blackboard.travel_click_at or 0.0),
+            now,
+            reason,
+        )
+    # Hold and repeat both aim at the absolute tile under the current origin.
+    # A screen point baked on an older origin lands past a wall once the
+    # player tile changes. The action layer aims again at the click itself.
+    content = waypoint_to_content(waypoint, origin)
     _emit_click(
         blackboard,
         content=content,
@@ -409,6 +433,19 @@ def emit_travel_hop(
             if blocked_for >= float(PATROL_NO_CLICK_SKIP_S):
                 if skip_blocked_patrol_point(blackboard):
                     return True
+        elif planned.note == "window has no safe click":
+            # No forward tile. The same 5s unstick used by a stuck hop
+            # takes over; patrol still waits for its own skip above.
+            _ticks, elapsed = _stuck_sample(blackboard)
+            if try_movement_unstick(
+                blackboard,
+                stuck=elapsed >= pm.TRAVEL_UNSTICK_SECONDS,
+                action=ActionType.TRAVELING,
+                reason="unstick nearby",
+                priority=priority,
+                on_walk=_walk_unstick,
+            ):
+                return _consume_unstick()
         note_hold(
             f"travel:{planned.note}",
             (

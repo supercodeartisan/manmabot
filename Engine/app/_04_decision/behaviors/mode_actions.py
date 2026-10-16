@@ -229,6 +229,76 @@ def player_is_poisoned(state: "GameState") -> bool:
     return False
 
 
+# Curse-paralyze string ids from data_string.csv.
+# 212 / 291 = 석화 상태(진행 중) / 你的身體漸漸麻痺 — drink.
+# 111 / 213 = 석화 상태(마비) / 你的身體慢慢石化 — too late.
+_CURE_PARALYZE_STR_IDS = frozenset({212, 291})
+_CURE_PARALYZE_NEEDLES = (
+    "석화 상태(진행 중)",
+    "석화상태(진행 중)",
+    "석화상태(진행중)",
+    "你的身體漸漸麻痺",
+    "你的身体渐渐麻痹",
+)
+_LOCKED_PARALYZE_STR_IDS = frozenset({111, 213})
+_LOCKED_PARALYZE_NEEDLES = (
+    "석화 상태(마비)",
+    "석화상태(마비)",
+    "你的身體慢慢石化",
+    "你的身体慢慢石化",
+)
+
+
+def _effect_str_id(effect: object) -> int:
+    try:
+        return int(getattr(effect, "str_id", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _player_effects(state: "GameState") -> list[object]:
+    player = getattr(state, "player", None)
+    if player is None:
+        return []
+    effects = list(getattr(player, "buffs", None) or [])
+    effects.extend(getattr(player, "debuffs", None) or [])
+    return effects
+
+
+def _effect_matches(effect: object, str_ids: frozenset[int], needles: tuple[str, ...]) -> bool:
+    if _effect_str_id(effect) in str_ids:
+        return True
+    blob = _effect_blob(effect)
+    return bool(blob and any(needle.lower() in blob for needle in needles))
+
+
+def player_has_locked_paralyze(state: "GameState") -> bool:
+    """True for petrify-(마비). The antidote no longer works."""
+    return any(
+        _effect_matches(effect, _LOCKED_PARALYZE_STR_IDS, _LOCKED_PARALYZE_NEEDLES)
+        for effect in _player_effects(state)
+    )
+
+
+def player_has_curable_paralyze(state: "GameState") -> bool:
+    """True for petrify in progress. Locked petrify does not match."""
+    if player_has_locked_paralyze(state):
+        return False
+    return any(
+        _effect_matches(effect, _CURE_PARALYZE_STR_IDS, _CURE_PARALYZE_NEEDLES)
+        for effect in _player_effects(state)
+    )
+
+
+def player_should_drink_antidote(state: "GameState") -> bool:
+    """In-progress petrify, or poison. Locked petrify (마비) is too late."""
+    if player_has_locked_paralyze(state):
+        return False
+    if player_has_curable_paralyze(state):
+        return True
+    return player_is_poisoned(state)
+
+
 def maybe_use_antidote(
     state: "GameState",
     blackboard: "Blackboard",
@@ -1630,6 +1700,22 @@ def continue_or_start_loot(
 
                 if not loot_ownership_allowed(sticky):
                     drop = True
+            if not drop:
+                from app._04_decision.behaviors.loot_hop import _in_pickup_range
+                from app._04_decision.combat_query import (
+                    object_absolute_tile,
+                    small_adena_ignored,
+                )
+
+                if small_adena_ignored(sticky) and (
+                    origin is None
+                    or not _in_pickup_range(
+                        origin,
+                        sticky,
+                        object_absolute_tile(sticky, origin),
+                    )
+                ):
+                    drop = True
             # Adena on the loot list beats sticky non-adena (approach/pickup).
             if not drop and not is_adena(sticky):
                 from app._04_decision.combat_query import list_lootable
@@ -1896,6 +1982,8 @@ __all__ = [
     "maybe_heal_mp_to_hp_at_tree",
     "emit_mp_potion",
     "player_is_poisoned",
+    "player_has_curable_paralyze",
+    "player_should_drink_antidote",
     "maybe_use_antidote",
     "should_drink_hp_potion",
     "should_drink_hp_potion_in_retreat",
