@@ -6,20 +6,32 @@ from typing import Any
 
 def load_farm_area_dicts(map_id: str) -> list[dict[str, Any]]:
     """All farm area dicts for a pack (userdata overlay or engine yaml)."""
+    return _load_named_area_dicts(map_id, kind="farm")
+
+
+def load_safe_area_dicts(map_id: str) -> list[dict[str, Any]]:
+    """All rest-area dicts for a pack (userdata overlay or engine yaml)."""
+    return _load_named_area_dicts(map_id, kind="safe")
+
+
+def _load_named_area_dicts(map_id: str, *, kind: str) -> list[dict[str, Any]]:
     import yaml
 
-    from session.probes import farms_yaml_path
+    from session.probes import farms_yaml_path, safe_yaml_path
 
-    path = farms_yaml_path(map_id)
+    path = safe_yaml_path(map_id) if kind == "safe" else farms_yaml_path(map_id)
     if path is None or not path.is_file():
         return []
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    areas = doc.get("areas") or doc.get("farm_areas") or []
+    if kind == "safe":
+        areas = doc.get("areas") or doc.get("safe_areas") or doc.get("farm_areas") or []
+    else:
+        areas = doc.get("areas") or doc.get("farm_areas") or []
     return [a for a in areas if isinstance(a, dict) and a.get("name")]
 
 
 def build_map_overlays(pack_ids: list[str] | tuple[str, ...] | None) -> dict[str, Any]:
-    """``{pack_id: {dungeon, areas, patrol}}`` for world_nav decide reads."""
+    """``{pack_id: {dungeon, areas, safe_areas, patrol}}`` for world_nav decide reads."""
     from session.probes import list_patrol_entries, map_style_is_dungeon
 
     out: dict[str, Any] = {}
@@ -30,6 +42,7 @@ def build_map_overlays(pack_ids: list[str] | tuple[str, ...] | None) -> dict[str
         out[pack_id] = {
             "dungeon": bool(map_style_is_dungeon(pack_id, None)),
             "areas": load_farm_area_dicts(pack_id),
+            "safe_areas": load_safe_area_dicts(pack_id),
             "patrol": [
                 (int(x), int(y), str(label or ""))
                 for x, y, label in list_patrol_entries(pack_id)
@@ -76,6 +89,7 @@ def install_world_nav_overlays(
 
 __all__ = [
     "load_farm_area_dicts",
+    "load_safe_area_dicts",
     "build_map_overlays",
     "pack_ids_for_routine",
     "install_world_nav_overlays",

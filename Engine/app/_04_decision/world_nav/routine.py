@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from . import pack_ids
 from . import planner_api as api
-from .overlays import farm_rects_selected, patrol_entries
+from .overlays import farm_rects_selected, patrol_entries, safe_rects_selected
 
 MAX_ROUTINE_MINUTES = 24 * 60
 
@@ -149,16 +149,24 @@ class RoutineCursor:
 
 
 def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
-    """Build a WorldNav Goal from a routine row (pack id + farms/patrol)."""
+    """Build a WorldNav Goal from a routine row (pack id + farms/patrol).
+
+    A break row with checked rest areas walks to the first checked area.
+    An empty break selection keeps the previous map or patrol goal.
+    """
     pack_id = str(entry.get("map_id") or "").strip()
     map_id = pack_ids.pack_id_to_map_id(pack_id)
     if map_id is None:
         raise ValueError(f"unknown routine map pack_id={pack_id!r}")
 
+    kind = str(entry.get("kind") or "battle").strip().lower()
     farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
     rects: list[dict[str, Any]] = []
     if farms and blackboard is not None:
-        rects = farm_rects_selected(blackboard, pack_id, farms)
+        if kind == "break":
+            rects = safe_rects_selected(blackboard, pack_id, farms)
+        else:
+            rects = farm_rects_selected(blackboard, pack_id, farms)
     if rects:
         r0 = rects[0]
         nx = (int(r0["x0"]) + int(r0["x1"])) // 2

@@ -278,21 +278,21 @@ class WorldNavSession:
                 summary=step.summary(),
             )
             if step.op == "walk":
-                return self._start_walk(step, pose, blackboard)
+                return self._start_walk(step, pose, blackboard, state)
             if step.op == "talking_scroll":
                 return self._start_scroll(step, blackboard)
             if step.op == "map_transition":
-                return self._start_transition(step, pose, blackboard)
+                return self._start_transition(step, pose, blackboard, state)
             if step.op == "npc_teleporter":
                 return self._start_npc_teleporter(step, pose, blackboard)
             self.fail(f"unknown op={step.op}")
             return Status.FAILURE
 
         if self.phase == "walk":
-            return self._tick_walk(step, pose, blackboard)
+            return self._tick_walk(step, pose, blackboard, state)
 
         if self.phase == "gate_approach":
-            return self._tick_gate_approach(step, pose, blackboard)
+            return self._tick_gate_approach(step, pose, blackboard, state)
 
         return Status.SUCCESS
 
@@ -346,7 +346,7 @@ class WorldNavSession:
         self.phase = "ready"
         return Status.SUCCESS
 
-    def _start_walk(self, step: Any, pose: Any, blackboard: Any) -> Status:
+    def _start_walk(self, step: Any, pose: Any, blackboard: Any, state: Any) -> Status:
         det = step.detail
         to = det["to"]
         map_id = int(to["mapId"])
@@ -418,7 +418,9 @@ class WorldNavSession:
         # Standing on/near snapped walkable tile: travel reports already_arrived.
         if travel_arrived(blackboard):
             return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
-        emit_travel_hop(blackboard, reason="world nav walk", priority=0.6)
+        emit_travel_hop(
+            blackboard, reason="world nav walk", priority=0.6, state=state
+        )
         if blackboard.intent is not None:
             return Status.SUCCESS
         miss = str(blackboard.scratch.get("travel_hop_miss") or "")
@@ -426,7 +428,7 @@ class WorldNavSession:
             return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
         return self._idle(blackboard, "world nav walk hop")
 
-    def _tick_walk(self, step: Any, pose: Any, blackboard: Any) -> Status:
+    def _tick_walk(self, step: Any, pose: Any, blackboard: Any, state: Any) -> Status:
         to = step.detail["to"]
         map_id = int(to["mapId"])
         gx, gy = int(to["x"]), int(to["y"])
@@ -435,7 +437,9 @@ class WorldNavSession:
             return Status.FAILURE
         if _chev(pose.x, pose.y, gx, gy) <= ARRIVE_TILES or travel_arrived(blackboard):
             return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
-        ok = emit_travel_hop(blackboard, reason="world nav walk", priority=0.6)
+        ok = emit_travel_hop(
+            blackboard, reason="world nav walk", priority=0.6, state=state
+        )
         if blackboard.intent is not None:
             return Status.SUCCESS
         if not ok:
@@ -549,7 +553,9 @@ class WorldNavSession:
         self.scroll_target = None
         return Status.SUCCESS
 
-    def _start_transition(self, step: Any, pose: Any, blackboard: Any) -> Status:
+    def _start_transition(
+        self, step: Any, pose: Any, blackboard: Any, state: Any
+    ) -> Status:
         det = step.detail
         frm, to = det["from"], det["to"]
         from_map = int(frm["mapId"])
@@ -627,12 +633,19 @@ class WorldNavSession:
             clear_travel(blackboard)
             self.phase = "gate_click"
             return self._emit_gate(blackboard)
-        emit_travel_hop(blackboard, reason="world nav gate approach", priority=0.6)
+        emit_travel_hop(
+            blackboard,
+            reason="world nav gate approach",
+            priority=0.6,
+            state=state,
+        )
         return Status.SUCCESS if blackboard.intent is not None else self._idle(
             blackboard, "world nav gate approach"
         )
 
-    def _tick_gate_approach(self, step: Any, pose: Any, blackboard: Any) -> Status:
+    def _tick_gate_approach(
+        self, step: Any, pose: Any, blackboard: Any, state: Any
+    ) -> Status:
         assert self.gate is not None
         g = self.gate
         if pose.map_id == int(g["to_map"]):
@@ -655,7 +668,12 @@ class WorldNavSession:
             clear_travel(blackboard)
             self.phase = "gate_click"
             return self._emit_gate(blackboard)
-        emit_travel_hop(blackboard, reason="world nav gate approach", priority=0.6)
+        emit_travel_hop(
+            blackboard,
+            reason="world nav gate approach",
+            priority=0.6,
+            state=state,
+        )
         return Status.SUCCESS if blackboard.intent is not None else self._idle(
             blackboard, "world nav gate approach"
         )

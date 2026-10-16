@@ -69,6 +69,7 @@ class ActionExecutor:
         self.last_cursor_reject_item_id: Optional[int] = None
         # Travel/search: relative WCS tile clicked after NORMAL verify (or fail).
         self.last_travel_click_relative: Optional[tuple[int, int]] = None
+        self.last_travel_click_origin: Optional[tuple[int, int]] = None
         self.last_travel_click_failed: bool = False
         # Probe stats for travel/search cursor analysis (dialog mis-click hunt).
         self.last_travel_cursor_stats: dict = {}
@@ -264,6 +265,7 @@ class ActionExecutor:
         self.last_cursor_reject_target_id = None
         self.last_cursor_reject_item_id = None
         self.last_travel_click_relative = None
+        self.last_travel_click_origin = None
         self.last_travel_click_failed = False
         self.last_travel_cursor_stats = {}
         self.last_arrow_lack = False
@@ -590,6 +592,132 @@ class ActionExecutor:
         scale = 0.04 / dist
         return Position(x=avoid[0] + dx * scale, y=avoid[1] + dy * scale)
 
+    def _hop_waypoint(self, action: ActionIntent) -> tuple[str, tuple[int, int]] | None:
+        """Absolute tile of this ground hop, or None when the click stays baked."""
+        bb = self._blackboard
+        if bb is None:
+            return None
+        if action.action is ActionType.TRAVELING:
+            wp = getattr(bb, "nav_waypoint", None)
+            if getattr(bb, "travel_hop_active", False) and wp is not None:
+                return "travel", (int(wp[0]), int(wp[1]))
+            return None
+        if action.action is not ActionType.SEARCHING:
+            return None
+        loot_wp = getattr(bb, "loot_approach_waypoint", None)
+        if (
+            getattr(bb, "loot_approach_active", False)
+            and loot_wp is not None
+            and action.target_id
+        ):
+            return "loot", (int(loot_wp[0]), int(loot_wp[1]))
+        search_wp = getattr(bb, "search_waypoint", None)
+        if getattr(bb, "search_hop_active", False) and search_wp is not None:
+            return "search", (int(search_wp[0]), int(search_wp[1]))
+        return None
+
+    def _aim_ground_click(self, action: ActionIntent):
+        """Screen point for the absolute hop under the live origin.
+
+        ``None`` keeps the baked destination. ``False`` means the straight
+        line from the live origin is closed, so the mouse must not click.
+        """
+        aimed = self._hop_waypoint(action)
+        if aimed is None or action.destination is None:
+            return None
+        kind, waypoint = aimed
+        bb = self._blackboard
+        try:
+            from app._03_world.merge.memory_sync import refresh_live_player_pose
+
+            refresh_live_player_pose(self._world, bb)
+        except Exception:
+            pass
+        origin = bb.world_origin
+        self.last_travel_click_origin = (int(origin.x), int(origin.y))
+        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.nav_config import get_terrain_map
+        from app._04_decision.pathfinding import waypoint_to_content
+
+        terrain = get_terrain_map()
+        start = (int(origin.x), int(origin.y))
+        closed = False
+        reason = "line"
+        if terrain is not None:
+            if start == waypoint:
+                closed = True
+                reason = "here"
+            elif not terrain.is_walkable(waypoint[0], waypoint[1]) or not click_clear(
+                terrain,
+                collect_body_tiles(self._world, origin),
+                start,
+                waypoint,
+            ):
+                closed = True
+        if closed:
+            from app.bot_log import event
+
+            event(
+                "avoid",
+                "click withheld kind=%s wp=%s from=%s reason=%s",
+                kind,
+                waypoint,
+                start,
+                reason,
+            )
+            self.last_travel_click_origin = None
+            return False
+        content = waypoint_to_content(waypoint, origin)
+        if kind == "loot" and action.target_id and self._world is not None:
+            content = self._nudge_loot_aim(content, action, origin, waypoint)
+        return content
+
+    def _nudge_loot_aim(self, content, action: ActionIntent, origin, waypoint):
+        """Keep a loot approach off the pile, same rule as the loot hop."""
+        try:
+            from app._03_world.space.world_coords import tile_chebyshev
+            from app._04_decision.behaviors.loot_hop import _nudge_content_off_item
+            from app._04_decision.combat_query import object_absolute_tile
+
+            item = self._world.get_object(int(action.target_id))
+            if item is None:
+                return content
+            item_tile = object_absolute_tile(item, origin)
+            if tile_chebyshev(
+                int(waypoint[0]), int(waypoint[1]), int(item_tile[0]), int(item_tile[1])
+            ) <= 2:
+                return content
+            return _nudge_content_off_item(content, item)
+        except Exception:
+            return content
+
+    def _clear_ring_points(self, dests: list, origin) -> list:
+        """Drop ring neighbors whose live tile is a wall or a closed line.
+
+        The primary point stays. It was already accepted for the hop tile.
+        """
+        from app._03_world.space.world_coords import content_to_world, relative_to_absolute
+        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.nav_config import get_terrain_map
+
+        terrain = get_terrain_map()
+        if terrain is None or len(dests) <= 1:
+            return dests
+        bodies = collect_body_tiles(self._world, origin)
+        start = (int(origin.x), int(origin.y))
+        kept = [dests[0]]
+        for content in dests[1:]:
+            rel = content_to_world(float(content.x), float(content.y))
+            tile = relative_to_absolute(rel.x, rel.y, origin)
+            if tile == start:
+                continue
+            if not terrain.is_walkable(tile[0], tile[1]):
+                continue
+            if not click_clear(terrain, bodies, start, tile):
+                continue
+            kept.append(content)
+        return kept
+
     def _search(self, action: ActionIntent, bounds: WindowBounds) -> None:
         """Click a ground hop; require NORMAL cursor, else a small tile ring."""
         if action.destination is None:
@@ -601,7 +729,27 @@ class ActionExecutor:
             relative_tile_of_content,
         )
 
-        dests = list(content_destinations_ring(action.destination))
+        aimed = self._aim_ground_click(action)
+        if aimed is False:
+            self.last_travel_click_failed = True
+            self.last_travel_cursor_stats = {
+                "ok": False,
+                "probes": 0,
+                "dialog_seen": 0,
+                "labels_seen": [],
+                "last_reject": "line",
+                "intent_reason": str(getattr(action, "reason", "") or ""),
+            }
+            return
+        destination = action.destination if aimed is None else aimed
+        dests = list(content_destinations_ring(destination))
+        pinned = self.last_travel_click_origin
+        if aimed is not None and pinned is not None:
+            from app._02_state.geometry import WorldOrigin
+
+            dests = self._clear_ring_points(
+                dests, WorldOrigin(x=int(pinned[0]), y=int(pinned[1]))
+            )
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []

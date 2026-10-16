@@ -353,6 +353,46 @@ def _farthest_guide_click(
     return best
 
 
+def _adjacent_guide_step(
+    terrain: TerrainMap,
+    origin: WorldOrigin,
+    start: tuple[int, int],
+    guide: list[tuple[int, int]],
+    waypoint: tuple[int, int],
+    bodies: set[tuple[int, int]],
+    max_hop: int,
+) -> tuple[int, int] | None:
+    """The next guide tile when it sits one step from the character.
+
+    Used only after the longer hop has no click. A tile farther than one
+    step stays out; a closed line stays out.
+    """
+    sx, sy = int(start[0]), int(start[1])
+    wx, wy = int(waypoint[0]), int(waypoint[1])
+    start_goal = tile_chebyshev(sx, sy, wx, wy)
+    through = _guide_through(guide, start, (wx, wy))
+    ordered: list[tuple[int, int]] = []
+    if len(through) >= 2:
+        ordered.append((int(through[1][0]), int(through[1][1])))
+    else:
+        for raw in guide:
+            tx, ty = int(raw[0]), int(raw[1])
+            if (tx, ty) == (sx, sy):
+                continue
+            if tile_chebyshev(sx, sy, tx, ty) != 1:
+                continue
+            if tile_chebyshev(tx, ty, wx, wy) > start_goal:
+                continue
+            ordered.append((tx, ty))
+            break
+    for tile in ordered:
+        if tile_chebyshev(sx, sy, tile[0], tile[1]) != 1:
+            continue
+        if _click_allowed(terrain, origin, start, tile, bodies, max_hop):
+            return tile
+    return None
+
+
 def choose_body_click(
     terrain: TerrainMap,
     origin: WorldOrigin,
@@ -381,11 +421,19 @@ def choose_body_click(
             terrain, origin, start, guide, waypoint, bodies, max_hop
         )
     if click is None:
+        # The longer hop is closed. One guide tile beside the character
+        # is still a step, when that single line is open.
+        click = _adjacent_guide_step(
+            terrain, origin, start, guide, waypoint, bodies, max_hop
+        )
+    if click is None:
         return None, "window has no safe click"
     click = (int(click[0]), int(click[1]))
     if click == waypoint:
         note = "line is clear, click is the guide waypoint"
-    elif click in _guide_through(guide, start, waypoint):
+    elif click in _guide_through(guide, start, waypoint) or click in {
+        (int(x), int(y)) for x, y in guide
+    }:
         note = "line is clear, click is the hop toward the waypoint"
     else:
         note = "a body blocks the guide line, click steps aside"

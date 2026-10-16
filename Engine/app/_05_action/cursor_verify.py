@@ -393,36 +393,53 @@ def object_attack_screen_points(
     obj: object,
     bounds,
 ) -> list[tuple[float, float]]:
-    """Body UV center, then a fractional-tile ring (no memory-tile jump).
+    """Memory ``iscr`` shifted up the screen, then that point's ring.
 
-    Radius is ``ATTACK_CURSOR_SEARCH_TILES`` (default 0.1 tile). Ring center is
-    the monster memory cell when known (not added as its own aim point).
-    Walked across ticks via ``attack_click_search`` (budget + sticky lock).
+    Up is ``ATTACK_AIM_SCREEN_UP_TILES`` (0.2). Radius is
+    ``ATTACK_CURSOR_SEARCH_TILES`` (default 0.1 tile). The ring is centered
+    on the lifted point. Walked across ticks via ``attack_click_search``.
     """
     from app._02_state.objects import Position
-    from app._03_world.space.world_coords import content_to_world
+    from app._03_world.space.world_coords import (
+        content_screen_up,
+        content_to_world,
+        content_to_world_continuous,
+    )
     from app._04_decision import player_mode as pm
     from app._05_action.travel_click import _fractional_content_ring
 
     pos = getattr(obj, "position", None)
-    primary = Position(
-        x=float(getattr(pos, "x", 0.0) or 0.0),
-        y=float(getattr(pos, "y", 0.0) or 0.0),
-    )
+    raw_x = float(getattr(pos, "x", 0.0) or 0.0)
+    raw_y = float(getattr(pos, "y", 0.0) or 0.0)
+    try:
+        lifted = content_screen_up(raw_x, raw_y, pm.ATTACK_AIM_SCREEN_UP_TILES)
+    except ValueError:
+        lifted = Position(x=raw_x, y=raw_y)
     points: list[tuple[float, float]] = [
-        executor._screen_point(primary.x, primary.y, bounds)
+        executor._screen_point(lifted.x, lifted.y, bounds)
     ]
     radius = float(pm.ATTACK_CURSOR_SEARCH_TILES)
     if radius > 1e-6:
-        rx = getattr(obj, "world_rx", None)
-        ry = getattr(obj, "world_ry", None)
-        if rx is not None and ry is not None:
-            cx, cy = float(rx), float(ry)
-        else:
-            tile = content_to_world(primary.x, primary.y)
-            cx, cy = float(tile.x), float(tile.y)
-        for dest in _fractional_content_ring(cx, cy, radius):
-            points.append(executor._screen_point(dest.x, dest.y, bounds))
+        cx: float | None = None
+        cy: float | None = None
+        try:
+            center = content_to_world_continuous(lifted.x, lifted.y)
+            cx, cy = float(center.x), float(center.y)
+        except ValueError:
+            rx = getattr(obj, "world_rx", None)
+            ry = getattr(obj, "world_ry", None)
+            if rx is not None and ry is not None:
+                cx, cy = float(rx), float(ry)
+            else:
+                try:
+                    tile = content_to_world(raw_x, raw_y)
+                except ValueError:
+                    tile = None
+                if tile is not None:
+                    cx, cy = float(tile.x), float(tile.y)
+        if cx is not None and cy is not None:
+            for dest in _fractional_content_ring(cx, cy, radius):
+                points.append(executor._screen_point(dest.x, dest.y, bounds))
     return _dedupe_screen_points(points)
 
 

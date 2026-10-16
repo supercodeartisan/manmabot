@@ -362,55 +362,18 @@ class MoveTab(QWidget):
             _fill_patrol()
             refill_list = _fill_patrol
             layout.addWidget(patrol_table, stretch=1)
-        elif rest:
-            layout.addWidget(
-                QLabel(
-                    self.t.get(
-                        "map_setup_hint_rest",
-                        "Rest areas are separate from combat farms. Draw them in the rest editor.",
-                    )
-                )
-            )
-            rest_status = QLabel("")
-            layout.addWidget(rest_status)
-            rest_table = QTableWidget(0, 2)
-            rest_table.setHorizontalHeaderLabels(
-                ["#", self.t.get("name", "Name")]
-            )
-            rest_table.verticalHeader().setVisible(False)
-            rest_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-            rest_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-            rest_table.setColumnWidth(0, 48)
-            rest_table.horizontalHeader().setStretchLastSection(True)
-
-            def _fill_rest() -> None:
-                rows, _err = list_safe_details(map_id)
-                rest_table.setRowCount(0)
-                for index, (name, _memo) in enumerate(rows, start=1):
-                    row = rest_table.rowCount()
-                    rest_table.insertRow(row)
-                    num = QTableWidgetItem(str(index))
-                    num.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    rest_table.setItem(row, 0, num)
-                    rest_table.setItem(
-                        row,
-                        1,
-                        QTableWidgetItem(route_point_display_name(name, self.vm.language)),
-                    )
-                rest_status.setText(
-                    self.t.get("map_registered_rest_line", "rest areas: {n}").format(
-                        n=len(rows)
-                    )
-                )
-
-            _fill_rest()
-            refill_list = _fill_rest
-            layout.addWidget(rest_table, stretch=1)
         else:
-            details, _err = list_farm_details(map_id)
-            layout.addWidget(
-                QLabel(self.t.get("map_setup_hint", self.t.get("routine_area", "Areas")))
-            )
+            list_details = list_safe_details if rest else list_farm_details
+            details, _err = list_details(map_id)
+            if rest:
+                hint = self.t.get(
+                    "map_setup_hint_rest",
+                    "Check the rest areas to use and set stay minutes. "
+                    "These are separate from combat farms.",
+                )
+            else:
+                hint = self.t.get("map_setup_hint", self.t.get("routine_area", "Areas"))
+            layout.addWidget(QLabel(hint))
             if not details:
                 layout.addWidget(
                     QLabel(
@@ -429,7 +392,9 @@ class MoveTab(QWidget):
             farm_table = QTableWidget(0, 3)
             farm_table.setHorizontalHeaderLabels(
                 [
-                    self.t.get("farms", "Farm"),
+                    self.t.get("rest_areas", "Rest areas")
+                    if rest
+                    else self.t.get("farms", "Farm"),
                     self.t.get("number", "#"),
                     self.t.get("farm_stay", "Stay"),
                 ]
@@ -516,10 +481,15 @@ class MoveTab(QWidget):
                 initial = stay_minutes_from_s(
                     stay_seconds_for(name, stay_by_name, DEFAULT_FARM_STAY_S)
                 )
+                stay_prompt = (
+                    self.t.get("rest_stay_prompt", "Minutes")
+                    if rest
+                    else self.t.get("farm_stay_prompt", "Minutes")
+                )
                 value, ok = QInputDialog.getInt(
                     dialog,
                     self.t.get("farm_stay", "Stay"),
-                    self.t.get("farm_stay_prompt", "Minutes"),
+                    stay_prompt,
                     initial,
                     MIN_FARM_STAY_MIN,
                     MAX_FARM_STAY_MIN,
@@ -532,7 +502,7 @@ class MoveTab(QWidget):
 
             def _reload_from_yaml() -> None:
                 assert farm_table is not None
-                details_now, _err = list_farm_details(map_id)
+                details_now, _err = list_details(map_id)
                 names = [name for name, _memo in details_now]
                 checked = {name for name in _checked_names() if name in names}
                 _fill_rows(names, checked)
