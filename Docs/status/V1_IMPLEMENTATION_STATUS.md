@@ -317,7 +317,7 @@ Start 시 F1–F3를 읽어 `heal` / `hp_potion` / `teleport` / `mother_tree` �
 | 런타임 오버레이 | `bot_controller.py` |
 | UI | `schedule_ui.py` |
 | 목록 | `engine/app/_03_world/game_catalog.py` |
-| 몬스터/아이템 JSON | `engine/analysis/list/korean/monster.json`, `item.json` 및 중국어 대응 |
+| 몬스터/아이템 JSON | `Engine/data/catalog/list/korean/monster.json`, `item.json` 및 중국어 대응 |
 
 ---
 

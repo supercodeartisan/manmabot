@@ -39,8 +39,9 @@ Engine/data/npc_behaviors.yaml   buy / sell / warehouse / teleporter catalog
 Engine/data/cursors/  cursor template PNGs
 Engine/data/world*/   world graph / transitions
 Engine/data/catalog/  skills / hotbar role map / icon catalog
+                        # + list/ (monster/item/spell dumps; was analysis/list)
                         # more calibration assets may move here (see USERDATA_POLICY.md)
-Engine/analysis/      memory DLLs + offsets
+Engine/analysis/      memory DLLs + offsets (no game list dumps)
 Engine/manmabot_v1/   DEPRECATED shim (raises ImportError)
 ```
 

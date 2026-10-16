@@ -36,7 +36,7 @@ Python entry: `app/_01_perception` readers + `PerceptionSensors`.
 
 | Today | Planned |
 | --- | --- |
-| `Engine/analysis/list/` | `Engine/data/catalog/list/` |
+| `Engine/data/catalog/list/` | **done** (moved from `analysis/list`) |
 | `_03_world/catalog/species_*.json` | optionally `Engine/data/catalog/` later |
 | `game_catalog.py` / `zh_convert.py` | stay under `_03_world/catalog/` (path root only) |
 
@@ -65,7 +65,7 @@ Do not place under a future Sensor tree.
 | `Hotbar/hotbar_listen*.dll`, `skill_offsets.txt` | RUNTIME |
 | `lc930/buff` / `uidialog` DLLs, `registry/LC930_REGISTRY.txt` | RUNTIME |
 | `NPC_conv/shop_listen.dll` | RUNTIME |
-| `list/` | RUNTIME data → move to `data/catalog/list` |
+| `list/` | moved → `Engine/data/catalog/list/` |
 | `*.c`, `*.h`, `build_*.bat` | BUILD |
 | `probe_*`, `entlocate`, `invsync`, `skilllocate`, combat scratch `.py` | RESEARCH |
 | `*.jsonl`, probe outs, scratch dumps | IGNORE |
@@ -94,12 +94,15 @@ Collect-ignored (stale imports / wrong trees): `test_autologin_pipeline`, `test_
 
 **Gate for step 3 (list move):** `test_game_catalog` + `test_localized_names` + `test_hp_actions` must still all pass after retarget.
 
+**Post-move gate (2026-10-16):** those three suites still all pass.  
+`test_mother_tree_mana_reserve` still has the one pre-existing fail (mana reserve logic, not path).
+
 ## 7. Pre-tidy order (safe → later)
 
-1. This doc
-2. Classify only (table above) — no moves
+1. This doc — done
+2. Classify only (table above) — done
 3. Baseline tests (section 6) — done
-4. Move `analysis/list` → `data/catalog/list` + retarget loaders only
+4. Move `analysis/list` → `data/catalog/list` + retarget loaders — done
 5. Optional: relocate RESEARCH out of `analysis`
 6. Stop. Sensor package split is a separate project
 

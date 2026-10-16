@@ -48,7 +48,7 @@ def _should_pack_analysis_file(path: Path, analysis_root: Path) -> bool:
         return False
     if path.suffix.lower() not in ANALYSIS_INCLUDE_SUFFIXES:
         return False
-    # Skip huge image dumps under analysis/list/image if any.
+    # Skip huge image dumps under analysis/*/image if any remain.
     parts = {p.lower() for p in path.relative_to(analysis_root).parts}
     if "image" in parts and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
         return False
