@@ -55,9 +55,7 @@ def main() -> int:
     _reexec_with_bundled_python()
     want_tools = any(flag in sys.argv for flag in _TOOL_FLAGS)
     _setup_path(include_tools=want_tools)
-    from session.startup_splash import open_until_main_window
-
-    open_until_main_window()
+    # The loading window starts in run_entry after the UAC prompt is answered.
     from session.run_entry import main as run_main
 
     return int(run_main())

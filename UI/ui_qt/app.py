@@ -10,24 +10,27 @@ def run_schedule_app() -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                "Manmabot.Version1"
-            )
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ZF")
         except Exception:
             pass
 
+    from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication
 
     from i18n.strings import ui_language
     from session.paths import ensure_userdata
+    from settings.map_previews import brand_icon_path
     from settings.profile import load_profile
     from ui_qt.shell.schedule_shell import ScheduleShell
     from ui_qt.theme import apply_classic_qt_theme
 
     ensure_userdata()
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("Manmabot")
-    app.setOrganizationName("Manmabot")
+    app.setApplicationName("ZF")
+    app.setOrganizationName("ZF")
+    logo = brand_icon_path()
+    if logo is not None:
+        app.setWindowIcon(QIcon(str(logo)))
     profile = load_profile()
     language = ui_language(profile.language)
     from ui_qt.theme import tokens

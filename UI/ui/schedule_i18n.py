@@ -341,7 +341,7 @@ _EN = {
     "confirm_delete": "Delete the selected schedule?\nThis cannot be undone.",
     "saved": "Schedule saved.",
     "applied": "Applied {count} supported setting(s).",
-    "console_title": "Manmabot v1",
+    "console_title": "ZF",
     "task_details": "New schedule",
     "add_schedule": "Add schedule",
     "update_schedule": "Update current",
@@ -609,7 +609,7 @@ _EN = {
     "timer_warning": "Start runs the enabled schedules on this clock.",
     "debug": "Debug",
     "debug_title": "Bot debug",
-    "debug_player_title": "Manmabot debug player",
+    "debug_player_title": "ZF",
     "debug_player_hint": "Standalone bot player for debugging — same runtime as Start here.",
     "debug_status_list": "Status",
     "debug_details": "Details",
@@ -1484,7 +1484,7 @@ _ZH = {
 }
 
 _KO.update({
-    "console_title": "Manmabot v1", "task_details": "새 일정",
+    "console_title": "ZF", "task_details": "새 일정",
     "add_schedule": "일정 추가",
     "update_schedule": "현재 일정 갱신",
     "save_as_new_schedule": "새 일정으로 보관",
@@ -1674,7 +1674,7 @@ _KO.update({
     "draft_short": "초안", "timer_warning": "시작을 누르면 켜 둔 일정이 이 시계대로 실행됩니다.",
     "debug": "디버그",
     "debug_title": "봇 디버그",
-    "debug_player_title": "Manmabot 디버그 플레이어",
+    "debug_player_title": "ZF",
     "debug_player_hint": "디버그 전용 독립 봇 플레이어 — 이 창에서 Start로 실행합니다.",
     "debug_status_list": "상태",
     "debug_details": "상세",
@@ -1911,7 +1911,7 @@ _KO.update({
 })
 
 _ZH.update({
-    "console_title": "Manmabot v1", "task_details": "新建日程",
+    "console_title": "ZF", "task_details": "新建日程",
     "add_schedule": "添加日程",
     "update_schedule": "更新当前日程",
     "save_as_new_schedule": "另存为新日程",
@@ -2101,7 +2101,7 @@ _ZH.update({
     "draft_short": "草稿", "timer_warning": "点击开始后，已启用的日程会按此时钟运行。",
     "debug": "调试",
     "debug_title": "机器人调试",
-    "debug_player_title": "Manmabot 调试播放器",
+    "debug_player_title": "ZF",
     "debug_player_hint": "独立调试机器人播放器 — 在此窗口点击 Start 运行。",
     "debug_status_list": "状态",
     "debug_details": "详情",

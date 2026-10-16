@@ -432,28 +432,11 @@ class AccountsDialog(QDialog):
             if self._recovery_prompted:
                 return
             self._recovery_prompted = True
-            if QMessageBox.question(
-                self,
-                self.t.get("account_unlock_title", "Accounts locked"),
-                self.t.get(
-                    "account_unlock_reset",
-                    "Reset inaccessible account store?",
-                ),
-            ) != QMessageBox.StandardButton.Yes:
-                return
             try:
-                backup = self.store.backup_and_reset_inaccessible()
+                self.store.backup_and_reset_inaccessible()
                 if self.profile is not None:
                     self.profile.selected_account_id = None
                     save_profile(self.profile)
-                QMessageBox.information(
-                    self,
-                    self.t.get("account_unlock_title", "Accounts locked"),
-                    self.t.get(
-                        "account_unlock_reset_done",
-                        "Backed up to {path}",
-                    ).format(path=str(backup) if backup else ""),
-                )
                 accounts = self.store.load()
                 self.on_changed()
             except Exception as exc:

@@ -190,6 +190,12 @@ class ScheduleShell(QMainWindow):
         self.bridge.rebind_hotkeys()
 
         self.setWindowTitle(self.t["console_title"])
+        from PySide6.QtGui import QIcon
+        from settings.map_previews import brand_icon_path
+
+        logo = brand_icon_path()
+        if logo is not None:
+            self.setWindowIcon(QIcon(str(logo)))
         self.setMinimumSize(tokens.MIN_WIDTH, tokens.MIN_HEIGHT)
         self.resize(tokens.DEFAULT_WIDTH, tokens.DEFAULT_HEIGHT)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
@@ -295,7 +301,7 @@ class ScheduleShell(QMainWindow):
         status = QStatusBar()
         self.setStatusBar(status)
         self.footer = status
-        status.showMessage(self.t.get("console_title", "Manmabot"))
+        status.showMessage(self.t.get("console_title", "ZF"))
 
     def _lock_pane_split(self) -> None:
         """Pin the schedule pane to the randomize control (classic sash lock)."""
@@ -318,23 +324,42 @@ class ScheduleShell(QMainWindow):
         QTimer.singleShot(0, self._apply_window_scale)
         if not self._launch_front_armed:
             self._launch_front_armed = True
-            self._raise_launch_window()
+            QTimer.singleShot(0, self._reveal_main_window)
+
+    def _reveal_main_window(self) -> None:
+        """Drop the loading window once this console has painted."""
+        if self._closing:
+            return
+        self._lock_pane_split()
+        self._apply_window_scale()
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
+        from session.startup_splash import close_startup_splash
+
+        close_startup_splash()
+        QTimer.singleShot(40, self._raise_launch_window)
 
     def _raise_launch_window(self) -> None:
-        """Show the console above the loading popup on every launch."""
+        """Bring the console forward after the loading window is gone."""
         if self._closing:
             return
         self._launch_front_tries += 1
+        if _startup_splash_visible() and self._launch_front_tries < 25:
+            from session.startup_splash import close_startup_splash
+
+            close_startup_splash()
+            QTimer.singleShot(40, self._raise_launch_window)
+            return
         self.raise_()
         self.activateWindow()
         hwnd = int(self.winId() or 0)
         if hwnd:
             _force_window_top(hwnd, topmost=True)
-        if _startup_splash_visible() and self._launch_front_tries < 40:
-            QTimer.singleShot(100, self._raise_launch_window)
-            return
-        if hwnd and not bool(self.profile.always_on_top):
-            _force_window_top(hwnd, topmost=False)
+            if not bool(self.profile.always_on_top):
+                _force_window_top(hwnd, topmost=False)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -435,21 +460,10 @@ class ScheduleShell(QMainWindow):
         self.power_btn.setIcon(run_glyph("start"))
         self.power_btn.clicked.connect(self._toggle_run)
         mark_accent(self.power_btn)
-        self.trial_btn = QPushButton(
-            self.t.get("trial_start", "Trial")
-        )
-        self.trial_btn.setToolTip(
-            self.t.get(
-                "trial_start_tip",
-                "Run with current settings (no timeline, no account).",
-            )
-        )
-        self.trial_btn.clicked.connect(self._start_trial)
         self.stop_btn = QPushButton(self.t.get("stop", "Stop"))
         self.stop_btn.setIcon(run_glyph("stop"))
         self.stop_btn.clicked.connect(self._on_stop)
         row.addWidget(self.power_btn)
-        row.addWidget(self.trial_btn)
         row.addWidget(self.stop_btn)
         return bar
 
@@ -1064,68 +1078,6 @@ class ScheduleShell(QMainWindow):
         layout.addWidget(buttons)
         return dialog.exec() == QDialog.DialogCode.Accepted
 
-    def _persist_editor_to_trial(self) -> None:
-        """Write the open editor (or live bag) into the trial workspace."""
-        from settings.settings_sections import split_settings_routine
-        from settings.trial_store import save_trial
-
-        try:
-            settings = self.editor.collect_settings()
-        except Exception:
-            settings = dict(self.editor.bag.data)
-        settings_n, routine = split_settings_routine(settings)
-        save_trial(settings_n, routine)
-        self._sync_routine_from_editor()
-        save_profile(self.profile)
-
-    def _start_trial(self) -> None:
-        """Trial: current settings+routine, no timeline arm, no account."""
-        from settings.trial_store import apply_trial_to_profile, mark_trial_run
-
-        self._append_log(self.t.get("trial_start", "Trial"))
-        if self.bridge.arming or self.bridge.controller.state != RunState.STOPPED:
-            QMessageBox.warning(
-                self,
-                self.t.get("title", "Manmabot"),
-                self.t.get("stop_to_apply", "Stop the bot before applying."),
-            )
-            return
-        if not self._game_is_up():
-            QMessageBox.warning(
-                self,
-                self.t.get("title", "Manmabot"),
-                self.t.get(
-                    "trial_needs_game",
-                    "Open the game client, then start Trial.",
-                ),
-            )
-            return
-        try:
-            self._persist_editor_to_trial()
-        except OSError as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
-            return
-        # Disarm schedule clock so timeline cannot take over.
-        try:
-            self._disarm_schedule()
-        except Exception:
-            pass
-        apply_trial_to_profile(self.profile)
-        mark_trial_run()
-        self.bridge.profile = self.profile
-        self.bridge.coordinator.profile = self.profile
-        if routine_is_break_only(getattr(self.profile, "routine", None)):
-            QMessageBox.warning(
-                self,
-                self.t.get("title", "Manmabot"),
-                self.t.get("start_break_only", "Routine is break-only."),
-            )
-            return
-        error = self.bridge.start(unattended=True)
-        if error:
-            self._report_start_error(error)
-        self._refresh_operator(force=True)
-
     def _start(self) -> None:
         """Classic Start: arm schedule clock, then unattended session prepare."""
         self._append_log(self.t.get("start", "Start"))
@@ -1138,18 +1090,18 @@ class ScheduleShell(QMainWindow):
 
         game_up = self._game_is_up()
         has_schedule = any(task.enabled for task in self.tasks)
-        if not has_schedule and not game_up:
+        if not has_schedule:
             QMessageBox.warning(
                 self,
                 self.t.get("title", "Manmabot"),
-                self.t.get("no_enabled_schedule", "Enable a schedule or open the game."),
+                self.t.get("no_enabled_schedule", "Turn on at least one schedule before Start."),
             )
             return
 
         will_start = (
             self.bridge.controller.state == RunState.STOPPED
             and not self.bridge.arming
-            and (has_schedule or game_up)
+            and has_schedule
         )
         if will_start and not self._confirm_start():
             self._append_log(self.t.get("start_confirm_no", "Start cancelled"))
@@ -1206,20 +1158,11 @@ class ScheduleShell(QMainWindow):
             self._refresh_operator(force=True)
             return
 
-        if (
-            game_up
-            and self.bridge.controller.state == RunState.STOPPED
-            and not self.bridge.arming
-        ):
-            # No enabled schedule: treat as trial (current settings, no account).
-            self._start_trial()
-            return
-        else:
-            self._append_log(
-                "Start skipped "
-                f"(game_up={game_up}, state={self.bridge.controller.state}, "
-                f"arming={self.bridge.arming})"
-            )
+        self._append_log(
+            "Start skipped "
+            f"(game_up={game_up}, state={self.bridge.controller.state}, "
+            f"arming={self.bridge.arming})"
+        )
         self._refresh_operator(force=True)
 
     def _drive_schedule(self) -> None:
@@ -1433,10 +1376,6 @@ class ScheduleShell(QMainWindow):
             self.power_btn.setText(label)
             self.power_btn.setIcon(run_glyph(glyph))
             self.power_btn.setEnabled(enabled)
-            if getattr(self, "trial_btn", None) is not None:
-                self.trial_btn.setEnabled(
-                    state == RunState.STOPPED and not arming
-                )
             self.stop_btn.setEnabled(
                 state != RunState.STOPPED or arming or scheduled
             )

@@ -415,8 +415,8 @@ class UiStrings:
 
 
 _EN = UiStrings(
-    window_title="Manmabot v1",
-    brand="Manmabot",
+    window_title="ZF",
+    brand="ZF",
     brand_sub="Version 1 (no license)",
     lamp_game="Game",
     lamp_memory="Memory",
@@ -854,15 +854,15 @@ _EN = UiStrings(
         "pause_resume": "Pause / Resume",
         "stop": "Stop bot",
     },
-    wizard_title="Setup — Manmabot v1",
+    wizard_title="Setup — ZF",
     wizard_back="Back",
     wizard_continue="Continue",
     wizard_finish="Finish",
     wizard_step="Step {cur} of {total}",
-    wizard_block_close="Finish the setup wizard to use Manmabot v1.",
+    wizard_block_close="Finish the setup wizard to use ZF.",
     wizard_welcome="Welcome",
     wizard_welcome_body=(
-        "This assistant sets up Manmabot for the map you choose.\n\n"
+        "This assistant sets up ZF for the map you choose.\n\n"
         "We'll check your memory driver, game window, character, "
         "map, and farms.\n\n"
         "You need: LC.exe running, and the signed memory driver loaded."
@@ -919,8 +919,8 @@ _EN = UiStrings(
 
 
 _KO = UiStrings(
-    window_title="Manmabot v1",
-    brand="Manmabot",
+    window_title="ZF",
+    brand="ZF",
     brand_sub="Version 1 (라이선스 없음)",
     lamp_game="게임",
     lamp_memory="메모리",
@@ -1359,15 +1359,15 @@ _KO = UiStrings(
         "pause_resume": "일시정지 / 재개",
         "stop": "봇 중지",
     },
-    wizard_title="설정 — Manmabot v1",
+    wizard_title="설정 — ZF",
     wizard_back="뒤로",
     wizard_continue="계속",
     wizard_finish="완료",
     wizard_step="{cur} / {total} 단계",
-    wizard_block_close="Manmabot v1를 사용하려면 설정 마법사를 완료하세요.",
+    wizard_block_close="ZF를 사용하려면 설정 마법사를 완료하세요.",
     wizard_welcome="환영합니다",
     wizard_welcome_body=(
-        "이 어시스턴트는 선택한 맵으로 Manmabot을 설정합니다.\n\n"
+        "이 어시스턴트는 선택한 맵으로 ZF를 설정합니다.\n\n"
         "메모리 드라이버, 게임 창, 캐릭터, 맵, 사냥터를 확인합니다.\n\n"
         "필요: LC.exe 실행, 서명된 메모리 드라이버 로드."
     ),
@@ -1423,8 +1423,8 @@ _KO = UiStrings(
 
 
 _ZH = UiStrings(
-    window_title="Manmabot v1",
-    brand="Manmabot",
+    window_title="ZF",
+    brand="ZF",
     brand_sub="Version 1（无许可证）",
     lamp_game="游戏",
     lamp_memory="内存",
@@ -1855,15 +1855,15 @@ _ZH = UiStrings(
         "pause_resume": "暂停 / 继续",
         "stop": "停止机器人",
     },
-    wizard_title="设置 — Manmabot v1",
+    wizard_title="设置 — ZF",
     wizard_back="返回",
     wizard_continue="继续",
     wizard_finish="完成",
     wizard_step="第 {cur} / {total} 步",
-    wizard_block_close="请完成设置向导后再使用 Manmabot v1。",
+    wizard_block_close="请完成设置向导后再使用 ZF。",
     wizard_welcome="欢迎",
     wizard_welcome_body=(
-        "本助手按你选择的地图设置 Manmabot。\n\n"
+        "本助手按你选择的地图设置 ZF。\n\n"
         "我们将检查内存驱动、游戏窗口、角色、地图与猎场。\n\n"
         "需要：LC.exe 正在运行，并已加载已签名的内存驱动。"
     ),

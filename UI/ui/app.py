@@ -12,9 +12,7 @@ def run_app() -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                "Manmabot.Version1"
-            )
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ZF")
         except Exception:
             pass
     from ui_qt.app import run_schedule_app

@@ -675,7 +675,7 @@ class OtherTab(QWidget):
             QMessageBox.warning(self, self.t.get("diagnostics", "Diagnostics"), str(exc))
             return
         text = (
-            f"Manmabot v1\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
+            f"ZF\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
             f"active_map={self.profile.active_map}\ncharacter={self.profile.character}\n"
             f"language={self.profile.language}\ngame_language={self.profile.game_language}\n"
         )

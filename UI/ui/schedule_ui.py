@@ -12253,24 +12253,11 @@ class ScheduleWindow(tk.Tk):
                 if recovery_prompted:
                     return
                 recovery_prompted = True
-                if not messagebox.askyesno(
-                    self.t["account_unlock_title"],
-                    self.t["account_unlock_reset"],
-                    parent=top,
-                ):
-                    return
                 try:
-                    backup = store.backup_and_reset_inaccessible()
+                    store.backup_and_reset_inaccessible()
                     self.profile.selected_account_id = None
                     save_profile(self.profile)
                     self.editor._load_accounts()
-                    messagebox.showinfo(
-                        self.t["account_unlock_title"],
-                        self.t["account_unlock_reset_done"].format(
-                            path=str(backup) if backup else ""
-                        ),
-                        parent=top,
-                    )
                 except Exception as exc:
                     messagebox.showerror(self.t["title"], str(exc), parent=top)
             except Exception as exc:
@@ -12958,7 +12945,7 @@ class ScheduleWindow(tk.Tk):
 
     def copy_diagnostics(self) -> None:
         game, memory, map_probe = self.coordinator.probes()
-        text = (f"Manmabot v1\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
+        text = (f"ZF\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
                 f"active_map={self.profile.active_map}\ncharacter={self.profile.character}\n"
                 f"language={self.profile.language}\ngame_language={self.profile.game_language}\n")
         self.clipboard_clear()
