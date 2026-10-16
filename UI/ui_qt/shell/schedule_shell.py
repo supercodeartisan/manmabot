@@ -55,6 +55,92 @@ from ui_qt.theme.apply import (
 )
 from ui_qt.theme.run_glyphs import run_glyph
 
+_SPLASH_CLASS = "ManmabotStartupSplash"
+_HWND_TOPMOST = -1
+_HWND_NOTOPMOST = -2
+_SWP_NOSIZE = 0x0001
+_SWP_NOMOVE = 0x0002
+_SWP_NOACTIVATE = 0x0010
+_SWP_SHOWWINDOW = 0x0040
+_SW_SHOW = 5
+
+
+def _startup_splash_visible() -> bool:
+    """True while this process still has the topmost loading popup."""
+    import ctypes
+    import os
+    from ctypes import wintypes
+
+    from win32_prototypes import bind_user32
+
+    user32 = ctypes.windll.user32
+    bind_user32(user32)
+    enum_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.EnumWindows.argtypes = [enum_proc, wintypes.LPARAM]
+    found = False
+    pid = os.getpid()
+
+    def _visit(hwnd, _lparam):
+        nonlocal found
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if int(owner.value) != pid or not user32.IsWindowVisible(hwnd):
+            return True
+        name = ctypes.create_unicode_buffer(64)
+        user32.GetClassNameW(hwnd, name, 64)
+        if name.value == _SPLASH_CLASS:
+            found = True
+            return False
+        return True
+
+    callback = enum_proc(_visit)
+    _startup_splash_visible._callback = callback  # type: ignore[attr-defined]
+    user32.EnumWindows(callback, 0)
+    return found
+
+
+def _force_window_top(hwnd: int, *, topmost: bool) -> None:
+    """Put hwnd above other windows. Topmost beats the loading popup."""
+    if not hwnd:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    from win32_prototypes import bind_user32
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    bind_user32(user32)
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+    kernel32.GetCurrentThreadId.argtypes = []
+    target = wintypes.HWND(hwnd)
+    insert = wintypes.HWND(_HWND_TOPMOST if topmost else _HWND_NOTOPMOST)
+    flags = _SWP_NOMOVE | _SWP_NOSIZE
+    flags |= _SWP_SHOWWINDOW if topmost else _SWP_NOACTIVATE
+    fg = user32.GetForegroundWindow()
+    fg_thread = 0
+    attached = False
+    if fg:
+        owner = wintypes.DWORD()
+        fg_thread = int(user32.GetWindowThreadProcessId(fg, ctypes.byref(owner)) or 0)
+    this_thread = int(kernel32.GetCurrentThreadId() or 0)
+    try:
+        user32.AllowSetForegroundWindow(wintypes.DWORD(0xFFFFFFFF))
+    except Exception:
+        pass
+    if fg_thread and fg_thread != this_thread:
+        attached = bool(user32.AttachThreadInput(fg_thread, this_thread, True))
+    try:
+        if topmost:
+            user32.ShowWindow(target, _SW_SHOW)
+        user32.SetWindowPos(target, insert, 0, 0, 0, 0, flags)
+        user32.SetForegroundWindow(target)
+        user32.BringWindowToTop(target)
+    finally:
+        if attached:
+            user32.AttachThreadInput(fg_thread, this_thread, False)
+
 
 class ScheduleShell(QMainWindow):
     """PySide schedule root with list + full editor tabs."""
@@ -80,6 +166,8 @@ class ScheduleShell(QMainWindow):
         self._probe_sig: tuple | None = None
         self._probe_at = 0.0
         self._main_splitter: QSplitter | None = None
+        self._launch_front_armed = False
+        self._launch_front_tries = 0
         # Classic default window (1187×806) → 8pt body, not 11.
         self._ui_scale_font_px = 8
         self._scale_timer = QTimer(self)
@@ -228,6 +316,25 @@ class ScheduleShell(QMainWindow):
         super().showEvent(event)
         QTimer.singleShot(0, self._lock_pane_split)
         QTimer.singleShot(0, self._apply_window_scale)
+        if not self._launch_front_armed:
+            self._launch_front_armed = True
+            self._raise_launch_window()
+
+    def _raise_launch_window(self) -> None:
+        """Show the console above the loading popup on every launch."""
+        if self._closing:
+            return
+        self._launch_front_tries += 1
+        self.raise_()
+        self.activateWindow()
+        hwnd = int(self.winId() or 0)
+        if hwnd:
+            _force_window_top(hwnd, topmost=True)
+        if _startup_splash_visible() and self._launch_front_tries < 40:
+            QTimer.singleShot(100, self._raise_launch_window)
+            return
+        if hwnd and not bool(self.profile.always_on_top):
+            _force_window_top(hwnd, topmost=False)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -606,30 +713,67 @@ class ScheduleShell(QMainWindow):
         self.schedule_list.show_timing_from(task)
         self.editor.load_task(task, editing=False)
 
+    def _blank_task(self) -> ScheduleTask:
+        """A new schedule starts empty. It does not copy the live profile."""
+        task = ScheduleTask(name="", account_id=None, server="")
+        task.settings = {"move": {"routine": []}}
+        return task
+
     def _begin_new(self) -> None:
         self._editing_id = None
         self._creating_new = True
-        task = self.store.create(self.profile)
-        task.name = ""
-        task.account_id = None
-        task.server = ""
+        task = self._blank_task()
+        self.schedule_list.clear_selection()
         self.schedule_list.show_timing_from(task)
-        self.editor.load_task(task, editing=False)
+        self.editor.load_task(task, editing=False, inherit_profile_routine=False)
         self.editor.set_commit_mode(False)
         self.footer.showMessage(self.t.get("task_details", "New schedule"))
+
+    def _enter_edit(self, task) -> None:
+        """Open ``task`` so the next save updates this schedule."""
+        self._editing_id = task.id
+        self._creating_new = False
+        self.schedule_list.show_timing_from(task)
+        self.editor.load_task(task, editing=True)
 
     def _edit_selected(self) -> None:
         task = self.schedule_list.selected_task()
         if task is None:
             return
-        self._editing_id = task.id
-        self._creating_new = False
-        self.schedule_list.show_timing_from(task)
-        self.editor.load_task(task, editing=True)
+        self._enter_edit(task)
         self.footer.showMessage(self.t.get("edit_schedule", "Edit"))
 
+    def _publish_paused_schedule(self, task) -> None:
+        """While paused, push the saved schedule into the running worker."""
+        from session.runtime_settings import publish_paused_task
+
+        if self.bridge.arming:
+            return
+        try:
+            status = publish_paused_task(self.bridge.controller, self.profile, task)
+        except Exception as exc:
+            self._append_log(f"Paused settings reload failed: {exc}")
+            return
+        if status == "not_paused":
+            return
+        self.bridge.profile = self.profile
+        self.bridge.coordinator.profile = self.profile
+        try:
+            self.bridge.invalidate_map_probe()
+        except Exception:
+            pass
+        key = (
+            "paused_settings_applied_keep_identity"
+            if status == "applied_keep_identity"
+            else "paused_settings_applied"
+        )
+        text = self.t.get(key, key)
+        self.footer.showMessage(text)
+        self._append_log(text)
+        self._refresh_operator(force=True)
+
     def _commit_update(self) -> None:
-        """Overwrite the schedule under edit; stay in edit mode for further changes."""
+        """Overwrite the schedule under edit and stay on that edit."""
         if not self._editing_id:
             return
         collected = self.editor.collect_task()
@@ -654,13 +798,12 @@ class ScheduleShell(QMainWindow):
         else:
             self.tasks[index] = collected
         self.schedule_list.persist(select=index)
-        self._creating_new = False
-        self.editor.load_task(collected, editing=True)
-        self._editing_id = collected.id
+        self._enter_edit(collected)
         self.footer.showMessage(self.t.get("saved", "Saved"))
+        self._publish_paused_schedule(collected)
 
     def _commit_add(self) -> None:
-        """Store the form as a new list row (does not overwrite the open edit)."""
+        """Store the form as a new list row, then open that row for edit."""
         collected = self.editor.collect_task()
         self.schedule_list.read_timing_into(collected)
         if not collected.account_id:
@@ -686,10 +829,14 @@ class ScheduleShell(QMainWindow):
             return
         collected.id = uuid.uuid4().hex
         self.tasks.append(collected)
-        self.schedule_list.persist(select=len(self.tasks) - 1)
+        index = len(self.tasks) - 1
+        # Claim the new id before the list selects it, so that selection
+        # does not reload the form as a blank new schedule.
+        self._editing_id = collected.id
         self._creating_new = False
+        self.schedule_list.persist(select=index)
+        self._enter_edit(collected)
         self.footer.showMessage(self.t.get("schedule_added", "Added"))
-        self._begin_new()
 
     def _commit_editor(self) -> None:
         if self._editing_id:

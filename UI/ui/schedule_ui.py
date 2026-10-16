@@ -9426,6 +9426,10 @@ class UnifiedTaskEditor(ttk.Frame):
         self.app._creating_new = False
         self.set_commit_mode(True)
         self.app.footer_status.configure(text=self.t["saved"])
+        try:
+            self.app._publish_paused_schedule(task)
+        except Exception:
+            pass
         return True
 
     def commit_add(
@@ -11059,6 +11063,42 @@ class ScheduleWindow(tk.Tk):
         self.footer_status.configure(text=self.t["applied"].format(count=count))
         self._refresh_operator()
         return True
+
+    def _publish_paused_schedule(self, task) -> None:
+        """While paused, push the saved schedule into the running worker."""
+        from session.runtime_settings import publish_paused_task
+
+        if getattr(self.coordinator, "arming", False):
+            return
+        try:
+            status = publish_paused_task(self.coordinator.controller, self.profile, task)
+        except Exception as exc:
+            try:
+                self.append_log(f"Paused settings reload failed: {exc}")
+            except Exception:
+                pass
+            return
+        if status == "not_paused":
+            return
+        try:
+            self.coordinator.invalidate_map_probe()
+        except Exception:
+            pass
+        key = (
+            "paused_settings_applied_keep_identity"
+            if status == "applied_keep_identity"
+            else "paused_settings_applied"
+        )
+        text = self.t.get(key, key)
+        try:
+            self.footer_status.configure(text=text)
+        except Exception:
+            pass
+        try:
+            self.append_log(text)
+        except Exception:
+            pass
+        self._refresh_operator()
 
     def _run_glyph(self, kind: str) -> tk.PhotoImage:
         icons = getattr(self, "_run_icons", None)

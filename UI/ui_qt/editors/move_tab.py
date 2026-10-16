@@ -641,8 +641,12 @@ class MoveTab(QWidget):
         self.vm.load_from_profile(self.profile)
         self.refresh()
 
-    def load_from_move_settings(self, move: dict | None) -> None:
-        self.vm.load_from_move_settings(move, self.profile)
+    def load_from_move_settings(
+        self, move: dict | None, *, inherit_profile: bool = True
+    ) -> None:
+        self.vm.load_from_move_settings(
+            move, self.profile, inherit_profile=inherit_profile
+        )
         self.refresh()
 
     def routine_payload(self) -> list:

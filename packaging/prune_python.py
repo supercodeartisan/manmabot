@@ -55,17 +55,54 @@ def _win_long(path: Path) -> str:
     return "\\\\?\\" + text
 
 
+def iter_pruned_python_files():
+    """Source files Stage 3 copies. Same skip rules as the customer runtime."""
+    prune = load_prune_names()
+    site = Path("Lib") / "site-packages"
+    for dirpath, dirnames, filenames in os.walk(SRC_PYTHON):
+        src_dir = Path(dirpath)
+        rel_dir = src_dir.relative_to(SRC_PYTHON)
+        if rel_dir == site:
+            dirnames[:] = [
+                d
+                for d in dirnames
+                if not is_pruned_name(d, prune) and not _should_skip_dir(d)
+            ]
+            filenames = [name for name in filenames if not is_pruned_name(name, prune)]
+        else:
+            dirnames[:] = [d for d in dirnames if not _should_skip_dir(d)]
+        parts = rel_dir.parts
+        if (
+            len(parts) >= 3
+            and parts[0] == "Lib"
+            and parts[1] == "site-packages"
+            and is_pruned_name(parts[2], prune)
+        ):
+            dirnames[:] = []
+            continue
+        for name in filenames:
+            if name.endswith((".pyc", ".pyo")):
+                continue
+            src = src_dir / name
+            rel = src.relative_to(SRC_PYTHON)
+            if (
+                len(rel.parts) == 3
+                and rel.parts[0] == "Lib"
+                and rel.parts[1] == "site-packages"
+                and is_pruned_name(rel.parts[2], prune)
+            ):
+                continue
+            yield src
+
+
 def copy_python_pruned(*, dry_run: bool = False) -> dict:
     if not PORTABLE_DIR.is_dir():
         raise RuntimeError(f"portable tree missing: {PORTABLE_DIR}")
     if not SRC_PYTHON.is_dir():
         raise RuntimeError(f"source python tree missing: {SRC_PYTHON}")
 
-    prune = load_prune_names()
     started = time.time()
     copied = 0
-    skipped_pkg = 0
-    skipped_other = 0
     bytes_copied = 0
 
     if DST_PYTHON.exists():
@@ -74,63 +111,27 @@ def copy_python_pruned(*, dry_run: bool = False) -> dict:
         else:
             shutil.rmtree(_win_long(DST_PYTHON))
 
-    site = Path("Lib") / "site-packages"
-
-    for dirpath, dirnames, filenames in os.walk(SRC_PYTHON):
-        src_dir = Path(dirpath)
-        rel_dir = src_dir.relative_to(SRC_PYTHON)
-
-        # Prune site-packages top-level denied names.
-        if rel_dir == site:
-            keep_dirs: list[str] = []
-            for d in list(dirnames):
-                if is_pruned_name(d, prune) or _should_skip_dir(d):
-                    skipped_pkg += 1
-                    continue
-                keep_dirs.append(d)
-            dirnames[:] = keep_dirs
-            filenames = [f for f in filenames if not is_pruned_name(f, prune)]
-        else:
-            dirnames[:] = [d for d in dirnames if not _should_skip_dir(d)]
-
-        # Skip anything under a pruned site-packages root entry.
-        parts = rel_dir.parts
-        if len(parts) >= 3 and parts[0] == "Lib" and parts[1] == "site-packages":
-            top = parts[2]
-            if is_pruned_name(top, prune):
-                dirnames[:] = []
-                skipped_other += 1
-                continue
-
-        for name in filenames:
-            if name.endswith((".pyc", ".pyo")):
-                skipped_other += 1
-                continue
-            src = src_dir / name
-            rel = src.relative_to(SRC_PYTHON)
-            if len(rel.parts) == 3 and rel.parts[0] == "Lib" and rel.parts[1] == "site-packages":
-                if is_pruned_name(rel.parts[2], prune):
-                    skipped_pkg += 1
-                    continue
-            dst = DST_PYTHON / rel
-            if dry_run:
-                copied += 1
-                continue
-            os.makedirs(_win_long(dst.parent), exist_ok=True)
-            shutil.copy2(_win_long(src), _win_long(dst))
+    for src in iter_pruned_python_files():
+        rel = src.relative_to(SRC_PYTHON)
+        dst = DST_PYTHON / rel
+        if dry_run:
             copied += 1
-            try:
-                bytes_copied += src.stat().st_size
-            except OSError:
-                pass
+            continue
+        os.makedirs(_win_long(dst.parent), exist_ok=True)
+        shutil.copy2(_win_long(src), _win_long(dst))
+        copied += 1
+        try:
+            bytes_copied += src.stat().st_size
+        except OSError:
+            pass
 
     return {
         "copied_files": copied,
-        "skipped_packages": skipped_pkg,
-        "skipped_other": skipped_other,
+        "skipped_packages": 0,
+        "skipped_other": 0,
         "bytes_copied": bytes_copied,
         "bytes_copied_mb": round(bytes_copied / (1024 * 1024), 1),
-        "prune_rule_count": len(prune),
+        "prune_rule_count": len(load_prune_names()),
         "elapsed_s": round(time.time() - started, 2),
         "destination": str(DST_PYTHON),
     }

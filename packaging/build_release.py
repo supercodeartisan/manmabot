@@ -373,6 +373,11 @@ def stage4(*, dry_run: bool, skip_sign: bool) -> int:
         },
     )
     print("Stage 4 OK")
+    if not dry_run:
+        from release_snapshot import write_input_snapshot
+
+        snapshot = write_input_snapshot()
+        print(f"  input snapshot: {snapshot}")
     print("  development tree was not modified")
     return 0
 
@@ -401,7 +406,23 @@ def stage0(deny_ok: bool = True) -> int:
     return 0
 
 
-def stage1(*, dry_run: bool, skip_python: bool, checksums: bool) -> int:
+def customer_release_exists() -> bool:
+    """True when a compiled customer folder is already present."""
+    if not (PORTABLE_DIR / "python" / "python.exe").is_file():
+        return False
+    engine = PORTABLE_DIR / "Engine"
+    if not engine.is_dir():
+        return False
+    return next(engine.rglob("*.pyd"), None) is not None
+
+
+def stage1(
+    *,
+    dry_run: bool,
+    skip_python: bool,
+    checksums: bool,
+    force_full: bool = False,
+) -> int:
     root_files, allow_roots, deny_globs = load_manifests()
     errors = validate_manifests(root_files, allow_roots, deny_globs)
     if errors:
@@ -411,6 +432,23 @@ def stage1(*, dry_run: bool, skip_python: bool, checksums: bool) -> int:
 
     if skip_python:
         allow_roots = [r for r in allow_roots if r != "python"]
+
+    if customer_release_exists() and not force_full:
+        print(
+            "ERROR: a customer portable already exists. "
+            "Full Stage 1 is only for the first release.",
+            file=sys.stderr,
+        )
+        print(
+            "       Update changed files with: "
+            "python\\python.exe packaging\\incremental_release.py",
+            file=sys.stderr,
+        )
+        print(
+            "       To wipe and rebuild everything, re-run Stage 1 with --force-full.",
+            file=sys.stderr,
+        )
+        return 2
 
     started = time.time()
     print(f"Stage 1 — portable copy -> {PORTABLE_DIR}")
@@ -589,6 +627,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Stage 4: never attempt Authenticode signing",
     )
+    parser.add_argument(
+        "--force-full",
+        action="store_true",
+        help="Stage 1: wipe an existing customer folder and copy again",
+    )
     args = parser.parse_args(argv)
 
     if args.stage == 0:
@@ -598,6 +641,7 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             skip_python=args.skip_python,
             checksums=not args.no_checksums,
+            force_full=args.force_full,
         )
     if args.stage == 2:
         return stage2(

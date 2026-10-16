@@ -55,12 +55,11 @@ def detect_build_python() -> Path:
             return path
         raise RuntimeError(f"MANMABOT_BUILD_PYTHON not found: {env}")
 
+    local = Path(os.environ.get("LocalAppData", ""))
     candidates = [
         Path(r"C:\Users\Condra\AppData\Local\Python\pythoncore-3.14-64\python.exe"),
-        Path(os.environ.get("LocalAppData", ""))
-        / "Python"
-        / "pythoncore-3.14-64"
-        / "python.exe",
+        local / "Python" / "pythoncore-3.14-64" / "python.exe",
+        local / "Programs" / "Python" / "Python314" / "python.exe",
     ]
     for path in candidates:
         if path.is_file() and (path.parent / "include" / "Python.h").is_file():

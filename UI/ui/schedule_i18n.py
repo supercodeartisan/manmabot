@@ -597,6 +597,10 @@ _EN = {
     "map_missing": "Cannot start — map data is missing.",
     "invalid_value": "Check the highlighted numeric and hotbar values.",
     "stop_to_apply": "Stop the bot before applying task settings.",
+    "paused_settings_applied": "Paused settings applied. Resume uses them.",
+    "paused_settings_applied_keep_identity": (
+        "Paused settings applied. Character and account stay until you stop and start."
+    ),
     "draft_short": "Draft",
     "timer_warning": "Start runs the enabled schedules on this clock.",
     "debug": "Debug",
@@ -1483,6 +1487,8 @@ _KO.update({
     "schedule_added": "일정을 목록에 추가했습니다.",
     "confirm_create_schedule": "이 일정을 목록에 추가할까요?",
     "confirm_update_schedule": "이 일정의 변경 내용을 저장할까요?",
+    "paused_settings_applied": "일시정지 중 설정을 적용했습니다. 재개하면 이 설정으로 동작합니다.",
+    "paused_settings_applied_keep_identity": "일시정지 중 설정을 적용했습니다. 캐릭터와 계정은 중지 후 시작할 때 바뀝니다.",
     "confirm_save_as_new": "지금 편집 내용을 새 일정으로 보관할까요? (현재 일정은 그대로 둡니다)",
     "confirm_leave_new": (
         "아직 목록에 없는 새 일정을 작성 중입니다.\n\n"
@@ -1904,6 +1910,8 @@ _ZH.update({
     "schedule_added": "已将日程添加到列表。",
     "confirm_create_schedule": "要将此日程添加到列表吗？",
     "confirm_update_schedule": "要保存对此日程的更改吗？",
+    "paused_settings_applied": "已在暂停时应用设置。继续后将使用这些设置。",
+    "paused_settings_applied_keep_identity": "已在暂停时应用设置。角色和账号要在停止并重新开始后才会更换。",
     "confirm_save_as_new": "要将当前编辑内容另存为新日程吗？（当前日程保持不变）",
     "confirm_leave_new": (
         "正在创建尚未加入列表的新日程。\n\n"

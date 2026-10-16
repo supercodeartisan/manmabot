@@ -364,13 +364,22 @@ class TaskEditor(QWidget):
                 if hasattr(tab, attr):
                     setattr(tab, attr, False)
 
-    def load_task(self, task: ScheduleTask, *, editing: bool) -> None:
+    def load_task(
+        self,
+        task: ScheduleTask,
+        *,
+        editing: bool,
+        inherit_profile_routine: bool = True,
+    ) -> None:
         self.task = copy.deepcopy(task)
         self.bag.load_task(self.task)
         if self.recovery_tab is not None:
             self.recovery_tab.reload_from_bag()
         if self.move_tab is not None:
-            self.move_tab.load_from_move_settings(self.task.settings.get("move"))
+            self.move_tab.load_from_move_settings(
+                self.task.settings.get("move"),
+                inherit_profile=inherit_profile_routine,
+            )
         self._invalidate_lazy_tabs()
         self.set_commit_mode(editing)
         self.refresh_accounts(select_id=self.task.account_id)
