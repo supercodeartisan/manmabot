@@ -179,6 +179,9 @@ class ActionExecutor:
         """
         if mid_act or not hz.ATTACK_STOP_ENABLED:
             return
+        from app.bot_log import event
+
+        event("action", "halt before attack")
         self.keyboard.press("esc")
         wait = float(hz.ATTACK_STOP_WAIT_S or 0.0)
         if wait > 0:
@@ -602,7 +605,6 @@ class ActionExecutor:
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
-        hunt_walk = str(getattr(action, "reason", "") or "") == "world nav walk"
         for content in dests:
             x, y = self._screen_point(content.x, content.y, bounds)
             probes += 1
@@ -627,17 +629,6 @@ class ActionExecutor:
                 category = getattr(match, "category", None)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
-            if hunt_walk and self._arm_dungeon_cursor_engage(content, label):
-                self.last_travel_cursor_stats = {
-                    "ok": False,
-                    "probes": probes,
-                    "dialog_seen": dialog_seen,
-                    "labels_seen": seen_labels,
-                    "click_label": label,
-                    "intent_reason": str(getattr(action, "reason", "") or ""),
-                    "cursor_engage": True,
-                }
-                return
         self.last_travel_click_failed = True
         self.last_travel_cursor_stats = {
             "ok": False,
@@ -705,52 +696,6 @@ class ActionExecutor:
         self._last_loot_click = now
         self._loot_click_gap = self._sample_loot_gap()
         self.last_loot_target_id = action.target_id
-
-    def _arm_dungeon_cursor_engage(self, content: object, label: str) -> bool:
-        """Stop a dungeon hunt walk when the client cursor is already attack.
-
-        Shop, return, and field walks keep sliding to a normal cursor.
-        ``arrow_lack`` stays a failed ground probe so the shop path still runs.
-        No eligible monster, including one behind a blocked line, means the
-        ring continues.
-        """
-        from app._05_action.cursor_catalog import ATTACK_OK_LABELS
-
-        if str(label or "") not in ATTACK_OK_LABELS:
-            return False
-        from app._04_decision.dungeon import is_dungeon_map
-
-        if not is_dungeon_map():
-            return False
-        blackboard = getattr(self, "_blackboard", None)
-        world = getattr(self, "_world", None)
-        if blackboard is None or world is None:
-            return False
-        try:
-            from app._04_decision.combat_query import (
-                arm_cursor_engage_pending,
-                monster_under_travel_cursor,
-            )
-
-            obj = monster_under_travel_cursor(
-                world,
-                blackboard,
-                float(getattr(content, "x", 0.0) or 0.0),
-                float(getattr(content, "y", 0.0) or 0.0),
-            )
-        except Exception:
-            return False
-        if obj is None:
-            return False
-        arm_cursor_engage_pending(blackboard, int(obj.track_id))
-        from app.bot_log import get_logger
-
-        get_logger("combat").info(
-            "cursor engage arm id=%s label=%s",
-            int(obj.track_id),
-            label,
-        )
-        return True
 
     def _travel(self, action: ActionIntent, bounds: WindowBounds) -> None:
         """Move toward destination (same as search for now)."""

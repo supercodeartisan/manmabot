@@ -160,9 +160,9 @@ TRAVEL_CURSOR_FALLBACK_RADIUS = 2
 # Memory tile is exact; screen click can be off. Search this Chebyshev
 # radius (tiles) around the entity until the attack cursor appears.
 ATTACK_CURSOR_SEARCH_TILES = 0.1
-# Attack hover: screen-up from the memory iscr point, in tiles.
-# 1 tile of pure screen-up is 1/19 of the battle-area height.
-ATTACK_AIM_SCREEN_UP_TILES = 0.2
+# Attack aim is the memory iscr point. These offsets are unused.
+ATTACK_AIM_SCREEN_UP_TILES = 0.0
+ATTACK_AIM_SCREEN_RIGHT_TILES = 0.0
 # Loot clicks the pile UV and memory cell only. A neighbor hunt is NORMAL=walk.
 LOOT_CURSOR_SEARCH_TILES = 0.0
 
@@ -269,6 +269,7 @@ __all__ = [
     "TRAVEL_CURSOR_FALLBACK_RADIUS",
     "ATTACK_CURSOR_SEARCH_TILES",
     "ATTACK_AIM_SCREEN_UP_TILES",
+    "ATTACK_AIM_SCREEN_RIGHT_TILES",
     "LOOT_CURSOR_SEARCH_TILES",
     "LOOT_MODE_ALL",
     "LOOT_MODE_ADENA",

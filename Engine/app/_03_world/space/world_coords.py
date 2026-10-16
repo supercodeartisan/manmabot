@@ -173,6 +173,27 @@ def content_screen_up(
     )
 
 
+def content_screen_right(
+    x: float,
+    y: float,
+    tiles: float,
+    battle: Optional[BattleArea] = None,
+) -> Position:
+    """Move a content point straight right on the screen by ``tiles``.
+
+    One tile is ``1/16`` of the battle-area width (world ``(+1, +1)``).
+    ``v`` is unchanged. Result is clamped to the content square ``[0, 1]``.
+    """
+    if tiles == 0:
+        return Position(x=float(x), y=float(y))
+    u, v = content_to_battle_uv(float(x), float(y), battle)
+    shifted = battle_uv_to_content(u + float(tiles) / 16.0, v, battle)
+    return Position(
+        x=min(1.0, max(0.0, shifted.x)),
+        y=min(1.0, max(0.0, shifted.y)),
+    )
+
+
 def max_distance(a: Position, b: Position) -> int:
     """Chebyshev (max) distance between two WCS positions/tiles."""
     return max(abs(round_half_away(a.x) - round_half_away(b.x)),

@@ -468,13 +468,16 @@ def plan_body_click(
         and (int(x), int(y)) != (sx, sy)
     }
     if not guide:
+        _log_avoid_plan((sx, sy), hop, near, None, None, "no path to the goal")
         return BodyClick(note="no path to the goal")
     waypoint = interim_waypoint((sx, sy), guide, near)
     if waypoint is None:
+        _log_avoid_plan((sx, sy), hop, near, None, None, "no click on the guide")
         return BodyClick(guide=guide, note="no click on the guide")
     click, note = choose_body_click(
         terrain, origin, (sx, sy), guide, waypoint, near, hop
     )
+    _log_avoid_plan((sx, sy), hop, near, click, waypoint, note)
     return BodyClick(guide=guide, waypoint=waypoint, click=click, note=note)
 
 
@@ -493,6 +496,81 @@ def classify_ground_reclick(
     if float(last_click_at) <= 0.0 or (float(now) - float(last_click_at)) >= GROUND_RECLICK_S:
         return "repeat"
     return "hold"
+
+
+def log_ground_pause(
+    kind: str,
+    waypoint: tuple[int, int],
+    moving: bool | None,
+    last_click_at: float,
+    now: float,
+    reason: str,
+) -> None:
+    """One line when a ground click is repeated because the body is not walking."""
+    from app.bot_log import event
+
+    gap = -1.0
+    if float(last_click_at) > 0.0:
+        gap = float(now) - float(last_click_at)
+    state = "unread" if moving is None else ("1" if moving else "0")
+    event(
+        "travel",
+        "pause reclick kind=%s wp=%s moving=%s gap=%.2f reason=%s",
+        kind,
+        (int(waypoint[0]), int(waypoint[1])),
+        state,
+        gap,
+        reason,
+    )
+
+
+_avoid_quiet_at = 0.0
+_avoid_quiet_key: tuple | None = None
+
+
+def _log_avoid_plan(
+    start: tuple[int, int],
+    hop: int,
+    near: set[tuple[int, int]],
+    click: tuple[int, int] | None,
+    waypoint: tuple[int, int] | None,
+    note: str,
+) -> None:
+    """One line per planned hop. A repeated no-click stays quiet for 2s."""
+    global _avoid_quiet_at, _avoid_quiet_key
+    import time
+
+    from app.bot_log import event
+
+    sx, sy = int(start[0]), int(start[1])
+    dist = -1
+    if click is not None:
+        dist = tile_chebyshev(sx, sy, int(click[0]), int(click[1]))
+    nearest = "-"
+    if near:
+        nx, ny = min(
+            near,
+            key=lambda tile: tile_chebyshev(sx, sy, int(tile[0]), int(tile[1])),
+        )
+        nearest = f"({int(nx) - sx},{int(ny) - sy})"
+    if click is None:
+        key = (None, waypoint, note, len(near))
+        now = time.time()
+        if key == _avoid_quiet_key and (now - _avoid_quiet_at) < 2.0:
+            return
+        _avoid_quiet_key = key
+        _avoid_quiet_at = now
+    event(
+        "avoid",
+        "hop click=%s wp=%s dist=%s cap=%s bodies=%d near=%s note=%s",
+        click,
+        waypoint,
+        dist,
+        int(hop),
+        len(near),
+        nearest,
+        note,
+    )
 
 
 def apply_avoidance(
@@ -537,6 +615,7 @@ __all__ = [
     "avoid_bodies",
     "choose_body_click",
     "classify_ground_reclick",
+    "log_ground_pause",
     "click_clear",
     "collect_body_tiles",
     "interim_waypoint",

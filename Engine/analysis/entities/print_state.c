@@ -8,7 +8,9 @@
        roster: ActorSubsystem flat vector (even slots), cell map if that yields none
      fast poll (every emit) reads PRES_B+0x40 once per entity
      A(+0x50) → B(+0x78) over INTERP_MS (516). screen = raw B; iscr = lerp.
-     Dead entities stay off the roster. AC flags come from one 0x140 block.
+     Dead entities stay off the roster. One 0x140 action block supplies bait,
+     death, and the AttackAction slot. owner/tgt are re-read from that slot
+     every sweep (16 bytes at +0x80). Those two qwords are not fingerprinted.
 
    Usage:
      print_state.exe [settings_print_state.json]
@@ -84,6 +86,9 @@ static uint32_t g_offCompTable = 0x20u, g_actVft = 0x1180DF0u, g_actIdx = 2u;
 static uint32_t g_deadByte = 0x49u, g_deadVal = 1u;
 static uint32_t g_baitOff = 0x40u, g_baitVal = 0x78u;
 static uint32_t g_deathVft = 0x1180AE8u, g_deadBodyVft = 0x11808A8u;
+/* AttackAction inside the AC block. owner/tgt sit past the 0x140 fingerprint. */
+static uint32_t g_attackActVft = 0x11E04A8u;
+static uint32_t g_offAtkOwner = 0x80u, g_offAtkTgt = 0x88u;
 static uint64_t g_camGlob = 0x180A150ull;
 static uint32_t g_entVft[24];
 static int g_entN = 0;
@@ -243,11 +248,14 @@ static uint64_t actionComp(uint64_t e) {
 /* One AC block per entity. Slot fingerprint skips the vft walk when the
  * action pointers are unchanged. A live dead byte is always OR'd in, and a
  * death already seen stays sticky until those pointers change, so the cache
- * cannot hide a corpse. No AC → not dead, not bait (same as the old helpers). */
+ * cannot hide a corpse. The AttackAction slot pointer is remembered so the
+ * next sweep can re-read owner/tgt without walking vfts. Those qwords are
+ * outside the block and are never stored. No AC → not dead, not bait. */
 #define AC_BLOCK 0x140
 typedef struct {
     uint64_t ent;
     uint64_t fp;
+    uint64_t atkSlot;
     int seenGen;
     uint8_t hasFp;
     uint8_t deadSticky;
@@ -275,14 +283,35 @@ static void acCachePrune(void) {
     }
     g_acCacheN = w;
 }
-static void readAcFlags(uint64_t e, int* dead, int* bait) {
-    uint64_t ac, fp;
+/* owner at +0x80 and tgt at +0x88 are outside the fingerprinted block. */
+static int readAtkPair(uint64_t slot, uint64_t* owner, uint64_t* tgt) {
+    uint64_t o = 0, t = 0;
+    if (!slot || !owner || !tgt) return 0;
+    if (g_offAtkTgt == g_offAtkOwner + 8) {
+        uint8_t buf[16];
+        if (!rm(slot + g_offAtkOwner, buf, 16)) return 0;
+        memcpy(&o, buf, 8);
+        memcpy(&t, buf + 8, 8);
+    } else if (!rm(slot + g_offAtkOwner, &o, 8) || !rm(slot + g_offAtkTgt, &t, 8)) {
+        return 0;
+    }
+    if (!t) return 0;
+    *owner = o;
+    *tgt = t;
+    return 1;
+}
+static void readAcFlags(uint64_t e, int* dead, int* bait,
+                        int* hasAtk, uint64_t* owner, uint64_t* tgt) {
+    uint64_t ac, fp, slot, live;
     uint8_t ab[AC_BLOCK];
     uint32_t o;
     int nheap, byteDead, vftDead;
     AcCache* row;
     *dead = 0;
     *bait = 0;
+    *hasAtk = 0;
+    *owner = 0;
+    *tgt = 0;
     ac = actionComp(e);
     if (!ac || !rm(ac, ab, sizeof(ab))) return;
     if (g_baitOff + 4 <= sizeof(ab)) {
@@ -305,21 +334,31 @@ static void readAcFlags(uint64_t e, int* dead, int* bait) {
         *dead = (row->deadSticky || byteDead) ? 1 : 0;
         if (*dead) row->deadSticky = 1;
         row->seenGen = g_acGen;
+        if (row->atkSlot && readAtkPair(row->atkSlot, owner, tgt)) *hasAtk = 1;
         return;
     }
     vftDead = 0;
+    slot = 0;
+    live = 0;
     for (o = 0; o + 8 <= sizeof(ab); o += 8) {
-        uint64_t w;
+        uint64_t w, ao = 0, at = 0;
         uint32_t cv;
         memcpy(&w, ab + o, 8);
         if (!isHeap(w)) continue;
         cv = vrva(w);
         if (cv == g_deathVft || cv == g_deadBodyVft) vftDead = 1;
+        else if (cv == g_attackActVft) {
+            if (!slot) slot = w;
+            if (!live && readAtkPair(w, &ao, &at)) live = w;
+        }
     }
+    if (live) slot = live;
     *dead = (vftDead || byteDead) ? 1 : 0;
+    if (slot && readAtkPair(slot, owner, tgt)) *hasAtk = 1;
     if (row) {
         row->fp = fp;
         row->hasFp = nheap > 0 ? 1 : 0;
+        row->atkSlot = slot;
         row->deadSticky = *dead ? 1 : 0;
         row->seenGen = g_acGen;
     }
@@ -390,6 +429,9 @@ static void loadEntityOffsets(const char* path) {
         else if (!strncmp(line, "ACT_BAIT_OFF=", 13)) g_baitOff = (uint32_t)strtoul(line + 13, 0, 16);
         else if (!strncmp(line, "ACT_BAIT_VAL=", 13)) g_baitVal = (uint32_t)strtoul(line + 13, 0, 16);
         else if (!strncmp(line, "DEATH_VFT=", 10)) g_deathVft = (uint32_t)strtoul(line + 10, 0, 16);
+        else if (!strncmp(line, "ATTACK_ACT_VFT=", 15)) g_attackActVft = (uint32_t)strtoul(line + 15, 0, 16);
+        else if (!strncmp(line, "ATK_OWNER=", 10)) g_offAtkOwner = (uint32_t)strtoul(line + 10, 0, 16);
+        else if (!strncmp(line, "ATK_TGT=", 8)) g_offAtkTgt = (uint32_t)strtoul(line + 8, 0, 16);
         else if (!strncmp(line, "DEADBODY_VFT=", 13)) g_deadBodyVft = (uint32_t)strtoul(line + 13, 0, 16);
         else if (!strncmp(line, "PLAYER_X=", 9)) g_offPlayerX = (uint32_t)strtoul(line + 9, 0, 16);
         else if (!strncmp(line, "PLAYER_Y=", 9)) g_offPlayerY = (uint32_t)strtoul(line + 9, 0, 16);
@@ -540,6 +582,9 @@ static void loadSettings(const char* path) {
     if (jhas("feet_dy")) g_feetDy = (float)jnum("feet_dy");
     if (jhas("client_w")) g_cfgClientW = (int)jnum("client_w");
     if (jhas("client_h")) g_cfgClientH = (int)jnum("client_h");
+    if (jhas("attack_act_vft")) g_attackActVft = (uint32_t)jnum("attack_act_vft");
+    if (jhas("off_atk_owner")) g_offAtkOwner = (uint32_t)jnum("off_atk_owner");
+    if (jhas("off_atk_tgt")) g_offAtkTgt = (uint32_t)jnum("off_atk_tgt");
 
     seedClasses();
     seedDefaultClasses();
@@ -733,6 +778,9 @@ typedef struct {
     int itemOwn;        /* 0=n/a 1=MINE 2=OTHER 3=FREE */
     int dead;           /* kept for OTHER guid match; omitted from JSON */
     int bait;           /* ActionComponent +ACT_BAIT_OFF == ACT_BAIT_VAL */
+    int hasAtk;         /* AttackAction slot has a non-zero tgt this sweep */
+    uint64_t atkOwner;
+    uint64_t atkTgt;
     char name[NAME_CAP];
     float liveU, liveV; /* B slot (+0x78) raw iso */
     int haveLive;
@@ -845,16 +893,20 @@ static int readPresBatch(uint64_t pres, Ent* t, DWORD now) {
 static int appendLiveEnt(Ent* out, int n, Ent* old, int no,
                          uint64_t ent, uint32_t rva, int32_t cx, int32_t cy,
                          const uint8_t* hdr) {
-    int dead = 0, bait = 0, i;
+    int dead = 0, bait = 0, hasAtk = 0, i;
+    uint64_t atkOwner = 0, atkTgt = 0;
     Ent* E;
     if (n >= MAXENT || !ent) return 0;
     for (i = 0; i < n; i++) if (out[i].ent == ent) return 0;
-    readAcFlags(ent, &dead, &bait);
+    readAcFlags(ent, &dead, &bait, &hasAtk, &atkOwner, &atkTgt);
     E = &out[n];
     memset(E, 0, sizeof(*E));
     E->ent = ent; E->vft = rva; E->cx = cx; E->cy = cy;
     E->dead = dead;
     E->bait = bait;
+    E->hasAtk = hasAtk;
+    E->atkOwner = atkOwner;
+    E->atkTgt = atkTgt;
     E->scrSrc = "none";
     if (hdr && g_offEntGuid + 8 <= 0x50)
         memcpy(&E->guid, hdr + g_offEntGuid, 8);
@@ -1205,6 +1257,9 @@ static void emitState(Out* out, DWORD t0, int W, int H, Ent* ents, int n,
             outf(out, ",\"contrib\":-1,\"own\":\"-\"");
         }
         outf(out, ",\"bait\":%s", E->bait ? "true" : "false");
+        outf(out, ",\"atk\":%d,\"owner\":\"0x%llX\",\"tgt\":\"0x%llX\"",
+            E->hasAtk ? 1 : 0,
+            (unsigned long long)E->atkOwner, (unsigned long long)E->atkTgt);
         outf(out, ",\"world\":{\"cx\":%d,\"cy\":%d}", E->cx, E->cy);
         if (E->aInit && E->haveLive) {
             DWORD now = GetTickCount();

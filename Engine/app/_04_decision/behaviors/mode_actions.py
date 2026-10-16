@@ -1801,10 +1801,7 @@ def farm_loot_or_combat(
        there is nothing left to loot.
     5. After a pickup click, while that pile remains in memory re-click or
        walk back (do not roam). Short timeout (~0.8s) then continue.
-    6. Else a dungeon world-nav probe that already showed an attack cursor
-       locks that monster ahead of ground loot when the straight line is
-       clear. A blocked line does not lock and does not keep the shot.
-    7. Else engage the nearest on-screen monster.
+    6. Else engage the nearest on-screen monster.
     """
     from app.bot_log import event
     from app._04_decision.combat_query import tile_distance_from_player
@@ -1820,9 +1817,6 @@ def farm_loot_or_combat(
 
     if is_hp_zero(state):
         return None
-    from app._04_decision.combat_query import pop_cursor_engage_pending
-
-    pending_cursor_id = pop_cursor_engage_pending(blackboard)
     origin = blackboard.world_origin
     exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
     # Refresh synthetic attacks_me targets before sticky so list-missing
@@ -1890,30 +1884,6 @@ def farm_loot_or_combat(
             chosen=attacker,
             reason="attacks_me engage",
         )
-
-    if pending_cursor_id is not None:
-        from app._04_decision.combat_query import (
-            SCRATCH_CURSOR_ENGAGE,
-            cursor_engage_target,
-        )
-
-        hovered = cursor_engage_target(state, blackboard, pending_cursor_id)
-        if hovered is not None:
-            event(
-                "combat",
-                "farm branch=cursor_engage id=%s dist=%s",
-                hovered.track_id,
-                _dist(hovered),
-            )
-            begin_engage(state, blackboard, int(hovered.track_id))
-            blackboard.scratch[SCRATCH_CURSOR_ENGAGE] = int(hovered.track_id)
-            return continue_or_start_combat(
-                state,
-                blackboard,
-                allow_new=False,
-                chosen=hovered,
-                reason="cursor engage",
-            )
 
     loot = continue_or_start_loot(
         state,

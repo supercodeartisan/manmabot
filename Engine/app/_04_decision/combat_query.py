@@ -47,9 +47,9 @@ def memory_target_gone(game_state: object, obj: object | None) -> bool:
     ``max_age_frames``, so sticky combat used to keep clicking that tile and
     the leftover attack cursor walked the character onto the corpse.
 
-    ``force_attacks_me`` synthetics are not in print_state; they stay alive
-    only while their ``memory_ent`` still appears in ``last_attacks_me``.
-    Dead or bait synthetics are always treated as gone (no finish_kill hold).
+    ``force_attacks_me`` synthetics stay alive only while that entity's
+    print_state row still has AttackAction tgt == MyPlayer. Dead or bait
+    synthetics are always treated as gone (no finish_kill hold).
     """
     if obj is None:
         return True
@@ -61,11 +61,9 @@ def memory_target_gone(game_state: object, obj: object | None) -> bool:
         ent = str(getattr(obj, "memory_ent", None) or "").strip().lower()
         if not ent:
             return True
-        from app._03_world.merge.memory_entities import attacks_me_from_snapshot
+        from app._03_world.merge.memory_entities import attacks_targeting_me
 
-        rows = attacks_me_from_snapshot(
-            getattr(game_state, "last_attacks_me", None)
-        )
+        rows = attacks_targeting_me(getattr(game_state, "last_print_state", None))
         return not any(
             str(r.get("ent") or "").strip().lower() == ent for r in rows
         )
@@ -415,23 +413,16 @@ def _guid_key(value: object) -> int | None:
 
 
 def contested_mob_guids(game_state: GameState) -> set[int]:
-    """Entity guids currently targeted by a visible other player.
+    """Monster guids currently targeted by a visible other player.
 
-    Built from ``last_contested_mobs`` ``guid`` (entity ``+0x18``), the same
-    id ``print_state`` stores as ``memory_guid``. Empty when the DLL has not
-    reported any — those mobs are treated as free. World cells are not used.
+    Built from print_state rows: another Player, or a summon whose owner is
+    not me, with AttackAction tgt equal to a Monster ``guid``. That guid is
+    the same id handoff stores as ``memory_guid``. Empty means free to engage.
+    World cells are not used.
     """
-    from app._03_world.merge.memory_entities import contested_mobs_from_snapshot
+    from app._03_world.merge.memory_entities import contested_monster_guids
 
-    rows = contested_mobs_from_snapshot(
-        getattr(game_state, "last_contested_mobs", None)
-    )
-    keys: set[int] = set()
-    for row in rows:
-        key = _guid_key(row.get("guid"))
-        if key is not None:
-            keys.add(key)
-    return keys
+    return contested_monster_guids(getattr(game_state, "last_print_state", None))
 
 
 def is_contested_monster(game_state: GameState, obj: WorldObject) -> bool:
@@ -750,137 +741,6 @@ def object_absolute_tile(
     return relative_to_absolute(rel.x, rel.y, origin)
 
 
-# Walk probe that showed an attack cursor. The next decision tick may lock
-# this monster only when the straight line is clear. Cleared when the sticky
-# engage state is reset. A later blocked line uses the dungeon wall skip.
-CURSOR_ENGAGE_TILES = 3
-SCRATCH_CURSOR_ENGAGE_PENDING = "cursor_engage_pending"
-SCRATCH_CURSOR_ENGAGE = "cursor_engage_id"
-
-
-def arm_cursor_engage_pending(blackboard: object, track_id: int) -> None:
-    """Remember a dungeon walk probe that landed on an attack cursor."""
-    scratch = getattr(blackboard, "scratch", None)
-    if not isinstance(scratch, dict):
-        return
-    scratch[SCRATCH_CURSOR_ENGAGE_PENDING] = {
-        "id": int(track_id),
-        "tick": int(getattr(blackboard, "tick_count", 0) or 0),
-    }
-
-
-def pop_cursor_engage_pending(blackboard: object) -> int | None:
-    """Return the pending id only on the decision tick after it was armed."""
-    scratch = getattr(blackboard, "scratch", None)
-    if not isinstance(scratch, dict):
-        return None
-    raw = scratch.pop(SCRATCH_CURSOR_ENGAGE_PENDING, None)
-    if not isinstance(raw, dict):
-        return None
-    try:
-        tid = int(raw.get("id"))
-        stored = int(raw.get("tick"))
-        now = int(getattr(blackboard, "tick_count", 0) or 0)
-    except (TypeError, ValueError):
-        return None
-    if now != stored + 1:
-        return None
-    return tid
-
-
-def cursor_engage_holds(blackboard: object, target_id: object) -> bool:
-    """True when this sticky was armed from a client attack cursor.
-
-    The flag does not keep the shot after the straight line blocks.
-    """
-    scratch = getattr(blackboard, "scratch", None)
-    if not isinstance(scratch, dict):
-        return False
-    held = scratch.get(SCRATCH_CURSOR_ENGAGE)
-    try:
-        return held is not None and int(held) == int(target_id)
-    except (TypeError, ValueError):
-        return False
-
-
-def cursor_engage_target(
-    game_state: GameState,
-    blackboard: object,
-    track_id: int,
-) -> WorldObject | None:
-    """Re-check a pending cursor target. A blocked line does not lock."""
-    try:
-        tid = int(track_id)
-    except (TypeError, ValueError):
-        return None
-    obj = game_state.get_object(tid)
-    if obj is None or not object_on_screen(obj):
-        return None
-    from app._04_decision.attack_feedback import excluded_target_ids
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
-
-    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
-    allowed = {
-        int(cand.track_id)
-        for cand in _attack_candidates(game_state, exclude=exclude)
-    }
-    if tid not in allowed:
-        return None
-    if is_contested_monster(game_state, obj):
-        return None
-    origin = getattr(blackboard, "world_origin", None)
-    if origin is None or not can_engage_target(obj, origin):
-        return None
-    return obj
-
-
-def monster_under_travel_cursor(
-    game_state: GameState,
-    blackboard: object,
-    content_x: float,
-    content_y: float,
-) -> WorldObject | None:
-    """Nearest eligible on-screen monster within ``CURSOR_ENGAGE_TILES``.
-
-    The content point is a walk probe where the client showed an attack
-    cursor. Contested, bait, blacklist, and give-up cooldown are excluded.
-    The nearest monster is the cursor target. A blocked straight line
-    returns None and does not substitute a farther monster.
-    """
-    origin = getattr(blackboard, "world_origin", None)
-    if origin is None:
-        return None
-    from app._04_decision.attack_feedback import excluded_target_ids
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
-
-    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
-    rel = content_to_world(float(content_x), float(content_y))
-    probe = relative_to_absolute(rel.x, rel.y, origin)
-    px, py = int(probe[0]), int(probe[1])
-    best: WorldObject | None = None
-    best_d = int(CURSOR_ENGAGE_TILES) + 1
-    for obj in _attack_candidates(game_state, exclude=exclude):
-        if not object_on_screen(obj):
-            continue
-        if is_contested_monster(game_state, obj):
-            continue
-        try:
-            tile = object_absolute_tile(obj, origin)
-        except (TypeError, ValueError, AttributeError):
-            continue
-        dist = int(tile_chebyshev(px, py, int(tile[0]), int(tile[1])))
-        tid = int(getattr(obj, "track_id", 0) or 0)
-        best_id = int(getattr(best, "track_id", 0) or 0) if best is not None else 0
-        if dist < best_d or (dist == best_d and best is not None and tid < best_id):
-            best = obj
-            best_d = dist
-    if best is None or best_d > int(CURSOR_ENGAGE_TILES):
-        return None
-    if not can_engage_target(best, origin):
-        return None
-    return best
-
-
 _PATH_OK_CACHE: "OrderedDict[tuple, bool]" = OrderedDict()
 _PATH_OK_CACHE_MAX = 512
 
@@ -1075,27 +935,14 @@ def _loot_in_farm(
     )
 
 
-_ATTACKS_ME_CLASSES = frozenset({"Monster", "SummonedMonster"})
-_PLAYER_ATTACKS_ME_CLASS = "Player"
-
-
 def player_attacking_me(game_state: GameState) -> dict | None:
-    """First ``attacks_me`` row whose class is another Player (PK).
+    """Another Player whose print_state AttackAction target is MyPlayer.
 
-    DLL rows include Player; force-engage only uses monsters. This is the
-    survival signal for escape teleport.
+    Force-engage uses monsters only. This row is the PK escape signal.
     """
-    from app._03_world.merge.memory_entities import attacks_me_from_snapshot
+    from app._03_world.merge.memory_entities import player_targeting_me
 
-    rows = attacks_me_from_snapshot(
-        getattr(game_state, "last_attacks_me", None)
-    )
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        if str(row.get("class") or "") == _PLAYER_ATTACKS_ME_CLASS:
-            return row
-    return None
+    return player_targeting_me(getattr(game_state, "last_print_state", None))
 
 
 # Reserved track_id band for attacks_me synthetics (avoid print_state TrackIds).
@@ -1110,19 +957,6 @@ def _attacks_me_cell(row: dict) -> tuple[int, int] | None:
         except (KeyError, TypeError, ValueError):
             pass
     return None
-
-
-def _name_match(obj: WorldObject, want: str) -> bool:
-    if not want:
-        return True
-    needle = want.strip().lower()
-    if not needle:
-        return True
-    for attr in (obj.species_name, obj.detail_classification, obj.label):
-        text = str(attr or "").strip().lower()
-        if text and (needle in text or text in needle):
-            return True
-    return False
 
 
 def _force_track_id(ent: str) -> int:
@@ -1175,11 +1009,11 @@ def _note_attacks_me_cell(
     log = get_logger("combat")
     if cell is None:
         log.info("attacks_me actor id=%s cell=absent", ent)
-        return
-    log.info("attacks_me actor id=%s cell=(%s,%s)", ent, int(cell[0]), int(cell[1]))
+    else:
+        log.info("attacks_me actor id=%s cell=(%s,%s)", ent, int(cell[0]), int(cell[1]))
     if screen_id is not None:
         log.info("matched screen monster id=%s attacked_me=true", int(screen_id))
-    elif synthetic_id is not None:
+    elif synthetic_id is not None and cell is not None:
         log.info(
             "attacks_me synthetic id=%s cell=(%s,%s)",
             int(synthetic_id),
@@ -1189,52 +1023,44 @@ def _note_attacks_me_cell(
 
 
 def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
-    """Upsert attacks_me attackers into GameState; mark dropped synthetics dead.
+    """Mark print_state attackers in GameState; mark dropped synthetics dead.
 
-    Prefers a live print_state monster on the same cell when present; otherwise
-    synthesizes a ``force_attacks_me`` object so blacklist / missing catalog
-    entries can still be fought until AttackAction ends.
+    A Monster or SummonedMonster whose AttackAction tgt is MyPlayer matches
+    the live object with the same guid. A missing cell does not drop that
+    row. A synthetic is created only when that same row is not already in
+    GameState, and it uses that row's own world cell.
     """
-    from app._03_world.merge.memory_entities import attacks_me_from_snapshot
+    from app._03_world.merge.memory_entities import attacks_targeting_me
     from app._02_state.objects import Identity, ObjectStatus, Position, Relationship
     from app._03_world.space.world_coords import world_to_content
 
-    rows = attacks_me_from_snapshot(getattr(game_state, "last_attacks_me", None))
+    rows = attacks_targeting_me(getattr(game_state, "last_print_state", None))
     live_ents: set[str] = set()
+    screen_bound: set[str] = set()
     out: list[WorldObject] = []
 
-    by_cell: dict[tuple[int, int], list[WorldObject]] = {}
+    by_guid: dict[int, list[WorldObject]] = {}
     for obj in game_state.monsters():
         if getattr(obj, "force_attacks_me", False):
             continue
-        cx = getattr(obj, "world_cx", None)
-        cy = getattr(obj, "world_cy", None)
-        if cx is None or cy is None:
+        key = _guid_key(getattr(obj, "memory_guid", None))
+        if key is None:
             continue
         if not _reachable(game_state, obj):
             continue
-        by_cell.setdefault((int(cx), int(cy)), []).append(obj)
+        by_guid.setdefault(key, []).append(obj)
 
     for row in rows:
         if not isinstance(row, dict):
-            continue
-        if str(row.get("class") or "") not in _ATTACKS_ME_CLASSES:
             continue
         ent = str(row.get("ent") or "").strip()
         if not ent:
             continue
         live_ents.add(ent.lower())
-        cell = _attacks_me_cell(row)
-        if cell is None:
-            _note_attacks_me_cell(ent, None)
-            continue
+        guid_text = str(row.get("guid") or "").strip()
         name = str(row.get("name") or "").strip()
-        matched: WorldObject | None = None
-        matches = by_cell.get(cell) or []
-        if name:
-            named = [o for o in matches if _name_match(o, name)]
-            if named:
-                matches = named
+        cell = _attacks_me_cell(row)
+        matches = by_guid.get(_guid_key(guid_text) or -1) or []
         if matches:
             matched = min(matches, key=lambda o: int(o.track_id))
             if bool(getattr(matched, "bait", False)):
@@ -1243,8 +1069,17 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
                 continue
             matched.attacked_me = True
             game_state.touch_object(matched.track_id)
+            screen_bound.add(ent.lower())
+            if cell is None:
+                cx = getattr(matched, "world_cx", None)
+                cy = getattr(matched, "world_cy", None)
+                if cx is not None and cy is not None:
+                    cell = (int(cx), int(cy))
             _note_attacks_me_cell(ent, cell, screen_id=int(matched.track_id))
             out.append(matched)
+            continue
+        if cell is None:
+            _note_attacks_me_cell(ent, None)
             continue
 
         tid = _force_track_id(ent)
@@ -1269,6 +1104,8 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
             existing.label = name or existing.label or "attacks_me"
             existing.force_attacks_me = True
             existing.memory_ent = ent
+            if guid_text:
+                existing.memory_guid = guid_text
             existing.occluded = False
             existing.bait = is_bait
             existing.attacked_me = not is_bait
@@ -1293,6 +1130,7 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
             world_ry=ry,
             force_attacks_me=True,
             memory_ent=ent,
+            memory_guid=guid_text or None,
             bait=is_bait,
             attacked_me=not is_bait,
         )
@@ -1311,6 +1149,10 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
             obj.attacked_me = False
             continue
         ent = str(getattr(obj, "memory_ent", None) or "").strip().lower()
+        if ent and ent in screen_bound:
+            obj.status = ObjectStatus.DEAD
+            obj.attacked_me = False
+            continue
         if ent and ent in live_ents:
             game_state.touch_object(obj.track_id)
             continue

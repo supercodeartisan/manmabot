@@ -467,7 +467,7 @@ def tick_loot_item(
         elif dest is not None and _loot_click_still_open(
             state, origin, wp, terrain=get_terrain_map()
         ):
-            from app._04_decision.avoidance import classify_ground_reclick
+            from app._04_decision.avoidance import classify_ground_reclick, log_ground_pause
             from app._05_action.body_pose import body_is_moving
 
             if try_movement_unstick(
@@ -490,11 +490,23 @@ def tick_loot_item(
                 if blackboard.scratch.pop(SCRATCH_ESCAPED, None):
                     clear_loot_hop(blackboard)
                 return Status.SUCCESS
+            moving = body_is_moving()
+            now = time.time()
+            clicked_at = float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0)
             follow = classify_ground_reclick(
-                body_is_moving(),
-                float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0),
-                now=time.time(),
+                moving,
+                clicked_at,
+                now=now,
             )
+            if follow == "repeat":
+                log_ground_pause(
+                    "loot",
+                    wp,
+                    moving,
+                    clicked_at,
+                    now,
+                    "walk onto item",
+                )
             _emit_approach(
                 blackboard,
                 destination=dest,

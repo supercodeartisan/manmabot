@@ -1119,16 +1119,19 @@ def build_runtime_snapshot(
     decision = _decision_section(blackboard, action)
     try:
         from app._03_world.merge.memory_entities import (
-            attacks_me_from_snapshot,
-            contested_mobs_from_snapshot,
+            attacks_targeting_me,
+            contested_monster_guids,
+            player_targeting_me,
         )
 
-        decision["attacks_me"] = attacks_me_from_snapshot(
-            _get(world, "last_attacks_me")
-        )
-        decision["contested_mobs"] = contested_mobs_from_snapshot(
-            _get(world, "last_contested_mobs")
-        )
+        snap = _get(world, "last_print_state")
+        attackers = list(attacks_targeting_me(snap))
+        player = player_targeting_me(snap)
+        if player is not None:
+            attackers.append(player)
+        decision["attacks_me"] = attackers
+        claimed = contested_monster_guids(snap)
+        decision["contested_mobs"] = [{"guid": f"0x{guid:X}"} for guid in sorted(claimed)]
     except Exception:
         decision["attacks_me"] = []
         decision["contested_mobs"] = []

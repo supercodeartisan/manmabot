@@ -45,10 +45,9 @@ _alias_index: dict[str, str] | None = None
 
 
 def attacks_me_from_snapshot(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """Normalize ``attacks_me`` rows from the dedicated attacks_me.dll snapshot.
+    """Normalize rows from an attacks_me.dll snapshot.
 
-    print_state no longer emits AttackAction. Decision uses these rows via
-    ``nearest_attacks_me_force`` (species-blacklist bypass force-engage).
+    Live decisions use print_state ``atk`` / ``tgt`` via ``attacks_targeting_me``.
     """
     if not isinstance(snapshot, dict):
         return []
@@ -88,6 +87,120 @@ def contested_mobs_from_snapshot(
             continue
         out.append(dict(row))
     return out
+
+
+_ME_CLASSES = frozenset({"MyPlayer", "SELF"})
+_ATTACKER_CLASSES = frozenset({"Monster", "SummonedMonster"})
+
+
+def _print_entities(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(snapshot, dict):
+        return []
+    raw = snapshot.get("entities")
+    if not isinstance(raw, list):
+        return []
+    return [row for row in raw if isinstance(row, dict)]
+
+
+def _row_guid(value: object) -> int | None:
+    text = str(value or "").strip().lower()
+    if text.startswith("0x"):
+        text = text[2:]
+    if not text or text == "0":
+        return None
+    try:
+        return int(text, 16)
+    except ValueError:
+        return None
+
+
+def _row_attacking(row: dict[str, Any]) -> bool:
+    return row.get("atk") in (1, True)
+
+
+def me_guid_from_print_state(snapshot: dict[str, Any] | None) -> int | None:
+    """MyPlayer guid (entity +0x18) from the same print_state snapshot."""
+    for row in _print_entities(snapshot):
+        if str(row.get("class") or "") not in _ME_CLASSES:
+            continue
+        key = _row_guid(row.get("guid"))
+        if key is not None:
+            return key
+    return None
+
+
+def attacks_targeting_me(snapshot: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Monster and summon rows whose AttackAction target is MyPlayer.
+
+    ``atk`` / ``owner`` / ``tgt`` come from print_state. A row with no live
+    target is not an attacker. Callers match ``guid``, not a second cell.
+    """
+    me = me_guid_from_print_state(snapshot)
+    if me is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for row in _print_entities(snapshot):
+        if str(row.get("class") or "") not in _ATTACKER_CLASSES:
+            continue
+        if not _row_attacking(row):
+            continue
+        if _row_guid(row.get("tgt")) != me:
+            continue
+        out.append(row)
+    return out
+
+
+def player_targeting_me(snapshot: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Another Player whose AttackAction target is MyPlayer."""
+    me = me_guid_from_print_state(snapshot)
+    if me is None:
+        return None
+    for row in _print_entities(snapshot):
+        if str(row.get("class") or "") != "Player":
+            continue
+        if _row_guid(row.get("guid")) == me:
+            continue
+        if not _row_attacking(row):
+            continue
+        if _row_guid(row.get("tgt")) != me:
+            continue
+        return row
+    return None
+
+
+def contested_monster_guids(snapshot: dict[str, Any] | None) -> set[int]:
+    """Monster guids targeted by another Player, or a summon not owned by me.
+
+    The claim is the monster's ``guid``, the same id handoff stores as
+    ``memory_guid``. My own attacks and my summons are not claims.
+    """
+    me = me_guid_from_print_state(snapshot)
+    entities = _print_entities(snapshot)
+    monsters: set[int] = set()
+    for row in entities:
+        if str(row.get("class") or "") != "Monster":
+            continue
+        key = _row_guid(row.get("guid"))
+        if key is not None:
+            monsters.add(key)
+    claimed: set[int] = set()
+    for row in entities:
+        cls = str(row.get("class") or "")
+        if cls == "Player":
+            if me is not None and _row_guid(row.get("guid")) == me:
+                continue
+        elif cls == "SummonedMonster":
+            owner = _row_guid(row.get("owner"))
+            if owner is None or (me is not None and owner == me):
+                continue
+        else:
+            continue
+        if not _row_attacking(row):
+            continue
+        tgt = _row_guid(row.get("tgt"))
+        if tgt is not None and tgt in monsters:
+            claimed.add(tgt)
+    return claimed
 
 
 def monster_band(level: int) -> str:
