@@ -32,6 +32,16 @@ _MAGIC_UI_DEFAULTS: dict[str, Any] = {
     "town_general_only": True,
 }
 
+_PARTY_UI_DEFAULTS: dict[str, Any] = {
+    "member_enabled": False,
+    "leader_name": "",
+    "follow_start_tiles": 8,
+    "follow_stop_tiles": 5,
+    "assist_leash_tiles": 10,
+    "approach_tiles": 2,
+    "potion_hp_ratio": 0.45,
+}
+
 
 class SettingsBag:
     def __init__(self, profile: Profile) -> None:
@@ -44,6 +54,9 @@ class SettingsBag:
         for key, value in _MAGIC_UI_DEFAULTS.items():
             magic.setdefault(key, value)
         magic.setdefault("skills", {})
+        party = self.data.setdefault("party", {})
+        for key, value in _PARTY_UI_DEFAULTS.items():
+            party.setdefault(key, value)
 
     def section(self, name: str) -> dict[str, Any]:
         return self.data.setdefault(name, {})
@@ -106,7 +119,15 @@ class SettingsBag:
 
     def load_task(self, task: ScheduleTask) -> None:
         self.data = copy.deepcopy(getattr(task, "settings", {}) or {})
-        for section in ("move", "hunt", "recovery", "magic", "equipment", "other"):
+        for section in (
+            "move",
+            "hunt",
+            "party",
+            "recovery",
+            "magic",
+            "equipment",
+            "other",
+        ):
             self.data.setdefault(section, {})
         hunt = self.data.setdefault("hunt", {})
         for key, value in _HUNT_UI_DEFAULTS.items():
@@ -115,6 +136,9 @@ class SettingsBag:
         for key, value in _MAGIC_UI_DEFAULTS.items():
             magic.setdefault(key, value)
         magic.setdefault("skills", {})
+        party = self.data.setdefault("party", {})
+        for key, value in _PARTY_UI_DEFAULTS.items():
+            party.setdefault(key, value)
 
     def apply_to_profile(self) -> list[str]:
         task = ScheduleTask(settings=copy.deepcopy(self.data))

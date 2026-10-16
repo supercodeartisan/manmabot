@@ -116,6 +116,10 @@ class BotController:
         # "user" = hotkey pause (needs Resume / hotkey; Resume arms pending).
         self._pause_kind: Optional[str] = None
         self._resume_pending: bool = False
+        # Read-only label for the income cards. Does not change shop clicks.
+        self._shop_lock = threading.Lock()
+        self._shop_kind = ""
+        self._buy_until = 0.0
         self._preview_enabled = threading.Event()
         self._preview_q: queue.Queue[bytes] = queue.Queue(maxsize=1)
         self._last_pause_preview_t: float = 0.0
@@ -491,6 +495,7 @@ class BotController:
         """Bind F-key slots from a memory scan and push them to the operator UI."""
         from app._05_action.spell_box import configure_spell_box
         from hotbar.inspect import merge_detected_spell_slots
+        from settings.antidote_potion import apply_antidote_potion_to_spell_slots
         from settings.haste_potion import apply_haste_potion_to_spell_slots
         from settings.hp_actions import apply_recovery_to_spell_slots
         from settings.profile import save_profile
@@ -511,12 +516,20 @@ class BotController:
             getattr(profile, "hp_actions", None),
         )
         profile.spell_slots = spell_slot_bindings(
-            apply_haste_potion_to_spell_slots(
-                merged,
-                use=bool(getattr(profile, "use_haste_potion", False)),
-                item_key=str(getattr(profile, "haste_potion_item", "") or ""),
-                box=getattr(profile, "haste_potion_box", 0),
-                key=getattr(profile, "haste_potion_key", ""),
+            apply_antidote_potion_to_spell_slots(
+                apply_haste_potion_to_spell_slots(
+                    merged,
+                    use=bool(getattr(profile, "use_haste_potion", False)),
+                    item_key=str(getattr(profile, "haste_potion_item", "") or ""),
+                    box=getattr(profile, "haste_potion_box", 0),
+                    key=getattr(profile, "haste_potion_key", ""),
+                    layout=profile.hotbar_layout,
+                    world=world,
+                ),
+                use=bool(getattr(profile, "use_antidote_potion", False)),
+                item_key=str(getattr(profile, "antidote_potion_item", "") or ""),
+                box=getattr(profile, "antidote_potion_box", 0),
+                key=getattr(profile, "antidote_potion_key", ""),
                 layout=profile.hotbar_layout,
                 world=world,
             )
@@ -704,6 +717,40 @@ class BotController:
             self._set_state(RunState.PAUSED, hint)
             self._log_ui("resume_wait")
 
+    def note_shop_action(self, action) -> None:
+        """Remember a buy while that shop click sequence is running.
+
+        The income cards ignore an Adena drop only during a buy. Selling stays
+        a normal gain. This does not change what the shop click does.
+        """
+        kind = ""
+        if action is not None:
+            token = getattr(action, "action", None)
+            label = str(
+                getattr(token, "value", None)
+                or getattr(token, "name", None)
+                or token
+                or ""
+            ).lower()
+            if label == "shop_run":
+                if bool(getattr(action, "shop_use_recover", False)):
+                    kind = "buy"
+                else:
+                    kind = str(getattr(action, "shop_kind", "") or "").strip().lower()
+        with self._shop_lock:
+            self._shop_kind = kind
+            if kind == "buy":
+                self._buy_until = time.monotonic() + 8.0
+
+    def purchase_in_progress(self) -> bool:
+        """True while a buy is clicking, and for a short time after it returns."""
+        with self._shop_lock:
+            kind = self._shop_kind
+            until = self._buy_until
+        if kind == "buy":
+            return True
+        return kind == "" and time.monotonic() < until
+
     def pause_user(self) -> None:
         with self._lock:
             if self.state != RunState.RUNNING:
@@ -875,9 +922,35 @@ class BotController:
         )
         from app._05_action.controller import ActionExecutor
         from app._05_action.cursor_verify import is_cursor_paralyzed
+        from app._06_party import PartyMemberConfig, PartyMemberManager
 
         profile = self._profile
         config = load_config()
+        # Single enable path: UI → SettingsBag → profile (no YAML / JSON dual path).
+        party_cfg = PartyMemberConfig.from_mapping(
+            {
+                "enabled": bool(getattr(profile, "party_member_enabled", False)),
+                "leader_name": str(
+                    getattr(profile, "party_leader_name", "") or ""
+                ).strip(),
+                "follow_start_tiles": int(
+                    getattr(profile, "party_follow_start_tiles", 8)
+                ),
+                "follow_stop_tiles": int(
+                    getattr(profile, "party_follow_stop_tiles", 5)
+                ),
+                "assist_leash_tiles": int(
+                    getattr(profile, "party_assist_leash_tiles", 10)
+                ),
+                "approach_tiles": int(
+                    getattr(profile, "party_approach_tiles", 2)
+                ),
+                "potion_hp_ratio": float(
+                    getattr(profile, "party_potion_hp_ratio", 0.45)
+                ),
+            }
+        )
+        party_mode = bool(party_cfg.enabled and party_cfg.leader_name)
         log_cfg = (config.get("logging") or {}) if isinstance(config, dict) else {}
         log_level = str(log_cfg.get("level") or "INFO")
         session_log = configure_bot_log(
@@ -968,6 +1041,8 @@ class BotController:
             if isinstance(area, dict)
         ]
         farm["loot_adena_weight_ratio"] = float(profile.loot_adena_weight_ratio)
+        farm["ignore_small_adena"] = bool(getattr(profile, "ignore_small_adena", False))
+        farm["ignore_small_adena_qty"] = int(getattr(profile, "ignore_small_adena_qty", 10))
         farm["area_empty"] = bool(getattr(profile, "area_empty", False))
         farm["area_empty_seconds"] = int(getattr(profile, "area_empty_seconds", 60))
         farm["area_low_yield"] = bool(getattr(profile, "area_low_yield", False))
@@ -1024,7 +1099,10 @@ class BotController:
         combat_cfg["target_delay_min_ms"] = max(10, min(50, int(getattr(profile, "target_delay_min_ms", 20))))
         combat_cfg["target_delay_max_ms"] = max(10, min(50, int(getattr(profile, "target_delay_max_ms", 50))))
         combat_cfg["abandon_same"] = False
-        combat_cfg["antidote_auto"] = False
+        combat_cfg["use_antidote_potion"] = bool(
+            getattr(profile, "use_antidote_potion", False)
+        )
+        combat_cfg["antidote_auto"] = combat_cfg["use_antidote_potion"]
         decision_cfg["combat"] = combat_cfg
         shop = dict(decision_cfg.get("shop") or {})
         shop["arrow_qty"] = int(profile.arrow_buy_qty)
@@ -1095,6 +1173,9 @@ class BotController:
         spells_cfg["haste_potion_item"] = str(
             getattr(profile, "haste_potion_item", "") or ""
         ).strip()
+        spells_cfg["antidote_potion_item"] = str(
+            getattr(profile, "antidote_potion_item", "") or ""
+        ).strip()
         decision_cfg["hp"] = hp
         decision_cfg["mp"] = mp
         decision_cfg["farm"] = farm
@@ -1137,38 +1218,49 @@ class BotController:
         decision = DecisionManager()
         decision.blackboard.world_origin = world_origin
         decision.blackboard.scratch["runtime_config"] = config
-        try:
-            from app._04_decision.world_nav import (
-                begin_world_nav,
-                init_routine_on_blackboard,
-            )
-            from session.world_nav_inject import install_world_nav_overlays
-            from settings.farm_schedule import normalize_routine
-
-            fallback_map = str(profile.active_map or "talking_island")
-            routine_rows = normalize_routine(
-                getattr(profile, "routine", None) or []
-            )
-            install_world_nav_overlays(
-                decision.blackboard,
-                routine_rows=routine_rows,
-                fallback_map=fallback_map,
-            )
-            init_routine_on_blackboard(
-                decision.blackboard,
-                routine=routine_rows,
-                fallback_map=fallback_map,
-                selected_farms=list(profile.selected_farms or []),
-                farm_stays_s=dict(getattr(profile, "farm_stays_s", {}) or {}),
-                entries_normalized=True,
-            )
-            begin_world_nav(decision.blackboard, "start")
+        party_brain: PartyMemberManager | None = None
+        if party_mode:
+            party_brain = PartyMemberManager(party_cfg)
+            party_brain.set_world_origin(world_origin)
             self.log(
-                f"World nav armed for routine "
-                f"({len(routine_rows)} entries)"
+                f"Party member mode — follow leader "
+                f"{party_cfg.leader_name!r} "
+                f"(start={party_cfg.follow_start_tiles} "
+                f"stop={party_cfg.follow_stop_tiles})"
             )
-        except Exception as exc:
-            self.log(f"World nav init skipped: {exc}")
+        else:
+            try:
+                from app._04_decision.world_nav import (
+                    begin_world_nav,
+                    init_routine_on_blackboard,
+                )
+                from session.world_nav_inject import install_world_nav_overlays
+                from settings.farm_schedule import normalize_routine
+
+                fallback_map = str(profile.active_map or "talking_island")
+                routine_rows = normalize_routine(
+                    getattr(profile, "routine", None) or []
+                )
+                install_world_nav_overlays(
+                    decision.blackboard,
+                    routine_rows=routine_rows,
+                    fallback_map=fallback_map,
+                )
+                init_routine_on_blackboard(
+                    decision.blackboard,
+                    routine=routine_rows,
+                    fallback_map=fallback_map,
+                    selected_farms=list(profile.selected_farms or []),
+                    farm_stays_s=dict(getattr(profile, "farm_stays_s", {}) or {}),
+                    entries_normalized=True,
+                )
+                begin_world_nav(decision.blackboard, "start")
+                self.log(
+                    f"World nav armed for routine "
+                    f"({len(routine_rows)} entries)"
+                )
+            except Exception as exc:
+                self.log(f"World nav init skipped: {exc}")
 
         from app._01_perception.sensors import (
             PerceptionSensors,
@@ -1462,6 +1554,13 @@ class BotController:
                             wo = world_origin_from_snapshot(applied.live_map_snap)
                             if wo is not None:
                                 decision.blackboard.world_origin = wo
+                                if party_brain is not None:
+                                    party_brain.set_world_origin(wo)
+                                    if mid is not None:
+                                        try:
+                                            party_brain.set_local_map_id(int(mid))
+                                        except (TypeError, ValueError):
+                                            pass
                                 session_origin_ready = True
                     except Exception as sync_exc:
                         self.log(f"Live map pack sync failed: {sync_exc}")
@@ -1506,35 +1605,53 @@ class BotController:
                     continue
 
                 # Scroll land: wait until live xy is within 4 tiles of the spot.
-                apply_talking_scroll_arrival(
-                    decision.blackboard, config, state=world
-                )
+                if party_brain is None:
+                    apply_talking_scroll_arrival(
+                        decision.blackboard, config, state=world
+                    )
 
-                action = decision.decide(world)
+                if party_brain is not None:
+                    action = party_brain.decide(world)
+                else:
+                    action = decision.decide(world)
                 t_decide = time.perf_counter()
                 last_action = action
-                try:
-                    from app._04_decision.world_nav import SCRATCH_WORLD_NAV_PAUSE
+                if party_brain is None:
+                    try:
+                        from app._04_decision.world_nav import SCRATCH_WORLD_NAV_PAUSE
 
-                    if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
-                        # Legacy flag: world-nav fail_skip no longer stops the bot.
-                        # Clear and continue so a stale scratch cannot halt Start.
-                        self.log(
-                            "World nav pause flag ignored — continuing routine"
-                        )
-                        publish("world_nav_continue")
-                        continue
-                except Exception as gate_exc:
-                    self.log(f"World nav pause check: {gate_exc}")
-                executor.execute(
-                    world,
-                    action,
-                    bounds=content_bounds,
-                    side_intents=list(
-                        getattr(decision.blackboard, "side_intents", None) or []
-                    ),
-                    blackboard=decision.blackboard,
-                )
+                        if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
+                            # Legacy flag: world-nav fail_skip no longer stops the bot.
+                            # Clear and continue so a stale scratch cannot halt Start.
+                            self.log(
+                                "World nav pause flag ignored — continuing routine"
+                            )
+                            publish("world_nav_continue")
+                            continue
+                    except Exception as gate_exc:
+                        self.log(f"World nav pause check: {gate_exc}")
+                self.note_shop_action(action)
+                try:
+                    executor.execute(
+                        world,
+                        action,
+                        bounds=content_bounds,
+                        side_intents=(
+                            []
+                            if party_brain is not None
+                            else list(
+                                getattr(decision.blackboard, "side_intents", None)
+                                or []
+                            )
+                        ),
+                        blackboard=(
+                            None
+                            if party_brain is not None
+                            else decision.blackboard
+                        ),
+                    )
+                finally:
+                    self.note_shop_action(None)
                 t_act = time.perf_counter()
                 if action.action is ActionType.GATE:
                     try:

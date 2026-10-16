@@ -51,6 +51,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
 
     move = task.settings.get("move", {})
     hunt = task.settings.get("hunt", {})
+    party = task.settings.get("party", {})
     recovery = task.settings.get("recovery", {})
     magic = task.settings.get("magic", {})
     equipment = task.settings.get("equipment", {})
@@ -152,8 +153,104 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("haste_potion_item", haste_item)
     set_value("haste_potion_box", haste_box)
     set_value("haste_potion_key", haste_key)
+
+    # Party member (UI → profile only). Empty leader name forces off.
+    party_on = bool(party.get("member_enabled", getattr(profile, "party_member_enabled", False)))
+    party_leader = str(
+        party.get("leader_name", getattr(profile, "party_leader_name", "")) or ""
+    ).strip()
+    if not party_leader:
+        party_on = False
+    set_value("party_member_enabled", party_on)
+    set_value("party_leader_name", party_leader)
+    follow_start = _int_range(
+        party.get(
+            "follow_start_tiles",
+            getattr(profile, "party_follow_start_tiles", 8),
+        ),
+        8,
+        1,
+        40,
+    )
+    follow_stop = _int_range(
+        party.get(
+            "follow_stop_tiles",
+            getattr(profile, "party_follow_stop_tiles", 5),
+        ),
+        5,
+        0,
+        40,
+    )
+    if follow_stop > follow_start:
+        follow_stop = follow_start
+    set_value("party_follow_start_tiles", follow_start)
+    set_value("party_follow_stop_tiles", follow_stop)
+    set_value(
+        "party_assist_leash_tiles",
+        _int_range(
+            party.get(
+                "assist_leash_tiles",
+                getattr(profile, "party_assist_leash_tiles", 10),
+            ),
+            10,
+            1,
+            40,
+        ),
+    )
+    set_value(
+        "party_approach_tiles",
+        _int_range(
+            party.get(
+                "approach_tiles",
+                getattr(profile, "party_approach_tiles", 2),
+            ),
+            2,
+            1,
+            8,
+        ),
+    )
+    try:
+        potion_ratio = float(
+            party.get(
+                "potion_hp_ratio",
+                getattr(profile, "party_potion_hp_ratio", 0.45),
+            )
+        )
+    except (TypeError, ValueError):
+        potion_ratio = 0.45
+    # UI may store percent (45) or ratio (0.45).
+    if potion_ratio > 1.0:
+        potion_ratio = potion_ratio / 100.0
+    set_value("party_potion_hp_ratio", max(0.05, min(0.95, potion_ratio)))
+    use_antidote = bool(
+        hunt.get("use_antidote_potion", getattr(profile, "use_antidote_potion", False))
+    )
+    antidote_item = str(
+        hunt.get("antidote_potion_item", getattr(profile, "antidote_potion_item", ""))
+        or ""
+    ).strip()
+    try:
+        antidote_box = int(
+            hunt.get(
+                "antidote_potion_box", getattr(profile, "antidote_potion_box", 0)
+            )
+            or 0
+        )
+    except (TypeError, ValueError):
+        antidote_box = 0
+    antidote_key = str(
+        hunt.get(
+            "antidote_potion_key", getattr(profile, "antidote_potion_key", "")
+        )
+        or ""
+    ).strip()
+    set_value("use_antidote_potion", use_antidote)
+    set_value("antidote_potion_item", antidote_item)
+    set_value("antidote_potion_box", antidote_box)
+    set_value("antidote_potion_key", antidote_key)
     set_value("abandon_same", False)
-    set_value("antidote_auto", False)
+    # Legacy hunt.antidote_auto stays off unless the new toggle is on.
+    set_value("antidote_auto", use_antidote)
     set_value("area_empty", bool(hunt.get("area_empty", getattr(profile, "area_empty", False))))
     set_value(
         "area_empty_seconds",
@@ -362,6 +459,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     layout = magic.get("hotbar_layout")
     if isinstance(layout, dict):
         set_value("hotbar_layout", copy.deepcopy(layout))
+    from settings.antidote_potion import apply_antidote_potion_to_spell_slots
     from settings.haste_potion import apply_haste_potion_to_spell_slots
 
     synced_slots = apply_haste_potion_to_spell_slots(
@@ -370,6 +468,14 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         item_key=haste_item,
         box=haste_box,
         key=haste_key,
+        layout=layout if isinstance(layout, dict) else getattr(profile, "hotbar_layout", None),
+    )
+    synced_slots = apply_antidote_potion_to_spell_slots(
+        synced_slots,
+        use=use_antidote,
+        item_key=antidote_item,
+        box=antidote_box,
+        key=antidote_key,
         layout=layout if isinstance(layout, dict) else getattr(profile, "hotbar_layout", None),
     )
     set_value("spell_slots", copy.deepcopy(synced_slots))
@@ -553,6 +659,18 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         "loot_adena_weight_ratio",
         _ratio(other.get("loot_adena_weight_pct"), profile.loot_adena_weight_ratio),
     )
+    set_value(
+        "ignore_small_adena",
+        bool(other.get("ignore_small_adena", getattr(profile, "ignore_small_adena", False))),
+    )
+    try:
+        qty = int(other.get(
+            "ignore_small_adena_qty",
+            getattr(profile, "ignore_small_adena_qty", 10),
+        ))
+    except (TypeError, ValueError):
+        qty = 10
+    set_value("ignore_small_adena_qty", max(1, min(99999, qty)))
     pickup_mode = str(other.get("item_pickup_mode", profile.item_pickup_mode)).strip().lower()
     if pickup_mode not in ("all", "blacklist", "whitelist"):
         pickup_mode = "all"

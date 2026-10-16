@@ -154,6 +154,14 @@ class Profile:
     selected_account_id: str | None = None
     # Schedule UI move.routine[] (battle/break). Empty → single active_map fallback.
     routine: list = field(default_factory=list)
+    # Party member (``app._06_party``): mirror a leader instead of solo farm.
+    party_member_enabled: bool = False
+    party_leader_name: str = ""
+    party_follow_start_tiles: int = 8
+    party_follow_stop_tiles: int = 5
+    party_assist_leash_tiles: int = 10
+    party_approach_tiles: int = 2
+    party_potion_hp_ratio: float = 0.45
 
     def __post_init__(self) -> None:
         char = str(self.character or "").strip().lower()

@@ -139,6 +139,135 @@ class HuntTab(QWidget):
             self._load_species()
         if self._items_built and hasattr(self, "item_table"):
             self._load_items()
+        self._reload_potion_assist_widgets()
+        self._reload_party_member_widgets()
+
+    def _build_party_member_card(self, host: QWidget, parent: QVBoxLayout) -> None:
+        """Temporary party-member controls (UI → profile → member brain)."""
+        box = card(
+            host,
+            self.t.get("party_member_temp", "Party member (temp)"),
+        )
+        parent.addWidget(box)
+        lay = box.layout()
+        assert isinstance(lay, QVBoxLayout)
+        hint = QLabel(
+            self.t.get(
+                "party_member_hint",
+                "When enabled, this bot follows the leader name and assists "
+                "instead of solo farm. Uses existing player / combat sensors "
+                "(no separate party sensor).",
+            )
+        )
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        self.party_enable = add_check(
+            lay,
+            self.bag,
+            "party",
+            "member_enabled",
+            self.t.get("party_member_enabled", "Run as party member"),
+            False,
+            on_change=self._on_party_member_changed,
+        )
+        name_row = QHBoxLayout()
+        name_row.addWidget(
+            QLabel(self.t.get("party_leader_name", "Leader character name"))
+        )
+        self.party_leader = QLineEdit()
+        self.party_leader.setText(self.bag.get_str("party", "leader_name", ""))
+        self.party_leader.setPlaceholderText(
+            self.t.get("party_leader_placeholder", "Exact in-game name")
+        )
+        self.party_leader.textChanged.connect(self._on_party_leader_edited)
+        name_row.addWidget(self.party_leader, stretch=1)
+        lay.addLayout(name_row)
+        self.party_follow_start = add_spin_row(
+            lay,
+            self.bag,
+            "party",
+            "follow_start_tiles",
+            self.t.get("party_follow_start", "Follow start (tiles)"),
+            8,
+            1,
+            40,
+            on_change=self._clamp_party_follow,
+        )
+        self.party_follow_stop = add_spin_row(
+            lay,
+            self.bag,
+            "party",
+            "follow_stop_tiles",
+            self.t.get("party_follow_stop", "Follow stop (tiles)"),
+            5,
+            0,
+            40,
+            on_change=self._clamp_party_follow,
+        )
+        self.party_assist_leash = add_spin_row(
+            lay,
+            self.bag,
+            "party",
+            "assist_leash_tiles",
+            self.t.get("party_assist_leash", "Assist leash (tiles)"),
+            10,
+            1,
+            40,
+        )
+        self._on_party_member_changed()
+
+    def _on_party_leader_edited(self, text: str) -> None:
+        self.bag.set("party", "leader_name", str(text or "").strip())
+
+    def _clamp_party_follow(self) -> None:
+        start = self.bag.get_int("party", "follow_start_tiles", 8)
+        stop = self.bag.get_int("party", "follow_stop_tiles", 5)
+        if stop > start:
+            self.bag.set("party", "follow_stop_tiles", start)
+            if hasattr(self, "party_follow_stop"):
+                self.party_follow_stop.blockSignals(True)
+                self.party_follow_stop.setValue(start)
+                self.party_follow_stop.blockSignals(False)
+
+    def _on_party_member_changed(self) -> None:
+        on = self.bag.get_bool("party", "member_enabled", False)
+        if hasattr(self, "party_leader"):
+            self.party_leader.setEnabled(on)
+        for spin in (
+            getattr(self, "party_follow_start", None),
+            getattr(self, "party_follow_stop", None),
+            getattr(self, "party_assist_leash", None),
+        ):
+            if spin is not None:
+                spin.setEnabled(on)
+
+    def _reload_party_member_widgets(self) -> None:
+        if not hasattr(self, "party_enable"):
+            return
+        self.party_enable.blockSignals(True)
+        self.party_enable.setChecked(
+            self.bag.get_bool("party", "member_enabled", False)
+        )
+        self.party_enable.blockSignals(False)
+        self.party_leader.blockSignals(True)
+        self.party_leader.setText(self.bag.get_str("party", "leader_name", ""))
+        self.party_leader.blockSignals(False)
+        self.party_follow_start.blockSignals(True)
+        self.party_follow_start.setValue(
+            self.bag.get_int("party", "follow_start_tiles", 8)
+        )
+        self.party_follow_start.blockSignals(False)
+        self.party_follow_stop.blockSignals(True)
+        self.party_follow_stop.setValue(
+            self.bag.get_int("party", "follow_stop_tiles", 5)
+        )
+        self.party_follow_stop.blockSignals(False)
+        self.party_assist_leash.blockSignals(True)
+        self.party_assist_leash.setValue(
+            self.bag.get_int("party", "assist_leash_tiles", 10)
+        )
+        self.party_assist_leash.blockSignals(False)
+        self._on_party_member_changed()
 
     def _clear_page(self, page: QWidget) -> None:
         layout = page.layout()
@@ -166,14 +295,17 @@ class HuntTab(QWidget):
         host = QWidget()
         scroll.setWidget(host)
         outer.addWidget(scroll, stretch=1)
-        body = QHBoxLayout(host)
+        body = QVBoxLayout(host)
+        self._build_party_member_card(host, body)
 
+        cols = QHBoxLayout()
+        body.addLayout(cols, stretch=1)
         left = QVBoxLayout()
         mid = QVBoxLayout()
         right = QVBoxLayout()
-        body.addLayout(left, 1)
-        body.addLayout(mid, 1)
-        body.addLayout(right, 1)
+        cols.addLayout(left, 1)
+        cols.addLayout(mid, 1)
+        cols.addLayout(right, 1)
 
         combat = card(host, self.t.get("attack_method", "Attack"))
         left.addWidget(combat)
@@ -342,7 +474,7 @@ class HuntTab(QWidget):
         self._refresh_attack_summary()
 
     def _build_haste_potion_assist(self, assist_l: QVBoxLayout) -> None:
-        haste_check = add_check(
+        self.haste_check = haste_check = add_check(
             assist_l,
             self.bag,
             "hunt",
@@ -363,6 +495,26 @@ class HuntTab(QWidget):
         self.haste_hotbar_label.setObjectName("muted")
         assist_l.addWidget(self.haste_hotbar_label)
 
+        self.antidote_check = antidote_check = add_check(
+            assist_l,
+            self.bag,
+            "hunt",
+            "use_antidote_potion",
+            self.t.get("use_antidote_potion", "Use antidote"),
+            False,
+            self._on_antidote_toggle,
+        )
+        antidote_hint = QLabel(self.t.get("use_antidote_potion_hint", ""))
+        antidote_hint.setWordWrap(True)
+        antidote_hint.setObjectName("muted")
+        assist_l.addWidget(antidote_hint)
+        self.antidote_item_label = QLabel(self._antidote_item_summary_text())
+        self.antidote_item_label.setWordWrap(True)
+        assist_l.addWidget(self.antidote_item_label)
+        self.antidote_hotbar_label = QLabel(self._antidote_hotbar_text())
+        self.antidote_hotbar_label.setObjectName("muted")
+        assist_l.addWidget(self.antidote_hotbar_label)
+
         btn_row = QHBoxLayout()
         self.haste_assign_btn = QPushButton(
             self.t.get("haste_potion_assign", "Assign from hotbar")
@@ -372,6 +524,14 @@ class HuntTab(QWidget):
         self.haste_clear_btn = QPushButton(self.t.get("haste_potion_clear", "Clear"))
         self.haste_clear_btn.clicked.connect(self._clear_haste_potion_item)
         btn_row.addWidget(self.haste_clear_btn)
+        self.antidote_assign_btn = QPushButton(
+            self.t.get("antidote_potion_assign", "Assign as antidote")
+        )
+        self.antidote_assign_btn.clicked.connect(self._assign_antidote_from_hotbar)
+        btn_row.addWidget(self.antidote_assign_btn)
+        self.antidote_clear_btn = QPushButton(self.t.get("antidote_potion_clear", "Clear"))
+        self.antidote_clear_btn.clicked.connect(self._clear_antidote_potion_item)
+        btn_row.addWidget(self.antidote_clear_btn)
         btn_row.addStretch(1)
         assist_l.addLayout(btn_row)
 
@@ -423,11 +583,30 @@ class HuntTab(QWidget):
             self.haste_hotbar_label,
             self.haste_assign_btn,
             self.haste_clear_btn,
+            haste_hint,
+        )
+        bind_gate(
+            antidote_check,
+            self.antidote_item_label,
+            self.antidote_hotbar_label,
+            self.antidote_assign_btn,
+            self.antidote_clear_btn,
+            antidote_hint,
+        )
+        shared = (
             self.haste_hotbar_status,
             self.haste_hotbar_refresh_btn,
             self.haste_hotbar_table,
-            haste_hint,
         )
+
+        def _gate_shared(*_args: object) -> None:
+            on = haste_check.isChecked() or antidote_check.isChecked()
+            for widget in shared:
+                widget.setEnabled(on)
+
+        haste_check.toggled.connect(_gate_shared)
+        antidote_check.toggled.connect(_gate_shared)
+        _gate_shared()
         self._paint_haste_hotbar(force=True)
 
     def _haste_item_summary_text(self) -> str:
@@ -480,7 +659,40 @@ class HuntTab(QWidget):
             self.haste_item_label.setText(self._haste_item_summary_text())
         if hasattr(self, "haste_hotbar_label"):
             self.haste_hotbar_label.setText(self._haste_hotbar_text())
+        if hasattr(self, "antidote_item_label"):
+            self.antidote_item_label.setText(self._antidote_item_summary_text())
+        if hasattr(self, "antidote_hotbar_label"):
+            self.antidote_hotbar_label.setText(self._antidote_hotbar_text())
         self._refresh_attack_summary()
+
+    def _reload_potion_assist_widgets(self) -> None:
+        """Push hunt potion fields back into the checkboxes after a task reload."""
+        if hasattr(self, "haste_check"):
+            self.haste_check.setChecked(
+                self.bag.get_bool("hunt", "use_haste_potion", False)
+            )
+        if hasattr(self, "antidote_check"):
+            self.antidote_check.setChecked(
+                self.bag.get_bool("hunt", "use_antidote_potion", False)
+            )
+        self._refresh_haste_labels()
+
+    def flush_potion_assist_to_bag(self) -> None:
+        """Write the visible potion checkboxes into the bag before a schedule save."""
+        if hasattr(self, "haste_check"):
+            self.bag.set(
+                "hunt", "use_haste_potion", bool(self.haste_check.isChecked())
+            )
+        if hasattr(self, "antidote_check"):
+            self.bag.set(
+                "hunt",
+                "use_antidote_potion",
+                bool(self.antidote_check.isChecked()),
+            )
+        if hasattr(self, "haste_check"):
+            self._sync_haste_spell_slot()
+        if hasattr(self, "antidote_check"):
+            self._sync_antidote_spell_slot()
 
     def _on_haste_toggle(self) -> None:
         self._sync_haste_spell_slot()
@@ -506,12 +718,124 @@ class HuntTab(QWidget):
                 self.t.get("haste_potion_empty_cell", "That hotbar cell is empty.")
             )
             return
+        box = int(cell.get("box") or 0)
+        key = str(cell.get("key") or "").strip().lower()
         self.bag.set("hunt", "haste_potion_item", name)
-        self.bag.set("hunt", "haste_potion_box", int(cell.get("box") or 0))
-        self.bag.set("hunt", "haste_potion_key", str(cell.get("key") or "").strip().lower())
+        self.bag.set("hunt", "haste_potion_box", box)
+        self.bag.set("hunt", "haste_potion_key", key)
+        self._drop_antidote_if_same_cell(box, key)
         self._sync_haste_spell_slot()
+        self._sync_antidote_spell_slot()
         self._refresh_haste_labels()
         msg = self.t.get("haste_potion_assigned", "Assigned: {name}").format(name=name)
+        self.haste_hotbar_status.setText(msg)
+        self.on_log(msg)
+
+    def _antidote_item_summary_text(self) -> str:
+        key = self.bag.get_str("hunt", "antidote_potion_item", "")
+        if not key:
+            return self.t.get("antidote_potion_none", "No potion selected")
+        return self.t.get("antidote_potion_selected", "Potion: {name}").format(name=key)
+
+    def _antidote_hotbar_text(self) -> str:
+        none = self.t.get("hp_action_hotbar_none", "Not on hotbar")
+        try:
+            from app._04_decision.hp_actions import format_hotbar_binding
+            from settings.antidote_potion import assigned_antidote_slot
+        except Exception:
+            return none
+        slot = assigned_antidote_slot(
+            self.bag.get("magic", "spell_slots", {}) or {},
+            item_key=self.bag.get_str("hunt", "antidote_potion_item", ""),
+            box=self.bag.get_int("hunt", "antidote_potion_box", 0),
+            key=self.bag.get_str("hunt", "antidote_potion_key", ""),
+        )
+        shown = format_hotbar_binding(slot)
+        if shown:
+            return self.t.get("antidote_potion_hotbar", "Hotbar: {slot}").format(
+                slot=shown
+            )
+        return none
+
+    def _sync_antidote_spell_slot(self) -> None:
+        from settings.antidote_potion import apply_antidote_potion_to_spell_slots
+
+        use = self.bag.get_bool("hunt", "use_antidote_potion", False)
+        previous = self.bag.get("magic", "spell_slots", {}) or {}
+        if not isinstance(previous, dict):
+            previous = {}
+        synced = apply_antidote_potion_to_spell_slots(
+            previous,
+            use=use,
+            item_key=self.bag.get_str("hunt", "antidote_potion_item", ""),
+            box=self.bag.get_int("hunt", "antidote_potion_box", 0),
+            key=self.bag.get_str("hunt", "antidote_potion_key", ""),
+            layout=self._haste_hotbar_layout(),
+        )
+        self.bag.set("magic", "spell_slots", synced)
+
+    def _on_antidote_toggle(self) -> None:
+        self._sync_antidote_spell_slot()
+        self._refresh_haste_labels()
+
+    def _drop_haste_if_same_cell(self, box: int, key: str) -> None:
+        from settings.antidote_potion import same_hotbar_cell
+
+        if not same_hotbar_cell(
+            box,
+            key,
+            self.bag.get_int("hunt", "haste_potion_box", 0),
+            self.bag.get_str("hunt", "haste_potion_key", ""),
+        ):
+            return
+        self.bag.set("hunt", "haste_potion_item", "")
+        self.bag.set("hunt", "haste_potion_box", 0)
+        self.bag.set("hunt", "haste_potion_key", "")
+        self._sync_haste_spell_slot()
+
+    def _drop_antidote_if_same_cell(self, box: int, key: str) -> None:
+        from settings.antidote_potion import same_hotbar_cell
+
+        if not same_hotbar_cell(
+            box,
+            key,
+            self.bag.get_int("hunt", "antidote_potion_box", 0),
+            self.bag.get_str("hunt", "antidote_potion_key", ""),
+        ):
+            return
+        self.bag.set("hunt", "antidote_potion_item", "")
+        self.bag.set("hunt", "antidote_potion_box", 0)
+        self.bag.set("hunt", "antidote_potion_key", "")
+
+    def _clear_antidote_potion_item(self) -> None:
+        self.bag.set("hunt", "antidote_potion_item", "")
+        self.bag.set("hunt", "antidote_potion_box", 0)
+        self.bag.set("hunt", "antidote_potion_key", "")
+        self._sync_antidote_spell_slot()
+        self._refresh_haste_labels()
+
+    def _assign_antidote_from_hotbar(self) -> None:
+        cell = self._selected_haste_hotbar_cell()
+        if cell is None:
+            self.haste_hotbar_status.setText(
+                self.t.get("antidote_potion_select_slot", "Select a hotbar cell")
+            )
+            return
+        name = str(cell.get("name") or "").strip()
+        if not name:
+            self.haste_hotbar_status.setText(
+                self.t.get("antidote_potion_empty_cell", "That hotbar cell is empty.")
+            )
+            return
+        box = int(cell.get("box") or 0)
+        key = str(cell.get("key") or "").strip().lower()
+        self._drop_haste_if_same_cell(box, key)
+        self.bag.set("hunt", "antidote_potion_item", name)
+        self.bag.set("hunt", "antidote_potion_box", box)
+        self.bag.set("hunt", "antidote_potion_key", key)
+        self._sync_antidote_spell_slot()
+        self._refresh_haste_labels()
+        msg = self.t.get("antidote_potion_assigned", "Assigned: {name}").format(name=name)
         self.haste_hotbar_status.setText(msg)
         self.on_log(msg)
 
@@ -547,6 +871,7 @@ class HuntTab(QWidget):
             self.bag.set("magic", "hotbar_layout", dict(layout))
             self._paint_haste_hotbar(force=True)
             self._sync_haste_spell_slot()
+            self._sync_antidote_spell_slot()
             self._refresh_haste_labels()
             return
         self._finish_haste_hotbar_fail(self.t.get("inventory_empty", "—"))
@@ -626,6 +951,11 @@ class HuntTab(QWidget):
             haste_name = self.bag.get_str("hunt", "haste_potion_item", "") or "—"
             lines.append(
                 f"{self.t.get('use_haste_potion', 'Haste potion')}: {haste_name}"
+            )
+        if self.bag.get_bool("hunt", "use_antidote_potion"):
+            antidote_name = self.bag.get_str("hunt", "antidote_potion_item", "") or "—"
+            lines.append(
+                f"{self.t.get('use_antidote_potion', 'Antidote')}: {antidote_name}"
             )
         lines.append(
             f"{self.t.get('mp_above', 'MP')}: {self.bag.get_int('hunt', 'mp_spell_above', 80)}%"

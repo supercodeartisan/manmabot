@@ -134,6 +134,25 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "area_players": bool(getattr(profile, "area_players", False)),
             "area_player_count": int(getattr(profile, "area_player_count", 3)),
         },
+        "party": {
+            "member_enabled": bool(
+                getattr(profile, "party_member_enabled", False)
+            ),
+            "leader_name": str(getattr(profile, "party_leader_name", "") or ""),
+            "follow_start_tiles": int(
+                getattr(profile, "party_follow_start_tiles", 8)
+            ),
+            "follow_stop_tiles": int(
+                getattr(profile, "party_follow_stop_tiles", 5)
+            ),
+            "assist_leash_tiles": int(
+                getattr(profile, "party_assist_leash_tiles", 10)
+            ),
+            "approach_tiles": int(getattr(profile, "party_approach_tiles", 2)),
+            "potion_hp_ratio": float(
+                getattr(profile, "party_potion_hp_ratio", 0.45)
+            ),
+        },
         "recovery": {
             "use_hp_potion": True,
             "use_heal": True,

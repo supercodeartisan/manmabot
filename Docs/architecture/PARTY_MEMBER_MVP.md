@@ -1,7 +1,7 @@
 # Isolated party-member MVP
 
 Date: 2026-10-13
-Status: proposed scope and architecture. Only documentation has been created.
+Status: v1 member brain implemented under ``Engine/app/_06_party/`` (follow / assist / hold). Session enables via profile ``party_member_enabled`` + ``party_leader_name``.
 
 ## Objective
 
@@ -43,20 +43,22 @@ Input execution must be bounded and cancellable so the next observation can revi
 
 ## Separate module
 
-Proposed layout, not yet created:
+Implemented layout:
 
 ```text
-Engine/party_member/
-  session.py        # own lifecycle and tick loop
-  config.py         # member-only configuration
-  state.py          # leader identity, freshness, target, follow state
-  perception.py    # adapter to shared readers
-  decision.py      # follow / assist / wait policy
-  actions.py       # bounded, cancellable allowed actions
-  status.py        # observable state and reasons
-Tools/party_member/
-  run_party_member.py
+Engine/app/_06_party/
+  config.py         # PartyMemberConfig
+  state.py          # MemberRuntime
+  leader.py         # resolve leader by name/ent
+  follow.py         # hysteresis + approach tile
+  assist.py         # external target or leader-strike proxy
+  policy.py         # pure decide ladder
+  intents.py        # ActionIntent builders
+  manager.py        # PartyMemberManager.decide
 ```
+
+Enable (single path): Hunt tab → Party member (temp) → Start applies bag to profile.
+
 
 Keep an independent entry point, configuration namespace, runtime state and decision loop. Do not call the solo DecisionManager or enter its farming/retreat/shop columns. Avoid shared mutable solo decision globals. Never allow solo and member loops to control the same game session concurrently.
 
