@@ -35,11 +35,13 @@ _MAGIC_UI_DEFAULTS: dict[str, Any] = {
 _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "member_enabled": False,
     "leader_name": "",
-    "follow_start_tiles": 8,
-    "follow_stop_tiles": 5,
+    "follow_tiles": 8,
+    "stop_tiles": 2,
     "assist_leash_tiles": 10,
     "approach_tiles": 2,
     "potion_hp_ratio": 0.45,
+    "random_loot": False,
+    "loot_role": "none",
 }
 
 
@@ -128,6 +130,7 @@ class SettingsBag:
             "equipment",
             "other",
         ):
+            # Keep party even when disk/trial omit it (older TOP_SECTIONS).
             self.data.setdefault(section, {})
         hunt = self.data.setdefault("hunt", {})
         for key, value in _HUNT_UI_DEFAULTS.items():

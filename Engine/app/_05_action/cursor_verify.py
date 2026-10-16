@@ -222,6 +222,57 @@ def verify_mage_cast_aim(executor: "ActionExecutor", x: float, y: float) -> bool
     )
 
 
+def cursor_is_spell_aim(executor: "ActionExecutor" | None = None) -> bool:
+    """True when the live cursor is still in cast-target (spell) mode.
+
+    After ``mage_attack`` / buff / heal the client keeps a spell circle until
+    the cast lands or Esc cancels. Travel needs NORMAL, so leftover aim must
+    be detected without moving the mouse.
+    """
+    if not CURSOR_VERIFY_ENABLED:
+        return False
+    matcher = get_cursor_matcher()
+    if not matcher.loaded:
+        return False
+    match = classify_cursor()
+    if match is None:
+        return False
+    if executor is not None:
+        executor.last_cursor_match = match
+    return (
+        match.category is CursorCategory.SPELL
+        or str(match.label or "").startswith("spell")
+    )
+
+
+def cancel_spell_aim(
+    executor: "ActionExecutor",
+    *,
+    reason: str = "",
+) -> bool:
+    """Esc once to leave cast-target mode. Returns whether aim looked active."""
+    active = cursor_is_spell_aim(executor)
+    if not active:
+        return False
+    try:
+        executor.keyboard.press("esc")
+    except Exception:
+        return active
+    settle = float(CURSOR_SEARCH_SETTLE_S or 0.0)
+    if settle > 0:
+        time.sleep(settle)
+    try:
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "spell aim cancel reason=%s",
+            str(reason or "spell").strip() or "spell",
+        )
+    except Exception:
+        pass
+    return True
+
+
 def verify_loot_aim(executor: "ActionExecutor", x: float, y: float) -> bool:
     """Loot: require NORMAL cursor (not dialog / door / attack)."""
     return aim_and_verify(
@@ -861,6 +912,8 @@ __all__ = [
     "verified_click",
     "verify_attack_aim",
     "verify_mage_cast_aim",
+    "cursor_is_spell_aim",
+    "cancel_spell_aim",
     "verify_loot_aim",
     "attack_click",
     "attack_pixel_offsets",

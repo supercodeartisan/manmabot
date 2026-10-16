@@ -125,6 +125,11 @@ class Profile:
     haste_potion_item: str = ""
     haste_potion_box: int = 0
     haste_potion_key: str = ""
+    # Combat assist: antidote potion (opt-in; mirrors haste slot wiring).
+    use_antidote_potion: bool = False
+    antidote_potion_item: str = ""
+    antidote_potion_box: int = 0
+    antidote_potion_key: str = ""
     abandon_same: bool = False
     abandon_seconds: int = 30
     antidote_auto: bool = False
@@ -157,11 +162,16 @@ class Profile:
     # Party member (``app._06_party``): mirror a leader instead of solo farm.
     party_member_enabled: bool = False
     party_leader_name: str = ""
+    party_follow_tiles: int = 8
+    party_stop_tiles: int = 2
+    # Legacy aliases kept for older profile JSON; mirrored on load/apply.
     party_follow_start_tiles: int = 8
-    party_follow_stop_tiles: int = 5
+    party_follow_stop_tiles: int = 2
     party_assist_leash_tiles: int = 10
     party_approach_tiles: int = 2
     party_potion_hp_ratio: float = 0.45
+    party_random_loot: bool = False
+    party_loot_role: str = "none"
 
     def __post_init__(self) -> None:
         char = str(self.character or "").strip().lower()
@@ -327,8 +337,11 @@ class Profile:
             "attack_jitter",
             "target_delay",
             "use_haste_potion",
+            "use_antidote_potion",
             "abandon_same",
             "antidote_auto",
+            "party_member_enabled",
+            "party_random_loot",
             "area_empty",
             "area_low_yield",
             "area_players",

@@ -1,5 +1,117 @@
 # Decision change log
 
+## 2026-10-16 — party travel/stop bands + combat close-in + loot gate
+
+Intent: mode-aware follow — travel leash (`follow_tiles`), settle to `stop_tiles` when leader pose is stable, combat assist with short close-in when out of range, loot only when leader not farming and within stop band.
+Shared: `policy` (`leader_farming` / `leader_stopped` / `CLOSE_IN`), `assist_in_attack_range`, `plan_close_in_intent`, Party tab follow+stop spins, profile/runtime. Solo DecisionManager farming columns unchanged.
+Affects: party-member follow/assist/loot only.
+Consent: user (“implement” after band design).
+Result: travel vs stop vs combat step-in; loot gated off mid-fight.
+
+## 2026-10-16 — party follow single 3-tile + no synthetic assist cast
+
+Intent: logs showed follow re-clicking ~5×/s on the same tile, and mage_attack skill-press with no live monster (synthetic/off-screen assist) → cursor thrash. Follow uses one threshold (default 3): farther → follow, else assist/hold. No start/stop hysteresis. Assist only live local monsters; mage Esc after failed aim search.
+Shared: `follow_kind` / `PartyMemberConfig.follow_tiles`, `plan_follow_intent` (idle in-transit / at approach), `assist` (no combat synthetics), `mage.py` Esc on aim fail, Party tab one spin. Solo DecisionManager farming columns unchanged except safer mage Esc.
+Affects: party follow smoothness; party assist; mage cast cancel on miss.
+Consent: user (check 10min logs; no start/stop; follow if out of 3; improve following; cursor rush / no target skill).
+Result: single follow distance; live-only assist; cast aim thrash cancelled.
+
+## 2026-10-16 — party loot roles + Party tab (Item right)
+
+Intent: Party settings live in their own tab (right of Item). Random loot ON → every member may loot nearby drops (no ownership gate). Random OFF → `loot_role` none vs responsible (ownership gate on). Side F4 while near; primary approach only on HOLD.
+Shared: `UI/ui_qt/editors/party_tab.py`; Hunt party card removed; `app._06_party.loot` + `PartyMemberConfig.random_loot` / `loot_role`; profile / task_runtime / BotController. Solo DecisionManager farming columns unchanged.
+Affects: party-member HOLD loot + side pickup; schedule Party tab.
+Consent: user (“go” after random ON all / OFF role architecture).
+Result: Party tab wired; loot gates applied in member decide.
+
+## 2026-10-16 — party heal/buff via solo helpers (no retreat)
+
+Intent: party member uses solo heal skill + buff + potion sides; never retreat / mother-tree / escape.
+Shared: `app._06_party.support.apply_party_support` → `emit_heal` / `maybe_cast_buff` / `arm_potion_side_intents` with `retreat_starters=False`. `BotController` always passes blackboard side_intents in party mode. Solo DecisionManager columns unchanged.
+Affects: party-member primary HEAL/BUFF before follow/assist; potion sides parallel.
+Consent: user (“go” after approach choice: party brain owns call site, reuse solo helpers).
+Result: heal/buff/potions on; retreat paths not called.
+
+## 2026-10-16 — party follow: shortest of walk vs WORLD_NAV (scroll/TP)
+
+Intent: when the leader teleports far, member was only TRAVELING (blind walk). Pick the cheaper of local walk vs WORLD_NAV (talking scroll / TP / gate).
+Shared: `app._06_party.follow_route.choose_follow_route`, `PartyMemberManager` FOLLOW → `PartyJoinNav` when WORLD_NAV wins (`follow_nav`). Solo DecisionManager unchanged.
+Affects: party-member FOLLOW when dist ≥ 24 and scroll/TP beats walk.
+Consent: user (must use winner of shortest path, not blind walk).
+Result: same-map long chase can scroll/TP; short chase still walks.
+
+## 2026-10-16 — fix: party follow idle (game xy → nav) + OFF_UI banner
+
+Intent: screenshot showed kind=follow action=idle while leader OFF_UI with party xy ~32k. Follow A* uses nav tiles; party xy was raw game → no_path/idle. Banner did not show IN_UI/OFF_UI or SAME_MAP.
+Shared: `_party_tile` → `game_to_nav`; Party monitor `[OFF_UI|SAME_MAP]` + `why=`. Solo unchanged.
+Affects: party-member same-map FOLLOW travel intent; Party etview status line.
+Consent: user (see UI — not finding / never showing not in UI).
+Result: party pose converted to nav; banner shows OFF_UI/SAME_MAP and follow fail reason.
+
+## 2026-10-16 — fix: lose leader must still FOLLOW (party pose)
+
+Intent: when the entity sweep loses the leader, the member was HOLD/WAIT and never chased. Drive movement from PartySubsystem pose; UI only gates assist.
+Shared: `decide_policy` (off-UI → always FOLLOW), sticky pose 15s/45s, `BotController` always `set_local_map_id` on live mapId. Solo unchanged.
+Affects: party-member off-UI chase + same-map detection.
+Consent: user (check and fix — lose leader never follows).
+Result: off-UI always follows party/sticky tile; local mapId updates every tick.
+
+## 2026-10-16 — party UI detect → off-UI follow → other-map WORLD_NAV join
+
+Intent: detect whether the leader is in the current UI (entity sweep); if not, go to PartySubsystem xy; if other map, WORLD_NAV (scroll/gate/teleporter) to leader map near their pose, then resume follow/assist.
+Shared: `app._06_party.policy` (`leader_in_ui` / `JOIN_MAP`), `join_map.PartyJoinNav` + session Blackboard stash, `PartyMemberManager`, `BotController` join-path scroll/gate/TP. Solo DecisionManager farming columns untouched.
+Affects: party-member only — assist requires leader in UI; other-map no longer WAIT.
+Consent: user (“alright, go” after scope including other-map teleport).
+Result: off-UI same-map FOLLOW; other-map join via WorldNavSession; then follow/assist.
+
+## 2026-10-16 — off-screen follow via PartySubsystem xy/mapId
+
+Intent: when the party leader leaves the local UI/entity sweep, the member still follows using `party_listen` / realtime_party pose (xy + mapId), not screen entities.
+Shared: `app._06_party.leader.resolve_leader` (prefer PartySubsystem tile), `PartyMemberManager._apply_sticky_party_pose` (3s sticky on 0,0 glitch). Solo DecisionManager untouched.
+Affects: party-member FOLLOW when leader is off-screen; WAIT on other mapId (unchanged).
+Consent: user (“implement” after Ask-mode off-screen follow confirm).
+Result: party xy is follow truth; brief missing/0,0 reads reuse last same-map pose.
+
+## 2026-10-16 — Party button opens etview-style overlay
+
+Intent: Party toolbar button shows etview.exe core UI (BitBlt underlay + circle/cross markers + ATK orange line / red X) combined with party status/decisions.
+Shared: `session.etview_probe` (print_state + contested), `ui_qt.debug.party_etview.PartyEtView`, `PartyMonitorWindow` splitter. Solo DecisionManager untouched.
+Affects: Party monitor window only.
+Consent: user (bring etview core into Party button UI).
+Result: Party window = etview canvas (leader ring + ATK target) over live capture + existing party panel.
+
+## 2026-10-16 — party assist knows leader ATK target (etview)
+
+Intent: party UI/module monitor the leader the way etview does — AttackAction owner→tgt — and assist that monster (not only “farming” with no who).
+Shared: `app._06_party.assist` (`describe_leader_target`, materialize off-screen contested tgt), `leader` / `manager` / `state` target fields; Party monitor TARGET line. No solo DecisionManager.
+Affects: party-member ASSIST when leader is attacking; Debug/Party banner shows target name/guid.
+Consent: user (check etview; fix assist who-target).
+Result: contested leader row → local or synthetic WorldObject; UI shows `ATK → name`.
+
+## 2026-10-16 — sticky leader ent/guid track + UI leader highlight
+
+Intent: keep tracking the party leader via sticky `ent`/`guid`/`track_id` whether farming or idle; show farming/visible/off-screen state in Party monitor.
+Shared: `app._06_party.leader` / `manager` / `state` / `config`; Party monitor banner only. No solo DecisionManager changes.
+Affects: party-member reacquire + assist proxy when entity blinks; Debug/Party UI leader highlight.
+Consent: user (ent-track while farming; highlight leader status).
+Result: implemented.
+
+## 2026-10-16 — party assist tracks leader attack (contested_mobs)
+
+Intent: when the party leader is attacking a monster, the member assists that mob (not only mobs hitting the leader).
+Shared: `app._06_party.assist` only — `resolve_leader_attack_target` + `pick_assist_target` order `leader_attack` then `leader_strike`. No sensor/DecisionManager/UI changes.
+Affects: party-member ASSIST when near leader and `assist_leader_strikes` is on.
+Consent: user (leader attack tracking; never touch other modules).
+Result: implemented.
+
+## 2026-10-16 — party member uses memory leader (no typed name)
+
+Intent: Hunt UI no longer asks for leader character name. Party-member Start needs only the checkbox; after join, `party_listen` supplies the game party leader.
+Shared: `party_member_block` / `resolve_leader`, `BotController` `party_mode`, `task_runtime` party apply, Hunt tab party card. Solo decide path unchanged.
+Affects: party-member enable and leader resolve only.
+Consent: user (remove leader name; get leader from memory after join).
+Result: implemented.
+
 ## 2026-10-16 — party-member sensor for leader stats (solo unchanged)
 
 Intent: when Hunt UI “Run as party member” is on, read PartySubsystem via an independent `party_listen` sensor and use leader name/HP/MP/xy/mapId for follow when the leader entity is not nearby. Solo Start never loads the party DLL and never calls `PartyMemberManager`.

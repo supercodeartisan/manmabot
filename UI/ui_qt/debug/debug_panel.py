@@ -32,6 +32,7 @@ from session.debug_snapshot import (
     section_text,
 )
 from ui_qt.debug.field_view import FieldView
+from ui_qt.debug.party_monitor_window import PartyMonitorPanel
 from ui_qt.theme import tokens
 
 
@@ -145,8 +146,21 @@ class DebugPanel(QWidget):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.addWidget(QLabel(self._tr("debug_status_list")))
         self.listbox = QListWidget()
+        _section_fallback = {
+            "party": "Party",
+            "overview": "Overview",
+            "decision": "Decision",
+            "field_view": "Field view",
+            "nav_show": "Navigation show",
+            "decide_time": "Decision time",
+        }
         for section in STATUS_SECTIONS:
-            self.listbox.addItem(self._tr(f"debug_{section}"))
+            self.listbox.addItem(
+                self._tr(
+                    f"debug_{section}",
+                    _section_fallback.get(section, section.replace("_", " ").title()),
+                )
+            )
         self.listbox.setCurrentRow(0)
         self.listbox.currentRowChanged.connect(self._on_select)
         left_layout.addWidget(self.listbox)
@@ -215,10 +229,12 @@ class DebugPanel(QWidget):
         )
         self.tables.verticalHeader().setVisible(False)
         self.stack.addWidget(self.tables)  # 5
+        self.party_panel = PartyMonitorPanel(t=self.t, show_headline=True)
+        self.stack.addWidget(self.party_panel)  # 6
         self.empty_label = QLabel(self._tr("debug_idle"))
         self.empty_label.setWordWrap(True)
         self.empty_label.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
-        self.stack.addWidget(self.empty_label)  # 6
+        self.stack.addWidget(self.empty_label)  # 7
         right_layout.addWidget(self.stack, stretch=1)
         split.addWidget(right)
         split.setStretchFactor(0, 1)
@@ -260,6 +276,9 @@ class DebugPanel(QWidget):
         elif section == "tables":
             self._set_previewing(False)
             self.stack.setCurrentWidget(self.tables)
+        elif section == "party":
+            self._set_previewing(False)
+            self.stack.setCurrentWidget(self.party_panel)
         else:
             self._set_previewing(False)
             self._configure_tree(section)
@@ -356,6 +375,38 @@ class DebugPanel(QWidget):
             return
         if self._section == "tables":
             self._refresh_tables(snapshot, force=force)
+            return
+        if self._section == "party":
+            try:
+                party_snap = self.controller.party_monitor_snapshot()
+            except Exception as exc:
+                party_snap = {"probe_error": f"snapshot failed: {exc}"}
+            # Belt-and-suspenders: always merge a fresh DLL probe into the panel.
+            try:
+                from session.party_probe import probe_party_live
+
+                live = probe_party_live()
+                party_snap = dict(party_snap or {})
+                party_snap["dll_path"] = live.get("dll_path") or party_snap.get(
+                    "dll_path", ""
+                )
+                party_snap["dll_loaded"] = bool(live.get("dll_loaded"))
+                party_snap["probe_error"] = str(
+                    live.get("error") or party_snap.get("probe_error") or ""
+                )
+                if isinstance(live.get("party"), dict):
+                    party_snap["party"] = live["party"]
+            except Exception as exc:
+                party_snap = dict(party_snap or {})
+                party_snap.setdefault("dll_loaded", False)
+                party_snap["probe_error"] = str(exc)
+            try:
+                party_snap["profile_party_enabled"] = bool(
+                    getattr(self.controller._profile, "party_member_enabled", False)
+                )
+            except Exception:
+                pass
+            self.party_panel.apply(party_snap)
             return
 
         stamp = (

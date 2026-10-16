@@ -57,7 +57,7 @@ Engine/app/_06_party/
   manager.py        # PartyMemberManager.decide
 ```
 
-Enable (single path): Hunt tab → Party member (temp) → Start applies bag to profile.
+Enable (single path): Party tab (right of Item) → Run as party member → Start applies bag to profile. Loot: `random_loot` / `loot_role`.
 
 
 Keep an independent entry point, configuration namespace, runtime state and decision loop. Do not call the solo DecisionManager or enter its farming/retreat/shop columns. Avoid shared mutable solo decision globals. Never allow solo and member loops to control the same game session concurrently.

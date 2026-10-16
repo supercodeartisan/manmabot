@@ -1,0 +1,593 @@
+"""Party monitor UI — live etview + compact status + decisions log."""
+
+from __future__ import annotations
+
+import time
+from typing import Any, Callable
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont, QColor
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMainWindow,
+    QSizePolicy,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from session.bot_controller import BotController
+from ui_qt.debug.party_etview import PartyEtView, capture_lc_client
+
+
+def _fmt(v: Any, fallback: str = "—") -> str:
+    if v is None:
+        return fallback
+    if isinstance(v, float):
+        return f"{v:.2f}"
+    return str(v)
+
+
+def _fmt_xy(xy: Any) -> str:
+    if not xy:
+        return "—"
+    try:
+        return f"{int(xy[0])},{int(xy[1])}"
+    except Exception:
+        return str(xy)
+
+
+def _fmt_time(ts: Any) -> str:
+    try:
+        t = float(ts)
+    except (TypeError, ValueError):
+        return "—"
+    return time.strftime("%H:%M:%S", time.localtime(t))
+
+
+def _fill_members(table: QTableWidget, party: dict[str, Any] | None, farming: bool) -> None:
+    members = list((party or {}).get("members") or []) if party else []
+    table.setRowCount(len(members))
+    for row, m in enumerate(members):
+        if not isinstance(m, dict):
+            continue
+        vals = [
+            str(m.get("name") or ""),
+            "Y" if m.get("is_leader") else "",
+            _fmt(m.get("hp")),
+            _fmt(m.get("mp")),
+            _fmt(m.get("level")),
+            f"{_fmt(m.get('x'))},{_fmt(m.get('y'))}",
+            _fmt(m.get("map_id")),
+            str(m.get("guid") or ""),
+        ]
+        for col, text in enumerate(vals):
+            item = QTableWidgetItem(text)
+            if m.get("is_leader"):
+                item.setForeground(QColor("#ffffff"))
+                item.setBackground(QColor("#1a7f37" if farming else "#2563eb"))
+                font = item.font()
+                font.setBold(True)
+                item.setFont(font)
+            table.setItem(row, col, item)
+
+
+def _fill_decisions(table: QTableWidget, decisions: list[Any]) -> None:
+    rows = list(reversed(list(decisions or [])[-20:]))
+    table.setRowCount(len(rows))
+    for row, d in enumerate(rows):
+        if not isinstance(d, dict):
+            continue
+        vals = [
+            _fmt_time(d.get("at")),
+            _fmt(d.get("tick")),
+            _fmt(d.get("kind")),
+            _fmt(d.get("action")),
+            _fmt(d.get("reason")),
+            _fmt(d.get("leader_name")),
+            _fmt(d.get("leader_dist")),
+            _fmt(d.get("assist_src") or d.get("leader_source")),
+            _fmt(d.get("assist_name") or d.get("assist_track_id")),
+        ]
+        for col, text in enumerate(vals):
+            table.setItem(row, col, QTableWidgetItem(text))
+
+
+class PartyMonitorPanel(QWidget):
+    """Compact party status for Debug → Party (no etview canvas)."""
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        t: dict[str, str] | None = None,
+        show_headline: bool = True,
+    ) -> None:
+        super().__init__(parent)
+        self.t = t or {}
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self.headline = QLabel("Party")
+        font = QFont(self.headline.font())
+        font.setBold(True)
+        self.headline.setFont(font)
+        if show_headline:
+            layout.addWidget(self.headline)
+        else:
+            self.headline.hide()
+
+        self.status = QLabel("")
+        self.status.setWordWrap(True)
+        self.status.setContentsMargins(8, 6, 8, 6)
+        layout.addWidget(self.status)
+
+        # Kept for older Debug-tab tests that assert .meta / .leader / .latest
+        self.meta = self.status
+        self.leader = self.status
+        self.leader_banner = self.status
+        self.self_row = self.status
+        self.latest = self.status
+
+        self.members = QTableWidget(0, 8)
+        self.members.setHorizontalHeaderLabels(
+            ["Name", "Leader", "HP", "MP", "Lv", "XY", "Map", "GUID"]
+        )
+        self.members.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        self.members.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.members.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self.members.setMaximumHeight(140)
+        layout.addWidget(self.members)
+
+        layout.addWidget(
+            QLabel(self.t.get("party_decisions", "Last 20 decisions"))
+        )
+        self.decisions = QTableWidget(0, 9)
+        self.decisions.setHorizontalHeaderLabels(
+            [
+                "Time",
+                "Tick",
+                "Kind",
+                "Action",
+                "Reason",
+                "Leader",
+                "Dist",
+                "Src",
+                "Assist",
+            ]
+        )
+        self.decisions.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.Stretch
+        )
+        self.decisions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.decisions.setAlternatingRowColors(True)
+        layout.addWidget(self.decisions, stretch=1)
+
+    def apply(self, snap: dict[str, Any]) -> None:
+        info = _status_bits(snap)
+        self.headline.setText(info["headline"])
+        self.status.setText(info["status_text"])
+        self.status.setStyleSheet(info["status_style"])
+        _fill_members(self.members, snap.get("party") if isinstance(snap.get("party"), dict) else None, info["farming"])
+        _fill_decisions(self.decisions, list(snap.get("decisions") or []))
+
+
+def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
+    enabled = bool(snap.get("enabled"))
+    profile_on = bool(snap.get("profile_party_enabled"))
+    dll_ok = bool(snap.get("dll_loaded"))
+    probe_err = str(snap.get("probe_error") or "")
+    status = snap.get("status") or {}
+    party = snap.get("party") if isinstance(snap.get("party"), dict) else None
+    action = snap.get("action") or {}
+    self_info = snap.get("self") or {}
+    note = _fmt(snap.get("note"), "")
+    in_party = bool(party.get("in_party")) if party else False
+    count = party.get("count") if party else None
+    leader_name = ""
+    leader_block = None
+    if party:
+        leader_name = str(party.get("leader_name") or "")
+        leader_block = party.get("leader")
+        if isinstance(leader_block, dict) and not leader_name:
+            leader_name = str(leader_block.get("name") or "")
+
+    if not dll_ok or "dll_missing" in note:
+        headline = "NO PARTY READ (DLL missing)"
+    elif in_party:
+        headline = f"IN PARTY ×{_fmt(count, '?')}  leader={leader_name or '—'}"
+    elif enabled:
+        headline = "PARTY SESSION ON — not in party"
+    elif profile_on:
+        headline = "party checkbox ON — Start to run member brain"
+    else:
+        headline = "probe only (Hunt→Run as party member is off)"
+
+    leader_hp = status.get("leader_hp")
+    leader_mp = status.get("leader_mp")
+    leader_xy = "—"
+    if isinstance(leader_block, dict):
+        if leader_hp is None:
+            leader_hp = leader_block.get("hp")
+        if leader_mp is None:
+            leader_mp = leader_block.get("mp")
+        try:
+            leader_xy = f"{int(leader_block.get('x'))},{int(leader_block.get('y'))}"
+        except Exception:
+            leader_xy = "—"
+
+    seen = str(status.get("leader_name_seen") or leader_name or "").strip()
+    farming = bool(status.get("leader_farming"))
+    ent_vis = bool(status.get("leader_entity_visible"))
+    same_map = status.get("leader_same_map")
+    if same_map is None:
+        same_map = True
+    else:
+        same_map = bool(same_map)
+    local_mid = status.get("local_map_id")
+    leader_mid = status.get("leader_map_id")
+    tgt = str(status.get("leader_target_name") or status.get("assist_name") or "").strip()
+    if farming and tgt:
+        activity = f"ATK→{tgt}"
+    elif farming:
+        activity = "FARMING"
+    elif ent_vis:
+        activity = "IN_UI"
+    elif seen or in_party:
+        activity = "OFF_UI"
+    else:
+        activity = "NO LOCK"
+    map_tag = "SAME_MAP" if same_map else "OTHER_MAP"
+    if local_mid is None or leader_mid is None:
+        map_tag = "MAP?"
+
+    kind = _fmt(status.get("last_kind"))
+    reason = _fmt(status.get("last_reason"))
+    status_text = (
+        f"LEADER  {seen or '—'}  [{activity}|{map_tag}]  "
+        f"hp={_fmt(leader_hp)}  mp={_fmt(leader_mp)}  xy={leader_xy}  "
+        f"dist={_fmt(status.get('leader_dist'))}  "
+        f"maps={_fmt(local_mid)}→{_fmt(leader_mid)}  "
+        f"assist={_fmt(status.get('assist_src'))}:{_fmt(status.get('assist_name') or status.get('assist_track_id'))}\n"
+        f"SELF  xy={_fmt_xy(self_info.get('xy'))}  "
+        f"hp={_fmt(self_info.get('hp'))}  mp={_fmt(self_info.get('mp'))}  "
+        f"kind={kind}  action={_fmt(action.get('name'))}  "
+        f"why={reason}  "
+        f"dll={'OK' if dll_ok else 'MISSING'}  "
+        f"bot={_fmt(snap.get('bot_state'), '?')}  "
+        f"probe={probe_err or 'ok'}"
+    )
+    if farming:
+        style = "background:#1a7f37; color:#ffffff; border-radius:4px;"
+    elif ent_vis:
+        style = "background:#2563eb; color:#ffffff; border-radius:4px;"
+    elif not same_map and (seen or in_party):
+        style = "background:#b45309; color:#ffffff; border-radius:4px;"
+    elif seen or in_party:
+        style = "background:#876800; color:#ffffff; border-radius:4px;"
+    else:
+        style = "background:#6b7280; color:#ffffff; border-radius:4px;"
+    # Tests look for these substrings on .meta / .leader
+    status_text = (
+        f"dll={'OK' if dll_ok else 'MISSING'}  in_party={in_party}  "
+        f"leader={leader_name or seen or '—'}\n"
+        + status_text
+    )
+    return {
+        "headline": headline,
+        "status_text": status_text,
+        "status_style": style,
+        "farming": farming,
+        "seen": seen,
+        "leader_name": leader_name,
+        "leader_hp": leader_hp,
+        "leader_mp": leader_mp,
+        "leader_xy": leader_xy,
+        "activity": activity,
+        "map_tag": map_tag,
+        "tgt": tgt,
+        "kind": kind,
+        "reason": reason,
+        "dll_ok": dll_ok,
+        "in_party": in_party,
+        "same_map": same_map,
+        "ent_vis": ent_vis,
+    }
+
+
+class PartyMonitorWindow(QMainWindow):
+    """Live etview (left) + decisions log (right) + compact player status."""
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        controller: BotController,
+        t: dict[str, str] | None = None,
+        on_close: Callable[[], None] | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.controller = controller
+        self._on_close = on_close
+        self._closing = False
+        self._capture_tick = 0
+        self._sized_to_client = False
+        self.t = t or {}
+        self.setWindowTitle(self.t.get("party_monitor_title", "Party etview"))
+        self.resize(1200, 720)
+        self.setMinimumSize(900, 520)
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+
+        top = QHBoxLayout()
+        self.capture_bg = QCheckBox(
+            self.t.get("etview_capture", "Game capture (BitBlt)")
+        )
+        self.capture_bg.setChecked(True)
+        top.addWidget(self.capture_bg)
+        top.addStretch(1)
+        self.topmost = QCheckBox(self.t.get("always_on_top", "Always on top"))
+        self.topmost.setChecked(True)
+        self.topmost.toggled.connect(self._on_topmost)
+        top.addWidget(self.topmost)
+        layout.addLayout(top)
+
+        main = QSplitter(Qt.Orientation.Horizontal)
+
+        # ---- left: live show + status + members ----
+        left = QWidget()
+        left_l = QVBoxLayout(left)
+        left_l.setContentsMargins(0, 0, 0, 0)
+        left_l.setSpacing(4)
+
+        self.etview = PartyEtView()
+        left_l.addWidget(self.etview, stretch=1)
+
+        self.status = QLabel("")
+        self.status.setWordWrap(True)
+        self.status.setContentsMargins(8, 6, 8, 6)
+        self.status.setFixedHeight(72)
+        self.status.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
+        self.status.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        status_font = QFont(self.status.font())
+        status_font.setPointSize(max(9, status_font.pointSize()))
+        status_font.setBold(True)
+        self.status.setFont(status_font)
+        left_l.addWidget(self.status)
+
+        self.members = QTableWidget(0, 8)
+        self.members.setHorizontalHeaderLabels(
+            ["Name", "L", "HP", "MP", "Lv", "XY", "Map", "GUID"]
+        )
+        self.members.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        self.members.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.members.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        # Fixed height so party row count cannot thrash the etview area.
+        self.members.setFixedHeight(110)
+        self.members.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.members.verticalHeader().setVisible(False)
+        left_l.addWidget(self.members)
+        main.addWidget(left)
+
+        # ---- right: 20 decision logs ----
+        right = QWidget()
+        right_l = QVBoxLayout(right)
+        right_l.setContentsMargins(0, 0, 0, 0)
+        right_l.setSpacing(4)
+        right_l.addWidget(
+            QLabel(self.t.get("party_decisions", "Last 20 decisions"))
+        )
+        self.decisions = QTableWidget(0, 9)
+        self.decisions.setHorizontalHeaderLabels(
+            [
+                "Time",
+                "Tick",
+                "Kind",
+                "Action",
+                "Reason",
+                "Leader",
+                "Dist",
+                "Src",
+                "Assist",
+            ]
+        )
+        self.decisions.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.Stretch
+        )
+        self.decisions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.decisions.setAlternatingRowColors(True)
+        self.decisions.verticalHeader().setVisible(False)
+        right_l.addWidget(self.decisions, stretch=1)
+        main.addWidget(right)
+
+        self._splitter = main
+        main.setStretchFactor(0, 3)
+        main.setStretchFactor(1, 2)
+        main.setSizes([780, 400])
+        layout.addWidget(main, stretch=1)
+
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+
+        self._poll = QTimer(self)
+        self._poll.timeout.connect(self._on_poll)
+        self._poll.start(100)
+        self._on_poll()
+
+    def _on_topmost(self, checked: bool) -> None:
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, bool(checked))
+        self.show()
+
+    def _on_poll(self) -> None:
+        if self._closing:
+            return
+        try:
+            snap = self.controller.party_monitor_snapshot()
+        except Exception as exc:
+            snap = {"probe_error": f"snapshot failed: {exc}"}
+        try:
+            from session.party_probe import probe_party_live
+
+            live = probe_party_live()
+            snap = dict(snap or {})
+            snap["dll_path"] = live.get("dll_path") or snap.get("dll_path", "")
+            snap["dll_loaded"] = bool(live.get("dll_loaded"))
+            snap["probe_error"] = str(
+                live.get("error") or snap.get("probe_error") or ""
+            )
+            if isinstance(live.get("party"), dict):
+                snap["party"] = live["party"]
+        except Exception as exc:
+            snap = dict(snap or {})
+            snap.setdefault("dll_loaded", False)
+            snap["probe_error"] = str(exc)
+
+        info = _status_bits(snap)
+        status = snap.get("status") if isinstance(snap.get("status"), dict) else {}
+        self.status.setText(
+            f"{info['headline']}\n"
+            f"LEADER  {info['seen'] or '—'}  [{info['activity']}|{info['map_tag']}]  "
+            f"hp={_fmt(info['leader_hp'])}  mp={_fmt(info['leader_mp'])}  "
+            f"xy={info['leader_xy']}  dist={_fmt(status.get('leader_dist'))}  "
+            f"tgt={info['tgt'] or '—'}  "
+            f"kind={info['kind']}  why={info.get('reason') or '—'}"
+        )
+        self.status.setStyleSheet(info["status_style"])
+        party = snap.get("party") if isinstance(snap.get("party"), dict) else None
+        _fill_members(self.members, party, info["farming"])
+        _fill_decisions(self.decisions, list(snap.get("decisions") or []))
+        self._refresh_etview(snap, info)
+
+    def _refresh_etview(self, snap: dict[str, Any], info: dict[str, Any]) -> None:
+        status = snap.get("status") if isinstance(snap.get("status"), dict) else {}
+        party = snap.get("party") if isinstance(snap.get("party"), dict) else {}
+        leader_block = (
+            party.get("leader") if isinstance(party.get("leader"), dict) else {}
+        )
+        leader_name = str(
+            status.get("leader_name_seen")
+            or party.get("leader_name")
+            or leader_block.get("name")
+            or info.get("seen")
+            or ""
+        )
+        leader_guid = str(
+            status.get("leader_guid") or leader_block.get("guid") or ""
+        )
+        target_name = str(
+            status.get("leader_target_name") or status.get("assist_name") or ""
+        )
+        target_guid = str(status.get("leader_target_guid") or "")
+
+        et: dict[str, Any] = {}
+        try:
+            from session.etview_probe import probe_etview_live
+
+            et = probe_etview_live()
+        except Exception as exc:
+            et = {"error": str(exc), "entities": [], "attacks": []}
+
+        bg = None
+        self._capture_tick += 1
+        if self.capture_bg.isChecked() and (self._capture_tick % 2) == 0:
+            try:
+                bg = capture_lc_client()
+            except Exception:
+                bg = None
+        elif not self.capture_bg.isChecked():
+            self.etview.clear_background()
+
+        n_ent = len(et.get("entities") or [])
+        n_atk = len(et.get("attacks") or [])
+        err = str(et.get("error") or "").strip()
+        hud = f"etview  ents={n_ent}  atk={n_atk}"
+        if leader_name:
+            hud += f"  leader={leader_name}"
+        if target_name:
+            hud += f"  tgt={target_name}"
+        if err:
+            hud += f"  ({err})"
+
+        client_w = float(et.get("client_w") or 800)
+        client_h = float(et.get("client_h") or 600)
+        self.etview.set_frame(
+            entities=list(et.get("entities") or []),
+            attacks=list(et.get("attacks") or []),
+            client_w=client_w,
+            client_h=client_h,
+            leader_name=leader_name,
+            leader_guid=leader_guid,
+            target_name=target_name,
+            target_guid=target_guid,
+            status=hud,
+            background=bg,
+        )
+        # Prefer BitBlt dims when present (set_frame already synced etview).
+        cw, ch = self.etview.client_size()
+        self._maybe_size_to_client(cw, ch)
+
+    def _maybe_size_to_client(self, client_w: float, client_h: float) -> None:
+        """Fit the window once to the game client aspect; never thrash on poll."""
+        if self._sized_to_client or self._closing:
+            return
+        cw = max(1.0, float(client_w or 0))
+        ch = max(1.0, float(client_h or 0))
+        # Wait for a real capture / probe size (skip default 800x600 placeholder).
+        if cw < 2 or ch < 2:
+            return
+        is_default = abs(cw - 800.0) < 0.5 and abs(ch - 600.0) < 0.5
+        if is_default and not self.etview.has_background():
+            return
+
+        left_w = 780
+        right_w = 400
+        margin_x = 16  # layout margins
+        margin_y = 16
+        top_bar = 28
+        status_h = 72
+        members_h = 110
+        spacing = 4 + 6 + 4  # left column + root spacing ballpark
+        etview_h = max(320, int(round(left_w * ch / cw)))
+        win_w = left_w + right_w + margin_x + 8  # splitter handle slack
+        win_h = top_bar + etview_h + status_h + members_h + spacing + margin_y
+        win_w = max(900, min(1800, win_w))
+        win_h = max(520, min(1200, win_h))
+        self._sized_to_client = True
+        self.resize(win_w, win_h)
+        splitter = getattr(self, "_splitter", None)
+        if splitter is not None:
+            splitter.setSizes([left_w, right_w])
+
+    def closeEvent(self, event) -> None:
+        if self._closing:
+            event.accept()
+            return
+        self._closing = True
+        self._poll.stop()
+        callback = self._on_close
+        event.accept()
+        if callback is not None:
+            callback()

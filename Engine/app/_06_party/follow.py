@@ -1,4 +1,4 @@
-"""Pure follow geometry: hysteresis kind + approach tile (never on leader)."""
+"""Pure follow geometry: travel/stop bands + approach tile (never on leader)."""
 from __future__ import annotations
 
 import random
@@ -8,23 +8,31 @@ from typing import Callable, Iterable, Optional
 def follow_kind(
     distance: int,
     *,
-    follow_start: int,
-    follow_stop: int,
-    chasing: bool,
+    follow_tiles: int = 8,
+    stop_tiles: int = 2,
+    leader_farming: bool = False,
+    leader_stopped: bool = False,
+    chasing: bool = False,
+    **_legacy: object,
 ) -> tuple[str, bool]:
-    """Return ``(kind, chasing)`` where kind is follow|near.
+    """Return ``(band, chasing)`` where band is follow|near.
 
-    ``follow`` while far or still closing the hysteresis band.
-    ``near`` when within ``follow_stop`` (eligible for assist/hold).
+    Travel: chase only when farther than ``follow_tiles``.
+    Stopped/idle: tighten until within ``stop_tiles``.
+    Combat (``leader_farming``): caller handles assist/close-in; here ``near``
+    means within the travel leash so policy can assist.
     """
+    del chasing, _legacy
     dist = int(distance)
-    start = max(1, int(follow_start))
-    stop = max(0, min(start, int(follow_stop)))
-    if chasing:
-        if dist > stop:
+    follow = max(1, int(follow_tiles))
+    stop = max(0, min(follow, int(stop_tiles)))
+    if leader_farming:
+        if dist > follow:
             return "follow", True
         return "near", False
-    if dist >= start:
+    if dist > follow:
+        return "follow", True
+    if leader_stopped and dist > stop:
         return "follow", True
     return "near", False
 
@@ -57,8 +65,13 @@ def choose_approach_tile(
     previous: Optional[tuple[int, int]] = None,
     *,
     exclude: Iterable[tuple[int, int]] = (),
+    prefer_near: Optional[tuple[int, int]] = None,
 ) -> Optional[tuple[int, int]]:
-    """Walkable tile near leader; never the leader's own cell."""
+    """Walkable tile near target; never the target's own cell.
+
+    Prefers ``previous`` when still valid. Otherwise picks the candidate
+    closest to ``prefer_near`` (usually the player) for smoother paths.
+    """
     tx, ty = int(target[0]), int(target[1])
     blocked = {(int(x), int(y)) for x, y in occupied}
     blocked.add((tx, ty))
@@ -80,6 +93,17 @@ def choose_approach_tile(
     candidates = [tile for tile in tiles_in_radius(tx, ty, radius) if ok(tile)]
     if not candidates:
         return None
+    if prefer_near is not None:
+        px, py = int(prefer_near[0]), int(prefer_near[1])
+        return min(
+            candidates,
+            key=lambda t: (
+                max(abs(int(t[0]) - px), abs(int(t[1]) - py)),
+                abs(int(t[0]) - tx) + abs(int(t[1]) - ty),
+                int(t[0]),
+                int(t[1]),
+            ),
+        )
     return rng.choice(candidates)
 
 

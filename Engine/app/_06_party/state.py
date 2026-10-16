@@ -20,10 +20,25 @@ class MemberRuntime:
     leader_hp: Optional[int] = None
     leader_mp: Optional[int] = None
     leader_map_id: Optional[int] = None
+    leader_ent: str = ""
+    leader_guid: str = ""
+    leader_track_id: Optional[int] = None
+    leader_farming: bool = False
+    leader_entity_visible: bool = False
+    leader_same_map: bool = True
+    leader_target_name: str = ""
+    leader_target_guid: str = ""
+    leader_target_ent: str = ""
     assist_track_id: Optional[int] = None
+    assist_src: str = ""
+    assist_name: str = ""
     tick: int = 0
     # Optional mapId from caller (MapSubsystem); None = unknown / skip check.
     local_map_id: Optional[int] = None
+    # Last good PartySubsystem pose (brief glitch / 0,0 read → keep following).
+    sticky_leader_tile: Optional[tuple[int, int]] = None
+    sticky_leader_map_id: Optional[int] = None
+    sticky_leader_pose_at: float = 0.0
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 
@@ -40,7 +55,19 @@ class MemberRuntime:
             "leader_hp": self.leader_hp,
             "leader_mp": self.leader_mp,
             "leader_map_id": self.leader_map_id,
+            "leader_ent": self.leader_ent,
+            "leader_guid": self.leader_guid,
+            "leader_track_id": self.leader_track_id,
+            "leader_farming": self.leader_farming,
+            "leader_entity_visible": self.leader_entity_visible,
+            "leader_same_map": self.leader_same_map,
+            "leader_in_ui": self.leader_entity_visible,
+            "leader_target_name": self.leader_target_name,
+            "leader_target_guid": self.leader_target_guid,
+            "leader_target_ent": self.leader_target_ent,
             "assist_track_id": self.assist_track_id,
+            "assist_src": self.assist_src,
+            "assist_name": self.assist_name,
             "tick": self.tick,
             "local_map_id": self.local_map_id,
         }

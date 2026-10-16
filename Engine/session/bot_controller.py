@@ -135,6 +135,8 @@ class BotController:
         self._debug_lock = threading.Lock()
         self._debug_snapshot: dict = {}
         self._debug_watchers = 0
+        # Temp party monitor UI — independent of debug watchers.
+        self._party_monitor: dict = {}
         # Read-only copy of the live routine cursor for the schedule list.
         self._routine_clock: dict | None = None
         self._routine_clock_gen = 0
@@ -269,6 +271,108 @@ class BotController:
             worker_alive=self._thread is not None and self._thread.is_alive(),
             arming=False,
         )
+
+    def party_monitor_snapshot(self) -> dict:
+        """Party monitor payload: live DLL party + last member decisions."""
+        with self._debug_lock:
+            snap = dict(self._party_monitor) if self._party_monitor else {}
+        snap.setdefault("bot_state", self.state.value)
+        snap.setdefault("bot_reason", self.reason)
+        snap.setdefault(
+            "worker_alive",
+            self._thread is not None and self._thread.is_alive(),
+        )
+        # Live party read every UI poll — do not wait for Start / party mode.
+        try:
+            from session.party_probe import probe_party_live
+
+            live = probe_party_live()
+            snap["dll_path"] = live.get("dll_path") or ""
+            snap["dll_loaded"] = bool(live.get("dll_loaded"))
+            snap["probe_error"] = str(live.get("error") or "")
+            if isinstance(live.get("party"), dict):
+                snap["party"] = live["party"]
+            elif "party" not in snap:
+                snap["party"] = None
+            if live.get("error") and not snap.get("note"):
+                snap["note"] = "probe"
+        except Exception as exc:
+            snap.setdefault("dll_loaded", False)
+            snap["probe_error"] = str(exc)
+        # Profile flag so UI shows whether party-member mode is armed.
+        try:
+            snap["profile_party_enabled"] = bool(
+                getattr(self._profile, "party_member_enabled", False)
+            )
+        except Exception:
+            snap["profile_party_enabled"] = False
+        return snap
+
+    def _publish_party_monitor(
+        self,
+        *,
+        party_brain,
+        world,
+        action=None,
+        note: str = "",
+    ) -> None:
+        """Always publish while party mode is on (does not need debug watchers)."""
+        try:
+            status = party_brain.status() if party_brain is not None else {}
+            party = getattr(world, "last_party", None) if world is not None else None
+            if isinstance(party, dict):
+                party = dict(party)
+            else:
+                party = None
+            action_name = ""
+            target_id = None
+            if action is not None:
+                raw = getattr(action, "action", None)
+                action_name = getattr(raw, "value", None) or str(raw or "")
+                target_id = getattr(action, "target_id", None)
+            player = getattr(world, "player", None) if world is not None else None
+            self_xy = None
+            self_hp = None
+            self_mp = None
+            # mapId only from MapSubsystem path already stored on party runtime.
+            self_map = status.get("local_map_id")
+            if player is not None:
+                try:
+                    self_hp = getattr(player, "hp", None)
+                    self_mp = getattr(player, "mp", None)
+                except Exception:
+                    pass
+                pos = getattr(player, "position", None)
+                if pos is not None:
+                    try:
+                        self_xy = (int(pos.x), int(pos.y))
+                    except Exception:
+                        pass
+            snap = {
+                "enabled": party_brain is not None,
+                "note": str(note or ""),
+                "updated_at": time.time(),
+                "status": status,
+                "party": party,
+                "decisions": list(status.get("decision_history") or []),
+                "action": {
+                    "name": str(action_name),
+                    "target_id": target_id,
+                },
+                "self": {
+                    "xy": self_xy,
+                    "hp": self_hp,
+                    "mp": self_mp,
+                    "map_id": self_map,
+                },
+                "bot_state": self.state.value,
+                "bot_reason": self.reason,
+                "worker_alive": self._thread is not None and self._thread.is_alive(),
+            }
+            with self._debug_lock:
+                self._party_monitor = snap
+        except Exception:
+            pass
 
     def _publish_debug(
         self,
@@ -930,14 +1034,20 @@ class BotController:
         party_cfg = PartyMemberConfig.from_mapping(
             {
                 "enabled": bool(getattr(profile, "party_member_enabled", False)),
-                "leader_name": str(
-                    getattr(profile, "party_leader_name", "") or ""
-                ).strip(),
-                "follow_start_tiles": int(
-                    getattr(profile, "party_follow_start_tiles", 8)
+                # Leader identity comes from party_listen memory after join.
+                "follow_tiles": int(
+                    getattr(
+                        profile,
+                        "party_follow_tiles",
+                        getattr(profile, "party_follow_start_tiles", 8),
+                    )
                 ),
-                "follow_stop_tiles": int(
-                    getattr(profile, "party_follow_stop_tiles", 5)
+                "stop_tiles": int(
+                    getattr(
+                        profile,
+                        "party_stop_tiles",
+                        getattr(profile, "party_follow_stop_tiles", 2),
+                    )
                 ),
                 "assist_leash_tiles": int(
                     getattr(profile, "party_assist_leash_tiles", 10)
@@ -948,9 +1058,21 @@ class BotController:
                 "potion_hp_ratio": float(
                     getattr(profile, "party_potion_hp_ratio", 0.45)
                 ),
+                "random_loot": bool(
+                    getattr(profile, "party_random_loot", False)
+                ),
+                "loot_role": str(
+                    getattr(profile, "party_loot_role", "none") or "none"
+                ),
             }
         )
-        party_mode = bool(party_cfg.enabled and party_cfg.leader_name)
+        party_mode = bool(party_cfg.enabled)
+        self.log(
+            "Party gate: "
+            f"profile.party_member_enabled="
+            f"{bool(getattr(profile, 'party_member_enabled', False))} "
+            f"→ party_mode={party_mode}"
+        )
         log_cfg = (config.get("logging") or {}) if isinstance(config, dict) else {}
         log_level = str(log_cfg.get("level") or "INFO")
         session_log = configure_bot_log(
@@ -1222,13 +1344,35 @@ class BotController:
         if party_mode:
             party_brain = PartyMemberManager(party_cfg)
             party_brain.set_world_origin(world_origin)
+            party_brain.set_nav_blackboard(decision.blackboard)
+            self._publish_party_monitor(
+                party_brain=party_brain,
+                world=world,
+                action=None,
+                note="party_armed",
+            )
             self.log(
-                f"Party member mode — follow leader "
-                f"{party_cfg.leader_name!r} "
-                f"(start={party_cfg.follow_start_tiles} "
-                f"stop={party_cfg.follow_stop_tiles})"
+                "Party member mode — follow memory party leader "
+                f"(follow>{party_cfg.follow_tiles} "
+                f"stop<={party_cfg.stop_tiles}); "
+                "off-UI chase + other-map join"
             )
         else:
+            with self._debug_lock:
+                self._party_monitor = {
+                    "enabled": False,
+                    "note": "solo",
+                    "updated_at": time.time(),
+                    "status": {},
+                    "party": None,
+                    "decisions": [],
+                    "action": {"name": "", "target_id": None},
+                    "self": {},
+                    "bot_state": self.state.value,
+                    "bot_reason": self.reason,
+                    "worker_alive": True,
+                }
+
             try:
                 from app._04_decision.world_nav import (
                     begin_world_nav,
@@ -1283,6 +1427,43 @@ class BotController:
         buf0 = sensors.capture_tick(
             force_inventory=True, hotbar=True, party=party_mode
         )
+        # Party init is lazy inside capture_tick — surface those errors now.
+        for err in list(sensors.buffer.errors):
+            self.log(f"Perception sensor: {err}")
+        if party_mode:
+            from app._01_perception.party_listen_reader import default_dll_path
+
+            party_reader = getattr(sensors, "_party", None)
+            dll_ok = bool(
+                party_reader is not None
+                and getattr(party_reader, "dll_loaded", False)
+            )
+            if not dll_ok:
+                dll_name = default_dll_path().name
+                self.log(
+                    f"Party member mode BLOCKED: {dll_name} missing. "
+                    "Build Engine/analysis/party/build_party_listen_dll.bat "
+                    "(needs VS Build Tools with VCTools), then restart."
+                )
+                self._publish_party_monitor(
+                    party_brain=party_brain,
+                    world=world,
+                    action=None,
+                    note=f"dll_missing:{dll_name}",
+                )
+            elif not buf0.party_ok:
+                self.log(
+                    "Party member mode on, but party memory read failed "
+                    "(join a party in-game; check signeddrv / LC attach)."
+                )
+            else:
+                snap = buf0.party if isinstance(buf0.party, dict) else {}
+                self.log(
+                    "Party memory ok "
+                    f"in_party={bool(snap.get('in_party'))} "
+                    f"count={snap.get('count')} "
+                    f"leader={snap.get('leader_name') or '—'}"
+                )
         apply_perception_buffer(world, decision.blackboard, buf0, content=None)
         if sensors.inventory_sweep is None:
             self._log_ui("inventory_setup_failed", error="inventory DLL unavailable")
@@ -1555,17 +1736,19 @@ class BotController:
                         )
                         if sync_msg:
                             self.log(sync_msg)
+                        # Party same-map / join-map needs MapSubsystem id every tick,
+                        # even when world-origin snap is briefly missing.
+                        if party_brain is not None:
+                            try:
+                                party_brain.set_local_map_id(int(mid))
+                            except (TypeError, ValueError):
+                                pass
                         if isinstance(applied.live_map_snap, dict):
                             wo = world_origin_from_snapshot(applied.live_map_snap)
                             if wo is not None:
                                 decision.blackboard.world_origin = wo
                                 if party_brain is not None:
                                     party_brain.set_world_origin(wo)
-                                    if mid is not None:
-                                        try:
-                                            party_brain.set_local_map_id(int(mid))
-                                        except (TypeError, ValueError):
-                                            pass
                                 session_origin_ready = True
                     except Exception as sync_exc:
                         self.log(f"Live map pack sync failed: {sync_exc}")
@@ -1609,14 +1792,24 @@ class BotController:
                     )
                     continue
 
-                # Scroll land: wait until live xy is within 4 tiles of the spot.
-                if party_brain is None:
+                # Scroll land: solo always; party only while joining the leader's map.
+                party_joining = (
+                    party_brain is not None and party_brain.joining_map()
+                )
+                if party_brain is None or party_joining:
                     apply_talking_scroll_arrival(
                         decision.blackboard, config, state=world
                     )
 
                 if party_brain is not None:
                     action = party_brain.decide(world)
+                    party_joining = party_brain.joining_map()
+                    self._publish_party_monitor(
+                        party_brain=party_brain,
+                        world=world,
+                        action=action,
+                        note="decide",
+                    )
                 else:
                     action = decision.decide(world)
                 t_decide = time.perf_counter()
@@ -1637,23 +1830,16 @@ class BotController:
                         self.log(f"World nav pause check: {gate_exc}")
                 self.note_shop_action(action)
                 try:
+                    # Party uses the same blackboard for heal/buff cooldowns,
+                    # potion sides, and WORLD_NAV join — never solo mode columns.
                     executor.execute(
                         world,
                         action,
                         bounds=content_bounds,
-                        side_intents=(
-                            []
-                            if party_brain is not None
-                            else list(
-                                getattr(decision.blackboard, "side_intents", None)
-                                or []
-                            )
+                        side_intents=list(
+                            getattr(decision.blackboard, "side_intents", None) or []
                         ),
-                        blackboard=(
-                            None
-                            if party_brain is not None
-                            else decision.blackboard
-                        ),
+                        blackboard=decision.blackboard,
                     )
                 finally:
                     self.note_shop_action(None)
@@ -1676,6 +1862,21 @@ class BotController:
                         )
                     except Exception as gate_exc:
                         self.log(f"World nav gate result: {gate_exc}")
+                # Party join-map may use NPC teleporter shop behaviors.
+                if party_joining and getattr(action, "shop_behavior_id", None):
+                    try:
+                        from app._04_decision.shops import is_teleporter_behavior
+                        from app._04_decision.world_nav import (
+                            apply_npc_teleporter_result,
+                        )
+
+                        bid = str(action.shop_behavior_id or "")
+                        if is_teleporter_behavior(bid):
+                            apply_npc_teleporter_result(
+                                decision.blackboard, behavior_id=bid
+                            )
+                    except Exception as tp_exc:
+                        self.log(f"Party join teleporter result: {tp_exc}")
                 trip_now = bool(decision.blackboard.scratch.get("shop_trip"))
                 if trip_now and not shop_bag_armed:
                     bag_after_shop = True
@@ -1725,6 +1926,14 @@ class BotController:
             with self._debug_lock:
                 if self._routine_clock_gen == routine_clock_gen:
                     self._routine_clock = None
+                if party_brain is not None:
+                    # Keep last decisions visible after stop; mark session ended.
+                    ended = dict(self._party_monitor) if self._party_monitor else {}
+                    ended["enabled"] = True
+                    ended["note"] = "stopped"
+                    ended["updated_at"] = time.time()
+                    ended["worker_alive"] = False
+                    self._party_monitor = ended
             self._stop_vision_preview()
 
         try:

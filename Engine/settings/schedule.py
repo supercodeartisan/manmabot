@@ -138,12 +138,20 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "member_enabled": bool(
                 getattr(profile, "party_member_enabled", False)
             ),
-            "leader_name": str(getattr(profile, "party_leader_name", "") or ""),
-            "follow_start_tiles": int(
-                getattr(profile, "party_follow_start_tiles", 8)
+            "leader_name": "",
+            "follow_tiles": int(
+                getattr(
+                    profile,
+                    "party_follow_tiles",
+                    getattr(profile, "party_follow_start_tiles", 8),
+                )
             ),
-            "follow_stop_tiles": int(
-                getattr(profile, "party_follow_stop_tiles", 5)
+            "stop_tiles": int(
+                getattr(
+                    profile,
+                    "party_stop_tiles",
+                    getattr(profile, "party_follow_stop_tiles", 2),
+                )
             ),
             "assist_leash_tiles": int(
                 getattr(profile, "party_assist_leash_tiles", 10)
@@ -152,6 +160,8 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "potion_hp_ratio": float(
                 getattr(profile, "party_potion_hp_ratio", 0.45)
             ),
+            "random_loot": bool(getattr(profile, "party_random_loot", False)),
+            "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
         },
         "recovery": {
             "use_hp_potion": True,

@@ -73,6 +73,11 @@ class MageCombatStrategy:
             sticky=bool(mid_act),
         ):
             executor.last_cursor_reject_target_id = action.target_id
+            # Skill entered aim mode but no monster cursor — Esc cancels thrash.
+            try:
+                executor.keyboard.press("esc")
+            except Exception:
+                pass
             return  # verify failed — skip click only
         executor._mage_cast_gap = executor._sample_mage_gap()
         executor.last_cast_target_id = action.target_id

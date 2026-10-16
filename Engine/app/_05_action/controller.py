@@ -592,7 +592,7 @@ class ActionExecutor:
         if action.destination is None:
             return
         from app._05_action.cursor_catalog import CursorCategory
-        from app._05_action.cursor_verify import travel_click
+        from app._05_action.cursor_verify import cancel_spell_aim, travel_click
         from app._05_action.travel_click import (
             content_destinations_ring,
             relative_tile_of_content,
@@ -602,23 +602,11 @@ class ActionExecutor:
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
-        for content in dests:
-            x, y = self._screen_point(content.x, content.y, bounds)
-            probes += 1
-            if travel_click(self, x, y):
-                self.last_travel_click_relative = relative_tile_of_content(content)
-                match = getattr(self, "last_cursor_match", None)
-                label = str(getattr(match, "label", "") or "")
-                self.last_travel_cursor_stats = {
-                    "ok": True,
-                    "probes": probes,
-                    "dialog_seen": dialog_seen,
-                    "labels_seen": seen_labels,
-                    "click_label": label,
-                    "intent_reason": str(getattr(action, "reason", "") or ""),
-                }
-                return
-            match = getattr(self, "last_cursor_match", None)
+        spell_cancel_done = False
+        intent_reason = str(getattr(action, "reason", "") or "")
+
+        def _note_label(match: object) -> str:
+            nonlocal dialog_seen
             label = str(getattr(match, "label", "") or "")
             if label:
                 if label not in seen_labels:
@@ -626,6 +614,48 @@ class ActionExecutor:
                 category = getattr(match, "category", None)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
+            return label
+
+        def _travel_ok(content: object, *, probes_n: int) -> bool:
+            match = getattr(self, "last_cursor_match", None)
+            label = str(getattr(match, "label", "") or "")
+            self.last_travel_click_relative = relative_tile_of_content(content)
+            self.last_travel_cursor_stats = {
+                "ok": True,
+                "probes": probes_n,
+                "dialog_seen": dialog_seen,
+                "labels_seen": seen_labels,
+                "click_label": label,
+                "intent_reason": intent_reason,
+            }
+            return True
+
+        for content in dests:
+            x, y = self._screen_point(content.x, content.y, bounds)
+            probes += 1
+            if travel_click(self, x, y):
+                _travel_ok(content, probes_n=probes)
+                return
+            match = getattr(self, "last_cursor_match", None)
+            label = _note_label(match) if match is not None else ""
+            category = getattr(match, "category", None) if match is not None else None
+            # Leftover mage/buff cast circle: Esc once, retry this tile.
+            if (
+                not spell_cancel_done
+                and (
+                    label.startswith("spell")
+                    or category is CursorCategory.SPELL
+                )
+            ):
+                cancel_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
+                spell_cancel_done = True
+                probes += 1
+                if travel_click(self, x, y):
+                    _travel_ok(content, probes_n=probes)
+                    return
+                match = getattr(self, "last_cursor_match", None)
+                if match is not None:
+                    _note_label(match)
         self.last_travel_click_failed = True
         self.last_travel_cursor_stats = {
             "ok": False,
@@ -633,7 +663,7 @@ class ActionExecutor:
             "dialog_seen": dialog_seen,
             "labels_seen": seen_labels,
             "last_reject": str(self.last_cursor_reject_reason or ""),
-            "intent_reason": str(getattr(action, "reason", "") or ""),
+            "intent_reason": intent_reason,
         }
 
     def _loot(

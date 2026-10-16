@@ -45,6 +45,10 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     changed: list[str] = []
 
     def set_value(name: str, value: Any) -> None:
+        # Only Profile-backed knobs (see docstring). Skip keys from newer bags
+        # that this Profile build does not define yet.
+        if not hasattr(profile, name):
+            return
         if getattr(profile, name) != value:
             setattr(profile, name, value)
             changed.append(name)
@@ -154,37 +158,41 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("haste_potion_box", haste_box)
     set_value("haste_potion_key", haste_key)
 
-    # Party member (UI → profile only). Empty leader name forces off.
-    party_on = bool(party.get("member_enabled", getattr(profile, "party_member_enabled", False)))
-    party_leader = str(
-        party.get("leader_name", getattr(profile, "party_leader_name", "")) or ""
-    ).strip()
-    if not party_leader:
-        party_on = False
+    # Party member (UI → profile). Leader comes from party_listen after join.
+    party_on = bool(
+        party.get("member_enabled", getattr(profile, "party_member_enabled", False))
+    )
     set_value("party_member_enabled", party_on)
-    set_value("party_leader_name", party_leader)
-    follow_start = _int_range(
-        party.get(
+    set_value("party_leader_name", "")
+    follow_raw = party.get("follow_tiles")
+    if follow_raw is None:
+        follow_raw = party.get(
             "follow_start_tiles",
-            getattr(profile, "party_follow_start_tiles", 8),
-        ),
-        8,
-        1,
-        40,
-    )
-    follow_stop = _int_range(
-        party.get(
+            getattr(
+                profile,
+                "party_follow_tiles",
+                getattr(profile, "party_follow_start_tiles", 8),
+            ),
+        )
+    follow_tiles = _int_range(follow_raw, 8, 1, 40)
+    stop_raw = party.get("stop_tiles")
+    if stop_raw is None:
+        stop_raw = party.get(
             "follow_stop_tiles",
-            getattr(profile, "party_follow_stop_tiles", 5),
-        ),
-        5,
-        0,
-        40,
-    )
-    if follow_stop > follow_start:
-        follow_stop = follow_start
-    set_value("party_follow_start_tiles", follow_start)
-    set_value("party_follow_stop_tiles", follow_stop)
+            getattr(
+                profile,
+                "party_stop_tiles",
+                getattr(profile, "party_follow_stop_tiles", 2),
+            ),
+        )
+    stop_tiles = _int_range(stop_raw, 2, 0, 40)
+    if stop_tiles > follow_tiles:
+        stop_tiles = follow_tiles
+    set_value("party_follow_tiles", follow_tiles)
+    set_value("party_stop_tiles", stop_tiles)
+    # Keep legacy fields mirrored so older readers stay consistent.
+    set_value("party_follow_start_tiles", follow_tiles)
+    set_value("party_follow_stop_tiles", stop_tiles)
     set_value(
         "party_assist_leash_tiles",
         _int_range(
@@ -222,6 +230,16 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     if potion_ratio > 1.0:
         potion_ratio = potion_ratio / 100.0
     set_value("party_potion_hp_ratio", max(0.05, min(0.95, potion_ratio)))
+    set_value(
+        "party_random_loot",
+        bool(party.get("random_loot", getattr(profile, "party_random_loot", False))),
+    )
+    loot_role = str(
+        party.get("loot_role", getattr(profile, "party_loot_role", "none")) or "none"
+    ).strip().lower()
+    if loot_role not in ("none", "responsible"):
+        loot_role = "none"
+    set_value("party_loot_role", loot_role)
     use_antidote = bool(
         hunt.get("use_antidote_potion", getattr(profile, "use_antidote_potion", False))
     )
