@@ -8,7 +8,7 @@ from typing import Any, Optional
 from .assist import pick_assist_target, resolve_self_defender
 from .config import PartyMemberConfig
 from .intents import intent_for_kind
-from .leader import bind_leader_identity, find_leader, player_name
+from .leader import bind_leader_identity, resolve_leader
 from .policy import MemberKind, PolicyInput, decide_policy
 from .state import MemberRuntime
 
@@ -16,7 +16,11 @@ _log = logging.getLogger("party.member")
 
 
 class PartyMemberManager:
-    """Independent member loop: follow leader + assist leader's fight."""
+    """Independent member loop: follow leader + assist leader's fight.
+
+    Only used when the session enabled party-member mode (Hunt UI checkbox).
+    Solo ``DecisionManager`` is never called from here.
+    """
 
     def __init__(self, config: PartyMemberConfig | dict | None = None) -> None:
         self.config = PartyMemberConfig.from_mapping(config)
@@ -88,20 +92,29 @@ class PartyMemberManager:
         origin = self.world_origin
         origin_ok = origin is not None and hasattr(origin, "x")
 
-        leader = find_leader(game_state, cfg)
+        view = resolve_leader(
+            game_state,
+            cfg,
+            origin=origin,
+            local_map_id=self.runtime.local_map_id,
+        )
+        leader = view.entity
         if leader is not None:
             self.config = bind_leader_identity(cfg, leader)
             cfg = self.config
-            self.runtime.leader_name_seen = player_name(leader) or cfg.leader_name
+        if view.name:
+            self.runtime.leader_name_seen = view.name
+        self.runtime.leader_source = view.source
+        self.runtime.leader_hp = view.hp
+        self.runtime.leader_mp = view.mp
+        self.runtime.leader_map_id = view.map_id
 
-        leader_tile = None
+        leader_tile = view.tile if view.present else None
         leader_dist: Optional[int] = None
-        if leader is not None and origin_ok:
+        if leader_tile is not None and origin_ok:
             try:
                 from app._03_world.space.world_coords import tile_chebyshev
-                from app._04_decision.combat_query import object_absolute_tile
 
-                leader_tile = object_absolute_tile(leader, origin)
                 leader_dist = tile_chebyshev(
                     int(origin.x),
                     int(origin.y),
@@ -110,7 +123,7 @@ class PartyMemberManager:
                 )
             except Exception as exc:
                 _log.debug("leader tile failed: %s", exc)
-                leader = None
+                leader_tile = None
                 leader_dist = None
 
         self.runtime.leader_dist = leader_dist
@@ -122,6 +135,7 @@ class PartyMemberManager:
 
         assist_obj = None
         assist_src = "none"
+        # Assist needs a visible leader entity (strike / external target).
         if leader is not None and game_state is not None:
             assist_obj, assist_src = pick_assist_target(
                 game_state, leader, cfg, origin=origin
@@ -130,25 +144,44 @@ class PartyMemberManager:
             int(getattr(assist_obj, "track_id", 0) or 0) if assist_obj else None
         )
 
-        result = decide_policy(
-            PolicyInput(
-                paused=bool(self.runtime.paused),
-                dead=dead,
-                origin_ok=origin_ok,
-                leader_present=leader is not None and leader_dist is not None,
-                leader_dist=leader_dist,
-                chasing=bool(self.runtime.chasing),
-                need_potion=need_potion,
-                self_threat=threat is not None,
-                assist_ready=assist_obj is not None,
-                config=cfg,
-            )
+        leader_present = (
+            view.same_map
+            and leader_tile is not None
+            and leader_dist is not None
         )
+
+        from .policy import PolicyResult
+
+        if not view.same_map and not dead and origin_ok and not self.runtime.paused:
+            # Stay local: potions/defend still ok; do not follow across maps.
+            if need_potion:
+                result = PolicyResult(MemberKind.POTION, False, "self_potion")
+            elif cfg.defend_self and threat is not None:
+                result = PolicyResult(MemberKind.DEFEND, False, "defend_self")
+            else:
+                result = PolicyResult(MemberKind.WAIT, False, "leader_other_map")
+        else:
+            result = decide_policy(
+                PolicyInput(
+                    paused=bool(self.runtime.paused),
+                    dead=dead,
+                    origin_ok=origin_ok,
+                    leader_present=leader_present,
+                    leader_dist=leader_dist if leader_present else None,
+                    chasing=bool(self.runtime.chasing),
+                    need_potion=need_potion,
+                    self_threat=threat is not None,
+                    assist_ready=assist_obj is not None,
+                    config=cfg,
+                )
+            )
         self.runtime.chasing = result.chasing
         self.runtime.last_kind = result.kind.value
         reason = result.reason
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
+        if view.source and result.kind is MemberKind.FOLLOW:
+            reason = f"{reason} via={view.source}"
 
         intent, goal, detail = intent_for_kind(
             result.kind,

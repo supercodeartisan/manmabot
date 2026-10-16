@@ -1,6 +1,7 @@
-"""Resolve the selected leader among nearby players."""
+"""Resolve the selected leader: nearby entity and/or party memory stats."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from .config import PartyMemberConfig
@@ -52,6 +53,134 @@ def find_leader(game_state: Any, config: PartyMemberConfig) -> Optional[Any]:
     return None
 
 
+def party_member_block(
+    snapshot: Optional[dict[str, Any]],
+    wanted_name: str,
+) -> Optional[dict[str, Any]]:
+    """Configured leader row from ``last_party``, or None."""
+    if not isinstance(snapshot, dict):
+        return None
+    if not bool(snapshot.get("in_party")):
+        return None
+    wanted = str(wanted_name or "").strip()
+    if not wanted:
+        return None
+    for raw in snapshot.get("members") or []:
+        if not isinstance(raw, dict):
+            continue
+        if _names_match(str(raw.get("name") or ""), wanted):
+            return raw
+    leader = snapshot.get("leader")
+    if isinstance(leader, dict) and _names_match(str(leader.get("name") or ""), wanted):
+        return leader
+    return None
+
+
+def _party_tile(block: dict[str, Any]) -> Optional[tuple[int, int]]:
+    try:
+        x = int(block.get("x"))
+        y = int(block.get("y"))
+    except (TypeError, ValueError):
+        return None
+    # Absolute cells from PartyPlayer; reject empty / sentinel zeros.
+    if x == 0 and y == 0:
+        return None
+    return (x, y)
+
+
+def _party_map_id(block: dict[str, Any]) -> Optional[int]:
+    try:
+        mid = int(block.get("map_id"))
+    except (TypeError, ValueError):
+        return None
+    return mid
+
+
+@dataclass
+class LeaderView:
+    """Leader pose for the member brain (entity optional)."""
+
+    entity: Any = None
+    name: str = ""
+    tile: Optional[tuple[int, int]] = None
+    map_id: Optional[int] = None
+    hp: Optional[int] = None
+    mp: Optional[int] = None
+    guid: str = ""
+    source: str = ""
+    same_map: bool = True
+
+    @property
+    def present(self) -> bool:
+        return self.tile is not None and self.same_map
+
+
+def resolve_leader(
+    game_state: Any,
+    config: PartyMemberConfig,
+    *,
+    origin: Any = None,
+    local_map_id: Optional[int] = None,
+) -> LeaderView:
+    """Prefer nearby entity; fall back to party-memory coords for follow.
+
+    Solo path never calls this. Assist still needs ``entity`` when present.
+    """
+    view = LeaderView()
+    wanted = str(config.leader_name or "").strip()
+    party_snap = getattr(game_state, "last_party", None) if game_state else None
+    party = party_member_block(party_snap if isinstance(party_snap, dict) else None, wanted)
+
+    entity = find_leader(game_state, config)
+    if entity is not None:
+        view.entity = entity
+        view.name = player_name(entity) or wanted
+        view.source = "entity"
+        if origin is not None and hasattr(origin, "x"):
+            try:
+                from app._04_decision.combat_query import object_absolute_tile
+
+                view.tile = object_absolute_tile(entity, origin)
+            except Exception:
+                view.tile = None
+
+    if party is not None:
+        view.name = str(party.get("name") or view.name or wanted).strip()
+        view.guid = str(party.get("guid") or "")
+        try:
+            view.hp = int(party.get("hp"))
+        except (TypeError, ValueError):
+            view.hp = None
+        try:
+            view.mp = int(party.get("mp"))
+        except (TypeError, ValueError):
+            view.mp = None
+        view.map_id = _party_map_id(party)
+        party_tile = _party_tile(party)
+        if view.tile is None and party_tile is not None:
+            view.tile = party_tile
+            view.source = "party" if not view.source else "entity+party"
+        elif view.tile is not None and party_tile is not None:
+            view.source = "entity+party"
+        elif view.source == "entity" and party is not None:
+            view.source = "entity+party"
+
+    if not view.name:
+        view.name = wanted
+
+    if (
+        local_map_id is not None
+        and view.map_id is not None
+        and int(local_map_id) != int(view.map_id)
+    ):
+        view.same_map = False
+        # Different map: do not follow stale party coords.
+        if view.source.startswith("party") or view.entity is None:
+            view.tile = None
+
+    return view
+
+
 def bind_leader_identity(config: PartyMemberConfig, leader: Any) -> PartyMemberConfig:
     """Remember ent/track_id once resolved by name (stable reacquire)."""
     if leader is None:
@@ -80,8 +209,11 @@ def bind_leader_identity(config: PartyMemberConfig, leader: Any) -> PartyMemberC
 
 
 __all__ = [
+    "LeaderView",
     "bind_leader_identity",
     "find_leader",
+    "party_member_block",
     "player_key",
     "player_name",
+    "resolve_leader",
 ]

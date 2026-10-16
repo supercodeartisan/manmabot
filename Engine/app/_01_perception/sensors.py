@@ -87,6 +87,8 @@ class PerceptionSensors:
         self._shop = None
         self._buff = None
         self._uidialog = None
+        self._party = None
+        self._party_init_tried = False
         self._entity_sweep = None
         self._last_hotbar_at = 0.0
         self._hotbar_interval_s = 1.0
@@ -104,6 +106,7 @@ class PerceptionSensors:
         self._init_shop()
         self._init_buff()
         self._init_uidialog()
+        # Party DLL loads only when capture_tick(party=True) / capture_party().
 
     def _init_print(self) -> None:
         try:
@@ -175,6 +178,26 @@ class PerceptionSensors:
             self._uidialog = None
             self.buffer.errors.append(f"uidialog: {exc}")
 
+    def _init_party(self) -> None:
+        """Lazy: only party-member sessions need this reader."""
+        if self._party_init_tried:
+            return
+        self._party_init_tried = True
+        try:
+            from app._01_perception.party_listen_reader import (
+                PartyListenReader,
+                default_dll_path,
+            )
+
+            self._party = PartyListenReader()
+            if not getattr(self._party, "dll_loaded", False):
+                self.buffer.errors.append(
+                    f"party: DLL missing ({default_dll_path().name})"
+                )
+        except Exception as exc:
+            self._party = None
+            self.buffer.errors.append(f"party: {exc}")
+
     @property
     def monitor(self) -> Any:
         return self._monitor
@@ -225,7 +248,14 @@ class PerceptionSensors:
             except Exception:
                 pass
             self._print_reader = None
-        for attr in ("_attacks_reader", "_contested_reader", "_shop", "_buff", "_uidialog"):
+        for attr in (
+            "_attacks_reader",
+            "_contested_reader",
+            "_shop",
+            "_buff",
+            "_uidialog",
+            "_party",
+        ):
             reader = getattr(self, attr)
             if reader is not None:
                 try:
@@ -247,11 +277,13 @@ class PerceptionSensors:
         *,
         force_inventory: bool = False,
         hotbar: bool = False,
+        party: bool = False,
     ) -> PerceptionBuffer:
         """Per-tick set: player, print_state, attacks, contested, buffs, uidialog; inventory/hotbar by schedule.
 
         Buff/uidialog are synchronous DLL reads each tick (uidialog poll; discover ~2s), run on
         two short-lived threads so they overlap each tick.
+        Party memory is read only when ``party=True`` (party-member sessions).
         """
         buf = self.buffer
         buf.clear()
@@ -269,6 +301,8 @@ class PerceptionSensors:
             self._capture_hotbar(buf)
             self._last_hotbar_at = time.perf_counter()
         self._capture_buff_and_uidialog_sync(buf)
+        if party:
+            self._capture_party(buf)
         return buf
 
     def capture(
@@ -276,9 +310,12 @@ class PerceptionSensors:
         *,
         force_inventory: bool = False,
         hotbar: bool = False,
+        party: bool = False,
     ) -> PerceptionBuffer:
         """Alias for :meth:`capture_tick`."""
-        return self.capture_tick(force_inventory=force_inventory, hotbar=hotbar)
+        return self.capture_tick(
+            force_inventory=force_inventory, hotbar=hotbar, party=party
+        )
 
     def capture_hotbar(self, *, force: bool = True) -> Optional[dict[str, Any]]:
         """On-demand hotbar slots. Also stamps ``self.buffer.hotbar`` when ok."""
@@ -327,6 +364,15 @@ class PerceptionSensors:
         self._capture_uidialog(buf)
         if buf.uidialog_ok:
             return buf.uidialog
+        return None
+
+    def capture_party(self) -> Optional[dict[str, Any]]:
+        """On-demand party roster / leader stats (synchronous DLL read)."""
+        self._init_party()
+        buf = self.buffer
+        self._capture_party(buf)
+        if buf.party_ok:
+            return buf.party
         return None
 
     def capture_field(self) -> PerceptionBuffer:
@@ -460,6 +506,19 @@ class PerceptionSensors:
         if isinstance(snap, dict) and isinstance(snap.get("windows"), dict):
             buf.uidialog = snap
             buf.uidialog_ok = True
+
+    def _capture_party(self, buf: PerceptionBuffer) -> None:
+        self._init_party()
+        if self._party is None or not getattr(self._party, "dll_loaded", False):
+            return
+        try:
+            snap = self._party.snapshot()
+        except Exception as exc:
+            buf.errors.append(f"party: {exc}")
+            return
+        if isinstance(snap, dict) and "leader" in snap:
+            buf.party = snap
+            buf.party_ok = True
 
     def _capture_buff_and_uidialog_sync(self, buf: PerceptionBuffer) -> None:
         """Fresh buff + uidialog DLL reads on separate threads (join before return)."""

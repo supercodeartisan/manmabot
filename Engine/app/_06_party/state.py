@@ -16,6 +16,10 @@ class MemberRuntime:
     last_kind: str = "stop"
     leader_dist: Optional[int] = None
     leader_name_seen: str = ""
+    leader_source: str = ""
+    leader_hp: Optional[int] = None
+    leader_mp: Optional[int] = None
+    leader_map_id: Optional[int] = None
     assist_track_id: Optional[int] = None
     tick: int = 0
     # Optional mapId from caller (MapSubsystem); None = unknown / skip check.
@@ -32,6 +36,10 @@ class MemberRuntime:
             "last_kind": self.last_kind,
             "leader_dist": self.leader_dist,
             "leader_name_seen": self.leader_name_seen,
+            "leader_source": self.leader_source,
+            "leader_hp": self.leader_hp,
+            "leader_mp": self.leader_mp,
+            "leader_map_id": self.leader_map_id,
             "assist_track_id": self.assist_track_id,
             "tick": self.tick,
             "local_map_id": self.local_map_id,

@@ -1280,7 +1280,9 @@ class BotController:
             )
         else:
             self.log("Memory monitor unavailable at worker start")
-        buf0 = sensors.capture_tick(force_inventory=True, hotbar=True)
+        buf0 = sensors.capture_tick(
+            force_inventory=True, hotbar=True, party=party_mode
+        )
         apply_perception_buffer(world, decision.blackboard, buf0, content=None)
         if sensors.inventory_sweep is None:
             self._log_ui("inventory_setup_failed", error="inventory DLL unavailable")
@@ -1493,7 +1495,10 @@ class BotController:
                     force_bag = True
                     bag_after_shop = False
 
-                sense_buf = sensors.capture_tick(force_inventory=force_bag)
+                sense_buf = sensors.capture_tick(
+                    force_inventory=force_bag,
+                    party=party_brain is not None,
+                )
                 applied = apply_perception_buffer(
                     world,
                     decision.blackboard,

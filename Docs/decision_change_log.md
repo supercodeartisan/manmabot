@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-16 — party-member sensor for leader stats (solo unchanged)
+
+Intent: when Hunt UI “Run as party member” is on, read PartySubsystem via an independent `party_listen` sensor and use leader name/HP/MP/xy/mapId for follow when the leader entity is not nearby. Solo Start never loads the party DLL and never calls `PartyMemberManager`.
+Shared: `PerceptionSensors.capture_tick(party=…)`, `PartyListenReader`, `resolve_leader` / `LeaderView`, `PartyMemberManager.decide`. Solo `DecisionManager`, retreat, shop, HP columns, login, and world-nav stay as they are.
+Affects: party-member follow when the leader is out of entity range (memory coords); wait on other mapId; assist still requires a visible leader entity.
+Consent: user (party logic must not affect current solo; only after UI party-member check).
+Result: implemented. Build `Engine/analysis/party/build_party_listen_dll.bat` before live reads.
+
 ## 2026-10-14.8 — search hops use plan_body_click + 0.1s reclick
 
 Consent: user asked for phase 1+2 on search hops only.
