@@ -139,10 +139,9 @@ def release_capture() -> None:
     global _captured
     try:
         if _captured:
-            ix = _get_interception()
             try:
-                ix.mouse_up("left")
-                ix.mouse_up("right")
+                _send_button("left", down=False)
+                _send_button("right", down=False)
             except Exception:
                 pass
         ctx = _current_context()
@@ -157,6 +156,64 @@ def _cursor_pos() -> tuple[int, int]:
     pt = wintypes.POINT()
     user32.GetCursorPos(ctypes.byref(pt))
     return int(pt.x), int(pt.y)
+
+
+def _absolute_xy(px: int, py: int) -> tuple[int, int]:
+    """Same 0..65535 scale ``move_to`` uses for this pixel."""
+    from interception._utils import to_interception_coordinate
+
+    ax, ay = to_interception_coordinate(int(px), int(py))
+    return int(ax), int(ay)
+
+
+def _send_button(
+    button: str,
+    *,
+    down: bool,
+    px: int | None = None,
+    py: int | None = None,
+) -> None:
+    """Press or release at a screen pixel.
+
+    The button stroke carries that pixel as an absolute coordinate, the same
+    way login clicks do. An absolute (0, 0) stroke clicks the screen origin.
+    A relative stroke with no position was ignored on the customer PC.
+    Without a pixel, the current cursor is used so a release does not jump.
+    """
+    from interception.constants import MouseButtonFlag, MouseFlag
+    from interception.exceptions import UnknownButtonError
+    from interception.strokes import MouseStroke
+
+    try:
+        states = MouseButtonFlag.from_string(button)
+    except KeyError as exc:
+        raise UnknownButtonError(button) from exc
+    flag = int(states[0] if down else states[1])
+    ctx = _current_context()
+    if not _context_usable(ctx):
+        return
+    if px is None or py is None:
+        px, py = _cursor_pos()
+    ax, ay = _absolute_xy(px, py)
+    stroke = MouseStroke(int(MouseFlag.MOUSE_MOVE_ABSOLUTE), flag, 0, ax, ay)
+    ctx.send(ctx.mouse, stroke)
+
+
+def _button_gap_s() -> float:
+    from interception.inputs import MOUSE_BUTTON_DELAY
+
+    return float(MOUSE_BUTTON_DELAY)
+
+
+def _click_in_place(button: str, px: int, py: int) -> None:
+    """Down, hold, up at ``(px, py)``. The hold matches the library button delay."""
+    gap = _button_gap_s()
+    _send_button(button, down=True, px=px, py=py)
+    if gap > 0.0:
+        time.sleep(gap)
+    _send_button(button, down=False, px=px, py=py)
+    if gap > 0.0:
+        time.sleep(gap)
 
 
 class MouseController:
@@ -293,24 +350,21 @@ class MouseController:
                 else 0.02
             )
         )
-        ix = _get_interception()
+        if delay > 0.0:
+            time.sleep(delay)
         if until_walk:
-            clicks = self._click_until_walk(
-                ix, px, py, button, delay, cursor_ok=cursor_ok
-            )
+            clicks = self._click_until_walk(button, px, py, cursor_ok=cursor_ok)
         else:
-            ix.click(px, py, button=button, delay=delay)
+            _click_in_place(button, px, py)
             clicks = 1
         self._last_pos = (px, py)
         self.button_events += clicks
 
     def _click_until_walk(
         self,
-        ix,
+        button: str,
         px: int,
         py: int,
-        button: str,
-        delay: float,
         *,
         cursor_ok: Optional[Callable[[], bool]] = None,
     ) -> int:
@@ -319,12 +373,12 @@ class MouseController:
         An unreadable body slot stops the repeat after 1s. One click is enough
         when the body is already standing or already walking. When ``cursor_ok``
         is set, a False result stops further re-clicks (first click already
-        issued after the caller's verify).
+        issued after the caller's verify). The caller already moved and waited.
         """
         from app._05_action.body_pose import BREATH_VFT, MOVE_VFTS, read_action
         from app.bot_log import event
 
-        ix.click(px, py, button=button, delay=delay)
+        _click_in_place(button, px, py)
         clicks = 1
         t0 = time.perf_counter()
         unread_deadline = t0 + float(GROUND_CLICK_UNREAD_S)
@@ -369,7 +423,7 @@ class MouseController:
                         clicks,
                     )
                     return clicks
-            ix.click(button=button, delay=0)
+            _click_in_place(button, px, py)
             clicks += 1
 
     def hold(self, x: float, y: float, duration: float, button: str = "left") -> None:
@@ -377,9 +431,18 @@ class MouseController:
         if not self.enabled:
             return
         _ensure_captured()
-        self.move(x, y)
-        with _get_interception().hold_mouse(button):
+        px, py = self._to_pixels(x, y)
+        self.move(px, py)
+        gap = _button_gap_s()
+        _send_button(button, down=True, px=px, py=py)
+        if gap > 0.0:
+            time.sleep(gap)
+        try:
             time.sleep(duration)
+        finally:
+            _send_button(button, down=False, px=px, py=py)
+            if gap > 0.0:
+                time.sleep(gap)
         self.button_events += 1
 
     def move_and_click(
@@ -413,4 +476,7 @@ class MouseController:
         # Do not reopen devices just to lift a button after Stop.
         if not is_captured():
             return
-        _get_interception().mouse_up(button)
+        _send_button(button, down=False)
+        gap = _button_gap_s()
+        if gap > 0.0:
+            time.sleep(gap)

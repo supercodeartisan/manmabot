@@ -222,6 +222,7 @@ _STAY_CLOCK_KEEP_REASONS = frozenset({
     "post_shop",
     "after_shop",
     "hunt_map",
+    "unstick_return",
 })
 
 
@@ -238,6 +239,9 @@ def _drop_world_nav_session(blackboard: Any) -> None:
         from app._04_decision.behaviors.travel import clear_travel
 
         clear_travel(blackboard)
+        from app._04_decision.behaviors.travel import SCRATCH_WORLD_NAV_SHORT_WALK
+
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
     except Exception:
         pass
 

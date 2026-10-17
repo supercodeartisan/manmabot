@@ -177,6 +177,69 @@ Nuitka가 `os.path.isdir = hook` 이후에도 저장해 둔 원본 대신 바뀐
 
 ---
 
+## RBF-006 — Mainland region boundaries missing from the portable folder (2026-10-17)
+
+### 증상
+
+개발 트리에서는 사냥터 편집 창에 본토 지역 색이 보이는데, `release/portable/ManmabotV1` 에서는 지역 경계가 없다.
+
+### 원인
+
+`map4_boundaries.tsv` 는 제품 루트에만 있고 `root_files.txt` 에 없었다. 편집 캔버스는 `Engine/data/maps/<id>/nav.png` 를 쓴다. `images/real_maps` 는 없어도 된다.
+
+### 수정 (소스에 포함됨)
+
+| 파일 | 내용 |
+|------|------|
+| `packaging/manifests/root_files.txt` | `map4_boundaries.tsv` 를 고객 루트로 복사 |
+
+### 이후 릴리스에서 할 일
+
+**수동 작업 없음.** Stage 1 또는 `incremental_release.py` 가 경계 파일을 넣는다. `images/real_maps` 는 넣지 않는다.
+
+### 재발 방지 규칙
+
+편집기가 `<제품 루트>/map4_boundaries.tsv` 를 읽는다. 구역을 그리는 그림은 각 맵의 `nav.png` 이다.
+
+---
+
+## RBF-007 — Talking-scroll row click misses on another PC (2026-10-17)
+
+### 증상
+
+고객 PC에서 말하는 두루마리 목록은 열리고 휠도 동작하며 커서는 줄 위에 있다. 줄 클릭 뒤에도 캐릭터는 같은 좌표에 남는다. `v1.log`에 `talking scroll click screen=(67,204)` 가 찍힌 뒤 `scroll land timeout` 이 반복된다.
+
+### 원인
+
+그 PC에는 ChangZhi Virtual Mouse가 실제 마우스와 함께 잡혀 있었다. 사냥 클릭은 하드웨어 ID가 있는 마우스 중 마지막 장치로 나간다. 그 장치가 가짜 마우스여서 커서는 움직이고 버튼은 게임이 받지 않았다. Virtual Mouse를 끄면 사냥용 버튼 패킷으로 줄이 선택된다.
+
+### 수정 (소스에 포함됨)
+
+| 파일 | 내용 |
+|------|------|
+| `Engine/app/_05_action/controller.py` | 두루마리 줄이 다시 `move_and_click` |
+| `Engine/app/_05_action/mouse.py` | 줄 전용 `win.interception.click` 제거 |
+
+고객 폴더에는 아래 두 파일을 같이 넣는다. Virtual Mouse는 장치 관리자에서 끈 상태를 유지한다.
+
+`Engine/app/_05_action/mouse.cp314-win_amd64.pyd`
+`Engine/app/_05_action/controller.cp314-win_amd64.pyd`
+
+### 이후 릴리스에서 할 일
+
+`incremental_release.py` 가 `mouse.py` 와 `controller.py` 를 다시 컴파일한다. 이미 보낸 고객 폴더에는 아래 두 파일을 같이 교체한다.
+
+`Engine/app/_05_action/mouse.cp314-win_amd64.pyd`
+`Engine/app/_05_action/controller.cp314-win_amd64.pyd`
+
+`.py` 원본은 고객 폴더에 넣지 않는다. `.pyd`가 우선이라 원본만 넣으면 수정이 적용되지 않는다.
+
+### 재발 방지 규칙
+
+두루마리 줄은 다른 게임 클릭과 같이 `MouseController.move_and_click` 을 쓴다. 마우스가 여러 개면 사냥 클릭은 마지막 장치로 나가므로, ChangZhi Virtual Mouse 같은 가짜 마우스를 끈다.
+
+---
+
 ## (다음 항목)
 
 형식:

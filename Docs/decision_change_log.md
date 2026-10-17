@@ -1,5 +1,101 @@
 # Decision change log
 
+## 2026-10-18 — shortest walk after a talking-scroll landing
+
+Intent: after the scroll lands on the nearest hub, the walk to the hunt area was following the 32-tile cluster corridor. From the Silver Knight inn that corridor leaves by the south door, while the tile path through the north door is shorter.
+Shared: the world-nav walk whose previous step is a talking scroll. That walk's hops use the tile path. Other walks keep the cluster corridor. The inn south wall seal stays. Login, combat, and HP stay as they are.
+Affects: the walk from a talking-scroll landing to the hunt area. At the inn the route leaves through (666, 1248).
+Consent: user (after landing on the nearest hub, take the shortest way to the hunting area).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — reopen the Silver Knight inn north exit
+
+Intent: the north opening (666, 1248) is white on nav.png. The load path was marking it unstandable, so a walk out of the inn could use only the south gap.
+Shared: mainland terrain load only. (666, 1248) stays walkable. The south wall y=1256, x=656–669 except (660, 1256), stays unstandable. Login, combat, and HP stay as they are.
+Affects: the walk out of the Silver Knight inn. The shorter route to the hunt area leaves through (666, 1248).
+Consent: user (reopen that north tile, keep the south wall seal).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — seal the Silver Knight inn wall
+
+Intent: after a talking scroll into the inn, the first hop clicked the south wall. Those cells are white tiles with a north fence, and the load path was clearing that fence, so both the white-tile path and the click check treated the wall as an open door.
+Shared: mainland terrain load only. The south edge y=1256, x=656–669 except (660, 1256), and the north hole (666, 1248), become unstandable. The earlier fence clear on (668, 1256) and (669, 1256) is removed. Scroll to the inn, login, combat, and HP stay as they are.
+Affects: the walk out of the Silver Knight inn. The exit that remains is (660, 1256).
+Consent: user (seal that wall, keep the south gap, close the north hole).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — inn door, nearest unstick hub, world-nav return
+
+Intent: the Silver Knight inn door is open in game and fenced on the walk map, so a walk from the inn hub never crosses it. A confined escape on the mainland always scrolls to the Giran teleporter. After that landing, the same map is treated as already on the hunt map, so the return walks with enter-farm and does not arm world nav.
+Shared: mainland fence tiles (668, 1256) and (669, 1256) opened when the pack loads. `farm_return_scroll_spot` for mainland now picks the talking-scroll hub nearest the active farm; Talking Island stays on 마법서 상인, and a dungeon floor still uses the fixed mainland row. After that mainland escape scroll lands outside the farm, `begin_world_nav` reason `unstick_return` runs instead of enter-farm. That arrival does not reset the routine stay clock.
+Affects: walks out of the Silver Knight inn, confined-escape scroll target on the mainland, and the return after that scroll. Login, combat, and HP selection stay as they are.
+Consent: user (open the inn door on the walk map; mainland confined scroll to the hub nearest the current hunt area; after that scroll lands outside the farm, re-arm world nav even on the same map so the return can use a talking scroll).
+Result: implemented. Not run in game.
+
+## 2026-10-17 — talking-scroll row returns to the hunt button
+
+Intent: the missed row click on the customer PC was a second mouse, ChangZhi Virtual Mouse. Disabling that device made the hunt button work. The row click goes back to `move_and_click`, the same packet as ground and attack clicks. The autologin `click` path used only for that row is removed.
+Shared: `_use_talking_scroll` only. `MouseController.click`, hover, the wheel, and the login flow stay as they are.
+Affects: the talking-scroll list row. Other clicks stay as they are.
+Consent: user (revert the scroll row to the hunt button packet; the extra mouse device was the cause).
+Result: implemented. Portable `mouse` and `controller` modules rebuilt.
+
+## 2026-10-17 — talking-scroll row closes the login driver after the click
+
+Intent: the scroll row uses autologin's click. After a real login, that context is destroyed and `restore_desktop_input` drops the topmost flag and lifts stuck keys so the mouse works outside the game. The row click was reopening the hunt devices without that restore, and the desktop mouse was lost again.
+Shared: `click_scroll_row` only. Before `shutdown` the login filter is set to none. Then `restore_desktop_input`, then `prepare_capture`, then the hunt filter is set to none. `MouseController.click` and the login flow stay as they are.
+Affects: the moment after a talking-scroll row click. Other clicks stay as they are.
+Consent: user (the post-login driver close was missing after the scroll row, and the outside-window mouse loss came back).
+Result: implemented. Portable `mouse` module rebuilt.
+
+## 2026-10-17 — talking-scroll row calls the autologin click
+
+Intent: a hand click and autologin both select the talking-scroll row on the customer PC. The hunt button does not. Writing a homemade 20-byte stroke through the hunt device was rejected (`fallback hunt button` in v1.log). The row now calls `Engine/autologin/bot/win/interception.py` `click`, the same function autologin uses. Hunt closes its devices for that click and opens them again afterwards.
+Shared: `click_scroll_row` and `_use_talking_scroll` only. `MouseController.click`, hover, the wheel, attack, ground, gate, shop, and the login flow stay on their current paths. If the autologin click cannot run, the row falls back to `move_and_click`.
+Affects: the talking-scroll list row. Other clicks stay as they are.
+Consent: user (only the scroll row; keep every other mouse path unchanged; hand click and autologin already work).
+Result: implemented. Portable `mouse` and `controller` modules rebuilt.
+
+## 2026-10-17 — talking-scroll row uses the login button stroke
+
+Intent: on one 1920x1080 laptop the cursor sits on the talking-scroll row and the wheel scrolls, and the hunt button still does not select the row. That row click now sends the same classic stroke login uses (button in `state`, absolute position), on the first mouse slot that accepts it. The devices already opened for hunt are reused. A second driver context is not opened.
+Shared: `click_scroll_row` and `_use_talking_scroll` only. `MouseController.click`, hover moves, the wheel, attack, ground, gate, shop, and login stay on their current paths. If the login stroke cannot be written, the row falls back to `move_and_click`.
+Affects: the talking-scroll list row. Other clicks stay as they are.
+Consent: user (login stroke for the scroll row only; keep every other mouse path unchanged).
+Result: implemented. Portable `mouse` and `controller` modules rebuilt.
+
+## 2026-10-17 — button stroke carries the click pixel
+
+Intent: the relative button stroke still did not select the talking-scroll row on the customer PC. The cursor sat on the row and the wheel scrolled. Login clicks already put the target pixel in an absolute button stroke, and that is the packet this PC accepts.
+Shared: `_send_button`, `_click_in_place`, `MouseController.click`, `_click_until_walk`, `hold`. A button release with no pixel uses the current cursor so it does not jump to the origin. Wheel, scroll UV, and login stay as they are.
+Affects: talking-scroll rows, ground hops, attack clicks, map gates, and shop clicks.
+Consent: user (absolute pixel inside the button stroke, then rebuild `mouse.cp314-win_amd64.pyd`).
+Result: implemented. Portable pyd rebuilt after this entry.
+
+## 2026-10-17 — click at the cursor, not at screen origin
+
+Intent: a talking-scroll row click moves the cursor onto the row, then the button packet was an absolute move to (0, 0). On the other laptop the list scrolled and the cursor sat on the row, and the character never left. Button presses now use a relative (0, 0) stroke, the same shape as the wheel.
+Shared: `MouseController.click`, `_click_until_walk`, `hold`, `release`, and the button lift in `release_capture`. `move_to`, wheel count, scroll UV, and arrival wait stay as they are. Login clicks stay on `Engine/autologin/bot/win/interception.py`, which already sends the button with the target coordinate.
+Affects: talking-scroll rows, ground hops, attack clicks, map gates, and shop clicks. Keys and the wheel are unchanged.
+Consent: user (relative button packet in mouse.py for every MouseController click; leave the installed interception package and login path alone).
+Result: implemented in `Engine/app/_05_action/mouse.py`. Portable `mouse.cp314-win_amd64.pyd` rebuilt for the customer folder. Not yet tried on the laptop where the row click missed.
+
+## 2026-10-17 — hide the autologin console
+
+Intent: the main program stays windowed, and the autologin child no longer opens a console that sits on screen until login finishes. Purple login, clicks, elevation, and the status file the UI already shows stay the same.
+Shared: `AutoLoginService.run` launch only. `bot2` is still `python.exe` with `--no-self-elevate`. When this process is already admin, the child gets `CREATE_NO_WINDOW` and its stdout/stderr go to `UserData/autologin_runs/<id>/console.log`. When it is not admin, the UAC child is `pythonw.exe` with `SW_HIDE`. `bot2_run.log` is unchanged.
+Affects: the window the operator sees during Start login. Login steps, shop, movement, combat, and HP are unchanged. The startup UAC prompt for the main program still appears.
+Consent: user (hide the autologin console; keep autologin working fully).
+Result: implemented. Not yet run against a live Purple login.
+
+## 2026-10-17 — startup memory warm imports on the main thread
+
+Intent: portable ZF.exe was crashing about 0.5s after the admin relaunch because the startup thread imported compiled modules while the main thread was still importing the UI. Elevation, WinNotify start, and the in-process memory attach stay the same call (`warm_memory_at_startup(wait_snapshot=False)` on the `signeddrv-start` thread).
+Shared: `prepare_runtime`. The schedule window's later warm is unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `apply_inplace_hp_support`, and login clicks stay as they are.
+Affects: process start only. The driver and memory reader still start before the operator uses the window. The warm modules are initialized on the main thread first so the worker does not initialize them again.
+Consent: user (stop the crash and keep the current startup, workflow, and features).
+Result: portable `elevate` module rebuilt. `ZF.exe` stayed up with a window and no access violation.
+
 ## 2026-10-17 — member sends player status every 10s
 
 Intent: the member bot connects to the leader address and sends the live player (hp, mp, position, map id, alive, level) every 10 seconds. Follow and combat stay as they are. The leader still farms solo and still sends only critical decisions.

@@ -19,6 +19,10 @@ from app._04_decision import player_mode as pm
 if TYPE_CHECKING:  # pragma: no cover
     from app._04_decision.blackboard import Blackboard
 
+# Walk that starts right after a talking-scroll landing. The hop uses the
+# shorter tile path instead of the 32-tile cluster corridor.
+SCRATCH_WORLD_NAV_SHORT_WALK = "world_nav_short_walk"
+
 
 def clear_travel(blackboard: "Blackboard") -> None:
     blackboard.nav_goal = None
@@ -407,11 +411,16 @@ def emit_travel_hop(
 
     origin = blackboard.world_origin
     bodies = collect_body_tiles(state, origin) if state is not None else set()
+    short_walk = (
+        blackboard.travel_purpose == "world_nav"
+        and bool(blackboard.scratch.get(SCRATCH_WORLD_NAV_SHORT_WALK))
+    )
     planned = plan_body_click(
         terrain,
         origin,
         (int(blackboard.nav_goal[0]), int(blackboard.nav_goal[1])),
         bodies,
+        force_flat=short_walk,
     )
     if not planned.guide or planned.click is None:
         if planned.note == "no path to the goal" or not planned.guide:

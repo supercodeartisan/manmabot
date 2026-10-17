@@ -479,8 +479,9 @@ def _guide_to_goal(
     cluster: int | None,
     coarse: object | None,
     portal_graph: object | None,
+    force_flat: bool = False,
 ) -> list[tuple[int, int]]:
-    if coarse is not None or portal_graph is not None:
+    if not force_flat and (coarse is not None or portal_graph is not None):
         from app._04_decision.hierarchical_path import (
             DEFAULT_CLUSTER,
             plan_travel_click_hierarchical,
@@ -504,6 +505,7 @@ def _guide_to_goal(
             goal,
             cluster=cluster,
             max_hop=int(max_hop),
+            force_flat=force_flat,
         )
     return [(int(x), int(y)) for x, y in path]
 
@@ -518,6 +520,7 @@ def plan_body_click(
     cluster: int | None = None,
     coarse: object | None = None,
     portal_graph: object | None = None,
+    force_flat: bool = False,
 ) -> BodyClick:
     """Guide, interim waypoint, and the one hop click around living bodies.
 
@@ -538,6 +541,7 @@ def plan_body_click(
         cluster=cluster,
         coarse=coarse,
         portal_graph=portal_graph,
+        force_flat=force_flat,
     )
     near = {
         (int(x), int(y))
