@@ -591,7 +591,7 @@ class MainWindow(ctk.CTk):
         self.arrow_type_var = tk.StringVar(
             value=(
                 "silver"
-                if getattr(self.profile, "buy_silver_arrows", False)
+                if getattr(self.profile, "buy_silver_arrows", True)
                 else "normal"
             )
         )
@@ -2817,8 +2817,8 @@ class MainWindow(ctk.CTk):
             map_style=getattr(self.profile, "map_style", None),
         )
         text = (
-            f"ZF\n"
-            f"manmabot={manmabot_root()}\n"
+            f"{self.s.brand}\n"
+            f"engine={manmabot_root()}\n"
             f"game={g.detail}\n"
             f"memory={m.detail}\n"
             f"map={mp.detail}\n"
@@ -2919,7 +2919,7 @@ class MainWindow(ctk.CTk):
             )
         if hasattr(self, "arrow_type_var"):
             self.arrow_type_var.set(
-                "silver" if getattr(profile, "buy_silver_arrows", False) else "normal"
+                "silver" if getattr(profile, "buy_silver_arrows", True) else "normal"
             )
         if hasattr(self, "restock_potions_var"):
             self.restock_potions_var.set(bool(getattr(profile, "restock_potions", True)))

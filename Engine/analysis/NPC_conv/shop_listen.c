@@ -10,14 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "signeddrv_client.h"
+#include "../pgcache.h"
 
 static uint64_t g_pid = 0, g_base = 0;
 static uint32_t g_modSize = 0;
 static int g_attached = 0;
 
 static int rm(uint64_t a, void* b, uint32_t s) {
-    uint32_t br = 0;
-    return SignedReadMemory(g_pid, a, b, s, &br) && br == s;
+    int drv = 0;
+    return pg_read(g_pid, a, b, s, &drv);
 }
 static uint64_t q64(uint64_t a) {
     uint64_t v = 0;
@@ -109,10 +110,20 @@ static uint32_t midFromKey(uint64_t keyPtr) {
     return (uint32_t)strtoul(d + 1, 0, 10);
 }
 
+static uint64_t g_shopSub[2];
+static uint32_t g_shopWant[2];
+
 static uint64_t findSubByVft(uint32_t want) {
-    uint64_t mgr = q64(g_base + 0x16DEE80);
-    uint64_t holder, bgn, end;
+    uint64_t mgr, holder, bgn, end;
     long i, subs;
+    for (i = 0; i < 2; i++) {
+        uint64_t v;
+        if (g_shopWant[i] != want || !g_shopSub[i]) continue;
+        v = q64(g_shopSub[i]);
+        if (inMod(v) && (uint32_t)(v - g_base) == want) return g_shopSub[i];
+        g_shopSub[i] = 0;
+    }
+    mgr = q64(g_base + 0x16DEE80);
     if (!isHeap(mgr)) return 0;
     holder = q64(mgr + 0xD0);
     if (!isHeap(holder)) return 0;
@@ -126,7 +137,12 @@ static uint64_t findSubByVft(uint32_t want) {
         uint64_t v;
         if (!isHeap(s)) continue;
         v = q64(s);
-        if (inMod(v) && (uint32_t)(v - g_base) == want) return s;
+        if (inMod(v) && (uint32_t)(v - g_base) == want) {
+            int slot = g_shopSub[0] ? 1 : 0;
+            g_shopSub[slot] = s;
+            g_shopWant[slot] = want;
+            return s;
+        }
     }
     return 0;
 }
@@ -214,7 +230,9 @@ static void shopDetach(void) {
 /* Write one JSON snapshot to f. Returns 1 on success.
  * Chains match memory_stand_dist shop_930 (vft find + BUY +0x30 $NNN name). */
 static int writeShopJson(FILE* f) {
-    uint64_t shop = findSubByVft(0x1229E00u); /* VFT_SHOP */
+    uint64_t shop;
+    pg_reset();
+    shop = findSubByVft(0x1229E00u); /* VFT_SHOP */
     uint64_t inv = findSubByVft(0x1226BB0u);  /* VFT_INVENTORY */
     if (!isHeap(shop)) {
         fprintf(f, "{\"cmd\":\"shop\",\"error\":\"no_shop\",\"pid\":%lu,\"base\":\"0x%llX\"}",

@@ -26,13 +26,13 @@ def run_schedule_app() -> int:
 
     ensure_userdata()
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("ZF")
     app.setOrganizationName("ZF")
     logo = brand_icon_path()
     if logo is not None:
         app.setWindowIcon(QIcon(str(logo)))
     profile = load_profile()
     language = ui_language(profile.language)
+    app.setApplicationName("종횡" if language == "ko" else "纵锋")
     from ui_qt.theme import tokens
     from ui_qt.theme.apply import font_roles_for_window
 

@@ -918,7 +918,7 @@ class BotController:
             self._run_bot_loop()
         except Exception:
             crashed = True
-            self.log("Bot worker crashed:\n" + traceback.format_exc())
+            self.log("Worker crashed:\n" + traceback.format_exc())
         finally:
             with self._lock:
                 if self.state != RunState.STOPPED:
@@ -1247,7 +1247,7 @@ class BotController:
                         executor.drop_mouse()
                         mouse_dropped = True
                     self._consume_paused_settings(config, decision, world, executor)
-                    self._set_preview_hold("Bot paused")
+                    self._set_preview_hold("Paused")
                     publish("paused")
                     time.sleep(0.05)
 
@@ -1370,7 +1370,7 @@ class BotController:
                         pass
 
                 if not self._pause_gate.is_set() or self._stop_event.is_set():
-                    self._set_preview_hold("Bot paused")
+                    self._set_preview_hold("Paused")
                     publish("paused")
                     continue
 

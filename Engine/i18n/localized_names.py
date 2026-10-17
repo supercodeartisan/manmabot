@@ -396,6 +396,63 @@ _SHOP_NPC_TALKING = (
 )
 
 
+# Mainland map4 region and village names. Keys stay the Korean TSV text.
+MAINLAND_REGION_NAMES: dict[str, tuple[str, str, str]] = {
+    "거울의 숲": ("Mirror Forest", "거울의 숲", "镜之森"),
+    "국경 요새": ("Border Fortress", "국경 요새", "国境要塞"),
+    "글루디오": ("Gludio", "글루디오", "古鲁丁"),
+    "글루딘 마을": ("Gludin Village", "글루딘 마을", "古鲁丁村庄"),
+    "마법사의 연구실": ("Wizard's Laboratory", "마법사의 연구실", "魔法师的研究室"),
+    "오크 숲": ("Orc Forest", "오크 숲", "兽人森林"),
+    "오크 요새": ("Orc Fortress", "오크 요새", "兽人要塞"),
+    "윈다우드": ("Windawood", "윈다우드", "风木"),
+    "윈다우드성": ("Windawood Castle", "윈다우드성", "风木城"),
+    "켄트": ("Kent", "켄트", "肯特"),
+    "켄트성": ("Kent Castle", "켄트성", "肯特城"),
+    "켄트성 마을": ("Kent Castle Village", "켄트성 마을", "肯特城村"),
+    "기란": ("Giran", "기란", "奇岩"),
+    "기란 마을": ("Giran Village", "기란 마을", "奇岩村庄"),
+    "기란 추가": ("Giran Extension", "기란 추가", "奇岩追加"),
+    "기란성": ("Giran Castle", "기란성", "奇岩城"),
+    "아덴": ("Aden", "아덴", "亚丁"),
+    "아덴 대륙": ("Aden Continent", "아덴 대륙", "亚丁大陆"),
+    "아덴 마을": ("Aden Village", "아덴 마을", "亚丁村庄"),
+    "아덴 집시촌": ("Aden Gypsy Camp", "아덴 집시촌", "亚丁吉普赛村"),
+    "아덴성": ("Aden Castle", "아덴성", "亚丁城"),
+    "용의 계곡": ("Dragon Valley", "용의 계곡", "龙之谷"),
+    "웰던": ("Weldon", "웰던", "威顿"),
+    "웰던 마을": ("Weldon Village", "웰던 마을", "威顿村庄"),
+    "풍룡의 둥지": ("Wind Dragon Nest", "풍룡의 둥지", "风龙巢穴"),
+    "풍룡의 상흔": ("Wind Dragon Scar", "풍룡의 상흔", "风龙之痕"),
+    "하이네": ("Heine", "하이네", "海音"),
+    "하이네 마을": ("Heine Village", "하이네 마을", "海音村庄"),
+    "하이네성": ("Heine Castle", "하이네성", "海音城"),
+    "황혼의 산맥": ("Twilight Mountains", "황혼의 산맥", "黄昏山脉"),
+    "오렌": ("Oren", "오렌", "欧瑞"),
+    "오렌 마을": ("Oren Village", "오렌 마을", "欧瑞村庄"),
+    "오렌 설벽": ("Oren Snow Wall", "오렌 설벽", "欧瑞雪壁"),
+    "오렌 추가": ("Oren Extension", "오렌 추가", "欧瑞追加"),
+    "악어섬": ("Crocodile Island", "악어섬", "鳄鱼岛"),
+    "엘모어 격전지": ("Elmore Battlefield", "엘모어 격전지", "艾尔摩激战地"),
+    "요정 숲": ("Elven Forest", "요정 숲", "妖精森林"),
+    "요정 숲 마을": ("Elven Forest Village", "요정 숲 마을", "妖精森林村庄"),
+    "화전민 마을": ("Woodburn Village", "화전민 마을", "燃柳村"),
+    "우드벡 마을": ("Woodbec Village", "우드벡 마을", "伍德贝克村"),
+    "화룡의 둥지": ("Fire Dragon Nest", "화룡의 둥지", "火龙巢穴"),
+    "은기사 지역": ("Silver Knight Area", "은기사 지역", "银骑士地区"),
+    "은기사 마을": ("Silver Knight Village", "은기사 마을", "银骑士村庄"),
+}
+
+
+def mainland_region_display(name: str, language: str | None) -> str:
+    """Localized mainland region or village label for the map editor."""
+    text = str(name or "").strip()
+    names = MAINLAND_REGION_NAMES.get(text)
+    if names is None:
+        return text
+    return _pick(names, language)
+
+
 def scroll_label_display(label: str, language: str | None) -> str:
     """Localized talking-scroll row name for the current UI language."""
     text = str(label or "").strip()

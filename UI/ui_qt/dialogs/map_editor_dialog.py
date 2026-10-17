@@ -49,10 +49,26 @@ from session.probes import (
     writable_patrol_yaml_path,
     writable_safe_yaml_path,
 )
+from ui_qt.dialogs.mainland_region_overlay import (
+    MainlandRegionOverlay,
+    build_mainland_overlay,
+    draw_visible_image,
+    region_button_text,
+)
 from ui_qt.theme import tokens
 
 Handle = Optional[str]
 _HANDLE_PX = 8
+_HANDLE_CURSORS = {
+    "n": Qt.CursorShape.SizeVerCursor,
+    "s": Qt.CursorShape.SizeVerCursor,
+    "e": Qt.CursorShape.SizeHorCursor,
+    "w": Qt.CursorShape.SizeHorCursor,
+    "nw": Qt.CursorShape.SizeFDiagCursor,
+    "se": Qt.CursorShape.SizeFDiagCursor,
+    "ne": Qt.CursorShape.SizeBDiagCursor,
+    "sw": Qt.CursorShape.SizeBDiagCursor,
+}
 _ZOOM_MIN = 0.4
 _ZOOM_MAX = 12.0
 # Live character marker: expanding rings (period / count / outer radius px).
@@ -84,6 +100,18 @@ class MapCanvas(QWidget):
 
     def mouseMoveEvent(self, event) -> None:
         self.editor.on_mouse_move(event)
+
+    def leaveEvent(self, event) -> None:
+        self.editor._hover_tile = None
+        self.editor._hover_canvas = None
+        if (
+            not self.editor._panning
+            and self.editor._drag is None
+            and self.editor._rect_anchor is None
+        ):
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.update()
+        super().leaveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
         self.editor.on_mouse_release(event)
@@ -235,7 +263,10 @@ class MapEditorWidget(QWidget):
         self._drag_origin: dict | tuple | None = None
         self._rect_anchor: tuple[int, int] | None = None
         self._hover_tile: tuple[int, int] | None = None
+        self._hover_canvas: tuple[float, float] | None = None
         self._hover_move: tuple[int, int] | None = None
+        self._region_overlay: MainlandRegionOverlay | None = None
+        self._show_regions = True
         self._live_nav: tuple[int, int] | None = None
         self._live_timer: QTimer | None = None
         self._live_anim_timer: QTimer | None = None
@@ -290,6 +321,12 @@ class MapEditorWidget(QWidget):
         tools.addWidget(zoom_out)
         tools.addWidget(self.zoom_label)
         tools.addWidget(zoom_in)
+        self._regions_btn = QPushButton(region_button_text(self.language))
+        self._regions_btn.setCheckable(True)
+        self._regions_btn.setChecked(True)
+        self._regions_btn.setVisible(False)
+        self._regions_btn.toggled.connect(self._toggle_regions)
+        tools.addWidget(self._regions_btn)
         root.addLayout(tools)
 
         split = QSplitter(Qt.Orientation.Horizontal)
@@ -330,6 +367,15 @@ class MapEditorWidget(QWidget):
         split.setSizes([250, 750])
         root.addWidget(split, stretch=1)
         self._sync_tools()
+
+    def _toggle_regions(self, checked: bool) -> None:
+        self._show_regions = bool(checked)
+        btn = getattr(self, "_regions_btn", None)
+        if btn is not None:
+            btn.setStyleSheet(
+                f"background: {tokens.ACCENT}; color: white;" if checked else ""
+            )
+        self.canvas.update()
 
     def _set_tool(self, tool: str) -> None:
         if not self._can_edit() and tool != "select":
@@ -406,6 +452,7 @@ class MapEditorWidget(QWidget):
         self._live_nav = None
         self._terrain = None
         self._base = None
+        self._region_overlay = None
         self._zoom = 1.0
         self._pan = [0.0, 0.0]
         if dungeon is None:
@@ -452,6 +499,25 @@ class MapEditorWidget(QWidget):
                 self._base = None
         else:
             self.status.setText(self.s.map_missing_short)
+        self._region_overlay = None
+        if not self._dungeon and self._base is not None:
+            try:
+                self._region_overlay = build_mainland_overlay(
+                    self._pack, language=self.language
+                )
+            except Exception:
+                self._region_overlay = None
+        if hasattr(self, "_regions_btn"):
+            self._regions_btn.setText(region_button_text(self.language))
+            self._regions_btn.setVisible(self._region_overlay is not None)
+            self._regions_btn.blockSignals(True)
+            self._regions_btn.setChecked(self._show_regions)
+            self._regions_btn.blockSignals(False)
+            self._regions_btn.setStyleSheet(
+                f"background: {tokens.ACCENT}; color: white;"
+                if self._show_regions
+                else ""
+            )
         if not self._dungeon:
             try:
                 self._load_farms()
@@ -662,33 +728,45 @@ class MapEditorWidget(QWidget):
             painter.drawText(10, 20, self.s.map_missing_short)
             return
         self._fit()
-        iw, ih = self._base.width(), self._base.height()
-        dw, dh = max(1, int(iw * self._scale)), max(1, int(ih * self._scale))
-        scaled = self._base.scaled(
-            dw, dh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation
-        )
         ox, oy = self._image_origin()
-        painter.drawImage(int(ox), int(oy), scaled)
+        draw_visible_image(
+            painter, self._base, ox, oy, self._scale, widget.width(), widget.height()
+        )
         ps = self._pixel_scale()
+        overlay = self._region_overlay
+        if overlay is not None and self._show_regions:
+            overlay.paint(
+                painter,
+                origin=(ox, oy),
+                scale=self._scale,
+                pixel_scale=ps,
+                tile_to_canvas=self._tile_to_canvas,
+                view_w=widget.width(),
+                view_h=widget.height(),
+                hover_tile=None if self._panning else self._hover_tile,
+                pointer=None if self._panning else self._hover_canvas,
+            )
         if not self._dungeon:
             for i, f in enumerate(self.farms):
                 x0, y0 = self._tile_to_canvas(f["x0"], f["y0"])
                 x1, y1 = self._tile_to_canvas(f["x1"] + 1, f["y1"] + 1)
                 selected = self.selected == ("farm", i)
                 preview = bool(f.get("_preview"))
-                color = QColor(250, 204, 21, 70) if preview else (
-                    QColor(29, 111, 232, 80) if selected else QColor(56, 189, 248, 55)
-                )
-                outline = QColor(202, 138, 4) if preview else QColor(29, 111, 232)
-                painter.fillRect(QRectF(x0, y0, x1 - x0, y1 - y0), color)
+                outline = QColor(202, 138, 4) if preview else QColor("#dc2626")
+                painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.setPen(QPen(outline, 2))
                 painter.drawRect(QRectF(x0, y0, x1 - x0, y1 - y0))
-                painter.setPen(QColor("#1f2937"))
-                painter.drawText(int(x0 + 4), int(max(12, y0 - 4)), str(f["name"]))
+                if not preview:
+                    painter.setPen(QColor("#1f2937"))
+                    painter.drawText(
+                        int(x0 + 4),
+                        int(max(12, y0 - 4)),
+                        route_point_display_name(str(f["name"]), self.language),
+                    )
                 if selected:
                     for hx, hy in self._handle_points(f).values():
                         painter.setBrush(QColor("white"))
-                        painter.setPen(QPen(QColor("#1d6fe8"), 2))
+                        painter.setPen(QPen(QColor("#dc2626"), 2))
                         painter.drawEllipse(QPointF(hx, hy), 5, 5)
         if len(self.patrol) >= 2:
             painter.setPen(QPen(QColor(56, 189, 248, 210), max(2, int(2 * self._scale))))
@@ -724,6 +802,10 @@ class MapEditorWidget(QWidget):
             hx, hy = self._hover_tile
             painter.setPen(QColor("#1e3a5f"))
             hover = self.s.editor_hover.format(x=hx, y=hy)
+            if overlay is not None and self._show_regions:
+                where = overlay.hover_text(hx, hy)
+                if where:
+                    hover = f"{hover}  ·  {where}"
             if self._live_nav is not None:
                 lx, ly = self._live_nav
                 hover = f"{hover}  ·  {self.s.editor_you_tile.format(x=lx, y=ly)}"
@@ -939,6 +1021,7 @@ class MapEditorWidget(QWidget):
             self._panning = True
             self._pan_start = (event.position().x(), event.position().y())
             self._pan_origin = list(self._pan)
+            self._sync_canvas_cursor()
             event.accept()
             return
         if event.button() != Qt.MouseButton.LeftButton:
@@ -947,7 +1030,8 @@ class MapEditorWidget(QWidget):
             if self._base is not None and not self._can_edit():
                 self.status.setText(self.s.editor_readonly)
             return
-        tx, ty = self._canvas_to_tile(event.position().x(), event.position().y())
+        cx, cy = event.position().x(), event.position().y()
+        tx, ty = self._canvas_to_tile(cx, cy)
         if self._dungeon and self.tool == "patrol":
             hit = self._hit_patrol(tx, ty)
             if hit is not None:
@@ -966,33 +1050,41 @@ class MapEditorWidget(QWidget):
         if self._dungeon:
             self._deselect()
             return
+        grabbed = self._handle_target(cx, cy)
+        if grabbed is not None:
+            hit_f, handle = grabbed
+            self._select("farm", hit_f)
+            self._drag = handle
+            self._drag_origin = dict(self.farms[hit_f])
+            self._hover_move = (tx, ty)
+            self._sync_canvas_cursor(cx, cy)
+            return
         hit_f = self._hit_farm(tx, ty)
         if hit_f is not None:
             self._select("farm", hit_f)
-            handle = self._hit_handle(
-                self.farms[hit_f], event.position().x(), event.position().y()
-            )
-            self._drag = handle or "move"
+            self._drag = "move"
             self._drag_origin = dict(self.farms[hit_f])
             self._hover_move = (tx, ty)
+            self._sync_canvas_cursor(cx, cy)
             return
         self._rect_anchor = (tx, ty)
         self.selected = None
+        self._sync_canvas_cursor(cx, cy)
 
     def on_mouse_move(self, event) -> None:
+        cx, cy = event.position().x(), event.position().y()
         if self._panning:
-            self._pan[0] = self._pan_origin[0] + (
-                event.position().x() - self._pan_start[0]
-            )
-            self._pan[1] = self._pan_origin[1] + (
-                event.position().y() - self._pan_start[1]
-            )
+            self._pan[0] = self._pan_origin[0] + (cx - self._pan_start[0])
+            self._pan[1] = self._pan_origin[1] + (cy - self._pan_start[1])
+            self._sync_canvas_cursor(cx, cy)
             self.canvas.update()
             return
         if self._base is None:
             return
-        tx, ty = self._canvas_to_tile(event.position().x(), event.position().y())
+        tx, ty = self._canvas_to_tile(cx, cy)
         self._hover_tile = (tx, ty)
+        self._hover_canvas = (cx, cy)
+        self._sync_canvas_cursor(cx, cy)
         if not self._can_edit():
             self.canvas.update()
             return
@@ -1105,6 +1197,10 @@ class MapEditorWidget(QWidget):
         self._drag = None
         self._drag_origin = None
         self._hover_move = None
+        self._sync_canvas_cursor(
+            event.position().x(),
+            event.position().y(),
+        )
         if self._dungeon:
             self._recompute_patrol_paths()
         self._refresh_list()
@@ -1124,6 +1220,62 @@ class MapEditorWidget(QWidget):
             "sw": (x0, y1),
             "w": (x0, my),
         }
+
+    def _sync_canvas_cursor(self, cx: float | None = None, cy: float | None = None) -> None:
+        """Resize arrows on handles, an open hand to move, a closed hand while dragging."""
+        canvas = getattr(self, "canvas", None)
+        if canvas is None:
+            return
+        if self._panning or self._drag == "move":
+            canvas.setCursor(Qt.CursorShape.ClosedHandCursor)
+            return
+        if self._drag in _HANDLE_CURSORS:
+            canvas.setCursor(_HANDLE_CURSORS[self._drag])
+            return
+        if (
+            not self._can_edit()
+            or self._dungeon
+            or self._base is None
+            or cx is None
+            or cy is None
+        ):
+            canvas.setCursor(
+                Qt.CursorShape.CrossCursor
+                if self._rect_anchor is not None
+                else Qt.CursorShape.ArrowCursor
+            )
+            return
+        if self._rect_anchor is not None:
+            canvas.setCursor(Qt.CursorShape.CrossCursor)
+            return
+        grabbed = self._handle_target(cx, cy)
+        if grabbed is not None:
+            canvas.setCursor(_HANDLE_CURSORS[grabbed[1]])
+            return
+        tx, ty = self._canvas_to_tile(cx, cy)
+        if self._hit_farm(tx, ty) is not None:
+            canvas.setCursor(Qt.CursorShape.OpenHandCursor)
+            return
+        canvas.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def _handle_target(self, cx: float, cy: float) -> tuple[int, str] | None:
+        """Farm handle under the pointer, including the part that sits outside the box."""
+        order: list[int] = []
+        if self.selected and self.selected[0] == "farm":
+            selected = self.selected[1]
+            if 0 <= selected < len(self.farms):
+                order.append(selected)
+        for i in range(len(self.farms) - 1, -1, -1):
+            if i not in order:
+                order.append(i)
+        for i in order:
+            farm = self.farms[i]
+            if farm.get("_preview"):
+                continue
+            handle = self._hit_handle(farm, cx, cy)
+            if handle:
+                return i, handle
+        return None
 
     def _hit_handle(self, f: dict, cx: float, cy: float) -> Handle:
         best: Handle = None

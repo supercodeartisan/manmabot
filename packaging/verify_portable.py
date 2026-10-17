@@ -15,7 +15,7 @@ def main() -> int:
     errors: list[str] = []
     for required in (
         PORTABLE / "run.py",
-        PORTABLE / "Bot_Manmabot.bat",
+        PORTABLE / "ZF.bat",
         PORTABLE / ".portable",
         PORTABLE / "README.txt",
         PORTABLE / "Engine",

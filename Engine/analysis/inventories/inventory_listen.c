@@ -30,6 +30,7 @@
 #include <math.h>
 #include <time.h>
 #include "signeddrv_client.h"
+#include "../pgcache.h"
 
 // ---------------------------------------------------------------------------
 // Tunables
@@ -132,8 +133,8 @@ static DWORD findPid(const wchar_t* name) {
 }
 
 static BOOL readMem(uint64_t addr, void* buf, uint32_t size) {
-    uint32_t br = 0;
-    return SignedReadMemory(g_pid, addr, buf, size, &br) && br == size;
+    int drv = 0;
+    return pg_read((uint64_t)g_pid, addr, buf, size, &drv) ? TRUE : FALSE;
 }
 
 /* Same PEB walk as print_state / realtime_monitor (no SignedGetImageBase). */
@@ -1047,10 +1048,52 @@ static uint32_t recMidOf(uint64_t rec) {
     return m;
 }
 
+#define NAME_CACHE 256
+typedef struct { uint32_t mid; char kr[96]; char tw[96]; } NameHit;
+static NameHit g_nameHits[NAME_CACHE];
+static int g_nameN = 0;
+static uint64_t g_nameBase = 0;
+
+static int nameCacheGet(uint32_t mid, char* kr, int krSz, char* tw, int twSz) {
+    int i;
+    if (g_nameBase != g_base) { g_nameN = 0; g_nameBase = g_base; }
+    for (i = 0; i < g_nameN; i++) {
+        if (g_nameHits[i].mid != mid) continue;
+        if (kr && krSz > 0) {
+            strncpy(kr, g_nameHits[i].kr, (size_t)krSz - 1);
+            kr[krSz - 1] = 0;
+        }
+        if (tw && twSz > 0) {
+            strncpy(tw, g_nameHits[i].tw, (size_t)twSz - 1);
+            tw[twSz - 1] = 0;
+        }
+        return g_nameHits[i].kr[0] ? 1 : 0;
+    }
+    return -1;
+}
+
+static void nameCachePut(uint32_t mid, const char* kr, const char* tw) {
+    NameHit* h;
+    if (!kr || !kr[0] || g_nameN >= NAME_CACHE) return;
+    if (g_nameBase != g_base) { g_nameN = 0; g_nameBase = g_base; }
+    h = &g_nameHits[g_nameN++];
+    h->mid = mid;
+    strncpy(h->kr, kr, sizeof(h->kr) - 1);
+    h->kr[sizeof(h->kr) - 1] = 0;
+    h->tw[0] = 0;
+    if (tw) {
+        strncpy(h->tw, tw, sizeof(h->tw) - 1);
+        h->tw[sizeof(h->tw) - 1] = 0;
+    }
+}
+
 static int msgNameStatic(uint32_t mid, char* out, int outSz, char* twOut, int twSz) {
     uint64_t anchor, rec;
     int steps;
+    int hit;
     if (!msgAnchorRva || !g_base || mid == 0) return 0;
+    hit = nameCacheGet(mid, out, outSz, twOut, twSz);
+    if (hit >= 0) return hit;
     anchor = q64(g_base + msgAnchorRva);
     if (!isStructHeap(anchor)) return 0;
     rec = q64(anchor + (fnv1aKey(mid) & msgBucketMask) * (uint64_t)msgBucketStride);
@@ -1070,6 +1113,7 @@ static int msgNameStatic(uint32_t mid, char* out, int outSz, char* twOut, int tw
             }
             if (twOut && twSz > 0 && isStructHeap(tw))
                 readSsoString(tw + msgNodeText, twOut, twSz);
+            if (ok) nameCachePut(mid, out, twOut);
             return ok;
         }
         {
@@ -1138,9 +1182,13 @@ static int applyStaticNames(InvItem* items, int nItems) {
     return filled;
 }
 
+static uint64_t g_cachedInv = 0;
+
 static uint64_t findInventorySub(void) {
     uint64_t mgr, holder, bgn, end, byIdx = 0;
     long i, subs;
+    if (g_cachedInv && vrva(g_cachedInv) == (uint32_t)invSubVft) return g_cachedInv;
+    g_cachedInv = 0;
     if (!g_base) return 0;
     mgr = q64(g_base + invMgr);
     if (!isStructHeap(mgr)) return 0;
@@ -1154,7 +1202,7 @@ static uint64_t findInventorySub(void) {
     for (i = 0; i < subs; i++) {
         uint64_t s = q64(bgn + 16ull * (uint64_t)i);
         if (!isStructHeap(s)) continue;
-        if (vrva(s) == invSubVft) return s;
+        if (vrva(s) == invSubVft) { g_cachedInv = s; return s; }
         if (i == (long)invSubIdx) byIdx = s;
     }
     if (byIdx && vrva(byIdx)) return byIdx;
@@ -1168,6 +1216,7 @@ static int inventoryScan(InvItem* items, int max, uint64_t* vecBase, uint64_t* v
     *nVec = 0; *vecBase = 0; *vecEnd = 0;
     g_drvReads = 0;
     g_budgetHit = 0;
+    pg_reset();
 
     inv = findInventorySub();
     if (!inv) {
@@ -1391,6 +1440,9 @@ static void invDetach(void) {
     g_pid = 0;
     g_base = 0;
     g_modSize = 0;
+    g_cachedInv = 0;
+    g_nameN = 0;
+    g_nameBase = 0;
 }
 
 static int invEnsure(const char* offsetsPath) {
@@ -1435,6 +1487,7 @@ __declspec(dllexport) int inventory_listen_snapshot(const char* offsetsPath, cha
     size_t got;
     if (!out || outCap < 16)
         return -1;
+    pg_reset();
     if (!invEnsure(offsetsPath))
         return -1;
     tf = tmpfile();

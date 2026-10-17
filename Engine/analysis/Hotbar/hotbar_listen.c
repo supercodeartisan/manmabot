@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../entities/signeddrv_client.h"
+#include "../pgcache.h"
 #include "nametable.h"
 
 static DWORD g_pid = 0;
@@ -42,8 +43,8 @@ static uint32_t IT_ID = 0x18, IT_COUNT = 0x38, IT_FMT = 0x68, IT_TMPL = 0x20;
 static uint32_t IT_ENCH = 0x3C, IT_VFT = 0x11C66E8;
 
 static int rm(uint64_t a, void* b, uint32_t s) {
-    uint32_t br = 0;
-    return SignedReadMemory(g_pid, a, b, s, &br) && br == s;
+    int drv = 0;
+    return pg_read((uint64_t)g_pid, a, b, s, &drv);
 }
 static uint64_t q64(uint64_t a) { uint64_t v = 0; rm(a, &v, 8); return v; }
 static uint32_t d32(uint64_t a) { uint32_t v = 0; rm(a, &v, 4); return v; }
@@ -214,8 +215,13 @@ static void loadAllOffsets(const char* skillPath) {
     loadInvReg(inv);
 }
 
+static uint64_t g_hsdObj = 0;
+static uint64_t g_invObj = 0;
+
 static uint64_t findHSD(void) {
     uint64_t mgr, holder, b, e;
+    if (g_hsdObj && vrva(g_hsdObj) == HSD_VFT2) return g_hsdObj + HSD_ADJ;
+    g_hsdObj = 0;
     if (!g_base) return 0;
     mgr = q64(g_base + MGR);
     if (!isHeap(mgr)) return 0;
@@ -228,11 +234,11 @@ static uint64_t findHSD(void) {
     for (uint64_t x = b; x + 16 <= e; x += 16) {
         uint64_t s = q64(x);
         if (!isHeap(s)) continue;
-        if (vrva(s) == HSD_VFT2) return s + HSD_ADJ;
+        if (vrva(s) == HSD_VFT2) { g_hsdObj = s; return s + HSD_ADJ; }
     }
     if (b + 16ull * HSD_IDX + 16 <= e) {
         uint64_t sub = q64(b + 16ull * HSD_IDX);
-        if (isHeap(sub) && vrva(sub) == HSD_VFT2) return sub + HSD_ADJ;
+        if (isHeap(sub) && vrva(sub) == HSD_VFT2) { g_hsdObj = sub; return sub + HSD_ADJ; }
     }
     return 0;
 }
@@ -251,15 +257,20 @@ static void buildInvMap(void) {
     uint64_t seen[512];
     int ns = 0;
     g_invn = 0;
-    mgr = q64(g_base + INV_MGR);
-    if (!isHeap(mgr)) return;
-    holder = q64(mgr + HOLDER);
-    if (!isHeap(holder)) return;
-    b = q64(holder + SUB_BEG);
-    e = q64(holder + SUB_END);
-    for (uint64_t x = b; x + 16 <= e; x += 16) {
-        uint64_t s = q64(x);
-        if (vrva(s) == INV_VFT) { inv = s; break; }
+    if (g_invObj && vrva(g_invObj) == INV_VFT) inv = g_invObj;
+    if (!inv) {
+        g_invObj = 0;
+        mgr = q64(g_base + INV_MGR);
+        if (!isHeap(mgr)) return;
+        holder = q64(mgr + HOLDER);
+        if (!isHeap(holder)) return;
+        b = q64(holder + SUB_BEG);
+        e = q64(holder + SUB_END);
+        for (uint64_t x = b; x + 16 <= e; x += 16) {
+            uint64_t s = q64(x);
+            if (vrva(s) == INV_VFT) { inv = s; break; }
+        }
+        if (inv) g_invObj = inv;
     }
     if (!inv) return;
     vb = q64(inv + INV_VEC_BEG);
@@ -438,6 +449,8 @@ static int scanHotbar(FILE* out) {
     NtCtx nt;
     char invPath[MAX_PATH];
 
+    pg_reset();
+    ntPgReset();
     hsd = findHSD();
     if (!hsd) {
         LOG("HudSlotDataSubsystem not found (run skilllocate.exe)\n");
@@ -476,6 +489,8 @@ static void hbDetach(void) {
     g_pid = 0;
     g_base = 0;
     g_modSize = 0;
+    g_hsdObj = 0;
+    g_invObj = 0;
 }
 
 static int hbEnsure(const char* offsetsPath) {
@@ -513,6 +528,8 @@ __declspec(dllexport) int hotbar_listen_snapshot(const char* offsetsPath, char* 
     long n;
     size_t got;
     if (!out || outCap < 16) return -1;
+    pg_reset();
+    ntPgReset();
     if (!hbEnsure(offsetsPath)) return -1;
     tf = tmpfile();
     if (!tf) return -1;

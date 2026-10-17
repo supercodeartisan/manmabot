@@ -1235,7 +1235,7 @@ class DebugWindow(tk.Toplevel):
         self._on_close = on_close
         self._closing = False
         self.t = t
-        self.title(t.get("debug_title", "Bot debug"))
+        self.title(t.get("debug_title", "Debug"))
         self.geometry("1180x700")
         self.minsize(900, 520)
         self.configure(background=BG)
@@ -1313,7 +1313,7 @@ class DebugPlayer(tk.Tk):
         apply_classic_style(self, self.language)
         global FONT_BODY
         FONT_BODY = ui_theme.FONT_BODY
-        self.title(self.t.get("debug_player_title", "Manmabot debug player"))
+        self.title(self.t.get("debug_player_title", "ZF"))
         self.geometry("1100x720")
         self.minsize(860, 540)
         self.configure(background=BG)
