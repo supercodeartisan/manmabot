@@ -25,7 +25,7 @@ from login.autologin_service import (
     AutoLoginRequest,
     AutoLoginService,
 )
-from settings.server_list import server_names_list
+from settings.server_list import server_names_list, translate_server_name
 from session.bot_controller import BotController, RunState
 from session.hotkeys import HotkeyManager, install_alt_menu_guard
 from i18n.localized_names import route_point_display_name
@@ -1936,10 +1936,12 @@ class MainWindow(ctk.CTk):
 
         def refresh_servers(*_args) -> None:
             names = server_names_list(selected_locale())
+            current = translate_server_name(server.get().strip(), selected_locale())
+            if current and current not in names:
+                names = [current, *names]
             if not names:
                 names = [""]
-            current = server.get().strip()
-            chosen = current if current in names else names[0]
+            chosen = current if current else names[0]
             server.set(chosen)
             server_menu.configure(values=names)
             try:
@@ -1956,7 +1958,12 @@ class MainWindow(ctk.CTk):
         ).grid(row=3, column=1, sticky="ew", pady=6)
         label(4, self.s.account_server)
         initial_servers = server_names_list(selected_locale()) or [""]
-        if server.get().strip() not in initial_servers:
+        opened = translate_server_name(server.get().strip(), selected_locale())
+        if opened and opened not in initial_servers:
+            initial_servers = [opened, *initial_servers]
+        if opened:
+            server.set(opened)
+        elif server.get().strip() not in initial_servers:
             server.set(initial_servers[0])
         server_menu = ctk.CTkOptionMenu(
             fields,

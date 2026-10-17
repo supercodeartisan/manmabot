@@ -29,7 +29,12 @@ from PySide6.QtWidgets import (
 
 from settings.accounts import Account, AccountStore, AccountStoreError
 from settings.profile import Profile, save_profile
-from settings.server_list import server_names_list
+from settings.server_list import (
+    server_cells_list,
+    server_name_at_slot,
+    server_slot_key,
+    translate_server_name,
+)
 from ui_qt.editors.form_helpers import configure_select_rows
 from ui_qt.theme import tokens
 from ui_qt.theme.apply import mark_accent
@@ -176,6 +181,7 @@ class AccountEditorDialog(QDialog):
 
         self.server = QComboBox()
         self.server.setEditable(False)
+        self._server_locale = default_locale
         self._reload_servers(
             default_locale,
             account.server if account else "",
@@ -285,34 +291,55 @@ class AccountEditorDialog(QDialog):
                 self.t.get("hide", "Hide") if self._pwd_shown else self.t.get("show", "Show")
             )
 
-    def _reload_servers(self, locale: str, current: str = "") -> None:
-        servers = server_names_list(locale)
-        if current and current not in servers:
-            servers = [current, *servers]
+    def _reload_servers(
+        self, locale: str, current: str = "", previous_locale: str = ""
+    ) -> None:
+        slot = self.server.currentData()
+        if not isinstance(slot, str) or slot.count("|") != 2:
+            slot = server_slot_key(current, previous_locale)
+        chosen = server_name_at_slot(locale, slot) if slot else ""
+        if not chosen:
+            chosen = translate_server_name(current, locale, previous_locale)
+        cells = server_cells_list(locale)
         self.server.blockSignals(True)
         self.server.clear()
-        self.server.addItems(servers)
-        if current and current in servers:
-            self.server.setCurrentText(current)
-        elif servers:
+        selected = -1
+        for name, cell in cells:
+            self.server.addItem(name, cell)
+            if selected < 0 and slot and cell == slot:
+                selected = self.server.count() - 1
+        if selected < 0 and chosen:
+            for index in range(self.server.count()):
+                if self.server.itemText(index) == chosen:
+                    selected = index
+                    break
+        if selected < 0 and chosen:
+            self.server.insertItem(0, chosen, slot or None)
+            selected = 0
+        if selected >= 0:
+            self.server.setCurrentIndex(selected)
+        elif self.server.count():
             self.server.setCurrentIndex(0)
         self.server.blockSignals(False)
+        self._server_locale = locale
 
     def _region_changed(self) -> None:
+        previous = self._server_locale
         region = str(self.region.currentData() or "Korea")
         locale = "zh-CN" if region == "China" else "ko"
         self.locale.blockSignals(True)
         self.locale.setCurrentIndex(max(0, self.locale.findData(locale)))
         self.locale.blockSignals(False)
-        self._reload_servers(locale, self.server.currentText())
+        self._reload_servers(locale, self.server.currentText(), previous)
 
     def _locale_changed(self) -> None:
+        previous = self._server_locale
         locale = str(self.locale.currentData() or "ko")
         region = "China" if locale == "zh-CN" else "Korea"
         self.region.blockSignals(True)
         self.region.setCurrentIndex(max(0, self.region.findData(region)))
         self.region.blockSignals(False)
-        self._reload_servers(locale, self.server.currentText())
+        self._reload_servers(locale, self.server.currentText(), previous)
 
     def _save(self) -> None:
         slot = self.slot_group.checkedId()

@@ -304,8 +304,97 @@ def try_enter_farm_detour(
         on_walk(tile, dest)
         return True
 
+    if not walkable_around(terrain, origin, radius):
+        why = f"enter-farm detour r={radius} has no walkable tile"
+    else:
+        why = f"enter-farm detour r={radius} exhausted ({len(tried)} tiles)"
     return try_unstick_escape(
-        blackboard, urgent=True, allow_outside_farm=True,
+        blackboard,
+        urgent=True,
+        allow_outside_farm=True,
+        reason=why,
+    )
+
+
+def _hunt_area_world_center(blackboard: "Blackboard") -> Optional[tuple[int, int]]:
+    """Absolute tile at the center of the active farm, or None."""
+    from app._03_world.space.map_pack import get_active_map_pack
+    from app._04_decision.nav_config import get_active_farm
+
+    farm = get_active_farm(int(getattr(blackboard, "farm_area_index", 0) or 0))
+    if farm is None:
+        return None
+    cx, cy = farm.center()
+    pack = get_active_map_pack()
+    if pack is None:
+        return int(cx), int(cy)
+    return int(cx) + int(pack.origin_x), int(cy) + int(pack.origin_y)
+
+
+def _urgent_escape_reason(
+    blackboard: "Blackboard",
+    state: Optional["GameState"],
+) -> str:
+    """Why a standstill skipped the nearby sweep."""
+    parts: list[str] = []
+    if burst_stuck(blackboard):
+        count = len(_trim_stuck_events(blackboard, time.time()))
+        parts.append(
+            f"burst {count} standstills in {int(pm.UNSTICK_BURST_WINDOW_S)}s"
+        )
+    if needs_hp_escape(blackboard, state):
+        ratio = _hp_ratio_hint(blackboard, state)
+        gate = _hp_escape_threshold()
+        if ratio is None:
+            parts.append(f"hp at escape gate {gate:.0%}")
+        else:
+            parts.append(f"hp {ratio:.0%} <= gate {gate:.0%}")
+    return "; ".join(parts) or "urgent escape"
+
+
+def _confined_escape_reason(blackboard: "Blackboard") -> str:
+    raw = blackboard.scratch.get(SCRATCH_CONFINED_ORIGIN) or []
+    if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+        origin = (int(raw[0]), int(raw[1]))
+    else:
+        origin = _player_tile(blackboard)
+    started = float(blackboard.scratch.get(SCRATCH_CONFINED_SINCE) or 0.0)
+    elapsed = (
+        max(0.0, time.time() - started)
+        if started > 0.0
+        else float(pm.UNSTICK_CONFINED_SECONDS)
+    )
+    return (
+        f"confined within {int(pm.UNSTICK_CONFINED_TILES)} tiles "
+        f"for {elapsed:.0f}s from {origin}"
+    )
+
+
+def _escape_detail(detail: str, context: str) -> str:
+    ctx = str(context or "").strip()
+    if ctx and ctx != "unstick nearby":
+        return f"{detail}; {ctx}"
+    return detail
+
+
+def _log_unstick_escape(
+    blackboard: "Blackboard",
+    *,
+    via: str,
+    reason: str,
+    spot: str = "",
+) -> None:
+    """One line when teleport or a talking scroll actually leaves."""
+    from app.bot_log import event
+
+    spot_bit = f" spot={spot}" if spot else ""
+    event(
+        "nav",
+        "unstick escape at %s via %s%s — %s",
+        _player_tile(blackboard),
+        via,
+        spot_bit,
+        reason or "unstick",
     )
 
 
@@ -333,27 +422,44 @@ def try_unstick_escape(
         return False
     if shopping_blocks_teleport(blackboard):
         return False
+    why = str(reason or "unstick")
     if try_unstick_teleport(
         blackboard,
         ignore_cooldown=urgent,
-        reason=str(reason or "unstick teleport"),
+        reason=why,
         state=state,
     ):
+        _log_unstick_escape(blackboard, via="teleport", reason=why)
         reset_unstick_tries(blackboard)
         reset_confined_progress(blackboard)
         blackboard.scratch[SCRATCH_ESCAPED] = True
         return True
     if not talking_scroll_available():
         return False
-    spot = farm_return_scroll_spot()
+    spot = farm_return_scroll_spot(near=_hunt_area_world_center(blackboard))
     if emit_talking_scroll(
         blackboard,
         spot_id=spot,
-        reason=str(reason or "unstick talking scroll"),
+        reason=why,
     ) is Status.SUCCESS:
+        _log_unstick_escape(
+            blackboard,
+            via="talking scroll",
+            reason=why,
+            spot=str(spot or ""),
+        )
         reset_unstick_tries(blackboard)
         reset_confined_progress(blackboard)
         blackboard.scratch[SCRATCH_ESCAPED] = True
+        from app._04_decision.talking_scroll import (
+            MAP_ID_MAINLAND,
+            SCRATCH_UNSTICK_SCROLL_RETURN,
+            geography_for_id,
+        )
+
+        geo = geography_for_id(spot) if spot else None
+        if geo is not None and str(geo.map_id) == MAP_ID_MAINLAND:
+            blackboard.scratch[SCRATCH_UNSTICK_SCROLL_RETURN] = True
         return True
     return False
 
@@ -398,7 +504,7 @@ def try_confined_escape(
         blackboard,
         urgent=True,
         allow_outside_farm=True,
-        reason="unstick confined",
+        reason=_confined_escape_reason(blackboard),
         state=state,
     )
 
@@ -444,13 +550,25 @@ def try_movement_unstick(
         burst_stuck(blackboard) or needs_hp_escape(blackboard, state)
     )
 
-    if urgent and try_unstick_escape(blackboard, urgent=True, state=state):
+    if urgent and try_unstick_escape(
+        blackboard,
+        urgent=True,
+        reason=_escape_detail(_urgent_escape_reason(blackboard, state), reason),
+        state=state,
+    ):
         return True
 
     if allow_escape and inner_ring_exhausted(blackboard, terrain, origin):
         if in_gap:
             return True
-        if try_unstick_escape(blackboard, state=state):
+        if try_unstick_escape(
+            blackboard,
+            reason=_escape_detail(
+                f"inner ring r={int(pm.TRAVEL_UNSTICK_INNER_RADIUS)} exhausted",
+                reason,
+            ),
+            state=state,
+        ):
             return True
 
     if in_gap:
@@ -460,7 +578,12 @@ def try_movement_unstick(
     if tile is None:
         if not allow_escape:
             return False
-        return try_unstick_escape(blackboard, state=state)
+        ring = int(pm.TRAVEL_UNSTICK_RADIUS if radius is None else radius)
+        return try_unstick_escape(
+            blackboard,
+            reason=_escape_detail(f"no walkable tile in r={ring}", reason),
+            state=state,
+        )
 
     dest = unstick_click_dest(tile, blackboard.world_origin)
     blackboard.scratch[SCRATCH_CLICK_AT] = now

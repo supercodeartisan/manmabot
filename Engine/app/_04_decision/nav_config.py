@@ -303,6 +303,36 @@ def _resolve_nav_prebuild_dir(section: dict[str, Any]) -> tuple[Path, Optional[P
     return prebuild_dir_beside_terrain(terrain_path), terrain_path
 
 
+# Silver Knight inn. Nav tiles, mainland origin (32448, 32128).
+# The south edge y=1256 is a real wall stored as white tiles plus a north
+# fence. World-nav A* sees only the white tile, and clearing that fence made
+# the click path treat (668, 1256) and (669, 1256) as an open door.
+# The north opening (666, 1248) stays walkable: it is open on nav.png.
+# The south gap that stays walkable is (660, 1256) — world (33108, 33384).
+_INN_SOUTH_WALL_Y = 1256
+_INN_SOUTH_WALL_X0 = 656
+_INN_SOUTH_WALL_X1 = 669
+_INN_SOUTH_GAP_X = 660
+
+
+def _seal_silver_knight_inn(terrain: Any, pack_id: str) -> None:
+    """Make the inn south wall unstandable. Leave both exits walkable."""
+    if str(pack_id) != "mainland":
+        return
+    walkable = getattr(terrain, "walkable", None)
+    if walkable is None:
+        return
+    if not getattr(walkable, "flags", None) or not walkable.flags.writeable:
+        walkable = walkable.copy()
+        terrain.walkable = walkable
+    height, width = walkable.shape
+    for x in range(_INN_SOUTH_WALL_X0, _INN_SOUTH_WALL_X1 + 1):
+        if x == _INN_SOUTH_GAP_X:
+            continue
+        if 0 <= x < width and 0 <= _INN_SOUTH_WALL_Y < height:
+            walkable[_INN_SOUTH_WALL_Y, x] = False
+
+
 def _load_navigation_graphs(section: dict[str, Any]) -> None:
     """Load offline nav prebuild into terrain / coarse / portal globals.
 
@@ -342,6 +372,7 @@ def _load_navigation_graphs(section: dict[str, Any]) -> None:
         clearance_tiles=clearance,
         wall_penalty=wall_penalty,
     )
+    _seal_silver_knight_inn(terrain, pack.id if pack is not None else "")
     set_terrain_map(terrain)
     set_coarse_map(coarse)
     set_portal_graph(graph)

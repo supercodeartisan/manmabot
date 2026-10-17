@@ -943,9 +943,6 @@ def _maybe_confined_escape(
         reset_confined_progress(blackboard)
         return None
     if try_confined_escape(blackboard, state):
-        from app.bot_log import event
-
-        event("nav", "confined escape fired (bubble timeout)")
         return Status.SUCCESS
     return None
 
@@ -1416,6 +1413,23 @@ def _enter_farm_if_needed(
     if farm is None or terrain is None:
         return None
     ox, oy = blackboard.world_origin.x, blackboard.world_origin.y
+    from app._04_decision.talking_scroll import (
+        SCRATCH_SCROLL_ARRIVAL,
+        SCRATCH_UNSTICK_SCROLL_RETURN,
+    )
+
+    if blackboard.scratch.get(SCRATCH_UNSTICK_SCROLL_RETURN):
+        if blackboard.scratch.get(SCRATCH_SCROLL_ARRIVAL):
+            if not farm.contains(ox, oy):
+                return Status.SUCCESS
+        elif farm.contains(ox, oy):
+            blackboard.scratch.pop(SCRATCH_UNSTICK_SCROLL_RETURN, None)
+        else:
+            blackboard.scratch.pop(SCRATCH_UNSTICK_SCROLL_RETURN, None)
+            from app._04_decision.world_nav import begin_world_nav
+
+            begin_world_nav(blackboard, "unstick_return")
+            return Status.FAILURE
     if farm.contains(ox, oy):
         return None
     from app.bot_log import event
