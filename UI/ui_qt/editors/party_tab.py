@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Callable
 
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -20,6 +23,12 @@ from ui_qt.viewmodels.settings_bag import SettingsBag
 _LOOT_ROLES = ("none", "responsible")
 _FARM_MODES = ("party", "solo")
 _PARTY_ROLES = ("member", "leader")
+
+
+class _WsTestBridge(QObject):
+    """Marshal WebSocket probe results back onto the UI thread."""
+
+    finished = Signal(bool, str)
 
 
 class PartyTab(QWidget):
@@ -38,6 +47,9 @@ class PartyTab(QWidget):
         self.language = language
         self.on_log = on_log or (lambda _m: None)
         self._lan_ip = ""
+        self._ws_testing = False
+        self._ws_bridge = _WsTestBridge(self)
+        self._ws_bridge.finished.connect(self._on_ws_test_finished)
         self._build()
 
     def _build(self) -> None:
@@ -75,6 +87,14 @@ class PartyTab(QWidget):
 
         self.bag.set("party", "leader_name", "")
 
+        self.member_ws_box = card(
+            self.member_panel,
+            self.t.get("party_ws_title", "WebSocket"),
+        )
+        member_lay.addWidget(self.member_ws_box)
+        ws_lay = self.member_ws_box.layout()
+        assert isinstance(ws_lay, QVBoxLayout)
+
         host_row = QHBoxLayout()
         host_row.addWidget(QLabel(self.t.get("party_leader_host", "Leader")))
         self.leader_host = QLineEdit(
@@ -83,9 +103,9 @@ class PartyTab(QWidget):
         self.leader_host.setPlaceholderText("10.0.0.2")
         self.leader_host.textChanged.connect(self._on_leader_host_changed)
         host_row.addWidget(self.leader_host, stretch=1)
-        member_lay.addLayout(host_row)
+        ws_lay.addLayout(host_row)
         self.member_ws_port = add_spin_row(
-            member_lay,
+            ws_lay,
             self.bag,
             "party",
             "ws_port",
@@ -94,6 +114,16 @@ class PartyTab(QWidget):
             1,
             65535,
         )
+        test_row = QHBoxLayout()
+        self.ws_test_btn = QPushButton(
+            self.t.get("party_ws_test", "Test connection")
+        )
+        self.ws_test_btn.clicked.connect(self._test_ws_connection)
+        test_row.addWidget(self.ws_test_btn)
+        self.ws_status = QLabel("")
+        self.ws_status.setWordWrap(True)
+        test_row.addWidget(self.ws_status, stretch=1)
+        ws_lay.addLayout(test_row)
 
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel(self.t.get("party_farm_mode", "Farming method")))
@@ -238,13 +268,79 @@ class PartyTab(QWidget):
     def _on_leader_host_changed(self, text: str) -> None:
         self.bag.set("party", "leader_host", str(text or "").strip())
 
-    def _lan_ip_text(self) -> str:
-        if not self._lan_ip:
-            try:
-                from websocket.netinfo import local_ipv4
+    def _test_ws_connection(self) -> None:
+        """Probe the leader party socket once (member WebSocket settings)."""
+        if self._ws_testing:
+            return
+        host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
+        port = int(self.bag.get_int("party", "ws_port", 8765) or 8765)
+        if not host:
+            msg = self.t.get(
+                "party_ws_need_host",
+                "Enter the leader IP first.",
+            )
+            self.ws_status.setText(msg)
+            self.on_log(msg)
+            return
+        self._ws_testing = True
+        self.ws_test_btn.setEnabled(False)
+        self.ws_status.setText(self.t.get("party_ws_testing", "Testing…"))
+        uri = f"ws://{host}:{port}/"
 
-                self._lan_ip = local_ipv4()
-            except Exception:
+        def work() -> None:
+            try:
+                from websocket.client import PartyClient
+
+                client = PartyClient(
+                    host,
+                    port,
+                    reconnect=False,
+                    sender="party-ui-test",
+                )
+                try:
+                    client.connect(timeout=3.0, wait=True)
+                finally:
+                    client.close(timeout=2.0)
+                self._ws_bridge.finished.emit(
+                    True,
+                    self.t.get("party_ws_ok", "Connected to {uri}").format(uri=uri),
+                )
+            except Exception as exc:
+                self._ws_bridge.finished.emit(
+                    False,
+                    self.t.get(
+                        "party_ws_fail",
+                        "Connection failed ({uri}): {error}",
+                    ).format(uri=uri, error=exc),
+                )
+
+        threading.Thread(
+            target=work,
+            name="party-ws-test",
+            daemon=True,
+        ).start()
+
+    def _on_ws_test_finished(self, ok: bool, detail: str) -> None:
+        self._ws_testing = False
+        on = self._party_on() and self._role() == "member"
+        if hasattr(self, "ws_test_btn"):
+            self.ws_test_btn.setEnabled(on)
+        if hasattr(self, "ws_status"):
+            self.ws_status.setText(
+                self.t.get("party_ws_ok_short", "OK")
+                if ok
+                else self.t.get("party_ws_fail_short", "Failed")
+            )
+        self.on_log(str(detail or ""))
+
+    def _lan_ip_text(self) -> str:
+        """Prefer the LAN NIC, not the VPN default-route address."""
+        try:
+            from websocket.netinfo import local_ipv4
+
+            self._lan_ip = local_ipv4()
+        except Exception:
+            if not self._lan_ip:
                 self._lan_ip = "127.0.0.1"
         return self._lan_ip
 
@@ -346,6 +442,9 @@ class PartyTab(QWidget):
             self.member_panel.setEnabled(on)
         if hasattr(self, "leader_panel"):
             self.leader_panel.setEnabled(on)
+        # Test button stays off while a probe is in flight.
+        if hasattr(self, "ws_test_btn") and self._ws_testing:
+            self.ws_test_btn.setEnabled(False)
         # Within the member panel, loot still depends on farm mode.
         if on and self._role() == "member":
             self._on_loot_mode_changed()
