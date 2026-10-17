@@ -14,6 +14,7 @@ from app._03_world.merge.memory_sync import (
 from app._02_state.objects import Position
 from app._04_decision.behavior_tree import Status
 from app._04_decision.behaviors.travel import (
+    SCRATCH_WORLD_NAV_SHORT_WALK,
     clear_travel,
     emit_travel_hop,
     start_travel,
@@ -342,6 +343,7 @@ class WorldNavSession:
             op="walk",
         )
         clear_travel(blackboard)
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
         self.step_i += 1
         self.phase = "ready"
         return Status.SUCCESS
@@ -412,6 +414,14 @@ class WorldNavSession:
         tokens = api.state_tokens()
         api.emit_state(tokens.WALK_START, map=map_id, x=gx, y=gy)
         clear_travel(blackboard)
+        prev = self.plan.steps[self.step_i - 1] if self.step_i > 0 else None
+        after_scroll = (
+            prev is not None and str(getattr(prev, "op", "") or "") == "talking_scroll"
+        )
+        if after_scroll:
+            blackboard.scratch[SCRATCH_WORLD_NAV_SHORT_WALK] = True
+        else:
+            blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
         start_travel(blackboard, nav, reason=f"world nav walk ({self.reason})")
         blackboard.travel_purpose = PURPOSE_WORLD_NAV
         self.phase = "walk"
@@ -433,6 +443,7 @@ class WorldNavSession:
         map_id = int(to["mapId"])
         gx, gy = int(to["x"]), int(to["y"])
         if pose.map_id != map_id:
+            blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
             self.fail(f"left map during walk (map{pose.map_id})")
             return Status.FAILURE
         if _chev(pose.x, pose.y, gx, gy) <= ARRIVE_TILES or travel_arrived(blackboard):
@@ -449,6 +460,7 @@ class WorldNavSession:
                 return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
             tokens = api.state_tokens()
             api.emit_state(tokens.WALK_FAIL, map=map_id, x=gx, y=gy, error=miss)
+            blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
             self.fail(f"walk hop failed {miss}")
             return Status.FAILURE
         return self._idle(blackboard, "world nav walk")

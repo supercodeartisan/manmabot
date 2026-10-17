@@ -99,6 +99,11 @@ HUNT_MAP_SCROLL_COOLDOWN_S = 8.0
 OFF_MAP_TERRAIN_SLACK = 24
 # Last time we were in combat (for Fix/Return idle 귀환).
 SCRATCH_LAST_COMBAT_AT = "last_combat_at"
+# Confined-escape scroll has landed (or is in flight). Return by world nav,
+# even on the same map, instead of the enter-farm walk.
+SCRATCH_UNSTICK_SCROLL_RETURN = "unstick_scroll_return"
+# Field mapId of mainland talking-scroll hubs (은기사, 기란, …).
+_MAINLAND_FIELD_MAP_ID = 4
 
 # Walk here when a newbie cannot talking-scroll to 허수아비 수련장.
 SCARECROW_FIELD_TILE = (32525, 32824)
@@ -808,14 +813,51 @@ def hunt_map_is_dungeon() -> bool:
     return bool(mid) and is_dungeon_map(mid, mid)
 
 
-def farm_return_scroll_spot(map_id: str | None = None) -> Optional[str]:
-    """Talking-scroll row for an NPC/teleporter on the farming map."""
+def nearest_mainland_hub_spot(
+    world_xy: tuple[int, int] | None,
+) -> Optional[str]:
+    """Mainland talking-scroll hub closest to ``world_xy`` (absolute tiles).
+
+    Talking Island rows (mapId 0) are not candidates. Equal distance keeps
+    the earlier hub index.
+    """
+    if world_xy is None:
+        return None
+    ax, ay = int(world_xy[0]), int(world_xy[1])
+    best_id: Optional[str] = None
+    best_key: Optional[tuple[int, int]] = None
+    for plan in scroll_spot_plans():
+        if int(plan.game_map_id) != _MAINLAND_FIELD_MAP_ID:
+            continue
+        dist = max(abs(int(plan.world_x) - ax), abs(int(plan.world_y) - ay))
+        key = (dist, int(plan.hub_index))
+        if best_key is None or key < best_key:
+            best_key = key
+            best_id = plan.id
+    return best_id
+
+
+def farm_return_scroll_spot(
+    map_id: str | None = None,
+    *,
+    near: tuple[int, int] | None = None,
+) -> Optional[str]:
+    """Talking-scroll row for an NPC/teleporter on the farming map.
+
+    Mainland uses the hub nearest ``near`` (absolute tiles of the current
+    hunt area). Talking Island stays on 마법서 상인. A dungeon floor still
+    lands at the fixed mainland town row.
+    """
     mid = str(map_id or "").strip()
     if not mid:
         from app._03_world.space.map_pack import get_active_map_pack
 
         pack = get_active_map_pack()
         mid = str(pack.id) if pack is not None else MAP_ID_TALKING_ISLAND
+    if mid == MAP_ID_MAINLAND:
+        spot = nearest_mainland_hub_spot(near)
+        if spot and scroll_spot_plan(spot) is not None:
+            return spot
     spot = FARM_RETURN_SPOT_BY_MAP.get(mid)
     if not spot:
         low = mid.lower()

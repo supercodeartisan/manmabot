@@ -7,3 +7,4 @@ Driver_Install_Interception.bat
 Driver_Start_SignedDriver.bat
 run.py
 launcher_manmabot.py
+map4_boundaries.tsv

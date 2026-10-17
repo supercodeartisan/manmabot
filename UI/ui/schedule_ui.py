@@ -83,7 +83,7 @@ from settings.profile import (
 )
 from settings.schedule import ScheduleStore, ScheduleTask, profile_snapshot
 from settings.schedule_clock import ScheduleSession
-from settings.server_list import server_names_list
+from settings.server_list import server_names_list, translate_server_name
 from settings.spell_defaults import SKILL_GRID, SKILL_KEYS
 from i18n.strings import DEFAULT_HOTKEYS, ui_language, ui_strings
 from settings.task_runtime import (
@@ -12439,8 +12439,10 @@ class ScheduleWindow(tk.Tk):
                 locale_label = str(variables["locale"].get())
                 locale = combo_ids["locale"].get(locale_label, locale_label)
                 servers = server_names_list(locale)
-                current = str(variables["server"].get())
-                if current not in servers and servers:
+                current = translate_server_name(str(variables["server"].get()), locale)
+                if current and current not in servers:
+                    servers = [current, *servers]
+                elif not current and servers:
                     current = servers[0]
                 show_combobox_value(combo_widgets["server"], current, servers)
 

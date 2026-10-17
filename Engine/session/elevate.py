@@ -93,6 +93,43 @@ def ensure_elevated_or_continue() -> str:
     return "declined"
 
 
+def _load_startup_warm_modules() -> None:
+    """Import the admin warm path on the caller thread.
+
+    The worker below still starts WinNotify and attaches the memory reader.
+    Nuitka initializes each compiled module once. Doing that import from the
+    worker while the main thread is still importing the UI crashes in
+    python314.dll, so those modules are loaded here first. Later imports in
+    the worker are cache hits and do not initialize again.
+    """
+    import importlib
+
+    import session.monitor_launch  # noqa: F401
+    import session.player_monitor as player_monitor
+
+    try:
+        player_monitor.reader_module()
+    except Exception:
+        pass
+    for name in (
+        "session.probes",
+        "tool.utils",
+        "app._01_perception.sensors",
+        "app._01_perception.memory_client",
+        "app._01_perception.print_state_reader",
+        "app._01_perception.inventory_listen_reader",
+        "app._01_perception.hotbar_listen_reader",
+        "app._01_perception.shop_listen_reader",
+        "app._01_perception.buff_listen_reader",
+        "app._01_perception.uidialog_listen_reader",
+        "app.bot_log",
+    ):
+        try:
+            importlib.import_module(name)
+        except Exception:
+            pass
+
+
 def prepare_runtime() -> str:
     """Elevate once, then start WinNotify and attach the memory reader.
 
@@ -104,6 +141,8 @@ def prepare_runtime() -> str:
         raise SystemExit(0)
     if is_admin():
         import threading
+
+        _load_startup_warm_modules()
 
         def _start_driver() -> None:
             try:

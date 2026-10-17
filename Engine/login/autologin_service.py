@@ -296,6 +296,24 @@ def _is_elevated() -> bool:
         return False
 
 
+def _windowless_flags() -> int:
+    """Console-subsystem Python, with no console window.
+
+    The operator UI is ``pythonw``. A plain ``Popen`` of ``python.exe``
+    therefore opens a console that stays up for the whole autologin run.
+    ``CREATE_NO_WINDOW`` keeps that process, its elevation, and its stdio.
+    """
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    flags |= getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    return flags
+
+
+def _bundled_python(*, windowed: bool) -> Path | None:
+    name = "pythonw.exe" if windowed else "python.exe"
+    candidate = app_root() / "python" / name
+    return candidate if candidate.is_file() else None
+
+
 def _launch_elevated(executable: Path, args: list[str], cwd: Path):
     class SHELLEXECUTEINFO(ctypes.Structure):
         _fields_ = [
@@ -361,6 +379,7 @@ class AutoLoginService:
         result_path = run_dir / "result.json"
         cancel_path = run_dir / "cancel"
         process = None
+        console_log = None
         try:
             template, assets = validate_autologin(self.root, request)
             try:
@@ -374,9 +393,7 @@ class AutoLoginService:
                 raise AutoLoginValidationError(
                     f"Could not protect the Purple password with DPAPI: {exc}"
                 ) from exc
-            python = app_root() / "python" / "python.exe"
-            if not python.is_file():
-                python = Path(sys.executable)
+            python = _bundled_python(windowed=False) or Path(sys.executable)
             args = [
                 str(self.root / "bot" / "bot2.py"), str(config_path),
                 "--timeout", str(request.timeout_seconds),
@@ -388,11 +405,20 @@ class AutoLoginService:
             if self._launcher is not None:
                 process = self._launcher(python, args, self.root / "bot")
             elif os.name == "nt" and not _is_elevated():
-                process = _launch_elevated(python, args, self.root / "bot")
+                # ShellExecute cannot pass CREATE_NO_WINDOW. pythonw has no
+                # console. nShow stays SW_HIDE; the UAC prompt still appears.
+                windowed = _bundled_python(windowed=True)
+                process = _launch_elevated(
+                    windowed or python, args, self.root / "bot"
+                )
             else:
+                console_log = open(run_dir / "console.log", "ab")
                 process = subprocess.Popen(
                     [str(python), *args], cwd=str(self.root / "bot"),
-                    creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+                    creationflags=_windowless_flags(),
+                    stdin=subprocess.DEVNULL,
+                    stdout=console_log,
+                    stderr=subprocess.STDOUT,
                 )
 
             deadline = (
@@ -491,6 +517,8 @@ class AutoLoginService:
                 EXIT_FAILED, "failed", detail, run_dir, False
             )
         finally:
+            if console_log is not None:
+                console_log.close()
             # Delete ciphertext and cancellation control data; status/result are
             # deliberately retained for diagnostics and contain no credentials.
             for secret_path in (config_path, cancel_path):
