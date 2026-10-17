@@ -332,6 +332,141 @@ class BotController:
             arming=False,
         )
 
+    def _party_socket_snapshot(self) -> dict:
+        """Live WebSocket link status for the party monitor banner."""
+        profile = self._profile
+        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
+        if role not in ("member", "leader"):
+            role = "member"
+        party_on = bool(
+            getattr(
+                profile,
+                "party_enabled",
+                getattr(profile, "party_member_enabled", False),
+            )
+        )
+        try:
+            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
+        except (TypeError, ValueError):
+            port = 8765
+        port = max(1, min(65535, port))
+        host = str(getattr(profile, "party_leader_host", "") or "").strip()
+        out: dict = {
+            "role": "none",
+            "party_on": party_on,
+            "profile_role": role,
+            "port": port,
+            "host": host,
+            "listening": False,
+            "connected": False,
+            "running": False,
+            "clients": 0,
+            "client_ids": [],
+            "uri": "",
+            "advertise": "",
+            "error": "",
+            "state": "off",
+        }
+        if not party_on:
+            out["state"] = "off"
+            return out
+        # Leader server (watchdog wraps PartyServer).
+        watchdog = self._party_ws
+        if watchdog is not None and role == "leader":
+            try:
+                st = watchdog.status() if hasattr(watchdog, "status") else {}
+            except Exception as exc:
+                st = {"last_error": str(exc)}
+            try:
+                from websocket.netinfo import local_ipv4
+
+                advertise = local_ipv4()
+            except Exception:
+                advertise = "127.0.0.1"
+            listening = bool(st.get("listening"))
+            running = bool(st.get("running") or st.get("watchdog_running"))
+            err = str(st.get("last_error") or st.get("watchdog_error") or "")
+            out.update(
+                {
+                    "role": "server",
+                    "listening": listening,
+                    "running": running,
+                    "bind_host": str(st.get("host") or "0.0.0.0"),
+                    "port": int(st.get("port") or port),
+                    "clients": int(st.get("clients") or 0),
+                    "client_ids": list(st.get("client_ids") or []),
+                    "advertise": advertise,
+                    "uri": f"ws://{advertise}:{int(st.get('port') or port)}/",
+                    "error": err,
+                    "state": (
+                        "listening"
+                        if listening
+                        else ("starting" if running else "down")
+                    ),
+                }
+            )
+            return out
+        # Member client.
+        client = self._party_client
+        if client is not None and role == "member":
+            try:
+                st = client.status() if hasattr(client, "status") else {}
+            except Exception as exc:
+                st = {"last_error": str(exc)}
+            connected = bool(st.get("connected"))
+            running = bool(st.get("running"))
+            uri = str(st.get("uri") or (f"ws://{host}:{port}/" if host else ""))
+            err = str(st.get("last_error") or "")
+            out.update(
+                {
+                    "role": "client",
+                    "connected": connected,
+                    "running": running,
+                    "uri": uri,
+                    "host": host,
+                    "port": port,
+                    "error": err,
+                    "state": (
+                        "connected"
+                        if connected
+                        else ("connecting" if running else "down")
+                    ),
+                }
+            )
+            return out
+        # Party on but socket not started yet (bot Stopped / still arming).
+        if role == "leader":
+            try:
+                from websocket.netinfo import local_ipv4
+
+                advertise = local_ipv4()
+            except Exception:
+                advertise = "127.0.0.1"
+            out.update(
+                {
+                    "role": "server",
+                    "advertise": advertise,
+                    "uri": f"ws://{advertise}:{port}/",
+                    "state": "idle",
+                    "error": "Start the bot to listen",
+                }
+            )
+        else:
+            uri = f"ws://{host}:{port}/" if host else ""
+            out.update(
+                {
+                    "role": "client",
+                    "uri": uri,
+                    "state": "idle",
+                    "error": (
+                        "Start the bot to connect"
+                        if host
+                        else "Set leader LAN IP on the Party tab"
+                    ),
+                }
+            )
+        return out
+
     def party_monitor_snapshot(self) -> dict:
         """Party monitor payload: live DLL party + socket message log."""
         with self._debug_lock:
@@ -342,6 +477,10 @@ class BotController:
             snap["messages"] = party_messages()
         except Exception:
             snap.setdefault("messages", [])
+        try:
+            snap["socket"] = self._party_socket_snapshot()
+        except Exception as exc:
+            snap["socket"] = {"role": "none", "state": "error", "error": str(exc)}
         snap.setdefault("bot_state", self.state.value)
         snap.setdefault("bot_reason", self.reason)
         snap.setdefault(

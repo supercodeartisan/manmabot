@@ -91,6 +91,58 @@ def _fill_messages(view: QPlainTextEdit, lines: list[Any]) -> None:
         bar.setValue(bar.maximum())
 
 
+def _socket_banner(snap: dict[str, Any]) -> tuple[str, str]:
+    """Return ``(text, stylesheet)`` for the WebSocket connection strip."""
+    sock = snap.get("socket") if isinstance(snap.get("socket"), dict) else {}
+    role = str(sock.get("role") or "none")
+    state = str(sock.get("state") or "off")
+    err = str(sock.get("error") or "").strip()
+    ok_style = "background:#1a7f37; color:#ffffff; border-radius:4px; padding:4px 8px;"
+    wait_style = "background:#2563eb; color:#ffffff; border-radius:4px; padding:4px 8px;"
+    warn_style = "background:#b45309; color:#ffffff; border-radius:4px; padding:4px 8px;"
+    bad_style = "background:#b91c1c; color:#ffffff; border-radius:4px; padding:4px 8px;"
+    off_style = "background:#6b7280; color:#ffffff; border-radius:4px; padding:4px 8px;"
+
+    if role == "server":
+        port = sock.get("port")
+        advertise = sock.get("advertise") or "—"
+        bind = sock.get("bind_host") or "0.0.0.0"
+        clients = sock.get("clients")
+        ids = sock.get("client_ids") or []
+        id_txt = ",".join(str(x) for x in ids[:4]) if ids else "—"
+        if state == "listening":
+            text = (
+                f"WS SERVER  LISTENING  bind={bind}:{port}  "
+                f"LAN={advertise}  clients={_fmt(clients, '0')}  ids={id_txt}"
+            )
+            return text, ok_style
+        if state in ("starting", "idle"):
+            text = (
+                f"WS SERVER  {state.upper()}  LAN={advertise}:{port}  "
+                f"{err or 'waiting for Start'}"
+            )
+            return text, wait_style if state == "starting" else warn_style
+        text = (
+            f"WS SERVER  DOWN  LAN={advertise}:{port}  "
+            f"{err or 'not listening'}"
+        )
+        return text, bad_style
+
+    if role == "client":
+        uri = sock.get("uri") or (
+            f"ws://{sock.get('host') or '?'}:{sock.get('port') or '?'}/"
+        )
+        if state == "connected":
+            return f"WS CLIENT  CONNECTED  {uri}", ok_style
+        if state in ("connecting", "idle"):
+            text = f"WS CLIENT  {state.upper()}  {uri}  {err or ''}".rstrip()
+            return text, wait_style if state == "connecting" else warn_style
+        text = f"WS CLIENT  DOWN  {uri}  {err or 'not connected'}"
+        return text, bad_style
+
+    return "WS  OFF  (Enable party on the Party tab)", off_style
+
+
 class PartyMonitorPanel(QWidget):
     """Compact party status for Debug → Party (no etview canvas)."""
 
@@ -142,6 +194,11 @@ class PartyMonitorPanel(QWidget):
         self.members.setMaximumHeight(140)
         layout.addWidget(self.members)
 
+        self.conn_status = QLabel("")
+        self.conn_status.setWordWrap(True)
+        self.conn_status.setContentsMargins(8, 6, 8, 6)
+        layout.addWidget(self.conn_status)
+
         layout.addWidget(
             QLabel(self.t.get("party_messages", "Messages"))
         )
@@ -153,6 +210,9 @@ class PartyMonitorPanel(QWidget):
         self.headline.setText(info["headline"])
         self.status.setText(info["status_text"])
         self.status.setStyleSheet(info["status_style"])
+        conn_text, conn_style = _socket_banner(snap)
+        self.conn_status.setText(conn_text)
+        self.conn_status.setStyleSheet(conn_style)
         _fill_members(self.members, snap.get("party") if isinstance(snap.get("party"), dict) else None, info["farming"])
         _fill_messages(self.messages, list(snap.get("messages") or []))
 
@@ -368,11 +428,15 @@ class PartyMonitorWindow(QMainWindow):
         left_l.addWidget(self.members)
         main.addWidget(left)
 
-        # ---- right: socket messages (leader and member) ----
+        # ---- right: connection status + socket messages ----
         right = QWidget()
         right_l = QVBoxLayout(right)
         right_l.setContentsMargins(0, 0, 0, 0)
         right_l.setSpacing(4)
+        self.conn_status = QLabel("")
+        self.conn_status.setWordWrap(True)
+        self.conn_status.setContentsMargins(8, 6, 8, 6)
+        right_l.addWidget(self.conn_status)
         right_l.addWidget(
             QLabel(self.t.get("party_messages", "Messages"))
         )
@@ -432,6 +496,9 @@ class PartyMonitorWindow(QMainWindow):
             f"kind={info['kind']}  why={info.get('reason') or '—'}"
         )
         self.status.setStyleSheet(info["status_style"])
+        conn_text, conn_style = _socket_banner(snap)
+        self.conn_status.setText(conn_text)
+        self.conn_status.setStyleSheet(conn_style)
         party = snap.get("party") if isinstance(snap.get("party"), dict) else None
         _fill_members(self.members, party, info["farming"])
         _fill_messages(self.messages, list(snap.get("messages") or []))
