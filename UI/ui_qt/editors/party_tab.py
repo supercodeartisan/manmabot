@@ -286,8 +286,27 @@ class PartyTab(QWidget):
         self.ws_test_btn.setEnabled(False)
         self.ws_status.setText(self.t.get("party_ws_testing", "Testing…"))
         uri = f"ws://{host}:{port}/"
+        hint = self.t.get(
+            "party_ws_need_leader_start",
+            "Start the leader bot first (Party enabled + Party leader + Start).",
+        )
 
         def work() -> None:
+            import socket as _socket
+
+            try:
+                # TCP first — clearer than a WebSocket timeout when nothing listens.
+                with _socket.create_connection((host, port), timeout=2.0):
+                    pass
+            except OSError as exc:
+                self._ws_bridge.finished.emit(
+                    False,
+                    self.t.get(
+                        "party_ws_tcp_fail",
+                        "No server at {uri} ({error}). {hint}",
+                    ).format(uri=uri, error=exc, hint=hint),
+                )
+                return
             try:
                 from websocket.client import PartyClient
 
@@ -310,8 +329,8 @@ class PartyTab(QWidget):
                     False,
                     self.t.get(
                         "party_ws_fail",
-                        "Connection failed ({uri}): {error}",
-                    ).format(uri=uri, error=exc),
+                        "Connection failed ({uri}): {error}. {hint}",
+                    ).format(uri=uri, error=exc, hint=hint),
                 )
 
         threading.Thread(

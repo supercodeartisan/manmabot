@@ -45,6 +45,10 @@ def follow_kind(
             return "follow", True
         return "near", False
     if leader_stopped:
+        # Already inside the stop band → hold/loot. Do not keep chasing an
+        # exact cardinal stand while the leader is idle (that blocked looting).
+        if dist <= stop:
+            return "near", False
         if at_settle_stand is False:
             return "follow", True
         if at_settle_stand is None and dist > stop:

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-17 — settle/loot when leader stops; clearer party WS probe
+
+Intent: with the leader idle, the member kept follow distance and skipped loot because settle required an exact cardinal tile. Hold as soon as distance ≤ stop; settle uses Arrive tolerance; clear a far travel sticky goal on stop; party-farm loot only while `leader_stopped` and near stop. Member WS test TCP-probes first and tells the user to Start the leader bot.
+Shared: `follow_kind` (stopped), manager settle/loot, `_start_party_client`, party tab WS test.
+Affects: party-member idle settle + loot; WS diagnose UX.
+Consent: user ("leader stopped then loot… keeping distance… connection is failing").
+Result: implemented.
+
 ## 2026-10-18 — shortest walk after a talking-scroll landing
 
 Intent: after the scroll lands on the nearest hub, the walk to the hunt area was following the 32-tile cluster corridor. From the Silver Knight inn that corridor leaves by the south door, while the tile path through the north door is shorter.

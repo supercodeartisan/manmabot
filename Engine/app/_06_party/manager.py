@@ -424,9 +424,38 @@ class PartyMemberManager:
             cfg=cfg,
             field=follow_field,
         )
+        from .follow import (
+            ARRIVAL_TOLERANCE,
+            STICKY_GOAL_SLACK,
+            sticky_goal_tile,
+            tile_chebyshev,
+        )
+
         at_settle_stand: Optional[bool] = None
         if settle_stand is not None and origin_ok:
-            at_settle_stand = (int(origin.x), int(origin.y)) == settle_stand
+            # Arrive tolerance — same as travel slot (exact tile blocked loot).
+            me = (int(origin.x), int(origin.y))
+            at_settle_stand = (
+                tile_chebyshev(me, settle_stand) <= ARRIVAL_TOLERANCE
+            )
+        # Leader just stopped: drop the walking formation sticky goal so we
+        # settle inward instead of holding the follow-distance travel slot.
+        if leader_stopped and self.runtime.approach_goal is not None:
+            if settle_stand is not None:
+                if (
+                    tile_chebyshev(self.runtime.approach_goal, settle_stand)
+                    > STICKY_GOAL_SLACK
+                ):
+                    self.runtime.approach_goal = None
+            elif leader_dist is not None and int(leader_dist) > int(cfg.stop_tiles):
+                # Far sticky travel goal with no stand yet — clear so approach
+                # hops toward the leader for loot range.
+                goal = self.runtime.approach_goal
+                if (
+                    leader_tile is not None
+                    and tile_chebyshev(goal, leader_tile) > int(cfg.stop_tiles)
+                ):
+                    self.runtime.approach_goal = None
 
         travel_spot: Optional[tuple[int, int]] = None
         if (
@@ -437,12 +466,6 @@ class PartyMemberManager:
             and not bool(view.farming)
             and follow_field is not None
         ):
-            from .follow import (
-                ARRIVAL_TOLERANCE,
-                STICKY_GOAL_SLACK,
-                sticky_goal_tile,
-                tile_chebyshev,
-            )
 
             move_dir = self._leader_move_dir()
             band = travel_band(cfg.follow_tiles)
@@ -529,12 +552,21 @@ class PartyMemberManager:
             )
             loot_max_tiles = max(4, int(cfg.follow_tiles))
         else:
-            # Loot only when idle HOLD, leader not farming, settled within stop_tiles.
+            # Party farm: loot when the leader is idle (stopped / not farming)
+            # and the member is holding inside the stop band.
+            near_stop = False
+            if leader_dist is not None and int(leader_dist) <= int(cfg.stop_tiles):
+                near_stop = True
+            if (
+                leader_walk_dist is not None
+                and int(leader_walk_dist) <= int(cfg.stop_tiles)
+            ):
+                near_stop = True
             can_loot_now = (
                 result.kind is MemberKind.HOLD
                 and not bool(view.farming)
-                and leader_dist is not None
-                and int(leader_dist) <= int(cfg.stop_tiles)
+                and bool(leader_stopped)
+                and near_stop
             )
             loot_max_tiles = max(4, int(cfg.stop_tiles) + 2)
 

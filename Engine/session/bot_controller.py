@@ -1106,12 +1106,22 @@ class BotController:
         """Member bot connects to the leader and reports player status."""
         profile = self._profile
         role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
-        enabled = bool(getattr(profile, "party_member_enabled", False))
-        if role != "member" or not enabled:
+        party_on = bool(
+            getattr(
+                profile,
+                "party_enabled",
+                getattr(profile, "party_member_enabled", False),
+            )
+        )
+        member_on = bool(getattr(profile, "party_member_enabled", False))
+        if role != "member" or not party_on or not member_on:
             return
         host = str(getattr(profile, "party_leader_host", "") or "").strip()
         if not host:
-            self.log("Party member status heartbeat needs the leader address.")
+            self.log(
+                "Party member WebSocket: set Leader IP on the Party tab "
+                "(LAN address of the leader PC)."
+            )
             return
         try:
             port = int(getattr(profile, "party_ws_port", 8765) or 8765)
@@ -1128,6 +1138,7 @@ class BotController:
                 sender="member",
                 reconnect=True,
             )
+            # Non-blocking: reconnects until the leader socket is up.
             client.connect(wait=False)
         except Exception as exc:
             self._party_client = None
@@ -1142,7 +1153,10 @@ class BotController:
             clear_party_log()
         except Exception:
             pass
-        self.log(f"Party member status heartbeat every 10s to {host}:{port}")
+        self.log(
+            f"Party member WebSocket → {host}:{port} "
+            "(reconnects until the leader bot is Started)"
+        )
 
     def _stop_party_client(self) -> None:
         client = self._party_client
