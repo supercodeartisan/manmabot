@@ -90,7 +90,7 @@ T = {
     "browse": "Browse",
     "modes": {"Single": "Single", "RecordTag": "Record Tag"},
     "record_hint": "Record Device Tag mode",
-    "record_desc": "Launches Purple; you log in manually. Bot records device tag after SMS verification.",
+    "record_desc": "Launches Purple; you log in manually. ZF records the device tag after SMS verification.",
     "admin_yes": "Admin: ON",
     "admin_no": "Admin: OFF",
     "elevate_btn": "Run as Admin",

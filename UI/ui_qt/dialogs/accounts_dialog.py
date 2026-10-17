@@ -347,7 +347,7 @@ class AccountEditorDialog(QDialog):
             self.accept()
         except Exception as exc:
             QMessageBox.warning(
-                self, self.t.get("title", "Manmabot"), str(exc)
+                self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc)
             )
 
 
@@ -441,11 +441,11 @@ class AccountsDialog(QDialog):
                 self.on_changed()
             except Exception as exc:
                 QMessageBox.warning(
-                    self, self.t.get("title", "Manmabot"), str(exc)
+                    self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc)
                 )
                 return
         except Exception as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+            QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))
             return
 
         for account in accounts:
@@ -498,7 +498,7 @@ class AccountsDialog(QDialog):
         if not account_id:
             QMessageBox.information(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("select_account", "Select an account to edit."),
             )
             return
@@ -507,14 +507,14 @@ class AccountsDialog(QDialog):
             if account is not None:
                 self._edit_account(account)
         except Exception as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+            QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))
 
     def _delete_selected(self) -> None:
         account_id = self._selected_id()
         if not account_id:
             QMessageBox.information(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("select_account", "Select an account to edit."),
             )
             return
@@ -526,7 +526,7 @@ class AccountsDialog(QDialog):
             self.reload()
             self.on_changed()
         except Exception as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+            QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))
 
     def _save_and_close(self) -> None:
         try:
@@ -534,4 +534,4 @@ class AccountsDialog(QDialog):
             self.on_changed()
             self.accept()
         except Exception as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+            QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))

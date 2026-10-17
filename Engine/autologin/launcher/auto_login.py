@@ -292,7 +292,7 @@ class LoginBot:
         self.state = "idle"
 
     def _log(self, msg):
-        text = f"[Bot {self.index}][login] {msg}"
+        text = f"[ZF {self.index}][login] {msg}"
         logger.info(text)
         if self.on_log:
             self.on_log(text)

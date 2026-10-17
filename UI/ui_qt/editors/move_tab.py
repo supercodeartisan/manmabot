@@ -59,6 +59,7 @@ class MoveTab(QWidget):
         self.on_log = on_log or (lambda _m: None)
         self.on_open_map_editor = on_open_map_editor
         self.on_routine_changed = on_routine_changed
+        self.on_content_changed = None
         self.vm = RoutineViewModel(language)
         self.vm.load_from_profile(profile)
         self._build()
@@ -208,13 +209,18 @@ class MoveTab(QWidget):
     def _duration_changed(self, entry_id: str, value: int) -> None:
         self.vm.set_duration(entry_id, value)
         self.summary.setPlainText("\n".join(self.vm.summary_lines(self.t)))
+        if callable(self.on_content_changed):
+            try:
+                self.on_content_changed()
+            except Exception:
+                pass
 
     def _add_row(self, kind: str) -> None:
         self.vm.reload_catalog()
         choices = self.vm.map_choices(kind=kind)
         if not choices:
             key = "routine_break_general_only" if kind == "break" else "probe_map_missing"
-            QMessageBox.information(self, self.t.get("title", "Manmabot"), self.t.get(key, key))
+            QMessageBox.information(self, self.t.get("title", self.t.get("console_title", "ZF")), self.t.get(key, key))
             return
         map_id = self._pick_map(kind, choices)
         if not map_id:
@@ -224,7 +230,7 @@ class MoveTab(QWidget):
         if self.vm.is_break_only():
             QMessageBox.warning(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("routine_break_only_warn", "Break-only routine."),
             )
 

@@ -155,7 +155,7 @@ class EquipmentTab(QWidget):
         kind_row = QHBoxLayout()
         self._arrow_group = QButtonGroup(self)
         self._arrow_radios: list[QRadioButton] = []
-        silver = self.bag.get_bool("equipment", "buy_silver_arrows", False)
+        silver = self.bag.get_bool("equipment", "buy_silver_arrows", True)
         for value, label_key in (
             ("normal", "buy_normal_arrows"),
             ("silver", "buy_silver_arrows"),
@@ -191,7 +191,7 @@ class EquipmentTab(QWidget):
         )
         potion_qty = add_spin_row(
             p, self.bag, "equipment", "buy_portion",
-            self.t.get("hp_potion_buy_qty", "HP qty"), 100, 1, 999,
+            self.t.get("hp_potion_buy_qty", "HP qty"), 10, 1, 999,
             on_change=self._refresh_buy_summary,
         )
         depoison = add_check(
@@ -203,6 +203,10 @@ class EquipmentTab(QWidget):
             self.t.get("depoison_qty", "Depoison qty"), 1, 1, 999,
             on_change=self._refresh_buy_summary,
         )
+        self._restock = restock
+        self._potion_qty = potion_qty
+        self._depoison = depoison
+        self._depoison_qty = depoison_qty
         bind_gate(restock, potion_qty)
         bind_gate(depoison, depoison_qty)
         npc_row = QHBoxLayout()
@@ -228,11 +232,51 @@ class EquipmentTab(QWidget):
         self._sync_buy_arrow_gates()
         self._refresh_buy_summary()
 
+    def reload_from_bag(self) -> None:
+        """Push the saved bag back into the buy controls after a task load."""
+        if not hasattr(self, "_buy_arrows"):
+            return
+        silver = self.bag.get_bool("equipment", "buy_silver_arrows", True)
+        widgets = [
+            self._buy_arrows,
+            self._arrow_qty,
+            self._silver_qty,
+            self._restock,
+            self._potion_qty,
+            self._depoison,
+            self._depoison_qty,
+            self.npc_edit,
+            *self._arrow_radios,
+        ]
+        for widget in widgets:
+            widget.blockSignals(True)
+        try:
+            self._buy_arrows.setChecked(self.bag.get_bool("equipment", "buy_arrows", True))
+            for radio, value in zip(self._arrow_radios, ("normal", "silver")):
+                radio.setChecked(value == ("silver" if silver else "normal"))
+            self._arrow_qty.setValue(self.bag.get_int("equipment", "arrow_quantity", 200))
+            self._silver_qty.setValue(
+                self.bag.get_int("equipment", "silver_arrow_quantity", 200)
+            )
+            restock_on = self.bag.get_bool("equipment", "restock_potions", True)
+            self._restock.setChecked(restock_on)
+            self._potion_qty.setValue(self.bag.get_int("equipment", "buy_portion", 10))
+            self._potion_qty.setEnabled(restock_on)
+            depoison_on = self.bag.get_bool("equipment", "buy_depoison", False)
+            self._depoison.setChecked(depoison_on)
+            self._depoison_qty.setValue(self.bag.get_int("equipment", "depoison_quantity", 1))
+            self._depoison_qty.setEnabled(depoison_on)
+            self.npc_edit.setText(self.bag.get_str("equipment", "hp_potion_npc", ""))
+        finally:
+            for widget in widgets:
+                widget.blockSignals(False)
+        self._sync_buy_arrow_gates()
+
     def _sync_buy_arrow_gates(self) -> None:
         on = bool(self._buy_arrows.isChecked())
         for radio in getattr(self, "_arrow_radios", []):
             radio.setEnabled(on)
-        silver = self.bag.get_bool("equipment", "buy_silver_arrows", False)
+        silver = self.bag.get_bool("equipment", "buy_silver_arrows", True)
         if hasattr(self, "_arrow_qty"):
             self._arrow_qty.setEnabled(on and not silver)
         if hasattr(self, "_silver_qty"):
@@ -306,7 +350,7 @@ class EquipmentTab(QWidget):
 
         lines = [f"{self.t.get('buy_arrows', 'Arrows')}: {state('buy_arrows')}"]
         if self.bag.get_bool("equipment", "buy_arrows", True):
-            if self.bag.get_bool("equipment", "buy_silver_arrows"):
+            if self.bag.get_bool("equipment", "buy_silver_arrows", True):
                 lines.append(
                     f"{self.t.get('buy_silver_arrows', 'Silver')}: "
                     f"{self.bag.get_int('equipment', 'silver_arrow_quantity', 200)}"
@@ -320,7 +364,7 @@ class EquipmentTab(QWidget):
         if self.bag.get_bool("equipment", "restock_potions", True):
             lines.append(
                 f"{self.t.get('hp_potion_buy_qty', 'HP')}: "
-                f"{self.bag.get_int('equipment', 'buy_portion', 100)}"
+                f"{self.bag.get_int('equipment', 'buy_portion', 10)}"
             )
         lines.append(f"{self.t.get('buy_depoison', 'Depoison')}: {state('buy_depoison')}")
         npc = self.bag.get_str("equipment", "hp_potion_npc", "")
@@ -793,7 +837,7 @@ class EquipmentTab(QWidget):
             b.addWidget(radio)
         self._adena_weight = add_spin_row(
             b, self.bag, "other", "loot_adena_weight_pct",
-            self.t.get("adena_weight", "Adena weight"), 30, 1, 95, "%",
+            self.t.get("adena_weight", "Adena weight"), 70, 1, 95, "%",
         )
         add_check_spin(
             b,

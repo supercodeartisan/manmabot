@@ -28,7 +28,7 @@ class DebugWindow(QMainWindow):
         self._on_close = on_close
         self._closing = False
         self.t = t
-        self.setWindowTitle(t.get("debug_title", "Bot debug"))
+        self.setWindowTitle(t.get("debug_title", "Debug"))
         self.resize(1180, 700)
         self.setMinimumSize(900, 520)
 

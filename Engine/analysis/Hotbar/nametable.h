@@ -31,6 +31,9 @@ typedef struct {
 /* registry(inventory_offsets.txt)에서 파라미터 로드. 없으면 기본값 유지. */
 void ntLoadRegistry(NtCtx* c, const char* path);
 
+/* Drop the snapshot page cache. Resolved $id strings stay. */
+void ntPgReset(void);
+
 /* "1_<mid>" 이름 해석. 성공 1. out=KR(UTF-8), twOut(옵션)=TW. */
 int  ntResolve(const NtCtx* c, uint32_t mid, char* out, int outSz, char* twOut, int twSz);
 

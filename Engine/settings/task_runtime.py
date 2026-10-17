@@ -449,7 +449,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
                 int(
                     equipment.get(
                         "buy_portion",
-                        getattr(profile, "hp_potion_buy_qty", 100),
+                        getattr(profile, "hp_potion_buy_qty", 10),
                     )
                 ),
             ),
@@ -521,7 +521,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     try:
         set_value(
             "return_potion_count",
-            max(0, int(hunt.get("return_potion_count", getattr(profile, "return_potion_count", 20)))),
+            max(0, int(hunt.get("return_potion_count", getattr(profile, "return_potion_count", 0)))),
         )
     except (TypeError, ValueError):
         pass

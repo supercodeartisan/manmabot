@@ -516,7 +516,7 @@ class ScheduleListPane(QWidget):
             return
         if QMessageBox.question(
             self,
-            self.t.get("title", "Manmabot"),
+            self.t.get("title", self.t.get("console_title", "ZF")),
             self.t.get("confirm_delete", "Delete?"),
         ) != QMessageBox.StandardButton.Yes:
             return

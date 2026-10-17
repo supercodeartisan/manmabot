@@ -109,7 +109,7 @@ class BotAccount:
         self._thread = None
 
     def _log(self, msg):
-        text = f"[Bot {self.idx}] {msg}"
+        text = f"[ZF {self.idx}] {msg}"
         logger.info(text)
         if self.on_log:
             self.on_log(text)
@@ -174,7 +174,7 @@ class BotAccount:
             return
 
         if self.state in ("timeout", "error"):
-            self._log(f"Bot {self.idx} failed during startup (state: {self.state})")
+            self._log(f"ZF {self.idx} failed during startup (state: {self.state})")
             self.stop()
             return
 
@@ -197,7 +197,7 @@ class BotAccount:
             time.sleep(1)
 
         if self.state in ("running", "purple_dead", "lc_failed", "bot_exited"):
-            self._log(f"Bot {self.idx} stopped (state: {self.state})")
+            self._log(f"ZF {self.idx} stopped (state: {self.state})")
             self.stop(kill_purple=False)
 
     def _watch_lc(self):

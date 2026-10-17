@@ -1,8 +1,8 @@
 # Root files shipped into release/portable/ManmabotV1/
 # One path relative to product root per line. # comments allowed.
 
-Bot_Manmabot.bat
-Bot_ManmabotV1.exe
+ZF.bat
+ZF.exe
 Driver_Install_Interception.bat
 Driver_Start_SignedDriver.bat
 run.py

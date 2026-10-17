@@ -21,7 +21,7 @@ The customer receives one folder: `release\portable\ManmabotV1`.
     version-info\BUILD.json           build record, not required by the customer
 ```
 
-Customer launch file: `Bot_Manmabot.bat` (or `Bot_ManmabotV1.exe` if that file is in the folder).
+Customer launch file: `ZF.bat` (or `ZF.exe` if that file is in the folder).
 
 Locked choices:
 
@@ -50,8 +50,8 @@ The updated tree must look like this. Names can differ inside `Engine` only if y
 <product-root>\
   run.py
   launcher_manmabot.py
-  Bot_Manmabot.bat
-  Bot_ManmabotV1.exe
+  ZF.bat
+  ZF.exe
   Driver_Install_Interception.bat
   Driver_Start_SignedDriver.bat
   Engine\
@@ -323,7 +323,7 @@ Stage 2 prints `development tree was not modified`. If a stage exits non-zero, s
 
 `release\portable\ManmabotV1` must contain:
 
-- `run.py`, `launcher_manmabot.py`, `Bot_Manmabot.bat`
+- `run.py`, `launcher_manmabot.py`, `ZF.bat`
 - `python\python.exe`
 - `Engine\data\catalog\skills_names.json`
 - `Engine\data\maps\<some map>\meta.yaml`
@@ -347,7 +347,7 @@ It must **not** contain:
 
 1. Zip **only** `release\portable\ManmabotV1`.
 2. Optionally send `release\checksums\SHA256SUMS` beside the zip.
-3. Tell them to keep the folder together, run `Driver_Install_Interception.bat` as administrator once, start the game client, then run `Bot_Manmabot.bat`.
+3. Tell them to keep the folder together, run `Driver_Install_Interception.bat` as administrator once, start the game client, then run `ZF.bat`.
 
 Do not zip the product root. That zip would include source, Tools, and Research.
 

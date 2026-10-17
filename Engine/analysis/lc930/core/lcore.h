@@ -51,11 +51,13 @@ static unsigned long long g_ioctl = 0;
  *   ?? ??: rm �� SignedReadMemory �� IOCTL 0x222060 �� ?? MmCopyVirtualMemory.
  *   ??: 10_4_test/docs/IRON_RULE_MMCOPY.md
  * �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T */
+#include "../../pgcache.h"
 static int rm(uint64_t a, void *b, uint32_t s)
 {
-    uint32_t br = 0;
-    g_ioctl++;
-    return SignedReadMemory(g_pid, a, b, s, &br) && br == s;
+    int drv = 0;
+    int ok = pg_read((uint64_t)g_pid, a, b, s, &drv);
+    g_ioctl += (unsigned)drv;
+    return ok;
 }
 static uint64_t q64(uint64_t a) { uint64_t v = 0; rm(a, &v, 8); return v; }
 static uint32_t d32(uint64_t a) { uint32_t v = 0; rm(a, &v, 4); return v; }
