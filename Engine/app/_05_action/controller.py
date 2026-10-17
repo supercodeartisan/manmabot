@@ -34,11 +34,15 @@ class ActionExecutor:
         humanize: bool = True,
         humanize_move: Optional[bool] = None,
         rng: Optional[random.Random] = None,
+        attack_mode: Optional[str] = None,
     ):
         self.character = character
         self.humanize = humanize
         self._rng = rng if rng is not None else random.Random()
-        self._combat: CombatStrategy = combat_strategy_for(character)
+        self.attack_mode = str(attack_mode or "").strip().lower() or None
+        self._combat: CombatStrategy = combat_strategy_for(
+            character, attack_mode=self.attack_mode
+        )
 
         self.keyboard = KeyboardController(
             enabled=enabled, humanize=humanize, rng=self._rng

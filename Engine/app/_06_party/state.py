@@ -39,6 +39,16 @@ class MemberRuntime:
     sticky_leader_tile: Optional[tuple[int, int]] = None
     sticky_leader_map_id: Optional[int] = None
     sticky_leader_pose_at: float = 0.0
+    # Random cardinal stand beside the stopped leader (cleared when it walks).
+    settle_stand: Optional[tuple[int, int]] = None
+    settle_leader_tile: Optional[tuple[int, int]] = None
+    settle_blocked: set[tuple[int, int]] = field(default_factory=set)
+    # Walk steps to the leader from the follow field (None = no field).
+    leader_walk_dist: Optional[int] = None
+    # Reynolds formation offset (behind + flank) from the walking leader.
+    travel_offset: Optional[tuple[int, int]] = None
+    # Last travel click tile on the walk path (in-transit check).
+    follow_hop: Optional[tuple[int, int]] = None
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 
@@ -46,10 +56,12 @@ class MemberRuntime:
         return {
             "chasing": self.chasing,
             "approach_goal": self.approach_goal,
+            "settle_stand": self.settle_stand,
             "paused": self.paused,
             "last_reason": self.last_reason,
             "last_kind": self.last_kind,
             "leader_dist": self.leader_dist,
+            "leader_walk_dist": self.leader_walk_dist,
             "leader_name_seen": self.leader_name_seen,
             "leader_source": self.leader_source,
             "leader_hp": self.leader_hp,

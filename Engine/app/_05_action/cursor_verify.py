@@ -744,6 +744,105 @@ def _click_spell_range_center(
     return None
 
 
+def find_attack_aim_point(
+    executor: "ActionExecutor",
+    points: Iterable[tuple[float, float]],
+    *,
+    target_id: int | None = None,
+    sticky: bool = False,
+) -> tuple[float, float] | None:
+    """Hover like elf aim; return the pixel where the attack cursor is valid.
+
+    Accepts the same knife/bow/fist labels as :func:`attack_click_search`
+    (``arrow``, ``fist``, ``sword``). Does **not** click. Used by mage to
+    lock the monster body before pressing the spell key.
+    """
+    pts = _dedupe_screen_points(points)
+    if not pts:
+        return None
+    _reset_attack_aim_if_target_changed(executor, target_id)
+    tid = int(target_id) if target_id is not None else None
+    thr = float(get_cursor_matcher().min_score)
+    wanted = {str(label).strip().lower() for label in ATTACK_OK_LABELS}
+    stop = {"arrow_lack", "dialog"}
+    probe = wanted | stop
+
+    def _accept(x: float, y: float) -> tuple[float, float] | None:
+        if not CURSOR_VERIFY_ENABLED:
+            return (float(x), float(y))
+        match = _probe_labels(executor, x, y, probe)
+        if match is None:
+            return None
+        if float(match.score) < thr:
+            executor.last_cursor_reject_reason = _format_cursor_score_reason(
+                match, thr=thr
+            )
+            return None
+        if match.label in stop:
+            executor.last_cursor_reject_reason = (
+                f"{_format_cursor_score_reason(match, thr=thr)} blocked"
+            )
+            return None
+        if match.label in wanted:
+            return (float(x), float(y))
+        executor.last_cursor_reject_reason = (
+            f"{_format_cursor_score_reason(match, thr=thr)} not allowed"
+        )
+        return None
+
+    lock = getattr(executor, "_attack_aim_lock", None)
+    if (
+        sticky
+        and tid is not None
+        and isinstance(lock, tuple)
+        and len(lock) >= 3
+        and int(lock[0]) == tid
+    ):
+        hit = _accept(float(lock[1]), float(lock[2]))
+        if hit is not None:
+            return hit
+        executor._attack_aim_lock = None
+
+    window = _next_aim_window(executor, pts)
+    for x, y in window:
+        hit = _accept(x, y)
+        if hit is not None:
+            if tid is not None:
+                executor._attack_aim_lock = (tid, hit[0], hit[1])
+            return hit
+    return None
+
+
+def mage_cast_at_point(
+    executor: "ActionExecutor",
+    x: float,
+    y: float,
+    *,
+    target_id: int | None = None,
+) -> bool:
+    """After the spell key: click ``(x, y)`` only when the cursor is ``spell``."""
+    tid = int(target_id) if target_id is not None else None
+    if not CURSOR_VERIFY_ENABLED:
+        _click_aim(executor, x, y)
+        if tid is not None:
+            executor._attack_aim_lock = (tid, float(x), float(y))
+        return True
+    if _click_when_found(
+        executor,
+        [(float(x), float(y))],
+        labels=MAGE_CAST_OK_LABELS,
+        stop_labels=("dialog", "spell_disable", "spell_out_range"),
+    ):
+        if tid is not None:
+            xy = getattr(executor, "_last_aim_click_xy", None)
+            if isinstance(xy, tuple) and len(xy) >= 2:
+                executor._attack_aim_lock = (tid, float(xy[0]), float(xy[1]))
+            else:
+                executor._attack_aim_lock = (tid, float(x), float(y))
+        return True
+    return False
+
+
 def mage_cast_click_search(
     executor: "ActionExecutor",
     points: Iterable[tuple[float, float]],
@@ -751,10 +850,11 @@ def mage_cast_click_search(
     target_id: int | None = None,
     sticky: bool = False,
 ) -> bool:
-    """Probe the whole cross and click the center of the ``spell`` range.
+    """Legacy: probe a cross and click the center of the ``spell`` range.
 
-    Sticky reuses that center while it still reads ``spell``. A miss probes
-    the cross again. ``spell_disable`` and ``spell_out_range`` do not count.
+    Prefer :func:`find_attack_aim_point` + :func:`mage_cast_at_point` for the
+    knife-first mage path. Sticky reuses a center while it still reads
+    ``spell``. ``spell_disable`` and ``spell_out_range`` do not count.
     """
     pts = _dedupe_screen_points(points)
     if not pts:
@@ -1106,6 +1206,8 @@ __all__ = [
     "spell_range_center",
     "object_loot_screen_points",
     "attack_click_search",
+    "find_attack_aim_point",
+    "mage_cast_at_point",
     "mage_cast_click_search",
     "mage_cast_click",
     "loot_click",

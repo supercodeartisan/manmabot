@@ -17,7 +17,10 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
     Random ON → every member loots without ownership gate (False).
     Random OFF + responsible → ownership gate on (True).
     Random OFF + none → no loot.
+    Solo farm → own drops only (ownership gate on), whatever the party split.
     """
+    if str(getattr(cfg, "farm_mode", "party") or "party") == "solo":
+        return True
     if bool(getattr(cfg, "random_loot", False)):
         return False
     role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()

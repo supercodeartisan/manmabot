@@ -100,6 +100,7 @@ class PerceptionSensors:
         )
         self._last_reconnect_at = 0.0
         self._init_print()
+        self._init_combat_readers()
         self._init_inventory()
         self._init_hotbar()
         self._init_shop()
@@ -117,7 +118,7 @@ class PerceptionSensors:
             self.buffer.errors.append(f"print_state: {exc}")
 
     def _init_combat_readers(self) -> None:
-        """Load attacks_me.dll and contested_mobs.dll. The live tick does not."""
+        """Load attacks_me.dll and contested_mobs.dll for the live tick + etview."""
         try:
             from app._01_perception.attacks_me_reader import AttacksMeReader
 
@@ -279,10 +280,10 @@ class PerceptionSensors:
         hotbar: bool = False,
         party: bool = False,
     ) -> PerceptionBuffer:
-        """Per-tick set: player, print_state, buffs, uidialog; inventory/hotbar by schedule.
+        """Per-tick set: player, print_state, attacks, contested, buffs; inventory/hotbar by schedule.
 
-        Attack owner/tgt and contested claims are fields on the print_state
-        entity rows. The attacks_me and contested_mobs snapshots are not read.
+        Contested_mobs is the same ActionComponent sweep etview uses for the
+        leader's AttackAction target; party assist reads ``last_contested_mobs``.
 
         Buff/uidialog are synchronous DLL reads each tick (uidialog poll; discover ~2s), run on
         two short-lived threads so they overlap each tick.
@@ -293,6 +294,8 @@ class PerceptionSensors:
         buf.stamp()
         self._capture_player(buf)
         self._capture_print_state(buf)
+        self._capture_attacks(buf)
+        self._capture_contested(buf)
         if force_inventory:
             self._capture_inventory(buf, force=True)
         else:

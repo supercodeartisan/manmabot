@@ -122,6 +122,12 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     species_sort = str(hunt.get("species_sort", profile.species_sort))
     if species_sort in ("name", "level"):
         set_value("species_sort", species_sort)
+    attack_mode = str(
+        hunt.get("attack_mode", getattr(profile, "attack_mode", "magic")) or "magic"
+    ).strip().lower()
+    if attack_mode not in ("ranged", "magic", "melee"):
+        attack_mode = "magic"
+    set_value("attack_mode", attack_mode)
     set_value("attack_jitter", bool(hunt.get("attack_jitter", getattr(profile, "attack_jitter", False))))
     set_value(
         "attack_jitter_ms",
@@ -240,6 +246,12 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     if loot_role not in ("none", "responsible"):
         loot_role = "none"
     set_value("party_loot_role", loot_role)
+    farm_mode = str(
+        party.get("farm_mode", getattr(profile, "party_farm_mode", "party")) or "party"
+    ).strip().lower()
+    if farm_mode not in ("party", "solo"):
+        farm_mode = "party"
+    set_value("party_farm_mode", farm_mode)
     use_antidote = bool(
         hunt.get("use_antidote_potion", getattr(profile, "use_antidote_potion", False))
     )

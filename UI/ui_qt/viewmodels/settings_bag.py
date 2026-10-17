@@ -46,6 +46,7 @@ _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "potion_hp_ratio": 0.45,
     "random_loot": False,
     "loot_role": "none",
+    "farm_mode": "party",
 }
 
 

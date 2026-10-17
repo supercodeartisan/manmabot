@@ -43,8 +43,16 @@ class PolicyInput:
     leader_farming: bool = False
     # Leader pose unchanged long enough (not farming) → settle to stop_tiles.
     leader_stopped: bool = False
+    # Stopped leader: on the locked cardinal stand? None = no stand available.
+    at_settle_stand: Optional[bool] = None
+    # Walking leader: within Arrive tolerance of formation slot? None = no slot.
+    at_travel_spot: Optional[bool] = None
+    # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
+    leader_walk_dist: Optional[int] = None
     # Assist target exists but outside attack/spell range → step closer.
     need_combat_step: bool = False
+    # Solo farm: own target fights inside the assist leash, leader fight or not.
+    solo_farm: bool = False
 
 
 @dataclass(frozen=True)
@@ -84,25 +92,47 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             f"follow_off_ui dist={dist}",
         )
 
-    # --- Combat: stay with leader, assist, or step in ---
+    # --- Solo farm: hunt own target while the leader is within the leash ---
+    if inp.solo_farm and inp.assist_ready and dist <= int(cfg.assist_leash_tiles):
+        if inp.need_combat_step:
+            return PolicyResult(
+                MemberKind.CLOSE_IN,
+                False,
+                f"solo_close_in dist={dist}",
+            )
+        return PolicyResult(
+            MemberKind.ASSIST,
+            False,
+            f"solo_farm dist={dist}",
+        )
+
+    # --- Party farm: attack the leader's target when resolved ---
+    # assist_ready alone is enough (contested / print_state atk/tgt). Do not
+    # require leader_farming — that flag can lag one tick behind the resolve.
+    if (
+        not inp.solo_farm
+        and inp.assist_ready
+        and dist <= int(cfg.assist_leash_tiles)
+    ):
+        if inp.need_combat_step:
+            return PolicyResult(
+                MemberKind.CLOSE_IN,
+                False,
+                f"close_in dist={dist}",
+            )
+        return PolicyResult(
+            MemberKind.ASSIST,
+            False,
+            f"assist dist={dist}",
+        )
+
+    # --- Combat leash: leader fighting but no live assist target yet ---
     if inp.leader_farming:
         if dist > int(cfg.assist_leash_tiles):
             return PolicyResult(
                 MemberKind.FOLLOW,
                 True,
                 f"follow_combat_leash dist={dist}",
-            )
-        if inp.assist_ready:
-            if inp.need_combat_step:
-                return PolicyResult(
-                    MemberKind.CLOSE_IN,
-                    False,
-                    f"close_in dist={dist}",
-                )
-            return PolicyResult(
-                MemberKind.ASSIST,
-                False,
-                f"assist dist={dist}",
             )
         # Farming but no live target yet — keep near stop band.
         if dist > int(cfg.stop_tiles):
@@ -118,26 +148,29 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         )
 
     # --- Travel / idle ---
+    walk = int(inp.leader_walk_dist) if inp.leader_walk_dist is not None else dist
     band, chasing = follow_kind(
-        dist,
+        walk,
         follow_tiles=cfg.follow_tiles,
         stop_tiles=cfg.stop_tiles,
         leader_farming=False,
         leader_stopped=bool(inp.leader_stopped),
         chasing=inp.chasing,
+        at_settle_stand=inp.at_settle_stand,
+        at_travel_spot=inp.at_travel_spot,
     )
     if band == "follow":
         why = "follow_settle" if inp.leader_stopped else "follow_travel"
         return PolicyResult(
             MemberKind.FOLLOW,
             chasing,
-            f"{why} dist={dist}",
+            f"{why} walk={walk} dist={dist}",
         )
 
     return PolicyResult(
         MemberKind.HOLD,
         False,
-        f"hold dist={dist}",
+        f"hold walk={walk} dist={dist}",
     )
 
 

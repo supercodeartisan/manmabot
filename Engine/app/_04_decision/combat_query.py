@@ -96,6 +96,18 @@ def _is_mage(game_state: GameState) -> bool:
     return player is not None and player.character_type is CharacterType.MAGE
 
 
+def _uses_spell_range(game_state: GameState) -> bool:
+    """Spell-range gate only for mage + Hunt attack mode ``magic``."""
+    if not _is_mage(game_state):
+        return False
+    try:
+        from app._04_decision import player_mode as pm
+
+        return bool(pm.uses_spell_aim())
+    except Exception:
+        return True
+
+
 def tile_distance_from_player(obj: WorldObject) -> int:
     """Chebyshev tiles from local player (relative WCS origin) to object."""
     from app._03_world.space.world_coords import distance_tiles_from_memory
@@ -510,7 +522,7 @@ def describe_attackable_filter_skips(
 
     ordered = sorted(base, key=_dist_key)
     claimed = contested_mob_guids(game_state)
-    mage = _is_mage(game_state)
+    mage = _uses_spell_range(game_state)
     cap = max(1, int(limit))
     buckets: dict[str, list[str]] = {
         "off_screen": [],
@@ -600,7 +612,7 @@ def list_attackable(
         _note_contested_guid_filter(claimed, dropped)
     if screen_only:
         candidates = [o for o in candidates if object_on_screen(o)]
-    if _is_mage(game_state):
+    if _uses_spell_range(game_state):
         candidates = [
             o
             for o in candidates
@@ -1269,7 +1281,7 @@ def nearest_attacks_me_force(
     ]
     if not living:
         return None
-    if _is_mage(game_state):
+    if _uses_spell_range(game_state):
         living = [
             o
             for o in living

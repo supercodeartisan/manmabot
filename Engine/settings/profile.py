@@ -53,6 +53,8 @@ class Profile:
     language: str = "en"
     game_language: str = "ko"
     character: str = "mage"
+    # Hunt Attack radios: ranged | magic | melee (mage ranged = bow).
+    attack_mode: str = "magic"
     loot_mode: str = "all_items"
     loot_adena_weight_ratio: float = 0.70
     ignore_small_adena: bool = False
@@ -174,6 +176,8 @@ class Profile:
     party_potion_hp_ratio: float = 0.45
     party_random_loot: bool = False
     party_loot_role: str = "none"
+    # party = assist the leader's fight; solo = follow the leader, farm own mobs.
+    party_farm_mode: str = "party"
 
     def __post_init__(self) -> None:
         char = str(self.character or "").strip().lower()

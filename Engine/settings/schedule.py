@@ -68,7 +68,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "transit_route": "",
         },
         "hunt": {
-            "attack_mode": "ranged",
+            "attack_mode": str(getattr(profile, "attack_mode", "magic") or "magic"),
             "attack_range": 16,
             "keep_distance": True,
             "keep_distance_tiles": 3,
@@ -166,6 +166,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             ),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
+            "farm_mode": str(getattr(profile, "party_farm_mode", "party") or "party"),
         },
         "recovery": {
             "use_hp_potion": True,

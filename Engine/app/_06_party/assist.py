@@ -292,24 +292,92 @@ def _row_matches_leader(row: dict[str, Any], guids: set[int], names: set[str]) -
     return by_guid or by_name
 
 
+def _print_entities(game_state: Any) -> list[dict[str, Any]]:
+    snap = getattr(game_state, "last_print_state", None)
+    if not isinstance(snap, dict):
+        return []
+    raw = snap.get("entities")
+    if not isinstance(raw, list):
+        return []
+    return [row for row in raw if isinstance(row, dict)]
+
+
+def _leader_attack_rows_from_print(
+    game_state: Any,
+    leader: Any,
+) -> list[dict[str, Any]]:
+    """Leader's AttackAction from print_state Player ``atk`` / ``tgt``.
+
+    Fallback when contested_mobs is empty (leader off contested sweep). Needs
+    both the leader Player row and the monster guid in the print roster.
+    """
+    guids, names = _leader_identity(leader)
+    if not guids and not names:
+        return []
+    entities = _print_entities(game_state)
+    if not entities:
+        return []
+    monsters_by_guid: dict[int, dict[str, Any]] = {}
+    for row in entities:
+        if str(row.get("class") or "") != "Monster":
+            continue
+        key = guid_key(row.get("guid"))
+        if key is not None:
+            monsters_by_guid[key] = row
+    out: list[dict[str, Any]] = []
+    for row in entities:
+        if str(row.get("class") or "") != "Player":
+            continue
+        if row.get("atk") not in (1, True):
+            continue
+        attacker = guid_key(row.get("guid"))
+        attacker_name = str(row.get("name") or "").strip().lower()
+        by_guid = attacker is not None and attacker in guids
+        by_name = bool(attacker_name) and attacker_name in names
+        if not (by_guid or by_name):
+            continue
+        tgt = guid_key(row.get("tgt"))
+        if tgt is None:
+            continue
+        mon = monsters_by_guid.get(tgt)
+        if mon is None:
+            continue
+        world = mon.get("world") if isinstance(mon.get("world"), dict) else None
+        out.append(
+            {
+                "name": str(mon.get("name") or "").strip(),
+                "guid": str(mon.get("guid") or "").strip(),
+                "ent": str(mon.get("ent") or "").strip(),
+                "tgt": str(mon.get("guid") or "").strip(),
+                "world": world,
+                "attacker_guid": str(row.get("guid") or "").strip(),
+                "attacker_name": str(row.get("name") or "").strip(),
+                "owner": str(row.get("guid") or "").strip(),
+            }
+        )
+    return out
+
+
 def leader_attack_rows(
     game_state: Any,
     leader: Any,
 ) -> list[dict[str, Any]]:
-    """Contested rows where the party leader owns the AttackAction (etview ATK)."""
+    """Rows where the party leader owns the AttackAction (etview contested first)."""
     if game_state is None or leader is None:
         return []
     guids, names = _leader_identity(leader)
     if not guids and not names:
         return []
+    # Same source as etview AttackAction monitoring (contested_mobs.dll).
     snap = getattr(game_state, "last_contested_mobs", None)
-    if not isinstance(snap, dict):
-        return []
-    out: list[dict[str, Any]] = []
-    for row in snap.get("contested") or []:
-        if isinstance(row, dict) and _row_matches_leader(row, guids, names):
-            out.append(row)
-    return out
+    if isinstance(snap, dict):
+        out: list[dict[str, Any]] = []
+        for row in snap.get("contested") or []:
+            if isinstance(row, dict) and _row_matches_leader(row, guids, names):
+                out.append(row)
+        if out:
+            return out
+    return _leader_attack_rows_from_print(game_state, leader)
 
 
 def describe_leader_target(
@@ -409,8 +477,9 @@ def resolve_leader_strike_target(
 ) -> Any:
     """Nearest monster whose AttackAction target guid is the leader.
 
-    Secondary assist path: mobs currently hitting the leader (attacks_me strikes).
-    Prefer :func:`resolve_leader_attack_target` for 'what the leader is attacking'.
+    Secondary assist path: mobs currently hitting the leader. Prefer
+    :func:`resolve_leader_attack_target` for 'what the leader is attacking'.
+    Uses print_state ``atk``/``tgt`` (live); legacy attacks_me DLL as fallback.
     """
     if game_state is None or leader is None:
         return None
@@ -418,14 +487,35 @@ def resolve_leader_strike_target(
     ally = guid_key(getattr(leader, "memory_guid", None))
     if ally is not None:
         wanted.add(ally)
+    found: list[Any] = []
+    seen: set[int] = set()
+
+    # Live: monster/summon rows whose tgt is the leader.
+    for row in _print_entities(game_state):
+        cls = str(row.get("class") or "")
+        if cls not in _STRIKE_CLASSES:
+            continue
+        if row.get("atk") not in (1, True):
+            continue
+        if guid_key(row.get("tgt")) not in wanted:
+            continue
+        obj = _monster_for_row(game_state, row)
+        if obj is None or not _assist_target_live(game_state, obj):
+            continue
+        tid = int(getattr(obj, "track_id", 0) or 0)
+        if tid in seen:
+            continue
+        seen.add(tid)
+        found.append(obj)
+    if found:
+        return _nearest_monster(origin, found)
+
     snap = getattr(game_state, "last_attacks_me", None)
     rows: list[Any] = []
     if isinstance(snap, dict):
         rows = list(snap.get("strikes") or [])
         if not rows:
             rows = list(snap.get("attacks_me") or [])
-    found: list[Any] = []
-    seen: set[int] = set()
     for row in rows:
         if not isinstance(row, dict) or not _strike_hits_guid(row, wanted):
             continue
@@ -454,46 +544,167 @@ def resolve_self_defender(game_state: Any, *, origin: Any = None) -> Any:
         return None
 
 
+def _assist_excluded_ids(blackboard: Any) -> set[int]:
+    if blackboard is None:
+        return set()
+    try:
+        from app._04_decision.attack_feedback import excluded_target_ids
+        from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
+
+        return set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    except Exception:
+        return set()
+
+
 def pick_assist_target(
     game_state: Any,
     leader: Any,
     config: PartyMemberConfig,
     *,
     origin: Any = None,
+    blackboard: Any = None,
 ) -> tuple[Optional[Any], str]:
-    """Return (monster, source): external|leader_attack|leader_strike|none."""
+    """Return (monster, source): external|leader_attack|leader_strike|none.
+
+    Skips soft give-up / blacklist ids so a failed mage cast can retarget.
+    """
+    skip = _assist_excluded_ids(blackboard)
+
+    def ok(obj: Any) -> bool:
+        if obj is None or not _assist_target_live(game_state, obj):
+            return False
+        tid = int(getattr(obj, "track_id", 0) or 0)
+        return tid > 0 and tid not in skip
+
     ext = resolve_external_target(game_state, config)
-    if ext is not None and _assist_target_live(game_state, ext):
+    if ok(ext):
         return ext, "external"
     if config.assist_leader_strikes:
         # Prefer what the leader is attacking (contested / etview ATK).
         attack = resolve_leader_attack_target(game_state, leader, origin=origin)
-        if attack is not None:
+        if ok(attack):
             return attack, "leader_attack"
         hit = resolve_leader_strike_target(game_state, leader, origin=origin)
-        if hit is not None:
+        if ok(hit):
             return hit, "leader_strike"
     return None, "none"
 
 
+def pick_solo_farm_target(
+    game_state: Any,
+    *,
+    origin: Any,
+    leader_tile: Optional[tuple[int, int]],
+    leash_tiles: int,
+    previous_id: Optional[int] = None,
+    blackboard: Any = None,
+) -> Optional[Any]:
+    """Own target for solo-farm members: nearest attackable near the leader.
+
+    Same gates as the solo bot (species allow/deny, contested by another
+    player, line of attack, mage range). Monsters farther than
+    ``leash_tiles`` from the leader are skipped so farming never drags the
+    member away. The current target is kept while it is still alive in range.
+    """
+    if game_state is None or origin is None or leader_tile is None:
+        return None
+    from app._02_state.objects import ObjectType
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision.combat_query import (
+        list_attackable,
+        object_absolute_tile,
+        tile_distance_from_player,
+    )
+
+    lx, ly = int(leader_tile[0]), int(leader_tile[1])
+    leash = max(1, int(leash_tiles))
+
+    def near_leader(obj: Any) -> bool:
+        try:
+            tx, ty = object_absolute_tile(obj, origin)
+            return tile_chebyshev(int(tx), int(ty), lx, ly) <= leash
+        except Exception:
+            return False
+
+    skip: set[int] = set()
+    if blackboard is not None:
+        try:
+            from app._04_decision.attack_feedback import excluded_target_ids
+            from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
+
+            skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+        except Exception:
+            skip = set()
+
+    if previous_id is not None and int(previous_id) not in skip:
+        obj = game_state.get_object(int(previous_id))
+        if (
+            obj is not None
+            and getattr(obj, "object_type", None) is ObjectType.MONSTER
+            and _assist_target_live(game_state, obj)
+            and near_leader(obj)
+        ):
+            try:
+                from app._04_decision.species_rules import is_avoided_for_state
+
+                if not is_avoided_for_state(game_state, obj):
+                    return obj
+            except Exception:
+                return obj
+
+    try:
+        cands = list_attackable(
+            game_state, exclude=skip, origin=origin, screen_only=True
+        )
+    except Exception:
+        return None
+    cands = [o for o in cands if _assist_target_live(game_state, o) and near_leader(o)]
+    if not cands:
+        return None
+    return min(
+        cands,
+        key=lambda o: (tile_distance_from_player(o), int(getattr(o, "track_id", 0))),
+    )
+
+
 def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
-    """True when the member can cast/click the monster from here."""
+    """True when the member can cast/click the monster from here.
+
+    Spell mages use mage spell range. Bow/melee (attack_mode ranged/melee, or
+    non-mage) use a short engage distance; the click strategies own fine aim.
+    """
     if obj is None or not _assist_target_live(game_state, obj):
         return False
+    spell_aim = True
     try:
-        pos = getattr(obj, "position", None)
-        if pos is not None:
-            from app._03_world.space.world_coords import in_mage_spell_range
+        from app._04_decision import player_mode as pm
 
-            if in_mage_spell_range(float(pos.x), float(pos.y)):
-                return True
+        spell_aim = bool(getattr(pm, "uses_spell_aim", lambda: True)())
     except Exception:
-        pass
+        spell_aim = True
+    if spell_aim:
+        try:
+            pos = getattr(obj, "position", None)
+            if pos is not None:
+                from app._03_world.space.world_coords import in_mage_spell_range
+
+                if in_mage_spell_range(float(pos.x), float(pos.y)):
+                    return True
+        except Exception:
+            pass
     try:
         from app._04_decision.combat_query import tile_distance_from_player
 
         d = tile_distance_from_player(obj)
-        if d is not None and int(d) <= 2:
+        # Bow/melee: within attack click tiles (default ~6–8); mage fallback 2.
+        limit = 6 if not spell_aim else 2
+        try:
+            from app._04_decision import player_mode as pm
+
+            limit = int(getattr(pm, "ATTACK_CLICK_TILES", limit) or limit)
+        except Exception:
+            pass
+        if d is not None and int(d) <= max(2, limit):
             return True
     except Exception:
         pass
@@ -527,6 +738,7 @@ __all__ = [
     "describe_leader_target",
     "leader_attack_rows",
     "pick_assist_target",
+    "pick_solo_farm_target",
     "resolve_external_target",
     "resolve_leader_attack_target",
     "resolve_leader_strike_target",

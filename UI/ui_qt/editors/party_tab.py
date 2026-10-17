@@ -17,6 +17,7 @@ from ui_qt.editors.form_helpers import add_check, add_spin_row, card
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
+_FARM_MODES = ("party", "solo")
 
 
 class PartyTab(QWidget):
@@ -71,6 +72,35 @@ class PartyTab(QWidget):
             on_change=self._on_party_member_changed,
         )
         self.bag.set("party", "leader_name", "")
+
+        mode_row = QHBoxLayout()
+        mode_row.addWidget(QLabel(self.t.get("party_farm_mode", "Farming method")))
+        self.party_farm_mode = QComboBox()
+        self.party_farm_mode.addItem(
+            self.t.get("party_farm_party", "Party farm — assist the leader's fight"),
+            "party",
+        )
+        self.party_farm_mode.addItem(
+            self.t.get(
+                "party_farm_solo", "Solo farm — follow the leader, farm own mobs"
+            ),
+            "solo",
+        )
+        self._select_farm_mode()
+        self.party_farm_mode.currentIndexChanged.connect(self._on_farm_mode_changed)
+        mode_row.addWidget(self.party_farm_mode)
+        mode_row.addStretch(1)
+        lay.addLayout(mode_row)
+        farm_hint = QLabel(
+            self.t.get(
+                "party_farm_hint",
+                "Solo farm: stays within the follow leash and hunts its own "
+                "monsters near the leader (species filter applies), and loots "
+                "its own drops. Party farm: attacks only what the leader fights.",
+            )
+        )
+        farm_hint.setWordWrap(True)
+        lay.addWidget(farm_hint)
 
         self.party_follow_tiles = add_spin_row(
             lay,
@@ -170,6 +200,23 @@ class PartyTab(QWidget):
                 self.party_stop_tiles.setValue(follow)
                 self.party_stop_tiles.blockSignals(False)
 
+    def _farm_mode(self) -> str:
+        mode = str(self.bag.get_str("party", "farm_mode", "party") or "party")
+        return mode if mode in _FARM_MODES else "party"
+
+    def _select_farm_mode(self) -> None:
+        self.party_farm_mode.blockSignals(True)
+        idx = self.party_farm_mode.findData(self._farm_mode())
+        self.party_farm_mode.setCurrentIndex(max(0, idx))
+        self.party_farm_mode.blockSignals(False)
+
+    def _on_farm_mode_changed(self) -> None:
+        mode = str(self.party_farm_mode.currentData() or "party")
+        if mode not in _FARM_MODES:
+            mode = "party"
+        self.bag.set("party", "farm_mode", mode)
+        self._on_loot_mode_changed()
+
     def _on_loot_role_changed(self) -> None:
         data = self.party_loot_role.currentData()
         role = str(data or "none")
@@ -178,11 +225,14 @@ class PartyTab(QWidget):
         self.bag.set("party", "loot_role", role)
 
     def _on_loot_mode_changed(self) -> None:
+        on = self.bag.get_bool("party", "member_enabled", False)
+        # Solo farm loots its own drops; the party loot split does not apply.
+        party_loot = on and self._farm_mode() == "party"
         random_on = self.bag.get_bool("party", "random_loot", False)
+        if hasattr(self, "party_random_loot"):
+            self.party_random_loot.setEnabled(party_loot)
         if hasattr(self, "party_loot_role"):
-            self.party_loot_role.setEnabled(
-                self.bag.get_bool("party", "member_enabled", False) and not random_on
-            )
+            self.party_loot_role.setEnabled(party_loot and not random_on)
 
     def _on_party_member_changed(self) -> None:
         on = self.bag.get_bool("party", "member_enabled", False)
@@ -194,8 +244,8 @@ class PartyTab(QWidget):
         ):
             if spin is not None:
                 spin.setEnabled(on)
-        if hasattr(self, "party_random_loot"):
-            self.party_random_loot.setEnabled(on)
+        if hasattr(self, "party_farm_mode"):
+            self.party_farm_mode.setEnabled(on)
         self._on_loot_mode_changed()
 
     def reload_from_bag(self) -> None:
@@ -242,4 +292,5 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
+        self._select_farm_mode()
         self._on_party_member_changed()

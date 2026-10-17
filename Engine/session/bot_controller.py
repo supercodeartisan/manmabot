@@ -1110,6 +1110,9 @@ class BotController:
                 "loot_role": str(
                     getattr(profile, "party_loot_role", "none") or "none"
                 ),
+                "farm_mode": str(
+                    getattr(profile, "party_farm_mode", "party") or "party"
+                ),
             }
         )
         party_mode = bool(party_cfg.enabled)
@@ -1155,6 +1158,17 @@ class BotController:
 
 
         character = CharacterType(profile.character)
+        attack_mode = str(
+            getattr(profile, "attack_mode", "magic") or "magic"
+        ).strip().lower()
+        if attack_mode not in ("ranged", "magic", "melee"):
+            attack_mode = "magic"
+        try:
+            from app._04_decision import player_mode as pm
+
+            pm.ATTACK_MODE = attack_mode
+        except Exception:
+            pass
         capture = open_perception_capture(config)
         memory_cfg = config.get("memory") or {}
         from app._03_world.merge.memory_entities import entity_source_is_legacy
@@ -1184,7 +1198,7 @@ class BotController:
             self.log(
                 "Party member mode — follow memory party leader "
                 f"(follow>{party_cfg.follow_tiles} "
-                f"stop<={party_cfg.stop_tiles}); "
+                f"stop<={party_cfg.stop_tiles} farm={party_cfg.farm_mode}); "
                 "off-UI chase + other-map join"
             )
         else:
@@ -1319,6 +1333,7 @@ class BotController:
             character=character,
             humanize=profile.humanize,
             humanize_move=bool(getattr(profile, "humanize_move", True)),
+            attack_mode=attack_mode,
         )
         apply_action_executor_options(executor)
         executor._perception_capture = capture
