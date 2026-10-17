@@ -139,6 +139,14 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "area_player_count": int(getattr(profile, "area_player_count", 3)),
         },
         "party": {
+            # Master Party-tab switch. Falls back to legacy member_enabled.
+            "enabled": bool(
+                getattr(
+                    profile,
+                    "party_enabled",
+                    getattr(profile, "party_member_enabled", False),
+                )
+            ),
             "member_enabled": bool(
                 getattr(profile, "party_member_enabled", False)
             ),

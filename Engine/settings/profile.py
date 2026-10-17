@@ -164,6 +164,8 @@ class Profile:
     # Schedule UI move.routine[] (battle/break). Empty → single active_map fallback.
     routine: list = field(default_factory=list)
     # Party member (``app._06_party``): mirror a leader instead of solo farm.
+    # Master switch for the Party tab (member follow or leader socket).
+    party_enabled: bool = False
     party_member_enabled: bool = False
     party_leader_name: str = ""
     party_follow_tiles: int = 8
@@ -351,6 +353,7 @@ class Profile:
             "use_antidote_potion",
             "abandon_same",
             "antidote_auto",
+            "party_enabled",
             "party_member_enabled",
             "party_random_loot",
             "area_empty",

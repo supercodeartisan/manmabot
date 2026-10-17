@@ -365,10 +365,14 @@ class BotController:
         except Exception as exc:
             snap.setdefault("dll_loaded", False)
             snap["probe_error"] = str(exc)
-        # Profile flag so UI shows whether party-member mode is armed.
+        # Profile flag so UI shows whether the Party tab master switch is on.
         try:
             snap["profile_party_enabled"] = bool(
-                getattr(self._profile, "party_member_enabled", False)
+                getattr(
+                    self._profile,
+                    "party_enabled",
+                    getattr(self._profile, "party_member_enabled", False),
+                )
             )
         except Exception:
             snap["profile_party_enabled"] = False
@@ -1022,8 +1026,10 @@ class BotController:
         return None
 
     def _start_party_socket(self) -> None:
-        """Listen while this worker runs, only when the profile role is leader."""
+        """Listen while this worker runs, only when Party is enabled as leader."""
         profile = self._profile
+        if not bool(getattr(profile, "party_enabled", False)):
+            return
         role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
         if role != "leader":
             return
@@ -1272,6 +1278,8 @@ class BotController:
             "Party gate: "
             f"role={party_role} "
             f"ws_port={int(getattr(profile, 'party_ws_port', 8765) or 8765)} "
+            f"profile.party_enabled="
+            f"{bool(getattr(profile, 'party_enabled', False))} "
             f"profile.party_member_enabled="
             f"{bool(getattr(profile, 'party_member_enabled', False))} "
             f"→ party_mode={party_mode}"

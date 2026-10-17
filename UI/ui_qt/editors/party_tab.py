@@ -54,21 +54,25 @@ class PartyTab(QWidget):
         body.addWidget(self.party_box)
         lay = self.party_box.layout()
         assert isinstance(lay, QVBoxLayout)
+
+        # Master switch: when off, every other party control is disabled.
+        self._migrate_enabled_flag()
+        self.party_enable = add_check(
+            lay,
+            self.bag,
+            "party",
+            "enabled",
+            self.t.get("party_enabled", "Enable party"),
+            False,
+            on_change=self._on_party_enabled_changed,
+        )
+
         self.role_farm = self._add_role_combo(lay)
 
         self.member_panel = QWidget()
         member_lay = QVBoxLayout(self.member_panel)
         member_lay.setContentsMargins(0, 0, 0, 0)
 
-        self.party_enable = add_check(
-            member_lay,
-            self.bag,
-            "party",
-            "member_enabled",
-            self.t.get("party_member_enabled", "Run as party member"),
-            False,
-            on_change=self._on_party_member_changed,
-        )
         self.bag.set("party", "leader_name", "")
 
         host_row = QHBoxLayout()
@@ -193,6 +197,22 @@ class PartyTab(QWidget):
         body.addStretch(1)
         self._apply_role(self._role())
 
+    def _migrate_enabled_flag(self) -> None:
+        """Older bags only had ``member_enabled``; promote it to the master switch."""
+        party = self.bag.section("party") or {}
+        if "enabled" in party:
+            return
+        legacy = bool(party.get("member_enabled", False))
+        self.bag.set("party", "enabled", legacy)
+
+    def _party_on(self) -> bool:
+        return bool(self.bag.get_bool("party", "enabled", False))
+
+    def _sync_member_enabled_flag(self) -> None:
+        """Runtime member-follow flag follows master + role (leader never follows)."""
+        on = self._party_on() and self._role() == "member"
+        self.bag.set("party", "member_enabled", on)
+
     def _add_role_combo(self, layout: QVBoxLayout) -> QComboBox:
         row = QHBoxLayout()
         combo = QComboBox()
@@ -283,13 +303,7 @@ class PartyTab(QWidget):
         if role not in _PARTY_ROLES:
             role = "member"
         self.bag.set("party", "role", role)
-        if role == "leader":
-            if self.bag.get_bool("party", "member_enabled", False):
-                self.bag.set("party", "member_enabled", False)
-            if hasattr(self, "party_enable"):
-                self.party_enable.blockSignals(True)
-                self.party_enable.setChecked(False)
-                self.party_enable.blockSignals(False)
+        self._sync_member_enabled_flag()
         combo = getattr(self, "role_farm", None)
         if combo is not None:
             combo.blockSignals(True)
@@ -306,11 +320,10 @@ class PartyTab(QWidget):
         )
         if leader:
             self._refresh_leader_labels()
-        self._on_party_member_changed()
+        self._refresh_enabled_state()
 
     def _on_loot_mode_changed(self) -> None:
-        on = self.bag.get_bool("party", "member_enabled", False)
-        # Solo farm loots its own drops; the party loot split does not apply.
+        on = self._party_on() and self._role() == "member"
         party_loot = on and self._farm_mode() == "party"
         random_on = self.bag.get_bool("party", "random_loot", False)
         if hasattr(self, "party_random_loot"):
@@ -318,27 +331,31 @@ class PartyTab(QWidget):
         if hasattr(self, "party_loot_role"):
             self.party_loot_role.setEnabled(party_loot and not random_on)
 
-    def _on_party_member_changed(self) -> None:
-        on = self.bag.get_bool("party", "member_enabled", False)
+    def _on_party_enabled_changed(self) -> None:
+        self._sync_member_enabled_flag()
         self.bag.set("party", "leader_name", "")
-        for spin in (
-            getattr(self, "party_follow_tiles", None),
-            getattr(self, "party_stop_tiles", None),
-            getattr(self, "party_assist_leash", None),
-        ):
-            if spin is not None:
-                spin.setEnabled(on)
-        if hasattr(self, "party_farm_mode"):
-            self.party_farm_mode.setEnabled(on)
-        self._on_loot_mode_changed()
+        self._refresh_enabled_state()
+
+    def _refresh_enabled_state(self) -> None:
+        """Enable party checkbox stays on; everything else follows the master switch."""
+        on = self._party_on()
+        if hasattr(self, "role_farm"):
+            self.role_farm.setEnabled(on)
+        # Member / leader panels: whole panel greyed when party is off.
+        if hasattr(self, "member_panel"):
+            self.member_panel.setEnabled(on)
+        if hasattr(self, "leader_panel"):
+            self.leader_panel.setEnabled(on)
+        # Within the member panel, loot still depends on farm mode.
+        if on and self._role() == "member":
+            self._on_loot_mode_changed()
 
     def reload_from_bag(self) -> None:
         if not hasattr(self, "party_enable"):
             return
+        self._migrate_enabled_flag()
         self.party_enable.blockSignals(True)
-        self.party_enable.setChecked(
-            self.bag.get_bool("party", "member_enabled", False)
-        )
+        self.party_enable.setChecked(self._party_on())
         self.party_enable.blockSignals(False)
         self.bag.set("party", "leader_name", "")
         party = self.bag.section("party") or {}

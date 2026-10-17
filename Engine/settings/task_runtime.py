@@ -186,13 +186,22 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             party.get("leader_host", getattr(profile, "party_leader_host", "")) or ""
         ).strip(),
     )
-    party_on = bool(
-        party.get("member_enabled", getattr(profile, "party_member_enabled", False))
-    )
-    # A leader hosts the socket and keeps farming on its own. It does not
-    # also run the member follow/assist path.
-    if party_role == "leader":
-        party_on = False
+    # Master Party-tab switch (UI checkbox). Legacy profiles only had member_enabled.
+    party_master = party.get("enabled")
+    if party_master is None:
+        party_master = party.get(
+            "member_enabled",
+            getattr(
+                profile,
+                "party_enabled",
+                getattr(profile, "party_member_enabled", False),
+            ),
+        )
+    party_master = bool(party_master)
+    set_value("party_enabled", party_master)
+    # Member follow only when the master switch is on and this PC is a member.
+    # Leaders host the socket and farm solo — they never run the member brain.
+    party_on = bool(party_master and party_role != "leader")
     set_value("party_member_enabled", party_on)
     set_value("party_leader_name", "")
     follow_raw = party.get("follow_tiles")
