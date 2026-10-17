@@ -1,4 +1,4 @@
-"""Mage combat: spell key then click target (spell-range gated)."""
+"""Mage combat: spell key, then click the center of the cast circle."""
 from __future__ import annotations
 
 import time
@@ -8,7 +8,7 @@ from app._03_world.space.world_coords import in_mage_spell_range
 from app._05_action import humanize as hz
 from app._05_action.cursor_verify import (
     mage_cast_click_search,
-    object_attack_screen_points,
+    mage_spell_cross_points,
 )
 from app._05_action import spell_box as sb
 
@@ -59,7 +59,7 @@ class MageCombatStrategy:
         if not in_mage_spell_range(target.position.x, target.position.y):
             return
 
-        points = object_attack_screen_points(executor, target, bounds)
+        points = mage_spell_cross_points(executor, target, bounds)
         hold = (
             hz.uniform(hz.MAGE_KEY_HOLD, executor._rng)
             if executor.humanize

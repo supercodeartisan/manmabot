@@ -1652,18 +1652,20 @@ class BotController:
                     try:
                         from app._04_decision.world_nav import SCRATCH_WORLD_NAV_PAUSE
 
-                    if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
-                        # Legacy flag: world-nav fail_skip no longer stops the bot.
-                        # Clear and continue so a stale scratch cannot halt Start.
-                        self.log(
-                            "World nav pause flag ignored — continuing routine"
-                        )
-                        publish("world_nav_continue")
-                        continue
-                except Exception as gate_exc:
-                    self.log(f"World nav pause check: {gate_exc}")
+                        if decision.blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None):
+                            # Legacy flag: world-nav fail_skip no longer stops the bot.
+                            # Clear and continue so a stale scratch cannot halt Start.
+                            self.log(
+                                "World nav pause flag ignored — continuing routine"
+                            )
+                            publish("world_nav_continue")
+                            continue
+                    except Exception as gate_exc:
+                        self.log(f"World nav pause check: {gate_exc}")
                 self.note_shop_action(action)
                 try:
+                    # Party uses the same blackboard for heal/buff cooldowns,
+                    # potion sides, and WORLD_NAV join — never solo mode columns.
                     executor.execute(
                         world,
                         action,

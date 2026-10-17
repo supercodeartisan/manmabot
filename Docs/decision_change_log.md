@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-16 — mage cast clicks the center of the spell range
+
+Intent: after the mage spell key, probe a screen cross through the monster and click the midpoint of the pixels whose cursor is `spell`. A locked fight reuses that center while it still reads `spell`. `spell_disable` and `spell_out_range` stay rejected.
+Shared: `mage_spell_cross_points`, `spell_range_center`, `mage_cast_click_search`, `MageCombatStrategy.attack`. The cross is centered on the same 0.2-screen-up body point as melee, with arms at 0.40 and 1.10 screen tiles. `object_attack_screen_points`, knight/elf/royal clicks, loot, travel, retreat, and HP stay as they are.
+Affects: mage attack casts. One cast hovers the cross (about 0.2 s) before the click, inside the 0.50 s cast gap. A `spell` pixel past a non-spell gap is left out, so a neighbor on an outer arm does not pull the center. A cast with no `spell` pixel still cancels with Esc. A monster that walks off the locked center is measured again.
+Consent: user (go, after the mage spell-center proposal).
+Result: implemented.
+
 ## 2026-10-16 — paused schedule update reaches the running logic
 
 Intent: Alt+A pause, then "update schedule", copies that schedule onto the live profile and the worker re-applies the Start configure path before the next decision tick. Resume uses the new settings. A running bot still does not apply. Map, routine, or farm-list changes restart the routine cursor and the in-farm timer. Stay-time and HP edits keep that timer.

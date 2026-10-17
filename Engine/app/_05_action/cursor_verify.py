@@ -43,6 +43,12 @@ ATTACK_PIXEL_RADII_PX = (10.0,)
 ATTACK_PIXEL_RING_N = 4
 # Max aim probes per attack tick (full ring is walked across ticks).
 ATTACK_AIM_PROBES_PER_TICK = 2
+# Mage cast cross, in screen tiles from the body point. The inner step
+# sits on the sprite; the outer step falls past a normal cast-circle rim.
+# Both steps are probed in one cast so the click can be the middle of the
+# pixels that read ``spell``.
+MAGE_SPELL_CROSS_TILES = (0.40, 1.10)
+_MAGE_CROSS_PROBE_LABELS = ("spell", "spell_disable", "spell_out_range", "dialog")
 
 
 def classify_cursor(
@@ -450,22 +456,14 @@ def object_attack_screen_points(
     ``ATTACK_CURSOR_SEARCH_TILES`` (default 0.1 tile). The ring is centered
     on the lifted point. Walked across ticks via ``attack_click_search``.
     """
-    from app._02_state.objects import Position
     from app._03_world.space.world_coords import (
-        content_screen_up,
         content_to_world,
         content_to_world_continuous,
     )
     from app._04_decision import player_mode as pm
     from app._05_action.travel_click import _fractional_content_ring
 
-    pos = getattr(obj, "position", None)
-    raw_x = float(getattr(pos, "x", 0.0) or 0.0)
-    raw_y = float(getattr(pos, "y", 0.0) or 0.0)
-    try:
-        lifted = content_screen_up(raw_x, raw_y, pm.ATTACK_AIM_SCREEN_UP_TILES)
-    except ValueError:
-        lifted = Position(x=raw_x, y=raw_y)
+    lifted = _attack_body_content(obj)
     points: list[tuple[float, float]] = [
         executor._screen_point(lifted.x, lifted.y, bounds)
     ]
@@ -482,6 +480,9 @@ def object_attack_screen_points(
             if rx is not None and ry is not None:
                 cx, cy = float(rx), float(ry)
             else:
+                pos = getattr(obj, "position", None)
+                raw_x = float(getattr(pos, "x", 0.0) or 0.0)
+                raw_y = float(getattr(pos, "y", 0.0) or 0.0)
                 try:
                     tile = content_to_world(raw_x, raw_y)
                 except ValueError:
@@ -492,6 +493,95 @@ def object_attack_screen_points(
             for dest in _fractional_content_ring(cx, cy, radius):
                 points.append(executor._screen_point(dest.x, dest.y, bounds))
     return _dedupe_screen_points(points)
+
+
+def _attack_body_content(obj: object):
+    """Memory ``iscr`` shifted ``ATTACK_AIM_SCREEN_UP_TILES`` up the screen."""
+    from app._02_state.objects import Position
+    from app._03_world.space.world_coords import content_screen_up
+    from app._04_decision import player_mode as pm
+
+    pos = getattr(obj, "position", None)
+    raw_x = float(getattr(pos, "x", 0.0) or 0.0)
+    raw_y = float(getattr(pos, "y", 0.0) or 0.0)
+    try:
+        return content_screen_up(raw_x, raw_y, pm.ATTACK_AIM_SCREEN_UP_TILES)
+    except ValueError:
+        return Position(x=raw_x, y=raw_y)
+
+
+def mage_spell_cross_points(
+    executor: "ActionExecutor",
+    obj: object,
+    bounds,
+) -> list[tuple[float, float]]:
+    """Body point, then screen-up, down, left, and right at each cross step.
+
+    The click is not one of these samples. ``mage_cast_click_search`` probes
+    them and clicks the center of the samples whose cursor is ``spell``.
+    """
+    from app._03_world.space.world_coords import content_screen_right, content_screen_up
+
+    center = _attack_body_content(obj)
+    points: list[tuple[float, float]] = [
+        executor._screen_point(center.x, center.y, bounds)
+    ]
+    for radius in MAGE_SPELL_CROSS_TILES:
+        step = float(radius)
+        if step <= 1e-6:
+            continue
+        for dest in (
+            content_screen_up(center.x, center.y, step),
+            content_screen_up(center.x, center.y, -step),
+            content_screen_right(center.x, center.y, step),
+            content_screen_right(center.x, center.y, -step),
+        ):
+            points.append(executor._screen_point(dest.x, dest.y, bounds))
+    return _dedupe_screen_points(points)
+
+
+def _contiguous_spell_hits(
+    points: Iterable[tuple[float, float]],
+    hits: Iterable[tuple[float, float]],
+) -> list[tuple[float, float]]:
+    """Spell pixels on this monster's cross, stopping at the first gap.
+
+    Point 0 is the body center. Each following group of four is one cross
+    step in order up, down, right, left, inner step first. A ``spell`` pixel
+    past a non-spell sample is a different monster and is left out. A list
+    that is not that cross keeps every hit.
+    """
+    hit_at = {(float(x), float(y)) for x, y in hits}
+    pts = [(float(x), float(y)) for x, y in points]
+    if len(pts) < 2 or (len(pts) - 1) % 4 != 0:
+        return [p for p in pts if p in hit_at]
+    center = pts[0]
+    kept: list[tuple[float, float]] = []
+    if center in hit_at:
+        kept.append(center)
+    radii = (len(pts) - 1) // 4
+    for direction in range(4):
+        arm = [pts[1 + ring * 4 + direction] for ring in range(radii)]
+        started = center in hit_at
+        for sample in arm:
+            if sample in hit_at:
+                started = True
+                kept.append(sample)
+            elif started:
+                break
+    return kept
+
+
+def spell_range_center(
+    points: Iterable[tuple[float, float]],
+) -> tuple[float, float] | None:
+    """Midpoint of the spell-hit range on each screen axis."""
+    pts = [(float(x), float(y)) for x, y in points]
+    if not pts:
+        return None
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return ((min(xs) + max(xs)) * 0.5, (min(ys) + max(ys)) * 0.5)
 
 
 def object_loot_screen_points(
@@ -584,6 +674,76 @@ def attack_click_search(
     return True
 
 
+def _spell_hit(match: CursorMatch | None, thr: float) -> bool:
+    if match is None or str(match.label) != "spell":
+        return False
+    try:
+        score = float(match.score)
+    except (TypeError, ValueError):
+        return False
+    return score >= thr
+
+
+def _click_aim(executor: "ActionExecutor", x: float, y: float) -> tuple[float, float]:
+    executor.mouse.click(x, y, snap=True)
+    xy = (float(x), float(y))
+    executor._last_aim_click_xy = xy
+    return xy
+
+
+def _collect_spell_hits(
+    executor: "ActionExecutor",
+    points: Iterable[tuple[float, float]],
+) -> list[tuple[float, float]]:
+    """Every probed pixel whose cursor is ``spell``. Other labels are skipped."""
+    thr = float(get_cursor_matcher().min_score)
+    hits: list[tuple[float, float]] = []
+    last: CursorMatch | None = None
+    for x, y in _dedupe_screen_points(points):
+        match = _probe_labels(executor, x, y, _MAGE_CROSS_PROBE_LABELS)
+        if match is None:
+            continue
+        last = match
+        if _spell_hit(match, thr):
+            hits.append((float(x), float(y)))
+    executor.last_cursor_match = last
+    if not hits:
+        executor.last_cursor_reject_reason = (
+            f"{_format_cursor_score_reason(last, thr=thr)} not allowed"
+        )
+    return hits
+
+
+def _click_spell_range_center(
+    executor: "ActionExecutor",
+    hits: list[tuple[float, float]],
+) -> tuple[float, float] | None:
+    """Click the center of the spell-hit range.
+
+    When that center is not itself ``spell``, click the spell sample nearest
+    to it.
+    """
+    center = spell_range_center(hits)
+    if center is None:
+        return None
+    cx, cy = center
+    nearest = min(hits, key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
+    if abs(nearest[0] - cx) <= 1.0 and abs(nearest[1] - cy) <= 1.0:
+        return _click_aim(executor, nearest[0], nearest[1])
+    thr = float(get_cursor_matcher().min_score)
+    match = _probe_labels(executor, cx, cy, _MAGE_CROSS_PROBE_LABELS)
+    if _spell_hit(match, thr):
+        return _click_aim(executor, cx, cy)
+    match = _probe_labels(executor, nearest[0], nearest[1], _MAGE_CROSS_PROBE_LABELS)
+    if _spell_hit(match, thr):
+        return _click_aim(executor, nearest[0], nearest[1])
+    executor.last_cursor_match = match
+    executor.last_cursor_reject_reason = (
+        f"{_format_cursor_score_reason(match, thr=thr)} not allowed"
+    )
+    return None
+
+
 def mage_cast_click_search(
     executor: "ActionExecutor",
     points: Iterable[tuple[float, float]],
@@ -591,12 +751,21 @@ def mage_cast_click_search(
     target_id: int | None = None,
     sticky: bool = False,
 ) -> bool:
-    """Probe a small aim window for the spell cursor; sticky locks last hit."""
+    """Probe the whole cross and click the center of the ``spell`` range.
+
+    Sticky reuses that center while it still reads ``spell``. A miss probes
+    the cross again. ``spell_disable`` and ``spell_out_range`` do not count.
+    """
     pts = _dedupe_screen_points(points)
     if not pts:
         return False
     _reset_attack_aim_if_target_changed(executor, target_id)
     tid = int(target_id) if target_id is not None else None
+    if not CURSOR_VERIFY_ENABLED:
+        xy = _click_aim(executor, pts[0][0], pts[0][1])
+        if tid is not None:
+            executor._attack_aim_lock = (tid, xy[0], xy[1])
+        return True
     lock = getattr(executor, "_attack_aim_lock", None)
     if (
         sticky
@@ -614,17 +783,14 @@ def mage_cast_click_search(
             return True
         executor._attack_aim_lock = None
 
-    window = _next_aim_window(executor, pts)
-    if not _click_when_found(
+    clicked = _click_spell_range_center(
         executor,
-        window,
-        labels=MAGE_CAST_OK_LABELS,
-        stop_labels=("dialog",),
-    ):
+        _contiguous_spell_hits(pts, _collect_spell_hits(executor, pts)),
+    )
+    if clicked is None:
         return False
-    xy = getattr(executor, "_last_aim_click_xy", None)
-    if tid is not None and isinstance(xy, tuple) and len(xy) >= 2:
-        executor._attack_aim_lock = (tid, float(xy[0]), float(xy[1]))
+    if tid is not None:
+        executor._attack_aim_lock = (tid, clicked[0], clicked[1])
     return True
 
 
@@ -921,6 +1087,7 @@ __all__ = [
     "ATTACK_PIXEL_RADII_PX",
     "ATTACK_PIXEL_RING_N",
     "ATTACK_AIM_PROBES_PER_TICK",
+    "MAGE_SPELL_CROSS_TILES",
     "clear_loot_attack_hover",
     "classify_cursor",
     "is_cursor_paralyzed",
@@ -935,6 +1102,8 @@ __all__ = [
     "attack_click",
     "attack_pixel_offsets",
     "object_attack_screen_points",
+    "mage_spell_cross_points",
+    "spell_range_center",
     "object_loot_screen_points",
     "attack_click_search",
     "mage_cast_click_search",
