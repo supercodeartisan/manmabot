@@ -165,9 +165,34 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("haste_potion_key", haste_key)
 
     # Party member (UI → profile). Leader comes from party_listen after join.
+    party_role = str(
+        party.get("role", getattr(profile, "party_role", "member")) or "member"
+    ).strip().lower()
+    if party_role not in ("member", "leader"):
+        party_role = "member"
+    set_value("party_role", party_role)
+    set_value(
+        "party_ws_port",
+        _int_range(
+            party.get("ws_port", getattr(profile, "party_ws_port", 8765)),
+            8765,
+            1,
+            65535,
+        ),
+    )
+    set_value(
+        "party_leader_host",
+        str(
+            party.get("leader_host", getattr(profile, "party_leader_host", "")) or ""
+        ).strip(),
+    )
     party_on = bool(
         party.get("member_enabled", getattr(profile, "party_member_enabled", False))
     )
+    # A leader hosts the socket and keeps farming on its own. It does not
+    # also run the member follow/assist path.
+    if party_role == "leader":
+        party_on = False
     set_value("party_member_enabled", party_on)
     set_value("party_leader_name", "")
     follow_raw = party.get("follow_tiles")

@@ -47,6 +47,9 @@ _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "random_loot": False,
     "loot_role": "none",
     "farm_mode": "party",
+    "role": "member",
+    "ws_port": 8765,
+    "leader_host": "",
 }
 
 

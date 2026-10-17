@@ -65,8 +65,13 @@ class PartyClient:
     def running(self) -> bool:
         return self._thread is not None and self._thread.is_alive() and not self._stop.is_set()
 
-    def connect(self, *, timeout: float = 10.0) -> None:
-        """Open the client loop on a background thread and wait for first connect."""
+    def connect(self, *, timeout: float = 10.0, wait: bool = True) -> None:
+        """Open the client loop on a background thread.
+
+        ``wait=False`` returns immediately and keeps reconnecting until
+        :meth:`close`. The member bot uses that so a down leader does not
+        stop the farm.
+        """
         if self.running:
             return
         self._stop.clear()
@@ -78,6 +83,8 @@ class PartyClient:
             daemon=True,
         )
         self._thread.start()
+        if not wait:
+            return
         if not self._ready.wait(timeout=max(0.1, float(timeout))):
             self.close()
             raise TimeoutError(f"party client failed to connect to {self.uri}")
@@ -110,6 +117,9 @@ class PartyClient:
             self._send_q.put_nowait(frame.to_json())
         except queue.Full as exc:
             raise RuntimeError("party client send queue full") from exc
+        from .traffic_log import note
+
+        note("sent", frame)
 
     def poll(self, timeout: float = 0.0) -> Optional[PartyMessage]:
         try:
@@ -276,6 +286,11 @@ class PartyClient:
             await ws.send(payload)
 
     def _deliver(self, msg: PartyMessage) -> None:
+        # The server relays a client's own frame back. That echo is not a new message.
+        if str(msg.sender or "") != self.sender or not self.sender:
+            from .traffic_log import note
+
+            note("recv", msg)
         try:
             self.inbox.put_nowait(msg)
         except queue.Full:

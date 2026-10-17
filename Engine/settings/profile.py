@@ -178,6 +178,11 @@ class Profile:
     party_loot_role: str = "none"
     # party = assist the leader's fight; solo = follow the leader, farm own mobs.
     party_farm_mode: str = "party"
+    # member = existing follow/assist. leader = this PC hosts the party socket.
+    party_role: str = "member"
+    party_ws_port: int = 8765
+    # Member client: address of the leader PC's party socket.
+    party_leader_host: str = ""
 
     def __post_init__(self) -> None:
         char = str(self.character or "").strip().lower()
@@ -434,6 +439,16 @@ class Profile:
             kwargs["return_weight_above"] = snap_return_weight_above(
                 kwargs.get("return_weight_above"), DEFAULT_RETURN_WEIGHT_ABOVE
             )
+        if "party_role" in kwargs:
+            role = str(kwargs.get("party_role") or "member").strip().lower()
+            kwargs["party_role"] = role if role in ("member", "leader") else "member"
+        if "party_leader_host" in kwargs:
+            kwargs["party_leader_host"] = str(kwargs.get("party_leader_host") or "").strip()
+        if "party_ws_port" in kwargs:
+            try:
+                kwargs["party_ws_port"] = max(1, min(65535, int(kwargs["party_ws_port"])))
+            except (TypeError, ValueError):
+                kwargs["party_ws_port"] = 8765
         # Mutex arrow type.
         if kwargs.get("buy_normal_arrows") and kwargs.get("buy_silver_arrows"):
             kwargs["buy_silver_arrows"] = False

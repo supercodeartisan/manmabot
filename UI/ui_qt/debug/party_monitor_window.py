@@ -1,8 +1,7 @@
-"""Party monitor UI — live etview + compact status + decisions log."""
+"""Party monitor UI — live etview + compact status + socket message log."""
 
 from __future__ import annotations
 
-import time
 from typing import Any, Callable
 
 from PySide6.QtCore import Qt, QTimer
@@ -13,6 +12,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QMainWindow,
+    QPlainTextEdit,
     QSizePolicy,
     QSplitter,
     QTableWidget,
@@ -42,14 +42,6 @@ def _fmt_xy(xy: Any) -> str:
         return str(xy)
 
 
-def _fmt_time(ts: Any) -> str:
-    try:
-        t = float(ts)
-    except (TypeError, ValueError):
-        return "—"
-    return time.strftime("%H:%M:%S", time.localtime(t))
-
-
 def _fill_members(table: QTableWidget, party: dict[str, Any] | None, farming: bool) -> None:
     members = list((party or {}).get("members") or []) if party else []
     table.setRowCount(len(members))
@@ -77,25 +69,26 @@ def _fill_members(table: QTableWidget, party: dict[str, Any] | None, farming: bo
             table.setItem(row, col, item)
 
 
-def _fill_decisions(table: QTableWidget, decisions: list[Any]) -> None:
-    rows = list(reversed(list(decisions or [])[-20:]))
-    table.setRowCount(len(rows))
-    for row, d in enumerate(rows):
-        if not isinstance(d, dict):
-            continue
-        vals = [
-            _fmt_time(d.get("at")),
-            _fmt(d.get("tick")),
-            _fmt(d.get("kind")),
-            _fmt(d.get("action")),
-            _fmt(d.get("reason")),
-            _fmt(d.get("leader_name")),
-            _fmt(d.get("leader_dist")),
-            _fmt(d.get("assist_src") or d.get("leader_source")),
-            _fmt(d.get("assist_name") or d.get("assist_track_id")),
-        ]
-        for col, text in enumerate(vals):
-            table.setItem(row, col, QTableWidgetItem(text))
+def _message_view() -> QPlainTextEdit:
+    view = QPlainTextEdit()
+    view.setReadOnly(True)
+    view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+    font = QFont("Consolas")
+    font.setStyleHint(QFont.StyleHint.Monospace)
+    font.setPointSize(9)
+    view.setFont(font)
+    return view
+
+
+def _fill_messages(view: QPlainTextEdit, lines: list[Any]) -> None:
+    text = "\n".join(str(line) for line in (lines or []) if str(line).strip())
+    if view.toPlainText() == text:
+        return
+    bar = view.verticalScrollBar()
+    at_end = bar.value() >= max(0, bar.maximum() - 4)
+    view.setPlainText(text)
+    if at_end:
+        bar.setValue(bar.maximum())
 
 
 class PartyMonitorPanel(QWidget):
@@ -150,28 +143,10 @@ class PartyMonitorPanel(QWidget):
         layout.addWidget(self.members)
 
         layout.addWidget(
-            QLabel(self.t.get("party_decisions", "Last 20 decisions"))
+            QLabel(self.t.get("party_messages", "Messages"))
         )
-        self.decisions = QTableWidget(0, 9)
-        self.decisions.setHorizontalHeaderLabels(
-            [
-                "Time",
-                "Tick",
-                "Kind",
-                "Action",
-                "Reason",
-                "Leader",
-                "Dist",
-                "Src",
-                "Assist",
-            ]
-        )
-        self.decisions.horizontalHeader().setSectionResizeMode(
-            4, QHeaderView.ResizeMode.Stretch
-        )
-        self.decisions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.decisions.setAlternatingRowColors(True)
-        layout.addWidget(self.decisions, stretch=1)
+        self.messages = _message_view()
+        layout.addWidget(self.messages, stretch=1)
 
     def apply(self, snap: dict[str, Any]) -> None:
         info = _status_bits(snap)
@@ -179,7 +154,7 @@ class PartyMonitorPanel(QWidget):
         self.status.setText(info["status_text"])
         self.status.setStyleSheet(info["status_style"])
         _fill_members(self.members, snap.get("party") if isinstance(snap.get("party"), dict) else None, info["farming"])
-        _fill_decisions(self.decisions, list(snap.get("decisions") or []))
+        _fill_messages(self.messages, list(snap.get("messages") or []))
 
 
 def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
@@ -306,7 +281,7 @@ def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
 
 
 class PartyMonitorWindow(QMainWindow):
-    """Live etview (left) + decisions log (right) + compact player status."""
+    """Live etview (left) + socket message log (right) + compact player status."""
 
     def __init__(
         self,
@@ -393,35 +368,16 @@ class PartyMonitorWindow(QMainWindow):
         left_l.addWidget(self.members)
         main.addWidget(left)
 
-        # ---- right: 20 decision logs ----
+        # ---- right: socket messages (leader and member) ----
         right = QWidget()
         right_l = QVBoxLayout(right)
         right_l.setContentsMargins(0, 0, 0, 0)
         right_l.setSpacing(4)
         right_l.addWidget(
-            QLabel(self.t.get("party_decisions", "Last 20 decisions"))
+            QLabel(self.t.get("party_messages", "Messages"))
         )
-        self.decisions = QTableWidget(0, 9)
-        self.decisions.setHorizontalHeaderLabels(
-            [
-                "Time",
-                "Tick",
-                "Kind",
-                "Action",
-                "Reason",
-                "Leader",
-                "Dist",
-                "Src",
-                "Assist",
-            ]
-        )
-        self.decisions.horizontalHeader().setSectionResizeMode(
-            4, QHeaderView.ResizeMode.Stretch
-        )
-        self.decisions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.decisions.setAlternatingRowColors(True)
-        self.decisions.verticalHeader().setVisible(False)
-        right_l.addWidget(self.decisions, stretch=1)
+        self.messages = _message_view()
+        right_l.addWidget(self.messages, stretch=1)
         main.addWidget(right)
 
         self._splitter = main
@@ -478,7 +434,7 @@ class PartyMonitorWindow(QMainWindow):
         self.status.setStyleSheet(info["status_style"])
         party = snap.get("party") if isinstance(snap.get("party"), dict) else None
         _fill_members(self.members, party, info["farming"])
-        _fill_decisions(self.decisions, list(snap.get("decisions") or []))
+        _fill_messages(self.messages, list(snap.get("messages") or []))
         self._refresh_etview(snap, info)
 
     def _refresh_etview(self, snap: dict[str, Any], info: dict[str, Any]) -> None:

@@ -145,6 +145,12 @@ class BotController:
         self._settings_epoch = 0
         self._settings_applied = 0
         self._route_identity: tuple | None = None
+        # Party leader socket. Lives only while this worker runs.
+        self._party_ws = None
+        self._party_ws_owned = False
+        # Party member client. Reports player status while this worker runs.
+        self._party_client = None
+        self._party_heartbeat = None
 
     def _ui(self):
         return ui_strings(getattr(self._profile, "language", None))
@@ -327,9 +333,15 @@ class BotController:
         )
 
     def party_monitor_snapshot(self) -> dict:
-        """Party monitor payload: live DLL party + last member decisions."""
+        """Party monitor payload: live DLL party + socket message log."""
         with self._debug_lock:
             snap = dict(self._party_monitor) if self._party_monitor else {}
+        try:
+            from websocket.traffic_log import snapshot as party_messages
+
+            snap["messages"] = party_messages()
+        except Exception:
+            snap.setdefault("messages", [])
         snap.setdefault("bot_state", self.state.value)
         snap.setdefault("bot_reason", self.reason)
         snap.setdefault(
@@ -1009,6 +1021,135 @@ class BotController:
             self._try_enter_running_locked(via="Auto-resume")
         return None
 
+    def _start_party_socket(self) -> None:
+        """Listen while this worker runs, only when the profile role is leader."""
+        profile = self._profile
+        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
+        if role != "leader":
+            return
+        try:
+            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
+        except (TypeError, ValueError):
+            port = 8765
+        port = max(1, min(65535, port))
+        try:
+            from websocket.active import current, publish
+            from websocket.netinfo import local_ipv4
+            from websocket.watchdog import PartyServerWatchdog
+
+            existing = current()
+            if (
+                existing is not None
+                and existing.running
+                and int(existing.server.port) == port
+            ):
+                self._party_ws = existing
+                self._party_ws_owned = False
+                self.log(
+                    f"Party socket already listening on port {port}. Using that server."
+                )
+                return
+
+            watchdog = PartyServerWatchdog(
+                host="0.0.0.0",
+                port=port,
+                relay=True,
+                announce=True,
+            )
+            watchdog.start(timeout=5.0)
+        except Exception as exc:
+            self._party_ws = None
+            self._party_ws_owned = False
+            self.log(f"Party socket failed to start on port {port}: {exc}")
+            return
+        publish(watchdog)
+        self._party_ws = watchdog
+        self._party_ws_owned = True
+        try:
+            from websocket.traffic_log import clear as clear_party_log
+
+            clear_party_log()
+        except Exception:
+            pass
+        try:
+            advertise = local_ipv4()
+        except Exception:
+            advertise = "127.0.0.1"
+        self.log(
+            f"Party socket listening on {advertise}:{port} (bind 0.0.0.0). "
+            "It stops when this bot stops."
+        )
+
+    def _stop_party_socket(self) -> None:
+        watchdog = self._party_ws
+        owned = self._party_ws_owned
+        self._party_ws = None
+        self._party_ws_owned = False
+        if watchdog is None or not owned:
+            return
+        try:
+            from websocket.active import clear
+
+            clear(watchdog)
+            watchdog.stop(timeout=3.0)
+            self.log("Party socket stopped")
+        except Exception as exc:
+            self.log(f"Party socket stop failed: {exc}")
+
+    def _start_party_client(self) -> None:
+        """Member bot connects to the leader and reports player status."""
+        profile = self._profile
+        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
+        enabled = bool(getattr(profile, "party_member_enabled", False))
+        if role != "member" or not enabled:
+            return
+        host = str(getattr(profile, "party_leader_host", "") or "").strip()
+        if not host:
+            self.log("Party member status heartbeat needs the leader address.")
+            return
+        try:
+            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
+        except (TypeError, ValueError):
+            port = 8765
+        port = max(1, min(65535, port))
+        try:
+            from websocket.client import PartyClient
+            from websocket.member_status import MemberHeartbeat
+
+            client = PartyClient(
+                host=host,
+                port=port,
+                sender="member",
+                reconnect=True,
+            )
+            client.connect(wait=False)
+        except Exception as exc:
+            self._party_client = None
+            self._party_heartbeat = None
+            self.log(f"Party member client failed to start: {exc}")
+            return
+        self._party_client = client
+        self._party_heartbeat = MemberHeartbeat(client)
+        try:
+            from websocket.traffic_log import clear as clear_party_log
+
+            clear_party_log()
+        except Exception:
+            pass
+        self.log(f"Party member status heartbeat every 10s to {host}:{port}")
+
+    def _stop_party_client(self) -> None:
+        client = self._party_client
+        self._party_client = None
+        self._party_heartbeat = None
+        if client is None:
+            return
+        try:
+            client.close(timeout=3.0)
+            self.log("Party member client stopped")
+        except Exception as exc:
+            self.log(f"Party member client stop failed: {exc}")
+
     def _worker(self) -> None:
         ensure_userdata()
         # Windowed / pythonw launches leave stdout/stderr as None; torch hub
@@ -1019,11 +1160,15 @@ class BotController:
             sys.stderr = open(os.devnull, "w", encoding="utf-8")
         crashed = False
         try:
+            self._start_party_socket()
+            self._start_party_client()
             self._run_bot_loop()
         except Exception:
             crashed = True
             self.log("Worker crashed:\n" + traceback.format_exc())
         finally:
+            self._stop_party_socket()
+            self._stop_party_client()
             with self._lock:
                 if self.state != RunState.STOPPED:
                     # Distinct from a clean user Stop so the UI can disarm the
@@ -1075,11 +1220,18 @@ class BotController:
         from app._06_party import PartyMemberConfig, PartyMemberManager
 
         profile = self._profile
+        party_role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
+        if party_role not in ("member", "leader"):
+            party_role = "member"
+        # Leader hosts the socket and farms on its own. Member follow stays off.
+        member_on = (
+            bool(getattr(profile, "party_member_enabled", False)) and party_role != "leader"
+        )
         config = load_config()
         # Single enable path: UI → SettingsBag → profile (no YAML / JSON dual path).
         party_cfg = PartyMemberConfig.from_mapping(
             {
-                "enabled": bool(getattr(profile, "party_member_enabled", False)),
+                "enabled": member_on,
                 # Leader identity comes from party_listen memory after join.
                 "follow_tiles": int(
                     getattr(
@@ -1118,10 +1270,17 @@ class BotController:
         party_mode = bool(party_cfg.enabled)
         self.log(
             "Party gate: "
+            f"role={party_role} "
+            f"ws_port={int(getattr(profile, 'party_ws_port', 8765) or 8765)} "
             f"profile.party_member_enabled="
             f"{bool(getattr(profile, 'party_member_enabled', False))} "
             f"→ party_mode={party_mode}"
         )
+        if party_role == "leader":
+            self.log(
+                "Party leader farms with the solo routine. "
+                "Only a member bot uses party follow."
+            )
         log_cfg = (config.get("logging") or {}) if isinstance(config, dict) else {}
         log_level = str(log_cfg.get("level") or "INFO")
         session_log = configure_bot_log(
@@ -1651,6 +1810,15 @@ class BotController:
                     )
 
                 if party_brain is not None:
+                    beat = self._party_heartbeat
+                    if beat is not None:
+                        try:
+                            beat.maybe_send(world, map_id=last_logged_map_id)
+                        except Exception as beat_exc:
+                            err = str(beat_exc)
+                            if err != getattr(self, "_party_hb_err", ""):
+                                self._party_hb_err = err
+                                self.log(f"Party member status send failed: {err}")
                     action = party_brain.decide(world)
                     party_joining = party_brain.joining_map()
                     self._publish_party_monitor(
@@ -1661,6 +1829,21 @@ class BotController:
                     )
                 else:
                     action = decision.decide(world)
+                    if party_role == "leader":
+                        try:
+                            from websocket.leader_decisions import (
+                                publish_leader_decision,
+                            )
+
+                            sent = publish_leader_decision(
+                                action,
+                                world,
+                                map_id=last_logged_map_id,
+                            )
+                            if sent:
+                                self.log(f"Party leader decision sent: {sent}")
+                        except Exception as party_exc:
+                            self.log(f"Party leader decision send failed: {party_exc}")
                 t_decide = time.perf_counter()
                 last_action = action
                 if party_brain is None:

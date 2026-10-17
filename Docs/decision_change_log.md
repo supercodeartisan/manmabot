@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-10-17 — member sends player status every 10s
+
+Intent: the member bot connects to the leader address and sends the live player (hp, mp, position, map id, alive, level) every 10 seconds. Follow and combat stay as they are. The leader still farms solo and still sends only critical decisions.
+Shared: none. New client start/stop sits next to the leader socket in the worker. The send runs after the world snapshot, before the member decision, and only while member logic is on.
+Affects: member websocket traffic and a host field on the party member panel.
+Consent: user (client sends current player status with a 10s heartbeat).
+Result: implemented.
+
+## 2026-10-17 — leader sends critical solo decisions
+
+Intent: the leader bot keeps the solo farm. It does not run party follow. After a solo decision, teleport, return, talking scroll, gate, shop, and respawn are copied onto the party socket once per change. Attack, loot, heal, and walk ticks are not sent. Member follow is unchanged.
+Shared: none. The hook is after `decision.decide` in the bot loop, and only when the role is leader.
+Affects: leader websocket traffic. Solo actions stay the ones decide already chose.
+Consent: user (verify sending the leader's critical decisions; leader farms solo; only the member uses party logic).
+Result: implemented.
+
+## 2026-10-17 — party role selector and leader socket
+
+Intent: the Party tab has two roles, party member and party leader, on both sections. Leader shows this PC's LAN address and the socket port. When the bot runs as leader, the existing party WebSocket server listens on that port until the bot stops. A temporary client window monitors messages and both sides' status. Member follow, assist, loot, combat, retreat, HP, and login are unchanged. Selecting leader turns member follow off so this PC does not also chase a leader.
+Shared: none of `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `apply_inplace_hp_support`. New path is `BotController._start_party_socket` / `_stop_party_socket` around the existing worker. The member gate reads `party_role` and skips member mode when it is leader.
+Affects: party tab settings, and a listening socket while a leader bot is running.
+Consent: user (party member / party leader select, show IP and port, start the websocket with the leader bot, temporary client UI).
+Result: implemented.
+
 ## 2026-10-17 — smooth party follow via Reynolds leader-following + Arrive
 
 Intent: travel follow was not smooth — random/exact travel tiles repathing every leader step caused jitter and reverse walks. Replace with Craig Reynolds leader following (GDC'99): formation slot behind the leader with a light lateral flank, Arrive tolerance (hold within 1 tile of the slot), and a sticky absolute goal (keep click target while the ideal drifts ≤2 tiles). HOLD keeps the sticky goal so the next chase reuses it.

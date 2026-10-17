@@ -41,6 +41,9 @@ class PartyServer:
         auto_rebind: bool = True,
         rebind_delay_s: float = 0.5,
         status_log_interval_s: float = 30.0,
+        relay: bool = False,
+        announce: bool = False,
+        announce_interval_s: float = 3.0,
     ) -> None:
         self.host = str(host or "0.0.0.0")
         self.port = int(port)
@@ -50,6 +53,13 @@ class PartyServer:
         self.auto_rebind = bool(auto_rebind)
         self.rebind_delay_s = max(0.1, float(rebind_delay_s))
         self.status_log_interval_s = max(0.0, float(status_log_interval_s))
+        # Relay copies each client frame to every connected client, including
+        # the sender, so a monitor can see the round trip. Announce pushes a
+        # status object (type=status) on connect, on roster changes, and on a
+        # timer. Both stay off unless the caller asks.
+        self.relay = bool(relay)
+        self.announce = bool(announce)
+        self.announce_interval_s = max(0.5, float(announce_interval_s))
         self.inbox: queue.Queue[PartyMessage] = queue.Queue(maxsize=max(1, int(inbox_max)))
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -146,7 +156,11 @@ class PartyServer:
 
     def broadcast(self, message: PartyMessage | dict[str, Any] | str, *, sender: str = "") -> int:
         frame = self._coerce(message, sender=sender)
-        return self._run_coro(self._broadcast(frame))
+        sent = self._run_coro(self._broadcast(frame))
+        from .traffic_log import note
+
+        note("sent", frame)
+        return sent
 
     def send_to(
         self,
@@ -330,15 +344,20 @@ class PartyServer:
         status_task = None
         if self.status_log_interval_s > 0:
             status_task = asyncio.create_task(self._status_heartbeat())
+        announce_task = None
+        if self.announce:
+            announce_task = asyncio.create_task(self._announce_loop())
 
         try:
             while not self._stop.is_set():
                 await asyncio.sleep(0.1)
         finally:
-            if status_task is not None:
-                status_task.cancel()
+            for task in (status_task, announce_task):
+                if task is None:
+                    continue
+                task.cancel()
                 try:
-                    await status_task
+                    await task
                 except asyncio.CancelledError:
                     pass
             self._listening = False
@@ -365,6 +384,54 @@ class PartyServer:
                 break
             self._log_status("heartbeat")
 
+    async def _announce_loop(self) -> None:
+        while not self._stop.is_set():
+            await asyncio.sleep(self.announce_interval_s)
+            if self._stop.is_set() or not self._listening:
+                continue
+            await self._announce("heartbeat")
+
+    async def _announce(
+        self,
+        event: str,
+        *,
+        websocket: Any = None,
+        client_id: str = "",
+    ) -> None:
+        """Push one status frame. No-op unless ``announce`` was requested."""
+        if not self.announce:
+            return
+        from .netinfo import local_ipv4
+
+        payload = PartyMessage(
+            sender="server",
+            message={
+                "type": "status",
+                "event": str(event or ""),
+                "listening": bool(self._listening),
+                "clients": self.client_count(),
+                "client_ids": self.client_ids(),
+                "host": self.host,
+                "advertise_host": local_ipv4(),
+                "port": self.port,
+                "client_id": str(client_id or ""),
+                "uptime_s": (
+                    round(time.time() - self._started_at, 1) if self._started_at else 0.0
+                ),
+            },
+        )
+        raw = payload.to_json()
+        if websocket is not None:
+            try:
+                await websocket.send(raw)
+            except Exception:
+                _log.info("party status send failed event=%s", event)
+            return
+        try:
+            await self._broadcast(payload)
+        except Exception:
+            _log.info("party status broadcast failed event=%s", event)
+
     async def _client_loop(self, websocket: Any) -> None:
         client_id = self._register(websocket)
         remote = "?"
@@ -381,6 +448,8 @@ class PartyServer:
             self.client_count(),
         )
         self._log_status("client_connected")
+        await self._announce("welcome", websocket=websocket, client_id=client_id)
+        await self._announce("clients")
         try:
             async for raw in websocket:
                 try:
@@ -389,6 +458,11 @@ class PartyServer:
                     _log.warning("bad party frame from %s: %s", client_id, exc)
                     continue
                 self._deliver(msg, client_id)
+                if self.relay and str(msg.sender or "") != "server":
+                    try:
+                        await self._broadcast(msg)
+                    except Exception:
+                        _log.exception("party relay failed")
         except Exception as exc:
             _log.info("party client disconnected id=%s (%s)", client_id, exc)
         finally:
@@ -399,6 +473,7 @@ class PartyServer:
                 self.client_count(),
             )
             self._log_status("client_removed")
+            await self._announce("clients")
 
     def _register(self, websocket: Any) -> str:
         with self._client_lock:
@@ -412,6 +487,9 @@ class PartyServer:
             self._clients.pop(client_id, None)
 
     def _deliver(self, msg: PartyMessage, client_id: str) -> None:
+        from .traffic_log import note
+
+        note("recv", msg)
         try:
             self.inbox.put_nowait(msg)
         except queue.Full:

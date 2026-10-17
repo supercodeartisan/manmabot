@@ -1,4 +1,4 @@
-"""Party tab — member follow/assist + loot role (right of Item)."""
+"""Party tab — member follow/assist, or this PC as the party-socket leader."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -18,6 +19,7 @@ from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
 _FARM_MODES = ("party", "solo")
+_PARTY_ROLES = ("member", "leader")
 
 
 class PartyTab(QWidget):
@@ -35,6 +37,7 @@ class PartyTab(QWidget):
         self.t = strings
         self.language = language
         self.on_log = on_log or (lambda _m: None)
+        self._lan_ip = ""
         self._build()
 
     def _build(self) -> None:
@@ -47,23 +50,18 @@ class PartyTab(QWidget):
         root.addWidget(scroll, stretch=1)
         body = QVBoxLayout(host)
 
-        box = card(host, self.t.get("party_tab_title", "Party member"))
-        body.addWidget(box)
-        lay = box.layout()
+        self.party_box = card(host, self.t.get("party_tab_title", "Party member"))
+        body.addWidget(self.party_box)
+        lay = self.party_box.layout()
         assert isinstance(lay, QVBoxLayout)
+        self.role_farm = self._add_role_combo(lay)
 
-        hint = QLabel(
-            self.t.get(
-                "party_member_hint",
-                "When enabled, this bot follows the in-party leader from "
-                "memory and assists instead of solo farm. Join a party first.",
-            )
-        )
-        hint.setWordWrap(True)
-        lay.addWidget(hint)
+        self.member_panel = QWidget()
+        member_lay = QVBoxLayout(self.member_panel)
+        member_lay.setContentsMargins(0, 0, 0, 0)
 
         self.party_enable = add_check(
-            lay,
+            member_lay,
             self.bag,
             "party",
             "member_enabled",
@@ -73,102 +71,86 @@ class PartyTab(QWidget):
         )
         self.bag.set("party", "leader_name", "")
 
+        host_row = QHBoxLayout()
+        host_row.addWidget(QLabel(self.t.get("party_leader_host", "Leader")))
+        self.leader_host = QLineEdit(
+            str(self.bag.get_str("party", "leader_host", "") or "")
+        )
+        self.leader_host.setPlaceholderText("10.0.0.2")
+        self.leader_host.textChanged.connect(self._on_leader_host_changed)
+        host_row.addWidget(self.leader_host, stretch=1)
+        member_lay.addLayout(host_row)
+        self.member_ws_port = add_spin_row(
+            member_lay,
+            self.bag,
+            "party",
+            "ws_port",
+            self.t.get("party_ws_port", "Port"),
+            8765,
+            1,
+            65535,
+        )
+
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel(self.t.get("party_farm_mode", "Farming method")))
         self.party_farm_mode = QComboBox()
         self.party_farm_mode.addItem(
-            self.t.get("party_farm_party", "Party farm — assist the leader's fight"),
+            self.t.get("party_farm_party", "Party farm"),
             "party",
         )
         self.party_farm_mode.addItem(
-            self.t.get(
-                "party_farm_solo", "Solo farm — follow the leader, farm own mobs"
-            ),
+            self.t.get("party_farm_solo", "Solo farm"),
             "solo",
         )
         self._select_farm_mode()
         self.party_farm_mode.currentIndexChanged.connect(self._on_farm_mode_changed)
         mode_row.addWidget(self.party_farm_mode)
         mode_row.addStretch(1)
-        lay.addLayout(mode_row)
-        farm_hint = QLabel(
-            self.t.get(
-                "party_farm_hint",
-                "Solo farm: stays within the follow leash and hunts its own "
-                "monsters near the leader (species filter applies), and loots "
-                "its own drops. Party farm: attacks only what the leader fights.",
-            )
-        )
-        farm_hint.setWordWrap(True)
-        lay.addWidget(farm_hint)
+        member_lay.addLayout(mode_row)
 
         self.party_follow_tiles = add_spin_row(
-            lay,
+            member_lay,
             self.bag,
             "party",
             "follow_tiles",
-            self.t.get(
-                "party_follow_tiles",
-                "Travel leash — follow if farther (tiles)",
-            ),
+            self.t.get("party_follow_tiles", "Follow"),
             8,
             1,
             40,
             on_change=self._clamp_follow_stop,
         )
         self.party_stop_tiles = add_spin_row(
-            lay,
+            member_lay,
             self.bag,
             "party",
             "stop_tiles",
-            self.t.get(
-                "party_stop_tiles",
-                "Stop settle — arrive within (tiles)",
-            ),
+            self.t.get("party_stop_tiles", "Stop"),
             2,
             0,
             40,
             on_change=self._clamp_follow_stop,
         )
         self.party_assist_leash = add_spin_row(
-            lay,
+            member_lay,
             self.bag,
             "party",
             "assist_leash_tiles",
-            self.t.get("party_assist_leash", "Assist leash (tiles)"),
+            self.t.get("party_assist_leash", "Assist"),
             10,
             1,
             40,
         )
-
-        loot = card(host, self.t.get("party_loot_title", "Party loot"))
-        body.addWidget(loot)
-        loot_lay = loot.layout()
-        assert isinstance(loot_lay, QVBoxLayout)
-        loot_hint = QLabel(
-            self.t.get(
-                "party_loot_hint",
-                "Random ON: every party member may loot any nearby drop. "
-                "Random OFF: only the Responsible role approaches and picks up.",
-            )
-        )
-        loot_hint.setWordWrap(True)
-        loot_lay.addWidget(loot_hint)
-
         self.party_random_loot = add_check(
-            loot_lay,
+            member_lay,
             self.bag,
             "party",
             "random_loot",
-            self.t.get("party_random_loot", "Random loot (all members)"),
+            self.t.get("party_random_loot", "Random"),
             False,
             on_change=self._on_loot_mode_changed,
         )
-
         role_row = QHBoxLayout()
-        role_row.addWidget(
-            QLabel(self.t.get("party_loot_role", "Loot role"))
-        )
+        role_row.addWidget(QLabel(self.t.get("party_loot_role", "Role")))
         self.party_loot_role = QComboBox()
         self.party_loot_role.addItem(
             self.t.get("party_loot_role_none", "None"), "none"
@@ -185,10 +167,70 @@ class PartyTab(QWidget):
         self.party_loot_role.currentIndexChanged.connect(self._on_loot_role_changed)
         role_row.addWidget(self.party_loot_role)
         role_row.addStretch(1)
-        loot_lay.addLayout(role_row)
+        member_lay.addLayout(role_row)
+        lay.addWidget(self.member_panel)
 
+        self.leader_panel = QWidget()
+        leader_lay = QVBoxLayout(self.leader_panel)
+        leader_lay.setContentsMargins(0, 0, 0, 0)
+        self.ip_edit = self._address_row(
+            leader_lay, self.t.get("party_ws_ip", "IP")
+        )
+        self.party_ws_port = add_spin_row(
+            leader_lay,
+            self.bag,
+            "party",
+            "ws_port",
+            self.t.get("party_ws_port", "Port"),
+            8765,
+            1,
+            65535,
+            on_change=self._refresh_leader_labels,
+        )
+        lay.addWidget(self.leader_panel)
+
+        self.role_farm.currentIndexChanged.connect(self._on_role_combo_changed)
         body.addStretch(1)
-        self._on_party_member_changed()
+        self._apply_role(self._role())
+
+    def _add_role_combo(self, layout: QVBoxLayout) -> QComboBox:
+        row = QHBoxLayout()
+        combo = QComboBox()
+        combo.blockSignals(True)
+        combo.addItem(self.t.get("party_role_member", "Party member"), "member")
+        combo.addItem(self.t.get("party_role_leader", "Party leader"), "leader")
+        combo.blockSignals(False)
+        row.addWidget(combo)
+        row.addStretch(1)
+        layout.addLayout(row)
+        return combo
+
+    def _address_row(self, layout: QVBoxLayout, label: str) -> QLineEdit:
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        field = QLineEdit()
+        field.setReadOnly(True)
+        field.setMinimumWidth(180)
+        row.addWidget(field, stretch=1)
+        layout.addLayout(row)
+        return field
+
+    def _on_leader_host_changed(self, text: str) -> None:
+        self.bag.set("party", "leader_host", str(text or "").strip())
+
+    def _lan_ip_text(self) -> str:
+        if not self._lan_ip:
+            try:
+                from websocket.netinfo import local_ipv4
+
+                self._lan_ip = local_ipv4()
+            except Exception:
+                self._lan_ip = "127.0.0.1"
+        return self._lan_ip
+
+    def _refresh_leader_labels(self) -> None:
+        if getattr(self, "ip_edit", None) is not None:
+            self.ip_edit.setText(self._lan_ip_text())
 
     def _clamp_follow_stop(self) -> None:
         follow = self.bag.get_int("party", "follow_tiles", 8)
@@ -203,6 +245,10 @@ class PartyTab(QWidget):
     def _farm_mode(self) -> str:
         mode = str(self.bag.get_str("party", "farm_mode", "party") or "party")
         return mode if mode in _FARM_MODES else "party"
+
+    def _role(self) -> str:
+        role = str(self.bag.get_str("party", "role", "member") or "member")
+        return role if role in _PARTY_ROLES else "member"
 
     def _select_farm_mode(self) -> None:
         self.party_farm_mode.blockSignals(True)
@@ -223,6 +269,44 @@ class PartyTab(QWidget):
         if role not in _LOOT_ROLES:
             role = "none"
         self.bag.set("party", "loot_role", role)
+
+    def _on_role_combo_changed(self) -> None:
+        combo = self.sender()
+        if not isinstance(combo, QComboBox):
+            return
+        role = str(combo.currentData() or "member")
+        if role not in _PARTY_ROLES:
+            role = "member"
+        self._apply_role(role)
+
+    def _apply_role(self, role: str) -> None:
+        if role not in _PARTY_ROLES:
+            role = "member"
+        self.bag.set("party", "role", role)
+        if role == "leader":
+            if self.bag.get_bool("party", "member_enabled", False):
+                self.bag.set("party", "member_enabled", False)
+            if hasattr(self, "party_enable"):
+                self.party_enable.blockSignals(True)
+                self.party_enable.setChecked(False)
+                self.party_enable.blockSignals(False)
+        combo = getattr(self, "role_farm", None)
+        if combo is not None:
+            combo.blockSignals(True)
+            idx = combo.findData(role)
+            combo.setCurrentIndex(max(0, idx))
+            combo.blockSignals(False)
+        leader = role == "leader"
+        self.member_panel.setVisible(not leader)
+        self.leader_panel.setVisible(leader)
+        self.party_box.setTitle(
+            self.t.get("party_leader_title", "Party leader")
+            if leader
+            else self.t.get("party_tab_title", "Party member")
+        )
+        if leader:
+            self._refresh_leader_labels()
+        self._on_party_member_changed()
 
     def _on_loot_mode_changed(self) -> None:
         on = self.bag.get_bool("party", "member_enabled", False)
@@ -292,5 +376,20 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
+        if hasattr(self, "party_ws_port"):
+            self.party_ws_port.blockSignals(True)
+            self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
+            self.party_ws_port.blockSignals(False)
+        if hasattr(self, "member_ws_port"):
+            self.member_ws_port.blockSignals(True)
+            self.member_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
+            self.member_ws_port.blockSignals(False)
+        if hasattr(self, "leader_host"):
+            self.leader_host.blockSignals(True)
+            self.leader_host.setText(
+                str(self.bag.get_str("party", "leader_host", "") or "")
+            )
+            self.leader_host.blockSignals(False)
         self._select_farm_mode()
-        self._on_party_member_changed()
+        self._lan_ip = ""
+        self._apply_role(self._role())

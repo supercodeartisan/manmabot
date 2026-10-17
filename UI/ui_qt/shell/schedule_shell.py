@@ -465,7 +465,7 @@ class ScheduleShell(QMainWindow):
         party_btn.setToolTip(
             self.t.get(
                 "party_monitor_tip",
-                "Party etview: game capture + entity markers, leader ATK target, decisions.",
+                "Party etview: game capture + entity markers, leader ATK target, socket messages.",
             )
         )
         party_btn.clicked.connect(self.open_party_monitor)
@@ -954,7 +954,6 @@ class ScheduleShell(QMainWindow):
             from settings.task_runtime import apply_runtime_settings
 
             party = dict(self.editor.bag.section("party") or {})
-            on = bool(party.get("member_enabled", False))
             apply_runtime_settings(
                 ScheduleTask(settings={"party": party}),
                 self.profile,
@@ -962,9 +961,13 @@ class ScheduleShell(QMainWindow):
             save_profile(self.profile)
             self.bridge.profile = self.profile
             self.bridge.coordinator.profile = self.profile
+            role = str(getattr(self.profile, "party_role", "member") or "member")
+            port = int(getattr(self.profile, "party_ws_port", 8765) or 8765)
+            member = bool(getattr(self.profile, "party_member_enabled", False))
+            host = str(getattr(self.profile, "party_leader_host", "") or "")
             self._append_log(
-                f"Party member mode={'ON' if on else 'OFF'} "
-                f"(profile={bool(getattr(self.profile, 'party_member_enabled', False))})"
+                f"Party role={role} member={'ON' if member else 'OFF'} "
+                f"port={port} leader={host}"
             )
         except Exception as exc:
             self._append_log(f"Party settings overlay failed: {exc}")
