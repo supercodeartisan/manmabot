@@ -8,14 +8,14 @@ aborts Nuitka on Python 3.14).
 from __future__ import annotations
 
 import ctypes
-import json
 import math
 import os
 import threading
 import traceback
 from ctypes import wintypes
 
-_CLASS = "ManmabotStartupSplash"
+_CLASS = "ZFStartupSplash"
+_BRAND_MARK = "纵锋"
 _WIDTH = 400
 _HEIGHT = 460
 _MIN_UI_W = 480
@@ -133,7 +133,7 @@ _born = 0
 _alpha = 0
 _ui_hits = 0
 _tick = 0
-_loading_text = "Loading"
+_loading_text = "正在加载"
 _logo = ctypes.c_void_p()
 _gdiplus_token = ctypes.c_ulong()
 _bitmap = ctypes.c_void_p()
@@ -272,33 +272,6 @@ def _bind_gdiplus() -> None:
     _gp("GdipDisposeImage", ctypes.c_int, [ctypes.c_void_p])
 
 
-def _loading_caption() -> tuple[str, str]:
-    """Return caption and a face that can draw it."""
-    lang = ""
-    try:
-        from session.paths import APP_PATH
-
-        if APP_PATH.is_file():
-            payload = json.loads(APP_PATH.read_text(encoding="utf-8"))
-            lang = str(payload.get("language") or "").lower()
-    except Exception:
-        lang = ""
-    if not lang:
-        try:
-            lang_id = int(_kernel32.GetUserDefaultUILanguage() or 0) & 0x3FF
-        except Exception:
-            lang_id = 0
-        if lang_id == 0x12:
-            lang = "ko"
-        elif lang_id == 0x04:
-            lang = "zh"
-    if lang.startswith("ko"):
-        return "불러오는 중", "Malgun Gothic"
-    if lang.startswith("zh"):
-        return "正在加载", "Microsoft YaHei"
-    return "Loading", "Segoe UI"
-
-
 def _round_path(x: float, y: float, w: float, h: float, radius: float):
     path = ctypes.c_void_p()
     if _gdiplus.GdipCreatePath(0, ctypes.byref(path)) != 0 or not path:
@@ -344,11 +317,20 @@ def _load_logo() -> None:
         _logo = image
 
 
-def _make_font(family_name: str, size: float, style: int, slot: str) -> None:
+def _make_font(
+    family_name: str,
+    size: float,
+    style: int,
+    slot: str,
+    *,
+    fallback: str = "Segoe UI",
+) -> None:
     family = ctypes.c_void_p()
     font = ctypes.c_void_p()
     if _gdiplus.GdipCreateFontFamilyFromName(family_name, None, ctypes.byref(family)) != 0:
-        if _gdiplus.GdipCreateFontFamilyFromName("Segoe UI", None, ctypes.byref(family)) != 0:
+        if not fallback or _gdiplus.GdipCreateFontFamilyFromName(
+            fallback, None, ctypes.byref(family)
+        ) != 0:
             return
     if _gdiplus.GdipCreateFont(family, size, style, _UNIT_PX, ctypes.byref(font)) != 0:
         _gdiplus.GdipDeleteFontFamily(family)
@@ -427,9 +409,11 @@ def _draw_frame(now_ms: int) -> None:
             _gdiplus.GdipResetClip(_graphics)
             _gdiplus.GdipDeletePath(clip)
 
-    _draw_text("ZF", _title_font, card_x, logo_y + logo + 8.0, card_w, 36.0, _argb(255, 31, 35, 40))
     _draw_text(
-        _loading_text, _body_font, card_x, logo_y + logo + 40.0, card_w, 22.0, _argb(255, 107, 114, 128)
+        _BRAND_MARK, _title_font, card_x, logo_y + logo + 6.0, card_w, 42.0, _argb(255, 31, 35, 40)
+    )
+    _draw_text(
+        _loading_text, _body_font, card_x, logo_y + logo + 48.0, card_w, 22.0, _argb(255, 107, 114, 128)
     )
 
     track_w, track_h = 148.0, 3.0
@@ -526,11 +510,20 @@ def _run() -> None:
     _bind_gdiplus()
     if not _startup_gdiplus():
         return
-    caption, face = _loading_caption()
-    _loading_text = caption
+    _loading_text = "正在加载"
     _load_logo()
-    _make_font("Segoe UI", 28.0, 1, "title")
-    _make_font(face, 13.0, 0, "body")
+    for face_name in ("Microsoft YaHei", "SimSun", "DengXian", "Microsoft JhengHei"):
+        _make_font(face_name, 30.0, 1, "title", fallback="")
+        if _title_font.value:
+            break
+    if not _title_font.value:
+        _make_font("Segoe UI", 30.0, 1, "title")
+    for face_name in ("Microsoft YaHei", "SimSun", "DengXian", "Microsoft JhengHei"):
+        _make_font(face_name, 13.0, 0, "body", fallback="")
+        if _body_font.value:
+            break
+    if not _body_font.value:
+        _make_font("Segoe UI", 13.0, 0, "body")
     if not _create_surface():
         return
     instance = _kernel32.GetModuleHandleW(None)
@@ -545,7 +538,7 @@ def _run() -> None:
     _hwnd = _user32.CreateWindowExW(
         _WS_EX_LAYERED | _WS_EX_TOPMOST | _WS_EX_TOOLWINDOW,
         _CLASS,
-        "ZF",
+        _BRAND_MARK,
         _WS_POPUP,
         0,
         0,

@@ -4533,7 +4533,7 @@ class UnifiedTaskEditor(ttk.Frame):
             stock,
             gate="hunt.return_potion_enabled", gate_default=True,
             label=self.t["return_potion_count"], name="hunt.return_potion_count",
-            default=20, suffix=self.t["count_or_fewer"], low=0, high=999,
+            default=0, suffix=self.t["count_or_fewer"], low=0, high=999,
         )
         self._fix_meter(
             stock,
@@ -5637,7 +5637,7 @@ class UnifiedTaskEditor(ttk.Frame):
                 gate_line(
                     self.t["return_potion_count"],
                     "hunt.return_potion_enabled",
-                    f"≤ {self._summary_number('hunt.return_potion_count', 20)}",
+                    f"≤ {self._summary_number('hunt.return_potion_count', 0)}",
                 ),
                 gate_line(
                     self.t["return_arrow_count"],
@@ -6939,9 +6939,9 @@ class UnifiedTaskEditor(ttk.Frame):
         arrows = self._attack_card(buy_left, self.t["buy_arrows"])
         arrows.pack(fill="x", pady=(0, 8))
         buy_arrows = self._check(arrows, 0, self.t["buy_arrows"], "equipment.buy_arrows", True)
-        self._var("equipment.buy_normal_arrows", True, "bool")
-        self._var("equipment.buy_silver_arrows", False, "bool")
-        self._arrow_kind = tk.StringVar(self, value="normal")
+        self._var("equipment.buy_normal_arrows", False, "bool")
+        self._var("equipment.buy_silver_arrows", True, "bool")
+        self._arrow_kind = tk.StringVar(self, value="silver")
         for value, text in (
             ("normal", self.t["buy_normal_arrows"]),
             ("silver", self.t["buy_silver_arrows"]),
@@ -6967,7 +6967,7 @@ class UnifiedTaskEditor(ttk.Frame):
         )
         self._row(
             portions, 1, self.t["hp_potion_buy_qty"],
-            "equipment.buy_portion", 100, "int",
+            "equipment.buy_portion", 10, "int",
         )
         self._check(
             portions, 2, self.t["buy_depoison"], "equipment.buy_depoison", False,
@@ -7086,7 +7086,7 @@ class UnifiedTaskEditor(ttk.Frame):
         if self._summary_on("equipment.restock_potions"):
             lines.append(
                 f"{self.t['hp_potion_buy_qty']}: "
-                f"{self._summary_number('equipment.buy_portion', 100)}"
+                f"{self._summary_number('equipment.buy_portion', 10)}"
             )
         lines.append(f"{self.t['buy_depoison']}: {state('equipment.buy_depoison')}")
         if self._summary_on("equipment.buy_depoison"):
@@ -7200,7 +7200,7 @@ class UnifiedTaskEditor(ttk.Frame):
         weight_frame.grid(row=1, column=1, sticky="w", pady=2)
         self._adena_weight_entry = ttk.Entry(
             weight_frame,
-            textvariable=self._var("other.loot_adena_weight_pct", 30, "int"),
+            textvariable=self._var("other.loot_adena_weight_pct", 70, "int"),
             width=13,
         )
         self._adena_weight_entry.pack(side="left")
@@ -12945,7 +12945,7 @@ class ScheduleWindow(tk.Tk):
 
     def copy_diagnostics(self) -> None:
         game, memory, map_probe = self.coordinator.probes()
-        text = (f"ZF\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
+        text = (f"{self.t.get('console_title', 'ZF')}\ngame={game.detail}\nmemory={memory.detail}\nmap={map_probe.detail}\n"
                 f"active_map={self.profile.active_map}\ncharacter={self.profile.character}\n"
                 f"language={self.profile.language}\ngame_language={self.profile.game_language}\n")
         self.clipboard_clear()

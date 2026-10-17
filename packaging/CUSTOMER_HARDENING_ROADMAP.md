@@ -49,7 +49,7 @@ Setup / 첫 실행
 2. 관리자 UAC
 3. §1 Interception 분기
 4. 필요 시에만 재부팅
-5. 바로가기 → `Bot_Manmabot.bat` / exe
+5. 바로가기 → `ZF.bat` / `ZF.exe`
 
 **재부팅 후에도 100% 무인·무결점은 약속하지 않음** (게임 클라이언트, SmartScreen, AV, SignedDriver 차단, 계정 입력).
 

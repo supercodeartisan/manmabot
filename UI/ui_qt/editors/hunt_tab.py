@@ -1279,6 +1279,7 @@ class HuntTab(QWidget):
         col.addLayout(filter_row)
         mode_row = QHBoxLayout()
         self._item_mode = QButtonGroup(self)
+        self._item_mode_radios: dict[str, QRadioButton] = {}
         mode = self.bag.get_str("other", "item_pickup_mode", "blacklist")
         for value, label_key in (
             ("blacklist", "filter_blacklist"),
@@ -1287,6 +1288,7 @@ class HuntTab(QWidget):
             radio = QRadioButton(self.t.get(label_key, value))
             radio.setChecked(mode == value)
             self._item_mode.addButton(radio)
+            self._item_mode_radios[value] = radio
             radio.toggled.connect(
                 lambda checked, v=value: checked and self._set_item_mode(v)
             )
@@ -1334,6 +1336,16 @@ class HuntTab(QWidget):
     def _load_items(self) -> None:
         selected = set(str(x) for x in (self.bag.get("other", "item_pickup_names", []) or []))
         mode = self.bag.get_str("other", "item_pickup_mode", "blacklist")
+        radios = getattr(self, "_item_mode_radios", {})
+        for radio in radios.values():
+            radio.blockSignals(True)
+        try:
+            chosen = radios.get(mode if mode in ("blacklist", "whitelist") else "blacklist")
+            if chosen is not None:
+                chosen.setChecked(True)
+        finally:
+            for radio in radios.values():
+                radio.blockSignals(False)
         try:
             from app._03_world.catalog.game_catalog import (
                 item_category_labels,

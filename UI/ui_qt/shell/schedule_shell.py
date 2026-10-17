@@ -55,7 +55,7 @@ from ui_qt.theme.apply import (
 )
 from ui_qt.theme.run_glyphs import run_glyph
 
-_SPLASH_CLASS = "ManmabotStartupSplash"
+_SPLASH_CLASS = "ZFStartupSplash"
 _HWND_TOPMOST = -1
 _HWND_NOTOPMOST = -2
 _SWP_NOSIZE = 0x0001
@@ -225,6 +225,7 @@ class ScheduleShell(QMainWindow):
 
         if self.tasks:
             self.schedule_list.refresh(select=0)
+            self._edit_selected()
         else:
             self._begin_new()
         QTimer.singleShot(0, self._lock_pane_split)
@@ -287,6 +288,8 @@ class ScheduleShell(QMainWindow):
             clear_shell_logs=self._clear_shell_logs,
         )
         self.editor.accountChanged.connect(self._sync_list_account)
+        self.editor.set_timing_reader(self.schedule_list.read_timing_into)
+        self._bind_schedule_dirty_signals()
         self.schedule_list.account_combo.currentIndexChanged.connect(
             self._sync_editor_account
         )
@@ -500,6 +503,19 @@ class ScheduleShell(QMainWindow):
         dialog.exec()
         _changed()
 
+    def _bind_schedule_dirty_signals(self) -> None:
+        pane = self.schedule_list
+        touch = self.editor.schedule_content_touched
+        pane.mode_window.toggled.connect(touch)
+        pane.mode_duration.toggled.connect(touch)
+        pane.start_time.textChanged.connect(touch)
+        pane.end_time.textChanged.connect(touch)
+        pane.duration_spin.valueChanged.connect(touch)
+        pane.repeat_daily.toggled.connect(touch)
+        for box in pane.weekday_checks:
+            box.toggled.connect(touch)
+        pane.account_combo.currentIndexChanged.connect(touch)
+
     def _sync_list_account(self, account_id) -> None:
         combo = self.schedule_list.account_combo
         combo.blockSignals(True)
@@ -604,7 +620,7 @@ class ScheduleShell(QMainWindow):
                 on_closed=_closed,
             )
         except Exception as exc:
-            QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+            QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))
             if on_closed is not None:
                 try:
                     on_closed()
@@ -622,7 +638,7 @@ class ScheduleShell(QMainWindow):
             save_profile(self.profile)
             QMessageBox.information(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get(
                     "restart_language",
                     "Language saved. Restart the Qt shell to refresh all labels.",
@@ -826,21 +842,21 @@ class ScheduleShell(QMainWindow):
         self._append_log(text)
         self._refresh_operator(force=True)
 
-    def _commit_update(self) -> None:
+    def _commit_update(self) -> bool:
         """Overwrite the schedule under edit and stay on that edit."""
         if not self._editing_id:
-            return
+            return False
         collected = self.editor.collect_task()
         self.schedule_list.read_timing_into(collected)
         if (
             QMessageBox.question(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("confirm_update_schedule", "Save changes?"),
             )
             != QMessageBox.StandardButton.Yes
         ):
-            return
+            return False
         collected.id = self._editing_id
         index = next(
             (i for i, item in enumerate(self.tasks) if item.id == self._editing_id),
@@ -855,18 +871,19 @@ class ScheduleShell(QMainWindow):
         self._enter_edit(collected)
         self.footer.showMessage(self.t.get("saved", "Saved"))
         self._publish_paused_schedule(collected)
+        return True
 
-    def _commit_add(self) -> None:
+    def _commit_add(self) -> bool:
         """Store the form as a new list row, then open that row for edit."""
         collected = self.editor.collect_task()
         self.schedule_list.read_timing_into(collected)
         if not collected.account_id:
             QMessageBox.warning(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("account_required", "Account required."),
             )
-            return
+            return False
         prompt = (
             self.t.get("confirm_save_as_new", self.t.get("confirm_create_schedule", "Add?"))
             if self._editing_id
@@ -875,12 +892,12 @@ class ScheduleShell(QMainWindow):
         if (
             QMessageBox.question(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 prompt,
             )
             != QMessageBox.StandardButton.Yes
         ):
-            return
+            return False
         collected.id = uuid.uuid4().hex
         self.tasks.append(collected)
         index = len(self.tasks) - 1
@@ -891,18 +908,18 @@ class ScheduleShell(QMainWindow):
         self.schedule_list.persist(select=index)
         self._enter_edit(collected)
         self.footer.showMessage(self.t.get("schedule_added", "Added"))
+        return True
 
-    def _commit_editor(self) -> None:
+    def _commit_editor(self) -> bool:
         if self._editing_id:
-            self._commit_update()
-        else:
-            self._commit_add()
+            return self._commit_update()
+        return self._commit_add()
 
     def _apply_editor_task(self) -> bool:
         if self.bridge.arming or self.bridge.controller.state != RunState.STOPPED:
             QMessageBox.warning(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("stop_to_apply", "Stop the bot before applying."),
             )
             return False
@@ -989,7 +1006,7 @@ class ScheduleShell(QMainWindow):
             if interactive:
                 QMessageBox.warning(
                     self,
-                    self.t.get("title", "Manmabot"),
+                    self.t.get("title", self.t.get("console_title", "ZF")),
                     self.t.get("stop_to_apply", "Stop the bot before applying."),
                 )
             return False
@@ -1143,19 +1160,23 @@ class ScheduleShell(QMainWindow):
     def _start(self) -> None:
         """Classic Start: arm schedule clock, then unattended session prepare."""
         self._append_log(self.t.get("start", "Start"))
-        if self._editing_id:
+        if self._editing_id and self.editor.has_unsaved_changes():
             try:
-                self._commit_editor()
+                if not self._commit_editor():
+                    self._refresh_operator(force=True)
+                    return
             except OSError as exc:
                 self._append_log(str(exc))
-                QMessageBox.warning(self, self.t.get("title", "Manmabot"), str(exc))
+                QMessageBox.warning(self, self.t.get("title", self.t.get("console_title", "ZF")), str(exc))
+                self._refresh_operator(force=True)
+                return
 
         game_up = self._game_is_up()
         has_schedule = any(task.enabled for task in self.tasks)
         if not has_schedule:
             QMessageBox.warning(
                 self,
-                self.t.get("title", "Manmabot"),
+                self.t.get("title", self.t.get("console_title", "ZF")),
                 self.t.get("no_enabled_schedule", "Turn on at least one schedule before Start."),
             )
             return
@@ -1202,7 +1223,7 @@ class ScheduleShell(QMainWindow):
                 if routine_is_break_only(getattr(self.profile, "routine", None)):
                     QMessageBox.warning(
                         self,
-                        self.t.get("title", "Manmabot"),
+                        self.t.get("title", self.t.get("console_title", "ZF")),
                         self.t.get("start_break_only", "Routine is break-only."),
                     )
                     return

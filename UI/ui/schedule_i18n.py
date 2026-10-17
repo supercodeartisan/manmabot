@@ -597,7 +597,7 @@ _EN = {
     "paused": "Paused",
     "cannot_start": "Cannot start",
     "account_required": "Select or create an account before Start.",
-    "start_without_login": "Game is already running — starting the bot without autologin.",
+    "start_without_login": "Game is already running — starting ZF without autologin.",
     "start_no_game": "Cannot start — game window not found.",
     "start_no_memory": "Cannot start — memory monitor is not ready. Approve UAC if prompted, then try Start again.",
     "start_no_setup": "Cannot start — finish Setup first.",
@@ -612,11 +612,11 @@ _EN = {
         "Fix the routine or map data, then press Start."
     ),
     "worker_crashed": (
-        "Stopped — the bot worker crashed. Check the log, then press Start."
+        "Stopped — ZF worker crashed. Check the log, then press Start."
     ),
     "map_missing": "Cannot start — map data is missing.",
     "invalid_value": "Check the highlighted numeric and hotbar values.",
-    "stop_to_apply": "Stop the bot before applying task settings.",
+    "stop_to_apply": "Stop ZF before applying task settings.",
     "paused_settings_applied": "Paused settings applied. Resume uses them.",
     "paused_settings_applied_keep_identity": (
         "Paused settings applied. Character and account stay until you stop and start."
@@ -624,14 +624,14 @@ _EN = {
     "draft_short": "Draft",
     "timer_warning": "Start runs the enabled schedules on this clock.",
     "debug": "Debug",
-    "debug_title": "Bot debug",
+    "debug_title": "Debug",
     "debug_player_title": "ZF",
-    "debug_player_hint": "Standalone bot player for debugging — same runtime as Start here.",
+    "debug_player_hint": "Standalone player for debugging — same runtime as Start here.",
     "debug_status_list": "Status",
     "debug_details": "Details",
     "debug_copy": "Copy",
     "debug_copied": "Copied the selected status.",
-    "debug_idle": "Bot is stopped. Press Start to run and inspect.",
+    "debug_idle": "Stopped. Press Start to run and inspect.",
     "debug_same_run": "Same live run as the operator console.",
     "debug_no_data": "No data yet for this status.",
     "debug_arming": "Arming",
@@ -752,7 +752,7 @@ _EN = {
     "diag_game": "Game window",
     "diag_memory": "Memory",
     "diag_map": "Map",
-    "diag_bot": "Bot",
+    "diag_bot": "ZF",
     "diag_hotbar": "Hotbar",
     "status_ok": "Normal",
     "status_wait": "Waiting",
@@ -1180,7 +1180,7 @@ _KO = {
     "saved": "스케줄을 저장했습니다.",
     "applied": "지원 설정 {count}개를 적용했습니다.",
     "invalid_value": "숫자 및 단축바 값을 확인하세요.",
-    "stop_to_apply": "작업 설정을 적용하기 전에 봇을 중지하세요.",
+    "stop_to_apply": "작업 설정을 적용하기 전에 종횡을 중지하세요.",
 }
 
 _ZH = {
@@ -1514,11 +1514,11 @@ _ZH = {
     "saved": "计划已保存。",
     "applied": "已应用 {count} 项支持的设置。",
     "invalid_value": "请检查数字及快捷栏数值。",
-    "stop_to_apply": "应用任务设置前请先停止机器人。",
+    "stop_to_apply": "应用任务设置前请先停止纵锋。",
 }
 
 _KO.update({
-    "console_title": "ZF", "task_details": "새 일정",
+    "console_title": "종횡", "task_details": "새 일정",
     "add_schedule": "일정 추가",
     "update_schedule": "현재 일정 갱신",
     "save_as_new_schedule": "새 일정으로 보관",
@@ -1687,7 +1687,7 @@ _KO.update({
     "resume": "재개",
     "stop": "중지", "stopped": "중지됨", "running": "실행 중", "paused": "일시정지",
     "cannot_start": "시작할 수 없음", "account_required": "시작 전에 계정을 선택하거나 만드세요.",
-    "start_without_login": "게임이 이미 실행 중입니다 — 자동 로그인 없이 봇을 시작합니다.",
+    "start_without_login": "게임이 이미 실행 중입니다 — 자동 로그인 없이 종횡을 시작합니다.",
     "start_no_game": "시작할 수 없음 — 게임 창을 찾을 수 없습니다.",
     "start_no_memory": "시작할 수 없음 — 메모리 모니터가 준비되지 않았습니다. UAC가 뜨면 승인한 뒤 다시 시작하세요.",
     "start_no_setup": "시작할 수 없음 — 설정을 먼저 완료하세요.",
@@ -1702,19 +1702,19 @@ _KO.update({
         "루틴·맵 데이터를 확인한 뒤 시작을 누르세요."
     ),
     "worker_crashed": (
-        "중지됨 — 봇 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
+        "중지됨 — 종횡 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
     ),
     "map_missing": "시작할 수 없음 — 맵 데이터가 없습니다.",
     "draft_short": "초안", "timer_warning": "시작을 누르면 켜 둔 일정이 이 시계대로 실행됩니다.",
     "debug": "디버그",
-    "debug_title": "봇 디버그",
-    "debug_player_title": "ZF",
-    "debug_player_hint": "디버그 전용 독립 봇 플레이어 — 이 창에서 Start로 실행합니다.",
+    "debug_title": "종횡 디버그",
+    "debug_player_title": "종횡",
+    "debug_player_hint": "디버그 전용 독립 종횡 플레이어 — 이 창에서 Start로 실행합니다.",
     "debug_status_list": "상태",
     "debug_details": "상세",
     "debug_copy": "복사",
     "debug_copied": "선택한 상태를 복사했습니다.",
-    "debug_idle": "봇이 중지되어 있습니다. Start를 눌러 실행하고 확인하세요.",
+    "debug_idle": "종횡이 중지되어 있습니다. Start를 눌러 실행하고 확인하세요.",
     "debug_same_run": "운영자 콘솔과 같은 실시간 실행입니다.",
     "debug_no_data": "이 상태에 아직 데이터가 없습니다.",
     "debug_arming": "준비 중",
@@ -1863,7 +1863,7 @@ _KO.update({
     "diag_game": "게임 창 감지",
     "diag_memory": "메모리 상태",
     "diag_map": "맵 상태",
-    "diag_bot": "봇 상태",
+    "diag_bot": "종횡 상태",
     "diag_hotbar": "단축바",
     "status_ok": "정상",
     "status_wait": "대기",
@@ -1946,7 +1946,7 @@ _KO.update({
 })
 
 _ZH.update({
-    "console_title": "ZF", "task_details": "新建日程",
+    "console_title": "纵锋", "task_details": "新建日程",
     "add_schedule": "添加日程",
     "update_schedule": "更新当前日程",
     "save_as_new_schedule": "另存为新日程",
@@ -2115,7 +2115,7 @@ _ZH.update({
     "resume": "继续",
     "stop": "停止", "stopped": "已停止", "running": "运行中", "paused": "已暂停",
     "cannot_start": "无法开始", "account_required": "开始前请选择或创建账号。",
-    "start_without_login": "游戏已在运行 — 将跳过自动登录并启动机器人。",
+    "start_without_login": "游戏已在运行 — 将跳过自动登录并启动纵锋。",
     "start_no_game": "无法启动 — 未找到游戏窗口。",
     "start_no_memory": "无法启动 — 内存监视器未就绪。如提示 UAC 请批准后再次点击开始。",
     "start_no_setup": "无法启动 — 请先完成设置。",
@@ -2130,19 +2130,19 @@ _ZH.update({
         "请检查例行或地图数据后再次点击开始。"
     ),
     "worker_crashed": (
-        "已停止 — 机器人工作线程异常退出。请查看日志后再次点击开始。"
+        "已停止 — 纵锋工作线程异常退出。请查看日志后再次点击开始。"
     ),
     "map_missing": "无法启动 — 缺少地图数据。",
     "draft_short": "草稿", "timer_warning": "点击开始后，已启用的日程会按此时钟运行。",
     "debug": "调试",
-    "debug_title": "机器人调试",
-    "debug_player_title": "ZF",
-    "debug_player_hint": "独立调试机器人播放器 — 在此窗口点击 Start 运行。",
+    "debug_title": "纵锋调试",
+    "debug_player_title": "纵锋",
+    "debug_player_hint": "独立调试纵锋播放器 — 在此窗口点击 Start 运行。",
     "debug_status_list": "状态",
     "debug_details": "详情",
     "debug_copy": "复制",
     "debug_copied": "已复制所选状态。",
-    "debug_idle": "机器人已停止。按 Start 即可运行并查看。",
+    "debug_idle": "纵锋已停止。按 Start 即可运行并查看。",
     "debug_same_run": "与操作控制台是同一次实时运行。",
     "debug_no_data": "此状态暂无数据。",
     "debug_arming": "准备中",
@@ -2291,7 +2291,7 @@ _ZH.update({
     "diag_game": "游戏窗口",
     "diag_memory": "内存状态",
     "diag_map": "地图状态",
-    "diag_bot": "机器人状态",
+    "diag_bot": "纵锋状态",
     "diag_hotbar": "快捷栏",
     "status_ok": "正常",
     "status_wait": "等待",

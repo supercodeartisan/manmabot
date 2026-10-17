@@ -1,4 +1,4 @@
-"""Thin Bot_ManmabotV1.exe entry: always run live ``run.py`` with bundled Python.
+"""Thin ZF.exe entry: always run live ``run.py`` with bundled Python.
 
 Prefer project sources over any frozen UI build.
 """
@@ -31,7 +31,7 @@ def main() -> int:
         os.chdir(str(root))
         os.execv(str(frozen), [str(frozen), *sys.argv[1:]])
     sys.stderr.write(
-        f"Manmabot launcher: missing run.py/python under {root}\n"
+        f"ZF launcher: missing run.py/python under {root}\n"
     )
     return 1
 

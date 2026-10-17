@@ -27,6 +27,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include "signeddrv_client.h"
+#include "../pgcache.h"
 
 #define MAXENT   512
 #define MAXCLS   64
@@ -109,8 +110,8 @@ static int isHeap(uint64_t a) {
     return a >= 0x10000000000ULL && a < 0x70000000000ULL;
 }
 static int rm(uint64_t a, void* b, uint32_t n) {
-    uint32_t br = 0;
-    return SignedReadMemory(g_pid, a, b, n, &br) && br == n;
+    int drv = 0;
+    return pg_read((uint64_t)g_pid, a, b, n, &drv);
 }
 static uint64_t rq(uint64_t a) { uint64_t v = 0; rm(a, &v, 8); return v; }
 static uint32_t rd(uint64_t a) { uint32_t v = 0; rm(a, &v, 4); return v; }
@@ -711,16 +712,6 @@ static uint64_t findPres(uint64_t ent, uint32_t want) {
             uint32_t r2 = vrva(p + 0x10);
             if (r2 == g_vftPresB) return p + 0x10;
         }
-        for (uint32_t o2 = 0; o2 < 0xA0; o2 += 8) {
-            uint64_t c = 0;
-            if (!rm(p + o2, &c, 8) || !isHeap(c)) continue;
-            r = vrva(c);
-            if (r == want) return c;
-            if (want == g_vftPresB) {
-                uint32_t r2 = vrva(c + 0x10);
-                if (r2 == g_vftPresB) return c + 0x10;
-            }
-        }
     }
     return 0;
 }
@@ -834,6 +825,7 @@ static Ent g_ents[MAXENT];
 static int g_nEnts = 0;
 static DWORD g_lastSlow = 0;
 static int32_t g_lastSweepPx = 0, g_lastSweepPy = 0;
+static uint64_t g_cachedGrid = 0;
 
 static void resetTracks(void) {
     g_nEnts = 0;
@@ -1014,19 +1006,24 @@ static int slowSweep(int32_t px, int32_t py) {
     int n = 0;
     Ent* out = g_ents;
     if (no > 0) memcpy(old, g_ents, sizeof(Ent) * (size_t)no);
-    uint64_t mgr = rq(g_base + g_offEntMgr);
-    if (!isHeap(mgr)) { g_nEnts = 0; acCacheClear(); return 0; }
-    /* 9.30: MGR guard byte is not a hard gate (modify/enttrack). */
-    uint8_t grd = 0; (void)rm(mgr + g_offGuard, &grd, 1); (void)grd; (void)g_guardVal;
-    uint64_t holder = rq(mgr + g_offHolder);
-    if (!isHeap(holder)) { g_nEnts = 0; acCacheClear(); return 0; }
-    uint64_t bgn = rq(holder + g_offSubBeg), end = rq(holder + g_offSubEnd);
-    if (!isHeap(bgn) || end <= bgn || (end - bgn) > 0x2000) { g_nEnts = 0; acCacheClear(); return 0; }
     uint64_t best = 0;
-    for (uint64_t e = bgn; e + 16 <= end; e += 16) {
-        uint64_t obj = rq(e);
-        if (!isHeap(obj)) continue;
-        if (vrva(obj) == g_gridVft) { best = obj; break; }
+    if (g_cachedGrid && vrva(g_cachedGrid) == g_gridVft) best = g_cachedGrid;
+    if (!best) {
+        uint64_t mgr = rq(g_base + g_offEntMgr);
+        g_cachedGrid = 0;
+        if (!isHeap(mgr)) { g_nEnts = 0; acCacheClear(); return 0; }
+        /* 9.30: MGR guard byte is not a hard gate (modify/enttrack). */
+        uint8_t grd = 0; (void)rm(mgr + g_offGuard, &grd, 1); (void)grd; (void)g_guardVal;
+        uint64_t holder = rq(mgr + g_offHolder);
+        if (!isHeap(holder)) { g_nEnts = 0; acCacheClear(); return 0; }
+        uint64_t bgn = rq(holder + g_offSubBeg), end = rq(holder + g_offSubEnd);
+        if (!isHeap(bgn) || end <= bgn || (end - bgn) > 0x2000) { g_nEnts = 0; acCacheClear(); return 0; }
+        for (uint64_t e = bgn; e + 16 <= end; e += 16) {
+            uint64_t obj = rq(e);
+            if (!isHeap(obj)) continue;
+            if (vrva(obj) == g_gridVft) { best = obj; break; }
+        }
+        if (best) g_cachedGrid = best;
     }
     if (!best) { g_nEnts = 0; acCacheClear(); return 0; }
     g_acGen++;
@@ -1290,6 +1287,7 @@ static void detach(void) {
     if (g_attached) SignedClose();
     g_attached = 0;
     g_pid = 0;
+    g_cachedGrid = 0;
     resetTracks();
 }
 
@@ -1318,6 +1316,7 @@ static int ensureAttached(const char* cfgPath) {
    Returns JSON bytes, or <0 on failure. */
 __declspec(dllexport) int print_state_snapshot(const char* cfgPath, char* out, int outCap) {
     if (!out || outCap < 8) return -1;
+    pg_reset();
     if (!ensureAttached(cfgPath)) return -1;
     HWND gwnd = findLCWnd(g_pid);
     int W = 0, H = 0;
@@ -1395,6 +1394,7 @@ int main(int argc, char** argv) {
 
         int W = 0, H = 0;
         resolveClientSize(gwnd, &W, &H);
+        pg_reset();
 
         uint32_t px = rd(g_base + g_offPlayerX);
         uint32_t py = rd(g_base + g_offPlayerY);

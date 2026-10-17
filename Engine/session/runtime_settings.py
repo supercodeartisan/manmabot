@@ -193,10 +193,10 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     shop = dict(decision_cfg.get("shop") or {})
     shop["arrow_qty"] = int(profile.arrow_buy_qty)
     shop["silver_arrow_qty"] = int(getattr(profile, "silver_arrow_buy_qty", 200))
-    shop["hp_potion_qty"] = int(getattr(profile, "hp_potion_buy_qty", 100))
+    shop["hp_potion_qty"] = int(getattr(profile, "hp_potion_buy_qty", 10))
     shop["depoison_qty"] = int(getattr(profile, "depoison_buy_qty", 1))
-    shop["buy_normal_arrows"] = bool(getattr(profile, "buy_normal_arrows", True))
-    shop["buy_silver_arrows"] = bool(getattr(profile, "buy_silver_arrows", False))
+    shop["buy_normal_arrows"] = bool(getattr(profile, "buy_normal_arrows", False))
+    shop["buy_silver_arrows"] = bool(getattr(profile, "buy_silver_arrows", True))
     if shop["buy_normal_arrows"] and shop["buy_silver_arrows"]:
         shop["buy_silver_arrows"] = False
     shop["restock_potions"] = bool(getattr(profile, "restock_potions", True))
@@ -219,7 +219,7 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     shop["return_potion_enabled"] = bool(
         getattr(profile, "return_potion_enabled", True)
     )
-    shop["return_potion_count"] = int(getattr(profile, "return_potion_count", 20))
+    shop["return_potion_count"] = int(getattr(profile, "return_potion_count", 0))
     shop["return_arrow_enabled"] = bool(
         getattr(profile, "return_arrow_enabled", True)
     )

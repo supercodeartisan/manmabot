@@ -24,6 +24,7 @@
 #include <math.h>
 #include <time.h>
 #include "signeddrv_client.h"
+#include "pgcache.h"
 
 // ---------------------------------------------------------------------------
 // Tunables
@@ -137,8 +138,8 @@ static DWORD findPid(const wchar_t* name) {
 }
 
 static BOOL readMem(uint64_t addr, void* buf, uint32_t size) {
-    uint32_t br = 0;
-    return SignedReadMemory(g_pid, addr, buf, size, &br) && br == size;
+    int drv = 0;
+    return pg_read((uint64_t)g_pid, addr, buf, size, &drv) ? TRUE : FALSE;
 }
 
 static int getModuleBase(uint64_t* base) {
@@ -1388,6 +1389,7 @@ static void writeFrame(FILE* f, int frame, double ts, const PlayerData* p,
 static void buildSnapshot(FILE* out, int frame, double ts,
                           uint64_t* buffArray, EntityRef* refs, int* nRefs) {
     PlayerData p; SkillData skills[MAX_SKILLS];
+    pg_reset();
     PartyData party[MAX_PARTY]; BuffData buffs[MAX_BUFFS];
     EntityData ents[MAX_ENTITIES];
     memset(&p, 0, sizeof(p));
@@ -1553,6 +1555,7 @@ __declspec(dllexport) int realtime_monitor_snapshot(const char* offsetsPath, int
     LARGE_INTEGER now;
     double ts;
     if (!out || outCap < 16) return -1;
+    pg_reset();
     if (!monitorEnsure(offsetsPath)) return -1;
     if (fresh) discoverNow();
     QueryPerformanceCounter(&now);

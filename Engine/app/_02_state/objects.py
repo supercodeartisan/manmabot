@@ -104,6 +104,13 @@ def _label_hold_key(
     return f"{object_type.value}:{identity}"
 
 
+def _memory_class(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    return text or None
+
+
 def _opt_cell(value: Any) -> int | None:
     if value is None:
         return None
@@ -148,6 +155,9 @@ class PerceptionObject:
     loot_own: str | None = None
     loot_qty: int | None = None
     memory_guid: str | None = None
+    # print_state coarse class (``monster`` / ``player`` / ``npc`` / ``item``).
+    # Avoidance reads this. Attack selection keeps ``object_type``.
+    memory_class: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PerceptionObject":
@@ -173,6 +183,8 @@ class PerceptionObject:
                 loot_qty = None
         guid_raw = data.get("memory_guid")
         memory_guid = str(guid_raw).strip() if guid_raw not in (None, "") else None
+        class_raw = data.get("memory_class")
+        memory_class = str(class_raw).strip().lower() if class_raw not in (None, "") else None
         return cls(
             track_id=int(data["track_id"]),
             object_type=data["object_type"],
@@ -215,6 +227,7 @@ class PerceptionObject:
             loot_own=loot_own,
             loot_qty=loot_qty,
             memory_guid=memory_guid,
+            memory_class=memory_class or None,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -274,6 +287,9 @@ class WorldObject:
     loot_own: str | None = None
     loot_qty: int | None = None
     memory_guid: str | None = None
+    # print_state coarse class. Avoidance treats ``monster`` as a body even
+    # when the species filter left ``object_type`` as OTHER.
+    memory_class: str | None = None
 
     @classmethod
     def from_perception(cls, perception: PerceptionObject) -> "WorldObject":
@@ -312,6 +328,7 @@ class WorldObject:
             loot_own=getattr(perception, "loot_own", None),
             loot_qty=getattr(perception, "loot_qty", None),
             memory_guid=getattr(perception, "memory_guid", None),
+            memory_class=_memory_class(getattr(perception, "memory_class", None)),
             first_seen=now,
             last_seen=now,
             label_hold_key=key,
@@ -351,6 +368,7 @@ class WorldObject:
         self.loot_own = getattr(perception, "loot_own", None)
         self.loot_qty = getattr(perception, "loot_qty", None)
         self.memory_guid = getattr(perception, "memory_guid", None)
+        self.memory_class = _memory_class(getattr(perception, "memory_class", None))
         self.last_seen = time.time()
         key = _label_hold_key(
             self.object_type, self.detail_classification, self.species_name

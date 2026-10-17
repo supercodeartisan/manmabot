@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import copy
+import json
 from typing import Callable
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QEvent, QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -81,6 +82,14 @@ class TaskEditor(QWidget):
         self.task: ScheduleTask | None = None
         self._accounts_by_id: dict[str, object] = {}
         self._suppress_account = False
+        self._suppress_dirty = 0
+        self._baseline: str | None = None
+        self._timing_reader: Callable[[ScheduleTask], None] | None = None
+        self._watched: set[int] = set()
+        self._update_check_timer = QTimer(self)
+        self._update_check_timer.setSingleShot(True)
+        self._update_check_timer.setInterval(80)
+        self._update_check_timer.timeout.connect(self._apply_update_button)
         self.move_tab: MoveTab | None = None
         self.hunt_tab: HuntTab | None = None
         self.recovery_tab: RecoveryTab | None = None
@@ -212,6 +221,8 @@ class TaskEditor(QWidget):
         )
         tabs.addTab(self.other_tab, self.t.get("other", "other"))
         layout.addWidget(tabs, stretch=1)
+        self.move_tab.on_content_changed = self.schedule_content_touched
+        self.bag.on_changed = self.schedule_content_touched
 
         commit_bar = QHBoxLayout()
         commit_bar.addStretch(1)
@@ -229,6 +240,7 @@ class TaskEditor(QWidget):
         layout.addLayout(commit_bar)
 
         self.refresh_accounts()
+        self._watch_widget(self)
 
     def _fact(self, row: QHBoxLayout, label: str) -> QLabel:
         row.addWidget(QLabel(label))
@@ -285,6 +297,7 @@ class TaskEditor(QWidget):
                 if character in ("elf", "mage", "knight", "royal"):
                     self.task.character = character
         self.accountChanged.emit(account_id)
+        self.schedule_content_touched()
 
     def _show_account_details(self) -> None:
         empty = self.t.get("value_empty", "—")
@@ -320,6 +333,7 @@ class TaskEditor(QWidget):
                 self.hunt_tab.sync_species_region_to_map()
             except Exception:
                 pass
+        self.schedule_content_touched()
 
     def _on_hotbar_applied(self) -> None:
         if self.magic_tab is not None and hasattr(self.magic_tab, "_refresh_magic_summary"):
@@ -351,7 +365,9 @@ class TaskEditor(QWidget):
             if editing
             else self.t.get("task_details", "Task")
         )
-        self.update_btn.setEnabled(bool(editing))
+        if not self._editing:
+            self._baseline = None
+            self.update_btn.setEnabled(False)
         self.commit_btn.setText(
             self.t.get("save_as_new_schedule", self.t.get("add_schedule", "Add schedule"))
             if editing
@@ -374,7 +390,95 @@ class TaskEditor(QWidget):
                 if hasattr(tab, attr):
                     setattr(tab, attr, False)
 
+    def set_timing_reader(self, reader: Callable[[ScheduleTask], None] | None) -> None:
+        """Apply the schedule-list clock and account onto a collected task."""
+        self._timing_reader = reader
+
+    def schedule_content_touched(self, *_args) -> None:
+        if self._suppress_dirty or not self._editing:
+            return
+        self._update_check_timer.start()
+
+    def _watch_widget(self, widget: QWidget) -> None:
+        for item in (widget, *widget.findChildren(QWidget)):
+            if id(item) in self._watched:
+                continue
+            item.installEventFilter(self)
+            self._watched.add(id(item))
+
+    def eventFilter(self, watched, event):  # noqa: N802
+        kind = event.type()
+        if kind == QEvent.Type.ChildAdded:
+            child = event.child()
+            if isinstance(child, QWidget):
+                self._watch_widget(child)
+        elif kind in (
+            QEvent.Type.MouseButtonRelease,
+            QEvent.Type.KeyRelease,
+            QEvent.Type.Wheel,
+        ):
+            self.schedule_content_touched()
+        return super().eventFilter(watched, event)
+
+    def _fingerprint(self) -> str | None:
+        """Same payload the update button would save."""
+        self._suppress_dirty += 1
+        try:
+            task = self.collect_task()
+            if self._timing_reader is not None:
+                self._timing_reader(task)
+            return json.dumps(
+                task.to_dict(),
+                sort_keys=True,
+                default=str,
+                ensure_ascii=False,
+            )
+        except Exception:
+            return None
+        finally:
+            self._suppress_dirty -= 1
+
+    def has_unsaved_changes(self) -> bool:
+        """True when the open edit differs from the last loaded or saved snapshot."""
+        if not self._editing or self._baseline is None:
+            return False
+        current = self._fingerprint()
+        if current is None:
+            return self.update_btn.isEnabled()
+        return current != self._baseline
+
+    def _apply_update_button(self) -> None:
+        if not self._editing or self._baseline is None:
+            self.update_btn.setEnabled(False)
+            return
+        current = self._fingerprint()
+        if current is None:
+            return
+        self.update_btn.setEnabled(current != self._baseline)
+
     def load_task(
+        self,
+        task: ScheduleTask,
+        *,
+        editing: bool,
+        inherit_profile_routine: bool = True,
+    ) -> None:
+        self._suppress_dirty += 1
+        try:
+            self._load_task_body(
+                task,
+                editing=editing,
+                inherit_profile_routine=inherit_profile_routine,
+            )
+            if self._editing:
+                self._baseline = self._fingerprint()
+            else:
+                self._baseline = None
+        finally:
+            self._suppress_dirty -= 1
+        self._apply_update_button()
+
+    def _load_task_body(
         self,
         task: ScheduleTask,
         *,
@@ -401,10 +505,8 @@ class TaskEditor(QWidget):
             self.magic_tab._refresh_magic_summary()
         if self.recovery_tab is not None and hasattr(self.recovery_tab, "_refresh_summary"):
             self.recovery_tab._refresh_summary()
-        if self.equipment_tab is not None and hasattr(
-            self.equipment_tab, "_refresh_buy_summary"
-        ):
-            self.equipment_tab._refresh_buy_summary()
+        if self.equipment_tab is not None and hasattr(self.equipment_tab, "reload_from_bag"):
+            self.equipment_tab.reload_from_bag()
 
     def collect_settings(self) -> dict:
         if self.hunt_tab is not None and hasattr(

@@ -181,7 +181,7 @@ def manmabot_root() -> Path:
             return candidate
     raise RuntimeError(
         f"Engine not found under {app_root()}. Keep the Engine folder "
-        "next to Bot_Manmabot.bat / run.py."
+        "next to run.py."
     )
 
 

@@ -51,6 +51,7 @@ install_930_dlls.bat
 # --- runtime logs must not ship from the build machine ---
 Engine/logs/
 UI/logs/
+*.log
 
 # --- operator secrets / live UserData (release seeds empty UserData separately) ---
 UserData/accounts.json

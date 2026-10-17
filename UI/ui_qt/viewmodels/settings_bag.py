@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, Callable
 
 from settings.profile import Profile, save_profile
 from settings.schedule import ScheduleTask, profile_snapshot
@@ -63,6 +63,12 @@ class SettingsBag:
         party = self.data.setdefault("party", {})
         for key, value in _PARTY_UI_DEFAULTS.items():
             party.setdefault(key, value)
+        self.on_changed: Callable[[], None] | None = None
+
+    def _notify(self) -> None:
+        callback = self.on_changed
+        if callback is not None:
+            callback()
 
     def section(self, name: str) -> dict[str, Any]:
         return self.data.setdefault(name, {})
@@ -71,7 +77,11 @@ class SettingsBag:
         return self.section(section).get(key, default)
 
     def set(self, section: str, key: str, value: Any) -> None:
-        self.section(section)[key] = value
+        bucket = self.section(section)
+        if key in bucket and bucket[key] == value:
+            return
+        bucket[key] = value
+        self._notify()
 
     def get_bool(self, section: str, key: str, default: bool = False) -> bool:
         return bool(self.get(section, key, default))
@@ -122,6 +132,7 @@ class SettingsBag:
         flat[f"skill_{setting_key}_auto"] = bool(entry.get("auto", True))
         flat[f"skill_{setting_key}_priority"] = int(entry.get("priority") or 1)
         flat[f"skill_{setting_key}_hotkey"] = str(entry.get("hotkey") or "")
+        self._notify()
 
     def load_task(self, task: ScheduleTask) -> None:
         self.data = copy.deepcopy(getattr(task, "settings", {}) or {})

@@ -48,14 +48,43 @@ def avoid_bodies(blackboard: object) -> set[tuple[int, int]]:
     return {(int(x), int(y)) for x, y in raw}
 
 
+def _memory_monster(obj: object) -> bool:
+    """True when print_state classed this row as a monster.
+
+    Species catalog and blacklist do not apply. ``SummonedMonster`` is
+    stored as the same coarse class.
+    """
+    kind = getattr(obj, "memory_class", None)
+    return isinstance(kind, str) and kind.strip().lower() == "monster"
+
+
+def _avoid_body(obj: object) -> bool:
+    """Players and NPCs stay on object type. Monsters use memory class."""
+    kind = getattr(obj, "object_type", None)
+    if kind in (ObjectType.PLAYER, ObjectType.NPC):
+        return True
+    return _memory_monster(obj)
+
+
+def _body_candidates(state: object) -> list:
+    if hasattr(state, "all_objects"):
+        return list(state.all_objects())
+    found = []
+    for kind in _BODY_TYPES:
+        found.extend(state.objects(kind))
+    return found
+
+
 def collect_body_tiles(
     state: object,
     origin: WorldOrigin,
     *,
     ignore_ids: Iterable[int] = (),
 ) -> set[tuple[int, int]]:
-    """Alive player / NPC / monster centers inside the local window.
+    """Alive player / NPC / memory-monster centers inside the local window.
 
+    Players and NPCs use object type. A monster is a print_state
+    ``monster`` row, including one the species filter typed as OTHER.
     The character's own tile is omitted. Tiles farther than
     ``AVOID_RADIUS`` are omitted. ``ignore_ids`` is empty for travel,
     search, and loot.
@@ -69,27 +98,28 @@ def collect_body_tiles(
     ignored = {int(item) for item in ignore_ids}
     missing = getattr(state, "missing_frames", None)
     tiles: set[tuple[int, int]] = set()
-    for kind in _BODY_TYPES:
-        for obj in state.objects(kind):
-            if getattr(obj, "status", None) is ObjectStatus.DEAD:
+    for obj in _body_candidates(state):
+        if not _avoid_body(obj):
+            continue
+        if getattr(obj, "status", None) is ObjectStatus.DEAD:
+            continue
+        if getattr(obj, "relationship", None) is Relationship.SELF:
+            continue
+        track_id = getattr(obj, "track_id", None)
+        if track_id is not None and int(track_id) in ignored:
+            continue
+        if callable(missing) and track_id is not None:
+            if int(missing(int(track_id))) > int(MAX_MISSED_FRAMES):
                 continue
-            if getattr(obj, "relationship", None) is Relationship.SELF:
-                continue
-            track_id = getattr(obj, "track_id", None)
-            if track_id is not None and int(track_id) in ignored:
-                continue
-            if callable(missing) and track_id is not None:
-                if int(missing(int(track_id))) > int(MAX_MISSED_FRAMES):
-                    continue
-            try:
-                tile = object_absolute_tile(obj, origin)
-            except (TypeError, ValueError, AttributeError):
-                continue
-            if tile == start:
-                continue
-            if tile_chebyshev(start[0], start[1], tile[0], tile[1]) > AVOID_RADIUS:
-                continue
-            tiles.add((int(tile[0]), int(tile[1])))
+        try:
+            tile = object_absolute_tile(obj, origin)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if tile == start:
+            continue
+        if tile_chebyshev(start[0], start[1], tile[0], tile[1]) > AVOID_RADIUS:
+            continue
+        tiles.add((int(tile[0]), int(tile[1])))
     return tiles
 
 

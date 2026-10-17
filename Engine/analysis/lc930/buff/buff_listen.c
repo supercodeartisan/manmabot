@@ -95,6 +95,7 @@ __declspec(dllexport) int buff_listen_snapshot(const char* registryPath, char* o
     long n;
     size_t got;
     if (!out || outCap < 16) return -1;
+    pg_reset();
     if (!buffEnsure(registryPath)) return -1;
     tf = tmpfile();
     if (!tf) return -1;

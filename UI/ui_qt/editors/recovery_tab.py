@@ -254,7 +254,7 @@ class RecoveryTab(QWidget):
         self._bind_fix_meter(
             sl, "return_potion_enabled", True,
             self.t.get("return_potion_count", "Potions"),
-            "return_potion_count", 20, 0, 999, self.t.get("count_or_fewer", ""),
+            "return_potion_count", 0, 0, 999, self.t.get("count_or_fewer", ""),
         )
         self._bind_fix_meter(
             sl, "return_arrow_enabled", True,

@@ -93,7 +93,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "return_potion_enabled": bool(
                 getattr(profile, "return_potion_enabled", True)
             ),
-            "return_potion_count": int(getattr(profile, "return_potion_count", 20)),
+            "return_potion_count": int(getattr(profile, "return_potion_count", 0)),
             "return_arrow_enabled": bool(getattr(profile, "return_arrow_enabled", True)),
             "return_arrow_count": int(getattr(profile, "return_arrow_count", 300)),
             "return_depoison_enabled": bool(
@@ -232,12 +232,12 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "skills": {},
         },
         "equipment": {
-            "buy_arrows": True,
-            "buy_normal_arrows": True,
-            "buy_silver_arrows": False,
+            "buy_arrows": bool(profile.buy_normal_arrows or profile.buy_silver_arrows),
+            "buy_normal_arrows": bool(profile.buy_normal_arrows),
+            "buy_silver_arrows": bool(profile.buy_silver_arrows),
             "arrow_quantity": profile.arrow_buy_qty,
             "silver_arrow_quantity": getattr(profile, "silver_arrow_buy_qty", profile.arrow_buy_qty),
-            "buy_portion": getattr(profile, "hp_potion_buy_qty", 100),
+            "buy_portion": getattr(profile, "hp_potion_buy_qty", 10),
             "buy_depoison": bool(getattr(profile, "buy_depoison", False)),
             "depoison_quantity": getattr(profile, "depoison_buy_qty", 1),
             "hp_potion_npc": str(getattr(profile, "hp_potion_npc", "") or ""),
@@ -246,7 +246,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "store_after_sell": False,
             "warehouse_npc": "",
             "repair_equipment": True,
-            "restock_potions": True,
+            "restock_potions": bool(profile.restock_potions),
             "equip_profile": "Default",
             "use_potion_on_pickup": True,
             "minimize_combat_during_loot": True,

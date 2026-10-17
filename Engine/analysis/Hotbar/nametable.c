@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../entities/signeddrv_client.h"
+#include "../pgcache.h"
 #include "nametable.h"
 
 static NtCtx g_def = {
@@ -17,7 +18,47 @@ static NtCtx g_def = {
     0x00, 0x08, 0x10, 0x30
 };
 
-static int rm_(uint64_t pid,uint64_t a,void*b,uint32_t s){ uint32_t br=0; return SignedReadMemory(pid,a,b,s,&br)&&br==s; }
+static int rm_(uint64_t pid,uint64_t a,void*b,uint32_t s){ int drv=0; return pg_read(pid,a,b,s,&drv); }
+
+void ntPgReset(void) { pg_reset(); }
+
+#define NT_CACHE 256
+static uint32_t g_ntMid[NT_CACHE];
+static char g_ntKr[NT_CACHE][160];
+static char g_ntTw[NT_CACHE][160];
+static int g_ntN = 0;
+static uint64_t g_ntBase = 0;
+
+static int ntCacheGet(uint64_t base, uint32_t mid, char* out, int outSz, char* twOut, int twSz) {
+    int i;
+    if (g_ntBase != base) { g_ntN = 0; g_ntBase = base; }
+    for (i = 0; i < g_ntN; i++) {
+        if (g_ntMid[i] != mid) continue;
+        if (out && outSz > 0) {
+            strncpy(out, g_ntKr[i], (size_t)outSz - 1);
+            out[outSz - 1] = 0;
+        }
+        if (twOut && twSz > 0) {
+            strncpy(twOut, g_ntTw[i], (size_t)twSz - 1);
+            twOut[twSz - 1] = 0;
+        }
+        return g_ntKr[i][0] ? 1 : 0;
+    }
+    return -1;
+}
+
+static void ntCachePut(uint32_t mid, const char* kr, const char* tw) {
+    if (!kr || !kr[0] || g_ntN >= NT_CACHE) return;
+    g_ntMid[g_ntN] = mid;
+    strncpy(g_ntKr[g_ntN], kr, 159);
+    g_ntKr[g_ntN][159] = 0;
+    g_ntTw[g_ntN][0] = 0;
+    if (tw) {
+        strncpy(g_ntTw[g_ntN], tw, 159);
+        g_ntTw[g_ntN][159] = 0;
+    }
+    g_ntN++;
+}
 static uint64_t q64_(uint64_t pid,uint64_t a){ uint64_t v=0; rm_(pid,a,&v,8); return v; }
 static int isHeap_(uint64_t a){ return a>=0x10000000000ULL && a<0x70000000000ULL; }
 static int isMod_(const NtCtx* c,uint64_t a){ return a>=c->base && a<c->base+c->modSize; }
@@ -75,8 +116,11 @@ uint32_t ntTokenMid(const char* fmt){
 }
 
 int ntResolve(const NtCtx* c, uint32_t mid, char* out, int outSz, char* twOut, int twSz){
+    int hit;
     if(out&&outSz>0) out[0]=0;
     if(!mid||!c->pid||!c->base) return 0;
+    hit = ntCacheGet(c->base, mid, out, outSz, twOut, twSz);
+    if (hit >= 0) return hit;
     uint64_t anchor=q64_(c->pid,c->base+c->anchorRva);
     if(!isHeap_(anchor)) return 0;
     uint64_t rec=q64_(c->pid,anchor+(fnv1aKey(mid,c->fnvOffset,c->fnvPrime)&c->bucketMask)*c->bucketStride);
@@ -90,6 +134,7 @@ int ntResolve(const NtCtx* c, uint32_t mid, char* out, int outSz, char* twOut, i
             if(isHeap_(kr)){ char lang[8];
                 if(readSso_(c->pid,kr+c->nodeLang,lang,sizeof(lang))>0 && readSso_(c->pid,kr+c->nodeText,out,outSz)>0) ok=1; }
             if(twOut&&twSz>0&&isHeap_(tw)) readSso_(c->pid,tw+c->nodeText,twOut,twSz);
+            if (ok) ntCachePut(mid, out, twOut);
             return ok;
         }
         uint64_t nx=q64_(c->pid,rec+c->recNext); if(nx==rec) break; rec=nx;

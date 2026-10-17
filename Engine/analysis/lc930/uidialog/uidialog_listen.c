@@ -26,7 +26,7 @@ static int      RG_RESCAN=2000;
 static uint32_t g_chead[8], g_cnext[8]; static int g_ncont=0;
 
 /* ── 고속 읽기(MmCopy, VirtualQueryEx 생략) — 컨테이너 walk 전용 ───────── */
-static int      rmf(uint64_t a, void*b, uint32_t s){ uint32_t br=0; g_ioctl++; return SignedReadFast(g_pid,a,b,s,&br)&&br==s; }
+static int      rmf(uint64_t a, void*b, uint32_t s){ int drv=0; int ok=pg_read((uint64_t)g_pid,a,b,s,&drv); g_ioctl += (unsigned)drv; return ok; }
 static uint64_t q64f(uint64_t a){ uint64_t v=0; rmf(a,&v,8); return v; }
 
 /* ── 감시 대상(registry UIDLG_WIN_*) ──────────────────────────────────── */
@@ -740,6 +740,7 @@ __declspec(dllexport) int uidialog_listen_scan(const char* registryPath, char* o
     size_t got;
     uint64_t ui;
     if (!out || outCap < 16) return -1;
+    pg_reset();
     if (!uidlgEnsure(registryPath)) return -1;
     ui = g_ui ? g_ui : anchorUI();
     g_ui = ui;
@@ -789,6 +790,7 @@ __declspec(dllexport) int uidialog_listen_snapshot(const char* registryPath, cha
     long n;
     size_t got;
     if (!out || outCap < 16) return -1;
+    pg_reset();
     if (!uidlgEnsure(registryPath)) return -1;
     tf = tmpfile();
     if (!tf) return -1;

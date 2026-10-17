@@ -60,7 +60,7 @@ def default_sign_targets(portable: Path = PORTABLE_DIR) -> list[Path]:
     """Executables customers launch / install — not every .pyd."""
     targets: list[Path] = []
     for name in (
-        "Bot_ManmabotV1.exe",
+        "ZF.exe",
         "python/python.exe",
         "python/pythonw.exe",
     ):

@@ -241,7 +241,7 @@ def hollow_svchost(account_idx, purple_path, payload_path=None):
 
     loader_path = payload_path or BOT_LOADER_X86
     if not os.path.isfile(loader_path):
-        raise RuntimeError(f"Bot loader not found: {loader_path}")
+        raise RuntimeError(f"Loader not found: {loader_path}")
 
     with open(loader_path, "rb") as f:
         payload = f.read()
@@ -249,7 +249,7 @@ def hollow_svchost(account_idx, purple_path, payload_path=None):
     if pe is None:
         raise RuntimeError("Invalid bot loader PE")
     if pe["machine"] != MACHINE_X86:
-        raise RuntimeError(f"Bot loader must be x86, got 0x{pe['machine']:04X}")
+        raise RuntimeError(f"Loader must be x86, got 0x{pe['machine']:04X}")
 
     host = _pick_host()
     config_path = write_loader_config(account_idx, purple_path)

@@ -105,6 +105,9 @@ def handoff_to_perception(handoff_rows: list[dict[str, Any]]) -> list[Perception
             species_name=species_name,
             species_conf=species_conf,
         )
+        memory_class = None
+        if isinstance(coarse, str):
+            memory_class = coarse.strip().lower() or None
         objects.append(PerceptionObject(
             track_id=int(track_id),
             object_type=obj_type,
@@ -144,6 +147,7 @@ def handoff_to_perception(handoff_rows: list[dict[str, Any]]) -> list[Perception
             loot_qty=_opt_loot_qty(v.get("loot_qty")),
             loot_own=_opt_loot_own(v.get("loot_own")),
             memory_guid=_opt_guid(v.get("memory_guid")),
+            memory_class=memory_class,
         ))
     return objects
 

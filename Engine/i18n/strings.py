@@ -442,7 +442,7 @@ _EN = UiStrings(
     region="Map",
     region_locked="Talking Island (locked)",
     map_select="Map",
-    map_hint="Change map only while the bot is stopped.",
+    map_hint="Change map only while ZF is stopped.",
     map_preview_missing="No map image yet.",
     game_window="Game window",
     not_checked="Not checked",
@@ -484,7 +484,7 @@ _EN = UiStrings(
     save_areas="Save",
     editor_hint_island="Drag empty ground to draw a farm. Drag a farm to move it. Right-click a farm to copy, delete, or rename.",
     editor_hint_dungeon="Place patrol: click walkable tiles. Drag a marker to move it.",
-    editor_readonly="Stop the bot to edit farms or patrol points.",
+    editor_readonly="Stop ZF to edit farms or patrol points.",
     saved_areas="Saved farm areas for this map.",
     saved_rest="Saved rest areas for this map.",
     saved_patrol="Saved patrol points for this dungeon.",
@@ -513,8 +513,8 @@ _EN = UiStrings(
     nav_heading="Navigation test",
     nav_hint=(
         "Live reads your in-game tile. Select start and end on the map, then Run. "
-        "Live Run walks the character with the same travel code as the bot. "
-        "Stop the bot first."
+        "Live Run walks the character with the same travel code as ZF. "
+        "Stop ZF first."
     ),
     nav_live="Live",
     nav_select_start="Select start",
@@ -531,7 +531,7 @@ _EN = UiStrings(
     nav_live_no_pos="Live: cannot read player position.",
     nav_live_start_locked="Live: start is the character. Select end instead.",
     nav_live_lost="Live: lost player position.",
-    nav_bot_running="Stop the bot before Live or live Run.",
+    nav_bot_running="Stop ZF before Live or live Run.",
     nav_click_tile="Click a walkable tile ({kind}).",
     nav_blocked="Blocked tile ({x}, {y}). Click walkable ground.",
     nav_start_set="Start = ({x}, {y}). Now select end.",
@@ -582,7 +582,7 @@ _EN = UiStrings(
     species_no_image="No image",
     spells_heading="Spell shortcuts",
     spells_hint=(
-        "On Start the bot reads 24 hotbar slots from memory. "
+        "On Start ZF reads 24 hotbar slots from memory. "
         "Mapped names become keybinds automatically; unmapped slots are ignored."
     ),
     spells_usage_heading="Usage",
@@ -607,8 +607,8 @@ _EN = UiStrings(
     restore_spells_q="Restore default spell keys and usage?",
     spell_conflict="{a} and {b} cannot share the same box and key.",
     spells_detected_heading="Detected hotbars",
-    spells_waiting_scan="Start the bot once to scan skill boxes 1–3.",
-    spells_active_heading="Roles the bot will use",
+    spells_waiting_scan="Start ZF once to scan skill boxes 1–3.",
+    spells_active_heading="Roles ZF will use",
     spells_ignored="ignored",
     spells_unmapped="unmapped",
     spell_titles={
@@ -634,17 +634,17 @@ _EN = UiStrings(
         "hp_potion": "HP potion (item).",
         "teleport": "Teleport skill.",
         "mage_attack": "Mage attack spell (energy bolt, …).",
-        "talking_scroll": "Talking scroll item. Opens the top-left list; the bot clicks a row to teleport. Keep Favorites empty so row order stays fixed.",
+        "talking_scroll": "Talking scroll item. Opens the top-left list; ZF clicks a row to teleport. Keep Favorites empty so row order stays fixed.",
         "mother_tree": "Elf Return to Mother Tree. Instant warp to the tree to recover HP and MP, then talking-scroll home.",
         "hp_to_mp": "Convert HP into MP. Used at the Mother Tree once HP is full, to fill MP faster.",
     },
-    wizard_spells_note="Skill keys are read from memory on every Start (24 slots: F1–F3 pages, F5–F12). Fill hotbar_role_map.csv so names map to bot roles.",
+    wizard_spells_note="Skill keys are read from memory on every Start (24 slots: F1–F3 pages, F5–F12). Fill hotbar_role_map.csv so names map to ZF roles.",
     hotkeys_intro="These shortcuts work even when the game is focused.",
     change="Change",
     reset_hotkeys="Reset to defaults",
     hotkeys_tip=(
         "Tip: Move the cursor outside the game or Alt-Tab to pause, "
-        "then click Stop — or press Stop bot."
+        "then click Stop — or press Stop."
     ),
     change_shortcut_title="Change shortcut",
     press_new_shortcut="Press new shortcut for {action}…",
@@ -728,7 +728,7 @@ _EN = UiStrings(
     recovery_completed="Automatic recovery completed.",
     recovery_limit="Automatic recovery stopped after too many recent game closures.",
     setup="Setup",
-    stop_to_change_setup="Stop the bot to change Setup.",
+    stop_to_change_setup="Stop ZF to change Setup.",
     cannot_start="Cannot start",
     memory_title="Memory",
     memory_connected="Connected.\n{detail}",
@@ -740,7 +740,7 @@ _EN = UiStrings(
     driver_ok="{msg}\n\nApprove UAC if prompted, then use Start monitor & connect.",
     driver_fail_prefix="{msg}",
     drivers_setup="Set up drivers",
-    drivers_setup_hint="Both drivers must be ready before the bot can start.",
+    drivers_setup_hint="Both drivers must be ready before ZF can start.",
     interception_driver="Interception input",
     install_interception="Install input driver (admin)…",
     setup_memory_reader="Set up memory reader (admin)…",
@@ -748,13 +748,13 @@ _EN = UiStrings(
     driver_ready="Ready",
     driver_not_ready="Not ready",
     driver_restart_hint="Restart Windows after installing the input driver.",
-    stop_open_setup_q="Stop the bot and open setup?",
+    stop_open_setup_q="Stop ZF and open setup?",
     reset_title="Reset",
     reset_confirm="Reset all settings to defaults? This cannot be undone.",
     settings_reset_log="Settings reset to defaults",
     wizard_done_log="Setup wizard completed",
     diagnostics_copied="Diagnostics copied to clipboard",
-    memory_connected_session="Memory connected (bot session)",
+    memory_connected_session="Memory connected (ZF session)",
     logs={
         "running": "{via} → Running",
         "auto_pause": "Auto-pause ({code})",
@@ -762,12 +762,12 @@ _EN = UiStrings(
         "start_running": "Start → Running",
         "resume_wait": (
             "Resume requested — click the game window "
-            "(bot resumes automatically when focused)"
+            "(ZF resumes automatically when focused)"
         ),
         "paused_hotkey": "Paused — hotkey",
         "stop_stopped": "Stop → Stopped",
         "stop_stopped_reason": "Stop → Stopped ({reason})",
-        "worker_exited": "Bot worker exited",
+        "worker_exited": "Worker exited",
         "hotbar_reading": "Reading hotbar from memory (24 slots)…",
         "hotbar_done": "Hotbar scan done · {roles}",
         "hotbar_done_none": "Hotbar scan done · no mapped roles",
@@ -802,10 +802,10 @@ _EN = UiStrings(
         "game_closed": "Stopped — game window was closed.",
         "ready_for_resume": (
             "Ready — click the game window "
-            "(bot resumes when the game is focused)."
+            "(ZF resumes when the game is focused)."
         ),
         "resume_hint": (
-            "Click the game window — the bot resumes automatically when focused."
+            "Click the game window — ZF resumes automatically when focused."
         ),
     },
     start_fail={
@@ -826,7 +826,7 @@ _EN = UiStrings(
             "Fix the routine or map data, then press Start."
         ),
         "worker_crashed": (
-            "Stopped — the bot worker crashed. Check the log, then press Start."
+            "Stopped — ZF worker crashed. Check the log, then press Start."
         ),
         "map_missing": "Cannot start — map data is missing.",
     },
@@ -841,7 +841,7 @@ _EN = UiStrings(
         },
     },
     loot_weight_note=(
-        "If bag weight is above {pct}%, the bot temporarily picks up adená only."
+        "If bag weight is above {pct}%, ZF temporarily picks up adená only."
     ),
     char_blurbs={
         "mage": "Casts spells on targets in range.",
@@ -852,7 +852,7 @@ _EN = UiStrings(
     char_titles={"mage": "Mage", "elf": "Elf", "knight": "Knight", "royal": "Royal"},
     hotkey_labels={
         "pause_resume": "Pause / Resume",
-        "stop": "Stop bot",
+        "stop": "Stop",
     },
     wizard_title="Setup — ZF",
     wizard_back="Back",
@@ -883,7 +883,7 @@ _EN = UiStrings(
     escape_hp_pct="Escape when HP below %",
     wizard_farms_title="Farms",
     wizard_map_title="Map",
-    wizard_map_body="Choose the map pack the bot will use. You can change this later in Setup.",
+    wizard_map_body="Choose the map pack ZF will use. You can change this later in Setup.",
     wizard_dungeon_farms=(
         "This map is a dungeon — farming areas are not used. "
         "Place patrol points on the Farms tab after setup."
@@ -901,7 +901,7 @@ _EN = UiStrings(
         "Hotkeys: Pause {pause} · Stop {stop}\n"
         "{spells}\n\n"
         "Safety:\n"
-        "• Cursor leaving the game or losing focus pauses the bot.\n"
+        "• Cursor leaving the game or losing focus pauses ZF.\n"
         "• Resume is manual.\n"
         "• Stop after pause, or use the Stop hotkey."
     ),
@@ -919,8 +919,8 @@ _EN = UiStrings(
 
 
 _KO = UiStrings(
-    window_title="ZF",
-    brand="ZF",
+    window_title="종횡",
+    brand="종횡",
     brand_sub="Version 1 (라이선스 없음)",
     lamp_game="게임",
     lamp_memory="메모리",
@@ -946,7 +946,7 @@ _KO = UiStrings(
     region="맵",
     region_locked="말하는 섬 (고정)",
     map_select="맵",
-    map_hint="봇이 정지된 동안에만 맵을 바꿀 수 있습니다.",
+    map_hint="종횡이 정지된 동안에만 맵을 바꿀 수 있습니다.",
     map_preview_missing="맵 이미지가 아직 없습니다.",
     game_window="게임 창",
     not_checked="확인 안 됨",
@@ -988,7 +988,7 @@ _KO = UiStrings(
     save_areas="저장",
     editor_hint_island="빈 곳을 드래그하면 사냥터가 그려집니다. 구역 위에서 드래그하면 이동합니다. 오른쪽 클릭으로 복사, 삭제, 이름 변경.",
     editor_hint_dungeon="패트롤 배치: 이동 가능한 타일을 클릭하세요. 마커를 끌어 옮깁니다.",
-    editor_readonly="봇을 중지한 뒤에 사냥터·패트롤을 편집할 수 있습니다.",
+    editor_readonly="종횡을 중지한 뒤에 사냥터·패트롤을 편집할 수 있습니다.",
     saved_areas="이 맵의 사냥터를 저장했습니다.",
     saved_rest="이 맵의 휴식 지역을 저장했습니다.",
     saved_patrol="이 던전의 패트롤 지점을 저장했습니다.",
@@ -1017,8 +1017,8 @@ _KO = UiStrings(
     nav_heading="이동 테스트",
     nav_hint=(
         "Live는 게임 속 현재 타일을 읽습니다. 지도에서 시작점과 끝점을 고른 뒤 Run을 누르세요. "
-        "Live Run은 봇과 같은 이동 코드로 캐릭터를 걷게 합니다. "
-        "봇이 실행 중이면 쓸 수 없습니다."
+        "Live Run은 종횡과 같은 이동 코드로 캐릭터를 걷게 합니다. "
+        "종횡이 실행 중이면 쓸 수 없습니다."
     ),
     nav_live="Live",
     nav_select_start="시작점",
@@ -1035,7 +1035,7 @@ _KO = UiStrings(
     nav_live_no_pos="Live: 캐릭터 위치를 읽지 못했습니다.",
     nav_live_start_locked="Live: 시작점은 캐릭터입니다. 끝점을 고르세요.",
     nav_live_lost="Live: 캐릭터 위치를 잃었습니다.",
-    nav_bot_running="Live 또는 Live 실행 전에 봇을 중지하세요.",
+    nav_bot_running="Live 또는 Live 실행 전에 종횡을 중지하세요.",
     nav_click_tile="이동 가능한 타일을 클릭하세요 ({kind}).",
     nav_blocked="막힌 타일 ({x}, {y}). 흰 땅을 클릭하세요.",
     nav_start_set="시작점 = ({x}, {y}). 이제 끝점을 고르세요.",
@@ -1086,7 +1086,7 @@ _KO = UiStrings(
     species_no_image="이미지 없음",
     spells_heading="스킬 단축키",
     spells_hint=(
-        "시작할 때 봇이 메모리에서 핫바 24칸을 읽습니다. "
+        "시작할 때 종횡이 메모리에서 핫바 24칸을 읽습니다. "
         "매핑된 이름만 자동으로 단축키가 되고, 매핑되지 않은 칸은 무시합니다."
     ),
     spells_usage_heading="사용 방식",
@@ -1111,8 +1111,8 @@ _KO = UiStrings(
     restore_spells_q="스킬 키와 사용 방식을 기본값으로 되돌릴까요?",
     spell_conflict="{a}와 {b}는 같은 창·키를 쓸 수 없습니다.",
     spells_detected_heading="감지된 핫바",
-    spells_waiting_scan="봇을 한 번 시작해 1–3번 창을 스캔하세요.",
-    spells_active_heading="봇이 사용할 역할",
+    spells_waiting_scan="종횡을 한 번 시작해 1–3번 창을 스캔하세요.",
+    spells_active_heading="종횡이 사용할 역할",
     spells_ignored="무시",
     spells_unmapped="미매핑",
     spell_titles={
@@ -1231,7 +1231,7 @@ _KO = UiStrings(
     recovery_completed="자동 복구가 완료되었습니다.",
     recovery_limit="최근 게임 종료가 너무 많아 자동 복구를 중지했습니다.",
     setup="설정",
-    stop_to_change_setup="설정을 바꾸려면 봇을 중지하세요.",
+    stop_to_change_setup="설정을 바꾸려면 종횡을 중지하세요.",
     cannot_start="시작할 수 없음",
     memory_title="메모리",
     memory_connected="연결됨.\n{detail}",
@@ -1245,7 +1245,7 @@ _KO = UiStrings(
     driver_ok="{msg}\n\nUAC가 뜨면 승인한 뒤 모니터 시작 & 연결을 사용하세요.",
     driver_fail_prefix="{msg}",
     drivers_setup="드라이버 설정",
-    drivers_setup_hint="봇을 시작하려면 두 드라이버가 모두 준비되어야 합니다.",
+    drivers_setup_hint="종횡을 시작하려면 두 드라이버가 모두 준비되어야 합니다.",
     interception_driver="Interception 입력",
     install_interception="입력 드라이버 설치 (관리자)…",
     setup_memory_reader="메모리 읽기 설정 (관리자)…",
@@ -1253,13 +1253,13 @@ _KO = UiStrings(
     driver_ready="준비됨",
     driver_not_ready="준비 안 됨",
     driver_restart_hint="입력 드라이버를 설치한 뒤 Windows를 다시 시작하세요.",
-    stop_open_setup_q="봇을 중지하고 설정을 열까요?",
+    stop_open_setup_q="종횡을 중지하고 설정을 열까요?",
     reset_title="초기화",
     reset_confirm="모든 설정을 기본값으로 되돌릴까요? 되돌릴 수 없습니다.",
     settings_reset_log="설정을 기본값으로 초기화했습니다",
     wizard_done_log="설정 마법사 완료",
     diagnostics_copied="진단 정보를 클립보드에 복사했습니다",
-    memory_connected_session="메모리 연결됨 (봇 세션)",
+    memory_connected_session="메모리 연결됨 (종횡 세션)",
     logs={
         "running": "{via} → 실행 중",
         "auto_pause": "자동 일시정지 ({code})",
@@ -1272,7 +1272,7 @@ _KO = UiStrings(
         "paused_hotkey": "일시정지 — 단축키",
         "stop_stopped": "정지 → 중지됨",
         "stop_stopped_reason": "정지 → 중지됨 ({reason})",
-        "worker_exited": "봇 작업이 종료되었습니다",
+        "worker_exited": "종횡 작업이 종료되었습니다",
         "hotbar_reading": "메모리에서 핫바 24칸을 읽는 중…",
         "hotbar_done": "핫바 스캔 완료 · {roles}",
         "hotbar_done_none": "핫바 스캔 완료 · 매핑된 역할 없음",
@@ -1307,10 +1307,10 @@ _KO = UiStrings(
         "game_closed": "정지 — 게임 창이 닫혔습니다.",
         "ready_for_resume": (
             "준비됨 — 게임 창을 클릭하세요 "
-            "(게임이 포커스되면 봇이 재개됩니다)."
+            "(게임이 포커스되면 종횡이 재개됩니다)."
         ),
         "resume_hint": (
-            "게임 창을 클릭하세요 — 포커스되면 봇이 자동으로 재개됩니다."
+            "게임 창을 클릭하세요 — 포커스되면 종횡이 자동으로 재개됩니다."
         ),
     },
     start_fail={
@@ -1331,7 +1331,7 @@ _KO = UiStrings(
             "루틴·맵 데이터를 확인한 뒤 시작을 누르세요."
         ),
         "worker_crashed": (
-            "중지됨 — 봇 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
+            "중지됨 — 종횡 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
         ),
         "map_missing": "시작할 수 없음 — 맵 데이터가 없습니다.",
     },
@@ -1357,17 +1357,17 @@ _KO = UiStrings(
     char_titles={"mage": "마법사", "elf": "요정", "knight": "기사", "royal": "로얄"},
     hotkey_labels={
         "pause_resume": "일시정지 / 재개",
-        "stop": "봇 중지",
+        "stop": "종횡 중지",
     },
-    wizard_title="설정 — ZF",
+    wizard_title="설정 — 종횡",
     wizard_back="뒤로",
     wizard_continue="계속",
     wizard_finish="완료",
     wizard_step="{cur} / {total} 단계",
-    wizard_block_close="ZF를 사용하려면 설정 마법사를 완료하세요.",
+    wizard_block_close="종횡을 사용하려면 설정 마법사를 완료하세요.",
     wizard_welcome="환영합니다",
     wizard_welcome_body=(
-        "이 어시스턴트는 선택한 맵으로 ZF를 설정합니다.\n\n"
+        "이 어시스턴트는 선택한 맵으로 종횡을 설정합니다.\n\n"
         "메모리 드라이버, 게임 창, 캐릭터, 맵, 사냥터를 확인합니다.\n\n"
         "필요: LC.exe 실행, 서명된 메모리 드라이버 로드."
     ),
@@ -1387,7 +1387,7 @@ _KO = UiStrings(
     escape_hp_pct="HP 이하일 때 탈출 %",
     wizard_farms_title="사냥터",
     wizard_map_title="맵",
-    wizard_map_body="봇이 사용할 맵 팩을 고르세요. 나중에 설정에서 바꿀 수 있습니다.",
+    wizard_map_body="종횡이 사용할 맵 팩을 고르세요. 나중에 설정에서 바꿀 수 있습니다.",
     wizard_dungeon_farms=(
         "이 맵은 던전이라 사냥터 영역을 사용하지 않습니다. "
         "패트롤 지점은 설정 후 사냥터 탭에서 배치하세요."
@@ -1423,8 +1423,8 @@ _KO = UiStrings(
 
 
 _ZH = UiStrings(
-    window_title="ZF",
-    brand="ZF",
+    window_title="纵锋",
+    brand="纵锋",
     brand_sub="Version 1（无许可证）",
     lamp_game="游戏",
     lamp_memory="内存",
@@ -1450,7 +1450,7 @@ _ZH = UiStrings(
     region="地图",
     region_locked="说话之岛（固定）",
     map_select="地图",
-    map_hint="仅在机器人停止时可以更换地图。",
+    map_hint="仅在纵锋停止时可以更换地图。",
     map_preview_missing="还没有地图图片。",
     game_window="游戏窗口",
     not_checked="未检查",
@@ -1490,7 +1490,7 @@ _ZH = UiStrings(
     save_areas="保存",
     editor_hint_island="在空白处拖动绘制猎场。在区域上拖动可移动。右键可复制、删除或重命名。",
     editor_hint_dungeon="放置巡逻点：点击可行走格子。拖动标记可移动。",
-    editor_readonly="请先停止机器人，再编辑猎场或巡逻点。",
+    editor_readonly="请先停止纵锋，再编辑猎场或巡逻点。",
     saved_areas="已保存此地图的猎场。",
     saved_rest="已保存此地图的休息区域。",
     saved_patrol="已保存此地下城的巡逻点。",
@@ -1517,8 +1517,8 @@ _ZH = UiStrings(
     nav_heading="导航测试",
     nav_hint=(
         "Live 读取游戏内当前格子。在地图上选择起点和终点，然后点运行。"
-        "Live 运行用与机器人相同的移动代码让角色走路。"
-        "请先停止机器人。"
+        "Live 运行用与纵锋相同的移动代码让角色走路。"
+        "请先停止纵锋。"
     ),
     nav_live="Live",
     nav_select_start="选起点",
@@ -1535,7 +1535,7 @@ _ZH = UiStrings(
     nav_live_no_pos="Live：无法读取角色位置。",
     nav_live_start_locked="Live：起点就是角色。请改选终点。",
     nav_live_lost="Live：丢失角色位置。",
-    nav_bot_running="请先停止机器人，再使用 Live 或 Live 运行。",
+    nav_bot_running="请先停止纵锋，再使用 Live 或 Live 运行。",
     nav_click_tile="点击可行走格子（{kind}）。",
     nav_blocked="阻挡格子 ({x}, {y})。请点击可行走地面。",
     nav_start_set="起点 = ({x}, {y})。请选择终点。",
@@ -1611,8 +1611,8 @@ _ZH = UiStrings(
     restore_spells_q="恢复默认技能键位和用法？",
     spell_conflict="{a} 与 {b} 不能使用同一栏和同一键。",
     spells_detected_heading="检测到的快捷栏",
-    spells_waiting_scan="请先启动机器人一次以扫描第 1–3 栏。",
-    spells_active_heading="机器人将使用的角色",
+    spells_waiting_scan="请先启动纵锋一次以扫描第 1–3 栏。",
+    spells_active_heading="纵锋将使用的角色",
     spells_ignored="忽略",
     spells_unmapped="未映射",
     spell_titles={
@@ -1731,7 +1731,7 @@ _ZH = UiStrings(
     recovery_completed="自动恢复已完成。",
     recovery_limit="近期游戏关闭次数过多，自动恢复已停止。",
     setup="设置",
-    stop_to_change_setup="请先停止机器人再更改设置。",
+    stop_to_change_setup="请先停止纵锋再更改设置。",
     cannot_start="无法启动",
     memory_title="内存",
     memory_connected="已连接。\n{detail}",
@@ -1745,7 +1745,7 @@ _ZH = UiStrings(
     driver_ok="{msg}\n\n如出现 UAC 请批准，然后使用“启动监视器并连接”。",
     driver_fail_prefix="{msg}",
     drivers_setup="设置驱动程序",
-    drivers_setup_hint="启动机器人前，两个驱动程序都必须准备就绪。",
+    drivers_setup_hint="启动纵锋前，两个驱动程序都必须准备就绪。",
     interception_driver="Interception 输入",
     install_interception="安装输入驱动（管理员）…",
     setup_memory_reader="设置内存读取（管理员）…",
@@ -1753,13 +1753,13 @@ _ZH = UiStrings(
     driver_ready="已就绪",
     driver_not_ready="未就绪",
     driver_restart_hint="安装输入驱动后请重新启动 Windows。",
-    stop_open_setup_q="停止机器人并打开设置？",
+    stop_open_setup_q="停止纵锋并打开设置？",
     reset_title="重置",
     reset_confirm="将所有设置恢复默认？此操作无法撤销。",
     settings_reset_log="设置已恢复默认",
     wizard_done_log="设置向导已完成",
     diagnostics_copied="诊断信息已复制到剪贴板",
-    memory_connected_session="内存已连接（机器人会话）",
+    memory_connected_session="内存已连接（纵锋会话）",
     logs={
         "running": "{via} → 运行中",
         "auto_pause": "自动暂停（{code}）",
@@ -1772,7 +1772,7 @@ _ZH = UiStrings(
         "paused_hotkey": "已暂停 — 快捷键",
         "stop_stopped": "停止 → 已停止",
         "stop_stopped_reason": "停止 → 已停止（{reason}）",
-        "worker_exited": "机器人工作线程已退出",
+        "worker_exited": "纵锋工作线程已退出",
         "hotbar_reading": "正在从内存读取 24 格快捷栏…",
         "hotbar_done": "快捷栏扫描完成 · {roles}",
         "hotbar_done_none": "快捷栏扫描完成 · 没有映射角色",
@@ -1807,9 +1807,9 @@ _ZH = UiStrings(
         "game_closed": "已停止 — 游戏窗口已关闭。",
         "ready_for_resume": (
             "就绪 — 请点击游戏窗口"
-            "（游戏获得焦点后机器人会继续）。"
+            "（游戏获得焦点后纵锋会继续）。"
         ),
-        "resume_hint": "请点击游戏窗口 — 获得焦点后机器人会自动继续。",
+        "resume_hint": "请点击游戏窗口 — 获得焦点后纵锋会自动继续。",
     },
     start_fail={
         "start_no_game": "无法启动 — 未找到游戏窗口。",
@@ -1829,7 +1829,7 @@ _ZH = UiStrings(
             "请检查例行或地图数据后再次点击开始。"
         ),
         "worker_crashed": (
-            "已停止 — 机器人工作线程异常退出。请查看日志后再次点击开始。"
+            "已停止 — 纵锋工作线程异常退出。请查看日志后再次点击开始。"
         ),
         "map_missing": "无法启动 — 缺少地图数据。",
     },
@@ -1843,7 +1843,7 @@ _ZH = UiStrings(
             "desc": "只拾取金币，忽略其他地面物品。",
         },
     },
-    loot_weight_note="若背包负重超过 {pct}%，机器人会暂时只拾取金币。",
+    loot_weight_note="若背包负重超过 {pct}%，纵锋会暂时只拾取金币。",
     char_blurbs={
         "mage": "对范围内目标施放魔法。",
         "elf": "以稳定节奏点击攻击。",
@@ -1853,17 +1853,17 @@ _ZH = UiStrings(
     char_titles={"mage": "法师", "elf": "精灵", "knight": "骑士", "royal": "王族"},
     hotkey_labels={
         "pause_resume": "暂停 / 继续",
-        "stop": "停止机器人",
+        "stop": "停止纵锋",
     },
-    wizard_title="设置 — ZF",
+    wizard_title="设置 — 纵锋",
     wizard_back="返回",
     wizard_continue="继续",
     wizard_finish="完成",
     wizard_step="第 {cur} / {total} 步",
-    wizard_block_close="请完成设置向导后再使用 ZF。",
+    wizard_block_close="请完成设置向导后再使用纵锋。",
     wizard_welcome="欢迎",
     wizard_welcome_body=(
-        "本助手按你选择的地图设置 ZF。\n\n"
+        "本助手按你选择的地图设置纵锋。\n\n"
         "我们将检查内存驱动、游戏窗口、角色、地图与猎场。\n\n"
         "需要：LC.exe 正在运行，并已加载已签名的内存驱动。"
     ),
@@ -1883,7 +1883,7 @@ _ZH = UiStrings(
     escape_hp_pct="HP低于时逃跑 %",
     wizard_farms_title="猎场",
     wizard_map_title="地图",
-    wizard_map_body="选择机器人将使用的地图包。之后可在设置中更改。",
+    wizard_map_body="选择纵锋将使用的地图包。之后可在设置中更改。",
     wizard_dungeon_farms="此地图为地下城，不使用猎场区域。完成设置后请在猎场选项卡中放置巡逻点。",
     select_one_farm="请至少选择一个猎场。",
     wizard_hotkeys="快捷键",
@@ -1898,7 +1898,7 @@ _ZH = UiStrings(
         "快捷键：暂停 {pause} · 停止 {stop}\n"
         "{spells}\n\n"
         "安全：\n"
-        "• 光标离开游戏或失去焦点会暂停机器人。\n"
+        "• 光标离开游戏或失去焦点会暂停纵锋。\n"
         "• 继续为手动操作。\n"
         "• 暂停后停止，或使用停止快捷键。"
     ),
