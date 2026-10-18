@@ -517,6 +517,10 @@ def tick_loot_item(
             )
             return Status.SUCCESS
         else:
+            if dest is not None:
+                from app._04_decision.behaviors.unstick import note_confined_line_closed
+
+                note_confined_line_closed(blackboard)
             blackboard.loot_approach_active = False
             blackboard.loot_approach_destination = None
             blackboard.loot_approach_waypoint = None
@@ -563,12 +567,16 @@ def tick_loot_item(
 
     from app._04_decision.avoidance import collect_body_tiles, plan_body_click
 
+    bodies = collect_body_tiles(state, hop_origin)
     planned = plan_body_click(
         terrain,
         hop_origin,
         item_tile,
-        collect_body_tiles(state, hop_origin),
+        bodies,
     )
+    from app._04_decision.behaviors.unstick import note_confined_planned_avoid
+
+    note_confined_planned_avoid(blackboard, planned, bodies)
     if planned.guide and planned.click is None:
         from app._04_decision.clickgap import note_hold
 

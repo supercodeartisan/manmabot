@@ -14,7 +14,7 @@ change the main schedule/operator pipeline. While this tool is running:
 - if origin is on a blocked map tile: click nearest walkable (r=2..3) only
 - if ActionType.IDLE lasts ≥1.5s on a walkable tile: same nearby walkable clicks
   (shop trip / retreat / world-tree stand skipped)
-- 13s / 5-tile confined escape teleport is disabled
+- 13s / 3-tile confined escape teleport is disabled
 - no teleport→talking-scroll escalate after a TP hop
 
 Hotkeys: Home = start, End = stop.
@@ -136,7 +136,7 @@ def _dungeon_skip_species() -> list[str]:
 _PATCH_SPECS: tuple[tuple[str, str, str], ...] = (
     ("app._04_decision.behaviors.mode_ticks", "_maybe_scroll_to_hunt_map", "none"),
     ("app._04_decision.behaviors.mode_ticks", "_maybe_post_respawn_spellbook", "none"),
-    # 5-tile / 13 s pocket TP — dungeon combat only; main Manmabot unchanged.
+    # 3-tile / 13 s pocket TP — dungeon combat only; main Manmabot unchanged.
     ("app._04_decision.behaviors.mode_ticks", "_maybe_confined_escape", "none"),
     ("app._04_decision.behaviors.unstick", "try_confined_escape", "false"),
     ("app._04_decision.behaviors.unstick", "try_movement_unstick", "false"),

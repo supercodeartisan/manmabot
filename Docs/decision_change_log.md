@@ -1,5 +1,85 @@
 # Decision change log
 
+## 2026-10-18 — finished world nav does not keep the first hunt area
+
+Intent: after a talking-scroll walk into the second hunt area, the session ended but `travel_purpose` stayed `world_nav`. The stay clock then watched the first checked area, so the second area's minute froze and the character never left for the third.
+Shared: `_on_world_nav_arrived`, `_drop_world_nav_session`, and `clear_world_nav_run` clear that purpose. `trip_destination_farm` follows a world-nav trip only while the session exists; afterward the clock uses `farm_area_index`. The area-list "Moving" flag does the same. Walk target, combat, and HP stay as they are.
+Affects: the hunt-area countdown after a world-nav arrival on Talking Island and the mainland, and the move to the next checked area when that minute ends.
+Consent: user (yes, clear the purpose so the timer keeps the current area).
+Result: implemented. Not run in game. A `nav` line `world nav purpose cleared` is written when the leftover purpose is dropped.
+
+## 2026-10-18 — checked user areas stay on the hunt list
+
+Intent: a map reload was replacing the checked hunt areas with the shipped pack `farms.yaml`. Areas drawn only in the user file (mainland 구역 7, 구역 8) stayed checked in the dialog but were missing from the running hunt list and its timer.
+Shared: `ensure_navigation_for_pack_id`, after `configure_navigation_for_map`. When the live pack is the active battle row, the checked overlay rects are loaded again. A break row, a dungeon, or a different map does not get those rects. The tour is cleared only when that name list changes. Stay clock, walk target, combat, and HP stay as they are.
+Affects: the hunt list and area timer on Talking Island and the mainland after Start and after a map sync. Unchecked shipped areas are not put back on the list.
+Consent: user (yes, keep the checked user areas when the map reloads).
+Result: implemented. Not run in game. A `nav` line `checked farms remounted` lists the names.
+
+## 2026-10-18 — hunt-area stay no longer waits for the center
+
+Intent: after the edge-start change, the countdown still began when the walk reached the area center. World-nav arrival loads the hunt row and was still calling `reset_farm_timer` for reasons such as `start` and `same_map_routine`. Until that arrival the clock also followed the loaded farm slot, not the rectangle the walk is entering.
+Shared: `sample_farm_presence` times the trip's destination rectangle once the live map matches that pack. `apply_routine_entry_runtime` resets the stay on a new row, and on arrival only when that farm has not already started. The area-list clock highlights that destination while the trip is outside (`Moving`) and counts down after the tile is inside the rect. The walk target stays the center. `is_inside_active_farm` is unchanged for empty-area and yield checks.
+Affects: the hunt-area countdown on the way into a Talking Island or mainland area, including the first walk after Start and a same-map routine change. Login, combat, and HP stay as they are.
+Consent: user (timer should start as soon as the character enters the hunting area; reported that it still waited for the center).
+Result: implemented. Not run in game. `farm stay start` logs the farm name and the nav tile of the first inside sample.
+
+## 2026-10-18 — hunt-area stay starts at the rectangle edge
+
+Intent: the stay clock was zeroed when world nav or the next-farm walk arrived at the area center, so the countdown began only after that point.
+Shared: `reset_farm_timer` no longer runs on next-farm arrival or on `farm_area` world-nav arrival. It runs when the tour advances and when a new routine row loads its farms. `sample_farm_presence` still adds time only inside the active rectangle. The area timer shows the countdown once the character is inside, and `Moving` only while the trip is still outside that rectangle.
+Affects: the hunt-area stay on Talking Island and the mainland, including the walk from the edge to the center. Login, combat, and HP stay as they are. The walk target is still the center.
+Consent: user (timer should start as soon as the character enters the hunting area).
+Result: implemented. Not run in game. A `nav` line `farm stay start` is written on the first inside sample of a fresh stay.
+
+## 2026-10-18 — field same-map moves use world nav
+
+Intent: a routine-row change or a hunt-area change on Talking Island or the mainland should use the same world-nav plan as a map change, including a talking scroll when that costs less. A failure of that trip must not skip the routine row.
+Shared: `take_next_routine_if_due` for packs `talking_island` and `mainland` arms reason `same_map_routine`. `_try_farm_upkeep` on those packs arms reason `farm_area` toward `farm_area_index`. `goal_for_entry` reads that index for `farm_area`. Arrival keeps the index and starts the farm stay clock; the row clock is not reset. Other maps keep the old same-map rule. Cross-map failure still calls `_fail_skip`.
+Affects: travel between hunt areas and between routine rows on Talking Island and the mainland. Dungeon floors, login, combat, and HP stay as they are.
+Consent: user (yes; log those trips; only the two field maps).
+Result: implemented. Not run in game. On failure the `nav` log and `[world_nav] STATE=FIELD_NAV_FALLBACK` record reason, error, and `via=walk` or `via=retry`. The row stays. Arm and arrival log `field world nav ...`.
+
+## 2026-10-18 — return to the farm area that was left
+
+Intent: after retreat or a shop trip, the walk back used the first checked farm. The character should return to the area index they left, including a Mother Tree or shop landing.
+Shared: `goal_for_entry` and `apply_routine_entry_runtime` for reasons `post_retreat`, `post_shop`, `after_shop`, `hunt_map`, and `unstick_return`. The index is saved once in `begin_retreat`, `begin_shopping`, `tick_shop_trip`, and before a scroll/Mother Tree map reload. A new routine row still starts at the first checked area. Break rows still walk to the first checked rest area. Login, combat, and HP stay as they are.
+Affects: the walk home from town, the world tree, and a shop, and the farm index after that arrival. A changed schedule row does not reuse the old index.
+Consent: user (yes, that return scope).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — confined episode log
+
+Intent: a 13 s stay inside Chebyshev radius 3 does not say whether the character was against a wall or weaving. The next log needs the path from that window.
+Shared: `note_confined_progress` still fires at 13 s / radius 3. It now keeps one episode and writes a `nav` line when the 13 s elapse (`kind=fire`) and when the character leaves the bubble (`kind=leave`). Combat and shopping still clear the clock without a line. Teleport, the talking scroll, and the radius stay as they are.
+Affects: island and travel confined logging only. The line carries anchor, cell, elapsed, stepped distance, distinct cells, waypoint start/now/changes, verified click tile and its changes, moving 1/0/unread ticks, closed click lines, and body-avoidance hops.
+Consent: user (add the episode summary, leave the gate).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — travel hop does not arrive across a fence
+
+Intent: a hop waypoint one tile away counted as arrived by Chebyshev distance alone. Standing on the near side of a fence completed the hop without crossing.
+Shared: `_near_tile` in `travel.py`. Same tile is still arrived. Chebyshev 1 is arrived only when `can_step` opens that edge. No terrain map keeps the distance check. `travel_arrived`, farm arrive radius, patrol, loot, login, combat, and HP stay as they are.
+Affects: every travel hop (world nav, shop, retreat). A character against a fence keeps that hop and clicks it again.
+Consent: user (yes, this hop-complete check).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — drop the 3-standstills-in-20s escape
+
+Intent: three separate 5-second stops inside 20 seconds no longer skip the nearby clicks. A pocket is already the 7×7 / 13 s clock. One stop is already the nearby-click sweep.
+Shared: `try_movement_unstick`. Low HP still skips the sweep and teleports or uses the talking scroll. The 13 s bubble, the radius-3 clicks, and the radius-2 escalate ring stay. Login, combat, and the HP gate stay as they are.
+Affects: travel, search, and loot walks inside a farm. A third stop more than 3 tiles from the last one now clicks nearby tiles instead of leaving immediately.
+Consent: user (remove the 20-second, 3-stop rule).
+Result: implemented. Not run in game.
+
+## 2026-10-18 — confined bubble radius 5 → 3
+
+Intent: a 20×18 world window makes Chebyshev radius 5 an 11×11, more than half the view. Radius 3 is a 7×7. One field hop of 5 tiles leaves it, so local search no longer counts as confined. 13 seconds stays.
+Shared: `note_confined_progress` / `try_confined_escape`. Nearby-click radius 3, the radius-2 escalate ring, the enter-farm radius-5 ring, hop cap 5, and the 13 s clock stay. Dungeon still disables this escape. Login, combat, and HP stay as they are.
+Affects: island and travel confined escape. A character who moves 4 or more tiles from the anchor restarts the 13 s clock. Weaving inside the 7×7 for 13 s still teleports or uses the talking scroll.
+Consent: user (keep 13 seconds, change 5 to 3).
+Result: implemented. Not run in game.
+
 ## 2026-10-18 — shortest walk after a talking-scroll landing
 
 Intent: after the scroll lands on the nearest hub, the walk to the hunt area was following the 32-tile cluster corridor. From the Silver Knight inn that corridor leaves by the south door, while the tile path through the north door is shorter.

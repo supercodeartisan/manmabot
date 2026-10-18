@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -37,8 +38,18 @@ from settings.farm_schedule import (
 )
 from settings.profile import Profile, save_profile
 from ui_qt.editors.form_helpers import cell_button, table_row_height_for_controls, wrap_cell_widget
+from ui_qt.theme import tokens
 from ui_qt.widgets.step_spin import StepSpinBox
 from ui_qt.viewmodels.routine_vm import RoutineViewModel
+
+
+def _format_area_timer(seconds: float) -> str:
+    whole = max(0, int(seconds))
+    hours, rem = divmod(whole, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
 
 
 class MoveTab(QWidget):
@@ -62,8 +73,68 @@ class MoveTab(QWidget):
         self.on_content_changed = None
         self.vm = RoutineViewModel(language)
         self.vm.load_from_profile(profile)
+        self._farm_clock_provider: Callable[[], dict | None] | None = None
+        self._farm_timer_table: QTableWidget | None = None
         self._build()
         self.refresh()
+
+    def set_farm_clock_provider(self, provider: Callable[[], dict | None] | None) -> None:
+        self._farm_clock_provider = provider
+
+    def paint_farm_timers(self) -> None:
+        """Countdown on the open area list. The active area counts down; the rest stay full."""
+        table = self._farm_timer_table
+        if table is None:
+            return
+        try:
+            rows = table.rowCount()
+        except RuntimeError:
+            self._farm_timer_table = None
+            return
+        if rows <= 0:
+            return
+        clock = self._farm_clock_provider() if self._farm_clock_provider is not None else None
+        names = [str(item) for item in (clock or {}).get("names") or []]
+        limits = [float(item) for item in (clock or {}).get("limits_s") or []]
+        try:
+            index = int((clock or {}).get("index") or 0)
+        except (TypeError, ValueError):
+            index = -1
+        active = names[index] if clock and 0 <= index < len(names) else ""
+        navigating = bool((clock or {}).get("navigating"))
+        try:
+            elapsed = float((clock or {}).get("elapsed_s") or 0.0)
+        except (TypeError, ValueError):
+            elapsed = 0.0
+        limit_by_name = {
+            name: limits[i] for i, name in enumerate(names) if i < len(limits)
+        }
+        live = QBrush(QColor(tokens.ACCENT))
+        plain = QBrush(QColor(tokens.TEXT))
+        moving = self.t.get("routine_timer_moving", "Moving")
+        for row in range(rows):
+            box = table.cellWidget(row, 0)
+            name = str(box.property("farm_name") or "") if isinstance(box, QCheckBox) else ""
+            checked = isinstance(box, QCheckBox) and box.isChecked()
+            stay_item = table.item(row, 2)
+            configured = stay_item.text() if stay_item is not None else ""
+            if not checked or not name:
+                text = ""
+            elif clock and name == active and navigating:
+                text = moving
+            elif clock and name == active and name in limit_by_name:
+                text = _format_area_timer(limit_by_name[name] - elapsed)
+            elif clock and name in limit_by_name:
+                text = _format_area_timer(limit_by_name[name])
+            else:
+                text = configured
+            item = table.item(row, 3)
+            if item is None:
+                item = QTableWidgetItem(text)
+                table.setItem(row, 3, item)
+            elif item.text() != text:
+                item.setText(text)
+            item.setForeground(live if clock and name == active else plain)
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
@@ -395,7 +466,7 @@ class MoveTab(QWidget):
                 for k, v in dict(entry.get("farm_stays_s") or {}).items()
             }
             yaml_names = [name for name, _memo in details]
-            farm_table = QTableWidget(0, 3)
+            farm_table = QTableWidget(0, 4)
             farm_table.setHorizontalHeaderLabels(
                 [
                     self.t.get("rest_areas", "Rest areas")
@@ -403,6 +474,7 @@ class MoveTab(QWidget):
                     else self.t.get("farms", "Farm"),
                     self.t.get("number", "#"),
                     self.t.get("farm_stay", "Stay"),
+                    self.t.get("routine_timer", "Timer"),
                 ]
             )
             farm_table.verticalHeader().setVisible(False)
@@ -412,6 +484,14 @@ class MoveTab(QWidget):
             farm_table.setColumnWidth(0, 180)
             farm_table.setColumnWidth(1, 48)
             farm_table.setColumnWidth(2, 72)
+            farm_table.setColumnWidth(3, 88)
+            self._farm_timer_table = farm_table
+
+            def _drop_farm_timer_table() -> None:
+                if self._farm_timer_table is farm_table:
+                    self._farm_timer_table = None
+
+            dialog.destroyed.connect(lambda *_: _drop_farm_timer_table())
 
             def _checked_names() -> list[str]:
                 assert farm_table is not None
@@ -458,6 +538,7 @@ class MoveTab(QWidget):
                     farm_table.setCellWidget(row, 0, box)
                     farm_table.setItem(row, 1, QTableWidgetItem(""))
                     farm_table.setItem(row, 2, QTableWidgetItem(""))
+                    farm_table.setItem(row, 3, QTableWidgetItem(""))
                 _refresh_order_column()
 
             def _select_all() -> None:

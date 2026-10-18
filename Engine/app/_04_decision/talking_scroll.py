@@ -583,6 +583,9 @@ def _reset_nav_session(blackboard: "Blackboard") -> None:
     clear_travel(blackboard)
     blackboard.farm_route.clear()
     blackboard.farm_route_pos = 0
+    from app._04_decision.farm_tour import remember_return_farm
+
+    remember_return_farm(blackboard)
     blackboard.farm_area_index = 0
     blackboard.patrol_index = 0
     reset_farm_timer(blackboard)

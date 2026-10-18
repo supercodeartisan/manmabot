@@ -10,6 +10,7 @@ States used now (Extra_data LIVE RUN) and reserved for main-bot integration:
   TRANSITION_START / TRANSITION_LANDED / TRANSITION_FAIL
   FAIL_SKIP_NEXT   — routine advances after plan/exec failure (main bot)
   PAUSE_CYCLE      — one routine round all failed; retry next round (no stop)
+  FIELD_NAV_FALLBACK — field same-map move failed; walk or retry, row kept
 """
 
 from __future__ import annotations
@@ -43,6 +44,7 @@ NPC_TP_LAND = "NPC_TP_LAND"
 NPC_TP_FAIL = "NPC_TP_FAIL"
 FAIL_SKIP_NEXT = "FAIL_SKIP_NEXT"
 PAUSE_CYCLE = "PAUSE_CYCLE"
+FIELD_NAV_FALLBACK = "FIELD_NAV_FALLBACK"
 
 
 def format_event(state: str, **fields: Any) -> str:

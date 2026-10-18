@@ -922,7 +922,7 @@ def _patrol_travel(blackboard: "Blackboard") -> bool:
 def _maybe_confined_escape(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Teleport / talking scroll after 13 s inside a 5-tile bubble.
+    """Teleport / talking scroll after 13 s inside a 3-tile bubble.
 
     Movement / search / loot-walk only. Attacking a living sticky target
     clears the bubble clock so fight time does not count toward 13 s, and
@@ -1368,6 +1368,12 @@ def _try_farm_upkeep(state: "GameState", blackboard: "Blackboard") -> Status | N
     if shop is not None:
         return shop
 
+    from app._04_decision.player_mode import PlayerMode
+
+    # A same-tick world-nav or fallback walk already owns this move.
+    if blackboard.player_mode in (PlayerMode.WORLD_NAV, PlayerMode.TRAVELING):
+        return Status.FAILURE
+
     farms = get_farm_areas()
     terrain = get_terrain_map()
     if not farms or terrain is None:
@@ -1383,7 +1389,29 @@ def _try_farm_upkeep(state: "GameState", blackboard: "Blackboard") -> Status | N
         return None
 
     next_index = advance_farm_tour(blackboard)
+    reset_farm_timer(blackboard)
     farm = farms[next_index]
+    from app._04_decision.player_mode import HUNT_MAP_ID
+    from app._04_decision.world_nav import begin_world_nav
+    from app._04_decision.world_nav.hooks import (
+        FIELD_WORLD_NAV_PACKS,
+        REASON_FARM_AREA,
+    )
+    from app.bot_log import get_logger
+
+    pack = str(HUNT_MAP_ID or "").strip()
+    if pack in FIELD_WORLD_NAV_PACKS:
+        blackboard.farm_visit.clear()
+        blackboard.scratch["changing_area"] = True
+        get_logger("nav").info(
+            "field world nav farm area pack=%s index=%s cause=%s",
+            pack,
+            next_index,
+            reason,
+        )
+        begin_world_nav(blackboard, REASON_FARM_AREA)
+        return Status.FAILURE
+
     start = (blackboard.world_origin.x, blackboard.world_origin.y)
     goal = farm.interior_walkable(terrain, start, margin=farm_area.ARRIVE_TILES)
     if goal is None:

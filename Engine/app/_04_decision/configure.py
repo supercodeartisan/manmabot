@@ -368,10 +368,6 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
         pm.TRAVEL_STUCK_SECONDS = float(travel["stuck_seconds"])
     if "unstick_seconds" in travel:
         pm.TRAVEL_UNSTICK_SECONDS = float(travel["unstick_seconds"])
-    if "unstick_burst_count" in travel:
-        pm.UNSTICK_BURST_COUNT = max(1, int(travel["unstick_burst_count"]))
-    if "unstick_burst_window_s" in travel:
-        pm.UNSTICK_BURST_WINDOW_S = max(1.0, float(travel["unstick_burst_window_s"]))
     if "confined_tiles" in travel:
         pm.UNSTICK_CONFINED_TILES = max(1, int(travel["confined_tiles"]))
     if "confined_seconds" in travel:

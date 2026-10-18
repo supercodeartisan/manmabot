@@ -120,9 +120,7 @@ decision:
     stuck_ticks: 100           # legacy; live recovery uses unstick_seconds
     stuck_seconds: 10.0        # legacy hard-stuck gate
     unstick_seconds: 5.0       # same tile this long → 360° nearby walk clicks
-    unstick_burst_count: 3     # this many standstills in the window → TP / scroll
-    unstick_burst_window_s: 20.0
-    confined_tiles: 5          # stay inside this Chebyshev bubble...
+    confined_tiles: 3          # Chebyshev radius; 7×7. One field hop (5) leaves it
     confined_seconds: 13.0     # ...this long → teleport / talking scroll
     reclick_s: 2.0             # re-click / replan hop this often while traveling
     max_hop_tiles: 5           # field Chebyshev hop cap (client-walk clear still required)

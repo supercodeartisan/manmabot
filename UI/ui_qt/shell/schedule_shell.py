@@ -287,6 +287,8 @@ class ScheduleShell(QMainWindow):
             clear_shell_logs=self._clear_shell_logs,
         )
         self.editor.accountChanged.connect(self._sync_list_account)
+        if self.editor.move_tab is not None:
+            self.editor.move_tab.set_farm_clock_provider(self._live_farm_clock)
         self.editor.set_timing_reader(self.schedule_list.read_timing_into)
         self._bind_schedule_dirty_signals()
         self.schedule_list.account_combo.currentIndexChanged.connect(
@@ -1351,6 +1353,13 @@ class ScheduleShell(QMainWindow):
                 return clock
         return None
 
+    def _live_farm_clock(self) -> dict | None:
+        """Stay clock for the open hunt-area list."""
+        controller = self.bridge.controller
+        if controller.state not in (RunState.RUNNING, RunState.PAUSED):
+            return None
+        return controller.farm_clock()
+
     def _on_poll(self) -> None:
         if self._closing:
             return
@@ -1369,6 +1378,8 @@ class ScheduleShell(QMainWindow):
             self._poll_timer.setInterval(1000)
         self._refresh_operator(force=False)
         self.schedule_list.paint_routine_timers()
+        if self.editor.move_tab is not None:
+            self.editor.move_tab.paint_farm_timers()
 
     def _refresh_operator(self, force: bool = False) -> None:
         state = self.bridge.controller.state
