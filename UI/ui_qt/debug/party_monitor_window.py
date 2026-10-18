@@ -72,11 +72,19 @@ def _fill_members(table: QTableWidget, party: dict[str, Any] | None, farming: bo
 def _message_view() -> QPlainTextEdit:
     view = QPlainTextEdit()
     view.setReadOnly(True)
-    view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+    view.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+    view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     font = QFont("Consolas")
     font.setStyleHint(QFont.StyleHint.Monospace)
-    font.setPointSize(9)
+    font.setPointSize(10)
     view.setFont(font)
+    view.setStyleSheet(
+        "QPlainTextEdit {"
+        " background:#111827; color:#e5e7eb;"
+        " border:1px solid #374151; border-radius:4px;"
+        " padding:6px;"
+        "}"
+    )
     return view
 
 
