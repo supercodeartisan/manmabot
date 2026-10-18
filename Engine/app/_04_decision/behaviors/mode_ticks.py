@@ -431,6 +431,12 @@ def _maybe_scroll_to_hunt_map(
         return None
     if hunt_map_is_dungeon() and on_dungeon_return_town():
         return None
+    from app._04_decision.dungeon_floor_route import inside_target_dungeon
+
+    # Same complex, deeper floor: floor route owns the walk. Other maps still
+    # arm world nav.
+    if inside_target_dungeon(blackboard):
+        return None
     begin_world_nav(blackboard, "hunt_map")
     return Status.FAILURE
 
@@ -919,10 +925,16 @@ def _patrol_travel(blackboard: "Blackboard") -> bool:
     return blackboard.travel_purpose == PURPOSE_PATROL
 
 
+def _dungeon_floor_travel(blackboard: "Blackboard") -> bool:
+    from app._04_decision.dungeon_floor_route import PURPOSE_DUNGEON_FLOOR
+
+    return blackboard.travel_purpose == PURPOSE_DUNGEON_FLOOR
+
+
 def _maybe_confined_escape(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Teleport / talking scroll after 13 s inside a 5-tile bubble.
+    """Teleport / talking scroll after 13 s inside a 3-tile bubble.
 
     Movement / search / loot-walk only. Attacking a living sticky target
     clears the bubble clock so fight time does not count toward 13 s, and
@@ -1002,7 +1014,11 @@ def _step_travel_training_done(
 def _step_travel_hunt_map(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    if _enter_farm_travel(blackboard) or _patrol_travel(blackboard):
+    if (
+        _enter_farm_travel(blackboard)
+        or _patrol_travel(blackboard)
+        or _dungeon_floor_travel(blackboard)
+    ):
         return _maybe_scroll_to_hunt_map(state, blackboard)
     return None
 
@@ -1010,7 +1026,11 @@ def _step_travel_hunt_map(
 def _step_travel_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    if _enter_farm_travel(blackboard) or _patrol_travel(blackboard):
+    if (
+        _enter_farm_travel(blackboard)
+        or _patrol_travel(blackboard)
+        or _dungeon_floor_travel(blackboard)
+    ):
         return farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
     return None
 
@@ -1368,6 +1388,12 @@ def _try_farm_upkeep(state: "GameState", blackboard: "Blackboard") -> Status | N
     if shop is not None:
         return shop
 
+    from app._04_decision.player_mode import PlayerMode
+
+    # A same-tick world-nav or fallback walk already owns this move.
+    if blackboard.player_mode in (PlayerMode.WORLD_NAV, PlayerMode.TRAVELING):
+        return Status.FAILURE
+
     farms = get_farm_areas()
     terrain = get_terrain_map()
     if not farms or terrain is None:
@@ -1383,7 +1409,29 @@ def _try_farm_upkeep(state: "GameState", blackboard: "Blackboard") -> Status | N
         return None
 
     next_index = advance_farm_tour(blackboard)
+    reset_farm_timer(blackboard)
     farm = farms[next_index]
+    from app._04_decision.player_mode import HUNT_MAP_ID
+    from app._04_decision.world_nav import begin_world_nav
+    from app._04_decision.world_nav.hooks import (
+        FIELD_WORLD_NAV_PACKS,
+        REASON_FARM_AREA,
+    )
+    from app.bot_log import get_logger
+
+    pack = str(HUNT_MAP_ID or "").strip()
+    if pack in FIELD_WORLD_NAV_PACKS:
+        blackboard.farm_visit.clear()
+        blackboard.scratch["changing_area"] = True
+        get_logger("nav").info(
+            "field world nav farm area pack=%s index=%s cause=%s",
+            pack,
+            next_index,
+            reason,
+        )
+        begin_world_nav(blackboard, REASON_FARM_AREA)
+        return Status.FAILURE
+
     start = (blackboard.world_origin.x, blackboard.world_origin.y)
     goal = farm.interior_walkable(terrain, start, margin=farm_area.ARRIVE_TILES)
     if goal is None:
@@ -1529,24 +1577,362 @@ def _search_inside_farm(state: "GameState", blackboard: "Blackboard") -> Status:
     return Status.SUCCESS
 
 
+def _floor_idle(blackboard: "Blackboard", reason: str) -> Status:
+    blackboard.emit(ActionType.IDLE, priority=0.2, reason=reason)
+    return Status.SUCCESS
+
+
+def _logical_cell_reached(blackboard: "Blackboard", cell: tuple[int, int]) -> bool:
+    """True when travel's arrive radius covers the logical waypoint."""
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision.dungeon import travel_arrive_tiles
+
+    return (
+        tile_chebyshev(
+            int(blackboard.world_origin.x),
+            int(blackboard.world_origin.y),
+            int(cell[0]),
+            int(cell[1]),
+        )
+        <= travel_arrive_tiles()
+    )
+
+
+def _plan_dungeon_floor_session(
+    state: "GameState",
+    blackboard: "Blackboard",
+    target: str,
+):
+    """One route from the live cell. None when the caller already idled."""
+    from app._03_world.space.map_pack import get_active_map_pack
+    from app._04_decision.dungeon_floor_route import (
+        SCRATCH_DUNGEON_FLOOR_ROUTE,
+        FloorRouteSession,
+        PickedPoint,
+        RouteError,
+        _snap,
+        _terrain_from_nav,
+        choice_for_raw_map,
+        floor_of_pack,
+        plan_floor_steps,
+        same_dungeon_family,
+    )
+    from app._04_decision.world_nav.session import live_pose_from_state
+    from app.bot_log import get_logger
+
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return _floor_idle(blackboard, "dungeon floor route wait pose")
+    choice = choice_for_raw_map(int(pose.map_id))
+    active = get_active_map_pack()
+    if (
+        choice is None
+        or active is None
+        or str(active.id) != choice.pack_id
+        or not same_dungeon_family(choice.pack_id, target)
+    ):
+        get_logger("nav").info(
+            "dungeon floor route unavailable map=%s target=%s",
+            getattr(pose, "map_id", "-"),
+            target,
+        )
+        failed = FloorRouteSession(
+            target_pack=target,
+            complex_name="",
+            steps=[],
+            phase="failed",
+            fail_reason="dungeon floor route unavailable",
+        )
+        blackboard.scratch[SCRATCH_DUNGEON_FLOOR_ROUTE] = failed
+        return _floor_idle(blackboard, "dungeon floor route unavailable")
+    terrain = _terrain_from_nav(choice.nav_path, choice.pixel_scale)
+    origin = (int(blackboard.world_origin.x), int(blackboard.world_origin.y))
+    snapped = _snap(terrain, origin) if terrain is not None else origin
+    if snapped is None:
+        get_logger("nav").info(
+            "dungeon floor route unavailable no walk tile target=%s",
+            target,
+        )
+        failed = FloorRouteSession(
+            target_pack=target,
+            complex_name="",
+            steps=[],
+            phase="failed",
+            fail_reason="dungeon floor route unavailable",
+        )
+        blackboard.scratch[SCRATCH_DUNGEON_FLOOR_ROUTE] = failed
+        return _floor_idle(blackboard, "dungeon floor route unavailable")
+    start = PickedPoint(choice=choice, nav_x=int(snapped[0]), nav_y=int(snapped[1]))
+    try:
+        steps = plan_floor_steps(start, target)
+    except RouteError as exc:
+        get_logger("nav").info(
+            "dungeon floor route unavailable target=%s reason=%s",
+            target,
+            exc,
+        )
+        failed = FloorRouteSession(
+            target_pack=target,
+            complex_name="",
+            steps=[],
+            phase="failed",
+            fail_reason="dungeon floor route unavailable",
+        )
+        blackboard.scratch[SCRATCH_DUNGEON_FLOOR_ROUTE] = failed
+        return _floor_idle(blackboard, "dungeon floor route unavailable")
+    if not steps:
+        return _finish_dungeon_floor_route(blackboard, target)
+    record = floor_of_pack(target)
+    session = FloorRouteSession(
+        target_pack=target,
+        complex_name="" if record is None else record.complex_name,
+        steps=steps,
+    )
+    blackboard.scratch[SCRATCH_DUNGEON_FLOOR_ROUTE] = session
+    get_logger("nav").info(
+        "dungeon floor route planned dungeon=%s current=%s target=%s steps=%s",
+        session.complex_name or "-",
+        choice.pack_id,
+        target,
+        len(steps),
+    )
+    return session
+
+
+def _finish_dungeon_floor_route(blackboard: "Blackboard", target: str) -> None:
+    """Target floor is confirmed. Load that floor's own patrol and start the clock."""
+    from app._04_decision.dungeon_floor_route import SCRATCH_DUNGEON_FLOOR_ROUTE
+    from app._04_decision.world_nav.hooks import (
+        SCRATCH_ROUTINE,
+        apply_routine_entry_runtime,
+    )
+    from app.bot_log import get_logger
+
+    blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
+    cursor = blackboard.scratch.get(SCRATCH_ROUTINE)
+    entry = cursor.active() if cursor is not None and hasattr(cursor, "active") else None
+    if cursor is not None and isinstance(entry, dict):
+        cursor.mark_arrived(reset_clock=True)
+        cursor.reset_fail_mask()
+        apply_routine_entry_runtime(blackboard, entry, reason="dungeon_floor")
+    get_logger("nav").info("dungeon floor route complete target=%s", target)
+
+
+def _replan_dungeon_floor_route(
+    state: "GameState",
+    blackboard: "Blackboard",
+    session,
+    why: str,
+) -> Status:
+    """Ask the calculator again. The new cells still go only to existing travel."""
+    from app._04_decision.dungeon_floor_route import SCRATCH_DUNGEON_FLOOR_ROUTE
+    from app.bot_log import get_logger
+
+    session.replans += 1
+    if session.replans > 1:
+        session.fail(f"dungeon floor route unavailable {why}")
+        get_logger("nav").info(
+            "dungeon floor route unavailable target=%s reason=%s",
+            session.target_pack,
+            why,
+        )
+        return _floor_idle(blackboard, "dungeon floor route unavailable")
+    blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
+    planned = _plan_dungeon_floor_session(state, blackboard, session.target_pack)
+    if planned is None:
+        return None
+    if not isinstance(planned, type(session)):
+        return planned
+    planned.replans = session.replans
+    return _drive_dungeon_floor_route(state, blackboard, session.target_pack)
+
+
+def _drive_dungeon_floor_walk(state, blackboard, session, step) -> Status:
+    from app._04_decision.dungeon_floor_route import PURPOSE_DUNGEON_FLOOR
+    from app._04_decision.mode_control import begin_travel
+    from app._04_decision.world_nav.session import live_pose_from_state
+    from app.bot_log import get_logger
+
+    cell = (int(step.nav_x), int(step.nav_y))
+    pose = live_pose_from_state(state)
+    if pose is not None and int(pose.map_id) != int(step.map_id):
+        return _replan_dungeon_floor_route(
+            state, blackboard, session, "map left the walk step"
+        )
+    traveling = (
+        blackboard.travel_purpose == PURPOSE_DUNGEON_FLOOR
+        and tuple(blackboard.nav_goal) == cell
+        if blackboard.nav_goal is not None
+        else False
+    )
+    if session.phase == "walk" and session.walk_cell == cell:
+        if traveling:
+            return tick_traveling(state, blackboard)
+        if _logical_cell_reached(blackboard, cell):
+            session.index += 1
+            session.phase = ""
+            session.walk_cell = None
+            return _drive_dungeon_floor_route(state, blackboard, session.target_pack)
+        return _replan_dungeon_floor_route(
+            state, blackboard, session, "travel failed the walk step"
+        )
+    begin_travel(
+        blackboard,
+        cell,
+        purpose=PURPOSE_DUNGEON_FLOOR,
+        reason=f"dungeon floor walk {cell[0]},{cell[1]}",
+    )
+    session.phase = "walk"
+    session.walk_cell = cell
+    session.expect_map_id = int(step.map_id)
+    get_logger("nav").info(
+        "dungeon floor step index=%s type=walk cell=(%s,%s)",
+        session.index,
+        cell[0],
+        cell[1],
+    )
+    return tick_traveling(state, blackboard)
+
+
+def _drive_dungeon_floor_transition(state, blackboard, session, step) -> Status:
+    from app._04_decision.world_nav.session import live_pose_from_state
+    from app.bot_log import get_logger
+
+    if not step.gate_compatible:
+        session.fail("dungeon floor route unavailable transition")
+        get_logger("nav").info(
+            "dungeon floor route unavailable target=%s kind=%s",
+            session.target_pack,
+            step.kind,
+        )
+        return _floor_idle(blackboard, "dungeon floor route unavailable")
+    if session.phase != "transition":
+        session.phase = "transition"
+        session.gate_seen = False
+        session.gate_ok = False
+        session.gate_map_id = None
+        session.expect_map_id = int(step.to_map_id)
+        get_logger("nav").info(
+            "dungeon floor transition pending %s->%s cell=(%s,%s)",
+            step.from_pack_id,
+            step.to_pack_id,
+            step.entrance_world[0],
+            step.entrance_world[1],
+        )
+        blackboard.emit(
+            ActionType.GATE,
+            priority=0.55,
+            reason="dungeon floor transition",
+            gate_entrance=(int(step.entrance_world[0]), int(step.entrance_world[1])),
+            gate_expect_map_id=int(step.to_map_id),
+            gate_expect_xy=(int(step.landing_world[0]), int(step.landing_world[1])),
+            gate_from_map_id=int(step.from_map_id),
+            gate_edge=f"floor:{step.from_pack_id}->{step.to_pack_id}",
+        )
+        return Status.SUCCESS
+    if not session.gate_seen:
+        return _floor_idle(blackboard, "dungeon floor transition pending")
+    pose = live_pose_from_state(state)
+    live_map = session.gate_map_id
+    if live_map is None and pose is not None:
+        live_map = int(pose.map_id)
+    if session.gate_ok and live_map is not None and int(live_map) == int(step.to_map_id):
+        get_logger("nav").info(
+            "dungeon floor transition confirmed map=%s",
+            int(live_map),
+        )
+        session.index += 1
+        session.phase = ""
+        session.gate_seen = False
+        session.gate_ok = False
+        session.gate_map_id = None
+        return _drive_dungeon_floor_route(state, blackboard, session.target_pack)
+    session.fail("dungeon floor route unavailable transition")
+    get_logger("nav").info(
+        "dungeon floor route unavailable target=%s transition map=%s want=%s",
+        session.target_pack,
+        live_map,
+        step.to_map_id,
+    )
+    return _floor_idle(blackboard, "dungeon floor route unavailable")
+
+
+def _drive_dungeon_floor_route(
+    state: "GameState",
+    blackboard: "Blackboard",
+    target: str,
+) -> Status | None:
+    from app._04_decision.dungeon_floor_route import (
+        SCRATCH_DUNGEON_FLOOR_ROUTE,
+        FloorRouteSession,
+        FloorTransition,
+        FloorWalk,
+    )
+
+    from app._04_decision import player_mode as pm
+
+    # Hunt id only. The target floor's terrain stays unloaded until arrival.
+    if str(pm.HUNT_MAP_ID or "") != target:
+        pm.HUNT_MAP_ID = target
+    session = blackboard.scratch.get(SCRATCH_DUNGEON_FLOOR_ROUTE)
+    if not isinstance(session, FloorRouteSession) or session.target_pack != target:
+        planned = _plan_dungeon_floor_session(state, blackboard, target)
+        if not isinstance(planned, FloorRouteSession):
+            return Status.SUCCESS if planned is not None else None
+        session = planned
+    if session.phase == "failed":
+        return _floor_idle(
+            blackboard,
+            session.fail_reason or "dungeon floor route unavailable",
+        )
+    step = session.current()
+    if step is None:
+        _finish_dungeon_floor_route(blackboard, target)
+        return None
+    if isinstance(step, FloorWalk):
+        return _drive_dungeon_floor_walk(state, blackboard, session, step)
+    if isinstance(step, FloorTransition):
+        return _drive_dungeon_floor_transition(state, blackboard, session, step)
+    session.fail("dungeon floor route unavailable")
+    return _floor_idle(blackboard, "dungeon floor route unavailable")
+
 
 def _step_dungeon_off_floor(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    del state
+    """Wrong floor of the scheduled dungeon walks a calculated route.
+
+    Entrance-floor hunts keep the old idle. The route only names logical
+    cells; ``begin_travel`` / the existing gate executor perform them.
+    """
+    from app._04_decision.dungeon_floor_route import (
+        SCRATCH_DUNGEON_FLOOR_ROUTE,
+        inside_target_dungeon,
+        needs_floor_route,
+        routine_target_pack,
+    )
     from app._04_decision.talking_scroll import (
         hunt_map_is_dungeon,
         player_on_selected_map,
     )
 
-    if hunt_map_is_dungeon() and not player_on_selected_map(blackboard):
-        blackboard.emit(
-            ActionType.IDLE,
-            priority=0.2,
-            reason="dungeon, off hunt floor",
-        )
-        return Status.SUCCESS
-    return None
+    target = routine_target_pack(blackboard)
+    # Deeper floor, already inside that complex: route before any patrol,
+    # even when HUNT_MAP has not been applied yet.
+    if needs_floor_route(target) and inside_target_dungeon(blackboard):
+        if not player_on_selected_map(blackboard):
+            return _drive_dungeon_floor_route(state, blackboard, target)
+    if player_on_selected_map(blackboard):
+        blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
+        return None
+    if not hunt_map_is_dungeon():
+        return None
+    blackboard.emit(
+        ActionType.IDLE,
+        priority=0.2,
+        reason="dungeon, off hunt floor",
+    )
+    return Status.SUCCESS
 
 
 def _step_dungeon_blocked(

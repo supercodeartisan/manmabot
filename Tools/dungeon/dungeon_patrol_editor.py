@@ -1,11 +1,16 @@
-"""Dungeon patrol editor — place waypoints on raw map images, A* between them, save YAML.
+"""Dungeon patrol editor — waypoints on one map, or a multi-floor route.
 
 Launch::
 
     python run.py --dungeon-patrol
+
+출발점선택 / 도착점선택 load an engine map pack and take one click.
+플레이 chains ``find_path`` across ``floors_entrances.txt`` gates, saves the
+mouse-click tiles, and walks a marker from the start map to the goal map.
 """
 from __future__ import annotations
 
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -23,6 +28,16 @@ from settings.dungeon_assets import (
     save_patrol_overlay,
     suggest_map_id,
 )
+from dungeon.floor_route import (
+    PickedPoint,
+    RouteError,
+    RouteSegment,
+    choice_for_raw_map,
+    plan_floor_route,
+    save_route,
+)
+from dungeon.live_route import LiveError, LiveRoute
+from dungeon.map_pick_dialog import pick_map_point
 from session.paths import ensure_userdata, map_overlay_slug
 from session.probes import list_patrol_entries
 from ui.design_system import (
@@ -39,6 +54,7 @@ from ui.design_system import (
 _ZOOM_MIN = 0.5
 _ZOOM_MAX = 16.0
 _HIT_R = 6
+_STOP_HOTKEY = "end"
 
 
 class DungeonPatrolEditor(tk.Tk):
@@ -70,8 +86,20 @@ class DungeonPatrolEditor(tk.Tk):
         self._pan_origin = [0.0, 0.0]
         self._dragging: Optional[int] = None
         self._dirty = False
+        self._suspend_scale = False
+        self.start_pick: Optional[PickedPoint] = None
+        self.goal_pick: Optional[PickedPoint] = None
+        self._segments: list[RouteSegment] = []
+        self._playing = False
+        self._play_job: Optional[str] = None
+        self._play_seg = 0
+        self._play_at = 0
+        self._char: Optional[tuple[int, int]] = None
+        self._live = LiveRoute()
+        self._stop_hotkey = None
 
         self._build()
+        self._bind_stop_hotkey()
         self.refresh_assets()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -133,7 +161,7 @@ class DungeonPatrolEditor(tk.Tk):
         self._meta_row(meta, 4, "pixel_scale", self.var_ps, spin=(1, 16))
         ttk.Label(
             meta,
-            text="White pixels = walkable. Click to place patrol points.",
+            text="층 이동은 오른쪽 위 출발점선택, 도착점선택, 플레이.\n이 지도의 흰 칸을 클릭하면 한 층 순찰 점을 놓습니다.",
             foreground=TEXT_MUTED,
             wraplength=240,
             justify="left",
@@ -142,10 +170,29 @@ class DungeonPatrolEditor(tk.Tk):
         right = ttk.Frame(outer)
         right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
-        right.rowconfigure(1, weight=1)
+        right.rowconfigure(2, weight=1)
+
+        route = ttk.Frame(right)
+        route.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        ttk.Button(route, text="출발점선택", command=self._pick_start).pack(
+            side="left"
+        )
+        ttk.Button(route, text="도착점선택", command=self._pick_goal).pack(
+            side="left", padx=(4, 0)
+        )
+        ttk.Button(route, text="플레이", command=self._play_route).pack(
+            side="left", padx=(12, 0)
+        )
+        ttk.Button(route, text="정지 (End)", command=self._stop_route).pack(
+            side="left", padx=(4, 0)
+        )
+        self.route_info = ttk.Label(
+            route, text="출발점과 도착점을 선택하세요.", foreground=TEXT_MUTED
+        )
+        self.route_info.pack(side="left", padx=(12, 0))
 
         tools = ttk.Frame(right)
-        tools.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        tools.grid(row=1, column=0, sticky="ew", pady=(0, 6))
         for text, cmd in (
             ("Delete selected", self._delete_selected),
             ("Clear all", self._clear_all),
@@ -160,10 +207,10 @@ class DungeonPatrolEditor(tk.Tk):
             var.trace_add("write", lambda *_a: self._on_scale_changed())
 
         body = ttk.Frame(right)
-        body.grid(row=1, column=0, sticky="nsew")
+        body.grid(row=2, column=0, sticky="nsew")
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
-        right.rowconfigure(1, weight=1)
+        right.rowconfigure(2, weight=1)
 
         canvas_host = ttk.Frame(body, relief="solid", borderwidth=1)
         canvas_host.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
@@ -292,6 +339,7 @@ class DungeonPatrolEditor(tk.Tk):
         self._zoom = 1.0
         self._pan = [0.0, 0.0]
         self.selected = None
+        self._char = None
         self._rebuild_terrain()
         self._reload_patrol(silent=True)
         self._dirty = False
@@ -326,7 +374,7 @@ class DungeonPatrolEditor(tk.Tk):
         self._terrain = TerrainMap.from_array(walkable)
 
     def _on_scale_changed(self) -> None:
-        if self._base is None:
+        if self._suspend_scale or self._base is None:
             return
         try:
             self._rebuild_terrain()
@@ -461,20 +509,33 @@ class DungeonPatrolEditor(tk.Tk):
                 pts.append((px, py))
             draw.line(pts, fill=(56, 189, 248, 200), width=max(2, int(2 * self._zoom)))
 
-        # waypoints
-        for i, (tx, ty, _name) in enumerate(self.patrol):
+        # waypoints — same dots the manual editor uses. Route playback keeps
+        # only the path line plus one marker of this same size.
+        if self._char is None:
+            for i, (tx, ty, _name) in enumerate(self.patrol):
+                cx = (tx * ps + ps / 2) * self._zoom
+                cy = (ty * ps + ps / 2) * self._zoom
+                r = 7 if self.selected == i else 5
+                r = max(r, int(4 * self._zoom))
+                fill = (249, 115, 22, 255) if self.selected == i else (234, 179, 8, 255)
+                draw.ellipse(
+                    [cx - r, cy - r, cx + r, cy + r],
+                    fill=fill,
+                    outline=(255, 255, 255, 255),
+                    width=2,
+                )
+                draw.text((cx + r + 2, cy - r), str(i + 1), fill=(255, 255, 255, 230))
+        else:
+            tx, ty = self._char
             cx = (tx * ps + ps / 2) * self._zoom
             cy = (ty * ps + ps / 2) * self._zoom
-            r = 7 if self.selected == i else 5
-            r = max(r, int(4 * self._zoom))
-            fill = (249, 115, 22, 255) if self.selected == i else (234, 179, 8, 255)
+            r = max(5, int(4 * self._zoom))
             draw.ellipse(
                 [cx - r, cy - r, cx + r, cy + r],
-                fill=fill,
+                fill=(234, 179, 8, 255),
                 outline=(255, 255, 255, 255),
                 width=2,
             )
-            draw.text((cx + r + 2, cy - r), str(i + 1), fill=(255, 255, 255, 230))
 
         composed = Image.alpha_composite(shown.convert("RGBA"), overlay)
         self._photo = ImageTk.PhotoImage(composed)
@@ -510,7 +571,7 @@ class DungeonPatrolEditor(tk.Tk):
         return best
 
     def _on_lmb(self, event: tk.Event) -> None:
-        if self._terrain is None:
+        if self._playing or self._terrain is None:
             return
         tx, ty = self._canvas_to_tile(event.x, event.y)
         hit = self._hit_patrol(tx, ty)
@@ -691,10 +752,331 @@ class DungeonPatrolEditor(tk.Tk):
             parent=self,
         )
 
+    def _bind_stop_hotkey(self) -> None:
+        """End stops the walk even when the game window is in front."""
+        try:
+            import keyboard
+        except Exception as exc:
+            self.status.configure(text=f"정지 단축키를 쓸 수 없습니다: {exc}")
+            return
+
+        def _fire() -> None:
+            self.after(0, self._stop_route)
+
+        try:
+            self._stop_hotkey = keyboard.add_hotkey(
+                _STOP_HOTKEY, _fire, suppress=False
+            )
+        except Exception as exc:
+            self._stop_hotkey = None
+            self.status.configure(text=f"정지 단축키를 쓸 수 없습니다: {exc}")
+
+    def _unbind_stop_hotkey(self) -> None:
+        handle = self._stop_hotkey
+        self._stop_hotkey = None
+        if handle is None:
+            return
+        try:
+            import keyboard
+
+            keyboard.remove_hotkey(handle)
+        except Exception:
+            pass
+
     def _on_close(self) -> None:
         if self._dirty and not self._confirm_discard():
             return
+        self._unbind_stop_hotkey()
+        self._stop_route()
+        self._live.shutdown()
         self.destroy()
+
+    # ── multi-floor route ─────────────────────────────────────────────────
+
+    def _pick_start(self) -> None:
+        self._stop_route()
+        self.status.configure(text="게임에서 맵과 좌표를 읽는 중…")
+        threading.Thread(
+            target=self._read_start_worker,
+            name="dungeon-read-start",
+            daemon=True,
+        ).start()
+
+    def _read_start_worker(self) -> None:
+        try:
+            picked = self._live.read_start()
+        except LiveError as exc:
+            message = str(exc)
+            self.after(0, lambda message=message: self._report(message))
+            return
+        except Exception as exc:
+            message = str(exc)
+            self.after(0, lambda message=message: self._report(message))
+            return
+        self.after(0, lambda picked=picked: self._apply_start(picked))
+
+    def _apply_start(self, picked: PickedPoint) -> None:
+        self.start_pick = picked
+        self._refresh_route_info()
+        self._show_pick(picked)
+        self.status.configure(
+            text=(
+                f"현재 위치 {picked.choice.kr or picked.choice.pack_id} "
+                f"({picked.world_x}, {picked.world_y})"
+            )
+        )
+
+    def _pick_goal(self) -> None:
+        picked = pick_map_point(self, "도착점선택")
+        if picked is None:
+            return
+        self.goal_pick = picked
+        self._refresh_route_info()
+
+    def _refresh_route_info(self) -> None:
+        def _one(label: str, picked: Optional[PickedPoint]) -> str:
+            if picked is None:
+                return f"{label} 없음"
+            return (
+                f"{label} {picked.choice.kr or picked.choice.pack_id} "
+                f"({picked.world_x},{picked.world_y})"
+            )
+
+        self.route_info.configure(
+            text=f"{_one('출발', self.start_pick)}   →   {_one('도착', self.goal_pick)}"
+        )
+
+    def _show_pick(self, picked: PickedPoint) -> None:
+        self._char = (picked.nav_x, picked.nav_y)
+        self._show_nav(
+            picked.choice.nav_path,
+            picked.choice,
+            path=[],
+            clicks=[(picked.nav_x, picked.nav_y, "start")],
+        )
+
+    def _show_nav(
+        self,
+        nav_path: Path,
+        choice,
+        *,
+        path: list[tuple[int, int]],
+        clicks: list[tuple[int, int, str]],
+    ) -> None:
+        try:
+            image = Image.open(nav_path).convert("RGB")
+        except OSError as exc:
+            messagebox.showerror(self.title(), f"맵을 열지 못했습니다:\n{exc}", parent=self)
+            return
+        self._suspend_scale = True
+        try:
+            self._base = image
+            self.map_id = choice.pack_id
+            self.var_id.set(choice.pack_id)
+            self.var_name.set(choice.kr or choice.en or choice.pack_id)
+            self.var_ox.set(choice.origin_x)
+            self.var_oy.set(choice.origin_y)
+            self.var_ps.set(choice.pixel_scale)
+        finally:
+            self._suspend_scale = False
+        self.asset = None
+        self.selected = None
+        self._rebuild_terrain()
+        self.patrol = list(clicks)
+        self.paths = [path] if len(path) >= 2 else []
+        self._dirty = False
+        self._refresh_point_list()
+        self._fit_view()
+        self.status.configure(text=f"{choice.label if hasattr(choice, 'label') else choice.pack_id}")
+        self._redraw()
+
+    def _play_route(self) -> None:
+        if self._playing:
+            return
+        if self.start_pick is None or self.goal_pick is None:
+            messagebox.showinfo(
+                self.title(),
+                "출발점선택과 도착점선택을 먼저 하세요.",
+                parent=self,
+            )
+            return
+        self.status.configure(text="층 이동 경로를 계산하는 중…")
+        self.update_idletasks()
+        start = self.start_pick
+        goal = self.goal_pick
+        threading.Thread(
+            target=self._plan_worker,
+            args=(start, goal),
+            name="dungeon-floor-route",
+            daemon=True,
+        ).start()
+
+    def _plan_worker(self, start: PickedPoint, goal: PickedPoint) -> None:
+        try:
+            live = self._live.read_start()
+        except Exception:
+            live = None
+        if live is not None:
+            start = live
+        try:
+            segments = plan_floor_route(start, goal)
+            written = save_route(segments)
+        except RouteError as exc:
+            message = str(exc)
+            self.after(0, lambda message=message: self._plan_failed(message))
+            return
+        except Exception as exc:
+            message = str(exc)
+            self.after(0, lambda message=message: self._plan_failed(message))
+            return
+        self.after(0, lambda segments=segments, written=written: self._plan_ready(segments, written))
+
+    def _plan_failed(self, message: str) -> None:
+        self._report(message)
+
+    def _report(self, message: str) -> None:
+        self.status.configure(text=message)
+        messagebox.showerror(self.title(), message, parent=self)
+
+    def _plan_ready(self, segments: list[RouteSegment], written: list[Path]) -> None:
+        del written
+        self._segments = segments
+        floors = " → ".join(
+            segment.choice.kr or segment.choice.pack_id for segment in segments
+        )
+        clicks = sum(len(segment.clicks) for segment in segments)
+        self.status.configure(
+            text=f"{floors}  ·  클릭 {clicks}점을 각 층 patrol.yaml에 저장"
+        )
+        self.route_info.configure(text=floors)
+        self._playing = True
+        self._play_seg = 0
+        self._play_at = 0
+        self._show_segment(0)
+        self.status.configure(text=f"{floors}  ·  게임에서 이동 시작")
+        self._live.walk(
+            segments,
+            on_status=self._live_status,
+            on_pose=self._live_pose,
+            on_done=self._live_done,
+            on_route=self._live_route,
+        )
+
+    def _show_segment(self, index: int) -> None:
+        segment = self._segments[index]
+        clicks = [
+            (point.nav_x, point.nav_y, point.name) for point in segment.clicks
+        ]
+        self._show_nav(
+            segment.choice.nav_path,
+            segment.choice,
+            path=segment.path,
+            clicks=clicks,
+        )
+        if segment.path:
+            self._char = segment.path[0]
+            self._redraw()
+
+    def _schedule_tick(self) -> None:
+        if self._play_job is not None:
+            self.after_cancel(self._play_job)
+        self._play_job = self.after(70, self._play_tick)
+
+    def _play_tick(self) -> None:
+        self._play_job = None
+        if not self._playing or not self._segments:
+            return
+        segment = self._segments[self._play_seg]
+        path = segment.path
+        if not path:
+            self._stop_route()
+            return
+        self._play_at = min(self._play_at + 1, len(path) - 1)
+        self._char = path[self._play_at]
+        self._redraw()
+        if self._play_at < len(path) - 1:
+            self._schedule_tick()
+            return
+        if self._play_seg + 1 >= len(self._segments):
+            self._playing = False
+            self.status.configure(text="도착점에 도착했습니다.")
+            return
+        self._play_seg += 1
+        self._play_at = 0
+        self._show_segment(self._play_seg)
+        self._play_job = self.after(450, self._play_tick)
+
+    def _live_status(self, text: str) -> None:
+        self.after(0, lambda text=text: self.status.configure(text=text))
+
+    def _live_pose(self, map_id: int, world_x: int, world_y: int) -> None:
+        self.after(
+            0,
+            lambda map_id=map_id, world_x=world_x, world_y=world_y: self._apply_live_pose(
+                map_id, world_x, world_y
+            ),
+        )
+
+    def _apply_live_pose(self, map_id: int, world_x: int, world_y: int) -> None:
+        choice = choice_for_raw_map(map_id)
+        if choice is None:
+            return
+        scale = max(1, choice.pixel_scale)
+        nav = (
+            int(world_x - choice.origin_x) // scale,
+            int(world_y - choice.origin_y) // scale,
+        )
+        self._char = nav
+        if self.map_id != choice.pack_id:
+            segment = next(
+                (item for item in self._segments if item.choice.pack_id == choice.pack_id),
+                None,
+            )
+            if segment is not None:
+                clicks = [
+                    (point.nav_x, point.nav_y, point.name) for point in segment.clicks
+                ]
+                self._show_nav(
+                    segment.choice.nav_path,
+                    segment.choice,
+                    path=segment.path,
+                    clicks=clicks,
+                )
+                self._char = nav
+        self._redraw()
+
+    def _live_route(self, segments: list[RouteSegment]) -> None:
+        self.after(0, lambda segments=list(segments): self._apply_replanned(segments))
+
+    def _apply_replanned(self, segments: list[RouteSegment]) -> None:
+        self._segments = segments
+        if not segments:
+            return
+        floors = " → ".join(
+            segment.choice.kr or segment.choice.pack_id for segment in segments
+        )
+        self.route_info.configure(text=floors)
+        self._show_segment(0)
+        self.status.configure(text=f"새 위치에서 다시 계산 · {floors}")
+
+    def _live_done(self, ok: bool, message: str) -> None:
+        self.after(0, lambda ok=ok, message=message: self._finish_live(ok, message))
+
+    def _finish_live(self, ok: bool, message: str) -> None:
+        self._playing = False
+        self.status.configure(text=message)
+        if not ok and message != "이동을 멈췄습니다.":
+            messagebox.showerror(self.title(), message, parent=self)
+
+    def _stop_route(self) -> None:
+        self._playing = False
+        self._live.stop()
+        if self._play_job is not None:
+            try:
+                self.after_cancel(self._play_job)
+            except tk.TclError:
+                pass
+            self._play_job = None
 
 
 def run_dungeon_patrol_editor() -> int:

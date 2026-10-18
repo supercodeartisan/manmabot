@@ -137,6 +137,9 @@ def _emit_body_hop(
         (int(goal[0]), int(goal[1])),
         bodies,
     )
+    from app._04_decision.behaviors.unstick import note_confined_planned_avoid
+
+    note_confined_planned_avoid(blackboard, planned, bodies)
     if planned.click is not None:
         wp = (int(planned.click[0]), int(planned.click[1]))
         _emit_search_click(
@@ -248,6 +251,9 @@ def _follow_body_click(
                 len(bodies),
                 start,
             )
+            from app._04_decision.behaviors.unstick import note_confined_line_closed
+
+            note_confined_line_closed(blackboard)
             blackboard.search_hop_active = False
             blackboard.search_destination = None
             blackboard.search_waypoint = None

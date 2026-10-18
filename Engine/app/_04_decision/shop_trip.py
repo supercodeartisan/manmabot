@@ -58,6 +58,9 @@ def ensure_shopping_mode(blackboard: "Blackboard") -> None:
 def begin_shopping(blackboard: "Blackboard", reason: str = "shop") -> None:
     """Enter ``SHOPPING`` mode (trip arm happens in ``tick_shop_trip``)."""
     del reason
+    from app._04_decision.farm_tour import remember_return_farm
+
+    remember_return_farm(blackboard)
     ensure_shopping_mode(blackboard)
 
 
@@ -529,6 +532,9 @@ def tick_shop_trip(state: "GameState", blackboard: "Blackboard") -> Status | Non
     blackboard.scratch[SCRATCH_SHOP_BEHAVIOR] = behavior_id
     blackboard.scratch[SCRATCH_SHOP_TRIP] = True
     blackboard.scratch[SCRATCH_SHOP_ID] = behavior_id
+    from app._04_decision.farm_tour import remember_return_farm
+
+    remember_return_farm(blackboard)
     ensure_shopping_mode(blackboard)
 
     # Open only when live world coords are at the stall. After a talking-scroll

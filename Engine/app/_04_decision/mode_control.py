@@ -427,7 +427,9 @@ def begin_retreat(
     clear_engage_state(blackboard)
     clear_loot_hop(blackboard)
     from app._04_decision.world_nav import clear_world_nav_run
+    from app._04_decision.farm_tour import remember_return_farm
 
+    remember_return_farm(blackboard)
     clear_world_nav_run(blackboard)
 
     set_mode(blackboard, PlayerMode.RETREATING)
@@ -642,6 +644,20 @@ def finish_retreat(blackboard: "Blackboard") -> None:
 
     # Mother tree / teleport / scroll: the saved cell belongs to the map we left.
     if not on_hunt:
+        from app._04_decision.dungeon_floor_route import (
+            SCRATCH_DUNGEON_FLOOR_ROUTE,
+            inside_target_dungeon,
+        )
+
+        if inside_target_dungeon(blackboard):
+            # Same complex, other floor: plan again from here. Do not walk
+            # back to the entrance.
+            blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
+            get_logger("hp").info(
+                "retreat inside dungeon family — floor route resume"
+            )
+            set_mode(blackboard, PlayerMode.FARMING)
+            return
         get_logger("hp").info(
             "retreat off hunt map — world nav return dropped stash=%s purpose=%s",
             stash,
@@ -716,11 +732,8 @@ def complete_travel_arrival(blackboard: "Blackboard") -> None:
         set_mode(blackboard, PlayerMode.FARMING)
         return
     if purpose in (PURPOSE_NEXT_FARM, PURPOSE_ENTER_FARM, None):
-        from app._04_decision.farm_time import reset_farm_timer
-
-        # Only a farm rotation starts a fresh in-farm stay clock.
-        if purpose is PURPOSE_NEXT_FARM:
-            reset_farm_timer(blackboard)
+        # The stay clock already started when the character entered the rect.
+        # Arriving at the center must not zero it.
         blackboard.farm_visit.clear()
         blackboard.scratch.pop("changing_area", None)
         set_mode(blackboard, PlayerMode.FARMING)

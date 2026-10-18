@@ -1,0 +1,386 @@
+==== bot-20261018-185559.log
+2026-10-18 18:55:59.291  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 18:56:00.062  INFO   session     핫바 스캔 완료 · 파워 업@box1/f8, 아머 업@box1/f6, 힐@box1/f9, HP 물약@box2/f11, 텔레포트@box1/f10, 말하는 두루마리@box1/f5, 마더 트리@box2/f6, HP를 MP로@box1/f12, 해독제@box2/f7
+2026-10-18 18:56:00.282  INFO   session     Live mapId=4 (MapSubsystem, every-tick refresh)
+2026-10-18 18:56:00.452  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\farms.yaml safe=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\safe.yaml home=D:\ManmabotV1_final_final_final\
+2026-10-18 18:56:00.520  INFO   decision    mode=world_nav goal=buff action=buff target=- sticky=- origin=(996,694) shop=0 scrolled=0 sides=- reason='armor_up' status=success
+2026-10-18 18:56:02.677  INFO   nav         [world_nav] STATE=PLAN_OK reason=start cost=28 steps=4 start=map4,33444,32822 end=map53,32810,32731
+2026-10-18 18:56:02.678  INFO   nav         [world_nav] STATE=STEP_BEGIN i=1 n=4 op=talking_scroll summary="SCROLL -> 기란 마을/텔레포터 map4 (33437,32798) [+10]"
+2026-10-18 18:56:02.678  INFO   nav         [world_nav] STATE=SCROLL_START dest="기란 마을/텔레포터" map=4 x=33437 y=32798 wheels=0
+2026-10-18 18:56:02.678  INFO   nav         talking scroll uv emit land_pack=mainland mapId=4 xy=(33437,32798) wheels=0 reason=world nav scroll 기란 마을/텔레포터
+2026-10-18 18:56:02.679  INFO   decision    mode=world_nav goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(996,694) shop=0 scrolled=0 sides=- reason='world nav scroll 기란 마을/텔레포터' status=success
+2026-10-18 18:56:03.268  INFO   scroll      talking scroll key=f5 box=1 opened=True wait=2.00s reason=world nav scroll 기란 마을/텔레포터
+2026-10-18 18:56:03.268  INFO   scroll      talking scroll click uv=(0.043,0.460) screen=(101,672) wheels=0
+2026-10-18 18:56:04.071  INFO   decision    mode=world_nav goal=world_nav action=idle target=- sticky=- origin=(996,694) shop=0 scrolled=0 sides=- reason='world nav scroll land' status=success
+2026-10-18 18:56:05.058  INFO   nav         talking scroll arrival ok spot=world_nav_uv map4 (33437,32798) pack=mainland
+2026-10-18 18:56:05.266  INFO   nav         [world_nav] STATE=SCROLL_LAND map=4 x=33437 y=32798
+2026-10-18 18:56:05.266  INFO   nav         [world_nav] STATE=SCROLL_SETTLE map=4 wait_s=2.0
+2026-10-18 18:56:07.292  INFO   nav         [world_nav] STATE=STEP_OK i=1 n=4 op=talking_scroll
+2026-10-18 18:56:07.441  INFO   nav         [world_nav] STATE=STEP_BEGIN i=3 n=4 op=npc_teleporter summary="NPC_TP teleport_giran_ch map4(33437,32795) -> gate (33311,33062) dest_map=53 adena=330 [+15]"
+2026-10-18 18:56:07.577  INFO   nav         [world_nav] STATE=NPC_TP_START behavior=teleport_giran_ch map=4 x=33437 y=32795 adena=330 gate=tmo:4:98
+2026-10-18 18:56:07.578  INFO   decision    mode=world_nav goal=world_nav_teleporter action=shop_run target=- sticky=- origin=(989,670) shop=0 scrolled=0 sides=- reason='world nav teleporter:teleport_giran_ch' status=success
+2026-10-18 18:56:10.570  INFO   decision    mode=world_nav goal=world_nav action=idle target=- sticky=- origin=(989,670) shop=0 scrolled=0 sides=- reason='world nav teleporter settle' status=success
+2026-10-18 18:56:11.566  INFO   nav         [world_nav] STATE=NPC_TP_LAND behavior=teleport_giran_ch map=4 x=33314 y=33062 dest=53
+2026-10-18 18:56:11.566  INFO   nav         [world_nav] STATE=STEP_OK i=3 n=4 op=npc_teleporter
+2026-10-18 18:56:11.619  INFO   decision    mode=world_nav goal=world_nav_gate action=gate target=- sticky=- origin=(866,934) shop=0 scrolled=0 sides=- reason='world nav gate' status=success
+2026-10-18 18:56:16.324  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 18:56:16.405  INFO   session     Live mapId 4→53
+2026-10-18 18:56:16.672  INFO   nav         dungeon entrance reached target=giran_dungeon_F2 (floor route pending)
+2026-10-18 18:56:17.695  INFO   nav         dungeon floor route planned dungeon=기란 던전 current=giran_dungeon_F1 target=giran_dungeon_F2 steps=2
+2026-10-18 18:56:17.695  INFO   nav         dungeon floor step index=0 type=walk cell=(92,147)
+2026-10-18 18:56:17.780  INFO   travel      hop begin wp=(167, 94) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:17.781  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(170,91) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:56:19.245  INFO   travel      hop begin wp=(165, 96) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:21.308  INFO   travel      hop begin wp=(163, 98) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:22.439  INFO   travel      hop begin wp=(164, 100) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:24.404  INFO   travel      hop begin wp=(164, 103) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:25.725  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(164,101) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:56:26.427  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:27.374  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:27.898  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:28.275  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:28.946  INFO   travel      hop begin wp=(161, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:31.402  INFO   travel      hop begin wp=(159, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:34.551  INFO   travel      hop begin wp=(156, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:35.286  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(159,109) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:56:36.522  INFO   travel      hop begin wp=(153, 112) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:38.540  INFO   decision    mode=traveling goal=combat action=attack target=140 sticky=140 origin=(153,111) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:56:48.895  INFO   travel      hop begin wp=(152, 115) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:48.895  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(152,112) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:56:51.787  INFO   travel      hop begin wp=(152, 117) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:52.922  INFO   travel      hop begin wp=(152, 119) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:54.808  INFO   travel      hop begin wp=(152, 120) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:55.209  INFO   travel      hop begin wp=(152, 120) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:55.691  INFO   travel      hop begin wp=(152, 120) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:56.005  INFO   travel      hop begin wp=(149, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:57.818  INFO   travel      hop begin wp=(147, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:56:59.424  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(149,123) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:56:59.856  INFO   travel      hop begin wp=(146, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:00.435  INFO   travel      hop begin wp=(146, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:00.910  INFO   travel      hop begin wp=(143, 126) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:03.822  INFO   travel      hop begin wp=(139, 129) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:05.965  INFO   travel      hop begin wp=(141, 131) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:06.828  INFO   travel      hop begin wp=(142, 133) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:08.110  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(141,131) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:57:08.876  INFO   travel      hop begin wp=(142, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:10.841  INFO   travel      hop begin wp=(142, 139) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:12.334  INFO   decision    mode=traveling goal=combat action=attack target=145 sticky=145 origin=(142,137) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:57:13.151  INFO   travel      hop begin wp=(142, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:13.151  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(142,139) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:57:14.615  INFO   decision    mode=traveling goal=combat action=attack target=145 sticky=145 origin=(142,139) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:57:21.817  INFO   travel      hop begin wp=(140, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:21.817  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(142,140) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:57:22.877  INFO   decision    mode=traveling goal=loot action=pickup target=148 sticky=- origin=(142,140) shop=0 scrolled=0 sides=- reason='engage item' status=success
+2026-10-18 18:57:23.755  INFO   travel      hop begin wp=(140, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:23.756  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(142,140) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:57:24.463  INFO   travel      hop begin wp=(140, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:24.969  INFO   travel      hop begin wp=(140, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:25.431  INFO   travel      hop begin wp=(137, 139) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:27.107  INFO   travel      hop begin wp=(135, 137) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:29.146  INFO   travel      hop begin wp=(135, 134) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:31.153  INFO   travel      hop begin wp=(132, 131) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:33.198  INFO   decision    mode=traveling goal=combat action=attack target=149 sticky=149 origin=(133,132) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:57:34.868  INFO   decision    mode=traveling goal=combat action=attack target=150 sticky=150 origin=(132,131) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 18:57:37.091  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:39.345  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:41.604  INFO   hp          hp idle ratio=0.71 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:45.183  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:47.396  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:49.577  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:49.649  INFO   decision    mode=traveling goal=combat action=attack target=150 sticky=150 origin=(132,131) shop=0 scrolled=0 sides=- reason='attack target' status=success (repeat x50)
+2026-10-18 18:57:50.614  INFO   decision    mode=traveling goal=combat action=attack target=149 sticky=149 origin=(132,131) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 18:57:51.839  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:54.095  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:54.756  INFO   travel      hop begin wp=(129, 130) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:54.848  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(132,131) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 18:57:55.317  INFO   travel      hop begin wp=(130, 132) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:56.637  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:56.697  INFO   travel      hop begin wp=(128, 132) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:58.283  INFO   travel      hop begin wp=(127, 132) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:57:58.920  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:57:59.427  INFO   travel      hop begin wp=(124, 135) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:01.059  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:01.471  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:02.365  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:02.969  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:03.502  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:03.566  INFO   travel      hop begin wp=(119, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:05.472  INFO   travel      hop begin wp=(117, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:06.052  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:07.461  INFO   travel      hop begin wp=(115, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:08.117  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:08.513  INFO   travel      hop begin wp=(113, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:10.164  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:10.259  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(114,138) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:58:11.670  INFO   travel      pause reclick kind=travel wp=(113, 141) moving=0 gap=3.16 reason=dungeon floor walk 92,147
+2026-10-18 18:58:11.671  INFO   travel      hop begin wp=(113, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:12.208  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:13.443  INFO   travel      hop begin wp=(110, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:14.295  INFO   hp          hp idle ratio=0.77 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:15.489  INFO   travel      hop begin wp=(108, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:16.327  INFO   hp          hp idle ratio=0.77 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:16.518  INFO   travel      hop begin wp=(106, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:18.503  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:18.548  INFO   travel      hop begin wp=(104, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:19.657  INFO   travel      hop begin wp=(104, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:20.230  INFO   travel      hop begin wp=(104, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:20.701  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:20.744  INFO   travel      hop begin wp=(100, 143) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:22.158  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(104,140) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 18:58:22.726  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:23.641  INFO   travel      hop begin wp=(98, 146) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:24.842  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:25.621  INFO   travel      hop begin wp=(97, 144) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:26.703  INFO   travel      hop begin wp=(94, 145) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:27.262  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:28.702  INFO   travel      hop begin wp=(92, 147) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 18:58:29.304  INFO   hp          hp idle ratio=0.78 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:30.712  INFO   nav         dungeon floor transition pending giran_dungeon_F1->giran_dungeon_F2 cell=(32732,32787)
+2026-10-18 18:58:30.818  INFO   decision    mode=farming goal=? action=gate target=- sticky=- origin=(92,147) shop=0 scrolled=0 sides=- reason='dungeon floor transition' status=success
+2026-10-18 18:58:31.719  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 18:58:31.737  INFO   nav         dungeon floor transition result ok=True map=54
+2026-10-18 18:58:31.822  INFO   session     Live mapId 53→54
+2026-10-18 18:58:31.908  INFO   hp          hp idle ratio=0.79 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:32.019  INFO   decision    mode=farming goal=combat action=attack target=161 sticky=161 origin=(170,153) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:58:32.434  INFO   decision    mode=farming goal=combat action=attack target=162 sticky=162 origin=(170,153) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 18:58:33.849  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(170,153) shop=0 scrolled=0 sides=- reason='patrol waypoint 1' status=success
+2026-10-18 18:58:34.523  INFO   hp          hp idle ratio=0.79 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:34.847  INFO   decision    mode=traveling goal=combat action=attack target=162 sticky=162 origin=(170,153) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:58:36.731  INFO   hp          hp idle ratio=0.79 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:38.919  INFO   hp          hp idle ratio=0.72 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:39.334  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(169,152) shop=0 scrolled=0 sides=- reason='patrol waypoint 1' status=success
+2026-10-18 18:58:41.027  INFO   hp          hp idle ratio=0.72 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:43.458  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:45.493  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:47.646  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:49.722  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:51.962  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:52.062  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(158,149) shop=0 scrolled=0 sides=- reason='patrol waypoint 2' status=success (repeat x50)
+2026-10-18 18:58:54.027  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:56.336  INFO   hp          hp idle ratio=0.74 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:58.003  INFO   decision    mode=traveling goal=combat action=attack target=168 sticky=168 origin=(153,148) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:58:58.600  INFO   hp          hp idle ratio=0.74 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:58:59.737  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(152,150) shop=0 scrolled=0 sides=- reason='patrol waypoint 2' status=success
+2026-10-18 18:59:00.623  INFO   hp          hp idle ratio=0.74 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:02.682  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:05.020  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:07.083  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:09.260  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:11.713  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:12.535  INFO   decision    mode=traveling goal=combat action=attack target=173 sticky=173 origin=(137,146) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 18:59:13.907  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:15.038  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(136,146) shop=0 scrolled=0 sides=- reason='patrol waypoint 2' status=success
+2026-10-18 18:59:15.564  INFO   decision    mode=traveling goal=heal action=heal target=- sticky=- origin=(136,146) shop=0 scrolled=0 sides=- reason='recover hp' status=success
+2026-10-18 18:59:17.196  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:17.373  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(134,144) shop=0 scrolled=0 sides=- reason='patrol waypoint 2' status=success
+2026-10-18 18:59:19.277  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 18:59:19.641  INFO   decision    mode=traveling goal=heal action=heal target=- sticky=- origin=(133,143) shop=0 scrolled=0 sides=- reason='recover hp' status=success
+2026-10-18 18:59:21.367  INFO   decision    mode=traveling goal=loot action=searching target=177 sticky=- origin=(131,141) shop=0 scrolled=0 sides=- reason='walk onto item' status=success
+2026-10-18 18:59:29.387  INFO   decision    mode=traveling goal=loot action=pickup target=177 sticky=- origin=(123,135) shop=0 scrolled=0 sides=- reason='loot target' status=success
+2026-10-18 18:59:29.772  INFO   decision    mode=traveling goal=loot action=searching target=180 sticky=- origin=(123,135) shop=0 scrolled=0 sides=- reason='walk onto item' status=success
+2026-10-18 18:59:34.389  INFO   decision    mode=traveling goal=loot action=pickup target=180 sticky=- origin=(118,137) shop=0 scrolled=0 sides=- reason='loot target' status=success
+2026-10-18 18:59:35.142  INFO   nav         talking scroll emit spot=ti_general_goods purpose=shop wheels=0 reason=go to shop (sell_except_keep_ch)
+2026-10-18 18:59:35.142  INFO   shop        shop scrolled behavior=sell_except_keep_ch retry=0
+2026-10-18 18:59:35.143  INFO   decision    mode=shopping goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(118,137) shop=1 scrolled=1 sides=- reason='go to shop (sell_except_keep_ch)' status=success
+2026-10-18 18:59:35.746  INFO   scroll      talking scroll key=f5 box=1 opened=True wait=2.00s reason=go to shop (sell_except_keep_ch)
+2026-10-18 18:59:35.746  INFO   scroll      talking scroll click uv=(0.088,0.245) screen=(139,540) wheels=0
+2026-10-18 18:59:38.279  INFO   session     Live mapId 54→0
+2026-10-18 18:59:38.349  INFO   nav         farms=4 safe=11 home=(385, 246) (files farm=D:\ManmabotV1_final_final_final\Engine\data\maps\talking_island\farms.yaml safe=D:\ManmabotV1_final_final_final\Engine\data\maps\talking_island\safe.yaml home=D:\ManmabotV1
+2026-10-18 18:59:38.616  INFO   nav         talking scroll arrival ok spot=ti_general_goods map0 (32642,32949) pack=talking_island
+2026-10-18 18:59:38.810  INFO   decision    mode=shopping goal=shop action=shop_stop target=- sticky=- origin=(386,245) shop=1 scrolled=1 sides=- reason='stop at shop' status=success
+2026-10-18 18:59:39.514  INFO   decision    mode=shopping goal=shop action=shop_run target=- sticky=- origin=(386,245) shop=1 scrolled=1 sides=- reason='shop:sell_except_keep_ch' status=success
+2026-10-18 18:59:49.840  INFO   nav         talking scroll emit spot=giran_weapon purpose=shop wheels=0 reason=go to shop (sell_except_keep_weapon_ch)
+2026-10-18 18:59:49.849  INFO   shop        shop scrolled behavior=sell_except_keep_weapon_ch retry=0
+2026-10-18 18:59:49.849  INFO   decision    mode=shopping goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(386,245) shop=1 scrolled=1 sides=- reason='go to shop (sell_except_keep_weapon_ch)' status=success
+2026-10-18 18:59:50.475  INFO   scroll      talking scroll key=f5 box=1 opened=True wait=2.00s reason=go to shop (sell_except_keep_weapon_ch)
+2026-10-18 18:59:50.475  INFO   scroll      talking scroll click uv=(0.088,0.505) screen=(139,700) wheels=0
+2026-10-18 18:59:53.038  INFO   session     Live mapId 0→4
+2026-10-18 18:59:53.140  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\farms.yaml safe=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\safe.yaml home=D:\ManmabotV1_final_final_final\
+2026-10-18 18:59:53.297  INFO   nav         talking scroll arrival ok spot=giran_weapon map4 (33388,32672) pack=mainland
+2026-10-18 18:59:53.505  INFO   decision    mode=shopping goal=shop action=shop_stop target=- sticky=- origin=(940,544) shop=1 scrolled=1 sides=- reason='stop at shop' status=success
+2026-10-18 18:59:54.199  INFO   decision    mode=shopping goal=shop action=shop_run target=- sticky=- origin=(940,544) shop=1 scrolled=1 sides=- reason='shop:sell_except_keep_weapon_ch' status=success
+-- matches 200
+==== bot-20261018-190032.log
+2026-10-18 19:00:32.255  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 19:00:32.727  INFO   session     핫바 스캔 완료 · 파워 업@box1/f8, 아머 업@box1/f6, 힐@box1/f9, HP 물약@box2/f11, 텔레포트@box1/f10, 말하는 두루마리@box1/f5, 마더 트리@box2/f6, HP를 MP로@box1/f12, 해독제@box2/f7
+2026-10-18 19:00:32.948  INFO   session     Live mapId=4 (MapSubsystem, every-tick refresh)
+2026-10-18 19:00:33.054  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\farms.yaml safe=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\safe.yaml home=D:\ManmabotV1_final_final_final\
+2026-10-18 19:00:34.699  INFO   nav         [world_nav] STATE=PLAN_OK reason=start cost=28 steps=4 start=map4,33388,32672 end=map53,32810,32731
+2026-10-18 19:00:34.700  INFO   nav         [world_nav] STATE=STEP_BEGIN i=1 n=4 op=talking_scroll summary="SCROLL -> 기란 마을/텔레포터 map4 (33437,32798) [+10]"
+2026-10-18 19:00:34.700  INFO   nav         [world_nav] STATE=SCROLL_START dest="기란 마을/텔레포터" map=4 x=33437 y=32798 wheels=0
+2026-10-18 19:00:34.700  INFO   nav         talking scroll uv emit land_pack=mainland mapId=4 xy=(33437,32798) wheels=0 reason=world nav scroll 기란 마을/텔레포터
+2026-10-18 19:00:34.701  INFO   decision    mode=world_nav goal=talking_scroll action=use_talking_scroll target=- sticky=- origin=(940,544) shop=0 scrolled=0 sides=- reason='world nav scroll 기란 마을/텔레포터' status=success
+2026-10-18 19:00:35.427  INFO   scroll      talking scroll key=f5 box=1 opened=True wait=2.00s reason=world nav scroll 기란 마을/텔레포터
+2026-10-18 19:00:35.429  INFO   scroll      talking scroll click uv=(0.043,0.460) screen=(101,672) wheels=0
+2026-10-18 19:00:36.190  INFO   decision    mode=world_nav goal=world_nav action=idle target=- sticky=- origin=(940,544) shop=0 scrolled=0 sides=- reason='world nav scroll land' status=success
+2026-10-18 19:00:37.344  INFO   nav         talking scroll arrival ok spot=world_nav_uv map4 (33437,32798) pack=mainland
+2026-10-18 19:00:37.399  INFO   nav         [world_nav] STATE=SCROLL_LAND map=4 x=33437 y=32798
+2026-10-18 19:00:37.399  INFO   nav         [world_nav] STATE=SCROLL_SETTLE map=4 wait_s=2.0
+2026-10-18 19:00:39.417  INFO   nav         [world_nav] STATE=STEP_OK i=1 n=4 op=talking_scroll
+2026-10-18 19:00:39.559  INFO   nav         [world_nav] STATE=STEP_BEGIN i=3 n=4 op=npc_teleporter summary="NPC_TP teleport_giran_ch map4(33437,32795) -> gate (33311,33062) dest_map=53 adena=330 [+15]"
+2026-10-18 19:00:39.714  INFO   nav         [world_nav] STATE=NPC_TP_START behavior=teleport_giran_ch map=4 x=33437 y=32795 adena=330 gate=tmo:4:98
+2026-10-18 19:00:39.715  INFO   decision    mode=world_nav goal=world_nav_teleporter action=shop_run target=- sticky=- origin=(989,670) shop=0 scrolled=0 sides=- reason='world nav teleporter:teleport_giran_ch' status=success
+2026-10-18 19:00:42.920  INFO   decision    mode=world_nav goal=world_nav action=idle target=- sticky=- origin=(989,670) shop=0 scrolled=0 sides=- reason='world nav teleporter settle' status=success
+2026-10-18 19:00:43.837  INFO   nav         [world_nav] STATE=NPC_TP_LAND behavior=teleport_giran_ch map=4 x=33314 y=33062 dest=53
+2026-10-18 19:00:43.837  INFO   nav         [world_nav] STATE=STEP_OK i=3 n=4 op=npc_teleporter
+2026-10-18 19:00:43.910  INFO   decision    mode=world_nav goal=world_nav_gate action=gate target=- sticky=- origin=(866,934) shop=0 scrolled=0 sides=- reason='world nav gate' status=success
+2026-10-18 19:00:48.467  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 19:00:48.571  INFO   session     Live mapId 4→53
+2026-10-18 19:00:48.649  INFO   nav         dungeon entrance reached target=giran_dungeon_F4 (floor route pending)
+2026-10-18 19:00:49.057  INFO   nav         dungeon floor route planned dungeon=기란 던전 current=giran_dungeon_F1 target=giran_dungeon_F4 steps=6
+2026-10-18 19:00:49.057  INFO   nav         dungeon floor step index=0 type=walk cell=(92,147)
+2026-10-18 19:00:49.193  INFO   travel      hop begin wp=(167, 94) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:49.194  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(170,91) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 19:00:51.468  INFO   travel      hop begin wp=(164, 97) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:53.498  INFO   travel      hop begin wp=(164, 99) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:54.541  INFO   travel      hop begin wp=(164, 101) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:56.569  INFO   travel      hop begin wp=(164, 104) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:57.540  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(165,102) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:00:58.592  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:59.126  INFO   travel      hop begin wp=(164, 105) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:00:59.548  INFO   travel      hop begin wp=(161, 108) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:01.656  INFO   travel      hop begin wp=(159, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:02.584  INFO   travel      hop begin wp=(157, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:04.689  INFO   travel      hop begin wp=(156, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:05.248  INFO   travel      hop begin wp=(156, 109) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:05.867  INFO   travel      hop begin wp=(153, 112) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:07.311  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(154,109) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:01:08.693  INFO   travel      hop begin wp=(152, 115) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:10.681  INFO   travel      hop begin wp=(152, 117) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:11.676  INFO   travel      hop begin wp=(152, 119) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:14.016  INFO   travel      hop begin wp=(152, 120) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:14.483  INFO   travel      hop begin wp=(152, 120) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:14.897  INFO   travel      hop begin wp=(149, 122) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:16.215  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(152,121) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:01:16.722  INFO   travel      hop begin wp=(147, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:18.850  INFO   travel      hop begin wp=(146, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:19.277  INFO   travel      hop begin wp=(146, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:19.695  INFO   travel      hop begin wp=(146, 123) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:20.001  INFO   decision    mode=traveling goal=combat action=attack target=318 sticky=318 origin=(146,123) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:01:25.686  INFO   decision    mode=traveling goal=loot action=pickup target=320 sticky=- origin=(144,123) shop=0 scrolled=0 sides=- reason='engage item' status=success
+2026-10-18 19:01:27.241  INFO   travel      hop begin wp=(141, 126) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:27.242  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(144,123) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 19:01:28.815  INFO   travel      hop begin wp=(139, 128) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:30.921  INFO   travel      hop begin wp=(140, 130) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:31.865  INFO   travel      hop begin wp=(142, 132) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:33.823  INFO   travel      hop begin wp=(143, 133) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:34.902  INFO   travel      hop begin wp=(143, 134) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:35.862  INFO   travel      hop begin wp=(143, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:36.873  INFO   travel      hop begin wp=(143, 137) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:37.281  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(144,135) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:01:37.998  INFO   travel      hop begin wp=(143, 139) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:38.916  INFO   travel      hop begin wp=(143, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:39.971  INFO   travel      hop begin wp=(142, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:40.353  INFO   travel      hop begin wp=(142, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:40.761  INFO   travel      hop begin wp=(142, 140) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:41.312  INFO   travel      hop begin wp=(140, 141) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:42.907  INFO   hp          hp idle ratio=0.79 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:01:42.967  INFO   travel      hop begin wp=(138, 139) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:44.945  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:01:44.998  INFO   travel      hop begin wp=(135, 137) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:46.986  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:01:47.037  INFO   travel      hop begin wp=(135, 134) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:47.920  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(135,137) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:01:49.024  INFO   hp          hp idle ratio=0.75 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:01:49.090  INFO   travel      hop begin wp=(132, 131) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:51.024  INFO   travel      hop begin wp=(130, 129) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:51.613  INFO   hp          hp idle ratio=0.72 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:01:52.194  INFO   travel      hop begin wp=(128, 131) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:53.150  INFO   decision    mode=traveling goal=heal action=heal target=- sticky=- origin=(130,129) shop=0 scrolled=0 sides=- reason='recover hp' status=success
+2026-10-18 19:01:55.708  INFO   travel      hop begin wp=(124, 133) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:01:55.708  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(127,130) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 19:01:59.136  INFO   travel      hop begin wp=(123, 135) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:01.169  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:01.712  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:02.071  INFO   travel      hop begin wp=(123, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:02.333  INFO   travel      hop begin wp=(120, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:04.255  INFO   travel      hop begin wp=(118, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:05.225  INFO   travel      hop begin wp=(116, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:06.776  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(118,138) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:02:07.197  INFO   travel      hop begin wp=(115, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:08.339  INFO   travel      hop begin wp=(112, 136) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:10.237  INFO   travel      hop begin wp=(109, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:11.316  INFO   hp          hp idle ratio=0.80 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:12.370  INFO   travel      hop begin wp=(106, 138) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:13.479  INFO   hp          hp idle ratio=0.76 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:14.445  INFO   travel      hop begin wp=(103, 139) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:15.322  INFO   decision    mode=traveling goal=combat action=attack target=329 sticky=329 origin=(105,138) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:02:15.679  INFO   hp          hp idle ratio=0.73 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:17.886  INFO   hp          hp idle ratio=0.70 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:19.759  INFO   decision    mode=traveling goal=combat action=attack target=325 sticky=325 origin=(103,139) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 19:02:20.063  INFO   hp          hp idle ratio=0.69 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:22.414  INFO   hp          hp idle ratio=0.68 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:24.498  INFO   hp          hp idle ratio=0.52 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:26.532  INFO   hp          hp idle ratio=0.52 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:28.837  INFO   hp          hp idle ratio=0.45 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:30.939  INFO   hp          hp idle ratio=0.37 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:33.191  INFO   hp          hp idle ratio=0.38 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:35.199  INFO   decision    mode=traveling goal=combat action=attack target=325 sticky=325 origin=(103,139) shop=0 scrolled=0 sides=- reason='attack target' status=success (repeat x50)
+2026-10-18 19:02:35.474  INFO   hp          hp idle ratio=0.38 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:02:36.771  INFO   decision    mode=traveling goal=heal action=heal target=- sticky=325 origin=(103,139) shop=0 scrolled=0 sides=- reason='recover hp' status=success
+2026-10-18 19:02:42.349  INFO   decision    mode=traveling goal=combat action=attack target=329 sticky=329 origin=(103,139) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 19:02:44.400  INFO   travel      hop begin wp=(100, 142) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:44.401  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(103,139) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success
+2026-10-18 19:02:46.653  INFO   travel      hop begin wp=(99, 143) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:47.676  INFO   travel      hop begin wp=(99, 143) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:48.221  INFO   travel      hop begin wp=(99, 143) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:48.861  INFO   travel      hop begin wp=(97, 144) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:51.205  INFO   travel      pause reclick kind=travel wp=(97, 144) moving=0 gap=2.34 reason=dungeon floor walk 92,147
+2026-10-18 19:02:51.205  INFO   travel      hop begin wp=(97, 144) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:51.770  INFO   travel      hop begin wp=(94, 145) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:52.227  INFO   travel      hop begin wp=(96, 146) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:52.658  INFO   travel      hop begin wp=(94, 145) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:54.453  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(96,146) shop=0 scrolled=0 sides=- reason='dungeon floor walk 92,147' status=success (repeat x50)
+2026-10-18 19:02:54.698  INFO   travel      hop begin wp=(92, 147) purpose=dungeon_floor reason=dungeon floor walk 92,147
+2026-10-18 19:02:56.855  INFO   nav         dungeon floor transition pending giran_dungeon_F1->giran_dungeon_F2 cell=(32732,32787)
+2026-10-18 19:02:56.856  INFO   decision    mode=farming goal=? action=gate target=- sticky=- origin=(92,147) shop=0 scrolled=0 sides=- reason='dungeon floor transition' status=success
+2026-10-18 19:02:57.753  INFO   nav         farms=0 safe=0 home=None (files farm=None safe=D:\ManmabotV1_final_final_final\Engine\areas\safe_areas.yaml home=D:\ManmabotV1_final_final_final\Engine\areas\home.yaml)
+2026-10-18 19:02:57.769  INFO   nav         dungeon floor transition result ok=True map=54
+2026-10-18 19:02:57.867  INFO   session     Live mapId 53→54
+2026-10-18 19:02:57.946  INFO   nav         dungeon floor transition confirmed map=54
+2026-10-18 19:02:57.946  INFO   nav         dungeon floor step index=2 type=walk cell=(88,171)
+2026-10-18 19:02:58.024  INFO   decision    mode=traveling goal=combat action=attack target=333 sticky=333 origin=(170,153) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:02:59.060  INFO   decision    mode=traveling goal=combat action=attack target=331 sticky=331 origin=(170,153) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:03:02.414  INFO   travel      hop begin wp=(167, 150) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:02.415  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(170,153) shop=0 scrolled=0 sides=- reason='dungeon floor walk 88,171' status=success
+2026-10-18 19:03:03.470  INFO   decision    mode=traveling goal=combat action=attack target=337 sticky=337 origin=(170,153) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:03:09.962  INFO   travel      hop begin wp=(166, 151) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:09.962  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(169,152) shop=0 scrolled=0 sides=- reason='dungeon floor walk 88,171' status=success
+2026-10-18 19:03:12.080  INFO   travel      hop begin wp=(164, 152) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:12.569  INFO   decision    mode=traveling goal=combat action=attack target=339 sticky=339 origin=(167,151) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:03:13.304  INFO   travel      hop begin wp=(164, 152) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:13.304  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(165,152) shop=0 scrolled=0 sides=- reason='dungeon floor walk 88,171' status=success
+2026-10-18 19:03:14.766  INFO   travel      hop begin wp=(164, 152) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:15.177  INFO   travel      hop begin wp=(161, 149) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:17.113  INFO   travel      hop begin wp=(159, 149) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:18.061  INFO   travel      hop begin wp=(158, 149) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:19.091  INFO   travel      hop begin wp=(158, 149) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:19.905  INFO   travel      hop begin wp=(158, 149) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:20.510  INFO   travel      hop begin wp=(154, 147) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:23.274  INFO   travel      hop begin wp=(154, 147) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:23.842  INFO   travel      hop begin wp=(154, 147) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:24.460  INFO   travel      hop begin wp=(151, 150) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:26.224  INFO   travel      hop begin wp=(149, 150) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:26.225  INFO   decision    mode=traveling goal=traveling action=traveling target=- sticky=- origin=(152,149) shop=0 scrolled=0 sides=- reason='dungeon floor walk 88,171' status=success (repeat x50)
+2026-10-18 19:03:28.230  INFO   travel      hop begin wp=(146, 148) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:30.378  INFO   travel      hop begin wp=(143, 146) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:32.438  INFO   travel      hop begin wp=(140, 146) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:34.302  INFO   travel      hop begin wp=(138, 146) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:35.430  INFO   travel      hop begin wp=(138, 146) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:35.941  INFO   travel      hop begin wp=(138, 146) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:36.308  INFO   travel      hop begin wp=(134, 143) purpose=dungeon_floor reason=dungeon floor walk 88,171
+2026-10-18 19:03:37.370  INFO   decision    mode=traveling goal=combat action=attack target=347 sticky=347 origin=(136,146) shop=0 scrolled=0 sides=- reason='screen engage' status=success
+2026-10-18 19:03:48.383  INFO   decision    mode=traveling goal=combat action=attack target=351 sticky=351 origin=(134,144) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 19:03:48.748  INFO   decision    mode=traveling goal=combat action=attack target=347 sticky=347 origin=(134,144) shop=0 scrolled=0 sides=- reason='attack target' status=success
+2026-10-18 19:03:57.623  INFO   hp          hp idle ratio=0.66 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:03:59.772  INFO   hp          hp idle ratio=0.45 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:04:01.903  INFO   hp          hp idle ratio=0.37 can=heal,mother_tree,teleport,safe_zone
+2026-10-18 19:04:02.551  INFO   hp          hp action=mother_tree
+2026-10-18 19:04:02.551  INFO   hp          begin retreat reason=hp scroll=False mother_tree=True teleport=False prefer_scroll=False
+2026-10-18 19:04:02.613  INFO   decision    mode=retreating goal=mother_tree action=return_to_mother_tree target=- sticky=- origin=(134,144) shop=0 scrolled=0 sides=pickup reason='return to mother tree' status=success
+2026-10-18 19:04:02.806  INFO   action      skill press name=mother_tree box=2 key=f6 double=0
+2026-10-18 19:04:04.368  INFO   session     Live mapId 54→4
+2026-10-18 19:04:04.464  INFO   nav         farms=6 safe=0 home=None (files farm=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\farms.yaml safe=D:\ManmabotV1_final_final_final\Engine\data\maps\mainland\safe.yaml home=D:\ManmabotV1_final_final_final\
+2026-10-18 19:04:04.565  INFO   decision    mode=retreating goal=mother_tree action=idle target=- sticky=- origin=(326,656) shop=0 scrolled=0 sides=- reason='recharging at mother tree' status=success
+2026-10-18 19:04:15.620  INFO   decision    mode=retreating goal=mother_tree action=idle target=- sticky=- origin=(609,217) shop=0 scrolled=0 sides=- reason='recharging at mother tree' status=success (repeat x50)
+-- matches 182

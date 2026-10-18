@@ -75,6 +75,10 @@ def main() -> int:
             from action_view.action_view_gui import run_action_view
 
             return int(run_action_view())
+        if "--world-nav" in sys.argv:
+            from world_nav_probe.world_nav_gui import run_world_nav_probe
+
+            return int(run_world_nav_probe())
         if "--ui" in sys.argv:
             # Legacy ttk console: run.py --ui tk
             try:

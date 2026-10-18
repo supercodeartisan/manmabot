@@ -22,6 +22,7 @@ _TOOL_FLAGS = (
     "--memory-bench",
     "--follow-player",
     "--action-view",
+    "--world-nav",
 )
  
 

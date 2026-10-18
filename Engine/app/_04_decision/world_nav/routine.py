@@ -148,16 +148,32 @@ class RoutineCursor:
         self.cycle_start_index = self.index
 
 
-def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
+def goal_for_entry(
+    entry: dict[str, Any],
+    blackboard: Any = None,
+    *,
+    reason: str = "",
+) -> Any:
     """Build a WorldNav Goal from a routine row (pack id + farms/patrol).
 
     A break row with checked rest areas walks to the first checked area.
-    An empty break selection keeps the previous map or patrol goal.
+    A return onto the same hunt row walks to the farm the character left.
+    ``farm_area`` walks to ``farm_area_index`` (the tour slot just selected).
+    A new row walks to the first checked farm. An empty break selection
+    keeps the previous map or patrol goal.
     """
     pack_id = str(entry.get("map_id") or "").strip()
     map_id = pack_ids.pack_id_to_map_id(pack_id)
     if map_id is None:
         raise ValueError(f"unknown routine map pack_id={pack_id!r}")
+
+    # Deeper dungeon floors: world nav stops at the complex entrance.
+    # Floor-to-floor cells are planned later and walked by existing travel.
+    from app._04_decision.dungeon_floor_route import world_nav_entrance_map_id
+
+    entrance_map = world_nav_entrance_map_id(pack_id)
+    if entrance_map is not None and int(entrance_map) != int(map_id):
+        return api.map_goal(int(entrance_map))
 
     kind = str(entry.get("kind") or "battle").strip().lower()
     farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
@@ -168,11 +184,45 @@ def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
         else:
             rects = farm_rects_selected(blackboard, pack_id, farms)
     if rects:
-        r0 = rects[0]
-        nx = (int(r0["x0"]) + int(r0["x1"])) // 2
-        ny = (int(r0["y0"]) + int(r0["y1"])) // 2
+        index = 0
+        returning = False
+        if blackboard is not None and kind != "break":
+            from app._04_decision.farm_tour import RETURN_FARM_REASONS, return_farm_index
+
+            returning = str(reason or "") in RETURN_FARM_REASONS
+            if returning:
+                index = return_farm_index(blackboard, len(rects))
+            elif str(reason or "") == "farm_area":
+                try:
+                    index = int(getattr(blackboard, "farm_area_index", 0) or 0)
+                except (TypeError, ValueError):
+                    index = 0
+                if index < 0 or index >= len(rects):
+                    index = 0
+        chosen = rects[index]
+        nx = (int(chosen["x0"]) + int(chosen["x1"])) // 2
+        ny = (int(chosen["y0"]) + int(chosen["y1"])) // 2
         abs_xy = pack_ids.nav_to_abs(pack_id, nx, ny)
         if abs_xy is not None:
+            if returning:
+                from app.bot_log import get_logger
+
+                get_logger("nav").info(
+                    "return farm index=%s of %s reason=%s",
+                    index,
+                    len(rects),
+                    reason or "-",
+                )
+            elif str(reason or "") == "farm_area":
+                from app.bot_log import get_logger
+
+                get_logger("nav").info(
+                    "field world nav goal index=%s of %s pack=%s reason=%s",
+                    index,
+                    len(rects),
+                    pack_id,
+                    reason or "-",
+                )
             return api.point_goal(map_id, abs_xy[0], abs_xy[1])
 
     # Dungeon / no farms: first patrol tile if any.

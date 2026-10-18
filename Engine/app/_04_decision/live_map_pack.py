@@ -90,6 +90,11 @@ def ensure_navigation_for_pack_id(
         get_logger("nav").exception("live pack sync failed pack=%s: %s", want, exc)
         return False, f"pack sync failed {want}: {exc}"
 
+    # Pack reload points farm_areas_file at the shipped yaml and drops areas
+    # that exist only in the user file. Put the checked hunt rects back when
+    # this pack is the active battle row.
+    _remount_checked_farms(blackboard, config, want)
+
     # Hop rules follow the live pack, not the (possibly dungeon) hunt target.
     try:
         from app._04_decision.dungeon import set_dungeon_mode_override
@@ -113,6 +118,76 @@ def ensure_navigation_for_pack_id(
         msg += f" (mapId={live_map_id})"
     get_logger("nav").info("%s", msg)
     return True, msg
+
+
+def _remount_checked_farms(blackboard: Any, config: dict[str, Any], pack_id: str) -> None:
+    """Load the active row's checked userdata farms after a pack reload.
+
+    A battle row on this same pack keeps those rects, including areas that are
+    not in the shipped ``farms.yaml``. A break row, a dungeon, or a different
+    map leaves the pack files just loaded. The stay clock and tour index are
+    not cleared when the name list is unchanged.
+    """
+    from app._04_decision.nav_config import get_farm_areas
+    from app._04_decision.world_nav.overlays import farm_rects_selected, is_dungeon_pack
+
+    if is_dungeon_pack(blackboard, pack_id):
+        return
+    cursor = blackboard.scratch.get("routine_cursor")
+    entry = cursor.active() if cursor is not None and hasattr(cursor, "active") else None
+    if not isinstance(entry, dict):
+        return
+    if str(entry.get("map_id") or "").strip() != pack_id:
+        return
+    if str(entry.get("kind") or "battle").strip().lower() == "break":
+        return
+    names = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
+    if not names:
+        return
+    rects = farm_rects_selected(blackboard, pack_id, names)
+    if not rects:
+        return
+    from app._03_world.space.map_pack import navigation_with_map_pack
+
+    filled = navigation_with_map_pack(config)
+    nav = dict(filled.get("navigation") or {})
+    nav["farm_areas"] = rects
+    nav.pop("farm_areas_file", None)
+    config["navigation"] = nav
+    try:
+        from app._04_decision import nav_config as nc
+
+        nc._load_farms_and_home(nav)
+    except Exception as exc:
+        get_logger("nav").warning("checked farm remount failed pack=%s: %s", pack_id, exc)
+        return
+    loaded = [str(getattr(farm, "name", "") or "") for farm in get_farm_areas()]
+    wanted = [str(rect.get("name") or "") for rect in rects]
+    if loaded != wanted:
+        get_logger("nav").warning(
+            "checked farm remount mismatch pack=%s wanted=%s loaded=%s",
+            pack_id,
+            ",".join(wanted),
+            ",".join(loaded),
+        )
+        return
+    previous = blackboard.scratch.get("farm_area_names")
+    if previous != loaded:
+        blackboard.farm_tour.clear()
+        try:
+            index = int(getattr(blackboard, "farm_area_index", 0) or 0)
+        except (TypeError, ValueError):
+            index = 0
+        if index < 0 or index >= len(loaded):
+            blackboard.farm_area_index = 0
+            blackboard.farm_tour_pos = 0
+    blackboard.scratch["farm_area_names"] = list(loaded)
+    get_logger("nav").info(
+        "checked farms remounted pack=%s n=%s names=%s",
+        pack_id,
+        len(loaded),
+        ",".join(loaded),
+    )
 
 
 def ensure_navigation_for_live_map_id(

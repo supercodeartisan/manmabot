@@ -92,17 +92,25 @@ def travel_arrived(blackboard: "Blackboard") -> bool:
 
 
 def _near_tile(blackboard: "Blackboard", tile: tuple[int, int]) -> bool:
+    """Hop complete on the same tile, or one tile away across an open step.
+
+    Chebyshev 1 counts only when ``can_step`` can cross that edge. Standing
+    against a fence is not an arrival. A missing terrain map keeps the
+    distance check. The final goal still uses ``travel_arrived``.
+    """
     from app._04_decision.dungeon import travel_arrive_tiles
 
-    return (
-        tile_chebyshev(
-            blackboard.world_origin.x,
-            blackboard.world_origin.y,
-            tile[0],
-            tile[1],
-        )
-        <= travel_arrive_tiles()
-    )
+    ox = int(blackboard.world_origin.x)
+    oy = int(blackboard.world_origin.y)
+    dist = tile_chebyshev(ox, oy, int(tile[0]), int(tile[1]))
+    if dist > travel_arrive_tiles():
+        return False
+    if dist != 1:
+        return True
+    terrain = get_terrain_map()
+    if terrain is None:
+        return True
+    return bool(terrain.can_step(ox, oy, int(tile[0]), int(tile[1])))
 
 
 def _reset_stuck(blackboard: "Blackboard") -> None:
@@ -228,6 +236,9 @@ def _follow_body_click(
                 len(bodies),
                 start,
             )
+            from app._04_decision.behaviors.unstick import note_confined_line_closed
+
+            note_confined_line_closed(blackboard)
             blackboard.travel_hop_active = False
             blackboard.travel_destination = None
             blackboard.nav_waypoint = None
@@ -276,7 +287,7 @@ def emit_travel_hop(
 
     Re-clicks about every ``TRAVEL_RECLICK_SECONDS`` from live memory
     position. Same tile ~2.5s → 360° walkable clicks; all radius-2
-    tiles failing, 3 standstills in 20s, or low HP → teleport or talking
+    tiles failing, or low HP → teleport or talking
     scroll. Enter / next-farm with no A* path walks a 5-tile ring first.
     """
     if blackboard.nav_goal is None:
@@ -422,6 +433,9 @@ def emit_travel_hop(
         bodies,
         force_flat=short_walk,
     )
+    from app._04_decision.behaviors.unstick import note_confined_planned_avoid
+
+    note_confined_planned_avoid(blackboard, planned, bodies)
     if not planned.guide or planned.click is None:
         if planned.note == "no path to the goal" or not planned.guide:
             clear_patrol_click_block(blackboard)

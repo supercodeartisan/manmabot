@@ -650,6 +650,9 @@ class DecisionManager:
             origin = self._click_feedback_origin(executor)
             ax, ay = relative_to_absolute(rel[0], rel[1], origin)
             abs_tile = (ax, ay)
+            from app._04_decision.behaviors.unstick import note_confined_actual_click
+
+            note_confined_actual_click(self.blackboard, abs_tile)
             # Cursor-ring neighbors stay. A shifted or walled tile is not
             # the arrival point; the next tick plans a new hop. The origin
             # is the one used to aim the click, so a later pose pulse does

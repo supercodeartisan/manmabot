@@ -1,9 +1,9 @@
 # Patrol midpoints (nav tiles). Dungeon mode travels these in order.
 waypoints:
-  - { x: 172, y: 84, name: mid_1 }
-  - { x: 135, y: 131, name: mid_2 }
-  - { x: 96, y: 120, name: mid_3 }
-  - { x: 90, y: 145, name: mid_4 }
-  - { x: 145, y: 155, name: mid_5 }
-  - { x: 158, y: 131, name: mid_6 }
-  - { x: 94, y: 160, name: mid_7 }
+  - { x: 100, y: 149, name: click_1 }
+  - { x: 100, y: 152, name: click_2 }
+  - { x: 100, y: 155, name: click_3 }
+  - { x: 100, y: 158, name: click_4 }
+  - { x: 100, y: 161, name: click_5 }
+  - { x: 100, y: 164, name: click_6 }
+  - { x: 100, y: 167, name: gate_글루디오 던전 2층 }
