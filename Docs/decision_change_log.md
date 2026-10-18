@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-10-18 — one stair goal per floor, and start inside the dungeon
+
+Intent: dungeon floor walks were a new travel every 3 tiles, so the character stopped at each one. A start already on the scheduled floor (or another floor of that same complex) still planned world nav back to the entrance and scrolled to town.
+Shared: `steps_from_segments` now emits one WALK, the stair cell, then the existing gate step. `emit_travel_hop` still cuts that walk into 3-tile clicks and sends the next click when a hop arrives. `arm_world_nav` reads the live MapSubsystem map before planning. The scheduled floor marks arrival and loads that floor's patrol. Another listed floor of the same complex sets the hunt id and returns to farming so the floor route starts there. A field, another dungeon, or an entrance-floor row still plans world nav. `begin_travel`, the gate executor, avoidance, and `DUNGEON_MAX_HOP_TILES` stay as they are.
+Affects: every deeper-floor dungeon row at Start and while climbing. Entrance-floor rows and field hunts keep the previous arm. Patrol click length is unchanged.
+Consent: user (ok, after the log analysis of the 3-tile stops and the Gludio F3 restart).
+Result: implemented. Floor calculator checks passed (one walk per floor, F1 goal unchanged). Not run in game.
+
+## 2026-10-18 — dungeon floors above the entrance use a calculated route
+
+Intent: a hunt scheduled on a deeper dungeon floor still enters through the existing world-nav gate, then walks logical cells to that floor. The cells come from the shared floor calculator. Travel, avoidance, combat, and the gate click stay on the current executors.
+Shared: `goal_for_entry` stops world nav on the complex entrance when the row is a deeper floor. `_on_world_nav_arrived` and the already-there arm do not load that floor's terrain or start its clock until the live map is the scheduled floor. `_maybe_scroll_to_hunt_map` does not re-arm world nav while the live pack is a listed floor of that same complex. `finish_retreat` resumes the floor route in that case and still world-navs from anywhere else. `_step_dungeon_off_floor` idles only for an entrance-floor hunt; a deeper floor calls `begin_travel` for each logical cell and `ActionType.GATE` for a `floor` link. `apply_gate_result` records that gate outcome with the existing land check. Travel engage during the walk is the same `farm_loot_or_combat` patrol travel already uses.
+Affects: dungeon rows whose floor is deeper than the ground entrance (Gludio F2 and below). An entrance-floor row (Gludio F1) keeps the previous world-nav goal, gate, terrain load, and patrol. Field hunts, login, HP, and unstick are unchanged. `patrol.yaml` is not written.
+Consent: user (add in-dungeon floor travel; use only the route coordinates; keep existing movement, avoidance, and attack).
+Result: implemented. Checked with the floor calculator (F1 goal unchanged, F2/F3 step order, family mismatch, failed gate does not advance). Not run in game.
+
 ## 2026-10-18 — finished world nav does not keep the first hunt area
 
 Intent: after a talking-scroll walk into the second hunt area, the session ended but `travel_purpose` stayed `world_nav`. The stay clock then watched the first checked area, so the second area's minute froze and the character never left for the third.

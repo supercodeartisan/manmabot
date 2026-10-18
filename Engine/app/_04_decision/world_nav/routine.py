@@ -167,6 +167,14 @@ def goal_for_entry(
     if map_id is None:
         raise ValueError(f"unknown routine map pack_id={pack_id!r}")
 
+    # Deeper dungeon floors: world nav stops at the complex entrance.
+    # Floor-to-floor cells are planned later and walked by existing travel.
+    from app._04_decision.dungeon_floor_route import world_nav_entrance_map_id
+
+    entrance_map = world_nav_entrance_map_id(pack_id)
+    if entrance_map is not None and int(entrance_map) != int(map_id):
+        return api.map_goal(int(entrance_map))
+
     kind = str(entry.get("kind") or "battle").strip().lower()
     farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
     rects: list[dict[str, Any]] = []

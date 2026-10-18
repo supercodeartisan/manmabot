@@ -644,6 +644,20 @@ def finish_retreat(blackboard: "Blackboard") -> None:
 
     # Mother tree / teleport / scroll: the saved cell belongs to the map we left.
     if not on_hunt:
+        from app._04_decision.dungeon_floor_route import (
+            SCRATCH_DUNGEON_FLOOR_ROUTE,
+            inside_target_dungeon,
+        )
+
+        if inside_target_dungeon(blackboard):
+            # Same complex, other floor: plan again from here. Do not walk
+            # back to the entrance.
+            blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
+            get_logger("hp").info(
+                "retreat inside dungeon family — floor route resume"
+            )
+            set_mode(blackboard, PlayerMode.FARMING)
+            return
         get_logger("hp").info(
             "retreat off hunt map — world nav return dropped stash=%s purpose=%s",
             stash,

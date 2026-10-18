@@ -82,6 +82,11 @@ def ensure_world_nav_mode(blackboard: Any) -> None:
 
 def begin_world_nav(blackboard: Any, reason: str) -> None:
     """Request arm + enter ``PlayerMode.WORLD_NAV`` (external entry points)."""
+    from app._04_decision.dungeon_floor_route import SCRATCH_DUNGEON_FLOOR_ROUTE
+
+    # A field/town return starts at the entrance again. Drop a half-finished
+    # floor route so it cannot resume on the wrong map.
+    blackboard.scratch.pop(SCRATCH_DUNGEON_FLOOR_ROUTE, None)
     request_world_nav(blackboard, reason)
     ensure_world_nav_mode(blackboard)
 
@@ -402,15 +407,41 @@ def leave_world_nav_mode_if_idle(blackboard: Any) -> None:
         set_mode(blackboard, PlayerMode.FARMING)
 
 
+def _remember_deeper_dungeon_target(blackboard: Any, entry: dict[str, Any]) -> None:
+    """Keep the scheduled floor as the hunt id without loading its terrain."""
+    from app._04_decision import player_mode as pm
+
+    pack_id = str(entry.get("map_id") or "").strip()
+    if pack_id:
+        pm.HUNT_MAP_ID = pack_id
+    get_logger("nav").info(
+        "dungeon entrance reached target=%s (floor route pending)",
+        pack_id or "-",
+    )
+
+
 def _on_world_nav_arrived(blackboard: Any, *, reason: str = "") -> None:
-    """Mark routine arrival and apply hunt/farm/dungeon runtime for that row."""
+    """Mark routine arrival and apply hunt/farm/dungeon runtime for that row.
+
+    A deeper dungeon floor is not arrived when world nav only reached the
+    entrance map. Terrain, patrol, and the stay clock wait for that floor.
+    """
+    from app._03_world.space.map_pack import get_active_map_pack
+    from app._04_decision.dungeon_floor_route import arrived_on_hunt_floor
+
     cursor: RoutineCursor | None = blackboard.scratch.get(SCRATCH_ROUTINE)
     if cursor is not None:
-        cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
-        cursor.reset_fail_mask()
         entry = cursor.active()
-        if entry is not None:
-            apply_routine_entry_runtime(blackboard, entry, reason=reason)
+        live = get_active_map_pack()
+        live_id = "" if live is None else str(live.id)
+        target = "" if entry is None else str(entry.get("map_id") or "")
+        if entry is not None and not arrived_on_hunt_floor(live_id, target):
+            _remember_deeper_dungeon_target(blackboard, entry)
+        else:
+            cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
+            cursor.reset_fail_mask()
+            if entry is not None:
+                apply_routine_entry_runtime(blackboard, entry, reason=reason)
     blackboard.scratch.pop(SCRATCH_WORLD_NAV, None)
     blackboard.scratch.pop(SCRATCH_WORLD_NAV_GATE, None)
     # Clear stale need so break/farm UI countdown is not stuck on "Moving".
@@ -443,6 +474,47 @@ def cursor_map(blackboard: Any) -> str | None:
     return str(entry.get("map_id") or "") or None
 
 
+def _dungeon_live_pack(pose: Any, target: str) -> str | None:
+    """Pack for this pose when it is a listed floor of ``target``'s complex.
+
+    ``None`` means world nav should still plan (field, other dungeon, entrance
+    floor schedule). ``""`` means the pose is inside the complex but the active
+    terrain is not that floor yet, so the arm must wait.
+    """
+    from app._03_world.space.map_pack import get_active_map_pack
+    from app._04_decision.dungeon_floor_route import (
+        choice_for_raw_map,
+        needs_floor_route,
+        same_dungeon_family,
+    )
+
+    if not target or not needs_floor_route(target):
+        return None
+    try:
+        map_id = int(getattr(pose, "map_id", -1))
+    except (TypeError, ValueError):
+        return None
+    choice = choice_for_raw_map(map_id)
+    if choice is None or not same_dungeon_family(choice.pack_id, target):
+        return None
+    live = get_active_map_pack()
+    live_id = "" if live is None else str(live.id)
+    if live_id != choice.pack_id:
+        return ""
+    return choice.pack_id
+
+
+def _release_world_nav_to_farming(blackboard: Any) -> None:
+    from app._04_decision.mode_control import set_mode
+    from app._04_decision.player_mode import PlayerMode
+
+    blackboard.scratch.pop(SCRATCH_NEED_WORLD_NAV, None)
+    blackboard.scratch.pop(SCRATCH_WORLD_NAV, None)
+    _clear_finished_world_nav_purpose(blackboard)
+    if blackboard.player_mode is PlayerMode.WORLD_NAV:
+        set_mode(blackboard, PlayerMode.FARMING)
+
+
 def arm_world_nav(blackboard: Any, reason: str) -> bool:
     """Plan world nav to the active routine goal. Returns False on plan fail."""
     cursor: RoutineCursor | None = blackboard.scratch.get(SCRATCH_ROUTINE)
@@ -461,6 +533,39 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
         request_world_nav(blackboard, reason)
         get_logger("nav").info("world nav arm deferred (no pose) reason=%s", reason)
         return False
+
+    target = str(entry.get("map_id") or "").strip()
+    live_pack = _dungeon_live_pack(pose, target)
+    if live_pack == "":
+        request_world_nav(blackboard, reason)
+        get_logger("nav").info(
+            "dungeon floor wait pack target=%s map=%s",
+            target,
+            getattr(pose, "map_id", "-"),
+        )
+        return False
+    if live_pack:
+        _release_world_nav_to_farming(blackboard)
+        if live_pack == target:
+            cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
+            cursor.reset_fail_mask()
+            apply_routine_entry_runtime(blackboard, entry, reason=reason)
+            get_logger("nav").info(
+                "dungeon already on target floor pack=%s reason=%s",
+                live_pack,
+                reason,
+            )
+        else:
+            from app._04_decision import player_mode as pm
+
+            pm.HUNT_MAP_ID = target
+            get_logger("nav").info(
+                "dungeon already inside current=%s target=%s reason=%s",
+                live_pack,
+                target,
+                reason,
+            )
+        return True
 
     try:
         from app._04_decision.talking_scroll import talking_scroll_available
@@ -485,10 +590,19 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
     if not ok:
         # Already at destination (empty plan) — treat as arrival, not fail_skip.
         if _pose_meets_entry(pose, entry, blackboard, reason=reason):
+            from app._03_world.space.map_pack import get_active_map_pack
+            from app._04_decision.dungeon_floor_route import arrived_on_hunt_floor
+
             blackboard.scratch.pop(SCRATCH_NEED_WORLD_NAV, None)
-            cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
-            cursor.reset_fail_mask()
-            apply_routine_entry_runtime(blackboard, entry, reason=reason)
+            live = get_active_map_pack()
+            live_id = "" if live is None else str(live.id)
+            target = str(entry.get("map_id") or "")
+            if not arrived_on_hunt_floor(live_id, target):
+                _remember_deeper_dungeon_target(blackboard, entry)
+            else:
+                cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
+                cursor.reset_fail_mask()
+                apply_routine_entry_runtime(blackboard, entry, reason=reason)
             _note_field_nav_arrived(blackboard, reason)
             get_logger("nav").info(
                 "world nav already at goal map=%s reason=%s",
@@ -759,7 +873,36 @@ def apply_gate_result(
     if live_map_id is not None and live_x is not None and live_y is not None:
         live_pose = api.Pose(int(live_map_id), int(live_x), int(live_y))
 
-    if session is not None and getattr(session, "phase", None) == "gate_click":
+    from app._04_decision.dungeon_floor_route import (
+        SCRATCH_DUNGEON_FLOOR_ROUTE,
+        FloorRouteSession,
+    )
+
+    floor = blackboard.scratch.get(SCRATCH_DUNGEON_FLOOR_ROUTE)
+    world_gate = session is not None and getattr(session, "phase", None) == "gate_click"
+    if (
+        not world_gate
+        and isinstance(floor, FloorRouteSession)
+        and floor.phase == "transition"
+        and not floor.gate_seen
+    ):
+        # Same executor result world nav stores. No extra retry here.
+        floor.note_gate(bool(ok), live_map_id)
+        if ok and live_map_id is not None:
+            from app._04_decision.live_map_pack import (
+                ensure_navigation_for_live_map_id,
+            )
+
+            cfg = blackboard.scratch.get(SCRATCH_RUNTIME_CONFIG)
+            if isinstance(cfg, dict):
+                ensure_navigation_for_live_map_id(blackboard, cfg, int(live_map_id))
+        get_logger("nav").info(
+            "dungeon floor transition result ok=%s map=%s",
+            bool(ok),
+            live_map_id,
+        )
+
+    if world_gate:
         session.note_gate_result(bool(ok), live_pose, error=error or "")
         if ok:
             from app._04_decision.live_map_pack import (
