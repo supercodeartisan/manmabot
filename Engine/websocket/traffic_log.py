@@ -23,6 +23,17 @@ def snapshot() -> list[str]:
         return list(_lines)
 
 
+def note_local(text: str) -> None:
+    """Session note in the party monitor (not a socket frame)."""
+    try:
+        stamp = time.strftime("%H:%M:%S")
+        line = f"{stamp}  ---  local    {str(text or '').strip()}"
+        with _lock:
+            _lines.append(line)
+    except Exception:
+        return
+
+
 def note(direction: str, message: Any) -> None:
     try:
         body = getattr(message, "message", message)
@@ -149,4 +160,4 @@ def _fmt_value(value: Any) -> str:
     return str(value)
 
 
-__all__ = ["clear", "note", "snapshot"]
+__all__ = ["clear", "note", "note_local", "snapshot"]

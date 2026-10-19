@@ -39,22 +39,34 @@ def roster_invite_names(rows: Any, self_name: str = "") -> list[str]:
     return out
 
 
-def send_game_chat(text: str) -> None:
+def send_game_chat(text: str) -> bool:
     """Open chat, paste the line, send. Uses the hunt Interception path."""
     from autologin.bot.input.inputrouter import InputRouter
 
     line = str(text or "").strip()
     if not line:
-        return
+        return False
+    try:
+        from session.probes import bring_game_to_front, probe_game
+
+        game = probe_game()
+        hwnd = int(getattr(game, "hwnd", 0) or 0)
+        if hwnd:
+            bring_game_to_front(hwnd)
+            time.sleep(0.2)
+    except Exception:
+        pass
     if not InputRouter.physical_press_enter():
         InputRouter.press_enter()
     time.sleep(0.2)
-    if not InputRouter.physical_type_text(line):
+    typed = InputRouter.physical_type_text(line)
+    if not typed:
         InputRouter.type_text(line)
     time.sleep(0.2)
     if not InputRouter.physical_press_enter():
         InputRouter.press_enter()
     time.sleep(0.35)
+    return True
 
 
 def _leader_name(snapshot: Any) -> str:

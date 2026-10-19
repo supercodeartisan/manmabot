@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-19 — party wait logs until farm start
+
+Intent: keep the party websocket monitor log (do not clear it on connect). Until follow/farm actually starts, write a wait line every 2.5s: in_party, party-memory leader, xy, map, seen name, dist, kind, reason, socket state. Leader Start also logs the roster and that `/초대` is in-game chat after the world is ready, not the WS local test. Member Start says follow uses party_listen, not the socket.
+Shared: none. Follow, invite commands, and combat are unchanged.
+Affects: party leader and member session logs until the first farm/follow action.
+Consent: user (member never found the leader; invites not seen; leave the log until farm start).
+Result: implemented. Not run in game.
+
 ## 2026-10-19 — leader roster invite at bot start
 
 Intent: when the leader bot starts, open the party socket first, then type the in-game party commands for the roster table. Leave with `파티탈퇴` if this character is already in a party and is not the in-game leader. Invite each table name with `/초대 <name>` + Enter. Names already in the party, and this character, are skipped. Empty table does nothing.
