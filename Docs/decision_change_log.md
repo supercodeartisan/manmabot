@@ -1,5 +1,53 @@
 # Decision change log
 
+## 2026-10-19 — warehouse visit follows the store-after-sell box
+
+Intent: the warehouse keeper ran whenever leftovers remained outside the keep list. Visit `give_goods` only when equipment `store_after_sell` is checked. The box defaults to checked. Unchecked ends the sell trip after the four merchants.
+Shared: `advance_sell_trip`, `STORE_AFTER_SELL` via schedule → profile → `configure_decision`. Sell clicks, buy, HP, login, and combat stay as they are.
+Affects: the warehouse stop after an overweight or pre-retreat sell.
+Consent: user (visit only if the box is checked; checked by default).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — checked buffs recast from the magic table
+
+Intent: auto-use on the individual magic table chooses which lasting buffs are kept up. When the live buff is missing or has 10 seconds or less left, the matching hotbar key is pressed, one skill at a time, in priority order. MP still has to clear the reserve. Heal, teleport, attack magic, and the haste potion stay on their existing paths.
+Shared: `due_buff`, `maybe_cast_buff`, `_maybe_support_spells` (call site unchanged). `apply_hp_actions`, `maybe_heal_after_teleport`, and `try_unstick_teleport` are unchanged. Armor and weapon buffs no longer fire from the old role order unless that skill is checked.
+Affects: hunt, travel, and dungeon ticks that allow buffs. A checked skill that is not on the hotbar is skipped. Potions, login, and selling stay as they are.
+Consent: user (yes).
+Result: implemented. Resolver and due-buff check passed. Not run in game.
+
+## 2026-10-19 — warehouse deposit reads storewin
+
+Intent: `give_goods` was clicking with the merchant sell list. The warehouse window list comes from storewin. Only the deposit tab is used. Rows outside the keep list are stored with the same scroll flicks, cursor hold, and 0.2–0.5s click gap as the four merchants. Adena is skipped by name. A retrieve list is not clicked. The four merchants still use shop_listen, and the warehouse stay last.
+Shared: `storewin_snapshot`, `storewin_reader`, `execute_calibrated_sell` when `action` is store. Buy, HP, login, and combat stay as they are.
+Affects: the warehouse stop at the end of an overweight or pre-retreat sell. A scroll that rewrites the window vector was not checked in game; the reader walks the full slot vector (the sample was 29 rows).
+Consent: user (yes).
+Result: implemented. `storewin.dll` built and loaded; with the game closed the snapshot returns `mode=closed`. Not run in game.
+
+## 2026-10-19 — sell item clicks wait 0.2–0.5s; scroll leaves the cursor
+
+Intent: item-row clicks used a fixed 0.5s before and after the quantity. Each sell-row click now waits a random 0.2–0.5s, then the quantity is typed with no second wait. The sell-list wheel no longer moves the cursor to the scroll point; it stays on the last item clicked. Buy still moves to its scroll point.
+Shared: `execute_calibrated_sell`, `_scroll_list(move=False)` on the sell path only. Confirm, buy, keep list, and the 5/6/7 flick size stay as they are.
+Affects: overweight sell, pre-retreat sell, and warehouse deposit (same sell function).
+Consent: user (0.2–0.5s between item clicks; cursor stays on the last item while scrolling).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — sell list flicks 5, 6, or 7 rows
+
+Intent: after the first screen, the sell dialog advanced one row at a time and clicked one item. Each later flick now rolls 5, 6, or 7 rows, then clicks the rows that came into view. A row already clicked is left alone when it is still on screen. The flick shortens at the bottom of the list so the click stays on the right row.
+Shared: `sell_scroll_clicks`, `execute_calibrated_sell`. Warehouse deposit uses that function, so it flicks the same way. Keep list, Adena skip, the four-NPC shuffle, buy, HP, login, and combat stay as they are.
+Affects: overweight sell and the pre-retreat sell, and warehouse deposit.
+Consent: user (scroll 5, 6, or 7 rows, chosen at random).
+Result: implemented. Plan check passed for chunks 5, 6, and 7, including a short list and keep-list gaps. Not run in game.
+
+## 2026-10-19 — shuffle the four sell NPCs; one sell dialog selects every row
+
+Intent: the four merchants were always visited in a fixed order, and each sell confirm closed the window after one scroll page. Visit those four in a random order. In one open Sell tab, scroll through every row outside the keep list, then confirm once. The warehouse keeper stays after the four, and only when the bag still holds something outside the keep list.
+Shared: `shop_trip._shuffled_sell_ids` (used by `_begin_sell_queue` and `arm_sell_before_hp_retreat`). `execute_calibrated_sell` and `sell_scroll_clicks`. `give_goods` is still appended in `advance_sell_trip`. The keep-list filter, Adena skip, buy path, HP, login, and combat stay as they are. Warehouse deposit uses the same sell function, so it also selects every row before one confirm.
+Affects: overweight sell trips and the pre-retreat sell. A scroll that clears already selected rows would drop those rows; this path does not reopen the shop to finish them. Rows past 80 are left for the next merchant or the warehouse.
+Consent: user (yes).
+Result: implemented. Scroll-click plan checked (first seven rows need no wheel; later rows scroll only the extra notches). Not run in game.
+
 ## 2026-10-19 — low HP heals in place, teleports once while hit
 
 Intent: at the retreat HP, a character who was not being attacked still left for the world tree, and a character who was being attacked did not teleport before that. Heal and teleport could also be pressed below 20 MP on the unstick path and at the key itself.

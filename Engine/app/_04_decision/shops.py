@@ -39,6 +39,8 @@ RETURN_WEIGHT_ENABLED = True
 SELL_WEIGHT_RATIO = 0.70  # decoded WEIGHT percent/100 ≥ this → sell trip
 # Item/Sell mode: sell_only_garbage | sell_except_keep.
 SELL_MODE = "sell_except_keep"
+# Schedule equipment.store_after_sell. Off skips the warehouse keeper.
+STORE_AFTER_SELL = True
 POTION_SUPPRESS_S = 600.0
 # Chebyshev tiles from the shop NPC to click / buy (walk stops here).
 SHOP_ARRIVE_TILES = 7
@@ -122,9 +124,11 @@ def resolve_shopping_behavior_id(kind: str) -> str:
 
 
 def resolve_sell_behavior_ids() -> tuple[str, ...]:
-    """Ordered sell YAML ids. No UI NPC picker — locale + SELL_MODE only.
+    """The four sell YAML ids. No UI NPC picker — locale + SELL_MODE only.
 
-    Four NPCs: existing TI + weapon, then mainland general + mainland armor.
+    Visit order is shuffled in ``shop_trip._shuffled_sell_ids``. This tuple
+    stays stable so the candidate set does not change between calls.
+    Four NPCs: TI general, weapon, mainland general, mainland armor.
     sell_only_garbage: sell_garbage[_ch], sell_garbage_weapon[_ch],
                        sell_garbage_mainland[_ch], sell_garbage_armor_mainland[_ch]
     sell_except_keep:  sell_except_keep[_ch], sell_except_keep_weapon[_ch],
@@ -332,6 +336,7 @@ __all__ = [
     "RETURN_WEIGHT_ENABLED",
     "SELL_WEIGHT_RATIO",
     "SELL_MODE",
+    "STORE_AFTER_SELL",
     "POTION_SUPPRESS_S",
     "SHOP_ARRIVE_TILES",
     "SHOP_CLICK_TILES",

@@ -491,6 +491,10 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         bool(equipment.get("restock_potions", profile.restock_potions)),
     )
     set_value(
+        "store_after_sell",
+        bool(equipment.get("store_after_sell", getattr(profile, "store_after_sell", True))),
+    )
+    set_value(
         "buy_depoison",
         bool(equipment.get("buy_depoison", getattr(profile, "buy_depoison", False))),
     )
@@ -649,4 +653,10 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("shop_locale", shop_locale)
     # Decorative preview is intentionally disabled in the classic UI.
     set_value("show_preview", False)
+    from settings.auto_buffs import auto_buffs_for_magic
+
+    profile.auto_buff_plan = auto_buffs_for_magic(
+        magic if isinstance(magic, dict) else {},
+        str(getattr(profile, "character", "") or ""),
+    )
     return changed

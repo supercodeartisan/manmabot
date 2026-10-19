@@ -412,7 +412,7 @@ class ActionExecutor:
                 self._heal(bounds, action)
 
             elif action.action == ActionType.BUFF:
-                self._buff(action.reason)
+                self._buff(action.reason, action)
 
             elif action.action == ActionType.TELEPORT:
                 self._teleport()
@@ -1053,12 +1053,42 @@ class ActionExecutor:
             forced = (int(intent.hotbar_box), str(intent.hotbar_key).strip().lower())
         self._press_assigned_skill("heal", forced_slot=forced)
 
-    def _buff(self, which: str) -> None:
-        """Self buff: power-up / armor / haste / light at the assigned slot."""
+    def _buff(self, which: str, intent: ActionIntent | None = None) -> None:
+        """Self buff: checked catalog buff, or haste / legacy role slot."""
         name = str(which or "")
+        if name.startswith("buff:") and intent is not None:
+            box = int(intent.hotbar_box or 0)
+            key = str(intent.hotbar_key or "").strip().lower()
+            if box in (1, 2, 3) and key:
+                self._press_catalog_buff(name, box, key)
+            return
         if name not in ("power_up", "armor_up", "haste", "light"):
             return
         self._press_assigned_skill(name)
+
+    def _press_catalog_buff(self, token: str, box: int, key: str) -> None:
+        """Press one checked buff. Decision already chose the hotbar cell."""
+        from app._04_decision.spells import _auto_buff, can_cast_spell
+
+        buff = _auto_buff(token)
+        spell_name = buff.names[0] if buff is not None and buff.names else ""
+        world = getattr(self, "_world", None)
+        if world is not None and not can_cast_spell(world, role=spell_name or None):
+            return
+        if self._last_magic_at > 0:
+            wait = sb.MAGIC_COOLDOWN_S - (time.time() - self._last_magic_at)
+            if wait > 0:
+                time.sleep(wait)
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "skill press name=%s box=%s key=%s",
+            token,
+            int(box),
+            key,
+        )
+        self._press_box_skill(box, key)
+        self._last_magic_at = time.time()
 
     def _ensure_skill_box(self) -> None:
         """Press F1 once when the bot starts acting so box 1 is selected."""
