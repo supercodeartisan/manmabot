@@ -180,8 +180,10 @@ class WorldNavPlanner:
             )
         )
         allow_npc_tp = bool(use_npc_teleporters) and not same_map and not near_entrance
-        # The same door check. Standing at the ground enter walks and clicks it.
-        allow_scroll = bool(has_talking_scroll) and not near_entrance
+        # Same map: walk. A scroll shortcut waits on a list that may never open,
+        # and the tick then idles on scroll-land instead of moving.
+        # Off the goal map, skip the scroll when already at the ground enter.
+        allow_scroll = bool(has_talking_scroll) and not same_map and not near_entrance
         tp_links = (
             _teleporter_links(g.transitions, adena=adena) if allow_npc_tp else []
         )
@@ -289,7 +291,7 @@ class WorldNavPlanner:
                     )
                     heapq.heappush(pq, (nc, v))
 
-            # Scroll: when already on goal map, only same-map hubs (no inter-map).
+            # Scroll only leaves the current map. Same-map hubs are walks.
             # Near the goal door this edge is omitted; the ground enter is the step.
             if allow_scroll:
                 for h in g.hubs:

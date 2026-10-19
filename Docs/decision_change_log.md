@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-19 — same-map world nav walks instead of a talking scroll
+
+Intent: on Talking Island the character was already on map 0, and world nav still opened a talking scroll toward the pet manager. The list never opened (`opened=False`), then every tick idled on `world nav scroll land` and never walked or hunted.
+Shared: `WorldNavPlanner.plan` `allow_scroll`. Cross-map scrolls, NPC teleporters, combat, and HP are unchanged.
+Affects: a goal on the map the character is already on (farm routine, same-map shop). That trip walks. A goal on another map still uses the talking scroll.
+Consent: user (check the log and fix; the bot is in the world and never decides).
+Result: implemented. Replay of map0 (32323,32965) → (32384,33068) is one walk of 103 tiles. Not run in game.
+
 ## 2026-10-19 — revive retreat keeps the dungeon routine clock
 
 Intent: dying and reviving was the one retreat that still started the dungeon row clock at zero on the way back. A revive retreat now freezes that clock the same way as a world-tree retreat, and the hunt-floor return resumes the saved seconds.
