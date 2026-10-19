@@ -18,6 +18,11 @@ GATE_STEP_DEG = 30
 # After GATE click: treat click as attempt; wait this long for MapSubsystem mapId
 # and (when provided) landing cell near the planned ``to`` tile.
 TRANSITION_WAIT_S = 5.0
+# Same tile and map for the whole land wait: skip the second ring and let
+# the caller step aside. A moving body or a flipped mapId still finishes
+# this wait and may take the second ring.
+STUCK_POSE_S = TRANSITION_WAIT_S
+GATE_STUCK_POSE = "gate stuck pose unchanged"
 # Dest mapId can flip a tick before absolute xy updates (seen: map1 with TI cell
 # 32477 → dungeon walk no_path). Require landing within this Chebyshev of to-xy.
 LAND_XY_SLACK = 24
@@ -30,6 +35,34 @@ _FRESH_POSE_TIMEOUT_S = 1.0
 
 def _chev(ax: int, ay: int, bx: int, by: int) -> int:
     return max(abs(int(ax) - int(bx)), abs(int(ay) - int(by)))
+
+
+def gate_land_watch(
+    elapsed_s: float,
+    live: Optional[tuple[int, int, int]],
+    *,
+    base_map: Optional[int],
+    base_xy: tuple[int, int],
+    expect_map: int,
+    expect_xy: Optional[tuple[int, int]],
+    stuck_s: float = STUCK_POSE_S,
+) -> Optional[str]:
+    """``landed``, ``GATE_STUCK_POSE``, or None to keep the land wait.
+
+    Stuck means the click did not change map or tile. A changed tile, or a
+    mapId that already flipped, keeps the full landing wait.
+    """
+    if _landed(live, expect_map, expect_xy):
+        return "landed"
+    if live is None or float(elapsed_s) < float(stuck_s):
+        return None
+    if int(live[0]) == int(expect_map):
+        return None
+    if base_map is not None and int(live[0]) != int(base_map):
+        return None
+    if _chev(live[1], live[2], base_xy[0], base_xy[1]) != 0:
+        return None
+    return GATE_STUCK_POSE
 
 
 def _landed(
@@ -111,6 +144,9 @@ def run_gate_click(
         if live is not None:
             px, py = live[1], live[2]
         _log(f"GATE attempt {attempt}/{GATE_ATTEMPTS} failed: {detail}")
+        # Same tile did not take the click. The caller steps aside once.
+        if detail == GATE_STUCK_POSE:
+            return False, detail
 
     return False, last_err
 
@@ -266,6 +302,11 @@ def _one_gate_attempt(
     )
 
     land_t0 = time.time()
+    base = read_pose()
+    base_xy = (
+        (int(base[1]), int(base[2])) if base is not None else (int(px), int(py))
+    )
+    base_map = int(base[0]) if base is not None else None
     last_live: Optional[tuple[int, int, int]] = None
     while time.time() - land_t0 < TRANSITION_WAIT_S:
         if stop is not None and stop():
@@ -280,10 +321,33 @@ def _one_gate_attempt(
             live = read_pose()
         if live is not None:
             last_live = live
-        if _landed(live, int(expect_map_id), land_xy):
+        watch = gate_land_watch(
+            time.time() - land_t0,
+            live,
+            base_map=base_map,
+            base_xy=base_xy,
+            expect_map=int(expect_map_id),
+            expect_xy=land_xy,
+        )
+        if watch == "landed":
             assert live is not None
             return True, f"landed map{live[0]} ({live[1]},{live[2]})"
+        if watch == GATE_STUCK_POSE:
+            return False, GATE_STUCK_POSE
         time.sleep(0.15)
+    # The loop stops just before the wait ends, so judge the last pose once more.
+    watch = gate_land_watch(
+        time.time() - land_t0,
+        last_live,
+        base_map=base_map,
+        base_xy=base_xy,
+        expect_map=int(expect_map_id),
+        expect_xy=land_xy,
+    )
+    if watch == "landed" and last_live is not None:
+        return True, f"landed map{last_live[0]} ({last_live[1]},{last_live[2]})"
+    if watch == GATE_STUCK_POSE:
+        return False, GATE_STUCK_POSE
     if last_live is not None and int(last_live[0]) == int(expect_map_id):
         return (
             False,

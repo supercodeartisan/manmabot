@@ -682,14 +682,20 @@ def _mana_blocks_teleport(
     state: Optional["GameState"],
     blackboard: Optional["Blackboard"] = None,
 ) -> bool:
-    """True when known MP is too low to cast teleport (matches HP-path gate)."""
+    """True when known MP is too low to cast teleport.
+
+    Absolute floor is 20, same as heal. The percent reserve still applies
+    on top for unstick. Unknown MP does not block on the absolute floor.
+    """
     if state is None:
         return False
+    from app._04_decision.behaviors.mode_actions import HP_SKILL_MIN_MP
+
     player = getattr(state, "player", None)
     if player is not None:
         try:
             mp = getattr(player, "mp", None)
-            if mp is not None and int(mp) < 5:
+            if mp is not None and int(mp) < HP_SKILL_MIN_MP:
                 return True
         except (TypeError, ValueError):
             pass

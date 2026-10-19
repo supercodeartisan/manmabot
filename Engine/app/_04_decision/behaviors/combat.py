@@ -293,8 +293,11 @@ def _living_same_species(
         return False
     tid = getattr(obj, "track_id", None)
     if tid is not None:
+        from app._04_decision.attack_feedback import _active_cursor_reject_ids
+
         blocked = set(blackboard.blacklisted_target_ids)
         blocked.update(blackboard.given_up_target_ids)
+        blocked.update(_active_cursor_reject_ids(blackboard))
         if tid in blocked:
             return False
     species = (blackboard.current_target_species or "").strip().lower()

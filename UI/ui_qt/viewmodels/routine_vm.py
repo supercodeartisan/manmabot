@@ -198,6 +198,29 @@ class RoutineViewModel:
             return len(list_patrol_entries(map_id)) > 0
         return bool(entry.get("selected_farms"))
 
+    def incomplete_setups(
+        self, rows: list[dict[str, Any]] | None = None
+    ) -> list[dict[str, Any]]:
+        """Rows whose setting button is still Area/Patrol · needed."""
+        source = self.rows if rows is None else normalize_routine(rows)
+        gaps: list[dict[str, Any]] = []
+        for index, entry in enumerate(source, start=1):
+            if self.setting_ready(entry):
+                continue
+            map_id = str(entry.get("map_id") or "")
+            dungeon = self.is_dungeon(map_id)
+            gaps.append(
+                {
+                    "index": index,
+                    "map_id": map_id,
+                    "label": self.map_label(map_id) or map_id,
+                    "setting_key": (
+                        "routine_patrol_needed" if dungeon else "routine_area_needed"
+                    ),
+                }
+            )
+        return gaps
+
     def farms_for_map(self, map_id: str) -> list[str]:
         names, _error = list_farms_for_map(map_id)
         return list(names)

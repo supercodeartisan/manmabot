@@ -875,21 +875,6 @@ def farm_return_scroll_spot(
     return fallback if row_by_id(fallback) is not None else None
 
 
-def on_dungeon_return_town() -> bool:
-    """True when live pack is already the town a dungeon hunt would scroll to."""
-    if not hunt_map_is_dungeon():
-        return False
-    from app._03_world.space.map_pack import get_active_map_pack
-    from app._04_decision.player_mode import HUNT_MAP_ID
-
-    pack = get_active_map_pack()
-    if pack is None:
-        return False
-    spot = farm_return_scroll_spot(HUNT_MAP_ID)
-    geo = geography_for_id(spot) if spot else None
-    return geo is not None and str(pack.id) == str(geo.map_id)
-
-
 def player_on_selected_map(blackboard: "Blackboard") -> bool:
     """True when the live nav tile sits on the selected hunt-map terrain.
 
@@ -1050,7 +1035,6 @@ __all__ = [
     "SCRATCH_LAST_COMBAT_AT",
     "player_on_selected_map",
     "hunt_map_is_dungeon",
-    "on_dungeon_return_town",
     "SCARECROW_FIELD_TILE",
     "FARM_RETURN_SPOT_BY_MAP",
     "ScrollGeography",

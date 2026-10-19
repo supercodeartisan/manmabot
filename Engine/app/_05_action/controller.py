@@ -971,9 +971,24 @@ class ActionExecutor:
         *,
         forced_slot: tuple[int, str] | None = None,
     ) -> None:
-        # Heal was already accepted by decision. Action only presses the key.
+        # Heal was already accepted by decision. Action only presses the key,
+        # except the shared absolute MP floor on heal and teleport.
         if name != "heal" and not sb.slot_is_enabled(name):
             return
+        if name in ("heal", "teleport"):
+            world = getattr(self, "_world", None)
+            if world is not None:
+                from app._04_decision.behaviors.mode_actions import (
+                    heal_blocked_by_mana,
+                )
+
+                if heal_blocked_by_mana(world, role=name):
+                    from app.bot_log import get_logger
+
+                    get_logger("action").info(
+                        "skill press skipped name=%s mp floor", name
+                    )
+                    return
         if sb.slot_is_magic(name) and name not in (
             "mother_tree",
             "hp_to_mp",

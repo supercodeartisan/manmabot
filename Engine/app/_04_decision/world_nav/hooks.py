@@ -9,7 +9,11 @@ from app.bot_log import get_logger
 
 from . import planner_api as api
 from .routine import RoutineCursor, goal_for_entry
-from .session import WorldNavSession, live_pose_from_state
+from .session import (
+    SCRATCH_WORLD_NAV_EXIT_LAND,
+    WorldNavSession,
+    live_pose_from_state,
+)
 
 SCRATCH_WORLD_NAV = "world_nav_session"
 SCRATCH_ROUTINE = "routine_cursor"
@@ -515,6 +519,30 @@ def _release_world_nav_to_farming(blackboard: Any) -> None:
         set_mode(blackboard, PlayerMode.FARMING)
 
 
+def _pose_at_stale_exit_landing(blackboard: Any, pose: Any) -> Any:
+    """Use a stashed exit landing once, then drop it."""
+    stashed = blackboard.scratch.pop(SCRATCH_WORLD_NAV_EXIT_LAND, None)
+    if not isinstance(stashed, dict) or pose is None:
+        return pose
+    try:
+        land_map = int(stashed.get("map_id"))
+        lx, ly = int(stashed["x"]), int(stashed["y"])
+    except (TypeError, ValueError, KeyError):
+        return pose
+    if land_map != int(getattr(pose, "map_id", -1)):
+        return pose
+    get_logger("nav").info(
+        "world nav plan start uses exit landing map=%s xy=(%s,%s) edge=%s live=(%s,%s)",
+        land_map,
+        lx,
+        ly,
+        stashed.get("edge") or "-",
+        int(pose.x),
+        int(pose.y),
+    )
+    return api.Pose(land_map, lx, ly)
+
+
 def arm_world_nav(blackboard: Any, reason: str) -> bool:
     """Plan world nav to the active routine goal. Returns False on plan fail."""
     cursor: RoutineCursor | None = blackboard.scratch.get(SCRATCH_ROUTINE)
@@ -545,6 +573,7 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
         )
         return False
     if live_pack:
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_EXIT_LAND, None)
         _release_world_nav_to_farming(blackboard)
         if live_pack == target:
             cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
@@ -571,6 +600,7 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
         from app._04_decision.talking_scroll import talking_scroll_available
 
         goal = goal_for_entry(entry, blackboard, reason=reason)
+        pose = _pose_at_stale_exit_landing(blackboard, pose)
 
         session = WorldNavSession()
         from app._04_decision.hunt_area import current_adena
@@ -887,7 +917,7 @@ def apply_gate_result(
         and not floor.gate_seen
     ):
         # Same executor result world nav stores. No extra retry here.
-        floor.note_gate(bool(ok), live_map_id)
+        floor.note_gate(bool(ok), live_map_id, error=error or "")
         if ok and live_map_id is not None:
             from app._04_decision.live_map_pack import (
                 ensure_navigation_for_live_map_id,

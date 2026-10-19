@@ -72,15 +72,49 @@ def _normalize_routine_fallback(raw: Any) -> list[dict[str, Any]]:
 class RoutineCursor:
     entries: list[dict[str, Any]] = field(default_factory=list)
     index: int = 0
-    started_at: float = 0.0
+    # Committed stay seconds. The open segment is ``running_since`` .. now.
+    # ``running_since`` is 0 while the bot is paused, so pause time is not counted.
+    elapsed_s: float = 0.0
+    running_since: float = 0.0
     fail_mask: set[int] = field(default_factory=set)
     cycle_start_index: int = 0
+
+    def _start_clock(self) -> None:
+        self.elapsed_s = 0.0
+        self.running_since = time.monotonic()
+
+    def elapsed(self, now: float | None = None) -> float:
+        total = float(self.elapsed_s)
+        since = float(self.running_since)
+        if since > 0.0:
+            total += (time.monotonic() if now is None else now) - since
+        return total if total > 0.0 else 0.0
+
+    def ticking(self) -> bool:
+        return float(self.running_since) > 0.0
+
+    def freeze(self, now: float | None = None) -> None:
+        """Commit the open segment and stop. A second call does not add time."""
+        since = float(self.running_since)
+        if since <= 0.0:
+            return
+        now_m = time.monotonic() if now is None else now
+        self.elapsed_s = float(self.elapsed_s) + (now_m - since)
+        self.running_since = 0.0
+
+    def resume(self, now: float | None = None) -> None:
+        """Open a new segment. Seconds already committed stay as they are."""
+        if float(self.running_since) > 0.0:
+            return
+        self.running_since = time.monotonic() if now is None else now
 
     @classmethod
     def from_entries(cls, entries: list[dict[str, Any]] | None) -> "RoutineCursor":
         """Build from already-normalized routine rows (session inject path)."""
         rows = [dict(e) for e in (entries or []) if isinstance(e, dict)]
-        return cls(entries=rows, index=0, started_at=time.monotonic())
+        cursor = cls(entries=rows, index=0)
+        cursor._start_clock()
+        return cursor
 
     @classmethod
     def from_routine(cls, raw: Any) -> "RoutineCursor":
@@ -105,7 +139,7 @@ class RoutineCursor:
             "selected_farms": list(selected_farms or []),
             "farm_stays_s": dict(farm_stays_s or {}),
         }
-        return cls(entries=[row], index=0, started_at=time.monotonic())
+        return cls.from_entries([row])
 
     def __len__(self) -> int:
         return len(self.entries)
@@ -118,7 +152,7 @@ class RoutineCursor:
     def mark_arrived(self, *, reset_clock: bool = True) -> None:
         """Record arrival. Return trips keep the row clock that is already running."""
         if reset_clock:
-            self.started_at = time.monotonic()
+            self._start_clock()
         self.fail_mask.discard(self.index)
 
     def duration_expired(self) -> bool:
@@ -126,13 +160,13 @@ class RoutineCursor:
         if entry is None:
             return False
         minutes = int(entry.get("duration_minutes") or 60)
-        return (time.monotonic() - float(self.started_at)) >= minutes * 60.0
+        return self.elapsed() >= minutes * 60.0
 
     def advance(self) -> dict[str, Any] | None:
         if not self.entries:
             return None
         self.index = (self.index + 1) % len(self.entries)
-        self.started_at = time.monotonic()
+        self._start_clock()
         return self.active()
 
     def mark_fail(self) -> None:

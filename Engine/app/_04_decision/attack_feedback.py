@@ -16,9 +16,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from app._02_state.objects import WorldObject
     from app._04_decision.blackboard import Blackboard
 
-# Consecutive attack-cursor misses on the same *monster* before soft give-up
-# (~GIVE_UP_COOLDOWN_TICKS).
+# Consecutive attack-cursor misses on the same monster before the 4s skip.
 CURSOR_VERIFY_FAIL_GIVE_UP = 5
+# After one rejected attack cursor, skip that id for this many seconds.
+CURSOR_REJECT_EXCLUDE_SECONDS = 4.0
 # Consecutive loot-cursor misses on the same *item* before soft abandon
 # (short loot cooldown — not the combat 160-tick map).
 CURSOR_VERIFY_FAIL_GIVE_UP_ITEM = 4
@@ -52,10 +53,12 @@ def note_cursor_verify_fail(
 ) -> bool:
     """Count a consecutive verify fail.
 
-    Combat: after :data:`CURSOR_VERIFY_FAIL_GIVE_UP` misses → soft give-up
-    (~160 ticks). Items: after :data:`CURSOR_VERIFY_FAIL_GIVE_UP_ITEM` loot-
-    cursor misses → short loot cooldown abandon. Returns True when a target
-    or pile was given up / abandoned.
+    Combat: after :data:`CURSOR_VERIFY_FAIL_GIVE_UP` rejected attack cursors
+    on the same id, release the sticky lock and exclude that id for
+    :data:`CURSOR_REJECT_EXCLUDE_SECONDS`. An accepted cursor clears the
+    streak and keeps the lock. Items: after
+    :data:`CURSOR_VERIFY_FAIL_GIVE_UP_ITEM` loot-cursor misses → short loot
+    cooldown abandon. Returns True when a target or pile was released.
     """
     streak = int(blackboard.cursor_verify_fail_streak.get(track_id, 0)) + 1
     blackboard.cursor_verify_fail_streak[track_id] = streak
@@ -88,22 +91,78 @@ def note_cursor_verify_fail(
         blackboard.cursor_verify_fail_streak.pop(int(track_id), None)
         return True
     if (not is_item) and streak >= CURSOR_VERIFY_FAIL_GIVE_UP:
-        from app._04_decision.behaviors.combat import give_up_target
-
-        give_up_reason = str(reason or "cursor verify")
-        give_up_target(
+        release_cursor_reject(
             blackboard,
             int(track_id),
-            reason=give_up_reason,
+            reason=str(reason or "cursor reject"),
             name=label,
             cursor_label=str(cursor_label or "").strip(),
             cursor_category=str(cursor_category or "").strip(),
             cursor_score=score_f,
             need_score=need_f,
         )
-        blackboard.cursor_verify_fail_streak.pop(int(track_id), None)
         return True
     return False
+
+
+def release_cursor_reject(
+    blackboard: "Blackboard",
+    track_id: int,
+    *,
+    reason: str = "",
+    name: str = "",
+    cursor_label: str = "",
+    cursor_category: str = "",
+    cursor_score: float | None = None,
+    need_score: float | None = None,
+) -> None:
+    """Drop the sticky lock and skip ``track_id`` for 4 seconds.
+
+    The id is not written to the 160-tick give-up map. Dungeon wall release
+    does not call this.
+    """
+    from app.bot_log import get_logger
+    from app._04_decision.behaviors.combat import clear_engage_state
+    from app._04_decision.clickgap import log_sticky_release
+
+    tid = int(track_id)
+    why = str(reason or "cursor reject").strip() or "cursor reject"
+    until = time.time() + float(CURSOR_REJECT_EXCLUDE_SECONDS)
+    blackboard.cursor_reject_until[tid] = until
+    blackboard.cursor_verify_fail_streak.pop(tid, None)
+    blackboard.finish_kill_ids.discard(tid)
+    get_logger("combat").info(
+        "cursor release id=%s name=%s exclude_s=%s reason=%s sticky_was=%s",
+        tid,
+        str(name or "").strip() or "-",
+        int(CURSOR_REJECT_EXCLUDE_SECONDS),
+        why,
+        blackboard.current_target_id,
+    )
+    held = blackboard.current_target_id
+    if held is not None and int(held) == tid:
+        log_sticky_release(None, blackboard, "cursor reject 4s")
+        blackboard.current_target_id = None
+        clear_engage_state(blackboard)
+    blackboard.scratch["last_cursor_release"] = {
+        "id": tid,
+        "reason": why,
+        "until": until,
+        "name": str(name or "").strip(),
+        "cursor_label": str(cursor_label or "").strip(),
+        "cursor_category": str(cursor_category or "").strip(),
+        "cursor_score": cursor_score,
+        "need_score": need_score,
+    }
+
+
+def _active_cursor_reject_ids(blackboard: "Blackboard") -> set[int]:
+    now = time.time()
+    until_map = blackboard.cursor_reject_until
+    expired = [tid for tid, until in until_map.items() if float(until) <= now]
+    for tid in expired:
+        until_map.pop(tid, None)
+    return set(until_map)
 
 
 def blacklist_target(blackboard: "Blackboard", track_id: int, *, reason: str) -> None:
@@ -120,7 +179,7 @@ def blacklist_target(blackboard: "Blackboard", track_id: int, *, reason: str) ->
 
 
 def excluded_target_ids(blackboard: "Blackboard", cooldown_ticks: int) -> set[int]:
-    """Give-up cooldown union session blacklist."""
+    """Give-up cooldown, 4s cursor-reject skips, and the session blacklist."""
     active = {
         tid
         for tid, t in blackboard.given_up_target_ids.items()
@@ -128,6 +187,7 @@ def excluded_target_ids(blackboard: "Blackboard", cooldown_ticks: int) -> set[in
     }
     return (
         active
+        | _active_cursor_reject_ids(blackboard)
         | set(blackboard.blacklisted_target_ids)
         | set(blackboard.exp_kill_ids)
     )
@@ -269,6 +329,7 @@ __all__ = [
     "target_wcs_tile",
     "note_cursor_verify_ok",
     "note_cursor_verify_fail",
+    "release_cursor_reject",
     "blacklist_target",
     "excluded_target_ids",
     "begin_or_refresh_attack_probe",

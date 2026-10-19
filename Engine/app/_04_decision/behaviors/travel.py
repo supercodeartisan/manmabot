@@ -276,6 +276,85 @@ def _follow_body_click(
     return True
 
 
+def emit_gate_sidestep(
+    blackboard: "Blackboard",
+    state: object | None,
+    *,
+    player_abs: tuple[int, int],
+    entrance_abs: tuple[int, int],
+    reason: str,
+    priority: float = 0.6,
+) -> bool:
+    """One existing body-avoid click, one tile off a blocked gate.
+
+    The goal is two tiles away from the door so the hop is not already
+    arrived. ``plan_body_click`` still steps aside when a body blocks
+    that line. Returns False when no walkable step exists.
+    """
+    from app._04_decision.avoidance import collect_body_tiles, plan_body_click
+
+    terrain = get_terrain_map()
+    if terrain is None:
+        return False
+    origin = blackboard.world_origin
+    ox, oy = int(origin.x), int(origin.y)
+    px, py = int(player_abs[0]), int(player_abs[1])
+    fx, fy = int(entrance_abs[0]), int(entrance_abs[1])
+    sx = 0 if px == fx else (1 if px > fx else -1)
+    sy = 0 if py == fy else (1 if py > fy else -1)
+    if sx == 0 and sy == 0:
+        sx = 1
+    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    for csx, csy in ((sx, sy), (-sy, sx), (sy, -sx), (-sx, -sy)):
+        raw = (ox + 2 * int(csx), oy + 2 * int(csy))
+        goal = _snap_aside(terrain, raw, avoid=(ox, oy))
+        if goal is None:
+            continue
+        planned = plan_body_click(
+            terrain,
+            origin,
+            goal,
+            bodies,
+            max_hop=1,
+            force_flat=True,
+        )
+        click = planned.click
+        if click is None or (int(click[0]), int(click[1])) == (ox, oy):
+            continue
+        content = waypoint_to_content((int(click[0]), int(click[1])), origin)
+        _emit_click(
+            blackboard,
+            content=content,
+            waypoint=(int(click[0]), int(click[1])),
+            reason=reason,
+            priority=priority,
+            mid_act=False,
+        )
+        return True
+    return False
+
+
+def _snap_aside(
+    terrain: object,
+    raw: tuple[int, int],
+    *,
+    avoid: tuple[int, int],
+) -> tuple[int, int] | None:
+    """Walkable tile at ``raw`` or a neighbor, never the tile we are leaving."""
+    ax, ay = int(avoid[0]), int(avoid[1])
+    x, y = int(raw[0]), int(raw[1])
+    if terrain.is_walkable(x, y) and (x, y) != (ax, ay):
+        return (x, y)
+    for dy in range(-1, 2):
+        for dx in range(-1, 2):
+            if dx == 0 and dy == 0:
+                continue
+            nx, ny = x + dx, y + dy
+            if (nx, ny) != (ax, ay) and terrain.is_walkable(nx, ny):
+                return (nx, ny)
+    return None
+
+
 def emit_travel_hop(
     blackboard: "Blackboard",
     *,

@@ -29,6 +29,9 @@ def active_farm_duration_limit(blackboard: "Blackboard") -> float:
 # ``pack:farm_name`` of the stay currently being timed. Arrival at the
 # walk goal (the rect center) must not clear a stay already started.
 SCRATCH_FARM_STAY_KEY = "farm_stay_key"
+# Set while the bot is not deciding. The open segment is closed, so pause
+# time is not added on the next sample.
+SCRATCH_FARM_CLOCK_FROZEN = "farm_clock_frozen"
 
 
 def is_inside_active_farm(blackboard: "Blackboard") -> bool:
@@ -132,14 +135,42 @@ def farm_stay_key(blackboard: "Blackboard") -> str:
     return f"{pack}:{name}"
 
 
+def freeze_farm_clock(blackboard: "Blackboard") -> None:
+    """Commit in-farm time up to now and hold it until :func:`resume_farm_clock`."""
+    if blackboard.scratch.get(SCRATCH_FARM_CLOCK_FROZEN):
+        return
+    now = time.time()
+    if blackboard.farm_time_inside and blackboard.farm_time_last_sample > 0:
+        blackboard.farm_elapsed_seconds += now - blackboard.farm_time_last_sample
+    blackboard.farm_time_last_sample = now
+    blackboard.scratch[SCRATCH_FARM_CLOCK_FROZEN] = True
+
+
+def resume_farm_clock(blackboard: "Blackboard") -> None:
+    """Drop the held gap. The next sample counts only from this moment."""
+    if not blackboard.scratch.pop(SCRATCH_FARM_CLOCK_FROZEN, None):
+        return
+    blackboard.farm_time_last_sample = time.time()
+
+
+def farm_clock_ticking(blackboard: "Blackboard") -> bool:
+    """True when the open in-farm segment is still growing."""
+    if blackboard.scratch.get(SCRATCH_FARM_CLOCK_FROZEN):
+        return False
+    return bool(blackboard.farm_time_inside and blackboard.farm_time_last_sample > 0)
+
+
 def sample_farm_presence(blackboard: "Blackboard") -> None:
     """Once per decide tick: add delta only while inside the stay rectangle.
 
     The stay starts on the first sample inside that rectangle, including the
     walk from the edge to the center. Leaving and re-entering continues the
-    same elapsed time. A different farm zeroes the previous stay.
+    same elapsed time. A different farm zeroes the previous stay. A frozen
+    gap from pause is dropped instead of counted.
     """
     now = time.time()
+    if blackboard.scratch.pop(SCRATCH_FARM_CLOCK_FROZEN, None):
+        blackboard.farm_time_last_sample = now
     inside = inside_farm_stay(blackboard)
     key = farm_stay_key(blackboard) if inside else ""
     switched = bool(
@@ -173,8 +204,13 @@ def sample_farm_presence(blackboard: "Blackboard") -> None:
 
 
 def farm_elapsed_seconds(blackboard: "Blackboard") -> float:
-    """Committed in-farm seconds plus any open inside segment."""
+    """Committed in-farm seconds plus any open inside segment.
+
+    While frozen, only the committed seconds are returned.
+    """
     total = blackboard.farm_elapsed_seconds
+    if blackboard.scratch.get(SCRATCH_FARM_CLOCK_FROZEN):
+        return total
     if blackboard.farm_time_inside and blackboard.farm_time_last_sample > 0:
         total += time.time() - blackboard.farm_time_last_sample
     return total
@@ -189,6 +225,7 @@ def reset_farm_timer(blackboard: "Blackboard") -> None:
     blackboard.farm_elapsed_seconds = 0.0
     blackboard.farm_time_last_sample = time.time()
     blackboard.farm_time_inside = inside_farm_stay(blackboard)
+    blackboard.scratch.pop(SCRATCH_FARM_CLOCK_FROZEN, None)
     blackboard.scratch[SCRATCH_FARM_STAY_KEY] = farm_stay_key(blackboard)
     from app._04_decision.hunt_area import reset_area_watch
 
@@ -200,6 +237,10 @@ __all__ = [
     "FARM_DURATION_LIMITS",
     "active_farm_duration_limit",
     "SCRATCH_FARM_STAY_KEY",
+    "SCRATCH_FARM_CLOCK_FROZEN",
+    "freeze_farm_clock",
+    "resume_farm_clock",
+    "farm_clock_ticking",
     "is_inside_active_farm",
     "trip_destination_farm",
     "clock_farm",

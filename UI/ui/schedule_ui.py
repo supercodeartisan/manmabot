@@ -230,6 +230,23 @@ def _magic_thumb(path: Path | None, size: int = 28):
     return Image.new("RGBA", (size, size), (219, 234, 254, 255))
 
 
+def _shown_elapsed(clock: dict) -> float:
+    """Elapsed seconds already sampled, plus time since that sample while running."""
+    try:
+        elapsed = float(clock.get("elapsed_s") or 0.0)
+    except (TypeError, ValueError):
+        elapsed = 0.0
+    if not clock.get("ticking"):
+        return elapsed
+    try:
+        as_of = float(clock.get("as_of") or 0.0)
+    except (TypeError, ValueError):
+        as_of = 0.0
+    if as_of <= 0.0:
+        return elapsed
+    return elapsed + max(0.0, time.monotonic() - as_of)
+
+
 def _format_routine_timer(seconds: float) -> str:
     """Clock text for a routine stay. Hours appear only past 60 minutes."""
     whole = max(0, int(seconds))
@@ -10765,7 +10782,7 @@ class ScheduleWindow(tk.Tk):
                 if kind == "break":
                     navigating = False
                 if not navigating:
-                    remaining = int(slot_s - (time.monotonic() - float(clock["started_at"])))
+                    remaining = int(slot_s - _shown_elapsed(clock))
         for row, iid in enumerate(children):
             if iid == active_iid and navigating:
                 text = self.t["routine_timer_moving"]
