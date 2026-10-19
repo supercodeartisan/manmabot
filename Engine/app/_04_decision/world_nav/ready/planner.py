@@ -180,6 +180,8 @@ class WorldNavPlanner:
             )
         )
         allow_npc_tp = bool(use_npc_teleporters) and not same_map and not near_entrance
+        # The same door check. Standing at the ground enter walks and clicks it.
+        allow_scroll = bool(has_talking_scroll) and not near_entrance
         tp_links = (
             _teleporter_links(g.transitions, adena=adena) if allow_npc_tp else []
         )
@@ -246,10 +248,10 @@ class WorldNavPlanner:
             if goal.kind == "map" and v[0] == goal.map_id:
                 # any node already on goal map satisfies MapGoal — no walk needed
                 return False
-            if has_talking_scroll and v in hub_keys:
+            if allow_scroll and v in hub_keys:
                 # Scroll to that hub costs scroll_cost; only walk if clearly cheaper.
                 return _cheb(u, v) < scroll_cost
-            if has_talking_scroll and u in hub_keys and v in hub_keys:
+            if allow_scroll and u in hub_keys and v in hub_keys:
                 return _cheb(u, v) < scroll_cost
             return True
 
@@ -288,7 +290,8 @@ class WorldNavPlanner:
                     heapq.heappush(pq, (nc, v))
 
             # Scroll: when already on goal map, only same-map hubs (no inter-map).
-            if has_talking_scroll:
+            # Near the goal door this edge is omitted; the ground enter is the step.
+            if allow_scroll:
                 for h in g.hubs:
                     if same_map and int(h.map_id) != int(goal.map_id):
                         continue
@@ -389,6 +392,7 @@ class WorldNavPlanner:
 
         meta = {
             "has_talking_scroll": has_talking_scroll,
+            "allow_talking_scroll": allow_scroll,
             "adena": adena,
             "use_npc_teleporters": use_npc_teleporters,
             "allow_npc_teleporters": allow_npc_tp,

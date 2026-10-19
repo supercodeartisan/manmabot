@@ -407,8 +407,6 @@ def _maybe_scroll_to_hunt_map(
     from app._04_decision.talking_scroll import (
         SCRATCH_SCROLL_ARRIVAL,
         SCRATCH_SHOP_TRIP,
-        hunt_map_is_dungeon,
-        on_dungeon_return_town,
         player_on_selected_map,
     )
     from app._04_decision.world_nav import (
@@ -428,8 +426,6 @@ def _maybe_scroll_to_hunt_map(
     if navigation_configure_in_progress():
         return None
     if player_on_selected_map(blackboard):
-        return None
-    if hunt_map_is_dungeon() and on_dungeon_return_town():
         return None
     from app._04_decision.dungeon_floor_route import inside_target_dungeon
 
@@ -1794,6 +1790,64 @@ def _drive_dungeon_floor_walk(state, blackboard, session, step) -> Status:
     return tick_traveling(state, blackboard)
 
 
+def _emit_floor_gate(blackboard, step) -> Status:
+    blackboard.emit(
+        ActionType.GATE,
+        priority=0.55,
+        reason="dungeon floor transition",
+        gate_entrance=(int(step.entrance_world[0]), int(step.entrance_world[1])),
+        gate_expect_map_id=int(step.to_map_id),
+        gate_expect_xy=(int(step.landing_world[0]), int(step.landing_world[1])),
+        gate_from_map_id=int(step.from_map_id),
+        gate_edge=f"floor:{step.from_pack_id}->{step.to_pack_id}",
+    )
+    return Status.SUCCESS
+
+
+def _floor_gate_sidestep(state, blackboard, session, step) -> Status:
+    """One body-avoid step, then the same floor gate click."""
+    from app._04_decision.behaviors.travel import clear_travel, emit_gate_sidestep
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(state)
+    if not session.gate_sidestep_sent:
+        if pose is None:
+            return _floor_idle(blackboard, "dungeon floor gate sidestep")
+        sent = emit_gate_sidestep(
+            blackboard,
+            state,
+            player_abs=(int(pose.x), int(pose.y)),
+            entrance_abs=(int(step.entrance_world[0]), int(step.entrance_world[1])),
+            reason="dungeon floor gate sidestep",
+        )
+        session.gate_sidestep_sent = True
+        session.gate_sidestep_from = (int(pose.x), int(pose.y))
+        session.gate_sidestep_waits = 0
+        if not sent:
+            clear_travel(blackboard)
+            session.phase = "transition"
+            session.gate_seen = False
+            session.gate_ok = False
+            session.gate_error = ""
+            return _emit_floor_gate(blackboard, step)
+        return Status.SUCCESS
+    session.gate_sidestep_waits = int(session.gate_sidestep_waits or 0) + 1
+    origin = session.gate_sidestep_from
+    moved = (
+        pose is not None
+        and origin is not None
+        and (int(pose.x), int(pose.y)) != (int(origin[0]), int(origin[1]))
+    )
+    if not moved and session.gate_sidestep_waits < 3:
+        return _floor_idle(blackboard, "dungeon floor gate sidestep")
+    clear_travel(blackboard)
+    session.phase = "transition"
+    session.gate_seen = False
+    session.gate_ok = False
+    session.gate_error = ""
+    return _emit_floor_gate(blackboard, step)
+
+
 def _drive_dungeon_floor_transition(state, blackboard, session, step) -> Status:
     from app._04_decision.world_nav.session import live_pose_from_state
     from app.bot_log import get_logger
@@ -1806,11 +1860,14 @@ def _drive_dungeon_floor_transition(state, blackboard, session, step) -> Status:
             step.kind,
         )
         return _floor_idle(blackboard, "dungeon floor route unavailable")
+    if session.phase == "sidestep":
+        return _floor_gate_sidestep(state, blackboard, session, step)
     if session.phase != "transition":
         session.phase = "transition"
         session.gate_seen = False
         session.gate_ok = False
         session.gate_map_id = None
+        session.gate_error = ""
         session.expect_map_id = int(step.to_map_id)
         get_logger("nav").info(
             "dungeon floor transition pending %s->%s cell=(%s,%s)",
@@ -1819,19 +1876,25 @@ def _drive_dungeon_floor_transition(state, blackboard, session, step) -> Status:
             step.entrance_world[0],
             step.entrance_world[1],
         )
-        blackboard.emit(
-            ActionType.GATE,
-            priority=0.55,
-            reason="dungeon floor transition",
-            gate_entrance=(int(step.entrance_world[0]), int(step.entrance_world[1])),
-            gate_expect_map_id=int(step.to_map_id),
-            gate_expect_xy=(int(step.landing_world[0]), int(step.landing_world[1])),
-            gate_from_map_id=int(step.from_map_id),
-            gate_edge=f"floor:{step.from_pack_id}->{step.to_pack_id}",
-        )
-        return Status.SUCCESS
+        return _emit_floor_gate(blackboard, step)
     if not session.gate_seen:
         return _floor_idle(blackboard, "dungeon floor transition pending")
+    from app._04_decision.world_nav.gate import GATE_STUCK_POSE
+
+    if (
+        not session.gate_ok
+        and session.gate_error == GATE_STUCK_POSE
+        and not session.gate_sidestep_done
+    ):
+        session.gate_sidestep_done = True
+        session.gate_sidestep_sent = False
+        session.phase = "sidestep"
+        get_logger("nav").info(
+            "dungeon floor gate stuck — sidestep then retry %s->%s",
+            step.from_pack_id,
+            step.to_pack_id,
+        )
+        return _floor_gate_sidestep(state, blackboard, session, step)
     pose = live_pose_from_state(state)
     live_map = session.gate_map_id
     if live_map is None and pose is not None:

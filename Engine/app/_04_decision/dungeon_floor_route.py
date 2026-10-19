@@ -951,6 +951,11 @@ class FloorRouteSession:
     gate_seen: bool = False
     gate_ok: bool = False
     gate_map_id: Optional[int] = None
+    gate_error: str = ""
+    gate_sidestep_done: bool = False
+    gate_sidestep_sent: bool = False
+    gate_sidestep_waits: int = 0
+    gate_sidestep_from: Optional[tuple[int, int]] = None
     replans: int = 0
     fail_reason: str = ""
 
@@ -959,11 +964,12 @@ class FloorRouteSession:
             return self.steps[self.index]
         return None
 
-    def note_gate(self, ok: bool, map_id: Optional[int]) -> None:
+    def note_gate(self, ok: bool, map_id: Optional[int], error: str = "") -> None:
         """Record the existing gate executor's result. Does not advance the route."""
         self.gate_seen = True
         self.gate_ok = bool(ok)
         self.gate_map_id = None if map_id is None else int(map_id)
+        self.gate_error = str(error or "")
 
     def fail(self, reason: str) -> None:
         self.phase = "failed"

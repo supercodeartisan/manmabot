@@ -673,6 +673,24 @@ def retreat_recover_until_ratio(state: "GameState") -> float:
     return float(pm.HP_ALMOST_FULL_RATIO)
 
 
+def retreat_fill_until_ratio(blackboard: "Blackboard") -> float | None:
+    """Safe-zone HP retreat keeps heal and potions up to the resume ratio.
+
+    None while hunting, on a mother-tree trip, or on an MP/return retreat.
+    Those keep the Recovery-tab percents.
+    """
+    from app._04_decision.mode_control import RETREAT_FOR_HP
+    from app._04_decision.player_mode import PlayerMode
+
+    if blackboard.player_mode is not PlayerMode.RETREATING:
+        return None
+    if blackboard.scratch.get("mother_tree_trip"):
+        return None
+    if blackboard.scratch.get("retreat_for") != RETREAT_FOR_HP:
+        return None
+    return float(pm.HP_ALMOST_FULL_RATIO)
+
+
 def _can_teleport_now(
     state: "GameState | None" = None,
     blackboard: "Blackboard | None" = None,
@@ -823,17 +841,9 @@ def _execute_hp_action(
             return HP_RETREAT_STARTED
         return None
     if action_id == "teleport":
-        if begin_retreat(
-            blackboard,
-            reason=RETREAT_FOR_HP,
-            teleport=True,
-            use_mother_tree=False,
-            allow_scroll=False,
-            walk_to_safe=True,
-        ):
-            blackboard.scratch[_SCRATCH_HP_RETREAT] = "teleport"
-            blackboard.scratch[_SCRATCH_HP_TP_ONCE] = True
-            return HP_RETREAT_STARTED
+        started = _begin_hp_teleport_retreat(blackboard)
+        if started is not None:
+            return started
         if begin_retreat(
             blackboard,
             reason=RETREAT_FOR_HP,
@@ -1027,12 +1037,14 @@ def _apply_teleport_once_gate(
     actions: list,
     can: dict[str, bool],
 ) -> None:
-    """Teleport once after potions are gone, until HP rises above its gate."""
+    """Teleport once after potions are gone, until HP rises above retreat."""
     from app._04_decision.hp_actions import action_threshold
 
     ratio = _known_hp_ratio(state)
+    retreat_th = action_threshold(actions, "retreat")
     threshold = action_threshold(actions, "teleport")
-    if ratio is not None and threshold is not None and ratio > threshold:
+    clear_above = retreat_th if retreat_th is not None else threshold
+    if ratio is not None and clear_above is not None and ratio > clear_above:
         blackboard.scratch.pop(_SCRATCH_HP_TP_ONCE, None)
     if blackboard.scratch.get(_SCRATCH_HP_TP_ONCE):
         can["teleport"] = False
@@ -1126,6 +1138,78 @@ def _execute_hp_retreat_layers(
     return None
 
 
+def _begin_hp_teleport_retreat(blackboard: "Blackboard") -> Status | object | None:
+    """One HP-retreat teleport. Callers decide when this is allowed."""
+    from app._04_decision.mode_control import RETREAT_FOR_HP, begin_retreat
+
+    if not begin_retreat(
+        blackboard,
+        reason=RETREAT_FOR_HP,
+        teleport=True,
+        use_mother_tree=False,
+        allow_scroll=False,
+        walk_to_safe=True,
+    ):
+        return None
+    blackboard.scratch[_SCRATCH_HP_RETREAT] = "teleport"
+    blackboard.scratch[_SCRATCH_HP_TP_ONCE] = True
+    return HP_RETREAT_STARTED
+
+
+def _release_lock_for_heal(state: "GameState", blackboard: "Blackboard") -> None:
+    """Drop the combat lock so a heal can cast. The id is not excluded."""
+    from app._04_decision.behaviors.combat import clear_engage_state
+    from app._04_decision.clickgap import log_sticky_release
+
+    tid = blackboard.current_target_id
+    if tid is not None:
+        log_sticky_release(state, blackboard, "heal in place")
+        try:
+            blackboard.finish_kill_ids.discard(int(tid))
+        except (TypeError, ValueError):
+            pass
+        blackboard.current_target_id = None
+    clear_engage_state(blackboard)
+
+
+def _retreat_hp_under_fire(
+    state: "GameState",
+    blackboard: "Blackboard",
+    can: dict[str, bool],
+) -> Status | object | None:
+    """Retreat HP: teleport once while hit, otherwise heal without leaving.
+
+    None lets the existing world-tree, talking-scroll, teleport ladder run.
+    """
+    from app._04_decision.combat_query import monster_hitting_me
+    from app._04_decision.talking_scroll import SCRATCH_HP_SAFE_SCROLLED
+    from app.bot_log import get_logger
+
+    if monster_hitting_me(state):
+        if blackboard.scratch.get(_SCRATCH_HP_TP_ONCE):
+            return None
+        if blackboard.scratch.get(SCRATCH_HP_SAFE_SCROLLED):
+            return None
+        if not _can_teleport_now(state, blackboard):
+            return None
+        get_logger("hp").info("hp teleport under attack")
+        return _begin_hp_teleport_retreat(blackboard)
+
+    if not can.get("heal"):
+        return None
+    _release_lock_for_heal(state, blackboard)
+    result = emit_heal(blackboard, state, reason="recover hp in place")
+    if result is not Status.FAILURE:
+        return result
+    blackboard.current_goal = "heal"
+    blackboard.emit(
+        ActionType.IDLE,
+        priority=0.92,
+        reason="recover hp, heal cooling",
+    )
+    return Status.SUCCESS
+
+
 def apply_hp_actions(
     state: "GameState",
     blackboard: "Blackboard",
@@ -1181,6 +1265,9 @@ def apply_hp_actions(
         and _hp_action_enabled(actions, "retreat")
         and ratio <= retreat_th
     ):
+        branched = _retreat_hp_under_fire(state, blackboard, can)
+        if branched is not None:
+            return branched
         started = _maybe_sell_then_hp_retreat(state, blackboard, can)
         if started is not None:
             return started
@@ -1371,7 +1458,11 @@ def apply_inplace_hp_support(
     *,
     until_ratio: float | None = None,
 ) -> Status | object | None:
-    """Heal at L_1 while retreating. Potions stay on side_intents. No scroll ladder."""
+    """Heal while retreating. Potions stay on side_intents. No scroll ladder.
+
+    A safe-zone HP retreat (no mother-tree trip) heals until the hunt-resume
+    ratio. Other retreats stop at the Recovery-tab heal percent.
+    """
     del until_ratio
     from app._04_decision import player_mode as pm
     from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
@@ -1393,13 +1484,24 @@ def apply_inplace_hp_support(
     shop = _shop_when_tree_blocked(state, blackboard, actions, can)
     if shop is not None:
         return shop
+    fill_until = retreat_fill_until_ratio(blackboard)
     heal_th = action_threshold(actions, "heal")
-    if (
-        heal_th is not None
+    heal_cap = fill_until if fill_until is not None else heal_th
+    heal_due = (
+        heal_cap is not None
         and can.get("heal")
-        and ratio <= heal_th
-    ):
-        result = emit_heal(blackboard, state, reason="recover hp")
+        and (ratio < heal_cap if fill_until is not None else ratio <= heal_cap)
+    )
+    if heal_due:
+        result = emit_heal(
+            blackboard,
+            state,
+            reason=(
+                "recover hp until resume"
+                if fill_until is not None
+                else "recover hp"
+            ),
+        )
         if result is not Status.FAILURE:
             return result
     from app._04_decision.spells import maybe_hp_to_mp

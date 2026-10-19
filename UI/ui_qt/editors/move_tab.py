@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Callable
 
 from PySide6.QtCore import Qt
@@ -41,6 +42,23 @@ from ui_qt.editors.form_helpers import cell_button, table_row_height_for_control
 from ui_qt.theme import tokens
 from ui_qt.widgets.step_spin import StepSpinBox
 from ui_qt.viewmodels.routine_vm import RoutineViewModel
+
+
+def _shown_elapsed(clock: dict) -> float:
+    """Elapsed seconds already sampled, plus time since that sample while inside."""
+    try:
+        elapsed = float(clock.get("elapsed_s") or 0.0)
+    except (TypeError, ValueError):
+        elapsed = 0.0
+    if not clock.get("ticking"):
+        return elapsed
+    try:
+        as_of = float(clock.get("as_of") or 0.0)
+    except (TypeError, ValueError):
+        as_of = 0.0
+    if as_of <= 0.0:
+        return elapsed
+    return elapsed + max(0.0, time.monotonic() - as_of)
 
 
 def _format_area_timer(seconds: float) -> str:
@@ -102,10 +120,7 @@ class MoveTab(QWidget):
             index = -1
         active = names[index] if clock and 0 <= index < len(names) else ""
         navigating = bool((clock or {}).get("navigating"))
-        try:
-            elapsed = float((clock or {}).get("elapsed_s") or 0.0)
-        except (TypeError, ValueError):
-            elapsed = 0.0
+        elapsed = _shown_elapsed(clock) if clock else 0.0
         limit_by_name = {
             name: limits[i] for i, name in enumerate(names) if i < len(limits)
         }

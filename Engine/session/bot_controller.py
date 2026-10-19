@@ -62,10 +62,17 @@ def _routine_clock_from_board(blackboard) -> dict | None:
         index = int(getattr(cursor, "index", 0) or 0)
     except (TypeError, ValueError):
         index = 0
+    as_of = time.monotonic()
+    elapsed_fn = getattr(cursor, "elapsed", None)
+    ticking_fn = getattr(cursor, "ticking", None)
     try:
-        started_at = float(getattr(cursor, "started_at", 0.0) or 0.0)
+        elapsed_s = float(elapsed_fn(as_of)) if callable(elapsed_fn) else 0.0
     except (TypeError, ValueError):
-        started_at = 0.0
+        elapsed_s = 0.0
+    try:
+        ticking = bool(ticking_fn()) if callable(ticking_fn) else False
+    except (TypeError, ValueError):
+        ticking = False
     active = entries[index % len(entries)] if entries else None
     kind = ""
     if isinstance(active, dict):
@@ -80,7 +87,9 @@ def _routine_clock_from_board(blackboard) -> dict | None:
         navigating = False
     return {
         "index": index % len(ids),
-        "started_at": started_at,
+        "elapsed_s": elapsed_s,
+        "as_of": as_of,
+        "ticking": ticking,
         "ids": ids,
         "durations_s": durations_s,
         "navigating": navigating,
@@ -147,13 +156,45 @@ def _farm_clock_from_board(blackboard) -> dict | None:
         elapsed = float(farm_elapsed_seconds(blackboard))
     except Exception:
         elapsed = 0.0
+    try:
+        from app._04_decision.farm_time import farm_clock_ticking
+
+        ticking = bool(farm_clock_ticking(blackboard))
+    except Exception:
+        ticking = False
     return {
         "index": index,
         "names": names,
         "limits_s": limits,
         "elapsed_s": elapsed,
+        "as_of": time.monotonic(),
+        "ticking": ticking,
         "navigating": navigating,
     }
+
+
+def _freeze_stay_clocks(blackboard) -> None:
+    """Stop the routine row and the hunt-area stay. Pause time is not counted."""
+    scratch = getattr(blackboard, "scratch", None)
+    cursor = scratch.get("routine_cursor") if isinstance(scratch, dict) else None
+    freeze = getattr(cursor, "freeze", None)
+    if callable(freeze):
+        freeze()
+    from app._04_decision.farm_time import freeze_farm_clock
+
+    freeze_farm_clock(blackboard)
+
+
+def _resume_stay_clocks(blackboard) -> None:
+    """Continue both stays from the seconds already committed."""
+    scratch = getattr(blackboard, "scratch", None)
+    cursor = scratch.get("routine_cursor") if isinstance(scratch, dict) else None
+    resume = getattr(cursor, "resume", None)
+    if callable(resume):
+        resume()
+    from app._04_decision.farm_time import resume_farm_clock
+
+    resume_farm_clock(blackboard)
 
 
 class BotController:
@@ -356,7 +397,9 @@ class BotController:
             return None
         return {
             "index": int(clock["index"]),
-            "started_at": float(clock["started_at"]),
+            "elapsed_s": float(clock.get("elapsed_s") or 0.0),
+            "as_of": float(clock.get("as_of") or 0.0),
+            "ticking": bool(clock.get("ticking")),
             "ids": list(clock["ids"]),
             "durations_s": list(clock["durations_s"]),
             "navigating": bool(clock["navigating"]),
@@ -376,6 +419,8 @@ class BotController:
             "names": list(clock["names"]),
             "limits_s": list(clock["limits_s"]),
             "elapsed_s": float(clock["elapsed_s"]),
+            "as_of": float(clock.get("as_of") or 0.0),
+            "ticking": bool(clock.get("ticking")),
             "navigating": bool(clock["navigating"]),
         }
 
@@ -1343,6 +1388,7 @@ class BotController:
                         executor.drop_mouse()
                         mouse_dropped = True
                     self._consume_paused_settings(config, decision, world, executor)
+                    _freeze_stay_clocks(decision.blackboard)
                     self._set_preview_hold("Paused")
                     publish("paused")
                     time.sleep(0.05)
@@ -1357,6 +1403,7 @@ class BotController:
                     if not minimized_dropped:
                         executor.drop_mouse()
                         minimized_dropped = True
+                    _freeze_stay_clocks(decision.blackboard)
                     self._set_preview_hold("Game window minimized — bot paused")
                     publish("minimized")
                     time.sleep(0.05)
@@ -1364,6 +1411,7 @@ class BotController:
                 minimized_dropped = False
 
                 if cap_status != "ok":
+                    _freeze_stay_clocks(decision.blackboard)
                     self._set_preview_hold("Waiting for game window")
                     publish("no_window")
                     time.sleep(0.01)
@@ -1466,6 +1514,7 @@ class BotController:
                         pass
 
                 if not self._pause_gate.is_set() or self._stop_event.is_set():
+                    _freeze_stay_clocks(decision.blackboard)
                     self._set_preview_hold("Paused")
                     publish("paused")
                     continue
@@ -1474,10 +1523,13 @@ class BotController:
                     if not paralyzed_dropped:
                         executor.drop_mouse()
                         paralyzed_dropped = True
+                    _freeze_stay_clocks(decision.blackboard)
                     # Capture/vision already ran; skip decide+act until cursor clears.
                     publish("cursor_paralyzed")
                     continue
                 paralyzed_dropped = False
+
+                _resume_stay_clocks(decision.blackboard)
 
                 if (
                     (not session_origin_ready or not session_map_id_ready)

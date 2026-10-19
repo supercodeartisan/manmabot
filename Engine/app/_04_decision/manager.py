@@ -242,7 +242,7 @@ class DecisionManager:
         cursor_score: float | None = None,
         need_score: float | None = None,
     ) -> bool:
-        """Count a verify fail; soft-give-up after consecutive fails on this id."""
+        """After 5 monster cursor rejects, skip that id for 4 seconds. Items still count misses."""
         return note_cursor_verify_fail(
             self.blackboard,
             track_id,

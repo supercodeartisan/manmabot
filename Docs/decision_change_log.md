@@ -1,5 +1,69 @@
 # Decision change log
 
+## 2026-10-19 — low HP heals in place, teleports once while hit
+
+Intent: at the retreat HP, a character who was not being attacked still left for the world tree, and a character who was being attacked did not teleport before that. Heal and teleport could also be pressed below 20 MP on the unstick path and at the key itself.
+Shared: `apply_hp_actions`. At or under the retreat row, a monster or summon whose attack targets the character teleports once when that skill can spend mana. The same drop does not teleport again until HP rises above the retreat row; the world tree, talking scroll, then teleport ladder runs instead. With nobody attacking, and heal able to spend mana, the combat lock is released and heal stays in place, including while the heal key is cooling. Dungeon and field hunting share this. Heal and every teleport refuse known MP below 20 at the decision and at the key press. Unstick keeps its percent reserve on top of that floor. The mother-tree mana floor stays. Potions, the 95% safe-zone fill, world-tree 40/80 recharge, and the fallback ladder stay as they are.
+Affects: field and dungeon HP recovery at the retreat percent. Stuck escape will not teleport below 20 MP.
+Consent: user (yes, keep every other behavior).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — a stuck gate click steps aside once
+
+Intent: a dungeon door click that did not move the character still waited 5 seconds twice on the same tile. Bodies on the entrance were never sidestepped during that wait.
+Shared: `run_gate_click` returns `gate stuck pose unchanged` when mapId and the tile are both unchanged for the full 5 second land wait, and does not take the second ring from that tile. A moved tile or a flipped mapId still finishes that wait and may take the second ring. World nav and the dungeon floor route then emit one existing body-avoid hop (`emit_gate_sidestep` / `plan_body_click`, one tile) and the same gate click once more. A second stuck click fails the transition as before. The first cut was 1 second; the user set it to 5 seconds before any game run.
+Affects: world-nav map transitions and dungeon floor gate clicks. Shop, HP retreat, talking scroll, NPC teleporter, and combat engage stay as they are.
+Consent: user (yes).
+Result: implemented at 5 seconds. Gate-watch check passed (unchanged tile is stuck at 5s; at 1s it still waits; a moved tile and a flipped mapId keep waiting). Not run in game.
+
+## 2026-10-19 — near a dungeon door, world nav walks and clicks
+
+Intent: a hunt that slipped out next to the dungeon door still took a talking scroll to a town hub when the click point was more than 10 tiles away. The 50-tile door check already dropped the NPC teleporter.
+Shared: `WorldNavPlanner.plan`. When `near_goal_ground_enter` is true (50 tiles, the same check that drops the NPC teleporter), talking-scroll edges are omitted for that plan. The walk to the `ground_enter` and the click stay. A separate 10-tile or 15-tile scroll radius was tried and removed; the user kept 50. Farther starts, same-map plans, shop scrolls, HP retreat scrolls, and the in-dungeon floor route are unchanged.
+Affects: world-nav returns that begin within 50 tiles of the goal map's ground door. A blocked walk still fails that plan instead of scrolling.
+Consent: user (yes; 50 tiles, no separate 10 or 15).
+Result: 50-tile check restored. Planner check passed (30 tiles: walk+click, scroll and NPC teleporter off; 80 tiles: both on). Not run in game.
+
+## 2026-10-19 — exit replan starts at the outside door
+
+Intent: leaving a dungeon flipped mapId while xy was still the inside cell, so the 50-tile door check measured about 200 tiles and took a talking scroll plus a paid teleporter.
+Shared: a world-nav walk that leaves its map (`left map during walk` / `walk on wrong map`). When the live xy is within 5 tiles of that exit's inside cell, the next plan starts at the exit's outside landing, once. The existing 50-tile check then drops the talking scroll and the NPC teleporter. A start that is not on that inside cell is unchanged.
+Affects: the replan after a world-nav walk steps through a known exit. Same-map walks, shop scrolls, HP retreat scrolls, and in-dungeon floor clicks stay as they are.
+Consent: user (yes).
+Result: implemented. Check passed for the 12:08 pose `(32811,32723)` leaving map 7: landing `(32728,32928)`, scroll off. `(33055,32342)` keeps the scroll. Not run in game.
+
+## 2026-10-19 — safe-zone retreat heals and drinks until hunt resume
+
+Intent: with the world tree unavailable, heal and potions stopped at the Recovery-tab percents while the character still waited until 95% HP to leave the safe zone.
+Shared: `apply_inplace_hp_support` and the HP-potion side intent. On an HP retreat that is not a mother-tree trip, both continue until `HP_ALMOST_FULL_RATIO` (95%). Heal still requires enough MP to cast. A heal cast on that tick skips the potion. Hunting keeps the tab percents. Mother-tree recharge keeps its 40% / 80% band.
+Affects: the wait after an HP retreat to a safe zone or teleport landing. MP retreats and return-to-town retreats are unchanged.
+Consent: user (yes).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — cursor reject skips that monster for 4 seconds
+
+Intent: a clipped monster failed the attack cursor, the sticky lock kept aiming at it, then the id sat on the 160-tick give-up list. After the body walked fully on screen the character still ignored it.
+Shared: `note_cursor_verify_fail` for monsters. Five rejected attack cursors in a row on the same id clear the sticky lock and record that id in `cursor_reject_until` for 4 seconds. An accepted cursor clears that streak. `excluded_target_ids` hides the id from the next attack choice, including a monster that has attacked me. Item cursor misses, dungeon wall release, and the 160-tick give-up for abandon / max engage / combat blocked stay as they are.
+Affects: farming, travel combat, and dungeon patrol whenever an attack click is rejected. A monster released this way can be chosen again after 4 seconds. Other monsters can be chosen during those 4 seconds.
+Consent: user (yes; 4 seconds instead of 160 ticks; exclude only after 5 cursor rejects in a row).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — pause freezes the routine and hunt-area clocks
+
+Intent: both stay clocks were wall time, so a pause still burned the row and the hunt area. The countdown kept falling, and a long pause advanced the row on resume.
+Shared: `RoutineCursor` elapsed time and `farm_time` sampling. Pause, auto-pause, a minimized window, a missing game window, and a paralyzed cursor commit the open segment and hold it. Resume continues from those seconds. The short wait for a live position at start still counts. Stop still drops both clocks, and the next start is the first row at zero. Arrival reset, return trips that keep the row clock, the Moving label, login, combat, and HP stay as they are.
+Affects: the routine-row countdown and the hunt-area stay, on screen and in the expiry check.
+Consent: user (yes, freeze both clocks on pause and continue on resume).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — off a dungeon floor, world nav starts again
+
+Intent: a dungeon hunt resumed on the mainland (world tree) kept the old floor patrol and fought there. The hunt-map check treated every mainland tile as the dungeon return town, because that town is the Giran teleporter row and its geography is the whole mainland pack.
+Shared: `_maybe_scroll_to_hunt_map` no longer returns early for that town. Off the scheduled floor, and not on another floor of the same complex, it still calls `begin_world_nav` with reason `hunt_map`. `on_dungeon_return_town` is removed. `finish_retreat` and `begin_world_nav` stay as they are.
+Affects: travel and farming while a dungeon row is active and the live pack is not that dungeon. A pause/resume at the world tree, and any other mainland tile, arms world nav back to the dungeon. Another floor of the same complex still uses the floor route. Shop trips, scroll-arrival waits, and an already armed world nav stay blocked. Field hunts are unchanged.
+Consent: user (ok, remove the return-town skip; do not add a separate resume path).
+Result: implemented. Not run in game.
+
 ## 2026-10-18 — one stair goal per floor, and start inside the dungeon
 
 Intent: dungeon floor walks were a new travel every 3 tiles, so the character stopped at each one. A start already on the scheduled floor (or another floor of that same complex) still planned world nav back to the entrance and scrolled to town.

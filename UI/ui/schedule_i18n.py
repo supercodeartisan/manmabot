@@ -445,6 +445,19 @@ _EN = {
     "routine_area_set": "Area · set",
     "routine_patrol_needed": "Patrol · needed",
     "routine_patrol_set": "Patrol · set",
+    "routine_setup_block_title": "Finish area or patrol",
+    "routine_setup_block_save": (
+        "Cannot save this schedule. "
+        "Finish the area or patrol setup for the routine maps below."
+    ),
+    "routine_setup_block_create": (
+        "Cannot add this schedule. "
+        "Finish the area or patrol setup for the routine maps below."
+    ),
+    "routine_setup_block_start": (
+        "Cannot start. "
+        "Finish the area or patrol setup for the schedules below."
+    ),
     "routine_break_general_only": "Break maps can only be general maps.",
     "sort": "Sort",
     "sort_name": "Name",
@@ -1575,6 +1588,19 @@ _KO.update({
     "routine_area_set": "구역 · 완료",
     "routine_patrol_needed": "패트롤 · 필요",
     "routine_patrol_set": "패트롤 · 완료",
+    "routine_setup_block_title": "구역·패트롤을 완료하세요",
+    "routine_setup_block_save": (
+        "이 일정을 저장할 수 없습니다. "
+        "아래 루틴의 구역 또는 패트롤 설정을 완료하세요."
+    ),
+    "routine_setup_block_create": (
+        "이 일정을 추가할 수 없습니다. "
+        "아래 루틴의 구역 또는 패트롤 설정을 완료하세요."
+    ),
+    "routine_setup_block_start": (
+        "시작할 수 없습니다. "
+        "아래 일정의 구역 또는 패트롤 설정을 완료하세요."
+    ),
     "routine_break_general_only": "휴식 맵은 일반 맵만 고를 수 있습니다.",
     "sort_name": "이름", "sort_level": "레벨",
     "route_editor_hint": "프로그램 안에서 사냥 구역과 순찰 경로를 편집합니다.",
@@ -2002,6 +2028,19 @@ _ZH.update({
     "routine_area_set": "区域 · 已设",
     "routine_patrol_needed": "巡逻 · 未设",
     "routine_patrol_set": "巡逻 · 已设",
+    "routine_setup_block_title": "请先完成区域或巡逻",
+    "routine_setup_block_save": (
+        "无法保存此日程。"
+        "请先完成下面例行的区域或巡逻设置。"
+    ),
+    "routine_setup_block_create": (
+        "无法添加此日程。"
+        "请先完成下面例行的区域或巡逻设置。"
+    ),
+    "routine_setup_block_start": (
+        "无法开始。"
+        "请先完成下面日程的区域或巡逻设置。"
+    ),
     "routine_break_general_only": "休息地图只能选择普通地图。",
     "sort_name": "名称", "sort_level": "等级",
     "route_editor_hint": "在程序内编辑狩猎区域和巡逻路线，改动保存到地图覆盖层。",
