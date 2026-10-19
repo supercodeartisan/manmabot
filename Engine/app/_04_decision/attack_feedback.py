@@ -21,7 +21,7 @@ CURSOR_VERIFY_FAIL_GIVE_UP = 5
 # After one rejected attack cursor, skip that id for this many seconds.
 CURSOR_REJECT_EXCLUDE_SECONDS = 4.0
 # Consecutive loot-cursor misses on the same *item* before soft abandon
-# (short loot cooldown — not the combat 160-tick map).
+# (short loot cooldown — not the 4-second combat give-up map).
 CURSOR_VERIFY_FAIL_GIVE_UP_ITEM = 4
 
 
@@ -118,7 +118,7 @@ def release_cursor_reject(
 ) -> None:
     """Drop the sticky lock and skip ``track_id`` for 4 seconds.
 
-    The id is not written to the 160-tick give-up map. Dungeon wall release
+    The id is not written to the 4-second give-up map. Dungeon wall release
     does not call this.
     """
     from app.bot_log import get_logger
@@ -178,15 +178,12 @@ def blacklist_target(blackboard: "Blackboard", track_id: int, *, reason: str) ->
     blackboard.scratch["last_blacklist"] = {"id": track_id, "reason": reason}
 
 
-def excluded_target_ids(blackboard: "Blackboard", cooldown_ticks: int) -> set[int]:
-    """Give-up cooldown, 4s cursor-reject skips, and the session blacklist."""
-    active = {
-        tid
-        for tid, t in blackboard.given_up_target_ids.items()
-        if blackboard.tick_count - t < cooldown_ticks
-    }
+def excluded_target_ids(blackboard: "Blackboard") -> set[int]:
+    """Give-up window (4s), 4s cursor-reject skips, and the session blacklist."""
+    from app._04_decision.behaviors.combat import active_give_up_ids
+
     return (
-        active
+        active_give_up_ids(blackboard)
         | _active_cursor_reject_ids(blackboard)
         | set(blackboard.blacklisted_target_ids)
         | set(blackboard.exp_kill_ids)

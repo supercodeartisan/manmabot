@@ -189,8 +189,11 @@ def _resume_stay_clocks(blackboard) -> None:
     """Continue both stays from the seconds already committed."""
     scratch = getattr(blackboard, "scratch", None)
     cursor = scratch.get("routine_cursor") if isinstance(scratch, dict) else None
+    from app._04_decision.world_nav.routine import ROUTINE_CLOCK_HELD
+
+    held = isinstance(scratch, dict) and bool(scratch.get(ROUTINE_CLOCK_HELD))
     resume = getattr(cursor, "resume", None)
-    if callable(resume):
+    if callable(resume) and not held:
         resume()
     from app._04_decision.farm_time import resume_farm_clock
 

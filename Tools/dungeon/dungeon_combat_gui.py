@@ -1538,7 +1538,9 @@ def _engagement_label(
     if oid_i is not None and oid_i in blacklist_ids:
         return "blacklist"
     if oid_i is not None and oid_i in give_up_by_id:
-        remain = give_up_by_id[oid_i].get("remain_ticks")
+        remain = give_up_by_id[oid_i].get("remain_s")
+        if remain is None:
+            remain = give_up_by_id[oid_i].get("remain_ticks")
         return f"give-up:{remain}" if remain is not None else "give-up"
     if kind == "monster" and _ids_equal(oid, target_id):
         return "engaged"
@@ -3210,7 +3212,12 @@ class DungeonCombatApp(tk.Tk):
         if give_ups:
             lines.append(f"give-up active: {len(give_ups)}")
             for row in sorted(
-                give_ups, key=lambda r: int(r.get("remain_ticks") or 0)
+                give_ups,
+                key=lambda r: float(
+                    r.get("remain_s")
+                    if r.get("remain_s") is not None
+                    else r.get("remain_ticks") or 0
+                ),
             )[:6]:
                 bits = [f"  id={row.get('id')}"]
                 nm = str(row.get("name") or "").strip()
@@ -3261,7 +3268,14 @@ class DungeonCombatApp(tk.Tk):
                         bits.append(f"score={score_s}")
                 reason = str(row.get("reason") or "give-up").strip() or "give-up"
                 bits.append(f"reason={reason}")
-                bits.append(f"({row.get('remain_ticks')}t left)")
+                remain_s = row.get("remain_s")
+                if remain_s is None:
+                    bits.append(f"({row.get('remain_ticks')}t left)")
+                else:
+                    try:
+                        bits.append(f"({float(remain_s):.1f}s left)")
+                    except (TypeError, ValueError):
+                        bits.append(f"({remain_s}s left)")
                 lines.append(" · ".join(bits))
         path_skips = [
             row

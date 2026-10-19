@@ -12,7 +12,6 @@ from app._03_world import ActionType, ObjectType
 from app._04_decision.attack_feedback import excluded_target_ids
 from app._04_decision.behavior_tree import Status
 from app._04_decision.behaviors.combat import (
-    GIVE_UP_COOLDOWN_TICKS,
     begin_engage,
     clear_engage_state,
     continue_sticky_combat,
@@ -1684,7 +1683,7 @@ def continue_or_start_combat(
     else:
         target = nearest_attackable(
             state,
-            exclude=excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS),
+            exclude=excluded_target_ids(blackboard),
             origin=origin,
             near_box=near_box,
             near_tiles=near_tiles,
@@ -1823,7 +1822,7 @@ def continue_or_start_loot(
                 from app._04_decision.combat_query import list_lootable
 
                 preview_skip = set(
-                    excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
+                    excluded_target_ids(blackboard)
                 )
                 preview_skip.update(
                     tid
@@ -1856,7 +1855,7 @@ def continue_or_start_loot(
     if not allow_new:
         return None
 
-    skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
         for tid in blackboard.loot_clicked_ids
@@ -1920,7 +1919,7 @@ def farm_loot_or_combat(
     if is_hp_zero(state):
         return None
     origin = blackboard.world_origin
-    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
+    exclude = excluded_target_ids(blackboard)
     # Refresh synthetic attacks_me targets before sticky so list-missing
     # attackers (e.g. uncatalogued slime) stay bound until AttackAction ends.
     try:
@@ -2064,7 +2063,7 @@ def retreat_loot_if_clear(
         blackboard.current_target_id = None
         clear_engage_state(blackboard)
 
-    exclude = excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS)
+    exclude = excluded_target_ids(blackboard)
     if nearest_attackable(
         state, exclude=exclude, origin=blackboard.world_origin
     ) is not None:

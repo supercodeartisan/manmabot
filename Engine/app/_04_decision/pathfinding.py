@@ -341,7 +341,35 @@ def select_click_waypoint(
         last_ok = (ax, ay)
         if terrain is None or terrain.dist_to_wall(ax, ay) >= 1:
             last_clear = (ax, ay)
-    return last_clear if last_clear is not None else last_ok
+    picked = last_clear if last_clear is not None else last_ok
+    if picked is None:
+        return None
+    from app._04_decision.doors import retarget_open_door
+
+    beyond, replaced = retarget_open_door(
+        [(int(x), int(y)) for x, y in path],
+        (int(ox), int(oy)),
+        picked,
+        max_hop,
+    )
+    if not replaced:
+        return picked
+    if beyond is None:
+        return None
+    rx, ry = absolute_to_relative(int(beyond[0]), int(beyond[1]), origin)
+    if not in_battle_click_region(rx, ry):
+        return None
+    try:
+        beyond_i = next(
+            i
+            for i, tile in enumerate(path)
+            if (int(tile[0]), int(tile[1])) == beyond
+        )
+    except StopIteration:
+        return None
+    if not is_click_valid(path, beyond_i, slack=slack, terrain=terrain):
+        return None
+    return beyond
 
 
 def waypoint_to_content(

@@ -1,7 +1,8 @@
 """In-process storewin. One call reads the NPC warehouse window list as JSON.
 
-DLL is storewin.dll (D:\\dist build, copied beside shop_listen.dll). Not injected
-into LC.exe. Rows are the window slot order: idx, name, qty.
+DLL is Engine/analysis/NPC_conv/storewin.dll. Offsets are
+Engine/analysis/lc930/registry/LC930_REGISTRY.txt. Not injected into LC.exe.
+Rows are the window slot order: idx, name, qty.
 """
 from __future__ import annotations
 
@@ -12,35 +13,46 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["StorewinReader"] = None
 
 
 def default_dll_path() -> Path:
     env = os.environ.get("STOREWIN_DLL", "").strip()
-    candidates: list[Path] = []
     if env:
-        candidates.append(Path(env))
-    here = Path(__file__).resolve()
-    candidates.append(here.parents[2] / "analysis" / "NPC_conv" / "storewin.dll")
-    candidates.append(Path(r"D:\dist\bin\storewin.dll"))
-    for path in candidates:
-        if path.is_file():
-            return path
-    return candidates[0] if env else candidates[-2]
+        return Path(env)
+    folder = _ANALYSIS / "NPC_conv"
+    built = folder / "storewin_build.dll"
+    live = folder / "storewin.dll"
+    if built.is_file() and (
+        not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
+    ):
+        return built
+    return live
+
+
+def default_registry_path() -> Path:
+    return _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
 
 
 class StorewinReader:
     """ctypes wrapper around storewin.dll."""
 
-    def __init__(self, dll_path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        dll_path: Optional[Path] = None,
+        registry_path: Optional[Path] = None,
+    ) -> None:
         dll = Path(dll_path or default_dll_path())
+        registry = Path(registry_path or default_registry_path())
         self._closed = False
         self._lib = None
         self._snap = None
         self._shutdown = None
+        self._registry = str(registry).encode("utf-8")
         self._buf = ctypes.create_string_buffer(1 << 20)
-        if not dll.is_file():
+        if not dll.is_file() or not registry.is_file():
             return
         self._lib = ctypes.CDLL(str(dll))
         self._snap = self._lib.storewin_snapshot
@@ -59,7 +71,7 @@ class StorewinReader:
         if self._closed or self._snap is None:
             return None
         with _LOCK:
-            n = int(self._snap(None, self._buf, len(self._buf)))
+            n = int(self._snap(self._registry, self._buf, len(self._buf)))
         if n < 2:
             return None
         try:

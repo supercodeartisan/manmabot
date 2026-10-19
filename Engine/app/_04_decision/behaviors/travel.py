@@ -113,6 +113,97 @@ def _near_tile(blackboard: "Blackboard", tile: tuple[int, int]) -> bool:
     return bool(terrain.can_step(ox, oy, int(tile[0]), int(tile[1])))
 
 
+def _client_line_continues(
+    start: tuple[int, int],
+    waypoint: tuple[int, int],
+    farther: tuple[int, int],
+) -> bool:
+    """True when the client walk P→C passes through W and does not turn there.
+
+    ``game_client_walk_tiles`` is diagonal first, then the leftover axis.
+    The step into W and the step out of W must be the same vector.
+    """
+    from app._04_decision.pathfinding import game_client_walk_tiles
+
+    sx, sy = int(start[0]), int(start[1])
+    wx, wy = int(waypoint[0]), int(waypoint[1])
+    cx, cy = int(farther[0]), int(farther[1])
+    absolute = [
+        (sx + rx, sy + ry)
+        for rx, ry in game_client_walk_tiles(cx - sx, cy - sy)
+    ]
+    try:
+        index = absolute.index((wx, wy))
+    except ValueError:
+        return False
+    if index <= 0 or index >= len(absolute) - 1:
+        return False
+    into = (wx - absolute[index - 1][0], wy - absolute[index - 1][1])
+    out = (absolute[index + 1][0] - wx, absolute[index + 1][1] - wy)
+    return into == out
+
+
+def _straight_extend_waypoint(
+    blackboard: "Blackboard",
+    terrain: object,
+    bodies: set[tuple[int, int]],
+) -> tuple[int, int] | None:
+    """Farthest guide tile past the current click that stays on the same line.
+
+    The hop cap, click region, and arrival radius are unchanged. An open door
+    or the final goal ends the scan so those hops still use the existing click.
+    """
+    from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
+    from app._04_decision.avoidance import click_clear, travel_max_hop
+    from app._04_decision.doors import door_state_at
+    from app._04_decision.pathfinding import is_game_walk_clear
+
+    waypoint = blackboard.nav_waypoint
+    if waypoint is None:
+        return None
+    origin = blackboard.world_origin
+    start = (int(origin.x), int(origin.y))
+    current = (int(waypoint[0]), int(waypoint[1]))
+    guide = [(int(x), int(y)) for x, y in blackboard.nav_path]
+    try:
+        start_at = guide.index(current)
+    except ValueError:
+        return None
+    goal = blackboard.nav_goal
+    goal_at: int | None = None
+    if goal is not None:
+        goal_tile = (int(goal[0]), int(goal[1]))
+        for index, tile in enumerate(guide):
+            if tile == goal_tile:
+                goal_at = index
+                break
+    hop = int(travel_max_hop())
+    best: tuple[int, int] | None = None
+    for index in range(start_at + 1, len(guide)):
+        if goal_at is not None and index > goal_at:
+            break
+        tile = guide[index]
+        if door_state_at(tile[0], tile[1]) == "open":
+            break
+        if tile_chebyshev(start[0], start[1], tile[0], tile[1]) > hop:
+            break
+        rx, ry = absolute_to_relative(tile[0], tile[1], origin)
+        if not in_battle_click_region(rx, ry):
+            break
+        if not _client_line_continues(start, current, tile):
+            break
+        if not is_game_walk_clear(terrain, start, tile):
+            break
+        if not click_clear(terrain, bodies, start, tile):
+            break
+        best = tile
+        if goal_at is not None and index == goal_at:
+            break
+    if best == current:
+        return None
+    return best
+
+
 def _reset_stuck(blackboard: "Blackboard") -> None:
     blackboard.travel_stuck_tile = (
         blackboard.world_origin.x,
@@ -161,6 +252,146 @@ def _mark_travel_unstick(blackboard: "Blackboard") -> None:
     blackboard.last_travel_tick = blackboard.tick_count
 
 
+_SCRATCH_HOP_LIFE = "hop_click_life"
+
+
+def _client_cells(
+    px: int, py: int, gx: int, gy: int
+) -> list[tuple[int, int]]:
+    from app._04_decision.pathfinding import game_client_walk_tiles
+
+    return [
+        (px + dx, py + dy)
+        for dx, dy in game_client_walk_tiles(gx - px, gy - py)
+    ]
+
+
+def _cells_text(cells: list[tuple[int, int]] | None) -> str:
+    if not cells:
+        return "-"
+    return ">".join(f"{x},{y}" for x, y in cells)
+
+
+def _path_is_prefix(
+    short: list[tuple[int, int]], long: list[tuple[int, int]]
+) -> int:
+    if not short:
+        return 0
+    return int(len(short) <= len(long) and long[: len(short)] == short)
+
+
+def _moving_bit() -> int:
+    from app._05_action.body_pose import body_is_moving
+
+    moving = body_is_moving()
+    if moving is True:
+        return 1
+    if moving is False:
+        return 0
+    return -1
+
+
+def _log_hop_click(
+    blackboard: "Blackboard",
+    new_click: tuple[int, int],
+) -> None:
+    """Record P, the click being replaced, and the click sent now.
+
+    A later line says whether the body stopped in the 0.3–0.7s after this
+    click. The click itself is unchanged.
+    """
+    from app.bot_log import event
+
+    moving = _moving_bit()
+    click_time = time.time()
+    previous = blackboard.scratch.get(_SCRATCH_HOP_LIFE)
+    if isinstance(previous, dict) and not previous.get("reported"):
+        elapsed = click_time - float(previous["click_time"])
+        if moving == 0 and float(previous["stopped_at"]) < 0.0:
+            previous["stopped"] = 1
+            previous["stopped_at"] = elapsed
+        previous["reported"] = True
+        event(
+            "travel",
+            "hop lifecycle prefix=%s stopped=%s stopped_at=%.3f elapsed=%.3f "
+            "player=%s active=%s next=%s",
+            int(previous["prefix"]),
+            int(previous["stopped"]),
+            float(previous["stopped_at"]),
+            elapsed,
+            previous["player"],
+            previous["active"] if previous["active"] is not None else "-",
+            previous["next"],
+        )
+    origin = blackboard.world_origin
+    player = (int(origin.x), int(origin.y))
+    active = blackboard.nav_waypoint
+    nxt = (int(new_click[0]), int(new_click[1]))
+    if active is None:
+        active_cell = None
+        dist = -1
+        path_w: list[tuple[int, int]] = []
+    else:
+        active_cell = (int(active[0]), int(active[1]))
+        dist = tile_chebyshev(player[0], player[1], active_cell[0], active_cell[1])
+        path_w = _client_cells(player[0], player[1], active_cell[0], active_cell[1])
+    path_c = _client_cells(player[0], player[1], nxt[0], nxt[1])
+    prefix = _path_is_prefix(path_w, path_c)
+    event(
+        "travel",
+        "hop click player=%s active=%s next=%s dist=%s prefix=%s moving=%s "
+        "click_time=%.3f path_w=%s path_c=%s",
+        player,
+        active_cell if active_cell is not None else "-",
+        nxt,
+        dist,
+        prefix,
+        moving,
+        click_time,
+        _cells_text(path_w),
+        _cells_text(path_c),
+    )
+    blackboard.scratch[_SCRATCH_HOP_LIFE] = {
+        "click_time": click_time,
+        "prefix": prefix,
+        "player": player,
+        "active": active_cell,
+        "next": nxt,
+        "stopped": 0,
+        "stopped_at": -1.0,
+        "reported": False,
+    }
+
+
+def _watch_hop_motion(blackboard: "Blackboard", moving: bool | None) -> None:
+    """One line if the body stops within 0.7s after the logged click."""
+    life = blackboard.scratch.get(_SCRATCH_HOP_LIFE)
+    if not isinstance(life, dict) or life.get("reported"):
+        return
+    elapsed = time.time() - float(life["click_time"])
+    if moving is False and elapsed <= 0.7:
+        life["stopped"] = 1
+        if float(life["stopped_at"]) < 0.0:
+            life["stopped_at"] = elapsed
+    if elapsed < 0.7:
+        return
+    from app.bot_log import event
+
+    life["reported"] = True
+    event(
+        "travel",
+        "hop lifecycle prefix=%s stopped=%s stopped_at=%.3f elapsed=%.3f "
+        "player=%s active=%s next=%s",
+        int(life["prefix"]),
+        int(life["stopped"]),
+        float(life["stopped_at"]),
+        elapsed,
+        life["player"],
+        life["active"] if life["active"] is not None else "-",
+        life["next"],
+    )
+
+
 def _emit_click(
     blackboard: "Blackboard",
     *,
@@ -172,6 +403,8 @@ def _emit_click(
 ) -> None:
     from app.bot_log import event
 
+    if not mid_act:
+        _log_hop_click(blackboard, (int(waypoint[0]), int(waypoint[1])))
     blackboard.nav_waypoint = waypoint
     blackboard.travel_destination = content
     blackboard.last_travel_tick = blackboard.tick_count
@@ -224,6 +457,7 @@ def _follow_body_click(
     origin = blackboard.world_origin
     start = (int(origin.x), int(origin.y))
     moving = body_is_moving()
+    _watch_hop_motion(blackboard, moving)
     if moving is not True:
         bodies = collect_body_tiles(state, origin) if state is not None else set()
         if not click_clear(terrain, bodies, start, waypoint):
@@ -471,6 +705,51 @@ def emit_travel_hop(
             # Fall through to plan the next hop this tick.
         else:
             from app._04_decision.mode_control import PURPOSE_ENTER_FARM
+            from app._05_action.body_pose import body_is_moving
+
+            # Straight line only: while still walking, and one tile before
+            # today's arrival, click a farther tile on that same line.
+            # Corners, doors, and the final goal fall through unchanged.
+            if (
+                body_is_moving() is True
+                and not blackboard.travel_unstick_active
+                and tile_chebyshev(
+                    int(blackboard.world_origin.x),
+                    int(blackboard.world_origin.y),
+                    int(wp[0]),
+                    int(wp[1]),
+                )
+                == 2
+            ):
+                from app._04_decision.avoidance import collect_body_tiles
+
+                bodies = (
+                    collect_body_tiles(state, blackboard.world_origin)
+                    if state is not None
+                    else set()
+                )
+                extended = _straight_extend_waypoint(blackboard, terrain, bodies)
+                if extended is not None:
+                    from app.bot_log import event
+
+                    event(
+                        "travel",
+                        "hop extend wp=%s -> %s purpose=%s",
+                        wp,
+                        extended,
+                        blackboard.travel_purpose,
+                    )
+                    _emit_click(
+                        blackboard,
+                        content=waypoint_to_content(
+                            extended, blackboard.world_origin
+                        ),
+                        waypoint=extended,
+                        reason=reason,
+                        priority=priority,
+                        mid_act=False,
+                    )
+                    return True
 
             _ticks, elapsed = _stuck_sample(blackboard)
             if try_movement_unstick(

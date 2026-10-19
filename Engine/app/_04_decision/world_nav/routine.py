@@ -270,3 +270,78 @@ def goal_for_entry(
             return api.point_goal(map_id, abs_xy[0], abs_xy[1])
 
     return api.map_goal(map_id)
+
+
+# Dungeon row clock paused for a retreat. World-tree time is not counted.
+ROUTINE_CLOCK_HELD = "routine_clock_held"
+# Return reason kept until the hunt floor is reached. Deeper floors arrive later.
+ROUTINE_RETURN_REASON = "routine_return_reason"
+
+
+def _routine_cursor(blackboard: Any) -> RoutineCursor | None:
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return None
+    from app._04_decision.world_nav.hooks import SCRATCH_ROUTINE
+
+    cursor = scratch.get(SCRATCH_ROUTINE)
+    return cursor if isinstance(cursor, RoutineCursor) else None
+
+
+def _routine_row_is_dungeon(blackboard: Any) -> bool:
+    cursor = _routine_cursor(blackboard)
+    entry = cursor.active() if cursor is not None else None
+    if not isinstance(entry, dict):
+        return False
+    if str(entry.get("kind") or "battle").strip().lower() == "break":
+        return False
+    pack_id = str(entry.get("map_id") or "").strip()
+    if not pack_id:
+        return False
+    from app._04_decision.world_nav.overlays import is_dungeon_pack
+
+    return bool(is_dungeon_pack(blackboard, pack_id))
+
+
+def hold_dungeon_routine_clock(blackboard: Any) -> None:
+    """Pause a dungeon routine clock when a retreat starts.
+
+    A revive retreat holds the same clock. Returning to the hunt floor
+    resumes the saved seconds.
+    """
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    if scratch.get(ROUTINE_CLOCK_HELD):
+        return
+    if not _routine_row_is_dungeon(blackboard):
+        return
+    cursor = _routine_cursor(blackboard)
+    if cursor is None:
+        return
+    cursor.freeze()
+    scratch[ROUTINE_CLOCK_HELD] = True
+    from app.bot_log import get_logger
+
+    get_logger("nav").info(
+        "routine clock pause elapsed=%.0fs",
+        cursor.elapsed(),
+    )
+
+
+def release_dungeon_routine_clock(blackboard: Any) -> bool:
+    """Resume a paused dungeon routine clock. False when nothing was held."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict) or not scratch.pop(ROUTINE_CLOCK_HELD, None):
+        return False
+    cursor = _routine_cursor(blackboard)
+    if cursor is None:
+        return False
+    cursor.resume()
+    from app.bot_log import get_logger
+
+    get_logger("nav").info(
+        "routine clock resume elapsed=%.0fs",
+        cursor.elapsed(),
+    )
+    return True

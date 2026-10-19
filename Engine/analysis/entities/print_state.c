@@ -301,8 +301,17 @@ static int readAtkPair(uint64_t slot, uint64_t* owner, uint64_t* tgt) {
     *tgt = t;
     return 1;
 }
+/* Door frame lives in the same AC block (DOOR_STATE.md: +0xD8). */
+#define DOOR_STATE_OFF 0xD8u
+#define DOOR_STATE_OPEN 0x1Cu
+#define DOOR_STATE_CLOSED 0x1Du
+#define DOOR_GFX_OFF 0x38u
+#define DOOR_GFX_LOCKED 0x8009u
+#define DOOR_SP 8u
+
 static void readAcFlags(uint64_t e, int* dead, int* bait,
-                        int* hasAtk, uint64_t* owner, uint64_t* tgt) {
+                        int* hasAtk, uint64_t* owner, uint64_t* tgt,
+                        uint32_t* doorFrame) {
     uint64_t ac, fp, slot, live;
     uint8_t ab[AC_BLOCK];
     uint32_t o;
@@ -313,12 +322,18 @@ static void readAcFlags(uint64_t e, int* dead, int* bait,
     *hasAtk = 0;
     *owner = 0;
     *tgt = 0;
+    if (doorFrame) *doorFrame = 0;
     ac = actionComp(e);
     if (!ac || !rm(ac, ab, sizeof(ab))) return;
     if (g_baitOff + 4 <= sizeof(ab)) {
         uint32_t b;
         memcpy(&b, ab + g_baitOff, 4);
         *bait = (b == g_baitVal) ? 1 : 0;
+    }
+    if (doorFrame && DOOR_STATE_OFF + 4 <= sizeof(ab)) {
+        uint32_t frame = 0;
+        memcpy(&frame, ab + DOOR_STATE_OFF, 4);
+        *doorFrame = frame;
     }
     byteDead = (g_deadByte < sizeof(ab) && ab[g_deadByte] == (uint8_t)g_deadVal) ? 1 : 0;
     fp = 1469598103934665603ull;
@@ -772,6 +787,10 @@ typedef struct {
     int hasAtk;         /* AttackAction slot has a non-zero tgt this sweep */
     uint64_t atkOwner;
     uint64_t atkTgt;
+    int doorCand;       /* InteractiveNPC species 8 or name Door */
+    uint32_t doorFrame; /* AC+0xD8: 0x1C open / 0x1D close */
+    uint32_t doorGfx;   /* Presentation+0x38: 0x8009 = not permitted */
+    int doorGfxOk;
     char name[NAME_CAP];
     float liveU, liveV; /* B slot (+0x78) raw iso */
     int haveLive;
@@ -887,10 +906,11 @@ static int appendLiveEnt(Ent* out, int n, Ent* old, int no,
                          const uint8_t* hdr) {
     int dead = 0, bait = 0, hasAtk = 0, i;
     uint64_t atkOwner = 0, atkTgt = 0;
+    uint32_t doorFrame = 0;
     Ent* E;
     if (n >= MAXENT || !ent) return 0;
     for (i = 0; i < n; i++) if (out[i].ent == ent) return 0;
-    readAcFlags(ent, &dead, &bait, &hasAtk, &atkOwner, &atkTgt);
+    readAcFlags(ent, &dead, &bait, &hasAtk, &atkOwner, &atkTgt, &doorFrame);
     E = &out[n];
     memset(E, 0, sizeof(*E));
     E->ent = ent; E->vft = rva; E->cx = cx; E->cy = cy;
@@ -899,6 +919,7 @@ static int appendLiveEnt(Ent* out, int n, Ent* old, int no,
     E->hasAtk = hasAtk;
     E->atkOwner = atkOwner;
     E->atkTgt = atkTgt;
+    E->doorFrame = doorFrame;
     E->scrSrc = "none";
     if (hdr && g_offEntGuid + 8 <= 0x50)
         memcpy(&E->guid, hdr + g_offEntGuid, 8);
@@ -960,7 +981,25 @@ static int appendLiveEnt(Ent* out, int n, Ent* old, int no,
             }
         }
     }
+    /* Door gfx is the kind, not the open/close frame. One read per door. */
+    if (!strcmp(classOf(rva), "InteractiveNPC") &&
+        (E->species == DOOR_SP || (E->name[0] && !strcmp(E->name, "Door")))) {
+        uint32_t gfx = 0;
+        E->doorCand = 1;
+        if (isHeap(E->presB) && rm(E->presB + DOOR_GFX_OFF, &gfx, 4)) {
+            E->doorGfx = gfx;
+            E->doorGfxOk = 1;
+        }
+    }
     return 1;
+}
+
+static const char* doorToken(const Ent* E) {
+    if (!E || !E->doorCand) return "";
+    if (E->doorGfxOk && E->doorGfx == DOOR_GFX_LOCKED) return "not_permitted";
+    if (E->doorFrame == DOOR_STATE_OPEN) return "open";
+    if (E->doorFrame == DOOR_STATE_CLOSED) return "close";
+    return "unknown";
 }
 
 /* Flat actor vector. Returns the roster count, or 0 so the caller keeps the cell map. */
@@ -1272,6 +1311,7 @@ static void emitState(Out* out, DWORD t0, int W, int H, Ent* ents, int n,
             outf(out, ",\"screen\":null");
         if (E->haveIscr)
             outf(out, ",\"iscr\":{\"x\":%.2f,\"y\":%.2f}", E->iScrX, E->iScrY);
+        if (E->doorCand) outf(out, ",\"door\":\"%s\"", doorToken(E));
         outc(out, '}');
     }
     }
