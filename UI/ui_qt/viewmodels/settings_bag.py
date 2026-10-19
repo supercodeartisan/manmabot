@@ -46,10 +46,12 @@ _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "potion_hp_ratio": 0.45,
     "random_loot": False,
     "loot_role": "none",
+    "loot_priority": "follow",
     "farm_mode": "party",
     "role": "member",
     "ws_port": 8765,
     "leader_host": "",
+    "roster": [],
 }
 
 
@@ -66,7 +68,7 @@ class SettingsBag:
         magic.setdefault("skills", {})
         party = self.data.setdefault("party", {})
         for key, value in _PARTY_UI_DEFAULTS.items():
-            party.setdefault(key, value)
+            party.setdefault(key, copy.deepcopy(value))
         self.on_changed: Callable[[], None] | None = None
 
     def _notify(self) -> None:
@@ -160,7 +162,7 @@ class SettingsBag:
         magic.setdefault("skills", {})
         party = self.data.setdefault("party", {})
         for key, value in _PARTY_UI_DEFAULTS.items():
-            party.setdefault(key, value)
+            party.setdefault(key, copy.deepcopy(value))
 
     def apply_to_profile(self) -> list[str]:
         task = ScheduleTask(settings=copy.deepcopy(self.data))

@@ -284,14 +284,25 @@ class PartyMemberManager:
             self._field_cache.clear()
         self.runtime.leader_walk_dist = leader_walk_dist
 
-        # Heal / buff / potion sides via solo helpers — never retreat/escape/tree.
-        from .loot import party_loot_ownership_filter
-
-        loot_own = (
-            party_loot_ownership_filter(cfg)
-            if (not dead and not bool(self.runtime.paused))
-            else None
+        # Retreat HP gate uses the solo survival line. Heal / buff stay in place.
+        from .loot import (
+            party_closest_looter_filter,
+            party_loot_first,
+            party_loot_ownership_filter,
         )
+
+        loot_first = party_loot_first(cfg)
+        loot_item_ok = None
+        if dead or bool(self.runtime.paused):
+            loot_own = None
+        elif loot_first:
+            # Party drops count as own for the closest non-leader, non-wizard.
+            loot_item_ok = party_closest_looter_filter(
+                game_state, origin, self.runtime.local_map_id
+            )
+            loot_own = False if loot_item_ok is not None else None
+        else:
+            loot_own = party_loot_ownership_filter(cfg)
         if (
             not dead
             and not bool(self.runtime.paused)
@@ -299,6 +310,19 @@ class PartyMemberManager:
             and self._nav_blackboard is not None
         ):
             from .loot import arm_party_loot_side
+
+            from .support import party_critical_escape
+
+            escape = party_critical_escape(game_state, self._nav_blackboard)
+            if escape is not None:
+                self.runtime.last_kind = "retreat"
+                self.runtime.last_reason = str(
+                    getattr(escape, "reason", "") or "critical retreat"
+                )
+                self.runtime.approach_goal = None
+                self.runtime.chasing = False
+                self._record_decision(escape)
+                return escape
 
             support = apply_party_support(
                 game_state,
@@ -313,6 +337,7 @@ class PartyMemberManager:
                         game_state,
                         self._nav_blackboard,
                         ownership_filter=bool(loot_own),
+                        item_ok=loot_item_ok,
                     )
                 except Exception as exc:
                     _log.debug("party loot side failed: %s", exc)
@@ -337,6 +362,10 @@ class PartyMemberManager:
             need_potion = False
         else:
             need_potion = self._need_potion(player, cfg)
+
+        gather = self._maybe_hunt_gather(game_state, dead=dead)
+        if gather is not None:
+            return gather
 
         threat = None
         if cfg.defend_self and game_state is not None:
@@ -551,6 +580,13 @@ class PartyMemberManager:
                 )
             )
             loot_max_tiles = max(4, int(cfg.follow_tiles))
+        elif loot_first:
+            # Loot before follow: assist / close-in / defend / join still win.
+            can_loot_now = walk_now is not None and result.kind in (
+                MemberKind.HOLD,
+                MemberKind.FOLLOW,
+            )
+            loot_max_tiles = max(4, int(cfg.follow_tiles))
         else:
             # Party farm: loot when the leader is idle (stopped / not farming)
             # and the member is holding inside the stop band.
@@ -603,6 +639,7 @@ class PartyMemberManager:
                     self._nav_blackboard,
                     ownership_filter=bool(loot_own),
                     max_tiles=loot_max_tiles,
+                    item_ok=loot_item_ok,
                 )
             except Exception as exc:
                 _log.debug("party hold loot failed: %s", exc)
@@ -767,6 +804,50 @@ class PartyMemberManager:
             self.runtime.last_kind,
             self.runtime.last_reason,
         )
+        return intent
+
+    def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:
+        """Walk to the leader's hunt NPC. Recovery orders are not handled here."""
+        if dead or self.runtime.paused:
+            return None
+        try:
+            from websocket.party_orders import member_orders
+        except Exception:
+            return None
+        order = member_orders.hunt
+        if order is None:
+            return None
+        if member_orders.arrived:
+            return None
+        try:
+            from app._04_decision.world_nav.session import live_pose_from_state
+        except Exception:
+            return None
+        pose = live_pose_from_state(game_state)
+        if pose is not None and member_orders.near(pose.map_id, pose.x, pose.y):
+            member_orders.mark_arrived()
+            self._join_nav.clear()
+            self.runtime.last_kind = "hold"
+            self.runtime.last_reason = "party_hunt_arrived"
+            return None
+        try:
+            map_id = int(order.get("map_id"))
+            dest_x = int(order.get("x"))
+            dest_y = int(order.get("y"))
+        except (TypeError, ValueError):
+            return None
+        intent = self._join_nav.tick(
+            game_state,
+            self._nav_blackboard,
+            dest_map=map_id,
+            dest_x=dest_x,
+            dest_y=dest_y,
+            reason="party_hunt_rally",
+        )
+        self.runtime.last_kind = "join_map"
+        self.runtime.last_reason = str(getattr(intent, "reason", "") or "party_hunt_rally")
+        self.runtime.chasing = False
+        self._record_decision(intent)
         return intent
 
     @staticmethod

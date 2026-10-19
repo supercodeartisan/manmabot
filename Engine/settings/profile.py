@@ -178,6 +178,8 @@ class Profile:
     party_potion_hp_ratio: float = 0.45
     party_random_loot: bool = False
     party_loot_role: str = "none"
+    # follow = loot only while holding. loot = party drops before follow.
+    party_loot_priority: str = "follow"
     # party = assist the leader's fight; solo = follow the leader, farm own mobs.
     party_farm_mode: str = "party"
     # member = existing follow/assist. leader = this PC hosts the party socket.
@@ -185,6 +187,8 @@ class Profile:
     party_ws_port: int = 8765
     # Member client: address of the leader PC's party socket.
     party_leader_host: str = ""
+    # Leader roster: [{"name": str, "role": "member"|"mage"|"shopkeeper"}].
+    party_roster: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
         char = str(self.character or "").strip().lower()
@@ -442,11 +446,16 @@ class Profile:
             kwargs["return_weight_above"] = snap_return_weight_above(
                 kwargs.get("return_weight_above"), DEFAULT_RETURN_WEIGHT_ABOVE
             )
+        if "party_loot_priority" in kwargs:
+            priority = str(kwargs.get("party_loot_priority") or "follow").strip().lower()
+            kwargs["party_loot_priority"] = priority if priority in ("follow", "loot") else "follow"
         if "party_role" in kwargs:
             role = str(kwargs.get("party_role") or "member").strip().lower()
             kwargs["party_role"] = role if role in ("member", "leader") else "member"
         if "party_leader_host" in kwargs:
             kwargs["party_leader_host"] = str(kwargs.get("party_leader_host") or "").strip()
+        if "party_roster" in kwargs:
+            kwargs["party_roster"] = normalize_party_roster(kwargs.get("party_roster"))
         if "party_ws_port" in kwargs:
             try:
                 kwargs["party_ws_port"] = max(1, min(65535, int(kwargs["party_ws_port"])))
@@ -460,6 +469,31 @@ class Profile:
         ):
             kwargs["buy_normal_arrows"] = True
         return cls(**{**base, **kwargs})
+
+
+_ROSTER_ROLES = ("member", "mage", "shopkeeper")
+
+
+def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
+    """Leader seat list: name plus member, mage, or shopkeeper."""
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    items = raw if isinstance(raw, (list, tuple)) else []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        role = str(item.get("role") or "member").strip().lower()
+        if role not in _ROSTER_ROLES:
+            role = "member"
+        rows.append({"name": name, "role": role})
+    return rows
 
 
 def load_profile(path: Path | None = None) -> Profile:

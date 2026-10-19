@@ -36,22 +36,45 @@ def publish_leader_decision(
     if name not in CRITICAL_ACTIONS:
         _last_key = None
         return ""
+    # Mother-tree and the hunt NPC click have their own frames (recovery / hunt_move).
+    if name == "return_to_mother_tree":
+        return ""
+    if name == "shop_run" and str(getattr(action, "shop_kind", "") or "") == "teleporter":
+        return ""
     key = _key(action, name)
     if key == _last_key:
         return ""
+    body = _body(action, name, world, map_id)
+    if publish_body(body) <= 0 and not _server_listening():
+        return ""
+    _last_key = key
+    return name
+
+
+def publish_body(body: dict[str, Any]) -> int:
+    """Broadcast one leader payload. Returns how many clients received it."""
     from .active import current
     from .protocol import PartyMessage
 
     watchdog = current()
     if watchdog is None or not watchdog.running or not watchdog.server.listening:
-        return ""
-    body = _body(action, name, world, map_id)
+        return 0
     try:
-        watchdog.server.broadcast(PartyMessage(sender="leader", message=body))
+        return int(
+            watchdog.server.broadcast(PartyMessage(sender="leader", message=body))
+            or 0
+        )
     except Exception:
-        return ""
-    _last_key = key
-    return name
+        return 0
+
+
+def _server_listening() -> bool:
+    from .active import current
+
+    watchdog = current()
+    return bool(
+        watchdog is not None and watchdog.running and watchdog.server.listening
+    )
 
 
 def _action_name(action: Any) -> str:
@@ -88,13 +111,11 @@ def _body(action: Any, name: str, world: Any, map_id: Optional[int]) -> dict[str
     dest = getattr(action, "destination", None)
     return {
         "type": "decision",
+        "from": "leader",
         "action": name,
-        "reason": str(getattr(action, "reason", "") or ""),
         "map_id": map_id,
         "x": x,
         "y": y,
-        "shop_kind": getattr(action, "shop_kind", None) or "",
-        "shop_behavior_id": getattr(action, "shop_behavior_id", None) or "",
         "gate_to": getattr(action, "gate_expect_map_id", None),
         "gate_edge": str(getattr(action, "gate_edge", "") or ""),
         "destination": (
@@ -105,4 +126,4 @@ def _body(action: Any, name: str, world: Any, map_id: Optional[int]) -> dict[str
     }
 
 
-__all__ = ["CRITICAL_ACTIONS", "publish_leader_decision"]
+__all__ = ["CRITICAL_ACTIONS", "publish_body", "publish_leader_decision"]

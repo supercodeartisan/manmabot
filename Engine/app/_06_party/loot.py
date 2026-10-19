@@ -1,9 +1,15 @@
 """Party-member loot gates + side/primary pickup (reuses solo loot hop)."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from .config import PartyMemberConfig
+
+# PartySubsystem ``cls`` for the wizard (Lineage order: prince 0, knight 1,
+# elf 2, wizard 3). Not confirmed against live memory yet.
+PARTY_CLS_WIZARD = 3
+# A party row this close to ``world_origin`` is the local character.
+_SELF_ROW_TILES = 2
 
 if TYPE_CHECKING:
     from app._02_state.objects import WorldObject
@@ -33,6 +39,120 @@ def party_may_loot(cfg: PartyMemberConfig) -> bool:
     return party_loot_ownership_filter(cfg) is not None
 
 
+def party_loot_first(cfg: PartyMemberConfig) -> bool:
+    """Party farm with loot-before-follow priority."""
+    if str(getattr(cfg, "farm_mode", "party") or "party") == "solo":
+        return False
+    return str(getattr(cfg, "loot_priority", "follow") or "follow") == "loot"
+
+
+def party_closest_looter_filter(
+    state: "GameState",
+    origin: Any,
+    local_map_id: Optional[int],
+) -> Optional[Callable[[Any], bool]]:
+    """Item predicate: True when this member is the closest eligible looter.
+
+    Eligible = party members except the leader and the wizard. None = this
+    character never takes party drops (wizard, or no origin).
+    """
+    from app._04_decision.mode_control import is_mage
+
+    if state is None or origin is None or not hasattr(origin, "x"):
+        return None
+    if is_mage(state):
+        return None
+    me = (int(origin.x), int(origin.y))
+    snapshot = getattr(state, "last_party", None)
+    self_name = _self_row_name(snapshot, me, local_map_id)
+    others = _other_looter_tiles(snapshot, me, local_map_id, self_name)
+    if not others:
+        return lambda _item: True
+
+    from app._04_decision.combat_query import object_absolute_tile
+
+    def _ok(item: Any) -> bool:
+        try:
+            tile = object_absolute_tile(item, origin)
+        except Exception:
+            return False
+        mine = _cheb(me, tile)
+        for name, other in others:
+            d = _cheb(other, tile)
+            if d < mine:
+                return False
+            # Tie: lower name wins so every client agrees on one looter.
+            if d == mine and name < self_name:
+                return False
+        return True
+
+    return _ok
+
+
+def _cheb(a: tuple[int, int], b: tuple[int, int]) -> int:
+    return max(abs(int(a[0]) - int(b[0])), abs(int(a[1]) - int(b[1])))
+
+
+def _party_rows(snapshot: Any) -> list[dict]:
+    if not isinstance(snapshot, dict) or not snapshot.get("in_party"):
+        return []
+    return [r for r in (snapshot.get("members") or []) if isinstance(r, dict)]
+
+
+def _row_tile_on_map(
+    row: dict, local_map_id: Optional[int]
+) -> Optional[tuple[int, int]]:
+    from .leader import _party_map_id, _party_tile
+
+    if local_map_id is not None:
+        mid = _party_map_id(row)
+        if mid is None or int(mid) != int(local_map_id):
+            return None
+    return _party_tile(row)
+
+
+def _self_row_name(
+    snapshot: Any, me: tuple[int, int], local_map_id: Optional[int]
+) -> str:
+    best = ""
+    best_d = _SELF_ROW_TILES + 1
+    for row in _party_rows(snapshot):
+        tile = _row_tile_on_map(row, local_map_id)
+        if tile is None:
+            continue
+        d = _cheb(me, tile)
+        if d < best_d:
+            best_d = d
+            best = str(row.get("name") or "").strip()
+    return best
+
+
+def _other_looter_tiles(
+    snapshot: Any,
+    me: tuple[int, int],
+    local_map_id: Optional[int],
+    self_name: str,
+) -> list[tuple[str, tuple[int, int]]]:
+    """(name, nav tile) of eligible looters on this map, excluding self."""
+    out: list[tuple[str, tuple[int, int]]] = []
+    for row in _party_rows(snapshot):
+        if bool(row.get("is_leader")):
+            continue
+        try:
+            if int(row.get("cls")) == PARTY_CLS_WIZARD:
+                continue
+        except (TypeError, ValueError):
+            pass
+        name = str(row.get("name") or "").strip()
+        if self_name and name == self_name:
+            continue
+        tile = _row_tile_on_map(row, local_map_id)
+        if tile is None:
+            continue
+        out.append((name, tile))
+    return out
+
+
 def clear_party_loot_sticky(blackboard: Any) -> None:
     """Drop sticky approach loot when follow/join/defend must win."""
     if blackboard is None:
@@ -54,6 +174,7 @@ def arm_party_loot_side(
     blackboard: "Blackboard",
     *,
     ownership_filter: bool,
+    item_ok: Optional[Callable[[Any], bool]] = None,
 ) -> None:
     """Append in-range ``PICKUP`` to ``side_intents`` (does not clear)."""
     from app._03_world import ActionType
@@ -68,7 +189,7 @@ def arm_party_loot_side(
     if any(getattr(s, "action", None) is ActionType.PICKUP for s in sides):
         return
     item = find_party_pickup_range_loot(
-        state, blackboard, ownership_filter=ownership_filter
+        state, blackboard, ownership_filter=ownership_filter, item_ok=item_ok
     )
     if item is None:
         return
@@ -94,6 +215,7 @@ def find_party_pickup_range_loot(
     blackboard: "Blackboard",
     *,
     ownership_filter: bool,
+    item_ok: Optional[Callable[[Any], bool]] = None,
 ) -> Optional["WorldObject"]:
     """Nearest lootable pile already within pickup tiles."""
     from app._04_decision.attack_feedback import excluded_target_ids
@@ -146,6 +268,8 @@ def find_party_pickup_range_loot(
     )
     in_range: list = []
     for item in candidates:
+        if item_ok is not None and not item_ok(item):
+            continue
         if _item_in_pickup_range(state, item, origin):
             in_range.append(item)
     if not in_range:
@@ -167,6 +291,7 @@ def try_party_hold_loot(
     *,
     ownership_filter: bool,
     max_tiles: int = 8,
+    item_ok: Optional[Callable[[Any], bool]] = None,
 ) -> Any:
     """Primary walk-to-item / pickup while HOLD near the leader.
 
@@ -236,16 +361,45 @@ def try_party_hold_loot(
                     return intent
             return None
 
-    item = nearest_lootable(
-        state,
-        loot_mode=loot_mode,
-        farm=None,
-        origin=blackboard.world_origin,
-        check_path=False,
-        exclude=skip,
-        screen_only=False,
-        ownership_filter=ownership_filter,
-    )
+    if item_ok is None:
+        item = nearest_lootable(
+            state,
+            loot_mode=loot_mode,
+            farm=None,
+            origin=blackboard.world_origin,
+            check_path=False,
+            exclude=skip,
+            screen_only=False,
+            ownership_filter=ownership_filter,
+        )
+    else:
+        from app._04_decision.combat_query import list_lootable
+
+        mine = [
+            o
+            for o in list_lootable(
+                state,
+                loot_mode=loot_mode,
+                farm=None,
+                origin=blackboard.world_origin,
+                check_path=False,
+                exclude=skip,
+                screen_only=False,
+                ownership_filter=ownership_filter,
+            )
+            if item_ok(o)
+        ]
+        item = (
+            min(
+                mine,
+                key=lambda o: (
+                    tile_distance_from_player(o),
+                    int(getattr(o, "track_id", 0)),
+                ),
+            )
+            if mine
+            else None
+        )
     if item is None:
         return None
     if tile_distance_from_player(item) > int(max_tiles):
@@ -274,6 +428,8 @@ __all__ = [
     "arm_party_loot_side",
     "clear_party_loot_sticky",
     "find_party_pickup_range_loot",
+    "party_closest_looter_filter",
+    "party_loot_first",
     "party_loot_ownership_filter",
     "party_may_loot",
     "try_party_hold_loot",

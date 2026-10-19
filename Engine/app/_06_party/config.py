@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Optional
 
 _LOOT_ROLES = frozenset({"none", "responsible"})
+_LOOT_PRIORITIES = frozenset({"follow", "loot"})
 # party = assist the leader's fight; solo = follow the leader and farm own mobs.
 FARM_MODES = ("party", "solo")
 
@@ -42,6 +43,8 @@ class PartyMemberConfig:
     # random_loot OFF → loot_role none | responsible (ownership gate on).
     random_loot: bool = False
     loot_role: str = "none"
+    # follow = current timing. loot = party drops before follow when assist is idle.
+    loot_priority: str = "follow"
     farm_mode: str = "party"
 
     @property
@@ -64,6 +67,9 @@ class PartyMemberConfig:
         mode = str(self.farm_mode or "party").strip().lower()
         if mode not in FARM_MODES:
             mode = "party"
+        priority = str(self.loot_priority or "follow").strip().lower()
+        if priority not in _LOOT_PRIORITIES:
+            priority = "follow"
         follow = max(1, min(40, int(self.follow_tiles)))
         stop = max(0, min(follow, int(self.stop_tiles)))
         return replace(
@@ -85,6 +91,7 @@ class PartyMemberConfig:
             external_target_ent=str(self.external_target_ent or "").strip(),
             random_loot=bool(self.random_loot),
             loot_role=role,
+            loot_priority=priority,
             farm_mode=mode,
         )
 
@@ -136,6 +143,7 @@ class PartyMemberConfig:
             external_target_ent=str(raw.get("external_target_ent") or ""),
             random_loot=bool(raw.get("random_loot", False)),
             loot_role=str(raw.get("loot_role") or "none"),
+            loot_priority=str(raw.get("loot_priority") or "follow"),
             farm_mode=str(raw.get("farm_mode") or "party"),
         ).clamped()
 

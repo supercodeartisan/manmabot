@@ -1,5 +1,38 @@
 # Decision change log
 
+## 2026-10-19 — leader roster invite at bot start
+
+Intent: when the leader bot starts, open the party socket first, then type the in-game party commands for the roster table. Leave with `파티탈퇴` if this character is already in a party and is not the in-game leader. Invite each table name with `/초대 <name>` + Enter. Names already in the party, and this character, are skipped. Empty table does nothing.
+Shared: none. Solo farm, member follow, `begin_retreat`, and HP lines are unchanged. Chat uses the existing Interception paste path (`InputRouter`).
+Affects: party leader only, once per Start, after live origin/mapId and before the first farm decide.
+Consent: user (socket first, then invites from the party table).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party loot priority (loot first / follow first)
+
+Intent: a party-farm member can choose loot first or follow first on the party tab. Loot first: when assist, close-in, defend, join-map, wait, and stop are not needed (policy is HOLD or FOLLOW), the member walks to party drops and picks them up within the follow distance, then follows. Party adena and items are treated as its own (no ownership gate), but only the closest eligible member takes each pile. Eligible = party list members except the leader and the wizard; the local wizard never takes them. Ties go to the lower name so every client picks the same looter. Follow first keeps the earlier loot timing and the Random / Role rules.
+Shared: `try_party_hold_loot`, `find_party_pickup_range_loot`, `arm_party_loot_side` gained an optional item filter (default unchanged). Side F4 on loot first still only while the leader is not fighting. Solo farm, `begin_retreat`, and the retreat HP line are unchanged.
+Affects: party-farm member loot vs follow order when `party.loot_priority` = `loot`. Default `follow` = unchanged behavior.
+Caveat: the wizard class id from the party list is assumed to be 3 (Lineage order). Not confirmed against live memory.
+Consent: user (closest member except leader and mage loots; UI loot/follow priority; implement).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party member uses the solo retreat line at the HP gate
+
+Intent: when a party member's HP is at or under the solo retreat threshold, call that same survival line so an elf goes to the mother tree and any other class takes the talking-scroll landing (teleport only if the scroll cannot). Follow, hunt-NPC walk, and buffs wait until that trip ends. After HP recovers, the solo hunt-map world nav is not run; the member follows the leader again.
+Shared: called, not edited — `apply_hp_actions`, `tick_retreating`, `tick_shopping`, `begin_retreat`.
+Affects: party member only, and only at the retreat HP gate or while that retreat or its pre-retreat sell is in progress.
+Consent: user (in that situation, call that line and escape).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party hunt NPC and mother-tree orders
+
+Intent: the moment the leader's route picks an NPC teleporter, tell members (`type` `hunt_move`, `from` `leader`, the NPC map and xy). The leader stands on that NPC until those members report they are there, then the existing teleporter click runs. A mother-tree recovery decision sends `type` `recovery` immediately. Members do not act on `recovery`. Members who receive `hunt_move` walk to that NPC, then send buffs and the item list (`type` `report`).
+Shared: `WorldNavSession.begin` calls an optional plan hook; `_start_npc_teleporter` waits only when that hook is installed (leader process). Solo leaves the hooks empty, so the click is unchanged. `begin_retreat` is not edited.
+Affects: party leader world-nav NPC click, party member follow while a hunt order is active, party socket payloads.
+Consent: user (send the NPC and mother-tree decision at once; members gather, report, then the group goes on; leave mother-tree behavior for later).
+Result: implemented. Not run in game.
+
 ## 2026-10-19 — party brain seats only (no live decide change)
 
 Intent: add four decision-adoption seats under `_06_party/brains` — leader, member (single party bot foundation), mage, shopkeeper.

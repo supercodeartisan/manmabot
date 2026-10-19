@@ -174,10 +174,18 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             ),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
+            "loot_priority": str(
+                getattr(profile, "party_loot_priority", "follow") or "follow"
+            ),
             "farm_mode": str(getattr(profile, "party_farm_mode", "party") or "party"),
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
+            "roster": [
+                {"name": str(row.get("name") or ""), "role": str(row.get("role") or "member")}
+                for row in (getattr(profile, "party_roster", None) or [])
+                if isinstance(row, dict)
+            ],
         },
         "recovery": {
             "use_hp_potion": True,

@@ -8,7 +8,7 @@ from settings.hp_actions import (
     normalize_hp_actions,
     sync_legacy_from_actions,
 )
-from settings.profile import Profile
+from settings.profile import Profile, normalize_party_roster
 from settings.schedule import ScheduleTask
 from i18n.strings import normalize_game_language
 
@@ -280,12 +280,28 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     if loot_role not in ("none", "responsible"):
         loot_role = "none"
     set_value("party_loot_role", loot_role)
+    loot_priority = str(
+        party.get(
+            "loot_priority",
+            getattr(profile, "party_loot_priority", "follow"),
+        )
+        or "follow"
+    ).strip().lower()
+    if loot_priority not in ("follow", "loot"):
+        loot_priority = "follow"
+    set_value("party_loot_priority", loot_priority)
     farm_mode = str(
         party.get("farm_mode", getattr(profile, "party_farm_mode", "party")) or "party"
     ).strip().lower()
     if farm_mode not in ("party", "solo"):
         farm_mode = "party"
     set_value("party_farm_mode", farm_mode)
+    set_value(
+        "party_roster",
+        normalize_party_roster(
+            party.get("roster", getattr(profile, "party_roster", None))
+        ),
+    )
     use_antidote = bool(
         hunt.get("use_antidote_potion", getattr(profile, "use_antidote_potion", False))
     )

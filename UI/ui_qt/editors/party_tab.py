@@ -5,24 +5,30 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
-from ui_qt.editors.form_helpers import add_check, add_spin_row, card
+from settings.profile import normalize_party_roster
+from ui_qt.editors.form_helpers import add_check, add_spin_row, card, configure_table_fill
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
+_LOOT_PRIORITIES = ("follow", "loot")
 _FARM_MODES = ("party", "solo")
 _PARTY_ROLES = ("member", "leader")
+_ROSTER_ROLES = ("member", "mage", "shopkeeper")
 
 
 class _WsTestBridge(QObject):
@@ -203,11 +209,30 @@ class PartyTab(QWidget):
         role_row.addWidget(self.party_loot_role)
         role_row.addStretch(1)
         member_lay.addLayout(role_row)
+        priority_row = QHBoxLayout()
+        priority_row.addWidget(
+            QLabel(self.t.get("party_loot_priority", "Priority"))
+        )
+        self.party_loot_priority = QComboBox()
+        self.party_loot_priority.addItem(
+            self.t.get("party_loot_priority_follow", "Follow first"), "follow"
+        )
+        self.party_loot_priority.addItem(
+            self.t.get("party_loot_priority_loot", "Loot first"), "loot"
+        )
+        self._select_loot_priority()
+        self.party_loot_priority.currentIndexChanged.connect(
+            self._on_loot_priority_changed
+        )
+        priority_row.addWidget(self.party_loot_priority)
+        priority_row.addStretch(1)
+        member_lay.addLayout(priority_row)
         lay.addWidget(self.member_panel)
 
         self.leader_panel = QWidget()
         leader_lay = QVBoxLayout(self.leader_panel)
         leader_lay.setContentsMargins(0, 0, 0, 0)
+        self._build_roster(leader_lay)
         self.ip_edit = self._address_row(
             leader_lay, self.t.get("party_ws_ip", "IP")
         )
@@ -289,6 +314,130 @@ class PartyTab(QWidget):
         row.addStretch(1)
         layout.addLayout(row)
         return combo
+
+    def _build_roster(self, layout: QVBoxLayout) -> None:
+        box = card(
+            self.leader_panel,
+            self.t.get("party_roster_title", "Party members"),
+        )
+        layout.addWidget(box)
+        box_lay = box.layout()
+        assert isinstance(box_lay, QVBoxLayout)
+
+        form = QHBoxLayout()
+        form.addWidget(QLabel(self.t.get("party_roster_name", "Name")))
+        self.roster_name = QLineEdit()
+        self.roster_name.returnPressed.connect(self._add_roster_row)
+        form.addWidget(self.roster_name, stretch=1)
+        form.addWidget(QLabel(self.t.get("party_roster_role", "Role")))
+        self.roster_role = QComboBox()
+        for role in _ROSTER_ROLES:
+            self.roster_role.addItem(self._roster_role_label(role), role)
+        form.addWidget(self.roster_role)
+        add_btn = QPushButton(self.t.get("add", "Add"))
+        add_btn.clicked.connect(self._add_roster_row)
+        form.addWidget(add_btn)
+        remove_btn = QPushButton(self.t.get("delete", "Delete"))
+        remove_btn.clicked.connect(self._remove_roster_row)
+        form.addWidget(remove_btn)
+        box_lay.addLayout(form)
+
+        self.roster_table = QTableWidget(0, 3)
+        self.roster_table.setHorizontalHeaderLabels(
+            [
+                self.t.get("number", "No"),
+                self.t.get("party_roster_name", "Name"),
+                self.t.get("party_roster_role", "Role"),
+            ]
+        )
+        self.roster_table.verticalHeader().setVisible(False)
+        self.roster_table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.roster_table.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.roster_table.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.roster_table.setMinimumHeight(160)
+        configure_table_fill(self.roster_table, 1, fixed={0: 48, 2: 120})
+        box_lay.addWidget(self.roster_table)
+        self._fill_roster_table()
+
+    def _roster_role_label(self, role: str) -> str:
+        labels = {
+            "member": ("party_seat_member", "Member"),
+            "mage": ("party_seat_mage", "Mage"),
+            "shopkeeper": ("party_seat_shopkeeper", "Shopkeeper"),
+        }
+        key, fallback = labels.get(role, labels["member"])
+        return self.t.get(key, fallback)
+
+    def _roster_rows(self) -> list[dict[str, str]]:
+        return normalize_party_roster(self.bag.get("party", "roster", []))
+
+    def _store_roster(self, rows: list[dict[str, str]]) -> None:
+        self.bag.set("party", "roster", normalize_party_roster(rows))
+
+    def _fill_roster_table(self) -> None:
+        table = getattr(self, "roster_table", None)
+        if not isinstance(table, QTableWidget):
+            return
+        rows = self._roster_rows()
+        table.setRowCount(len(rows))
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        for index, row in enumerate(rows):
+            number = QTableWidgetItem(str(index + 1))
+            number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            name = QTableWidgetItem(row["name"])
+            role = str(row.get("role") or "member")
+            role_item = QTableWidgetItem(self._roster_role_label(role))
+            role_item.setData(Qt.ItemDataRole.UserRole, role)
+            for item in (number, name, role_item):
+                item.setFlags(flags)
+            table.setItem(index, 0, number)
+            table.setItem(index, 1, name)
+            table.setItem(index, 2, role_item)
+
+    def _add_roster_row(self) -> None:
+        name = str(self.roster_name.text() or "").strip()
+        if not name:
+            self.on_log(
+                self.t.get("party_roster_need_name", "Enter a character name.")
+            )
+            return
+        rows = self._roster_rows()
+        if any(row["name"].casefold() == name.casefold() for row in rows):
+            self.on_log(
+                self.t.get(
+                    "party_roster_duplicate",
+                    "That name is already in the party list.",
+                )
+            )
+            return
+        role = str(self.roster_role.currentData() or "member")
+        if role not in _ROSTER_ROLES:
+            role = "member"
+        rows.append({"name": name, "role": role})
+        self._store_roster(rows)
+        self.roster_name.clear()
+        self._fill_roster_table()
+        if self.roster_table.rowCount():
+            self.roster_table.selectRow(self.roster_table.rowCount() - 1)
+
+    def _remove_roster_row(self) -> None:
+        row = self.roster_table.currentRow()
+        if row < 0:
+            return
+        rows = self._roster_rows()
+        if row >= len(rows):
+            return
+        del rows[row]
+        self._store_roster(rows)
+        self._fill_roster_table()
+        if self.roster_table.rowCount():
+            self.roster_table.selectRow(min(row, self.roster_table.rowCount() - 1))
 
     def _address_row(self, layout: QVBoxLayout, label: str) -> QLineEdit:
         row = QHBoxLayout()
@@ -479,6 +628,23 @@ class PartyTab(QWidget):
             role = "none"
         self.bag.set("party", "loot_role", role)
 
+    def _loot_priority(self) -> str:
+        value = str(self.bag.get_str("party", "loot_priority", "follow") or "follow")
+        return value if value in _LOOT_PRIORITIES else "follow"
+
+    def _select_loot_priority(self) -> None:
+        self.party_loot_priority.blockSignals(True)
+        idx = self.party_loot_priority.findData(self._loot_priority())
+        self.party_loot_priority.setCurrentIndex(max(0, idx))
+        self.party_loot_priority.blockSignals(False)
+
+    def _on_loot_priority_changed(self) -> None:
+        value = str(self.party_loot_priority.currentData() or "follow")
+        if value not in _LOOT_PRIORITIES:
+            value = "follow"
+        self.bag.set("party", "loot_priority", value)
+        self._on_loot_mode_changed()
+
     def _on_role_combo_changed(self) -> None:
         combo = self.sender()
         if not isinstance(combo, QComboBox):
@@ -515,10 +681,16 @@ class PartyTab(QWidget):
         on = self._party_on() and self._role() == "member"
         party_loot = on and self._farm_mode() == "party"
         random_on = self.bag.get_bool("party", "random_loot", False)
+        # Random / Role only drive follow-first loot.
+        follow_first = self._loot_priority() == "follow"
+        if hasattr(self, "party_loot_priority"):
+            self.party_loot_priority.setEnabled(party_loot)
         if hasattr(self, "party_random_loot"):
-            self.party_random_loot.setEnabled(party_loot)
+            self.party_random_loot.setEnabled(party_loot and follow_first)
         if hasattr(self, "party_loot_role"):
-            self.party_loot_role.setEnabled(party_loot and not random_on)
+            self.party_loot_role.setEnabled(
+                party_loot and follow_first and not random_on
+            )
 
     def _on_party_enabled_changed(self) -> None:
         self._sync_member_enabled_flag()
@@ -594,6 +766,7 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
+        self._select_loot_priority()
         if hasattr(self, "party_ws_port"):
             self.party_ws_port.blockSignals(True)
             self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
@@ -610,4 +783,5 @@ class PartyTab(QWidget):
             self.leader_host.blockSignals(False)
         self._select_farm_mode()
         self._lan_ip = ""
+        self._fill_roster_table()
         self._apply_role(self._role())

@@ -1,10 +1,86 @@
-"""Party self-support: heal + buff + potion sides. Never retreat / escape / tree."""
+"""Party self-support: heal + buff + potion sides.
+
+The retreat HP gate is the one exception: at that threshold the member calls
+the solo survival.hp line (mother tree, else talking scroll, else teleport).
+"""
 from __future__ import annotations
 
 import logging
 from typing import Any, Optional
 
 _log = logging.getLogger("party.member")
+
+
+def party_critical_escape(game_state: Any, blackboard: Any) -> Optional[Any]:
+    """Solo retreat line, only at the retreat HP gate or while that trip runs.
+
+    Elf mother-tree, other classes' talking-scroll landing, and the teleport
+    fallback stay inside ``apply_hp_actions`` / ``tick_retreating``. After HP
+    recovers, a solo ``post_retreat`` world-nav back to the hunt map is dropped
+    so this member follows the party leader again.
+    """
+    if game_state is None or blackboard is None:
+        return None
+
+    from app._04_decision import player_mode as pm
+    from app._04_decision.behaviors.mode_ticks import (
+        _step_survival_hp,
+        tick_retreating,
+        tick_shopping,
+    )
+    from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
+    from app._04_decision.mode_control import hp_ratio, set_mode
+    from app._04_decision.player_mode import PlayerMode
+    from app._04_decision.shop_trip import SCRATCH_HP_SELL_BEFORE_RETREAT
+    from app._04_decision.world_nav.hooks import (
+        SCRATCH_NEED_WORLD_NAV,
+        clear_world_nav_run,
+    )
+
+    def _drop_hunt_return() -> None:
+        if getattr(blackboard, "player_mode", None) is not PlayerMode.WORLD_NAV:
+            return
+        if str(blackboard.scratch.get(SCRATCH_NEED_WORLD_NAV) or "") != "post_retreat":
+            return
+        clear_world_nav_run(blackboard)
+        set_mode(blackboard, PlayerMode.FARMING)
+
+    mode = getattr(blackboard, "player_mode", None)
+    selling = bool(blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT))
+    if mode is PlayerMode.RETREATING or (mode is PlayerMode.SHOPPING and selling):
+        try:
+            blackboard.side_intents.clear()
+        except Exception:
+            blackboard.side_intents = []
+    if mode is PlayerMode.RETREATING:
+        blackboard.intent = None
+        tick_retreating(game_state, blackboard)
+        _drop_hunt_return()
+    elif mode is PlayerMode.SHOPPING and selling:
+        blackboard.intent = None
+        tick_shopping(game_state, blackboard)
+    else:
+        actions = pm.HP_ACTIONS or normalize_hp_actions(None)
+        threshold = action_threshold(actions, "retreat")
+        ratio = hp_ratio(game_state)
+        if threshold is None or ratio is None or float(ratio) > float(threshold):
+            return None
+        blackboard.intent = None
+        _step_survival_hp(game_state, blackboard)
+        _drop_hunt_return()
+
+    if getattr(blackboard, "player_mode", None) is PlayerMode.FARMING:
+        intent = getattr(blackboard, "intent", None)
+        if intent is None:
+            return None
+        return intent
+
+    intent = getattr(blackboard, "intent", None)
+    if intent is not None:
+        return intent
+    from .intents import idle
+
+    return idle("critical retreat")
 
 
 def apply_party_support(
@@ -133,4 +209,4 @@ def _try_party_buff(game_state: Any, blackboard: Any) -> Optional[Any]:
     return getattr(blackboard, "intent", None)
 
 
-__all__ = ["apply_party_support"]
+__all__ = ["apply_party_support", "party_critical_escape"]
