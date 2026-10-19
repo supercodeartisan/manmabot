@@ -36,6 +36,8 @@ BUFF_HASTE = "haste"
 BUFF_LIGHT = "light"
 # Startup order: shell, haste potion, then power-up. Light is not cast.
 BUFF_ORDER = (BUFF_ARMOR, BUFF_HASTE, BUFF_POWER)
+# Checked lasting buffs from the magic table. Haste potion stays on BUFF_HASTE.
+AUTO_BUFFS: tuple = ()
 # Hunt assist toggle (default off). Only when True may haste potion cast.
 USE_HASTE_POTION = False
 # Optional bag item key imported from inventory (matches hotbar by name).
@@ -199,6 +201,9 @@ def spell_mp_cost_for_role(
     wanted = str(role or "").strip()
     if not wanted:
         return None
+    named = mp_cost_by_spell_name(wanted)
+    if named is not None:
+        return named
     snap = _live_hotbar_snap(state, blackboard)
     if snap is not None:
         from hotbar.inspect import hotbar_spell_name_for_role
@@ -497,15 +502,123 @@ def _buff_cast_guarded(blackboard: "Blackboard", name: str, now: float) -> bool:
     return bool(prev and (now - prev) < BUFF_CAST_GUARD_S)
 
 
+def set_auto_buffs(rows) -> None:
+    """Install the checked buff list for this run."""
+    global AUTO_BUFFS
+    from settings.auto_buffs import AutoBuff
+
+    parsed: list[AutoBuff] = []
+    for row in rows or []:
+        if isinstance(row, AutoBuff):
+            parsed.append(row)
+            continue
+        if not isinstance(row, dict):
+            continue
+        try:
+            parsed.append(
+                AutoBuff(
+                    skill_id=int(row["skill_id"]),
+                    priority=int(row.get("priority") or 1),
+                    names=tuple(
+                        str(name)
+                        for name in (row.get("names") or [])
+                        if str(name or "").strip()
+                    ),
+                    duration_s=float(row.get("duration_s") or 0),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    AUTO_BUFFS = tuple(parsed)
+
+
+def _auto_buff(token: str):
+    text = str(token or "")
+    if not text.startswith("buff:"):
+        return None
+    try:
+        skill_id = int(text.split(":", 1)[1])
+    except (TypeError, ValueError):
+        return None
+    for buff in AUTO_BUFFS:
+        if int(buff.skill_id) == skill_id:
+            return buff
+    return None
+
+
+def _match_catalog_buff(buff, effects: list):
+    from hotbar.inspect import fold_hotbar_name
+
+    wanted = {
+        fold_hotbar_name(name).replace(" ", "").replace(":", "").replace("：", "").lower()
+        for name in buff.names
+        if str(name or "").strip()
+    }
+    for effect in effects:
+        if getattr(effect, "perpetual", False):
+            continue
+        try:
+            skill = int(getattr(effect, "skill", 0) or 0)
+        except (TypeError, ValueError):
+            skill = 0
+        if skill and skill == int(buff.skill_id):
+            return effect
+        folded = fold_hotbar_name(str(getattr(effect, "name", "") or ""))
+        folded = folded.replace(" ", "").replace(":", "").replace("：", "").lower()
+        if folded and folded in wanted:
+            return effect
+    return None
+
+
+def _due_catalog_buff(
+    blackboard: "Blackboard",
+    state: Optional["GameState"],
+    now: float,
+    memory_ok: bool,
+    effects: list,
+) -> Optional[str]:
+    """Next checked buff whose effect is missing or about to end."""
+    from settings.auto_buffs import press_for_buff
+
+    snap = _live_hotbar_snap(state, blackboard)
+    if snap is None:
+        return None
+    last = blackboard.buff_last_cast
+    for buff in AUTO_BUFFS:
+        if float(buff.duration_s or 0) <= 0:
+            continue
+        token = f"buff:{int(buff.skill_id)}"
+        if press_for_buff(snap, buff) is None:
+            continue
+        if _buff_cast_guarded(blackboard, token, now):
+            continue
+        if memory_ok:
+            live = _match_catalog_buff(buff, effects)
+            if live is None:
+                return token
+            try:
+                remain = float(getattr(live, "duration", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                remain = 0.0
+            if remain <= BUFF_REMAIN_RECAST_S:
+                return token
+            continue
+        prev = float(last.get(token, 0.0) or 0.0)
+        if prev <= 0.0 or (now - prev) >= float(buff.duration_s):
+            return token
+    return None
+
+
 def due_buff(
     blackboard: "Blackboard",
     state: Optional["GameState"] = None,
 ) -> Optional[str]:
-    """Next buff role to cast, or None.
+    """Next buff to cast, or None.
 
-    Prefer live memory remain when ``last_buff`` is present. Missing / remain
-    ≤ ``BUFF_REMAIN_RECAST_S`` → due. Perpetual skipped. No snapshot → timer
-    fallback (start delay + ``BUFF_COOLDOWN_S`` / slot reuse).
+    Checked lasting buffs come first, in table priority. A missing effect or
+    remain ≤ ``BUFF_REMAIN_RECAST_S`` is due. The haste potion still uses the
+    hunt-tab switch. Armor and weapon buffs are not cast from the old role
+    order unless that skill is checked.
     """
     now = time.time()
     started = _buff_session_start(blackboard, now)
@@ -513,7 +626,11 @@ def due_buff(
     memory_ok = _memory_buffs_ready(state)
     effects = list(getattr(getattr(state, "player", None), "buffs", None) or []) if memory_ok else []
 
-    for name in BUFF_ORDER:
+    catalog = _due_catalog_buff(blackboard, state, now, memory_ok, effects)
+    if catalog is not None:
+        return catalog
+
+    for name in (BUFF_HASTE,):
         if name == BUFF_HASTE and not USE_HASTE_POTION:
             continue
         if not slot_is_enabled(name):
@@ -590,6 +707,35 @@ def maybe_cast_buff(
     name = due_buff(blackboard, state)
     if name is None:
         return None
+    if str(name).startswith("buff:"):
+        buff = _auto_buff(name)
+        if buff is None:
+            return None
+        from settings.auto_buffs import press_for_buff
+
+        snap = _live_hotbar_snap(state, blackboard)
+        slot = press_for_buff(snap, buff) if snap is not None else None
+        if slot is None:
+            return None
+        spell_name = buff.names[0] if buff.names else ""
+        if not can_cast_spell(state, role=spell_name or None, blackboard=blackboard):
+            return None
+        if not magic_ready(blackboard):
+            return None
+        mark_buff_cast(blackboard, name)
+        now = time.time()
+        blackboard.magic_last_cast = now
+        blackboard.spell_last_cast[name] = now
+        box, key = slot
+        blackboard.current_goal = "buff"
+        blackboard.emit(
+            ActionType.BUFF,
+            priority=0.4,
+            reason=name,
+            hotbar_box=box,
+            hotbar_key=key,
+        )
+        return Status.SUCCESS
     # Haste potions are items — skip mana reserve / magic cooldown.
     if slot_is_magic(name):
         if not can_cast_spell(state, role=name, blackboard=blackboard):
@@ -682,14 +828,20 @@ def _mana_blocks_teleport(
     state: Optional["GameState"],
     blackboard: Optional["Blackboard"] = None,
 ) -> bool:
-    """True when known MP is too low to cast teleport (matches HP-path gate)."""
+    """True when known MP is too low to cast teleport.
+
+    Absolute floor is 20, same as heal. The percent reserve still applies
+    on top for unstick. Unknown MP does not block on the absolute floor.
+    """
     if state is None:
         return False
+    from app._04_decision.behaviors.mode_actions import HP_SKILL_MIN_MP
+
     player = getattr(state, "player", None)
     if player is not None:
         try:
             mp = getattr(player, "mp", None)
-            if mp is not None and int(mp) < 5:
+            if mp is not None and int(mp) < HP_SKILL_MIN_MP:
                 return True
         except (TypeError, ValueError):
             pass

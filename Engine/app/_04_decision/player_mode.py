@@ -150,12 +150,9 @@ ENTER_FARM_DETOUR_RADIUS = 5
 # ~2 tiles off the attack line (no teleport). A second wait gives up.
 COMBAT_BLOCKED_UNSTICK_SECONDS = 2.0
 COMBAT_BLOCKED_UNSTICK_RADIUS = 2
-# This many standstill episodes inside the window → teleport / talking scroll.
-UNSTICK_BURST_COUNT = 3
-UNSTICK_BURST_WINDOW_S = 20.0
 # If the player stays inside this Chebyshev bubble this long → TP / scroll.
-# Separate from the 3× standstill burst (different intent).
-UNSTICK_CONFINED_TILES = 5
+# Radius 3 is a 7×7 square. One field hop (5 tiles) leaves it.
+UNSTICK_CONFINED_TILES = 3
 UNSTICK_CONFINED_SECONDS = 13.0
 # While a hop is active, issue a real walk click this often (fresh screen coords).
 TRAVEL_RECLICK_SECONDS = 2.0
@@ -269,8 +266,6 @@ __all__ = [
     "ENTER_FARM_DETOUR_RADIUS",
     "COMBAT_BLOCKED_UNSTICK_SECONDS",
     "COMBAT_BLOCKED_UNSTICK_RADIUS",
-    "UNSTICK_BURST_COUNT",
-    "UNSTICK_BURST_WINDOW_S",
     "UNSTICK_CONFINED_TILES",
     "UNSTICK_CONFINED_SECONDS",
     "TRAVEL_RECLICK_SECONDS",

@@ -288,6 +288,8 @@ class ScheduleShell(QMainWindow):
             clear_shell_logs=self._clear_shell_logs,
         )
         self.editor.accountChanged.connect(self._sync_list_account)
+        if self.editor.move_tab is not None:
+            self.editor.move_tab.set_farm_clock_provider(self._live_farm_clock)
         self.editor.set_timing_reader(self.schedule_list.read_timing_into)
         self._bind_schedule_dirty_signals()
         self.schedule_list.account_combo.currentIndexChanged.connect(
@@ -842,9 +844,78 @@ class ScheduleShell(QMainWindow):
         self._append_log(text)
         self._refresh_operator(force=True)
 
+    def _routine_vm(self):
+        move = getattr(self.editor, "move_tab", None)
+        return getattr(move, "vm", None) if move is not None else None
+
+    def _gap_lines(self, gaps: list[dict]) -> list[str]:
+        lines: list[str] = []
+        for gap in gaps:
+            status = self.t.get(str(gap.get("setting_key") or ""), "")
+            label = str(gap.get("label") or gap.get("map_id") or "")
+            lines.append(f"{gap.get('index', '')}. {label} — {status}")
+        return lines
+
+    def _warn_incomplete_routine(
+        self,
+        gaps: list[dict],
+        *,
+        action: str,
+        sections: list[tuple[str, list[dict]]] | None = None,
+    ) -> None:
+        intro = self.t.get(f"routine_setup_block_{action}", "")
+        if sections:
+            chunks = [
+                heading + "\n" + "\n".join(self._gap_lines(rows))
+                for heading, rows in sections
+                if rows
+            ]
+            detail = "\n\n".join(chunks)
+        else:
+            detail = "\n".join(self._gap_lines(gaps))
+        text = intro if not detail else f"{intro}\n\n{detail}"
+        QMessageBox.warning(
+            self,
+            self.t.get(
+                "routine_setup_block_title",
+                self.t.get("title", self.t.get("console_title", "ZF")),
+            ),
+            text,
+        )
+
+    def _editor_routine_gaps(self) -> list[dict]:
+        vm = self._routine_vm()
+        if vm is None:
+            return []
+        return list(vm.incomplete_setups())
+
+    def _block_editor_routine(self, action: str) -> bool:
+        """True when save/create must stop because a routine setup is still needed."""
+        gaps = self._editor_routine_gaps()
+        if not gaps:
+            return False
+        self._warn_incomplete_routine(gaps, action=action)
+        return True
+
+    def _blocked_enabled_schedules(self) -> list[tuple[ScheduleTask, list[dict]]]:
+        vm = self._routine_vm()
+        if vm is None:
+            return []
+        blocked: list[tuple[ScheduleTask, list[dict]]] = []
+        for task in self.tasks:
+            if not task.enabled:
+                continue
+            routine = ((task.settings or {}).get("move") or {}).get("routine")
+            gaps = list(vm.incomplete_setups(routine))
+            if gaps:
+                blocked.append((task, gaps))
+        return blocked
+
     def _commit_update(self) -> bool:
         """Overwrite the schedule under edit and stay on that edit."""
         if not self._editing_id:
+            return False
+        if self._block_editor_routine("save"):
             return False
         collected = self.editor.collect_task()
         self.schedule_list.read_timing_into(collected)
@@ -875,6 +946,8 @@ class ScheduleShell(QMainWindow):
 
     def _commit_add(self) -> bool:
         """Store the form as a new list row, then open that row for edit."""
+        if self._block_editor_routine("create"):
+            return False
         collected = self.editor.collect_task()
         self.schedule_list.read_timing_into(collected)
         if not collected.account_id:
@@ -1184,6 +1257,19 @@ class ScheduleShell(QMainWindow):
             )
             return
 
+        blocked = self._blocked_enabled_schedules()
+        if blocked:
+            sections = [
+                (
+                    (task.name or "").strip() or self._account_label(task),
+                    gaps,
+                )
+                for task, gaps in blocked
+            ]
+            self._warn_incomplete_routine([], action="start", sections=sections)
+            self._refresh_operator(force=True)
+            return
+
         will_start = (
             self.bridge.controller.state == RunState.STOPPED
             and not self.bridge.arming
@@ -1420,6 +1506,13 @@ class ScheduleShell(QMainWindow):
                 return clock
         return None
 
+    def _live_farm_clock(self) -> dict | None:
+        """Stay clock for the open hunt-area list."""
+        controller = self.bridge.controller
+        if controller.state not in (RunState.RUNNING, RunState.PAUSED):
+            return None
+        return controller.farm_clock()
+
     def _on_poll(self) -> None:
         if self._closing:
             return
@@ -1438,6 +1531,8 @@ class ScheduleShell(QMainWindow):
             self._poll_timer.setInterval(1000)
         self._refresh_operator(force=False)
         self.schedule_list.paint_routine_timers()
+        if self.editor.move_tab is not None:
+            self.editor.move_tab.paint_farm_timers()
 
     def _refresh_operator(self, force: bool = False) -> None:
         state = self.bridge.controller.state

@@ -6,6 +6,6 @@
   "clearance_tiles": 2,
   "wall_penalty": 4,
   "source_name": "nav.png",
-  "source_sha256": "470242f8a85d6ea90760057bdd372651980a8a4af136e560ae1c085baddd5845",
-  "node_count": 3322
+  "source_sha256": "4975485856e7254fe60bb9098b2ccf4fa60820d9501188995849bb3fe0fdc3aa",
+  "node_count": 3433
 }

@@ -48,6 +48,8 @@ _MAGIC_CATEGORIES = (
     "attack_magic",
     "utility",
 )
+# Exact catalog names. Greater Heal / Mass Teleport stay user-toggleable.
+_LOCKED_SKILL_KO = frozenset({"힐", "텔레포트"})
 
 
 class MagicTab(QWidget):
@@ -69,6 +71,8 @@ class MagicTab(QWidget):
         self._catalog = load_skill_catalog()
         self._ui_class = "elf"
         self._category = "attack_buff"
+        self._skill_guard = False
+        self._skills_ready = False
         self._build()
 
     def _build(self) -> None:
@@ -286,13 +290,12 @@ class MagicTab(QWidget):
         layout.addLayout(body, stretch=1)
         left = QVBoxLayout()
         body.addLayout(left, stretch=4)
-        self.skill_table = QTableWidget(0, 5)
+        self.skill_table = QTableWidget(0, 4)
         self.skill_table.setHorizontalHeaderLabels(
             [
-                self.t.get("enabled", "On"),
+                self.t.get("col_auto", "Auto"),
                 "",
                 self.t.get("col_magic_name", "Name"),
-                self.t.get("col_auto", "Auto"),
                 self.t.get("col_priority", "Priority"),
             ]
         )
@@ -324,6 +327,7 @@ class MagicTab(QWidget):
         self.pick_summary = QTextEdit()
         self.pick_summary.setReadOnly(True)
         side.addWidget(self.pick_summary)
+        self._ensure_skill_model()
         self._select_category(self._category)
 
     def _on_class(self) -> None:
@@ -337,6 +341,118 @@ class MagicTab(QWidget):
             btn.setChecked(name == key)
         self._refresh_skills()
 
+    def _locked_skill(self, skill) -> bool:
+        return str(getattr(skill, "ko", "") or "") in _LOCKED_SKILL_KO
+
+    def _class_skills(self, ui_class: str):
+        rows = []
+        for category in _MAGIC_CATEGORIES:
+            rows.extend(self._catalog.for_filter(ui_class, category))
+        return rows
+
+    def _is_auto(self, skill) -> bool:
+        if self._locked_skill(skill):
+            return True
+        return bool(self.bag.skill_state(skill.setting_key).get("auto"))
+
+    def _checked_skills(self, ui_class: str):
+        return [skill for skill in self._class_skills(ui_class) if self._is_auto(skill)]
+
+    def _ranked_skills(self, ui_class: str):
+        """Checked skills that take a priority. Heal and Teleport stay outside."""
+        return [skill for skill in self._checked_skills(ui_class) if not self._locked_skill(skill)]
+
+    def _locked_skills(self, ui_class: str):
+        return [skill for skill in self._class_skills(ui_class) if self._locked_skill(skill)]
+
+    def _ensure_skill_model(self) -> None:
+        """Keep Heal/Teleport on, and give checked skills unique priorities."""
+        if self._skills_ready:
+            return
+        for skill in self._catalog.skills:
+            state = self.bag.skill_state(skill.setting_key)
+            if not state.get("auto_is_selection"):
+                # The removed On column was the old selection. Auto used to default on.
+                selected = bool(state.get("enabled")) or self._locked_skill(skill)
+                self.bag.set_skill_state(
+                    skill.setting_key,
+                    auto=selected,
+                    enabled=selected,
+                    auto_is_selection=True,
+                )
+            elif self._locked_skill(skill) and not state.get("auto"):
+                self.bag.set_skill_state(
+                    skill.setting_key, auto=True, enabled=True
+                )
+        for ui_class in ("elf", "mage", "knight", "royal"):
+            self._assign_priorities(ui_class, reset_order=False)
+        self._skills_ready = True
+
+    def _priorities_valid(self, checked) -> bool:
+        found = []
+        for skill in checked:
+            try:
+                found.append(int(self.bag.skill_state(skill.setting_key).get("priority") or 0))
+            except (TypeError, ValueError):
+                return False
+        return sorted(found) == list(range(1, len(checked) + 1))
+
+    def _assign_priorities(self, ui_class: str, *, reset_order: bool) -> None:
+        checked = self._ranked_skills(ui_class)
+        if not checked:
+            return
+        if not reset_order and self._priorities_valid(checked):
+            return
+        for index, skill in enumerate(checked, start=1):
+            self.bag.set_skill_state(
+                skill.setting_key, auto=True, enabled=True, priority=index
+            )
+
+    def _set_auto(self, key: str, checked: bool) -> None:
+        if self._skill_guard:
+            return
+        skill = next(
+            (row for row in self._class_skills(self._ui_class) if row.setting_key == key),
+            None,
+        )
+        if skill is None or self._locked_skill(skill):
+            return
+        self._skill_guard = True
+        try:
+            self.bag.set_skill_state(key, auto=bool(checked), enabled=bool(checked))
+            self._assign_priorities(self._ui_class, reset_order=True)
+        finally:
+            self._skill_guard = False
+        self._refresh_skills()
+
+    def _set_priority(self, key: str, value: int) -> None:
+        if self._skill_guard:
+            return
+        checked = self._ranked_skills(self._ui_class)
+        count = len(checked)
+        if count <= 0:
+            return
+        target = max(1, min(count, int(value)))
+        try:
+            current = int(self.bag.skill_state(key).get("priority") or 1)
+        except (TypeError, ValueError):
+            current = 1
+        if target == current:
+            return
+        self._skill_guard = True
+        try:
+            for skill in checked:
+                if skill.setting_key == key:
+                    continue
+                other = int(self.bag.skill_state(skill.setting_key).get("priority") or 0)
+                if other == target:
+                    self.bag.set_skill_state(skill.setting_key, priority=current)
+                    break
+            self.bag.set_skill_state(key, priority=target)
+        finally:
+            self._skill_guard = False
+        self._refresh_skills()
+
     def _visible_skills(self):
         skills = list(self._catalog.for_filter(self._ui_class, self._category))
         needle = ""
@@ -348,105 +464,128 @@ class MagicTab(QWidget):
         out = []
         for skill in skills:
             label = skill.label(self.language)
-            state = self.bag.skill_state(skill.setting_key)
-            enabled = bool(state.get("enabled"))
-            if show == "enabled" and not enabled:
+            selected = self._is_auto(skill)
+            if show == "enabled" and not selected:
                 continue
-            if show == "disabled" and enabled:
+            if show == "disabled" and selected:
                 continue
             if needle and needle not in label.lower() and needle not in skill.setting_key.lower():
                 continue
             out.append(skill)
         return out
 
+    def _summary_lines(self) -> list[str]:
+        selected = []
+        for skill in self._ranked_skills(self._ui_class):
+            priority = int(self.bag.skill_state(skill.setting_key).get("priority") or 0)
+            selected.append((priority, skill.label(self.language)))
+        selected.sort(key=lambda item: (item[0], item[1]))
+        lines = [
+            f"{self.t.get('summary_class', 'Class')}: {self.t.get(self._ui_class, self._ui_class)}",
+            f"{self.t.get('selected_magic', 'Selected')}: "
+            f"{self.t.get('magic_selected_count', '{count}').format(count=len(selected))}",
+            "",
+            *[f"{priority}. {name}" for priority, name in selected],
+        ]
+        locked = [skill.label(self.language) for skill in self._locked_skills(self._ui_class)]
+        if locked:
+            if selected:
+                lines.append("")
+            lines.extend(locked)
+        return lines
+
     def _refresh_skills(self) -> None:
         if not hasattr(self, "skill_table"):
             return
-        self.skill_table.setRowCount(0)
-        selected_names: list[str] = []
-        # Summary lists all enabled in category (not only filtered view).
-        for skill in self._catalog.for_filter(self._ui_class, self._category):
-            state = self.bag.skill_state(skill.setting_key)
-            if state.get("enabled"):
-                selected_names.append(skill.label(self.language))
-        for skill in self._visible_skills():
-            state = self.bag.skill_state(skill.setting_key)
-            row = self.skill_table.rowCount()
-            self.skill_table.insertRow(row)
-            enabled = QCheckBox()
-            enabled.setChecked(bool(state.get("enabled")))
-            enabled.toggled.connect(
-                lambda checked, key=skill.setting_key: self._skill_changed(key, enabled=checked)
-            )
-            self.skill_table.setCellWidget(row, 0, enabled)
-            icon_item = QTableWidgetItem()
-            icon_item.setIcon(QIcon(magic_icon(getattr(skill, "icon", None))))
-            self.skill_table.setItem(row, 1, icon_item)
-            name_item = QTableWidgetItem(skill.label(self.language))
-            name_item.setData(Qt.ItemDataRole.UserRole, skill.setting_key)
-            self.skill_table.setItem(row, 2, name_item)
-            auto = QCheckBox()
-            auto.setChecked(bool(state.get("auto", True)))
-            auto.toggled.connect(
-                lambda checked, key=skill.setting_key: self._skill_changed(key, auto=checked)
-            )
-            self.skill_table.setCellWidget(row, 3, auto)
-            spin = StepSpinBox(compact=True)
-            spin.setRange(1, 99)
-            spin.setValue(int(state.get("priority") or 1))
-            spin.valueChanged.connect(
-                lambda value, key=skill.setting_key: self._skill_changed(key, priority=value)
-            )
-            self.skill_table.setCellWidget(row, 4, wrap_cell_widget(spin, hpad=3, vpad=2))
-            self.skill_table.setRowHeight(row, table_row_height_for_controls())
+        self._ensure_skill_model()
+        checked_count = len(self._ranked_skills(self._ui_class))
+        self._skill_guard = True
+        try:
+            self.skill_table.setRowCount(0)
+            for skill in self._visible_skills():
+                state = self.bag.skill_state(skill.setting_key)
+                locked = self._locked_skill(skill)
+                selected = True if locked else bool(state.get("auto"))
+                row = self.skill_table.rowCount()
+                self.skill_table.insertRow(row)
+                auto = QCheckBox()
+                auto.setChecked(selected)
+                if locked:
+                    auto.setEnabled(False)
+                else:
+                    auto.toggled.connect(
+                        lambda checked, key=skill.setting_key: self._set_auto(key, checked)
+                    )
+                self.skill_table.setCellWidget(row, 0, auto)
+                icon_item = QTableWidgetItem()
+                icon_item.setIcon(QIcon(magic_icon(getattr(skill, "icon", None))))
+                self.skill_table.setItem(row, 1, icon_item)
+                name_item = QTableWidgetItem(skill.label(self.language))
+                name_item.setData(Qt.ItemDataRole.UserRole, skill.setting_key)
+                self.skill_table.setItem(row, 2, name_item)
+                spin = StepSpinBox(compact=True)
+                spin.blockSignals(True)
+                if locked or not selected or checked_count <= 0:
+                    spin.setRange(0, 0)
+                    spin.setValue(0)
+                    spin._spin.setSpecialValueText("—")
+                    spin.setEnabled(False)
+                else:
+                    spin.setRange(1, checked_count)
+                    spin.setValue(int(state.get("priority") or 1))
+                    spin.setEnabled(True)
+                spin.blockSignals(False)
+                if selected and not locked:
+                    spin.valueChanged.connect(
+                        lambda value, key=skill.setting_key: self._set_priority(key, value)
+                    )
+                self.skill_table.setCellWidget(row, 3, wrap_cell_widget(spin, hpad=3, vpad=2))
+                self.skill_table.setRowHeight(row, table_row_height_for_controls())
+        finally:
+            self._skill_guard = False
         from ui_qt.editors.form_helpers import sync_row_widget_selection
 
         sync_row_widget_selection(self.skill_table)
-        self.pick_summary.setPlainText(
-            "\n".join(
-                [
-                    f"{self.t.get('summary_class', 'Class')}: {self.t.get(self._ui_class, self._ui_class)}",
-                    f"{self.t.get('summary_category', 'Category')}: "
-                    f"{self._catalog.category_label(self._category, self.language)}",
-                    f"{self.t.get('selected_magic', 'Selected')}: "
-                    f"{self.t.get('magic_selected_count', '{count}').format(count=len(selected_names))}",
-                    "",
-                    *[f"• {name}" for name in selected_names],
-                ]
-            )
-        )
-
-    def _skill_changed(self, key: str, **fields) -> None:
-        self.bag.set_skill_state(key, **fields)
-        # Light summary refresh without rebuilding every checkbox.
-        selected = []
-        for skill in self._visible_skills():
-            if self.bag.skill_state(skill.setting_key).get("enabled"):
-                selected.append(skill.label(self.language))
-        self.pick_summary.setPlainText(
-            "\n".join(
-                [
-                    f"{self.t.get('summary_class', 'Class')}: {self.t.get(self._ui_class, self._ui_class)}",
-                    f"{self.t.get('summary_category', 'Category')}: "
-                    f"{self._catalog.category_label(self._category, self.language)}",
-                    f"{self.t.get('selected_magic', 'Selected')}: "
-                    f"{self.t.get('magic_selected_count', '{count}').format(count=len(selected))}",
-                    "",
-                    *[f"• {name}" for name in selected],
-                ]
-            )
-        )
+        self.pick_summary.setPlainText("\n".join(self._summary_lines()))
 
     def _set_visible(self, enabled: bool) -> None:
-        for skill in self._visible_skills():
-            self.bag.set_skill_state(skill.setting_key, enabled=enabled)
+        self._ensure_skill_model()
+        self._skill_guard = True
+        try:
+            for skill in self._visible_skills():
+                if self._locked_skill(skill):
+                    self.bag.set_skill_state(
+                        skill.setting_key, auto=True, enabled=True
+                    )
+                    continue
+                self.bag.set_skill_state(
+                    skill.setting_key, auto=bool(enabled), enabled=bool(enabled)
+                )
+            self._assign_priorities(self._ui_class, reset_order=True)
+        finally:
+            self._skill_guard = False
         self._refresh_skills()
 
     def _reset_visible(self) -> None:
-        for skill in self._visible_skills():
-            self.bag.set_skill_state(
-                skill.setting_key, enabled=False, auto=True, priority=1, hotkey=""
-            )
+        self._ensure_skill_model()
+        self._skill_guard = True
+        try:
+            for skill in self._visible_skills():
+                if self._locked_skill(skill):
+                    self.bag.set_skill_state(
+                        skill.setting_key, auto=True, enabled=True, hotkey=""
+                    )
+                    continue
+                self.bag.set_skill_state(
+                    skill.setting_key,
+                    auto=False,
+                    enabled=False,
+                    priority=1,
+                    hotkey="",
+                )
+            self._assign_priorities(self._ui_class, reset_order=True)
+        finally:
+            self._skill_guard = False
         self._refresh_skills()
 
     def apply_to_profile(self) -> None:

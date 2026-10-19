@@ -387,7 +387,7 @@ class EquipmentTab(QWidget):
         self.bag.set("equipment", "sell_mode", "sell_except_keep")
         add_check(
             s, self.bag, "equipment", "store_after_sell",
-            self.t.get("store_after_sell", "Store after sell"), False,
+            self.t.get("store_after_sell", "Store after sell"), True,
             self._refresh_sell_summary,
         )
 
@@ -640,7 +640,7 @@ class EquipmentTab(QWidget):
             return
         store = (
             self.t.get("summary_on", "ON")
-            if self.bag.get_bool("equipment", "store_after_sell")
+            if self.bag.get_bool("equipment", "store_after_sell", True)
             else self.t.get("summary_off", "OFF")
         )
         lines = [

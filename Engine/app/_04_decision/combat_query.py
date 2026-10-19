@@ -1178,6 +1178,19 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
     return out
 
 
+def monster_hitting_me(game_state: GameState) -> bool:
+    """True when a monster or summon is attacking me this tick.
+
+    Uses the AttackAction row only. A blocked path still counts. A dungeon
+    blacklisted species does not.
+    """
+    try:
+        attackers = sync_attacks_me_force_targets(game_state)
+    except Exception:
+        return False
+    return any(not _dungeon_ignores_blacklisted_attacker(obj) for obj in attackers)
+
+
 def _dungeon_ignores_blacklisted_attacker(obj: WorldObject) -> bool:
     """True when a dungeon must not fight this species even if it attacks us."""
     from app._04_decision.dungeon import is_dungeon_map
@@ -1416,6 +1429,7 @@ __all__ = [
     "nearest_attacks_me_force",
     "player_attacking_me",
     "sync_attacks_me_force_targets",
+    "monster_hitting_me",
     "nearest_lootable",
     "contested_mob_guids",
     "is_contested_monster",

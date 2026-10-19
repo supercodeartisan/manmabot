@@ -1,11 +1,15 @@
 """Shop trip: travel to an NPC behavior, then run calibrated buy/sell.
 
 Priority (one action family): overweight sell → HP potion → depoison → arrows.
-Sell has no NPC picker. Locale + sell_mode pick two YAML behaviors in order
-(general goods, then weapon). Weight trigger uses Recovery Fix/Return gauge.
+Sell has no NPC picker. Locale + sell_mode pick the four merchant behaviors.
+Each sell trip shuffles those four. The warehouse keeper stays after them
+when ``store_after_sell`` is checked and the bag still holds something
+outside the keep list. Unchecked, the trip ends after the four merchants.
+Weight trigger uses Recovery Fix/Return gauge.
 """
 from __future__ import annotations
 
+import random
 import time
 from typing import TYPE_CHECKING, Optional
 
@@ -58,6 +62,9 @@ def ensure_shopping_mode(blackboard: "Blackboard") -> None:
 def begin_shopping(blackboard: "Blackboard", reason: str = "shop") -> None:
     """Enter ``SHOPPING`` mode (trip arm happens in ``tick_shop_trip``)."""
     del reason
+    from app._04_decision.farm_tour import remember_return_farm
+
+    remember_return_farm(blackboard)
     ensure_shopping_mode(blackboard)
 
 
@@ -144,8 +151,19 @@ def needs_sell(state: "GameState") -> bool:
 needs_sell_garbage = needs_sell
 
 
-def _begin_sell_queue(blackboard: "Blackboard") -> Optional[str]:
+def _shuffled_sell_ids() -> list[str]:
+    """The four sell merchants, visit order shuffled. Warehouse is not included."""
     queue = [str(x) for x in resolve_sell_behavior_ids() if str(x).strip()]
+    random.shuffle(queue)
+    if queue:
+        from app.bot_log import get_logger
+
+        get_logger("shop").info("sell npc order %s", " → ".join(queue))
+    return queue
+
+
+def _begin_sell_queue(blackboard: "Blackboard") -> Optional[str]:
+    queue = _shuffled_sell_ids()
     if not queue:
         return None
     first = queue[0]
@@ -201,9 +219,9 @@ def advance_sell_trip(
 ) -> Optional[str]:
     """After one sell succeeds, start the next sell shop or end the trip.
 
-    When the merchant queue is done and the bag still has items outside the
-    keep list, ``give_goods`` runs before the trip ends. The following tick
-    then picks the next needed NPC (potions, arrows).
+    When the merchant queue is done, ``store_after_sell`` is checked, and the
+    bag still has items outside the keep list, ``give_goods`` runs before the
+    trip ends. The following tick then picks the next needed NPC (potions, arrows).
     """
     remaining = blackboard.scratch.get(SCRATCH_SELL_QUEUE)
     if isinstance(remaining, list) and remaining:
@@ -212,7 +230,11 @@ def advance_sell_trip(
         if next_id:
             return _arm_next_shop(blackboard, next_id, rest)
     current = str(blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "")
-    if current != GIVE_GOODS_ID and _bag_needs_give_goods(state):
+    if (
+        shops_mod.STORE_AFTER_SELL
+        and current != GIVE_GOODS_ID
+        and _bag_needs_give_goods(state)
+    ):
         from app.bot_log import get_logger
 
         get_logger("shop").info("sell done, leftovers outside keep list → give_goods")
@@ -238,7 +260,7 @@ def choose_shopping_behavior(
         if nxt:
             return nxt
     # Overweight sell first so perpetual potion/arrow restock cannot block it.
-    # No sell_npc picker — YAML behavior ids already name both shop visits.
+    # No sell_npc picker — the four merchants are shuffled per trip.
     if needs_sell(state):
         return _begin_sell_queue(blackboard)
     if needs_potion_restock(blackboard):
@@ -280,7 +302,7 @@ def arm_sell_before_hp_retreat(blackboard: "Blackboard") -> bool:
     ):
         blackboard.scratch[SCRATCH_HP_SELL_BEFORE_RETREAT] = "selling"
         return True
-    queue = [str(x) for x in resolve_sell_behavior_ids() if str(x).strip()]
+    queue = _shuffled_sell_ids()
     if not queue:
         return False
     _arm_next_shop(blackboard, queue[0], queue[1:])
@@ -529,6 +551,9 @@ def tick_shop_trip(state: "GameState", blackboard: "Blackboard") -> Status | Non
     blackboard.scratch[SCRATCH_SHOP_BEHAVIOR] = behavior_id
     blackboard.scratch[SCRATCH_SHOP_TRIP] = True
     blackboard.scratch[SCRATCH_SHOP_ID] = behavior_id
+    from app._04_decision.farm_tour import remember_return_farm
+
+    remember_return_farm(blackboard)
     ensure_shopping_mode(blackboard)
 
     # Open only when live world coords are at the stall. After a talking-scroll

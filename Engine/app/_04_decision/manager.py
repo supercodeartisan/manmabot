@@ -53,6 +53,9 @@ class DecisionManager:
         from app._04_decision.farm_time import sample_farm_presence
 
         begin_tick()
+        from app._04_decision.doors import refresh_live_doors
+
+        refresh_live_doors(getattr(game_state, "last_print_state", None))
         self.blackboard.tick_count += 1
         from app._04_decision.behaviors.combat import sample_kill_progress
 
@@ -242,7 +245,7 @@ class DecisionManager:
         cursor_score: float | None = None,
         need_score: float | None = None,
     ) -> bool:
-        """Count a verify fail; soft-give-up after consecutive fails on this id."""
+        """After 5 monster cursor rejects, skip that id for 4 seconds. Items still count misses."""
         return note_cursor_verify_fail(
             self.blackboard,
             track_id,
@@ -344,7 +347,7 @@ class DecisionManager:
             note_mouse(f"travel tile={tile_s} reason={intent_reason}")
             _log_action.info(
                 "travel click ok tile=%s cursor=%s/%s score=%s need=%s "
-                "probes=%s dialog_seen=%s labels=%s reason=%r "
+                "probes=%s dialog_seen=%s labels=%s door=%s reason=%r "
                 "travel=%s search=%s loot=%s",
                 tile_s,
                 meta.get("cursor_label") or stats.get("click_label") or "-",
@@ -354,6 +357,7 @@ class DecisionManager:
                 int(stats.get("probes") or 0),
                 int(stats.get("dialog_seen") or 0),
                 labels_s,
+                stats.get("door") or "-",
                 intent_reason,
                 bool(self.blackboard.travel_hop_active),
                 bool(self.blackboard.search_hop_active),
@@ -386,7 +390,7 @@ class DecisionManager:
         )
         _log_action.info(
             "travel click failed tile=%s cursor=%s/%s score=%s need=%s "
-            "probes=%s dialog_seen=%s labels=%s last_reject=%r reason=%r "
+            "probes=%s dialog_seen=%s labels=%s door=%s last_reject=%r reason=%r "
             "travel=%s search=%s loot=%s",
             tile_s,
             meta.get("cursor_label") or "-",
@@ -396,6 +400,7 @@ class DecisionManager:
             int(stats.get("probes") or 0),
             int(stats.get("dialog_seen") or 0),
             labels_s,
+            stats.get("door") or "-",
             str(
                 stats.get("last_reject")
                 or getattr(executor, "last_cursor_reject_reason", None)
@@ -650,6 +655,9 @@ class DecisionManager:
             origin = self._click_feedback_origin(executor)
             ax, ay = relative_to_absolute(rel[0], rel[1], origin)
             abs_tile = (ax, ay)
+            from app._04_decision.behaviors.unstick import note_confined_actual_click
+
+            note_confined_actual_click(self.blackboard, abs_tile)
             # Cursor-ring neighbors stay. A shifted or walled tile is not
             # the arrival point; the next tick plans a new hop. The origin
             # is the one used to aim the click, so a later pose pulse does

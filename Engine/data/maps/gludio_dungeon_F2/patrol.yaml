@@ -1,2 +1,40 @@
-# Patrol midpoints (nav tiles). Place in the map editor.
-waypoints: []
+# Patrol midpoints (nav tiles). Dungeon mode travels these in order.
+waypoints:
+  - { x: 108, y: 161, name: click_1 }
+  - { x: 109, y: 164, name: click_2 }
+  - { x: 109, y: 167, name: click_3 }
+  - { x: 109, y: 170, name: click_4 }
+  - { x: 106, y: 171, name: click_5 }
+  - { x: 103, y: 170, name: click_6 }
+  - { x: 100, y: 167, name: click_7 }
+  - { x: 97, y: 164, name: click_8 }
+  - { x: 95, y: 161, name: click_9 }
+  - { x: 96, y: 158, name: click_10 }
+  - { x: 99, y: 155, name: click_11 }
+  - { x: 102, y: 152, name: click_12 }
+  - { x: 100, y: 149, name: click_13 }
+  - { x: 101, y: 146, name: click_14 }
+  - { x: 104, y: 143, name: click_15 }
+  - { x: 107, y: 140, name: click_16 }
+  - { x: 110, y: 140, name: click_17 }
+  - { x: 113, y: 140, name: click_18 }
+  - { x: 116, y: 137, name: click_19 }
+  - { x: 119, y: 134, name: click_20 }
+  - { x: 122, y: 131, name: click_21 }
+  - { x: 125, y: 128, name: click_22 }
+  - { x: 128, y: 125, name: click_23 }
+  - { x: 131, y: 122, name: click_24 }
+  - { x: 134, y: 119, name: click_25 }
+  - { x: 137, y: 116, name: click_26 }
+  - { x: 140, y: 113, name: click_27 }
+  - { x: 143, y: 110, name: click_28 }
+  - { x: 146, y: 109, name: click_29 }
+  - { x: 149, y: 109, name: click_30 }
+  - { x: 152, y: 107, name: click_31 }
+  - { x: 153, y: 104, name: click_32 }
+  - { x: 153, y: 101, name: click_33 }
+  - { x: 155, y: 98, name: click_34 }
+  - { x: 157, y: 95, name: click_35 }
+  - { x: 155, y: 92, name: click_36 }
+  - { x: 152, y: 89, name: click_37 }
+  - { x: 153, y: 87, name: gate_글루디오 던전 3층 }

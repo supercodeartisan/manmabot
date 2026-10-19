@@ -107,6 +107,10 @@ class TerrainMap:
     # Optional Layer3 bit0 fence edges (field packs). When set, steps use can_step.
     block_n: Optional[np.ndarray] = None
     block_e: Optional[np.ndarray] = None
+    # Nav-tile origin of this grid. Submaps add their window so door walls
+    # stay in the same coordinates as the full pack.
+    nav_ox: int = 0
+    nav_oy: int = 0
 
     def __post_init__(self) -> None:
         if self.clearance is None or self.costs is None:
@@ -142,7 +146,11 @@ class TerrainMap:
     def is_walkable(self, x: int, y: int) -> bool:
         if not self.in_bounds(x, y):
             return False
-        return bool(self.walkable[y, x])
+        if not bool(self.walkable[y, x]):
+            return False
+        from app._04_decision.doors import tile_sealed
+
+        return not tile_sealed(int(self.nav_ox) + int(x), int(self.nav_oy) + int(y))
 
     def dist_to_wall(self, x: int, y: int) -> int:
         """Chebyshev rings from blocked: 0 means 8-adjacent (or blocked / OOB)."""
@@ -170,6 +178,8 @@ class TerrainMap:
             wall_penalty=self.wall_penalty,
             block_n=bn,
             block_e=be,
+            nav_ox=int(self.nav_ox) + int(x0),
+            nav_oy=int(self.nav_oy) + int(y0),
         )
 
     def can_step(self, ax: int, ay: int, bx: int, by: int) -> bool:

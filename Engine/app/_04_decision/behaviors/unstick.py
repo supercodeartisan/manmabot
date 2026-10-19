@@ -13,8 +13,8 @@ Combat uses a separate clock: if the monster tile does not change for
 attack line and swing again. Still no movement → give up that target.
 Combat never teleports.
 
-Three standstills inside 20 s, or HP at/below the operator escape gate,
-skip the sweep and go straight to teleport → talking scroll.
+HP at/below the operator escape gate skips the sweep and goes straight
+to teleport → talking scroll.
 """
 from __future__ import annotations
 
@@ -46,13 +46,12 @@ SCRATCH_BLOCK_TILE = "combat_block_tile"
 SCRATCH_BLOCK_AT = "combat_block_at"
 SCRATCH_BLOCK_SIDESTEP = "combat_block_sidestep"
 SCRATCH_ESCAPED = "unstick_escaped"
-SCRATCH_EVENTS = "unstick_event_times"
-SCRATCH_EVENT_NOTED = "unstick_event_noted"
 SCRATCH_DETOUR_TRIED = "enter_farm_detour_tried"
 SCRATCH_DETOUR_ORIGIN = "enter_farm_detour_origin"
 SCRATCH_DETOUR_CLICK_AT = "enter_farm_detour_click_at"
 SCRATCH_CONFINED_ORIGIN = "unstick_confined_origin"
 SCRATCH_CONFINED_SINCE = "unstick_confined_since"
+SCRATCH_CONFINED_EPISODE = "unstick_confined_episode"
 
 # Pause between sweep clicks so a successful step can clear the stuck clock.
 UNSTICK_SWEEP_GAP_S = 0.5
@@ -73,14 +72,14 @@ def reset_unstick_tries(blackboard: "Blackboard") -> None:
     blackboard.scratch.pop(SCRATCH_ORIGIN, None)
     blackboard.scratch.pop(SCRATCH_CLICK_AT, None)
     blackboard.scratch.pop(SCRATCH_ESCAPED, None)
-    blackboard.scratch.pop(SCRATCH_EVENT_NOTED, None)
     reset_enter_farm_detour(blackboard)
 
 
 def reset_confined_progress(blackboard: "Blackboard") -> None:
-    """Drop the 13 s / 5-tile confined-movement clock."""
+    """Drop the 13 s / 3-tile confined-movement clock."""
     blackboard.scratch.pop(SCRATCH_CONFINED_ORIGIN, None)
     blackboard.scratch.pop(SCRATCH_CONFINED_SINCE, None)
+    blackboard.scratch.pop(SCRATCH_CONFINED_EPISODE, None)
 
 
 def _player_tile(blackboard: "Blackboard") -> tuple[int, int]:
@@ -186,34 +185,6 @@ def next_sweep_tile(
     _store_tried(blackboard, tried)
     blackboard.scratch[SCRATCH_ORIGIN] = list(origin)
     return tile
-
-
-def _trim_stuck_events(blackboard: "Blackboard", now: float) -> list[float]:
-    window = float(pm.UNSTICK_BURST_WINDOW_S)
-    hist = [
-        float(stamp)
-        for stamp in (blackboard.scratch.get(SCRATCH_EVENTS) or [])
-        if now - float(stamp) <= window
-    ]
-    blackboard.scratch[SCRATCH_EVENTS] = hist
-    return hist
-
-
-def _note_stuck_event(blackboard: "Blackboard") -> None:
-    """Count this standstill once; later ticks on the same tile do not add."""
-    if blackboard.scratch.get(SCRATCH_EVENT_NOTED):
-        return
-    now = time.time()
-    hist = _trim_stuck_events(blackboard, now)
-    hist.append(now)
-    blackboard.scratch[SCRATCH_EVENTS] = hist
-    blackboard.scratch[SCRATCH_EVENT_NOTED] = True
-
-
-def burst_stuck(blackboard: "Blackboard") -> bool:
-    """True after ``UNSTICK_BURST_COUNT`` standstills inside the window."""
-    hist = _trim_stuck_events(blackboard, time.time())
-    return len(hist) >= int(pm.UNSTICK_BURST_COUNT)
 
 
 def _hp_escape_threshold() -> float:
@@ -337,11 +308,6 @@ def _urgent_escape_reason(
 ) -> str:
     """Why a standstill skipped the nearby sweep."""
     parts: list[str] = []
-    if burst_stuck(blackboard):
-        count = len(_trim_stuck_events(blackboard, time.time()))
-        parts.append(
-            f"burst {count} standstills in {int(pm.UNSTICK_BURST_WINDOW_S)}s"
-        )
     if needs_hp_escape(blackboard, state):
         ratio = _hp_ratio_hint(blackboard, state)
         gate = _hp_escape_threshold()
@@ -464,36 +430,227 @@ def try_unstick_escape(
     return False
 
 
+def _episode_new(cell: tuple[int, int]) -> dict:
+    return {
+        "steps": 0,
+        "cells": [[int(cell[0]), int(cell[1])]],
+        "last": [int(cell[0]), int(cell[1])],
+        "wp0": None,
+        "wp": None,
+        "wp_changes": 0,
+        "click": None,
+        "click_changes": 0,
+        "moving1": 0,
+        "moving0": 0,
+        "moving_unread": 0,
+        "line_closed": 0,
+        "avoids": 0,
+        "fired": False,
+    }
+
+
+def _open_episode(blackboard: "Blackboard") -> dict | None:
+    raw = blackboard.scratch.get(SCRATCH_CONFINED_EPISODE)
+    return raw if isinstance(raw, dict) else None
+
+
+def _hop_waypoint(blackboard: "Blackboard") -> tuple[int, int] | None:
+    if getattr(blackboard, "travel_hop_active", False) and blackboard.nav_waypoint is not None:
+        wp = blackboard.nav_waypoint
+    elif (
+        getattr(blackboard, "search_hop_active", False)
+        and blackboard.search_waypoint is not None
+    ):
+        wp = blackboard.search_waypoint
+    elif (
+        getattr(blackboard, "loot_approach_active", False)
+        and blackboard.loot_approach_waypoint is not None
+    ):
+        wp = blackboard.loot_approach_waypoint
+    else:
+        return None
+    return (int(wp[0]), int(wp[1]))
+
+
+def _note_xy(episode: dict, key: str, changes_key: str, tile: tuple[int, int]) -> None:
+    xy = [int(tile[0]), int(tile[1])]
+    prev = episode.get(key)
+    if prev is None:
+        episode[key] = xy
+        return
+    if list(prev) != xy:
+        episode[key] = xy
+        episode[changes_key] = int(episode.get(changes_key) or 0) + 1
+
+
+def _sample_confined_episode(blackboard: "Blackboard", cell: tuple[int, int]) -> None:
+    episode = _open_episode(blackboard)
+    if episode is None:
+        return
+    last = episode.get("last")
+    cur = [int(cell[0]), int(cell[1])]
+    if isinstance(last, (list, tuple)) and len(last) >= 2:
+        from app._03_world.space.world_coords import tile_chebyshev
+
+        step = tile_chebyshev(int(last[0]), int(last[1]), cur[0], cur[1])
+        if step > 0:
+            episode["steps"] = int(episode.get("steps") or 0) + int(step)
+            cells = episode.setdefault("cells", [])
+            if cur not in cells:
+                cells.append(cur)
+    episode["last"] = cur
+    wp = _hop_waypoint(blackboard)
+    if wp is not None:
+        if episode.get("wp0") is None:
+            episode["wp0"] = [wp[0], wp[1]]
+        _note_xy(episode, "wp", "wp_changes", wp)
+    from app._05_action.body_pose import body_is_moving
+
+    moving = body_is_moving()
+    if moving is True:
+        episode["moving1"] = int(episode.get("moving1") or 0) + 1
+    elif moving is False:
+        episode["moving0"] = int(episode.get("moving0") or 0) + 1
+    else:
+        episode["moving_unread"] = int(episode.get("moving_unread") or 0) + 1
+
+
+def _begin_confined_episode(
+    blackboard: "Blackboard", cell: tuple[int, int], now: float
+) -> None:
+    blackboard.scratch[SCRATCH_CONFINED_ORIGIN] = [int(cell[0]), int(cell[1])]
+    blackboard.scratch[SCRATCH_CONFINED_SINCE] = now
+    blackboard.scratch[SCRATCH_CONFINED_EPISODE] = _episode_new(cell)
+    _sample_confined_episode(blackboard, cell)
+
+
+def _fmt_xy(raw: object) -> str:
+    if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+        return f"({int(raw[0])},{int(raw[1])})"
+    return "-"
+
+
+def _log_confined_episode(
+    blackboard: "Blackboard",
+    kind: str,
+    cell: tuple[int, int],
+    now: float,
+) -> None:
+    """One line for a finished bubble. ``kind`` is ``fire`` or ``leave``."""
+    episode = _open_episode(blackboard)
+    if episode is None:
+        return
+    from app.bot_log import event
+
+    started = float(blackboard.scratch.get(SCRATCH_CONFINED_SINCE) or 0.0)
+    elapsed = max(0.0, now - started) if started > 0.0 else 0.0
+    cells = episode.get("cells") or []
+    event(
+        "nav",
+        "confined episode kind=%s anchor=%s cell=%s elapsed=%.1fs "
+        "steps=%s cells=%s wp0=%s wp=%s wp_changes=%s "
+        "click=%s click_changes=%s moving1=%s moving0=%s moving_unread=%s "
+        "line_closed=%s avoids=%s",
+        kind,
+        _fmt_xy(blackboard.scratch.get(SCRATCH_CONFINED_ORIGIN)),
+        _fmt_xy(cell),
+        elapsed,
+        int(episode.get("steps") or 0),
+        len(cells) if isinstance(cells, list) else 0,
+        _fmt_xy(episode.get("wp0")),
+        _fmt_xy(episode.get("wp")),
+        int(episode.get("wp_changes") or 0),
+        _fmt_xy(episode.get("click")),
+        int(episode.get("click_changes") or 0),
+        int(episode.get("moving1") or 0),
+        int(episode.get("moving0") or 0),
+        int(episode.get("moving_unread") or 0),
+        int(episode.get("line_closed") or 0),
+        int(episode.get("avoids") or 0),
+    )
+
+
+def note_confined_actual_click(
+    blackboard: "Blackboard", tile: tuple[int, int]
+) -> None:
+    """Count a verified ground-click tile while a bubble episode is open."""
+    episode = _open_episode(blackboard)
+    if episode is None:
+        return
+    _note_xy(episode, "click", "click_changes", (int(tile[0]), int(tile[1])))
+
+
+def note_confined_line_closed(blackboard: "Blackboard") -> None:
+    """Count a closed click line while a bubble episode is open."""
+    episode = _open_episode(blackboard)
+    if episode is None:
+        return
+    episode["line_closed"] = int(episode.get("line_closed") or 0) + 1
+
+
+def note_confined_body_avoid(blackboard: "Blackboard") -> None:
+    """Count a body sidestep or a body-blocked hop while an episode is open."""
+    episode = _open_episode(blackboard)
+    if episode is None:
+        return
+    episode["avoids"] = int(episode.get("avoids") or 0) + 1
+
+
+def note_confined_planned_avoid(
+    blackboard: "Blackboard",
+    planned: object,
+    bodies: object,
+) -> None:
+    """Count a hop that stepped aside or found no click because a body is near."""
+    if not bodies:
+        return
+    note = str(getattr(planned, "note", "") or "")
+    if note in ("no path to the goal", "already on the goal"):
+        return
+    wp = getattr(planned, "waypoint", None)
+    if wp is None:
+        return
+    click = getattr(planned, "click", None)
+    click_xy = None if click is None else (int(click[0]), int(click[1]))
+    if click_xy != (int(wp[0]), int(wp[1])):
+        note_confined_body_avoid(blackboard)
+
+
 def note_confined_progress(blackboard: "Blackboard") -> bool:
-    """Update the 5-tile bubble clock. True when it has lasted 13 s."""
+    """Update the 3-tile bubble clock. True when it has lasted 13 s."""
     from app._03_world.space.world_coords import tile_chebyshev
 
     cur = _player_tile(blackboard)
     now = time.time()
     raw = blackboard.scratch.get(SCRATCH_CONFINED_ORIGIN)
     if raw is None:
-        blackboard.scratch[SCRATCH_CONFINED_ORIGIN] = list(cur)
-        blackboard.scratch[SCRATCH_CONFINED_SINCE] = now
+        _begin_confined_episode(blackboard, cur, now)
         return False
     origin = (int(raw[0]), int(raw[1]))
     if tile_chebyshev(cur[0], cur[1], origin[0], origin[1]) > int(
         pm.UNSTICK_CONFINED_TILES
     ):
-        blackboard.scratch[SCRATCH_CONFINED_ORIGIN] = list(cur)
-        blackboard.scratch[SCRATCH_CONFINED_SINCE] = now
+        _log_confined_episode(blackboard, "leave", cur, now)
+        _begin_confined_episode(blackboard, cur, now)
         return False
     started = float(blackboard.scratch.get(SCRATCH_CONFINED_SINCE) or 0.0)
     if started <= 0.0:
         blackboard.scratch[SCRATCH_CONFINED_SINCE] = now
-        return False
-    return (now - started) >= float(pm.UNSTICK_CONFINED_SECONDS)
+    _sample_confined_episode(blackboard, cur)
+    due = (now - started) >= float(pm.UNSTICK_CONFINED_SECONDS) if started > 0.0 else False
+    if due:
+        episode = _open_episode(blackboard)
+        if episode is not None and not episode.get("fired"):
+            _log_confined_episode(blackboard, "fire", cur, now)
+            episode["fired"] = True
+    return due
 
 
 def try_confined_escape(
     blackboard: "Blackboard",
     state: Optional["GameState"] = None,
 ) -> bool:
-    """Leave a 5-tile / 13 s pocket: teleport if on the hotbar, else scroll."""
+    """Leave a 3-tile / 13 s pocket: teleport if on the hotbar, else scroll."""
     from app._04_decision.dungeon_policy import unstick_disabled
 
     if unstick_disabled():
@@ -540,15 +697,11 @@ def try_movement_unstick(
     origin = origin if origin is not None else _player_tile(blackboard)
     terrain = get_terrain_map()
     _sync_origin(blackboard, origin)
-    if allow_escape:
-        _note_stuck_event(blackboard)
 
     now = time.time()
     last = float(blackboard.scratch.get(SCRATCH_CLICK_AT) or 0.0)
     in_gap = last > 0.0 and (now - last) < UNSTICK_SWEEP_GAP_S
-    urgent = allow_escape and (
-        burst_stuck(blackboard) or needs_hp_escape(blackboard, state)
-    )
+    urgent = allow_escape and needs_hp_escape(blackboard, state)
 
     if urgent and try_unstick_escape(
         blackboard,
@@ -896,6 +1049,9 @@ __all__ = [
     "try_unstick_escape",
     "try_confined_escape",
     "note_confined_progress",
+    "note_confined_actual_click",
+    "note_confined_line_closed",
+    "note_confined_planned_avoid",
     "reset_confined_progress",
     "try_movement_unstick",
     "try_combat_approach_unstick",
@@ -903,6 +1059,5 @@ __all__ = [
     "try_combat_wall_detour",
     "combat_sidestep_tiles",
     "SCRATCH_BLOCK_SIDESTEP",
-    "burst_stuck",
     "needs_hp_escape",
 ]

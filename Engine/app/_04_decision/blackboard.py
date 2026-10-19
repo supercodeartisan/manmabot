@@ -99,9 +99,11 @@ class Blackboard:
     # Monotonic decision-tick counter, incremented once per ``decide()``. The
     # shared frame clock used for cooldowns.
     tick_count: int = 0
-    # Targets combat gave up on, mapped to the tick they were abandoned. They
-    # are excluded from re-selection until the cooldown elapses.
-    given_up_target_ids: dict[int, int] = field(default_factory=dict)
+    # Targets combat gave up on, mapped to the wall-clock time they were
+    # abandoned. They are excluded from re-selection for 4 seconds.
+    given_up_target_ids: dict[int, float] = field(default_factory=dict)
+    # Cursor-reject ids, mapped to the wall-clock time they become selectable.
+    cursor_reject_until: dict[int, float] = field(default_factory=dict)
     # Bow cursor was ``arrow_lack`` — go buy arrows at a shop.
     needs_arrows: bool = False
     needs_potion: bool = False
@@ -277,6 +279,7 @@ class Blackboard:
         self.exp_kill_ids.clear()
         self.tick_count = 0
         self.given_up_target_ids.clear()
+        self.cursor_reject_until.clear()
         self.needs_arrows = False
         self.needs_potion = False
         self.potion_suppress_until = 0.0

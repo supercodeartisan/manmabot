@@ -16,6 +16,7 @@ from app._04_decision.behavior_tree import Status
 from app._04_decision.behaviors.travel import (
     SCRATCH_WORLD_NAV_SHORT_WALK,
     clear_travel,
+    emit_gate_sidestep,
     emit_travel_hop,
     start_travel,
     travel_arrived,
@@ -25,6 +26,8 @@ from . import pack_ids
 from . import planner_api as api
 
 PURPOSE_WORLD_NAV = "world_nav"
+# One-shot start pose after an exit whose mapId flipped before xy did.
+SCRATCH_WORLD_NAV_EXIT_LAND = "world_nav_exit_land"
 # Transition / gate cells in map_transitions may be non-walkable on nav.png.
 # Path to a walkable tile within this Chebyshev radius; same radius = arrived.
 ARRIVE_TILES = 1
@@ -44,6 +47,79 @@ NPC_TP_APPROACH = 7  # SHOP_ARRIVE_TILES — walk step should already be at NPC
 
 def _chev(ax: int, ay: int, bx: int, by: int) -> int:
     return max(abs(int(ax) - int(bx)), abs(int(ay) - int(by)))
+
+
+def stale_exit_outside_landing(
+    prev_map: int,
+    map_id: int,
+    x: int,
+    y: int,
+    transitions: Any,
+    *,
+    radius: int = TRANSITION_APPROACH,
+) -> tuple[int, int, int, str] | None:
+    """Outside landing when ``xy`` is still the exit's inside cell.
+
+    ``prev_map`` is the map the walk was on. ``map_id``/``x``/``y`` is the live
+    pose. Returns ``(to_map, to_x, to_y, edge_id)`` for the closest inside cell
+    within ``radius``. None when no exit matches, or xy is already at the landing.
+    """
+    best: tuple[int, int, int, str] | None = None
+    best_d = 10**9
+    r = max(0, int(radius))
+    pm, mid = int(prev_map), int(map_id)
+    px, py = int(x), int(y)
+    for t in transitions:
+        if int(getattr(t, "from_map", -1)) != pm:
+            continue
+        if int(getattr(t, "to_map", -1)) != mid:
+            continue
+        d = _chev(px, py, int(t.from_x), int(t.from_y))
+        if d > r or d >= best_d:
+            continue
+        if _chev(px, py, int(t.to_x), int(t.to_y)) <= r:
+            continue
+        best_d = d
+        best = (int(t.to_map), int(t.to_x), int(t.to_y), str(t.edge_id))
+    return best
+
+
+def _remember_stale_exit_landing(blackboard: Any, prev_map: int, pose: Any) -> None:
+    """Stash the outside cell once. The next arm uses it as the plan start."""
+    from app.bot_log import get_logger
+
+    from .ready.graph import DEFAULT_MAP_TRANSITIONS, load_transitions_from_map_file
+
+    try:
+        transitions, _names = load_transitions_from_map_file(DEFAULT_MAP_TRANSITIONS)
+    except Exception as exc:
+        get_logger("nav").info("exit landing lookup failed: %s", exc)
+        return
+    landing = stale_exit_outside_landing(
+        prev_map,
+        int(pose.map_id),
+        int(pose.x),
+        int(pose.y),
+        transitions,
+    )
+    if landing is None:
+        return
+    to_map, tx, ty, edge = landing
+    blackboard.scratch[SCRATCH_WORLD_NAV_EXIT_LAND] = {
+        "map_id": to_map,
+        "x": tx,
+        "y": ty,
+        "edge": edge,
+    }
+    get_logger("nav").info(
+        "exit pose still on inside cell map=%s xy=(%s,%s) -> landing (%s,%s) edge=%s",
+        int(pose.map_id),
+        int(pose.x),
+        int(pose.y),
+        tx,
+        ty,
+        edge,
+    )
 
 
 def _snap_nav_walkable(
@@ -141,7 +217,7 @@ class WorldNavSession:
     reason: str = ""
     plan: Any = None
     step_i: int = 0
-    phase: str = "idle"  # idle|walk|scroll|scroll_settle|gate_approach|gate_click|npc_teleporter|npc_teleporter_settle|done|fail
+    phase: str = "idle"  # idle|walk|scroll|scroll_settle|gate_approach|gate_sidestep|gate_click|npc_teleporter|npc_teleporter_settle|done|fail
     error: str | None = None
     scroll_started_at: float = 0.0
     scroll_landed_at: float = 0.0
@@ -270,6 +346,8 @@ class WorldNavSession:
         if self.phase == "scroll_settle":
             return self._tick_scroll_settle(pose, blackboard)
 
+        if self.phase == "gate_sidestep":
+            return self._tick_gate_sidestep(pose, state, blackboard)
         if self.phase == "gate_click":
             # GATE intent → ActionExecutor.run_gate_click (not worker side-channel).
             if self.gate is None:
@@ -367,6 +445,7 @@ class WorldNavSession:
         map_id = int(to["mapId"])
         gx, gy = int(to["x"]), int(to["y"])
         if pose.map_id != map_id:
+            _remember_stale_exit_landing(blackboard, map_id, pose)
             self.fail(f"walk on wrong map{pose.map_id} want map{map_id}")
             return Status.FAILURE
         # After a gate, mapId can update a tick before absolute xy. Walking from
@@ -457,6 +536,7 @@ class WorldNavSession:
         gx, gy = int(to["x"]), int(to["y"])
         if pose.map_id != map_id:
             blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
+            _remember_stale_exit_landing(blackboard, map_id, pose)
             self.fail(f"left map during walk (map{pose.map_id})")
             return Status.FAILURE
         if _chev(pose.x, pose.y, gx, gy) <= ARRIVE_TILES or travel_arrived(blackboard):
@@ -939,8 +1019,58 @@ class WorldNavSession:
             self.phase = "ready"
             self.gate = None
             return
+        from app._04_decision.world_nav.gate import GATE_STUCK_POSE
+
+        # One blocked click: step aside, then the same gate once more.
+        if (
+            isinstance(self.gate, dict)
+            and error == GATE_STUCK_POSE
+            and not self.gate.get("sidestep_done")
+        ):
+            self.gate["sidestep_done"] = True
+            self.gate["sidestep_sent"] = False
+            self.phase = "gate_sidestep"
+            from app.bot_log import get_logger
+
+            get_logger("nav").info(
+                "gate stuck — sidestep then retry edge=%s",
+                self.gate.get("edge") or "-",
+            )
+            return
         api.emit_state(tokens.TRANSITION_FAIL, error=error or "gate fail")
         self.fail(error or "map transition gate failed")
+
+    def _tick_gate_sidestep(self, pose: Any, state: Any, blackboard: Any) -> Status:
+        """One body-avoid step, then the existing gate click."""
+        g = self.gate
+        if not isinstance(g, dict):
+            self.fail("gate payload missing")
+            return Status.FAILURE
+        if not g.get("sidestep_sent"):
+            sent = emit_gate_sidestep(
+                blackboard,
+                state,
+                player_abs=(int(pose.x), int(pose.y)),
+                entrance_abs=(int(g["fx"]), int(g["fy"])),
+                reason="world nav gate sidestep",
+            )
+            g["sidestep_sent"] = True
+            g["sidestep_from"] = (int(pose.x), int(pose.y))
+            g["sidestep_waits"] = 0
+            if not sent:
+                clear_travel(blackboard)
+                self.phase = "gate_click"
+                return self._emit_gate(blackboard)
+            return Status.SUCCESS
+        waits = int(g.get("sidestep_waits") or 0) + 1
+        g["sidestep_waits"] = waits
+        origin = g.get("sidestep_from") or (int(pose.x), int(pose.y))
+        moved = (int(pose.x), int(pose.y)) != (int(origin[0]), int(origin[1]))
+        if not moved and waits < 3:
+            return self._idle(blackboard, "world nav gate sidestep")
+        clear_travel(blackboard)
+        self.phase = "gate_click"
+        return self._emit_gate(blackboard)
 
     def _ensure_map_pack(self, blackboard: Any, pack_id: str) -> bool:
         """Load ``pack_id`` via central live-map sync before travel."""

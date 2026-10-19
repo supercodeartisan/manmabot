@@ -15,6 +15,17 @@ if TYPE_CHECKING:  # pragma: no cover
 # Exact TSP over centers is fine up to ~10 farms; beyond that use greedy.
 _EXACT_TOUR_MAX = 10
 
+# Trips back onto the hunt row already in progress. The goal is the farm
+# the character left, not the first checked area.
+SCRATCH_RETURN_FARM = "return_farm_area_index"
+RETURN_FARM_REASONS = frozenset({
+    "post_retreat",
+    "post_shop",
+    "after_shop",
+    "hunt_map",
+    "unstick_return",
+})
+
 
 def farm_center_distance(a: FarmRect, b: FarmRect) -> int:
     """Chebyshev distance between farm centers (tile metric)."""
@@ -136,6 +147,67 @@ def ensure_farm_tour(blackboard: "Blackboard") -> None:
     blackboard.farm_area_index = tour[pos]
 
 
+def remember_return_farm(blackboard: "Blackboard") -> None:
+    """Save the active farm index once, before a town trip clears it.
+
+    A later save does not replace this. Mother Tree and a talking scroll
+    set the live index to 0; that 0 must not become the remembered area.
+    """
+    if SCRATCH_RETURN_FARM in blackboard.scratch:
+        return
+    try:
+        idx = int(getattr(blackboard, "farm_area_index", 0) or 0)
+    except (TypeError, ValueError):
+        idx = 0
+    if idx < 0:
+        idx = 0
+    blackboard.scratch[SCRATCH_RETURN_FARM] = idx
+
+
+def saved_return_farm(blackboard: "Blackboard") -> Optional[int]:
+    if SCRATCH_RETURN_FARM not in blackboard.scratch:
+        return None
+    try:
+        return int(blackboard.scratch.get(SCRATCH_RETURN_FARM) or 0)
+    except (TypeError, ValueError):
+        return None
+
+
+def clear_return_farm(blackboard: "Blackboard") -> None:
+    blackboard.scratch.pop(SCRATCH_RETURN_FARM, None)
+
+
+def return_farm_index(blackboard: "Blackboard", count: int) -> int:
+    """Farm slot to walk back to. Out-of-range memory falls back to 0."""
+    n = int(count)
+    if n <= 0:
+        return 0
+    saved = saved_return_farm(blackboard)
+    if saved is not None and 0 <= saved < n:
+        return saved
+    try:
+        live = int(getattr(blackboard, "farm_area_index", 0) or 0)
+    except (TypeError, ValueError):
+        live = 0
+    if 0 <= live < n:
+        return live
+    return 0
+
+
+def restore_return_farm(blackboard: "Blackboard") -> Optional[int]:
+    """Put the remembered index back after a return arrival. None if no farms."""
+    farms = get_farm_areas()
+    n = len(farms)
+    if n <= 0:
+        return None
+    idx = return_farm_index(blackboard, n)
+    blackboard.farm_tour = list(range(n))
+    blackboard.farm_tour_pos = idx
+    blackboard.farm_area_index = idx
+    clear_return_farm(blackboard)
+    return idx
+
+
 def advance_farm_tour(blackboard: "Blackboard") -> int:
     """Move to the next farm on the cycle; return the new farm index."""
     ensure_farm_tour(blackboard)
@@ -154,4 +226,11 @@ __all__ = [
     "user_farm_tour",
     "ensure_farm_tour",
     "advance_farm_tour",
+    "SCRATCH_RETURN_FARM",
+    "RETURN_FARM_REASONS",
+    "remember_return_farm",
+    "saved_return_farm",
+    "clear_return_farm",
+    "return_farm_index",
+    "restore_return_farm",
 ]

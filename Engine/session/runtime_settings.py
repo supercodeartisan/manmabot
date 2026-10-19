@@ -200,6 +200,7 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     if shop["buy_normal_arrows"] and shop["buy_silver_arrows"]:
         shop["buy_silver_arrows"] = False
     shop["restock_potions"] = bool(getattr(profile, "restock_potions", True))
+    shop["store_after_sell"] = bool(getattr(profile, "store_after_sell", True))
     shop["buy_depoison"] = bool(getattr(profile, "buy_depoison", False))
     shop_locale = ""
     try:
@@ -253,6 +254,10 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     spells_cfg["antidote_potion_item"] = str(
         getattr(profile, "antidote_potion_item", "") or ""
     ).strip()
+    spells_cfg["auto_buffs"] = [
+        row.as_dict() if hasattr(row, "as_dict") else row
+        for row in (getattr(profile, "auto_buff_plan", ()) or ())
+    ]
     decision_cfg["hp"] = hp
     decision_cfg["mp"] = mp
     decision_cfg["farm"] = farm

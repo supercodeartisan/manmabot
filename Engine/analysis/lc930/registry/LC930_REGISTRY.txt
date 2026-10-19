@@ -510,3 +510,19 @@ SCAN_GUARD=200000
 # [SEC-14] ground-item drop claim (extra_ent / print_state)
 # =============================================================================
 LH_DELTA_MAX=16
+
+# 창고 창(NPCStorageLayoutPCImpl) 슬롯 문자열. storewin.dll
+UIDLG_WIN_BMStorage=BMStorageLayoutPCImpl
+OFF_REC_HDR=0x10
+OFF_STR_LEN=0x10
+OFF_STR_CAP=0x18
+RTTI_COL_TD_OFF=0xC
+RTTI_TD_NAME_OFF=0x10
+STR_SSO_MAX=0x10
+WINSLOT_WINCLS=NPCStorageLayoutPCImpl
+WINSLOT_VEC=0x100
+WINSLOT_STRIDE=0x10
+WINSLOT_NAMEW=0x18
+WINSLOT_CNTW=0x28
+WIDGET_RENDERER=0x740
+LABEL_TEXT_OFF=0x378

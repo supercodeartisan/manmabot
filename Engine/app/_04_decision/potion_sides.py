@@ -136,8 +136,17 @@ def _side_hp_potion(
         return None
 
     actions = pm.HP_ACTIONS or normalize_hp_actions(None)
+    from app._04_decision.behaviors.mode_actions import retreat_fill_until_ratio
+
+    fill_until = retreat_fill_until_ratio(blackboard)
     potion_th = action_threshold(actions, "hp_potion")
-    if potion_th is None or ratio > potion_th:
+    if fill_until is not None:
+        if ratio >= fill_until:
+            return None
+        intent = blackboard.intent
+        if intent is not None and intent.action is ActionType.HEAL:
+            return None
+    elif potion_th is None or ratio > potion_th:
         return None
     if not any(
         str(row.get("id") or "") == "hp_potion" and row.get("enabled", True)

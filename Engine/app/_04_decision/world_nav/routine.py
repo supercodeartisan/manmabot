@@ -72,15 +72,49 @@ def _normalize_routine_fallback(raw: Any) -> list[dict[str, Any]]:
 class RoutineCursor:
     entries: list[dict[str, Any]] = field(default_factory=list)
     index: int = 0
-    started_at: float = 0.0
+    # Committed stay seconds. The open segment is ``running_since`` .. now.
+    # ``running_since`` is 0 while the bot is paused, so pause time is not counted.
+    elapsed_s: float = 0.0
+    running_since: float = 0.0
     fail_mask: set[int] = field(default_factory=set)
     cycle_start_index: int = 0
+
+    def _start_clock(self) -> None:
+        self.elapsed_s = 0.0
+        self.running_since = time.monotonic()
+
+    def elapsed(self, now: float | None = None) -> float:
+        total = float(self.elapsed_s)
+        since = float(self.running_since)
+        if since > 0.0:
+            total += (time.monotonic() if now is None else now) - since
+        return total if total > 0.0 else 0.0
+
+    def ticking(self) -> bool:
+        return float(self.running_since) > 0.0
+
+    def freeze(self, now: float | None = None) -> None:
+        """Commit the open segment and stop. A second call does not add time."""
+        since = float(self.running_since)
+        if since <= 0.0:
+            return
+        now_m = time.monotonic() if now is None else now
+        self.elapsed_s = float(self.elapsed_s) + (now_m - since)
+        self.running_since = 0.0
+
+    def resume(self, now: float | None = None) -> None:
+        """Open a new segment. Seconds already committed stay as they are."""
+        if float(self.running_since) > 0.0:
+            return
+        self.running_since = time.monotonic() if now is None else now
 
     @classmethod
     def from_entries(cls, entries: list[dict[str, Any]] | None) -> "RoutineCursor":
         """Build from already-normalized routine rows (session inject path)."""
         rows = [dict(e) for e in (entries or []) if isinstance(e, dict)]
-        return cls(entries=rows, index=0, started_at=time.monotonic())
+        cursor = cls(entries=rows, index=0)
+        cursor._start_clock()
+        return cursor
 
     @classmethod
     def from_routine(cls, raw: Any) -> "RoutineCursor":
@@ -105,7 +139,7 @@ class RoutineCursor:
             "selected_farms": list(selected_farms or []),
             "farm_stays_s": dict(farm_stays_s or {}),
         }
-        return cls(entries=[row], index=0, started_at=time.monotonic())
+        return cls.from_entries([row])
 
     def __len__(self) -> int:
         return len(self.entries)
@@ -118,7 +152,7 @@ class RoutineCursor:
     def mark_arrived(self, *, reset_clock: bool = True) -> None:
         """Record arrival. Return trips keep the row clock that is already running."""
         if reset_clock:
-            self.started_at = time.monotonic()
+            self._start_clock()
         self.fail_mask.discard(self.index)
 
     def duration_expired(self) -> bool:
@@ -126,13 +160,13 @@ class RoutineCursor:
         if entry is None:
             return False
         minutes = int(entry.get("duration_minutes") or 60)
-        return (time.monotonic() - float(self.started_at)) >= minutes * 60.0
+        return self.elapsed() >= minutes * 60.0
 
     def advance(self) -> dict[str, Any] | None:
         if not self.entries:
             return None
         self.index = (self.index + 1) % len(self.entries)
-        self.started_at = time.monotonic()
+        self._start_clock()
         return self.active()
 
     def mark_fail(self) -> None:
@@ -148,16 +182,32 @@ class RoutineCursor:
         self.cycle_start_index = self.index
 
 
-def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
+def goal_for_entry(
+    entry: dict[str, Any],
+    blackboard: Any = None,
+    *,
+    reason: str = "",
+) -> Any:
     """Build a WorldNav Goal from a routine row (pack id + farms/patrol).
 
     A break row with checked rest areas walks to the first checked area.
-    An empty break selection keeps the previous map or patrol goal.
+    A return onto the same hunt row walks to the farm the character left.
+    ``farm_area`` walks to ``farm_area_index`` (the tour slot just selected).
+    A new row walks to the first checked farm. An empty break selection
+    keeps the previous map or patrol goal.
     """
     pack_id = str(entry.get("map_id") or "").strip()
     map_id = pack_ids.pack_id_to_map_id(pack_id)
     if map_id is None:
         raise ValueError(f"unknown routine map pack_id={pack_id!r}")
+
+    # Deeper dungeon floors: world nav stops at the complex entrance.
+    # Floor-to-floor cells are planned later and walked by existing travel.
+    from app._04_decision.dungeon_floor_route import world_nav_entrance_map_id
+
+    entrance_map = world_nav_entrance_map_id(pack_id)
+    if entrance_map is not None and int(entrance_map) != int(map_id):
+        return api.map_goal(int(entrance_map))
 
     kind = str(entry.get("kind") or "battle").strip().lower()
     farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
@@ -168,11 +218,45 @@ def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
         else:
             rects = farm_rects_selected(blackboard, pack_id, farms)
     if rects:
-        r0 = rects[0]
-        nx = (int(r0["x0"]) + int(r0["x1"])) // 2
-        ny = (int(r0["y0"]) + int(r0["y1"])) // 2
+        index = 0
+        returning = False
+        if blackboard is not None and kind != "break":
+            from app._04_decision.farm_tour import RETURN_FARM_REASONS, return_farm_index
+
+            returning = str(reason or "") in RETURN_FARM_REASONS
+            if returning:
+                index = return_farm_index(blackboard, len(rects))
+            elif str(reason or "") == "farm_area":
+                try:
+                    index = int(getattr(blackboard, "farm_area_index", 0) or 0)
+                except (TypeError, ValueError):
+                    index = 0
+                if index < 0 or index >= len(rects):
+                    index = 0
+        chosen = rects[index]
+        nx = (int(chosen["x0"]) + int(chosen["x1"])) // 2
+        ny = (int(chosen["y0"]) + int(chosen["y1"])) // 2
         abs_xy = pack_ids.nav_to_abs(pack_id, nx, ny)
         if abs_xy is not None:
+            if returning:
+                from app.bot_log import get_logger
+
+                get_logger("nav").info(
+                    "return farm index=%s of %s reason=%s",
+                    index,
+                    len(rects),
+                    reason or "-",
+                )
+            elif str(reason or "") == "farm_area":
+                from app.bot_log import get_logger
+
+                get_logger("nav").info(
+                    "field world nav goal index=%s of %s pack=%s reason=%s",
+                    index,
+                    len(rects),
+                    pack_id,
+                    reason or "-",
+                )
             return api.point_goal(map_id, abs_xy[0], abs_xy[1])
 
     # Dungeon / no farms: first patrol tile if any.
@@ -186,3 +270,78 @@ def goal_for_entry(entry: dict[str, Any], blackboard: Any = None) -> Any:
             return api.point_goal(map_id, abs_xy[0], abs_xy[1])
 
     return api.map_goal(map_id)
+
+
+# Dungeon row clock paused for a retreat. World-tree time is not counted.
+ROUTINE_CLOCK_HELD = "routine_clock_held"
+# Return reason kept until the hunt floor is reached. Deeper floors arrive later.
+ROUTINE_RETURN_REASON = "routine_return_reason"
+
+
+def _routine_cursor(blackboard: Any) -> RoutineCursor | None:
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return None
+    from app._04_decision.world_nav.hooks import SCRATCH_ROUTINE
+
+    cursor = scratch.get(SCRATCH_ROUTINE)
+    return cursor if isinstance(cursor, RoutineCursor) else None
+
+
+def _routine_row_is_dungeon(blackboard: Any) -> bool:
+    cursor = _routine_cursor(blackboard)
+    entry = cursor.active() if cursor is not None else None
+    if not isinstance(entry, dict):
+        return False
+    if str(entry.get("kind") or "battle").strip().lower() == "break":
+        return False
+    pack_id = str(entry.get("map_id") or "").strip()
+    if not pack_id:
+        return False
+    from app._04_decision.world_nav.overlays import is_dungeon_pack
+
+    return bool(is_dungeon_pack(blackboard, pack_id))
+
+
+def hold_dungeon_routine_clock(blackboard: Any) -> None:
+    """Pause a dungeon routine clock when a retreat starts.
+
+    A revive retreat holds the same clock. Returning to the hunt floor
+    resumes the saved seconds.
+    """
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    if scratch.get(ROUTINE_CLOCK_HELD):
+        return
+    if not _routine_row_is_dungeon(blackboard):
+        return
+    cursor = _routine_cursor(blackboard)
+    if cursor is None:
+        return
+    cursor.freeze()
+    scratch[ROUTINE_CLOCK_HELD] = True
+    from app.bot_log import get_logger
+
+    get_logger("nav").info(
+        "routine clock pause elapsed=%.0fs",
+        cursor.elapsed(),
+    )
+
+
+def release_dungeon_routine_clock(blackboard: Any) -> bool:
+    """Resume a paused dungeon routine clock. False when nothing was held."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict) or not scratch.pop(ROUTINE_CLOCK_HELD, None):
+        return False
+    cursor = _routine_cursor(blackboard)
+    if cursor is None:
+        return False
+    cursor.resume()
+    from app.bot_log import get_logger
+
+    get_logger("nav").info(
+        "routine clock resume elapsed=%.0fs",
+        cursor.elapsed(),
+    )
+    return True

@@ -178,41 +178,6 @@ class HuntTab(QWidget):
         cols.addLayout(mid, 1)
         cols.addLayout(right, 1)
 
-        combat = card(host, self.t.get("attack_method", "Attack"))
-        left.addWidget(combat)
-        combat_l = combat.layout()
-        assert isinstance(combat_l, QVBoxLayout)
-        modes = QHBoxLayout()
-        self._mode_group = QButtonGroup(self)
-        mode = self.bag.get_str("hunt", "attack_mode", "ranged")
-        for value, label_key in (
-            ("ranged", "ranged"),
-            ("magic", "magic_attack"),
-            ("melee", "melee"),
-        ):
-            radio = QRadioButton(self.t.get(label_key, value))
-            radio.setChecked(mode == value)
-            self._mode_group.addButton(radio)
-            radio.toggled.connect(
-                lambda checked, v=value: checked and self._set_mode(v)
-            )
-            modes.addWidget(radio)
-        modes.addStretch(1)
-        combat_l.addLayout(modes)
-        add_spin_row(
-            combat_l, self.bag, "hunt", "attack_range",
-            self.t.get("attack_range", "Range"), 16, 1, 30, on_change=self._refresh_attack_summary,
-        )
-        add_check(
-            combat_l, self.bag, "hunt", "close_attack",
-            self.t.get("close_attack_allow", "Close attack"), False, self._refresh_attack_summary,
-        )
-        add_check_spin(
-            combat_l, self.bag, "keep_distance", True, self.t.get("keep_distance", "Keep distance"),
-            "keep_distance_tiles", 3, 0, 20, self.t.get("tiles", "tiles"),
-            on_change=self._refresh_attack_summary,
-        )
-
         assist = card(host, self.t.get("combat_assist", "Assist"))
         left.addWidget(assist)
         assist_l = assist.layout()
@@ -263,29 +228,6 @@ class HuntTab(QWidget):
         self._build_haste_potion_assist(assist_l)
         left.addStretch(1)
 
-        magic = card(host, self.t.get("magic_use", "Magic use"))
-        mid.addWidget(magic)
-        magic_l = magic.layout()
-        assert isinstance(magic_l, QVBoxLayout)
-        add_spin_row(
-            magic_l, self.bag, "hunt", "mp_spell_above",
-            self.t.get("mp_above", "MP >"), 80, 0, 100, "%", self._refresh_attack_summary,
-        )
-        add_spin_row(
-            magic_l, self.bag, "hunt", "spell_count",
-            self.t.get("spell_count", "Spells"), 1, 1, 99,
-            f"[{self.t.get('times', 'x')}]", self._refresh_attack_summary,
-        )
-        add_spin_row(
-            magic_l, self.bag, "hunt", "ranged_count",
-            self.t.get("basic_attack_count", "Basic"), 1, 1, 99,
-            f"[{self.t.get('times', 'x')}]", self._refresh_attack_summary,
-        )
-        add_check_spin(
-            magic_l, self.bag, "fallback_melee", False, self.t.get("fallback", "Fallback melee"),
-            "fallback_mp_below", 20, 0, 100, "%", on_change=self._refresh_attack_summary,
-        )
-
         priority = card(host, self.t.get("target_priority", "Priority"))
         mid.addWidget(priority)
         pri_l = priority.layout()
@@ -296,7 +238,6 @@ class HuntTab(QWidget):
             ("prefer_strong", "hunt.prefer_strong", False),
             ("prefer_caster", "hunt.prefer_caster", True),
             ("exclude_busy", "hunt.exclude_busy", True),
-            ("stick_target", "hunt.stick_target", True),
         ):
             field = name.split(".", 1)[1]
             add_check(
@@ -792,32 +733,10 @@ class HuntTab(QWidget):
             self.t.get("hotbar_total_slots", "Slots: {count}").format(count=f"{filled}/24")
         )
 
-    def _set_mode(self, value: str) -> None:
-        self.bag.set("hunt", "attack_mode", value)
-        self._refresh_attack_summary()
-
     def _refresh_attack_summary(self) -> None:
         if not hasattr(self, "attack_summary"):
             return
-        mode = self.bag.get_str("hunt", "attack_mode", "ranged")
-        mode_label = {
-            "ranged": self.t.get("ranged", mode),
-            "magic": self.t.get("magic_attack", mode),
-            "melee": self.t.get("melee", mode),
-        }.get(mode, mode)
-        lines = [
-            f"{self.t.get('attack_method', 'Attack')}: {mode_label}",
-            f"{self.t.get('attack_range', 'Range')}: {self.bag.get_int('hunt', 'attack_range', 16)}",
-        ]
-        if self.bag.get_bool("hunt", "close_attack"):
-            lines.append(
-                f"{self.t.get('close_attack_allow', 'Close')}: {self.t.get('summary_on', 'ON')}"
-            )
-        if self.bag.get_bool("hunt", "keep_distance", True):
-            lines.append(
-                f"{self.t.get('keep_distance', 'Keep')}: "
-                f"{self.bag.get_int('hunt', 'keep_distance_tiles', 3)} {self.t.get('tiles', '')}"
-            )
+        lines = []
         if self.bag.get_bool("hunt", "use_haste_potion"):
             haste_name = self.bag.get_str("hunt", "haste_potion_item", "") or "—"
             lines.append(
@@ -828,17 +747,6 @@ class HuntTab(QWidget):
             lines.append(
                 f"{self.t.get('use_antidote_potion', 'Antidote')}: {antidote_name}"
             )
-        lines.append(
-            f"{self.t.get('mp_above', 'MP')}: {self.bag.get_int('hunt', 'mp_spell_above', 80)}%"
-        )
-        lines.append(
-            f"{self.t.get('spell_count', 'Spells')}: "
-            f"{self.bag.get_int('hunt', 'spell_count', 1)}{self.t.get('times', '')}"
-        )
-        lines.append(
-            f"{self.t.get('basic_attack_count', 'Basic')}: "
-            f"{self.bag.get_int('hunt', 'ranged_count', 1)}{self.t.get('times', '')}"
-        )
         priorities = [
             self.t.get(key, key)
             for key, field in (
@@ -847,7 +755,6 @@ class HuntTab(QWidget):
                 ("prefer_strong", "prefer_strong"),
                 ("prefer_caster", "prefer_caster"),
                 ("exclude_busy", "exclude_busy"),
-                ("stick_target", "stick_target"),
             )
             if self.bag.get_bool("hunt", field)
         ]

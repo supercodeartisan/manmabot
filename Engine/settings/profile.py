@@ -108,6 +108,7 @@ class Profile:
     buy_normal_arrows: bool = False
     buy_silver_arrows: bool = True
     restock_potions: bool = True
+    store_after_sell: bool = True
     buy_depoison: bool = False
     hp_potion_buy_qty: int = 10
     depoison_buy_qty: int = 1
@@ -369,6 +370,7 @@ class Profile:
             "buy_normal_arrows",
             "buy_silver_arrows",
             "restock_potions",
+            "store_after_sell",
             "buy_depoison",
             "humanize",
             "humanize_move",

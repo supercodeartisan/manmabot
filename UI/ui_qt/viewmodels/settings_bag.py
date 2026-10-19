@@ -124,7 +124,9 @@ class SettingsBag:
             except (TypeError, ValueError):
                 entry["priority"] = 1
         entry.setdefault("enabled", False)
-        entry.setdefault("auto", True)
+        # The individual-skill checkbox is auto-use. Unset rows stay off;
+        # Heal and Teleport are forced on by the magic tab.
+        entry.setdefault("auto", False)
         entry.setdefault("priority", 1)
         entry.setdefault("hotkey", "")
         skills[setting_key] = entry
