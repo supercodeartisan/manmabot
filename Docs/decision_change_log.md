@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-19 — party brain seats only (no live decide change)
+
+Intent: add four decision-adoption seats under `_06_party/brains` — leader, member (single party bot foundation), mage, shopkeeper.
+Shared: none. `PartyMemberManager.decide`, follow, assist, HP, and login stay on the current path. MemberBrain can wrap the existing manager when constructed; session does not call it yet. Leader, mage, and shopkeeper return `ready=False` and no intent.
+Affects: new package only.
+Consent: user (compose these modules first).
+Result: implemented. Not wired into the session.
+
 ## 2026-10-17 — settle/loot when leader stops; clearer party WS probe
 
 Intent: with the leader idle, the member kept follow distance and skipped loot because settle required an exact cardinal tile. Hold as soon as distance ≤ stop; settle uses Arrive tolerance; clear a far travel sticky goal on stop; party-farm loot only while `leader_stopped` and near stop. Member WS test TCP-probes first and tells the user to Start the leader bot.
