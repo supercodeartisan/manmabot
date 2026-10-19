@@ -441,8 +441,20 @@ def _on_world_nav_arrived(blackboard: Any, *, reason: str = "") -> None:
         target = "" if entry is None else str(entry.get("map_id") or "")
         if entry is not None and not arrived_on_hunt_floor(live_id, target):
             _remember_deeper_dungeon_target(blackboard, entry)
+            from .routine import ROUTINE_RETURN_REASON
+
+            if not _arrival_resets_stay(reason):
+                blackboard.scratch[ROUTINE_RETURN_REASON] = str(reason or "")
+            else:
+                blackboard.scratch.pop(ROUTINE_RETURN_REASON, None)
         else:
-            cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
+            from .routine import ROUTINE_RETURN_REASON, release_dungeon_routine_clock
+
+            resumed = release_dungeon_routine_clock(blackboard)
+            blackboard.scratch.pop(ROUTINE_RETURN_REASON, None)
+            cursor.mark_arrived(
+                reset_clock=False if resumed else _arrival_resets_stay(reason)
+            )
             cursor.reset_fail_mask()
             if entry is not None:
                 apply_routine_entry_runtime(blackboard, entry, reason=reason)
@@ -629,8 +641,20 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
             target = str(entry.get("map_id") or "")
             if not arrived_on_hunt_floor(live_id, target):
                 _remember_deeper_dungeon_target(blackboard, entry)
+                from .routine import ROUTINE_RETURN_REASON
+
+                if not _arrival_resets_stay(reason):
+                    blackboard.scratch[ROUTINE_RETURN_REASON] = str(reason or "")
+                else:
+                    blackboard.scratch.pop(ROUTINE_RETURN_REASON, None)
             else:
-                cursor.mark_arrived(reset_clock=_arrival_resets_stay(reason))
+                from .routine import ROUTINE_RETURN_REASON, release_dungeon_routine_clock
+
+                resumed = release_dungeon_routine_clock(blackboard)
+                blackboard.scratch.pop(ROUTINE_RETURN_REASON, None)
+                cursor.mark_arrived(
+                    reset_clock=False if resumed else _arrival_resets_stay(reason)
+                )
                 cursor.reset_fail_mask()
                 apply_routine_entry_runtime(blackboard, entry, reason=reason)
             _note_field_nav_arrived(blackboard, reason)

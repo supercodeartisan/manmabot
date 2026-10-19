@@ -53,6 +53,9 @@ class DecisionManager:
         from app._04_decision.farm_time import sample_farm_presence
 
         begin_tick()
+        from app._04_decision.doors import refresh_live_doors
+
+        refresh_live_doors(getattr(game_state, "last_print_state", None))
         self.blackboard.tick_count += 1
         from app._04_decision.behaviors.combat import sample_kill_progress
 
@@ -344,7 +347,7 @@ class DecisionManager:
             note_mouse(f"travel tile={tile_s} reason={intent_reason}")
             _log_action.info(
                 "travel click ok tile=%s cursor=%s/%s score=%s need=%s "
-                "probes=%s dialog_seen=%s labels=%s reason=%r "
+                "probes=%s dialog_seen=%s labels=%s door=%s reason=%r "
                 "travel=%s search=%s loot=%s",
                 tile_s,
                 meta.get("cursor_label") or stats.get("click_label") or "-",
@@ -354,6 +357,7 @@ class DecisionManager:
                 int(stats.get("probes") or 0),
                 int(stats.get("dialog_seen") or 0),
                 labels_s,
+                stats.get("door") or "-",
                 intent_reason,
                 bool(self.blackboard.travel_hop_active),
                 bool(self.blackboard.search_hop_active),
@@ -386,7 +390,7 @@ class DecisionManager:
         )
         _log_action.info(
             "travel click failed tile=%s cursor=%s/%s score=%s need=%s "
-            "probes=%s dialog_seen=%s labels=%s last_reject=%r reason=%r "
+            "probes=%s dialog_seen=%s labels=%s door=%s last_reject=%r reason=%r "
             "travel=%s search=%s loot=%s",
             tile_s,
             meta.get("cursor_label") or "-",
@@ -396,6 +400,7 @@ class DecisionManager:
             int(stats.get("probes") or 0),
             int(stats.get("dialog_seen") or 0),
             labels_s,
+            stats.get("door") or "-",
             str(
                 stats.get("last_reject")
                 or getattr(executor, "last_cursor_reject_reason", None)

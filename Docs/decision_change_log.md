@@ -1,5 +1,109 @@
 # Decision change log
 
+## 2026-10-19 — revive retreat keeps the dungeon routine clock
+
+Intent: dying and reviving was the one retreat that still started the dungeon row clock at zero on the way back. A revive retreat now freezes that clock the same way as a world-tree retreat, and the hunt-floor return resumes the saved seconds.
+Shared: `hold_dungeon_routine_clock`. Arrival and floor-route release already resume a held clock, including `post_respawn`. Field rows still start a new count when a revive return arrives.
+Affects: dungeon routine duration after death. Time from the revive retreat until the hunt floor is not counted.
+Consent: user (keep the timer in the revive case too).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — log the cell and walk line on each travel click
+
+Intent: the player cell at a travel click was not logged, so 77 of 147 arrival pairs could not be classed as a continued client walk. Each real travel click now records the player cell, the click it replaces, the new click, the distance, both client polylines, whether the old line is a prefix, and whether the body is moving. One later line says whether the body stopped within 0.7s.
+Shared: `_emit_click` and `_follow_body_click`. The click tile, the arrival rule, and avoidance are unchanged. A held hop (`mid_act`) does not add a click line.
+Affects: travel log volume on dungeon patrol, floor walks, and field hops. No change to where the character walks.
+Consent: user (log P, W, C, dist, both client paths, prefix, moving, and click time before changing the click timing).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — dungeon routine clock pauses for a retreat
+
+Intent: a dungeon row is one routine. Leaving it for the world tree was zeroing that clock when the hunt floor was reached again, and the time away was either discarded or still counted. The clock now freezes when a retreat starts on a dungeon row, including a revive retreat, and resumes from the saved seconds when the character is back on that hunt floor. The first arrival on a new row still starts at zero.
+Shared: `hold_dungeon_routine_clock`, `release_dungeon_routine_clock`, `begin_retreat`, `_finish_dungeon_floor_route`, and world-nav arrival. `_resume_stay_clocks` does not resume a held routine clock while the bot is running. Field rows, combat, movement, HP recovery, and the farm-area stay clock are unchanged.
+Affects: the routine duration of a dungeon row across mother-tree, teleport, scroll, and revive retreats. Time away from the hunt floor is not counted. A return whose reason is `post_retreat`, `post_shop`, `after_shop`, `hunt_map`, or `unstick_return` also keeps the clock when it was not held.
+Consent: user (dungeon routine timer is saved and pause/resume on world-tree retreat, return, and revive).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — warehouse deposit does not match the bag
+
+Intent: an open deposit window was labeled retrieve when one displayed name differed from the bag (`펫 목걸이 [LV.5 용맹펫]` versus `펫 목걸이`), so the visit closed without storing. The open warehouse list is the deposit list. Rows absent from the keep list are stored. Adena is still skipped by name.
+Shared: `writeStoreJson` mode and `execute_calibrated_sell` `read_sell_tab`. Merchant sell, the keep list, and the one-attempt warehouse stop stay as they are.
+Affects: the warehouse keeper only. A list read while the retrieve tab is showing would store those rows too.
+Consent: user (the open window is the deposit window; store rows that are not on the keep list; no bag comparison).
+Result: implemented. The open deposit window read `open=1 mode=deposit` with 28 rows. Keep-list names stayed; the other rows, including 양초, are the deposit set. Adena was not on this list.
+
+## 2026-10-19 — warehouse list reads the project DLL and registry
+
+Intent: the warehouse visit loaded `Engine/analysis/NPC_conv/storewin.dll`, which looked upward for `registry\LC930_REGISTRY.txt` and never found it, so every snapshot returned `error: attach`. The visit now passes `Engine/analysis/lc930/registry/LC930_REGISTRY.txt` into `storewin_snapshot`. The window-slot offsets that file was missing are written there. `D:\dist\bin\storewin.dll` is no longer a fallback.
+Shared: `storewin_reader.default_dll_path`, `default_registry_path`, and `storewin_load_reg`. Sell clicks, the keep list, and the one-attempt warehouse stop are unchanged.
+Affects: the warehouse keeper list read only. Merchant sell still uses `shop_listen`.
+Consent: user (yes; DLL and offsets stay in the project).
+Result: implemented. With the warehouse window closed, the project DLL and project registry returned `open=0 mode=closed` and no attach error, the same result as the registry beside the build. The previous project DLL had returned `error: attach`. Restart the bot so it loads this DLL; the running process still has the old file mapped.
+
+## 2026-10-19 — attack sight visits every cell a 1-tile fence crosses
+
+Intent: the first attack click could land on a monster behind a one-cell fence because the sight line sampled with `round` and a diagonal step passed when only one shoulder was open. The shot now blocks when the segment touches a blocked cell, and a diagonal step needs both shoulders. A new target needs a memory nav tile. A sticky already within 2 tiles still uses the screen tile. After a dungeon fence release, that id stays out of the new-target list for 2 seconds.
+Shared: `tiles_on_segment`, `line_of_sight_clear`, and `_los_step_open` in `dungeon.py`. `line_of_sight_clear` is only reached from `attack_line_clear`. Movement keeps `diagonal_open` (one open shoulder still walks). `list_attackable`, `list_attacked_me_targets`, and `nearest_attacks_me_force` drop a monster with no memory tile. `continue_or_start_combat` waits on a far sticky that has no memory tile, and `note_wall_fence_block` feeds `excluded_target_ids`.
+Affects: new target choice, sticky attack continuation, and dungeon self-defense sight. Walking, loot clicks, shop, potions, retreat, and login are unchanged.
+Consent: user (yes to this scope).
+Result: implemented. Sight cases checked in a local script. Not run in game.
+
+## 2026-10-19 — straight travel hops click onward while still walking
+
+Intent: a world-nav hop stopped about half a second at every 5-tile click because the next tile was chosen only at arrival. On a straight client walk line the farther guide tile is clicked while the body is still moving, two tiles before that arrival.
+Shared: `emit_travel_hop` and `_straight_extend_waypoint`. Arrival stays `_near_tile` / `travel_arrive_tiles` (1). The hop cap stays `travel_max_hop` (field 5, dungeon 3). Stuck time still resets only when the standing tile changes. An open door or the final goal stops the extension so door retarget and step completion stay as they are. Loot and search keep their own follow functions.
+Affects: field world nav, farm entry, retreat, and dungeon patrol when the current guide does not turn. Corners still wait for arrival. Screen engage, loot, and mother-tree heals still interrupt the walk.
+Consent: user (straight-line extend only, keep every existing workflow).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — warehouse keeper finishes after one attempt
+
+Intent: after the warehouse keeper ran once, a failed storewin read (retrieve, closed, or no snapshot) closed the window and clicked the same NPC again. One `give_goods` attempt now ends that step whether the list read succeeded or not. Merchant sell still retries only on success.
+Shared: `ActionController._shop_run`. `execute_calibrated_sell` and storewin are unchanged. A store behavior id (`give_goods` / `store_*`) sets `shop_ok` after the attempt returns, so `advance_sell_trip` runs the same path as a successful deposit. Sell, buy, and teleporter still require `ok`.
+Affects: the warehouse stop after an overweight or pre-retreat sell. The following step is unchanged: retreat when this trip was sell-then-retreat, otherwise the post-shop return. A failed open still leaves the keeper.
+Consent: user (finish the warehouse once the attempt is done, not according to the result).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — give-up list lasts 4 seconds
+
+Intent: a given-up monster stayed off the target list for 160 decision ticks, which is not a fixed time. The skip is now 4 seconds of wall clock.
+Shared: `give_up_target` stores `time.time()`. `active_give_up_ids` drops rows older than `GIVE_UP_COOLDOWN_SECONDS` (4). `excluded_target_ids` and sticky rebind (`_living_same_species`) both use that set. Cursor-reject 4 seconds, the session blacklist, and loot abandon stay separate. The old `give_up_cooldown_ticks` setting is ignored.
+Affects: farming, travel combat, dungeon patrol, and retreat's "enemy nearby, do not loot" check, whenever a target is given up (combat blocked, max engage, scarecrow level). After 4 seconds that id can be chosen again. A monster that is still inside the 4 seconds is still skipped, including one that is attacking.
+Consent: user (the give-up cooldown must be 4 seconds, not 160 ticks).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — an open door is crossed by the next path tile
+
+Intent: a normal cursor on a tile beside an open door left the character on the near side of the fence. When this hop's guide passes through an open door, the click is the next guide tile after that door, one step past the usual hop cap when that step is what clears the doorway. If that tile is outside the click region or the line is closed, the hop does not substitute a side tile. A door cursor on the far tile tries the following guide tile. A closed door is still clicked once. A not-permitted door stays a wall.
+Shared: `select_click_waypoint`, `plan_body_click`, and the travel click probe in `_search`. Combat, loot, HP, and login clicks stay as they are.
+Affects: patrol, dungeon floor hops, and other ground hops whose guide crosses an open door.
+Consent: user (yes; click the tile beyond the open door).
+Result: implemented. Retarget check passed. Not run in game.
+
+## 2026-10-19 — door cursor opens only a closed door
+
+Intent: a door cursor on an open door was still clicked, which shut the door, while the nav map kept treating the tile as open. A door cursor now clicks only when the live door state is `close`, and that click is once so the repeat does not shut it again. `open` and `unknown` skip that point and try another tile in the hop ring. `not_permitted` is a wall for pathfinding even when the map tile is white.
+Shared: `travel_click` ground hops (`_search`), the first `cursor_ok` check in `_click_until_walk`, and `TerrainMap.is_walkable` via the live door-wall set. Combat, loot, HP, and login clicks are unchanged.
+Affects: travel, patrol, and loot-approach hops in dungeons and on the field. `print_state` must be rebuilt so entity rows carry `door`; until that DLL is loaded, a door cursor has no `close` state and is not clicked.
+Consent: user (click the door only when it is close; pass through when open; treat not_permitted as a wall).
+Result: implemented. Policy and wall-tile check passed. `Engine/analysis/entities/print_state.dll` rebuilt (newer than `print_state.new.dll`, so the loader uses it). Not run in game. Restart the bot so the new DLL loads.
+
+## 2026-10-19 — a floor-route exit keeps the outside door
+
+Intent: leaving during a dungeon floor walk flipped mapId while xy was still the inside cell. The next `hunt_map` plan measured that cell against the outside door and took a talking scroll plus a paid teleporter. The world-nav walk correction did not run, because this walk is the floor route.
+Shared: `_drive_dungeon_floor_walk` calls the existing `_remember_stale_exit_landing` when the live map is no longer the walk step's map. The next world-nav arm still uses that outside landing once. The 50-tile door check is unchanged.
+Affects: a floor-route walk that steps through a known exit, then `hunt_map` replans. Same-map floor walks, shop scrolls, HP retreat scrolls, and combat stay as they are.
+Consent: user (yes; portable rebuild later).
+Result: implemented. Check passed for map 1 `(32669,32802)` onto map 0: landing `(32478,32851)`, scroll off. A start at the goods shop `(32642,32949)` still scrolls. Not run in game. Portable not rebuilt.
+
+## 2026-10-19 — Holy Weapon presses its hotbar key twice
+
+Intent: one press of Holy Weapon only raised the round skill cursor, so the buff never landed and the character could not attack. Weapon buffs already use a second key tap (`power_up` / `CAST_DOUBLE`). Checked buffs with that role now take the same second tap. Shield and other single-press buffs stay one tap. Heal and teleport are unchanged.
+Shared: `_press_catalog_buff` only. `_press_assigned_skill` is not used for this path.
+Affects: checked Holy Weapon, Enchant Weapon, and the other weapon-buff names on that role, during hunt, travel, and dungeon buff ticks.
+Consent: user (one press leaves the skill cursor; it needs the second press).
+Result: implemented. Not run in game.
+
 ## 2026-10-19 — warehouse visit follows the store-after-sell box
 
 Intent: the warehouse keeper ran whenever leftovers remained outside the keep list. Visit `give_goods` only when equipment `store_after_sell` is checked. The box defaults to checked. Unchecked ends the sell trip after the four merchants.

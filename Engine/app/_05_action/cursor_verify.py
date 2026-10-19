@@ -205,6 +205,8 @@ def verified_click(
     executor.mouse.click(
         x, y, snap=True, until_walk=until_walk, cursor_ok=cursor_ok
     )
+    if until_walk and int(getattr(executor.mouse, "last_ground_clicks", 1) or 0) <= 0:
+        return False
     return True
 
 
@@ -840,6 +842,16 @@ def loot_click(executor: "ActionExecutor", x: float, y: float) -> bool:
     return True
 
 
+def click_closed_door(executor: "ActionExecutor", x: float, y: float) -> bool:
+    """One click on a door cursor. Does not repeat, so the door stays open."""
+    ok, match = verify_cursor(labels=("door",))
+    executor.last_cursor_match = match
+    if not ok or match is None or str(getattr(match, "label", "") or "") != "door":
+        return False
+    executor.mouse.click(x, y, snap=True, until_walk=False)
+    return True
+
+
 def travel_click(executor: "ActionExecutor", x: float, y: float) -> bool:
     """Ground hop: require NORMAL cursor (not attack / dialog / door).
 
@@ -894,5 +906,6 @@ __all__ = [
     "dialog_click_ring",
     "dialog_click_destinations",
     "npc_search_screen_points",
+    "click_closed_door",
     "travel_click",
 ]

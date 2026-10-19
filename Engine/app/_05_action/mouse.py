@@ -357,6 +357,7 @@ class MouseController:
         else:
             _click_in_place(button, px, py)
             clicks = 1
+        self.last_ground_clicks = clicks
         self._last_pos = (px, py)
         self.button_events += clicks
 
@@ -372,12 +373,20 @@ class MouseController:
 
         An unreadable body slot stops the repeat after 1s. One click is enough
         when the body is already standing or already walking. When ``cursor_ok``
-        is set, a False result stops further re-clicks (first click already
-        issued after the caller's verify). The caller already moved and waited.
+        is set, a False result clicks nothing and stops the repeat. The caller
+        already moved and waited.
         """
         from app._05_action.body_pose import BREATH_VFT, MOVE_VFTS, read_action
         from app.bot_log import event
 
+        if callable(cursor_ok):
+            try:
+                allowed = bool(cursor_ok())
+            except Exception:
+                allowed = False
+            if not allowed:
+                event("clickgap", "ground-click done how=cursor clicks=0")
+                return 0
         _click_in_place(button, px, py)
         clicks = 1
         t0 = time.perf_counter()

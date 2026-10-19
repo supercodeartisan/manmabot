@@ -1708,7 +1708,17 @@ def _finish_dungeon_floor_route(blackboard: "Blackboard", target: str) -> None:
     cursor = blackboard.scratch.get(SCRATCH_ROUTINE)
     entry = cursor.active() if cursor is not None and hasattr(cursor, "active") else None
     if cursor is not None and isinstance(entry, dict):
-        cursor.mark_arrived(reset_clock=True)
+        from app._04_decision.world_nav.hooks import _arrival_resets_stay
+        from app._04_decision.world_nav.routine import (
+            ROUTINE_RETURN_REASON,
+            release_dungeon_routine_clock,
+        )
+
+        reason = str(blackboard.scratch.pop(ROUTINE_RETURN_REASON, "") or "")
+        resumed = release_dungeon_routine_clock(blackboard)
+        cursor.mark_arrived(
+            reset_clock=not (resumed or not _arrival_resets_stay(reason))
+        )
         cursor.reset_fail_mask()
         apply_routine_entry_runtime(blackboard, entry, reason="dungeon_floor")
     get_logger("nav").info("dungeon floor route complete target=%s", target)
@@ -1746,12 +1756,17 @@ def _replan_dungeon_floor_route(
 def _drive_dungeon_floor_walk(state, blackboard, session, step) -> Status:
     from app._04_decision.dungeon_floor_route import PURPOSE_DUNGEON_FLOOR
     from app._04_decision.mode_control import begin_travel
-    from app._04_decision.world_nav.session import live_pose_from_state
+    from app._04_decision.world_nav.session import (
+        _remember_stale_exit_landing,
+        live_pose_from_state,
+    )
     from app.bot_log import get_logger
 
     cell = (int(step.nav_x), int(step.nav_y))
     pose = live_pose_from_state(state)
     if pose is not None and int(pose.map_id) != int(step.map_id):
+        # Same one-shot landing the world-nav walk stores. hunt_map arms next.
+        _remember_stale_exit_landing(blackboard, int(step.map_id), pose)
         return _replan_dungeon_floor_route(
             state, blackboard, session, "map left the walk step"
         )

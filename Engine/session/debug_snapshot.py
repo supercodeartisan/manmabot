@@ -1,6 +1,7 @@
 """Serialize live bot internals into debug-GUI sections."""
 from __future__ import annotations
 
+import time
 from typing import Any, Iterable, Mapping, Sequence
 
 from settings.spell_defaults import SKILL_KEYS
@@ -175,20 +176,17 @@ def _player_section(world: Any) -> dict[str, Any]:
 
 
 def _give_up_rows(blackboard: Any) -> list[dict[str, Any]]:
-    """Active temporary give-ups with remaining cooldown ticks."""
+    """Active temporary give-ups with remaining cooldown seconds."""
     given = _get(blackboard, "given_up_target_ids") or {}
     if not isinstance(given, Mapping):
         return []
     try:
-        from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
+        from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_SECONDS
 
-        cooldown = max(1, int(GIVE_UP_COOLDOWN_TICKS))
+        window = max(0.1, float(GIVE_UP_COOLDOWN_SECONDS))
     except Exception:
-        cooldown = 160
-    try:
-        tick = int(_get(blackboard, "tick_count") or 0)
-    except (TypeError, ValueError):
-        tick = 0
+        window = 4.0
+    now = time.time()
     scratch = _get(blackboard, "scratch") or {}
     meta_by_id: dict[int, dict[str, Any]] = {}
     hist = scratch.get("give_up_history") if isinstance(scratch, Mapping) else None
@@ -211,12 +209,13 @@ def _give_up_rows(blackboard: Any) -> list[dict[str, Any]]:
     for tid, started in given.items():
         try:
             tid_i = int(tid)
-            age = tick - int(started)
+            age = now - float(started)
         except (TypeError, ValueError):
             continue
-        if age < 0 or age >= cooldown:
+        if age < 0 or age >= window:
             continue
         meta = meta_by_id.get(tid_i) or {}
+        remain = window - age
         rows.append(
             {
                 "id": tid_i,
@@ -226,11 +225,11 @@ def _give_up_rows(blackboard: Any) -> list[dict[str, Any]]:
                 "cursor_category": str(meta.get("cursor_category") or "").strip(),
                 "cursor_score": meta.get("cursor_score"),
                 "need_score": meta.get("need_score"),
-                "age_ticks": age,
-                "remain_ticks": cooldown - age,
+                "age_s": round(age, 2),
+                "remain_s": round(remain, 2),
             }
         )
-    rows.sort(key=lambda row: int(row.get("remain_ticks") or 0))
+    rows.sort(key=lambda row: float(row.get("remain_s") or 0))
     return rows
 
 

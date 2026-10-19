@@ -46,7 +46,7 @@ def abandon_loot_item(blackboard: "Blackboard", item_id: int) -> None:
 
     Uses the short loot-clicked cooldown only — does **not** enter the combat
     give-up map (that looked like ``give-up sticky_was=None`` and blocked
-    re-pickup for 160 ticks).
+    re-pickup for the combat give-up window).
     """
     from app.bot_log import get_logger
 

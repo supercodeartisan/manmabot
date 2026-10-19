@@ -18,8 +18,8 @@ ABANDON_SAME_ENABLED = False
 ABANDON_SECONDS = 30.0
 # Only used when print_state is missing. A listed death / omit drops instantly.
 STICKY_MISS_FRAMES = 1
-# After giving up on a target, do not re-select it for this many ticks.
-GIVE_UP_COOLDOWN_TICKS = 160
+# After giving up on a target, do not re-select it until this wall-clock window.
+GIVE_UP_COOLDOWN_SECONDS = 4.0
 # When TrackIds remaps a heap pointer, keep the same mob within this radius.
 STICKY_REBIND_TILES = 2
 # Same world tile after this many attack clicks. Living sticky is not dropped.
@@ -296,7 +296,7 @@ def _living_same_species(
         from app._04_decision.attack_feedback import _active_cursor_reject_ids
 
         blocked = set(blackboard.blacklisted_target_ids)
-        blocked.update(blackboard.given_up_target_ids)
+        blocked.update(active_give_up_ids(blackboard))
         blocked.update(_active_cursor_reject_ids(blackboard))
         if tid in blocked:
             return False
@@ -727,6 +727,32 @@ def prefer_attacked_me_sticky(
     return True
 
 
+def active_give_up_ids(blackboard: "Blackboard") -> set[int]:
+    """Ids still inside the 4-second give-up window. Expired rows are dropped."""
+    now = time.time()
+    window = float(GIVE_UP_COOLDOWN_SECONDS)
+    given = blackboard.given_up_target_ids
+    active: set[int] = set()
+    expired: list[int] = []
+    for tid, started in list(given.items()):
+        try:
+            age = now - float(started)
+            tid_i = int(tid)
+        except (TypeError, ValueError):
+            try:
+                expired.append(int(tid))
+            except (TypeError, ValueError):
+                pass
+            continue
+        if age >= window:
+            expired.append(tid_i)
+            continue
+        active.add(tid_i)
+    for tid_i in expired:
+        given.pop(tid_i, None)
+    return active
+
+
 def give_up_target(
     blackboard: "Blackboard",
     target_id: int,
@@ -738,7 +764,7 @@ def give_up_target(
     cursor_score: float | None = None,
     need_score: float | None = None,
 ) -> None:
-    """Abandon ``target_id`` for the give-up cooldown window.
+    """Abandon ``target_id`` for the 4-second give-up window.
 
     ``finish_kill`` only affects target priority; it does not block this.
     """
@@ -758,7 +784,7 @@ def give_up_target(
         int(was_finish),
     )
     tick = int(blackboard.tick_count)
-    blackboard.given_up_target_ids[tid] = tick
+    blackboard.given_up_target_ids[tid] = time.time()
     event: dict = {
         "id": tid,
         "reason": why,
@@ -817,7 +843,8 @@ __all__ = [
     "ABANDON_SAME_ENABLED",
     "ABANDON_SECONDS",
     "STICKY_MISS_FRAMES",
-    "GIVE_UP_COOLDOWN_TICKS",
+    "GIVE_UP_COOLDOWN_SECONDS",
+    "active_give_up_ids",
     "STICKY_REBIND_TILES",
     "sticky_target_alive",
     "sticky_identity",

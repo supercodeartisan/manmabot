@@ -550,8 +550,9 @@ def execute_calibrated_sell(
     def read_sell_tab() -> tuple[list[dict], int] | None:
         """Sellable rows, and the full list length (keep rows included).
 
-        Merchants use shop_listen. The warehouse uses storewin and only the
-        deposit tab. None means the warehouse list was not a deposit list.
+        Merchants use shop_listen. The warehouse uses the open storewin list.
+        The visit opens the deposit tab, so bag-name overlap is not a mode check.
+        None means that list was not open.
         """
         if is_store:
             from app._01_perception.storewin_reader import (
@@ -560,10 +561,7 @@ def execute_calibrated_sell(
             )
 
             snap = capture_store()
-            mode = str((snap or {}).get("mode") or "")
-            if mode == "retrieve":
-                return None
-            if not snap or not snap.get("open") or mode not in ("deposit", "empty"):
+            if not snap or not snap.get("open"):
                 return None
             rows = parse_store_entries(snap)
         else:

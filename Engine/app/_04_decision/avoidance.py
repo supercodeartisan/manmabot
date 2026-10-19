@@ -559,6 +559,23 @@ def plan_body_click(
     click, note = choose_body_click(
         terrain, origin, (sx, sy), guide, waypoint, near, hop
     )
+    from app._04_decision.doors import retarget_open_door
+
+    beyond, replaced = retarget_open_door(guide, (sx, sy), click, hop)
+    if replaced:
+        if beyond is None:
+            click = None
+            note = "open door has no tile past the doorway"
+        else:
+            extend = tile_chebyshev(sx, sy, int(beyond[0]), int(beyond[1]))
+            if _click_allowed(
+                terrain, origin, (sx, sy), beyond, near, max(hop, extend)
+            ):
+                click = beyond
+                note = "open door, click is the tile past the doorway"
+            else:
+                click = None
+                note = "open door past the doorway is not clickable"
     _log_avoid_plan((sx, sy), hop, near, click, waypoint, note)
     return BodyClick(guide=guide, waypoint=waypoint, click=click, note=note)
 

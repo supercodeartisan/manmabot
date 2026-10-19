@@ -394,8 +394,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
     # Legacy tick-based key → seconds (best-effort for old configs).
     elif "max_engage_ticks" in combat:
         combat_beh.MAX_ENGAGE_SECONDS = float(combat["max_engage_ticks"])
-    if "give_up_cooldown_ticks" in combat:
-        combat_beh.GIVE_UP_COOLDOWN_TICKS = int(combat["give_up_cooldown_ticks"])
+    # Give-up exclusion is a fixed 4-second wall clock in combat.py.
+    # The old give_up_cooldown_ticks key is ignored.
     if "max_missed_frames" in combat:
         target_selector.MAX_MISSED_FRAMES = int(combat["max_missed_frames"])
     if "mage_spell_range" in combat:

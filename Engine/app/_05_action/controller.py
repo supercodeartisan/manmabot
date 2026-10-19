@@ -718,16 +718,68 @@ class ActionExecutor:
             kept.append(content)
         return kept
 
+    def _clicks_past_door(self, nav_tile: tuple[int, int], already) -> list:
+        """Content points on the guide after an open door. No side tiles."""
+        origin = self.last_travel_click_origin
+        bb = self._blackboard
+        guide = list(getattr(bb, "nav_path", None) or []) if bb is not None else []
+        if origin is None or not guide:
+            return []
+        from app._02_state.geometry import WorldOrigin
+        from app._03_world.space.world_coords import (
+            absolute_to_relative,
+            in_battle_click_region,
+            world_to_content,
+        )
+        from app._04_decision.doors import door_state_at, tiles_after
+
+        steps = tiles_after(guide, nav_tile, count=2)
+        if not steps:
+            for tile in guide:
+                tx, ty = int(tile[0]), int(tile[1])
+                if door_state_at(tx, ty) == "open":
+                    steps = tiles_after(guide, (tx, ty), count=2)
+                    break
+        world = WorldOrigin(x=int(origin[0]), y=int(origin[1]))
+        seen = set()
+        for content in already:
+            rel = None
+            try:
+                from app._05_action.travel_click import relative_tile_of_content
+
+                rel = relative_tile_of_content(content)
+            except Exception:
+                rel = None
+            if rel is not None:
+                seen.add((int(origin[0]) + int(rel[0]), int(origin[1]) + int(rel[1])))
+        out = []
+        for tile in steps:
+            if tile in seen or door_state_at(tile[0], tile[1]) == "open":
+                continue
+            rx, ry = absolute_to_relative(int(tile[0]), int(tile[1]), world)
+            if not in_battle_click_region(rx, ry):
+                break
+            out.append(world_to_content(float(rx), float(ry)))
+        return out
+
     def _search(self, action: ActionIntent, bounds: WindowBounds) -> None:
         """Click a ground hop; require NORMAL cursor, else a small tile ring."""
         if action.destination is None:
             return
         from app._05_action.cursor_catalog import CursorCategory
-        from app._05_action.cursor_verify import travel_click
+        from app._05_action.cursor_verify import click_closed_door, travel_click
         from app._05_action.travel_click import (
             content_destinations_ring,
             relative_tile_of_content,
         )
+        from app._04_decision.doors import (
+            cursor_on_door_action,
+            door_state_at,
+            door_state_near,
+            refresh_live_doors,
+        )
+
+        refresh_live_doors(getattr(self._world, "last_print_state", None))
 
         aimed = self._aim_ground_click(action)
         if aimed is False:
@@ -753,11 +805,31 @@ class ActionExecutor:
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
-        for content in dests:
+        door_note = ""
+        index = 0
+        while index < len(dests):
+            content = dests[index]
+            index += 1
             x, y = self._screen_point(content.x, content.y, bounds)
             probes += 1
+            rel = relative_tile_of_content(content)
+            origin = self.last_travel_click_origin
+            if origin is None:
+                nav_tile = rel
+            else:
+                nav_tile = (int(origin[0]) + int(rel[0]), int(origin[1]) + int(rel[1]))
+            on_open_door = door_state_at(nav_tile[0], nav_tile[1]) == "open"
+            door_state = door_state_near(nav_tile[0], nav_tile[1])
+            if door_state == "not_permitted" or on_open_door:
+                door_note = "not_permitted" if door_state == "not_permitted" else "open"
+                if on_open_door or door_state == "not_permitted":
+                    if "door" not in seen_labels:
+                        seen_labels.append("door")
+                if on_open_door:
+                    dests = dests[:index] + self._clicks_past_door(nav_tile, dests[:index])
+                continue
             if travel_click(self, x, y):
-                self.last_travel_click_relative = relative_tile_of_content(content)
+                self.last_travel_click_relative = rel
                 match = getattr(self, "last_cursor_match", None)
                 label = str(getattr(match, "label", "") or "")
                 self.last_travel_cursor_stats = {
@@ -766,17 +838,37 @@ class ActionExecutor:
                     "dialog_seen": dialog_seen,
                     "labels_seen": seen_labels,
                     "click_label": label,
+                    "door": door_state or door_note or "-",
                     "intent_reason": str(getattr(action, "reason", "") or ""),
                 }
                 return
             match = getattr(self, "last_cursor_match", None)
             label = str(getattr(match, "label", "") or "")
+            category = getattr(match, "category", None)
             if label:
                 if label not in seen_labels:
                     seen_labels.append(label)
-                category = getattr(match, "category", None)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
+            door_cursor = label == "door" or category is CursorCategory.DOOR
+            if door_cursor:
+                door_note = door_state or "unknown"
+                action_on_door = cursor_on_door_action(door_state)
+                if action_on_door == "open" and click_closed_door(self, x, y):
+                    self.last_travel_click_relative = rel
+                    self.last_travel_cursor_stats = {
+                        "ok": True,
+                        "probes": probes,
+                        "dialog_seen": dialog_seen,
+                        "labels_seen": seen_labels,
+                        "click_label": "door",
+                        "door": "close",
+                        "intent_reason": str(getattr(action, "reason", "") or ""),
+                    }
+                    return
+                if door_state == "open":
+                    dests = dests[:index] + self._clicks_past_door(nav_tile, dests[:index])
+                continue
         self.last_travel_click_failed = True
         self.last_travel_cursor_stats = {
             "ok": False,
@@ -784,6 +876,7 @@ class ActionExecutor:
             "dialog_seen": dialog_seen,
             "labels_seen": seen_labels,
             "last_reject": str(self.last_cursor_reject_reason or ""),
+            "door": door_note or "-",
             "intent_reason": str(getattr(action, "reason", "") or ""),
         }
 
@@ -1081,14 +1174,46 @@ class ActionExecutor:
                 time.sleep(wait)
         from app.bot_log import get_logger
 
+        double = self._catalog_buff_is_double(buff)
         get_logger("action").info(
-            "skill press name=%s box=%s key=%s",
+            "skill press name=%s box=%s key=%s double=%s",
             token,
             int(box),
             key,
+            int(double),
         )
         self._press_box_skill(box, key)
+        if double:
+            # Same second tap as Holy Weapon / Enchant Weapon (power_up).
+            # One press only leaves the round skill cursor.
+            if self.humanize:
+                hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
+            else:
+                time.sleep(0.05)
+            self.keyboard.press(key)
+            get_logger("action").info(
+                "skill press name=%s box=%s key=%s double=2",
+                token,
+                int(box),
+                key,
+            )
         self._last_magic_at = time.time()
+
+    def _catalog_buff_is_double(self, buff) -> bool:
+        """Weapon buffs use the existing power_up double press. Armor stays one press."""
+        if buff is None:
+            return False
+        from hotbar.inspect import load_role_map, resolve_role
+
+        try:
+            roles = load_role_map()
+        except Exception:
+            return False
+        for name in buff.names:
+            role = resolve_role("", str(name or ""), str(name or ""), roles)
+            if role in sb.DEFAULT_SLOTS and sb.slot_is_double(role):
+                return True
+        return False
 
     def _ensure_skill_box(self) -> None:
         """Press F1 once when the bot starts acting so box 1 is selected."""
@@ -1343,13 +1468,27 @@ class ActionExecutor:
 
     def _shop_run(self, action: ActionIntent, bounds: WindowBounds) -> None:
         """Execute SHOP_RUN via shop product module (Intent carries kind/qty)."""
+        from app._04_decision.shops import is_store_behavior
+        from app.bot_log import get_logger
         from shop.runtime import execute_shop_intent
 
         ok, behavior_id = execute_shop_intent(self, bounds, action)
+        bid = str(
+            behavior_id or getattr(action, "shop_behavior_id", "") or ""
+        ).strip()
+        # Warehouse keeper: one attempt ends the step. storewin deposit/retrieve
+        # does not send the character back to the same NPC.
+        if not ok and not is_store_behavior(bid):
+            return
+        if not ok:
+            get_logger("shop").info(
+                "warehouse attempt finished, leave keeper behavior=%s",
+                bid,
+            )
+        self.result.shop_ok = True
+        self.result.shop_behavior_id = bid
         if not ok:
             return
-        self.result.shop_ok = True
-        self.result.shop_behavior_id = str(behavior_id or "")
         equip = str(getattr(action, "shop_equip", None) or "").strip().lower()
         if equip in ("silver", "normal"):
             self._equip_bought_arrows(equip)

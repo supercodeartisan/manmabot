@@ -431,6 +431,10 @@ def begin_retreat(
 
     remember_return_farm(blackboard)
     clear_world_nav_run(blackboard)
+    if entering:
+        from app._04_decision.world_nav.routine import hold_dungeon_routine_clock
+
+        hold_dungeon_routine_clock(blackboard)
 
     set_mode(blackboard, PlayerMode.RETREATING)
     blackboard.scratch["retreat_for"] = reason
