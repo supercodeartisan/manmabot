@@ -105,9 +105,9 @@ class FlowLayout(QLayout):
             return next_y
 
         for item in self._items:
-            widget = item.widget()
-            if widget is not None and not widget.isVisible():
-                continue
+            # Do not skip widgets that are not visible yet. The magic category
+            # row is laid out while those buttons are still hidden, and treating
+            # them as absent reports height 0 so the row never appears.
             hint = item.sizeHint()
             next_width = line_width() + hint.width() + (space if line else 0)
             if line and next_width > effective.width():

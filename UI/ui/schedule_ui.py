@@ -3350,64 +3350,6 @@ class UnifiedTaskEditor(ttk.Frame):
         variable.trace_add("write", _sync)
         _sync()
 
-    def _build_magic_use(self, parent: ttk.LabelFrame) -> None:
-        """Label, spin box, and unit share columns inside the magic card."""
-        sheet = ttk.Frame(parent)
-        sheet.pack(fill="x")
-        sheet.columnconfigure(3, weight=1)
-
-        def field(
-            row: int,
-            label: str,
-            name: str,
-            default: int,
-            low: int,
-            high: int,
-            suffix: str,
-            *,
-            label_pad: tuple[int, int] = (0, 8),
-            gated: bool = False,
-        ) -> None:
-            caption = ttk.Label(sheet, text=label)
-            caption.grid(row=row, column=0, sticky="w", padx=label_pad, pady=3)
-            spin = self._attack_spin(sheet, name, default, low, high)
-            spin.grid(row=row, column=1, sticky="w", pady=3)
-            unit = ttk.Label(sheet, text=suffix)
-            unit.grid(row=row, column=2, sticky="w", padx=(6, 0), pady=3)
-            if gated:
-                self._remember(name, caption)
-                self._remember(name, unit)
-
-        field(0, self.t["mp_above"], "hunt.mp_spell_above", 80, 0, 100, "[%]")
-        field(
-            1, self.t["spell_count"], "hunt.spell_count", 1, 1, 99,
-            f"[{self.t['times']}]",
-        )
-        field(
-            2, self.t["basic_attack_count"], "hunt.ranged_count", 1, 1, 99,
-            f"[{self.t['times']}]",
-        )
-
-        variable = self._var("hunt.fallback_melee", False, "bool")
-        check = ttk.Frame(sheet)
-        check.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(8, 2))
-        button = ttk.Checkbutton(check, variable=variable)
-        button.pack(side="left", anchor="n")
-        self._remember("hunt.fallback_melee", button)
-        title = ttk.Label(check, text=self.t["fallback"], justify="left", wraplength=160)
-        title.pack(side="left", fill="x", expand=True, padx=(4, 0))
-        title.bind("<Button-1>", lambda _event: variable.set(not bool(variable.get())))
-
-        def fit(event: tk.Event) -> None:
-            title.configure(wraplength=max(48, int(event.width) - 28))
-
-        check.bind("<Configure>", fit)
-        field(
-            4, "MP <", "hunt.fallback_mp_below", 20, 0, 100, "[%]",
-            label_pad=(22, 8), gated=True,
-        )
-        self._bind_gate("hunt.fallback_melee", "hunt.fallback_mp_below")
-
     def _build_attack(self, page: ttk.Frame) -> None:
         page.configure(style="Page.TFrame")
         body = ttk.Frame(page, style="Page.TFrame")
@@ -3423,31 +3365,6 @@ class UnifiedTaskEditor(ttk.Frame):
         middle.grid(row=0, column=1, sticky="nsew", padx=6)
         right.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
         left = _mount_scroll_column(left_host)
-
-        combat = self._attack_card(left, self.t["attack_method"])
-        combat.pack(fill="x", pady=(0, 8))
-        mode = self._var("hunt.attack_mode", "ranged")
-        modes = ttk.Frame(combat)
-        modes.pack(fill="x", pady=(0, 2))
-        for value, text in (
-            ("ranged", self.t["ranged"]),
-            ("magic", self.t["magic_attack"]),
-            ("melee", self.t["melee"]),
-        ):
-            ttk.Radiobutton(
-                modes, text=text, value=value, variable=mode,
-            ).pack(side="left", padx=(0, 14))
-        self._attack_value_row(
-            combat, self.t["attack_range"], "hunt.attack_range", 16, 1, 30,
-        )
-        self._attack_flag(combat, self.t["close_attack_allow"], "hunt.close_attack", False)
-        self._attack_inline(
-            combat, "hunt.keep_distance", True, [
-                ("check", self.t["keep_distance"]),
-                ("spin", ("hunt.keep_distance_tiles", 3, 0, 20)),
-                ("text", self.t["tiles"]),
-            ],
-        )
 
         assist = self._attack_card(left, self.t["combat_assist"])
         assist.pack(fill="x", pady=(0, 8))
@@ -3478,10 +3395,6 @@ class UnifiedTaskEditor(ttk.Frame):
         self._attack_note(assist, self.t["target_delay_hint"])
         self._build_haste_potion_assist(assist)
 
-        magic = self._attack_card(middle, self.t["magic_use"])
-        magic.pack(fill="x", pady=(0, 8))
-        self._build_magic_use(magic)
-
         priority = self._attack_card(middle, self.t["target_priority"])
         priority.pack(fill="x", pady=(0, 8))
         priority_flags = (
@@ -3490,7 +3403,6 @@ class UnifiedTaskEditor(ttk.Frame):
             ("prefer_strong", "hunt.prefer_strong", False),
             ("prefer_caster", "hunt.prefer_caster", True),
             ("exclude_busy", "hunt.exclude_busy", True),
-            ("stick_target", "hunt.stick_target", True),
         )
         priority_grid = ttk.Frame(priority)
         priority_grid.pack(fill="x")
@@ -3565,33 +3477,7 @@ class UnifiedTaskEditor(ttk.Frame):
     def _refresh_attack_summary(self, *_args: object) -> None:
         if not hasattr(self, "attack_summary"):
             return
-        mode = str(self.vars["hunt.attack_mode"].get() or "ranged")
-        mode_label = {
-            "ranged": self.t["ranged"],
-            "magic": self.t["magic_attack"],
-            "melee": self.t["melee"],
-        }.get(mode, mode)
-        lines: list[str] = [
-            f"{self.t['attack_method']}: {mode_label}",
-            f"{self.t['attack_range']}: {self._summary_number('hunt.attack_range', 16)}",
-        ]
-        if self._summary_on("hunt.close_attack"):
-            lines.append(f"{self.t['close_attack_allow']}: {self.t['summary_on']}")
-        if self._summary_on("hunt.keep_distance"):
-            tiles = self._summary_number("hunt.keep_distance_tiles", 3)
-            lines.append(f"{self.t['keep_distance']}: {tiles} {self.t['tiles']}")
-        above = self._summary_number("hunt.mp_spell_above", 80)
-        lines.append(f"{self.t['mp_above']}: {above}%")
-        lines.append(
-            f"{self.t['spell_count']}: {self._summary_number('hunt.spell_count', 1)}{self.t['times']}"
-        )
-        lines.append(
-            f"{self.t['basic_attack_count']}: "
-            f"{self._summary_number('hunt.ranged_count', 1)}{self.t['times']}"
-        )
-        if self._summary_on("hunt.fallback_melee"):
-            below = self._summary_number("hunt.fallback_mp_below", 20)
-            lines.append(f"{self.t['fallback']}: {self.t['summary_on']} (MP < {below}%)")
+        lines: list[str] = []
         priorities = [
             self.t[key]
             for key, name in (
@@ -3600,7 +3486,6 @@ class UnifiedTaskEditor(ttk.Frame):
                 ("prefer_strong", "hunt.prefer_strong"),
                 ("prefer_caster", "hunt.prefer_caster"),
                 ("exclude_busy", "hunt.exclude_busy"),
-                ("stick_target", "hunt.stick_target"),
             )
             if self._summary_on(name)
         ]
@@ -7066,7 +6951,7 @@ class UnifiedTaskEditor(ttk.Frame):
             settings, text=self.t["sell_except_keep"], foreground=TEXT_MUTED,
         ).grid(row=0, column=0, columnspan=3, sticky="w", pady=2)
         self._check(
-            settings, 1, self.t["store_after_sell"], "equipment.store_after_sell", False,
+            settings, 1, self.t["store_after_sell"], "equipment.store_after_sell", True,
         )
 
         items = group(sell_page, self.t["sell_items"])

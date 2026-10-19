@@ -151,6 +151,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             spell_mod.ANTIDOTE_POTION_ITEM = str(
                 spells_cfg.get("antidote_potion_item") or ""
             ).strip()
+        if "auto_buffs" in spells_cfg:
+            spell_mod.set_auto_buffs(spells_cfg.get("auto_buffs") or ())
 
     elf_cfg = root.get("elf") or {}
     if "mother_tree" in elf_cfg:
@@ -335,6 +337,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             )
         if "sell_mode" in shop:
             shops_mod.SELL_MODE = shops_mod.normalize_sell_mode(shop["sell_mode"])
+        if "store_after_sell" in shop:
+            shops_mod.STORE_AFTER_SELL = bool(shop["store_after_sell"])
         if "sell_weight_ratio" in shop:
             shops_mod.SELL_WEIGHT_RATIO = max(
                 0.0, min(1.0, float(shop["sell_weight_ratio"]))

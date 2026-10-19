@@ -1,8 +1,9 @@
 """Live-bot shopping execution (calibrated behaviors + recover stub)."""
 from __future__ import annotations
 
+import random
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from shop.behaviors import (
     ShoppingBehavior,
@@ -16,6 +17,8 @@ from shop.sell_slot_layout import (
 )
 
 _SELL_MAX_ITEMS = 80
+# One wheel flick moves this many sell-list rows. A person does not nudge one row.
+SELL_SCROLL_CHUNKS = (5, 6, 7)
 
 
 def _uv_xy(uv) -> tuple[float, float]:
@@ -33,16 +36,17 @@ def _click_uv(executor, bounds, uv, *, wait_s: float) -> None:
     time.sleep(wait_s)
 
 
-def _scroll_list(executor, bounds, scroll_uv, steps: int) -> None:
+def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) -> None:
     from app._05_action.coordinates import game_to_screen
     import interception
 
     if steps <= 0:
         return
-    u, v = _uv_xy(scroll_uv)
-    sx, sy = game_to_screen(u, v, bounds)
-    executor.mouse.move(sx, sy, snap=True)
-    time.sleep(0.15)
+    if move:
+        u, v = _uv_xy(scroll_uv)
+        sx, sy = game_to_screen(u, v, bounds)
+        executor.mouse.move(sx, sy, snap=True)
+        time.sleep(0.15)
     for _ in range(steps):
         interception.scroll("down")
         time.sleep(0.08)
@@ -433,6 +437,73 @@ def _sell_hit_center_uv(hit, slots, frame) -> tuple[float, float]:
     )
 
 
+def sell_scroll_clicks(
+    indices: list[int],
+    *,
+    visible_rows: int = 7,
+    limit: int = _SELL_MAX_ITEMS,
+    list_len: int | None = None,
+    chunk_picker: Callable[[], int] | None = None,
+) -> list[tuple]:
+    """Steps for one sell dialog.
+
+    ``("scroll", notches)`` then ``("click", target_i, visible_row)``.
+    The list starts at the top. Every flick rolls 5, 6, or 7 rows. The flick
+    is shortened when fewer rows remain, and it never rolls past the next
+    unselected row, so a click stays on that row. Rows already chosen are
+    not clicked again when a short flick leaves them on screen.
+    ``target_i`` is the position in ``indices`` (the caller sorts the same way).
+    """
+    rows = max(1, int(visible_rows))
+    cap = max(0, int(limit))
+    pairs = sorted(
+        ((n, max(0, int(idx))) for n, idx in enumerate(indices)),
+        key=lambda pair: (pair[1], pair[0]),
+    )
+    if not pairs:
+        return []
+    last_idx = pairs[-1][1]
+    length = last_idx + 1 if list_len is None else max(int(list_len), last_idx + 1)
+    max_scroll = max(0, length - rows)
+    pick = chunk_picker or (lambda: random.choice(SELL_SCROLL_CHUNKS))
+
+    steps: list[tuple] = []
+    scroll_at = 0
+    chosen = [False] * len(pairs)
+    clicks = 0
+    while clicks < cap and not all(chosen):
+        for n, (target_i, idx) in enumerate(pairs):
+            if chosen[n] or clicks >= cap:
+                continue
+            if scroll_at <= idx < scroll_at + rows:
+                steps.append(("click", target_i, idx - scroll_at))
+                chosen[n] = True
+                clicks += 1
+        if clicks >= cap or all(chosen):
+            break
+        pending = [
+            idx
+            for n, (_, idx) in enumerate(pairs)
+            if not chosen[n] and idx >= scroll_at
+        ]
+        room = max_scroll - scroll_at
+        if not pending or room <= 0:
+            break
+        try:
+            roll = int(pick())
+        except (TypeError, ValueError):
+            roll = SELL_SCROLL_CHUNKS[0]
+        if roll < 1:
+            roll = SELL_SCROLL_CHUNKS[0]
+        # Stay on the next unselected row, and stop at the bottom of the list.
+        delta = min(roll, room, pending[0] - scroll_at)
+        if delta <= 0:
+            break
+        steps.append(("scroll", delta))
+        scroll_at += delta
+    return steps
+
+
 def execute_calibrated_sell(
     executor,
     bounds,
@@ -443,10 +514,10 @@ def execute_calibrated_sell(
 ) -> bool:
     """Sell shop_listen Sell-tab rows using the same Keep/Sell rule as Debug.
 
-    Practice-style batches: open Sell → select every sellable row on the
-    current scroll page (click + qty) → one Confirm (dialog closes) → reopen
-    until the list is empty. Adena (id 5) is never sold. ``grab_frame`` kept
-    for call-site compat.
+    Open Sell once. Click every keep-list miss on the current screen, then
+    flick the wheel 5, 6, or 7 rows and click the newly shown rows. One
+    Confirm at the end closes the dialog. Adena (id 5) is never sold.
+    ``grab_frame`` kept for call-site compat.
     """
     del npc_uv, grab_frame
     from app._01_perception.sensors import shared_sensors
@@ -455,15 +526,16 @@ def execute_calibrated_sell(
     from shop.behaviors import ITEM_ROW_COUNT
 
     ui = behavior.ui
-    if not ui.calibrated(action="sell"):
+    is_store = str(behavior.action) == "store"
+    if not ui.calibrated(action="store" if is_store else "sell"):
         return False
     if ui.list_scroll_point is None:
         return False
     if sum(1 for r in ui.item_rows if r is not None) < ITEM_ROW_COUNT:
         return False
 
-    sensors = shared_sensors()
-    if not sensors.shop_ready:
+    sensors = None if is_store else shared_sensors()
+    if sensors is not None and not sensors.shop_ready:
         return False
 
     from shop.behaviors import resolve_active_sell_mode
@@ -475,15 +547,41 @@ def execute_calibrated_sell(
     wait = hz.SHOP_BUTTON_WAIT_S
     sold = 0
 
-    def sellable_rows() -> list[dict]:
-        """Memory rows Debug would mark Sell (shared keep/mode rule)."""
-        snap = sensors.capture_shop()
-        out = []
-        for row in parse_sell_entries(snap):
+    def read_sell_tab() -> tuple[list[dict], int] | None:
+        """Sellable rows, and the full list length (keep rows included).
+
+        Merchants use shop_listen. The warehouse uses storewin and only the
+        deposit tab. None means the warehouse list was not a deposit list.
+        """
+        if is_store:
+            from app._01_perception.storewin_reader import (
+                capture_store,
+                parse_store_entries,
+            )
+
+            snap = capture_store()
+            mode = str((snap or {}).get("mode") or "")
+            if mode == "retrieve":
+                return None
+            if not snap or not snap.get("open") or mode not in ("deposit", "empty"):
+                return None
+            rows = parse_store_entries(snap)
+        else:
+            rows = parse_sell_entries(sensors.capture_shop())
+        sellable: list[dict] = []
+        length = 0
+        for row in rows:
+            try:
+                idx = max(0, int(row.get("idx") or 0))
+            except (TypeError, ValueError):
+                idx = 0
+            length = max(length, idx + 1)
             try:
                 item_id = int(row.get("id") or 0)
             except (TypeError, ValueError):
                 item_id = 0
+            if is_store and str(row.get("name") or "").strip() in ("아데나", "Adena"):
+                continue
             if not item_passes_sell_filter(
                 str(row.get("name") or ""),
                 sell_mode=sell_mode,
@@ -492,8 +590,8 @@ def execute_calibrated_sell(
                 item_id=item_id,
             ):
                 continue
-            out.append(row)
-        return out
+            sellable.append(row)
+        return sellable, max(length, len(rows))
 
     def open_sell() -> bool:
         if not open_shop_npc(
@@ -516,12 +614,6 @@ def execute_calibrated_sell(
         except (TypeError, ValueError):
             return 0
 
-    def _scroll_steps(idx: int) -> int:
-        return max(0, idx - (ITEM_ROW_COUNT - 1))
-
-    def _row_i(idx: int) -> int:
-        return min(idx, ITEM_ROW_COUNT - 1)
-
     def _sell_qty(row: dict) -> int:
         try:
             row_count = max(0, int(row.get("count") or 0))
@@ -529,39 +621,59 @@ def execute_calibrated_sell(
             row_count = 0
         return max(1, min(999, row_count if row_count > 0 else qty))
 
-    # Confirm closes the dialog — one batch per open (Practice sell loop).
-    while sold < _SELL_MAX_ITEMS:
-        if not open_sell():
-            return sold > 0
-        targets = sellable_rows()
-        if not targets:
-            close_shop()
-            return True
+    # Confirm closes the dialog. Select every keep-list miss, then confirm once.
+    if not open_sell():
+        return False
+    read = read_sell_tab()
+    if read is None:
+        close_shop()
+        return False
+    targets, list_len = read
+    if not targets:
+        close_shop()
+        return True
 
-        first = min(targets, key=_idx)
-        page_scroll = _scroll_steps(_idx(first))
-        batch = [t for t in targets if _scroll_steps(_idx(t)) == page_scroll]
-        batch.sort(key=lambda t: _row_i(_idx(t)))
-        if not batch:
-            close_shop()
-            return sold > 0
+    targets.sort(key=_idx)
+    plan = sell_scroll_clicks(
+        [_idx(row) for row in targets],
+        visible_rows=ITEM_ROW_COUNT,
+        limit=_SELL_MAX_ITEMS,
+        list_len=list_len,
+    )
+    clicked_item = False
+    for step in plan:
+        if step[0] == "scroll":
+            # After an item click, leave the cursor there. The wheel still
+            # hits the sell list. Before any item click, hover the list.
+            _scroll_list(
+                executor,
+                bounds,
+                ui.list_scroll_point,
+                int(step[1]),
+                move=not clicked_item,
+            )
+            continue
+        target = targets[int(step[1])]
+        row_uv = ui.item_rows[int(step[2])]
+        if row_uv is None:
+            continue
+        _click_uv(
+            executor,
+            bounds,
+            row_uv,
+            wait_s=random.uniform(0.2, 0.5),
+        )
+        _type_qty(executor, _sell_qty(target), wait_s=0)
+        clicked_item = True
+        sold += 1
 
-        _scroll_list(executor, bounds, ui.list_scroll_point, page_scroll)
-        for target in batch:
-            if sold >= _SELL_MAX_ITEMS:
-                break
-            row_uv = ui.item_rows[_row_i(_idx(target))]
-            if row_uv is None:
-                continue
-            _click_uv(executor, bounds, row_uv, wait_s=wait)
-            _type_qty(executor, _sell_qty(target), wait_s=wait)
-            sold += 1
+    if sold <= 0:
+        close_shop()
+        return False
 
-        _click_uv(executor, bounds, ui.confirm_button, wait_s=wait)
-        time.sleep(0.25)
-
-    close_shop()
-    return sold > 0
+    _click_uv(executor, bounds, ui.confirm_button, wait_s=wait)
+    time.sleep(0.25)
+    return True
 
 
 def execute_calibrated_sell_legacy_template(
@@ -747,7 +859,8 @@ def execute_shop_intent(executor, bounds, action) -> tuple[bool, str]:
     if not behavior.ui.calibrated(action=kind):
         return False, behavior_id
 
-    # store (warehouse) reuses the sell-tab memory list path for now.
+    # store reads the warehouse window (storewin). sell reads shop_listen.
+    # Both then use the same keep-list clicks and scroll flicks.
     if kind in ("sell", "store"):
         capture = getattr(executor, "_perception_capture", None)
         if capture is None:

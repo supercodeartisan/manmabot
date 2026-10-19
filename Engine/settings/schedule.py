@@ -214,7 +214,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "hp_potion_npc": str(getattr(profile, "hp_potion_npc", "") or ""),
             "sell_mode": "sell_except_keep",
             "sell_npc": "",
-            "store_after_sell": False,
+            "store_after_sell": True,
             "warehouse_npc": "",
             "repair_equipment": True,
             "restock_potions": bool(profile.restock_potions),
