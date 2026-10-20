@@ -1357,10 +1357,17 @@ class BotController:
             advertise = local_ipv4()
         except Exception:
             advertise = "127.0.0.1"
-        self.log(
+        listen_msg = (
             f"Party socket listening on {advertise}:{port} (bind 0.0.0.0). "
             "It stops when this bot stops."
         )
+        self.log(listen_msg)
+        try:
+            from app._06_party.party_log import event as party_event
+
+            party_event("socket", "%s", listen_msg)
+        except Exception:
+            pass
         from settings.profile import normalize_party_roster
 
         roster = [
@@ -1371,16 +1378,30 @@ class BotController:
         ]
         roster = [n for n in roster if n]
         if roster:
-            self.log(
+            roster_msg = (
                 "Party roster: "
                 + ", ".join(roster)
                 + " — /초대 after the game world is ready (not the WS local test)."
             )
+            self.log(roster_msg)
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("setup", "%s", roster_msg)
+            except Exception:
+                pass
         else:
-            self.log(
+            empty_msg = (
                 "Party roster empty — add names on the leader Party tab "
                 "or no /초대 will be typed."
             )
+            self.log(empty_msg)
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("setup", "%s", empty_msg)
+            except Exception:
+                pass
 
     def _stop_party_socket(self) -> None:
         watchdog = self._party_ws
@@ -1524,14 +1545,30 @@ class BotController:
             if isinstance(block, dict):
                 lead = str(block.get("name") or "").strip()
             lead = lead or str(snap.get("leader_name") or "").strip()
-        self.log(
+        setup_msg = (
             "Party setup: "
             f"self={self_name or '—'} in_party={in_party} "
             f"leader={lead or '—'} invite={', '.join(n for n in names if n) or '—'}"
         )
+        self.log(setup_msg)
+        try:
+            from app._06_party.party_log import event as party_event
+
+            party_event("setup", "%s", setup_msg)
+        except Exception:
+            pass
 
         def _send(line: str) -> None:
             send_game_chat(line)
+
+        def _setup_log(msg: str) -> None:
+            self.log(msg)
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("setup", "%s", msg)
+            except Exception:
+                pass
 
         sent = configure_party_from_roster(
             names=names,
@@ -1539,10 +1576,16 @@ class BotController:
             self_name=self_name,
             send_line=_send,
             stopped=self._stop_event.is_set,
-            log=self.log,
+            log=_setup_log,
         )
         if sent:
             self.log(f"Party setup sent {len(sent)} chat line(s)")
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("setup", "sent %s chat line(s)", len(sent))
+            except Exception:
+                pass
             try:
                 from websocket.traffic_log import note_local
 
@@ -1552,6 +1595,12 @@ class BotController:
                 pass
         else:
             self.log("Party setup sent no chat lines (already in party or skipped)")
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("setup", "sent no chat lines (already in party or skipped)")
+            except Exception:
+                pass
 
     def _log_party_until_farm(
         self,
@@ -1594,10 +1643,17 @@ class BotController:
 
         if farmed:
             self._party_farm_started = True
-            self.log(
+            msg = (
                 f"Party farm start kind={kind or '—'} "
                 f"leader={leader_name or '—'} dist={dist}"
             )
+            self.log(msg)
+            try:
+                from app._06_party.party_log import event as party_event
+
+                party_event("session", "%s", msg)
+            except Exception:
+                pass
             return
 
         now = time.monotonic()
@@ -1629,13 +1685,20 @@ class BotController:
             ws = str(sock.get("state") or "")
         except Exception:
             ws = ""
-        self.log(
+        msg = (
             "Party wait: "
             f"role={party_role} in_party={in_party} count={count} "
             f"mem_leader={mem_lead or '—'} xy={xy or '—'} map={pmap or '—'} "
             f"seen={leader_name or '—'} dist={dist} kind={kind or '—'} "
             f"reason={reason or '—'} ws={ws or '—'}"
         )
+        self.log(msg)
+        try:
+            from app._06_party.party_log import event as party_event
+
+            party_event("session", "%s", msg)
+        except Exception:
+            pass
 
     def _leader_party_tick(self, world, blackboard, map_id) -> None:
         """Send mother-tree recovery and collect member arrival reports."""
@@ -1774,6 +1837,12 @@ class BotController:
                 reset_bot_log()
             except Exception:
                 pass
+            try:
+                from app._06_party.party_log import reset as reset_party_log
+
+                reset_party_log()
+            except Exception:
+                pass
 
     def _run_bot_loop(self) -> None:
         root = manmabot_root()
@@ -1876,6 +1945,35 @@ class BotController:
         )
         self.log(f"Loading Manmabot from {root}")
         self.log(f"Session log {session_log}")
+        party_on = bool(
+            getattr(
+                profile,
+                "party_enabled",
+                getattr(profile, "party_member_enabled", False),
+            )
+        )
+        if party_on:
+            try:
+                from app._06_party.party_log import (
+                    configure as configure_party_log,
+                    event as party_event,
+                )
+
+                party_log_path = configure_party_log(
+                    log_dir=root / "logs",
+                    level=log_level,
+                    role=party_role,
+                )
+                self.log(f"Party log {party_log_path}")
+                party_event(
+                    "session",
+                    "gate role=%s member_mode=%s ws_port=%s",
+                    party_role,
+                    party_mode,
+                    int(getattr(profile, "party_ws_port", 8765) or 8765),
+                )
+            except Exception as party_log_exc:
+                self.log(f"Party log open failed: {party_log_exc}")
         get_logger("session").info(
             "character=%s loot=%s game_lang=%s map=%s farms=%s file=%s",
             profile.character,

@@ -23,13 +23,31 @@ def snapshot() -> list[str]:
         return list(_lines)
 
 
+def _mirror_party_file(level: str, text: str) -> None:
+    """Also write to ``party-*.log`` when that session file is open."""
+    try:
+        from app._06_party import party_log
+
+        if not party_log.active():
+            return
+        logger = party_log.get_logger("socket")
+        if level == "debug":
+            logger.debug("%s", text)
+        else:
+            logger.info("%s", text)
+    except Exception:
+        return
+
+
 def note_local(text: str) -> None:
     """Session note in the party monitor (not a socket frame)."""
     try:
         stamp = time.strftime("%H:%M:%S")
-        line = f"{stamp}  ---  local    {str(text or '').strip()}"
+        body = str(text or "").strip()
+        line = f"{stamp}  ---  local    {body}"
         with _lock:
             _lines.append(line)
+        _mirror_party_file("info", f"local {body}")
     except Exception:
         return
 
@@ -46,9 +64,16 @@ def note(direction: str, message: Any) -> None:
         except (TypeError, ValueError, OSError):
             stamp = time.strftime("%H:%M:%S")
         way = "OUT" if str(direction or "").lower().startswith("s") else "IN "
-        line = f"{stamp}  {way}  {sender:<7}  {_body_text(body)}"
+        detail = _body_text(body)
+        line = f"{stamp}  {way}  {sender:<7}  {detail}"
         with _lock:
             _lines.append(line)
+        # Player heartbeats are frequent — file DEBUG; decisions/orders at INFO.
+        kind = ""
+        if isinstance(body, dict):
+            kind = str(body.get("type") or "").strip().lower()
+        level = "debug" if kind in ("player", "report") else "info"
+        _mirror_party_file(level, f"{way.strip()} {sender} {detail}")
     except Exception:
         return
 

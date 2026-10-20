@@ -5,10 +5,11 @@ the solo survival.hp line (mother tree, else talking scroll, else teleport).
 """
 from __future__ import annotations
 
-import logging
 from typing import Any, Optional
 
-_log = logging.getLogger("party.member")
+from .party_log import get_logger as _party_logger
+
+_log = _party_logger("member")
 
 
 def party_critical_escape(game_state: Any, blackboard: Any) -> Optional[Any]:

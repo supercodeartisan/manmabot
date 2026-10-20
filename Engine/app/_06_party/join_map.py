@@ -1,10 +1,11 @@
 """Cross-map join: WorldNav toward the leader's PartySubsystem pose."""
 from __future__ import annotations
 
-import logging
 from typing import Any, Optional
 
-_log = logging.getLogger("party.member")
+from .party_log import get_logger as _party_logger
+
+_log = _party_logger("join")
 
 # Re-arm if leader pose drifts this far (Chebyshev) while joining.
 _REPLAN_TILES = 24

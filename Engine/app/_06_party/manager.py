@@ -1,7 +1,6 @@
 """Party member brain — decide one ActionIntent per tick (solo DecisionManager peer)."""
 from __future__ import annotations
 
-import logging
 import random
 import time
 from collections import deque
@@ -31,9 +30,10 @@ from .leader import (
 )
 from .policy import MemberKind, PolicyInput, decide_policy
 from .state import MemberRuntime
+from .party_log import get_logger as _party_logger
 from .support import apply_party_support
 
-_log = logging.getLogger("party.member")
+_log = _party_logger("member")
 
 _DECISION_HISTORY = 20
 # Keep last PartySubsystem pose when xy drops to 0,0 / missing (off-UI chase).
@@ -798,12 +798,25 @@ class PartyMemberManager:
 
         self.runtime.last_reason = detail or reason
         self._record_decision(intent)
-        _log.debug(
-            "party member tick=%s kind=%s reason=%s",
-            self.runtime.tick,
-            self.runtime.last_kind,
-            self.runtime.last_reason,
-        )
+        kind_now = str(self.runtime.last_kind or "")
+        reason_now = str(self.runtime.last_reason or "")
+        prev = self.runtime.scratch.get("_party_log_kind_reason")
+        cur = (kind_now, reason_now)
+        if prev != cur:
+            self.runtime.scratch["_party_log_kind_reason"] = cur
+            _log.info(
+                "tick=%s kind=%s reason=%s",
+                self.runtime.tick,
+                kind_now or "—",
+                reason_now or "—",
+            )
+        else:
+            _log.debug(
+                "tick=%s kind=%s reason=%s",
+                self.runtime.tick,
+                kind_now or "—",
+                reason_now or "—",
+            )
         return intent
 
     def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:

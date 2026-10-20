@@ -7,6 +7,7 @@ Enable path (single): Party tab → Run as party member → Profile → BotContr
 Leader comes from ``party_listen`` after join (no typed leader name).
 Solo Start leaves this package unused (no party sensor, no member decide).
 """
+from . import party_log
 from .config import PartyMemberConfig
 from .leader import LeaderView, resolve_leader
 from .loot import party_loot_ownership_filter, party_may_loot
@@ -21,6 +22,7 @@ __all__ = [
     "PartyMemberConfig",
     "PartyMemberManager",
     "decide_policy",
+    "party_log",
     "party_loot_ownership_filter",
     "party_may_loot",
     "resolve_leader",

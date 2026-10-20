@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-19 — dedicated party session log
+
+Intent: open `Engine/logs/party-YYYYMMDD-HHMMSS.log` when party is enabled, separate from `bot-*.log`. Channels: setup (invite), session (wait/farm), member (kind changes), join (cross-map), socket (WS + local chat).
+Shared: logging only. Follow, assist, HP, login, and decide paths unchanged. Member kind lines log at INFO only when kind/reason changes.
+Affects: diagnosis files for party Start.
+Consent: user ("go" after confirming party log system was missing).
+Result: implemented. Unit tests in `Others/tests/test_party_log.py`.
+
 ## 2026-10-19 — same-map world nav walks instead of a talking scroll
 
 Intent: on Talking Island the character was already on map 0, and world nav still opened a talking scroll toward the pet manager. The list never opened (`opened=False`), then every tick idled on `world nav scroll land` and never walked or hunted.
