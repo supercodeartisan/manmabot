@@ -6,7 +6,15 @@ Intent: open `Engine/logs/party-YYYYMMDD-HHMMSS.log` when party is enabled, sepa
 Shared: logging only. Follow, assist, HP, login, and decide paths unchanged. Member kind lines log at INFO only when kind/reason changes.
 Affects: diagnosis files for party Start.
 Consent: user ("go" after confirming party log system was missing).
-Result: implemented. Unit tests in `Others/tests/test_party_log.py`.
+Result: implemented. Unit tests in `Others/tests/test_party_log.py`. First live Start created no `party-*.log` because open ran before `install_profile_runtime` (party_enabled still False). Open moved to after profile apply + leader setup/socket entry.
+
+## 2026-10-19 — party log open after profile apply
+
+Intent: party log file was missing while Party invite still ran.
+Shared: `_ensure_party_log` only. Decide/move/combat unchanged.
+Affects: when `party-*.log` is created.
+Consent: user (cannot see party log while doing party).
+Result: implemented.
 
 ## 2026-10-19 — same-map world nav walks instead of a talking scroll
 

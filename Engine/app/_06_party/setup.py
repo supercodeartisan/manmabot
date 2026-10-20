@@ -139,7 +139,7 @@ def configure_party_from_roster(
     if in_party and not _local_is_leader(snapshot, self_name):
         if halt():
             return sent
-        note("Party leave (not the in-game leader)")
+        note(f'Party chat "{LEAVE_COMMAND}" (not the in-game leader)')
         send(LEAVE_COMMAND)
         sent.append(LEAVE_COMMAND)
         sleep(1.0)
@@ -149,10 +149,11 @@ def configure_party_from_roster(
         if halt():
             break
         if name.casefold() in present:
-            note(f"Party already has {name}")
+            note(f'Party already has "{name}" — skip invite')
             continue
         line = invite_command(name)
-        note(f"Party invite {name}")
+        # Exact in-game line: ``/초대 <member name>``
+        note(f'Party chat "{line}"')
         send(line)
         sent.append(line)
         present.add(name.casefold())

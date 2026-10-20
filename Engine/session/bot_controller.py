@@ -1315,6 +1315,7 @@ class BotController:
         role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
         if role != "leader":
             return
+        self._ensure_party_log(role=role)
         try:
             port = int(getattr(profile, "party_ws_port", 8765) or 8765)
         except (TypeError, ValueError):
@@ -1512,6 +1513,34 @@ class BotController:
         reset_orders()
         self._party_tree_trip = ""
 
+    def _ensure_party_log(self, *, role: str = "", level: str = "INFO") -> None:
+        """Open ``party-*.log`` once party is known to be on (after profile apply)."""
+        try:
+            from app._06_party import party_log
+            from session.paths import manmabot_root
+
+            if party_log.active():
+                return
+            profile = self._profile
+            party_on = bool(
+                getattr(
+                    profile,
+                    "party_enabled",
+                    getattr(profile, "party_member_enabled", False),
+                )
+            )
+            if not party_on:
+                return
+            role_txt = str(role or getattr(profile, "party_role", "") or "").strip()
+            path = party_log.configure(
+                log_dir=manmabot_root() / "logs",
+                level=str(level or "INFO"),
+                role=role_txt,
+            )
+            self.log(f"Party log {path}")
+        except Exception as exc:
+            self.log(f"Party log open failed: {exc}")
+
     def _run_leader_party_setup(self, world) -> None:
         """After the socket is up: leave if needed, then invite the roster."""
         profile = self._profile
@@ -1520,6 +1549,7 @@ class BotController:
         role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
         if role != "leader":
             return
+        self._ensure_party_log(role=role)
         from settings.profile import normalize_party_roster
         from app._06_party.setup import configure_party_from_roster, send_game_chat
 
@@ -1590,7 +1620,7 @@ class BotController:
                 from websocket.traffic_log import note_local
 
                 for line in sent:
-                    note_local(f"chat {line}")
+                    note_local(f'chat "{line}"')
             except Exception:
                 pass
         else:
@@ -1945,35 +1975,6 @@ class BotController:
         )
         self.log(f"Loading Manmabot from {root}")
         self.log(f"Session log {session_log}")
-        party_on = bool(
-            getattr(
-                profile,
-                "party_enabled",
-                getattr(profile, "party_member_enabled", False),
-            )
-        )
-        if party_on:
-            try:
-                from app._06_party.party_log import (
-                    configure as configure_party_log,
-                    event as party_event,
-                )
-
-                party_log_path = configure_party_log(
-                    log_dir=root / "logs",
-                    level=log_level,
-                    role=party_role,
-                )
-                self.log(f"Party log {party_log_path}")
-                party_event(
-                    "session",
-                    "gate role=%s member_mode=%s ws_port=%s",
-                    party_role,
-                    party_mode,
-                    int(getattr(profile, "party_ws_port", 8765) or 8765),
-                )
-            except Exception as party_log_exc:
-                self.log(f"Party log open failed: {party_log_exc}")
         get_logger("session").info(
             "character=%s loot=%s game_lang=%s map=%s farms=%s file=%s",
             profile.character,
@@ -1996,6 +1997,25 @@ class BotController:
         self._route_identity = route_identity(profile_snap)
         with self._lock:
             self._settings_applied = seen_epoch
+
+        # Party flags land on the profile during install_profile_runtime.
+        # Opening the party file before that left party_enabled=False → no file.
+        self._ensure_party_log(role=party_role, level=log_level)
+        try:
+            from app._06_party.party_log import active as party_log_active
+            from app._06_party.party_log import event as party_event
+
+            if party_log_active():
+                party_event(
+                    "session",
+                    "gate role=%s member_mode=%s party_enabled=%s ws_port=%s",
+                    party_role,
+                    party_mode,
+                    bool(getattr(self._profile, "party_enabled", False)),
+                    int(getattr(self._profile, "party_ws_port", 8765) or 8765),
+                )
+        except Exception:
+            pass
 
 
         character = CharacterType(profile.character)
