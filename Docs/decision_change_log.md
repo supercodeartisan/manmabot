@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-20 — standalone party tactics package (not wired)
+
+Intent: add formation, movement, and focus-fire logic as independent modules under `Engine/app/_06_party/tactics/`: open-field vs narrow-dungeon classification, open-field fan slots with sight-line slot repair and pace, dungeon single-file trail with corner/lag hold for the leader, leader-jump regroup with staggered delays, focus-fire allocation with overkill prevention, and per-member volley delays. A random teleport scroll lands on a random tile, so regroup defaults to `rejoin`; repeated random teleport is opt-in for small maps.
+Shared: none. Nothing imports `tactics`; follow, assist, loot, HP, retreat, login, and decide are unchanged.
+Affects: nothing at runtime until wired.
+Consent: user ("impl" these logics as independent modules).
+Result: implemented. `Others/tests/test_party_tactics.py`, 37 tests pass. Not run in game.
+
 ## 2026-10-19 — dedicated party session log
 
 Intent: open `Engine/logs/party-YYYYMMDD-HHMMSS.log` when party is enabled, separate from `bot-*.log`. Channels: setup (invite), session (wait/farm), member (kind changes), join (cross-map), socket (WS + local chat).
