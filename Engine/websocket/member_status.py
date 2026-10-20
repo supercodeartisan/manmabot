@@ -1,6 +1,6 @@
 """Member → leader: buffs and item list.
 
-The 10s heartbeat carries the same report. Arrival at a hunt NPC sends one
+The 10s heartbeat carries the same report. Arrival at a gather point sends one
 immediately. Does not change follow or combat by itself.
 """
 from __future__ import annotations
@@ -28,6 +28,7 @@ class MemberHeartbeat:
         x: Any = None,
         y: Any = None,
         arrived: bool = False,
+        order: str = "",
     ) -> bool:
         """Send one report when the 10s interval has elapsed and the link is up."""
         now = time.monotonic()
@@ -40,6 +41,7 @@ class MemberHeartbeat:
             x=x,
             y=y,
             arrived=arrived,
+            order=order,
         )
 
     def send_report(
@@ -51,8 +53,9 @@ class MemberHeartbeat:
         x: Any = None,
         y: Any = None,
         arrived: bool = False,
+        order: str = "",
     ) -> bool:
-        """Send buffs and items now."""
+        """Send buffs and items now. ``order`` is the gather type ``arrived`` refers to."""
         client = self.client
         if client is None or not client.connected:
             return False
@@ -67,6 +70,7 @@ class MemberHeartbeat:
                     x=x,
                     y=y,
                     arrived=arrived,
+                    order=order,
                 ),
             )
         )
@@ -82,6 +86,7 @@ def _report(
     x: Any,
     y: Any,
     arrived: bool,
+    order: str = "",
 ) -> dict[str, Any]:
     player = getattr(world, "player", None)
     pos = getattr(player, "position", None)
@@ -98,6 +103,7 @@ def _report(
         "x": x,
         "y": y,
         "arrived": bool(arrived),
+        "order": str(order or ""),
     }
 
 

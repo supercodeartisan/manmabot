@@ -1,7 +1,12 @@
 """Party orders the leader sends the moment it decides, and the rally that follows.
 
-Hunt move (``hunt_move``): the chosen NPC teleporter. Members gather on that
-NPC. The leader does not click it until those members report they are there.
+Rally (``rally``): one gather point with a ``stage``:
+
+- ``start``   no teleport on the way — the leader's tile at party start
+- ``planned`` the planned landing of the last teleport, sent before leaving
+- ``landed``  the real landing tile, sent once the leader is there
+
+The leader waits on the point until every roster member has arrived.
 
 Recovery (``recovery``): mother-tree decision. Sent immediately. Members do not
 act on it yet.
@@ -10,11 +15,16 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-HUNT_MOVE = "hunt_move"
+RALLY = "rally"
 RECOVERY = "recovery"
 REPORT = "report"
 
-# Same band as the NPC click (already standing on the teleporter).
+STAGE_START = "start"
+STAGE_PLANNED = "planned"
+STAGE_LANDED = "landed"
+RALLY_STAGES = (STAGE_START, STAGE_PLANNED, STAGE_LANDED)
+
+# Arrival band around the gather point.
 ARRIVE_TILES = 7
 
 
@@ -47,37 +57,28 @@ def leader_message(
     }
 
 
-def hunt_message_from_detail(detail: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """Build ``hunt_move`` for one planned ``npc_teleporter`` step."""
-    if not isinstance(detail, dict):
-        return None
-    frm = detail.get("from") or {}
-    try:
-        x = int(frm.get("x"))
-        y = int(frm.get("y"))
-        map_id = int(detail.get("land_map_id") or frm.get("mapId"))
-    except (TypeError, ValueError):
-        return None
-    if x < 0 or y < 0:
-        return None
-    gate = detail.get("destination_dungeon")
-    try:
-        gate_to = int(gate) if gate not in (None, "") else None
-    except (TypeError, ValueError):
-        gate_to = None
-    if gate_to is not None and gate_to <= 0:
-        gate_to = None
-    action = str(detail.get("behavior_id") or "").strip() or "npc_teleporter"
-    return leader_message(
-        kind=HUNT_MOVE,
-        action=action,
-        map_id=map_id,
-        x=x,
-        y=y,
-        gate_to=gate_to,
-        gate_edge=str(detail.get("gate_edge_id") or ""),
-        destination=[x, y],
+def rally_message(*, stage: str, map_id: int, x: int, y: int) -> dict[str, Any]:
+    if stage not in RALLY_STAGES:
+        raise ValueError(f"unknown rally stage {stage!r}")
+    body = leader_message(
+        kind=RALLY,
+        action=RALLY,
+        map_id=int(map_id),
+        x=int(x),
+        y=int(y),
+        destination=[int(x), int(y)],
     )
+    body["stage"] = stage
+    return body
+
+
+def order_tag(body: Optional[dict[str, Any]]) -> str:
+    """``rally:landed`` style tag a member puts on its arrival report."""
+    if not isinstance(body, dict):
+        return ""
+    kind = str(body.get("type") or "")
+    stage = str(body.get("stage") or "")
+    return f"{kind}:{stage}" if stage else kind
 
 
 def recovery_message(
@@ -95,14 +96,6 @@ def recovery_message(
         y=y,
         destination=dest,
     )
-
-
-def first_npc_step(plan: Any) -> Any:
-    steps = getattr(plan, "steps", None) or []
-    for step in steps:
-        if str(getattr(step, "op", "") or "") == "npc_teleporter":
-            return step
-    return None
 
 
 def party_member_names(snapshot: Any) -> set[str]:
@@ -154,8 +147,20 @@ def _publish(body: dict[str, Any]) -> int:
     return int(publish_body(body) or 0)
 
 
-class HuntRally:
-    """One NPC gather. The click waits until expected members have arrived."""
+def _order_key(body: Optional[dict[str, Any]]) -> Optional[tuple]:
+    if body is None:
+        return None
+    return (
+        order_tag(body),
+        str(body.get("action") or ""),
+        body.get("map_id"),
+        body.get("x"),
+        body.get("y"),
+    )
+
+
+class Rally:
+    """Leader side of one gather point. The leader waits on ``ready``."""
 
     def __init__(self) -> None:
         self.key: Optional[tuple] = None
@@ -173,14 +178,13 @@ class HuntRally:
     def armed(self) -> bool:
         return self.body is not None
 
+    @property
+    def stage(self) -> str:
+        return str(self.body.get("stage") or "") if self.body is not None else ""
+
     def arm(self, body: dict[str, Any]) -> bool:
-        """Remember and send. False when this is the same NPC already announced."""
-        key = (
-            str(body.get("action") or ""),
-            body.get("map_id"),
-            body.get("x"),
-            body.get("y"),
-        )
+        """Remember and send. False when this point is already announced or no server."""
+        key = _order_key(body)
         if key == self.key:
             return False
         from .leader_decisions import _server_listening
@@ -226,6 +230,21 @@ class HuntRally:
                 name = next(iter(missing))
         self.arrived.add(name)
 
+    def note_positions(self, snapshot: Any) -> None:
+        """Count party-list members already standing within reach of the point."""
+        if not self.armed or self.body is None or not isinstance(snapshot, dict):
+            return
+        for raw in snapshot.get("members") or []:
+            if not isinstance(raw, dict) or raw.get("is_leader"):
+                continue
+            name = str(raw.get("name") or "").strip()
+            if name and _at_point(self.body, raw.get("map_id"), raw.get("x"), raw.get("y")):
+                self.arrived.add(name)
+
+    def missing(self, names: set[str]) -> list[str]:
+        expected = {str(n).strip() for n in names if str(n).strip()}
+        return sorted(expected - self.arrived)
+
     def ready(self, connected: int, names: set[str]) -> bool:
         """True when nobody is expected, or every expected member has arrived."""
         if not self.armed:
@@ -239,35 +258,39 @@ class HuntRally:
         return len(self.arrived) >= n
 
 
-def _report_at_rally(order: dict[str, Any], report: dict[str, Any]) -> bool:
-    if bool(report.get("arrived")):
-        return True
+def _at_point(order: dict[str, Any], map_id: Any, x: Any, y: Any) -> bool:
     try:
-        if int(report.get("map_id")) != int(order.get("map_id")):
+        if int(map_id) != int(order.get("map_id")):
             return False
-        dist = _chev(
-            int(report.get("x")),
-            int(report.get("y")),
-            int(order.get("x")),
-            int(order.get("y")),
-        )
+        dist = _chev(int(x), int(y), int(order.get("x")), int(order.get("y")))
     except (TypeError, ValueError):
         return False
     return dist <= ARRIVE_TILES
 
 
+def _report_at_rally(order: dict[str, Any], report: dict[str, Any]) -> bool:
+    # ``arrived`` refers to the member's current order; ignore it for another one.
+    if bool(report.get("arrived")) and str(report.get("order") or "") == order_tag(order):
+        return True
+    return _at_point(order, report.get("map_id"), report.get("x"), report.get("y"))
+
+
 class MemberOrders:
-    """Hunt-move order the member is walking to. Recovery is stored and ignored."""
+    """Member side: the rally point to walk to. Recovery is stored and ignored."""
 
     def __init__(self) -> None:
-        self.hunt: Optional[dict[str, Any]] = None
+        self.gather: Optional[dict[str, Any]] = None
         self.recovery: Optional[dict[str, Any]] = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
 
+    @property
+    def order_kind(self) -> str:
+        return order_tag(self.gather)
+
     def clear(self) -> None:
-        self.hunt = None
+        self.gather = None
         self.recovery = None
         self.arrived = False
         self._reported = False
@@ -282,44 +305,22 @@ class MemberOrders:
             if kind == RECOVERY:
                 self.recovery = dict(body)
                 continue
-            if kind != HUNT_MOVE:
+            if kind != RALLY:
                 continue
-            key = (
-                str(body.get("action") or ""),
-                body.get("map_id"),
-                body.get("x"),
-                body.get("y"),
-            )
-            prev = None
-            if self.hunt is not None:
-                prev = (
-                    str(self.hunt.get("action") or ""),
-                    self.hunt.get("map_id"),
-                    self.hunt.get("x"),
-                    self.hunt.get("y"),
-                )
-            if key != prev:
-                self.hunt = dict(body)
+            if _order_key(body) != _order_key(self.gather):
+                self.gather = dict(body)
                 self.arrived = False
                 self._reported = False
                 self._report_pending = False
 
     def near(self, map_id: Optional[int], x: Any, y: Any) -> bool:
-        order = self.hunt
-        if order is None:
-            return False
-        try:
-            if int(map_id) != int(order.get("map_id")):
-                return False
-            dist = _chev(int(x), int(y), int(order.get("x")), int(order.get("y")))
-        except (TypeError, ValueError):
-            return False
-        return dist <= ARRIVE_TILES
+        order = self.gather
+        return order is not None and _at_point(order, map_id, x, y)
 
     def mark_arrived(self) -> bool:
         """True the first time this order is reached (caller should report)."""
-        if self.hunt is None or self._reported:
-            self.arrived = self.hunt is not None
+        if self.gather is None or self._reported:
+            self.arrived = self.gather is not None
             return False
         self.arrived = True
         self._reported = True
@@ -334,47 +335,32 @@ class MemberOrders:
         return True
 
 
-hunt_rally = HuntRally()
+rally = Rally()
 member_orders = MemberOrders()
 
 
-def note_hunt_plan(plan: Any) -> None:
-    step = first_npc_step(plan)
-    if step is None:
-        return
-    detail = getattr(step, "detail", None) or {}
-    body = hunt_message_from_detail(detail)
-    if body is not None:
-        hunt_rally.arm(body)
-
-
-def npc_click_allowed(detail: dict[str, Any], *, connected: int, names: set[str]) -> bool:
-    """Arm the rally if the plan hook missed it, then say whether the click may run."""
-    body = hunt_message_from_detail(detail)
-    if body is not None:
-        hunt_rally.arm(body)
-    return hunt_rally.ready(connected, names)
-
-
 def reset_orders() -> None:
-    hunt_rally.clear()
+    rally.clear()
     member_orders.clear()
 
 
 __all__ = [
     "ARRIVE_TILES",
-    "HUNT_MOVE",
+    "RALLY",
+    "RALLY_STAGES",
     "RECOVERY",
     "REPORT",
-    "HuntRally",
+    "STAGE_LANDED",
+    "STAGE_PLANNED",
+    "STAGE_START",
     "MemberOrders",
-    "hunt_message_from_detail",
-    "hunt_rally",
+    "Rally",
     "leader_message",
     "member_orders",
-    "note_hunt_plan",
-    "npc_click_allowed",
+    "order_tag",
     "party_member_names",
+    "rally",
+    "rally_message",
     "recovery_message",
     "reset_orders",
     "self_name_from_party",

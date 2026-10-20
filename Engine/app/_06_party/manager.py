@@ -820,16 +820,17 @@ class PartyMemberManager:
         return intent
 
     def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:
-        """Walk to the leader's hunt NPC. Recovery orders are not handled here."""
+        """Walk to the leader's rally point. Recovery is not handled here."""
         if dead or self.runtime.paused:
             return None
         try:
             from websocket.party_orders import member_orders
         except Exception:
             return None
-        order = member_orders.hunt
+        order = member_orders.gather
         if order is None:
             return None
+        rally_reason = f"party_rally_{order.get('stage') or 'point'}"
         if member_orders.arrived:
             return None
         try:
@@ -841,7 +842,7 @@ class PartyMemberManager:
             member_orders.mark_arrived()
             self._join_nav.clear()
             self.runtime.last_kind = "hold"
-            self.runtime.last_reason = "party_hunt_arrived"
+            self.runtime.last_reason = f"{rally_reason}_arrived"
             return None
         try:
             map_id = int(order.get("map_id"))
@@ -855,10 +856,10 @@ class PartyMemberManager:
             dest_map=map_id,
             dest_x=dest_x,
             dest_y=dest_y,
-            reason="party_hunt_rally",
+            reason=rally_reason,
         )
         self.runtime.last_kind = "join_map"
-        self.runtime.last_reason = str(getattr(intent, "reason", "") or "party_hunt_rally")
+        self.runtime.last_reason = str(getattr(intent, "reason", "") or rally_reason)
         self.runtime.chasing = False
         self._record_decision(intent)
         return intent

@@ -36,7 +36,7 @@ def publish_leader_decision(
     if name not in CRITICAL_ACTIONS:
         _last_key = None
         return ""
-    # Mother-tree and the hunt NPC click have their own frames (recovery / hunt_move).
+    # Mother-tree and the start rally have their own frames (recovery / rally).
     if name == "return_to_mother_tree":
         return ""
     if name == "shop_run" and str(getattr(action, "shop_kind", "") or "") == "teleporter":

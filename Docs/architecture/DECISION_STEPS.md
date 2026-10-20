@@ -65,6 +65,7 @@ Sticky `PlayerMode.WORLD_NAV`. 진입: `begin_world_nav` / farming `nav.world`·
 | 3 | `survival.hp` | heal/… | emit / handoff retreating | — |
 | 4 | `survival.mp_safe` | — | handoff retreating | — |
 | 5 | `survival.return_vitals` | — | handoff retreating | — |
+| 5a | `party.hold_ground` | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `shop.trip` | `SHOP_*` / scroll / walk | **handoff SHOPPING** (request after_shop) | wait |
 | 7 | `spell.support` | heal | emit | — |
 | 8 | `spell.buffs` | `BUFF` | emit | — |
@@ -99,6 +100,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 3 | `survival.hp` | `apply_hp_actions` | heal/potion/`TELEPORT`/… | emit / **handoff retreating** | — |
 | 4 | `survival.mp_safe` | `_maybe_low_mp_to_safe` | — | **handoff retreating** | — |
 | 5 | `survival.return_vitals` | `_maybe_return_on_vitals` | — | **handoff retreating** | — |
+| 5a | `party.hold_ground` | `step_party_hold_ground` | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `survival.return_idle` | `_maybe_return_on_idle` | — | **handoff retreating** | — |
 | 7 | `shop.before_world_nav` | `_shop_before_world_nav` | `SHOP_*`, scroll, walk | **handoff SHOPPING** | wait |
 | 8 | `nav.world` | `_maybe_world_nav` | scroll/gate/`IDLE`; walk→engage | emit | wait |
@@ -125,6 +127,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 2 | `survival.hp` | shared (+ dungeon_policy) | — |
 | 3 | `survival.mp_safe` | shared | — |
 | 4 | `survival.return_vitals` | shared | — |
+| 4a | `party.hold_ground` | shared | — |
 | 5 | `survival.return_idle` | shared | — |
 | 6 | `shop.before_world_nav` | shared | wait |
 | 7 | `nav.world` | shared | wait |
@@ -153,6 +156,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 3 | `survival.hp` | shared | … | emit / handoff retreating | — |
 | 4 | `survival.mp_safe` | shared | — | handoff retreating | — |
 | 5 | `survival.return_vitals` | shared | — | handoff retreating | — |
+| 5a | `party.hold_ground` | shared | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `routine.duration` | `_maybe_routine_duration` | — | **handoff WORLD_NAV** (row minutes up) | — |
 | 7 | `spell.support` | shared | | emit | — |
 | 8 | `spell.buffs` | shared | `BUFF` | emit | — |
@@ -197,6 +201,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | `survival.hp` | island, dungeon, traveling | — |
 | `survival.mp_safe` | island, dungeon, traveling | — |
 | `survival.return_vitals` | island, dungeon, traveling | — |
+| `party.hold_ground` | world_nav, island, dungeon, traveling | — |
 | `survival.return_idle` | island, dungeon | — |
 | `survival.inplace_hp` | retreating | — |
 | `shop.before_world_nav` | island, dungeon | wait |

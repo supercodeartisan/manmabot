@@ -1,5 +1,64 @@
 # Decision change log
 
+## 2026-10-20 — invite retry: 30 s × up to 3 after each failed `/파티`
+
+Intent: when an invite line fails, wait 30 s and try again, up to 3 retries (`INVITE_RETRIES` / `INVITE_RETRY_S`), then move to the next roster name.
+Shared: `configure_party_from_roster` only. Leave still has no retry (failed leave stops invites).
+Consent: user ("실패하면 30초 간격으로 최대 3번까지 다시 시도").
+Result: implemented. Invite unit tests cover all-fail retries and success on the 3rd try.
+
+## 2026-10-20 — invite all names; rally wait 15 min; elf hold = solo click range
+
+Intent: three corrections to the party leader start path.
+1. Invite: a failed `/파티` line no longer stops the rest — every roster name is attempted; only a failed `파티탈퇴` still stops (cannot invite as non-leader).
+2. Rally wait: if not everyone has arrived after 15 minutes, the leader skips the rally and continues to the hunt (`LeaderStartRally.WAIT_TIMEOUT_S`).
+3. Hold-ground elf reach: use solo `ATTACK_CLICK_TILES` (default 8) instead of a hardcoded 6.
+Shared: `configure_party_from_roster`, `LeaderStartRally.update` / `_enter_waiting`, `hold_ground_reach`. Combat/HP/login paths otherwise unchanged.
+Consent: user ("i have to send all", "time out is 15 mins", elf = solo range).
+Result: implemented. Invite / rally / hold-ground unit tests updated.
+
+## 2026-10-20 — party rally wait: hold ground and hit back only at attackers
+
+Intent: while the leader waits for the roster (start rally, both the no-travel wait and the wait on the teleport landing), potions keep working and the leader fights only monsters attacking it, from its current tile. No chase, no loot, no wall detour or unstick, no new non-attacker targets.
+New step `party.hold_ground` (`app._04_decision.behaviors.hold_ground`), placed right after `survival.return_vitals` in the WORLD_NAV, FARMING_ISLAND, FARMING_DUNGEON and TRAVELING columns. It is a no-op unless blackboard scratch `party_hold_ground` is set. When set: ATTACK the nearest monster from `nearest_attacks_me_force` if it is within reach (melee 1 tile, elf 6, mage in spell mode `MAGE_SPELL_RANGE`) and `can_engage_target` holds; otherwise drop the target and emit IDLE "party rally wait members". Steps after it (shop trip, return-on-idle, routine duration, nav, spells, farm, world-nav drive) do not run during the wait.
+Shared: reuses `nearest_attacks_me_force`, `can_engage_target`, `begin_engage`, `note_attack_attempt`, `clear_loot_hop` read-only/as-is; `continue_or_start_combat`, `farm_loot_or_combat`, `try_combat_wall_detour`, `try_combat_blocked_unstick`, HP functions are not changed. `bot_controller` sets the flag every tick from `LeaderStartRally.waiting` (leader only) and freezes the routine/farm clocks during the wait; the old gate that skipped decide during the no-travel wait is removed, so decide (and survival) now runs then. `LeaderStartRally.waiting_before_route` removed.
+Affects: party leader during the start rally only. Solo and members: the flag is never set, so the new step does nothing.
+Side effects to watch: an attacker beyond reach (ranged monster for a melee leader) is not fought and keeps hitting; survival (potion, emergency teleport, return on vitals) still wins and can move the leader off the rally tile. Elf reach follows solo `ATTACK_CLICK_TILES`. Survival handoffs to RETREATING/SHOPPING leave the hold columns (those columns have no hold step).
+Consent: user (fight = new guard "팀장을 공격하는 몬스터만 제자리에서 반격, 추격·루팅 없음"; start wait = same as landing wait).
+Result: implemented. `Others/tests/test_party_hold_ground.py` and `test_party_rally.py` pass. Not run in game.
+
+## 2026-10-20 — party start rally on the last teleport landing (replaces the town rally and NPC-click wait)
+
+Intent: on the first hunt trip after party start, the leader gathers the roster where the route needs it.
+- No teleport on the way (already on the hunt map / in the target dungeon, or a walk-only world-nav plan): send the leader's tile (`rally` stage `start`) and wait there.
+- Teleport on the way (NPC teleporter or talking scroll): when the plan exists, send the planned landing of the last teleport (stage `planned`), travel without waiting at the NPC, then send the real landing tile (stage `landed`) and wait before the next step.
+Waits for every roster member, or 15 minutes (see later entry). Later trips (recovery return, schedule change) do not rally.
+Shared: `websocket.party_orders` — one `rally` message with `stage`; `hunt_move`, `town_rally`, `npc_click_allowed`, `note_hunt_plan` removed. New `app._06_party.leader_rally.LeaderStartRally`. `WorldNavHooks.allow_npc_teleport` replaced by `hold_at_step(step_i, pose)`, checked in the `ready` phase before each step (solo: unset, no effect). Member reports tag `order` as `rally:<stage>`.
+Affects: party leader first hunt trip, party member gather. Solo world nav, combat, HP, retreat, loot, and login are unchanged.
+While holding inside world nav the WORLD_NAV survival steps (HP, emergency) still run; combat does not (world-nav combat runs only in the walk phase). The no-travel start wait skips decide, as the town rally did. In-place fighting during the wait: see the hold-ground entry above.
+Consent: user (logic confirmed: planned+actual landing, NPC and scroll count as teleport, NPC-click wait removed, fight in place while waiting, first trip only; "진행").
+Result: implemented. `Others/tests/test_party_rally.py` passes. Not run in game.
+
+## 2026-10-20 — party start town rally on the leader's tile (superseded the same day)
+
+Intent: at party start, before leaving for the hunt, the leader sends `town_rally` (`map_id`, `x`, `y` = its own tile) and stands until every roster member is within 7 tiles. Then the normal solo routine (hunt travel, NPC rally) starts. The hunt NPC rally keeps waiting for everyone, as before.
+Shared: `websocket.party_orders` — `HuntRally` became `Rally` (`town_rally` and `hunt_rally` instances), new `note_positions` / `missing`; `MemberOrders.hunt` became `gather` and accepts both orders. Member reports carry `order`, so an `arrived` for one gather does not count for another. Member `_maybe_hunt_gather` walks to either point (`party_town_rally` / `party_hunt_rally` reasons). Leader report drain moved to `_drain_party_reports` (both rallies). Leader loop gate after the invite setup skips decide while waiting.
+Arrival counts from a member report or from the in-game party list position (town rally only).
+Affects: party leader start, party member gather. Solo, combat, HP, retreat, loot, and login are unchanged.
+Side effects to watch: no timeout (user chose to wait for everyone), so a roster member who never logs in keeps the leader standing; the leader does not decide (and so does not fight) while waiting at start. An exception in the rally skips it and leaves for the hunt.
+Consent: user (town rally at party start, on the leader's tile, wait for all; "이 범위로 진행").
+Result: implemented. `Others/tests/test_party_rally.py` passes. Not run in game.
+
+## 2026-10-20 — leader party invite types through the enter_chat module
+
+Intent: the leader's Start invite (`/파티 <name>`, `파티탈퇴` to leave) typed nothing or broke Hangul through the old `InputRouter` paste path. The tested `enter_chat` DLL now types each line: Hangul as 2-beolsik jamo keys through Interception and the Korean IME, other characters as `WM_CHAR`, Enter to open and send. No clipboard, no SendInput.
+Layout: native source + `bin/enter_chat.dll` in `Engine/analysis/enter_chat/`; Python output module `app._05_action.chat` (`native` binding, `handoff`, `sender.GameChat`); party lines in `app._06_party.chat_commands`; `app._06_party.setup` holds only the leave/invite flow and takes `send_line(line) -> bool`.
+Shared: `mouse.release_capture` / `prepare_capture` run around each typed line, because the DLL opens its own Interception context. Only `_run_leader_party_setup` sends chat; move, combat, HP, retreat, loot, login, and member logic are unchanged.
+Behaviour change: the first undelivered line (no LC window, focus, IME, elevation) is logged with the DLL status and stops the remaining invites. `send_game_chat` is removed.
+Side effects to watch: the bot holds no mouse/keyboard for about 1–2 s per line at leader Start; LC is brought to the foreground and the input language is switched to Korean for the line, then restored.
+Consent: user ("migrate this into this project as a new module for chatting, and use this in party logic to invite the members").
+Result: implemented. `Others/tests/test_game_chat.py` and `test_party_invite_setup.py` pass, including a real-DLL dry run (`/파티 번개공격` = 8 chars, 17 keys). Not run in game yet.
+
 ## 2026-10-20 — standalone party tactics package (not wired)
 
 Intent: add formation, movement, and focus-fire logic as independent modules under `Engine/app/_06_party/tactics/`: open-field vs narrow-dungeon classification, open-field fan slots with sight-line slot repair and pace, dungeon single-file trail with corner/lag hold for the leader, leader-jump regroup with staggered delays, focus-fire allocation with overkill prevention, and per-member volley delays. A random teleport scroll lands on a random tile, so regroup defaults to `rejoin`; repeated random teleport is opt-in for small maps.
