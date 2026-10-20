@@ -8,7 +8,7 @@ from settings.hp_actions import (
     normalize_hp_actions,
     sync_legacy_from_actions,
 )
-from settings.profile import Profile
+from settings.profile import Profile, normalize_party_roster
 from settings.schedule import ScheduleTask
 from i18n.strings import normalize_game_language
 
@@ -45,12 +45,17 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     changed: list[str] = []
 
     def set_value(name: str, value: Any) -> None:
+        # Only Profile-backed knobs (see docstring). Skip keys from newer bags
+        # that this Profile build does not define yet.
+        if not hasattr(profile, name):
+            return
         if getattr(profile, name) != value:
             setattr(profile, name, value)
             changed.append(name)
 
     move = task.settings.get("move", {})
     hunt = task.settings.get("hunt", {})
+    party = task.settings.get("party", {})
     recovery = task.settings.get("recovery", {})
     magic = task.settings.get("magic", {})
     equipment = task.settings.get("equipment", {})
@@ -117,6 +122,12 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     species_sort = str(hunt.get("species_sort", profile.species_sort))
     if species_sort in ("name", "level"):
         set_value("species_sort", species_sort)
+    attack_mode = str(
+        hunt.get("attack_mode", getattr(profile, "attack_mode", "magic")) or "magic"
+    ).strip().lower()
+    if attack_mode not in ("ranged", "magic", "melee"):
+        attack_mode = "magic"
+    set_value("attack_mode", attack_mode)
     set_value("attack_jitter", bool(hunt.get("attack_jitter", getattr(profile, "attack_jitter", False))))
     set_value(
         "attack_jitter_ms",
@@ -152,6 +163,145 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("haste_potion_item", haste_item)
     set_value("haste_potion_box", haste_box)
     set_value("haste_potion_key", haste_key)
+
+    # Party member (UI → profile). Leader comes from party_listen after join.
+    party_role = str(
+        party.get("role", getattr(profile, "party_role", "member")) or "member"
+    ).strip().lower()
+    if party_role not in ("member", "leader"):
+        party_role = "member"
+    set_value("party_role", party_role)
+    set_value(
+        "party_ws_port",
+        _int_range(
+            party.get("ws_port", getattr(profile, "party_ws_port", 8765)),
+            8765,
+            1,
+            65535,
+        ),
+    )
+    set_value(
+        "party_leader_host",
+        str(
+            party.get("leader_host", getattr(profile, "party_leader_host", "")) or ""
+        ).strip(),
+    )
+    # Master Party-tab switch (UI checkbox). Legacy profiles only had member_enabled.
+    party_master = party.get("enabled")
+    if party_master is None:
+        party_master = party.get(
+            "member_enabled",
+            getattr(
+                profile,
+                "party_enabled",
+                getattr(profile, "party_member_enabled", False),
+            ),
+        )
+    party_master = bool(party_master)
+    set_value("party_enabled", party_master)
+    # Member follow only when the master switch is on and this PC is a member.
+    # Leaders host the socket and farm solo — they never run the member brain.
+    party_on = bool(party_master and party_role != "leader")
+    set_value("party_member_enabled", party_on)
+    set_value("party_leader_name", "")
+    follow_raw = party.get("follow_tiles")
+    if follow_raw is None:
+        follow_raw = party.get(
+            "follow_start_tiles",
+            getattr(
+                profile,
+                "party_follow_tiles",
+                getattr(profile, "party_follow_start_tiles", 8),
+            ),
+        )
+    follow_tiles = _int_range(follow_raw, 8, 1, 40)
+    stop_raw = party.get("stop_tiles")
+    if stop_raw is None:
+        stop_raw = party.get(
+            "follow_stop_tiles",
+            getattr(
+                profile,
+                "party_stop_tiles",
+                getattr(profile, "party_follow_stop_tiles", 2),
+            ),
+        )
+    stop_tiles = _int_range(stop_raw, 2, 0, 40)
+    if stop_tiles > follow_tiles:
+        stop_tiles = follow_tiles
+    set_value("party_follow_tiles", follow_tiles)
+    set_value("party_stop_tiles", stop_tiles)
+    # Keep legacy fields mirrored so older readers stay consistent.
+    set_value("party_follow_start_tiles", follow_tiles)
+    set_value("party_follow_stop_tiles", stop_tiles)
+    set_value(
+        "party_assist_leash_tiles",
+        _int_range(
+            party.get(
+                "assist_leash_tiles",
+                getattr(profile, "party_assist_leash_tiles", 10),
+            ),
+            10,
+            1,
+            40,
+        ),
+    )
+    set_value(
+        "party_approach_tiles",
+        _int_range(
+            party.get(
+                "approach_tiles",
+                getattr(profile, "party_approach_tiles", 2),
+            ),
+            2,
+            1,
+            8,
+        ),
+    )
+    try:
+        potion_ratio = float(
+            party.get(
+                "potion_hp_ratio",
+                getattr(profile, "party_potion_hp_ratio", 0.45),
+            )
+        )
+    except (TypeError, ValueError):
+        potion_ratio = 0.45
+    # UI may store percent (45) or ratio (0.45).
+    if potion_ratio > 1.0:
+        potion_ratio = potion_ratio / 100.0
+    set_value("party_potion_hp_ratio", max(0.05, min(0.95, potion_ratio)))
+    set_value(
+        "party_random_loot",
+        bool(party.get("random_loot", getattr(profile, "party_random_loot", False))),
+    )
+    loot_role = str(
+        party.get("loot_role", getattr(profile, "party_loot_role", "none")) or "none"
+    ).strip().lower()
+    if loot_role not in ("none", "responsible"):
+        loot_role = "none"
+    set_value("party_loot_role", loot_role)
+    loot_priority = str(
+        party.get(
+            "loot_priority",
+            getattr(profile, "party_loot_priority", "follow"),
+        )
+        or "follow"
+    ).strip().lower()
+    if loot_priority not in ("follow", "loot"):
+        loot_priority = "follow"
+    set_value("party_loot_priority", loot_priority)
+    farm_mode = str(
+        party.get("farm_mode", getattr(profile, "party_farm_mode", "party")) or "party"
+    ).strip().lower()
+    if farm_mode not in ("party", "solo"):
+        farm_mode = "party"
+    set_value("party_farm_mode", farm_mode)
+    set_value(
+        "party_roster",
+        normalize_party_roster(
+            party.get("roster", getattr(profile, "party_roster", None))
+        ),
+    )
     use_antidote = bool(
         hunt.get("use_antidote_potion", getattr(profile, "use_antidote_potion", False))
     )

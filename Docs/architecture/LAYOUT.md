@@ -39,8 +39,9 @@ Engine/data/npc_behaviors.yaml   buy / sell / warehouse / teleporter catalog
 Engine/data/cursors/  cursor template PNGs
 Engine/data/world*/   world graph / transitions
 Engine/data/catalog/  skills / hotbar role map / icon catalog
+                        # + list/ (monster/item/spell dumps; was analysis/list)
                         # more calibration assets may move here (see USERDATA_POLICY.md)
-Engine/analysis/      memory DLLs + offsets
+Engine/analysis/      memory DLLs + offsets (no game list dumps)
 Engine/manmabot_v1/   DEPRECATED shim (raises ImportError)
 ```
 
@@ -68,7 +69,7 @@ Live bot starts SignedDriver through `session.monitor_launch.driver_script_path(
 
 ## Docs topics
 
-- `Docs/architecture/` — layout, `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`
+- `Docs/architecture/` — layout, `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`, `SENSOR_PRE_TIDY.md` (pre-sensor split; docs-only)
 - `Docs/decision/` — decision change log
 - `Docs/combat/` — combat design / CODEX notes
 - `Docs/prompt/` — master prompt + fragments

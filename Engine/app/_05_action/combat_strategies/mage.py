@@ -1,4 +1,4 @@
-"""Mage combat: spell key then click target (spell-range gated)."""
+"""Mage combat: find the attack (knife) cursor like elf, then cast there."""
 from __future__ import annotations
 
 import time
@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING
 from app._03_world.space.world_coords import in_mage_spell_range
 from app._05_action import humanize as hz
 from app._05_action.cursor_verify import (
-    mage_cast_click_search,
+    find_attack_aim_point,
+    mage_cast_at_point,
     object_attack_screen_points,
 )
 from app._05_action import spell_box as sb
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class MageCombatStrategy:
-    """Cast loop on every attack tick, throttled by ``MAGE_CAST_INTERVAL``."""
+    """Cast loop: knife-aim first (same ring as elf), then spell key + click."""
 
     def attack(
         self,
@@ -59,20 +60,40 @@ class MageCombatStrategy:
         if not in_mage_spell_range(target.position.x, target.position.y):
             return
 
+        # 1) Same body ring as elf — require attack cursor (arrow/fist/sword).
+        #    Do not press the spell key until the knife is on the monster.
         points = object_attack_screen_points(executor, target, bounds)
+        aim = find_attack_aim_point(
+            executor,
+            points,
+            target_id=action.target_id,
+            sticky=bool(mid_act),
+        )
+        if aim is None:
+            executor.last_cursor_reject_target_id = action.target_id
+            if not executor.last_cursor_reject_reason:
+                executor.last_cursor_reject_reason = "no attack cursor on target"
+            return
+
+        # 2) Spell key, then click that same pixel only when cursor is ``spell``.
         hold = (
             hz.uniform(hz.MAGE_KEY_HOLD, executor._rng)
             if executor.humanize
             else hz.MAGE_KEY_HOLD[0]
         )
         executor._press_assigned_skill("mage_attack", duration=hold)
-        if not mage_cast_click_search(
+        if not mage_cast_at_point(
             executor,
-            points,
+            aim[0],
+            aim[1],
             target_id=action.target_id,
-            sticky=bool(mid_act),
         ):
             executor.last_cursor_reject_target_id = action.target_id
-            return  # verify failed — skip click only
+            # Skill entered aim mode but no spell cursor — Esc cancels thrash.
+            try:
+                executor.keyboard.press("esc")
+            except Exception:
+                pass
+            return
         executor._mage_cast_gap = executor._sample_mage_gap()
         executor.last_cast_target_id = action.target_id

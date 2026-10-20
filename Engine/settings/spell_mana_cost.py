@@ -1,4 +1,4 @@
-"""Spell MP costs from analysis/list spell.json (name → consumables.mp)."""
+"""Spell MP costs from data/catalog/list spell.json (name → consumables.mp)."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
-_LIST_ROOT = Path(__file__).resolve().parents[1] / "analysis" / "list"
+_LIST_ROOT = Path(__file__).resolve().parents[1] / "data" / "catalog" / "list"
 _SPACE = re.compile(r"\s+")
 
 # When the live hotbar name is missing, resolve cost via these catalog names.

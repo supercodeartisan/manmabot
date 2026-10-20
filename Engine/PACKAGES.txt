@@ -4,7 +4,9 @@ app/         perception(read) → world(merge) → _02_state → decision → ac
              _01_perception = sensors API (tick + on-demand)
              _02_state = GameState/Player/WorldObject/geometry (data only)
              _03_world = merge only + space/catalog/debug
+             _04_decision = solo brain (farm / retreat / shop / world_nav)
              _05_action owns window geometry / preview grabs
+             _06_party = party member brain (follow / assist leader; not solo columns)
 session/     run lifecycle (BotController, paths, probes, drivers)
 settings/    UserData profile/schedule/accounts/overlays
 shop/        live shopping (not Tools/shopping editors)

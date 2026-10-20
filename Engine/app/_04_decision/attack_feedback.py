@@ -278,8 +278,16 @@ def evaluate_attack_probes(state: "GameState", blackboard: "Blackboard") -> None
     player = state.player
     # Mage: after a cast, MP must drop within ATTACK_MP_UNCHANGED_TICKS
     # attack ticks; else treat as a fake target.
+    spell_aim = True
+    try:
+        from app._04_decision import player_mode as pm
+
+        spell_aim = bool(pm.uses_spell_aim())
+    except Exception:
+        spell_aim = True
     if (
-        blackboard.attack_probe_awaiting_mp
+        spell_aim
+        and blackboard.attack_probe_awaiting_mp
         and player is not None
         and player.character_type is CharacterType.MAGE
         and blackboard.attack_probe_mp_before is not None

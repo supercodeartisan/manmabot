@@ -52,6 +52,7 @@ class GameState:
         self.last_hotbar: dict[str, Any] | None = None
         self.last_buff: dict[str, Any] | None = None
         self.last_uidialog: dict[str, Any] | None = None
+        self.last_party: dict[str, Any] | None = None
         self.last_perception_buffer: Any | None = None
         # MapSubsystem mapId for which ``attacked_me`` latches were armed.
         self.attacked_me_map_id: int | None = None
