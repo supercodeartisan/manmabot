@@ -1759,10 +1759,10 @@ class UnifiedTaskEditor(ttk.Frame):
         self._refresh_routine_summary()
 
     def _load_map_catalog(self) -> None:
-        from ui.hangul_sort import hangul_sort_key
+        from ui.hangul_sort import map_choice_sort_key
 
         choices = list(list_map_choices(self.app.language))
-        choices.sort(key=lambda item: hangul_sort_key(item[1]))
+        choices.sort(key=map_choice_sort_key)
         self._map_choices = choices
         self._map_labels = {map_id: label for map_id, label, _dungeon in choices}
         self._map_ids = {label: map_id for map_id, label, _dungeon in choices}

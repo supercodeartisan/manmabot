@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import heapq
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -198,6 +199,9 @@ class WalkService:
         self._packs: dict[int, MapPack] = {}
         self._grids: dict[int, WalkGrid | None] = {}
         self._cache: dict[tuple[int, int, int, int, int], WalkResult] = {}
+        self._labels: dict[int, dict[tuple[int, int], int]] = {}
+        self._closed: dict[int, bool] = {}
+        self._next_comp = 1
         if packs is not None:
             self.set_packs(packs)
         else:
@@ -207,6 +211,9 @@ class WalkService:
         self._packs = {p.map_id: p for p in packs}
         self._grids.clear()
         self._cache.clear()
+        self._labels.clear()
+        self._closed.clear()
+        self._next_comp = 1
 
     def _grid(self, map_id: int) -> WalkGrid | None:
         if map_id in self._grids:
@@ -258,3 +265,72 @@ class WalkService:
         res = WalkResult(ok=True, cost=cost, path_world=world_path)
         self._cache[key] = res
         return res
+
+    def same_component(
+        self,
+        map_id: int,
+        x0: int,
+        y0: int,
+        x1: int,
+        y1: int,
+        *,
+        cap: int = 80000,
+    ) -> bool:
+        """True when a one-tile walk can exist between the two cells.
+
+        A walled yard is closed once its cells are all visited, so a cell
+        outside that yard is not the same walk. A large field stops at
+        ``cap`` and stays possible; the later A* still checks that walk.
+        """
+        grid = self._grid(map_id)
+        if grid is None:
+            return True
+        start = grid.snap_walkable(*grid.world_to_nav(x0, y0))
+        goal = grid.snap_walkable(*grid.world_to_nav(x1, y1))
+        if start is None or goal is None:
+            return False
+        if start == goal:
+            return True
+        labels = self._labels.setdefault(map_id, {})
+        start_id = labels.get(start)
+        goal_id = labels.get(goal)
+        if start_id is not None and goal_id is not None:
+            return start_id == goal_id
+        if start_id is not None and goal_id is None and self._closed.get(start_id):
+            return False
+        if goal_id is not None and start_id is None and self._closed.get(goal_id):
+            return False
+        if start_id is None:
+            origin, target = start, goal
+        else:
+            origin, target = goal, start
+        comp = self._next_comp
+        self._next_comp += 1
+        pending: deque[tuple[int, int]] = deque([origin])
+        labels[origin] = comp
+        seen = 0
+        while pending:
+            x, y = pending.popleft()
+            seen += 1
+            if (x, y) == target or labels.get(target) == comp:
+                return True
+            if seen >= cap:
+                return True
+            for dx, dy in _NEIGHBORS:
+                nx, ny = x + dx, y + dy
+                if not grid.is_walkable(nx, ny):
+                    continue
+                if dx != 0 and dy != 0:
+                    if not grid.is_walkable(x + dx, y) and not grid.is_walkable(x, y + dy):
+                        continue
+                prev = labels.get((nx, ny))
+                if prev is None:
+                    labels[(nx, ny)] = comp
+                    pending.append((nx, ny))
+                    continue
+                if prev == comp:
+                    continue
+                if labels.get(target) == prev:
+                    return True
+        self._closed[comp] = True
+        return labels.get(target) == comp

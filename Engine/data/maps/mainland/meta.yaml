@@ -2,6 +2,8 @@
 # Active terrain: nav.png (fence_bw display, pixel_scale 4). Unused images under legacy/.
 id: mainland
 name: "Main Land"
+# MapSubsystem mapId. The floor list names this pack 아덴 대륙.
+raw_map: "4"
 origin_x: 32448
 origin_y: 32128
 pixel_scale: 4

@@ -34,6 +34,15 @@ def map_id_to_pack_id(map_id: int) -> Optional[str]:
     return None
 
 
+def pack_for_map_id(map_id: int):
+    """First discovered pack whose numeric mapId is ``map_id``. None if unmapped."""
+    mid = int(map_id)
+    for pack in _packs():
+        if int(pack.map_id) == mid:
+            return pack
+    return None
+
+
 def pack_origin(pack_id: str) -> Optional[tuple[int, int]]:
     key = str(pack_id or "").strip()
     for pack in _packs():

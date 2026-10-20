@@ -66,6 +66,10 @@ class DecisionManager:
         )
         with span("farm presence"):
             sample_farm_presence(self.blackboard)
+        from app._04_decision.world_nav.routine import sample_routine_zone_clock
+
+        with span("routine clock"):
+            sample_routine_zone_clock(self.blackboard)
 
         from app._04_decision.species_rules import sync_sleeping_golem_hazards
 
@@ -114,6 +118,8 @@ class DecisionManager:
             )
         self._log_decision(status, intent)
         self._log_new_legs(legs_before)
+        # The tick may have crossed into the hunt zone after the opening sample.
+        sample_routine_zone_clock(self.blackboard)
         return intent
 
     def _no_intent_reason(self, status: Status, handoffs: list[str]) -> str:

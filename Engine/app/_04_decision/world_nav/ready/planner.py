@@ -273,6 +273,11 @@ class WorldNavPlanner:
                     walk_skipped += 1
                     continue
                 w = _cheb(u, v)
+                # Chebyshev crosses a wall. A yard that ends before the
+                # other cell is not a walk, so the search keeps the door.
+                if not self.walk.same_component(u[0], u[1], u[2], v[1], v[2]):
+                    walk_fail += 1
+                    continue
                 walk_ok += 1
                 nc = cost + w
                 if nc < dist.get(v, 10**18):

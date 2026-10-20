@@ -8,7 +8,7 @@ from typing import Any
 
 from settings.farm_schedule import MAX_ROUTINE_MINUTES, normalize_routine, routine_is_break_only
 from session.probes import list_farms_for_map, list_map_choices, list_patrol_entries
-from ui.hangul_sort import hangul_sort_key
+from ui.hangul_sort import map_choice_sort_key
 
 _FARM_MAP_IDS = frozenset({"talking_island", "mainland"})
 
@@ -27,8 +27,8 @@ class RoutineViewModel:
 
     def reload_catalog(self) -> None:
         choices = list(list_map_choices(self.language))
-        # Pickers show display names — order by Korean jamo, not pack id.
-        choices.sort(key=lambda item: hangul_sort_key(item[1]))
+        # Talking Island and Mainland stay first; the rest follow Korean jamo.
+        choices.sort(key=map_choice_sort_key)
         self._map_choices = choices
         self._map_labels = {map_id: label for map_id, label, _flag in choices}
         self._map_dungeon = {map_id: bool(flag) for map_id, _label, flag in choices}

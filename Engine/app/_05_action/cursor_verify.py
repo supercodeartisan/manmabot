@@ -852,6 +852,32 @@ def click_closed_door(executor: "ActionExecutor", x: float, y: float) -> bool:
     return True
 
 
+def sweep_click_closed_door(
+    executor: "ActionExecutor",
+    cx: float,
+    cy: float,
+    client_h: float,
+) -> bool:
+    """Hover the door cell, then the entrance rings, and click the first door cursor.
+
+    One pass and one click. The click is not repeated, so the opened door stays open.
+    """
+    from app._04_decision.world_nav.gate import _gate_circle_samples
+
+    samples, _turn = _gate_circle_samples(float(cx), float(cy), float(client_h))
+    points = [(float(cx), float(cy))]
+    points.extend((float(sx), float(sy)) for sx, sy, _r, _ang in samples)
+    for x, y in points:
+        try:
+            executor.mouse.move(x, y, snap=True)
+        except Exception:
+            return False
+        if click_closed_door(executor, x, y):
+            return True
+        time.sleep(0.02)
+    return False
+
+
 def travel_click(executor: "ActionExecutor", x: float, y: float) -> bool:
     """Ground hop: require NORMAL cursor (not attack / dialog / door).
 
@@ -907,5 +933,6 @@ __all__ = [
     "dialog_click_destinations",
     "npc_search_screen_points",
     "click_closed_door",
+    "sweep_click_closed_door",
     "travel_click",
 ]

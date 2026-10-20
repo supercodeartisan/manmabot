@@ -24,10 +24,12 @@ GIVE_UP_COOLDOWN_SECONDS = 4.0
 STICKY_REBIND_TILES = 2
 # Same world tile after this many attack clicks. Living sticky is not dropped.
 ATTACK_STILL_TRIES = 5
-# Exp rise releases the sticky kill. Off until the kill signal is trusted.
-EXP_KILL_RELEASE_ENABLED = False
+# Exp rise releases the sticky kill while the corpse row can still be listed.
+EXP_KILL_RELEASE_ENABLED = True
 SCRATCH_STILL_TILE = "attack_still_tile"
 SCRATCH_STILL_TRIES = "attack_still_tries"
+# Executor drops ``_attack_aim_lock`` for this id on the next execute.
+SCRATCH_DROP_ATTACK_AIM = "drop_attack_aim_lock"
 
 
 def _strip_species_key(text: str) -> str:
@@ -551,7 +553,9 @@ def _release_sticky_for_kill(state: "GameState", blackboard: "Blackboard") -> No
     log_sticky_release(state, blackboard, "exp")
     _clear_finish_kill(state, blackboard, tid)
     if tid is not None:
-        blackboard.exp_kill_ids.add(int(tid))
+        released = int(tid)
+        blackboard.exp_kill_ids.add(released)
+        blackboard.scratch[SCRATCH_DROP_ATTACK_AIM] = released
     blackboard.current_target_id = None
     clear_engage_state(blackboard)
 
@@ -560,11 +564,11 @@ def sample_kill_progress(state: "GameState", blackboard: "Blackboard") -> None:
     """Compare this tick's (level, exp) with the previous tick.
 
     A rise while a sticky target is held means that monster was killed.
-    The lock is cleared immediately. That id stays unselectable until it
-    leaves the monster list, so a corpse still marked alive is not clicked
-    again. The first pair, a missing read, and a source change only update
-    the stored pair. While ``EXP_KILL_RELEASE_ENABLED`` is false a rise is
-    logged and the lock stays.
+    The lock is cleared immediately, before rebind. That id stays
+    unselectable until it leaves the monster list, so a corpse still
+    marked alive is not clicked again. The action layer drops that id's
+    ``_attack_aim_lock`` on the same tick. The first pair, a missing read,
+    and a source change only update the stored pair.
     """
     from app.bot_log import event, get_logger
 

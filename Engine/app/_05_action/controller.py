@@ -238,6 +238,42 @@ class ActionExecutor:
                 continue
             self._loot(side, game_state, bounds)
 
+    def _drop_killed_attack_aim(self) -> None:
+        """Drop the corpse pixel lock after an exp-kill sticky release.
+
+        ``sample_kill_progress`` runs before this execute. The released id
+        stays in ``exp_kill_ids`` until that row leaves the monster list, so
+        a later sticky click cannot reuse ``_attack_aim_lock``.
+        """
+        bb = self._blackboard
+        if bb is None:
+            return
+        ids: set[int] = set()
+        scratch = getattr(bb, "scratch", None)
+        if isinstance(scratch, dict):
+            from app._04_decision.behaviors.combat import SCRATCH_DROP_ATTACK_AIM
+
+            raw = scratch.pop(SCRATCH_DROP_ATTACK_AIM, None)
+            if raw is not None:
+                try:
+                    ids.add(int(raw))
+                except (TypeError, ValueError):
+                    pass
+        for raw in getattr(bb, "exp_kill_ids", ()) or ():
+            try:
+                ids.add(int(raw))
+            except (TypeError, ValueError):
+                continue
+        lock = self._attack_aim_lock
+        if not ids or not isinstance(lock, tuple) or not lock:
+            return
+        try:
+            locked = int(lock[0])
+        except (TypeError, ValueError):
+            return
+        if locked in ids:
+            self._attack_aim_lock = None
+
     def execute(
         self,
         game_state: WorldState,
@@ -258,6 +294,7 @@ class ActionExecutor:
         """
         self._world = game_state
         self._blackboard = blackboard
+        self._drop_killed_attack_aim()
         self.last_cast_target_id = None
         self.last_attack_target_id = None
         self.last_loot_target_id = None
@@ -767,12 +804,17 @@ class ActionExecutor:
         if action.destination is None:
             return
         from app._05_action.cursor_catalog import CursorCategory
-        from app._05_action.cursor_verify import click_closed_door, travel_click
+        from app._05_action.cursor_verify import (
+            click_closed_door,
+            sweep_click_closed_door,
+            travel_click,
+        )
         from app._05_action.travel_click import (
             content_destinations_ring,
             relative_tile_of_content,
         )
         from app._04_decision.doors import (
+            closed_door_before_click,
             cursor_on_door_action,
             door_state_at,
             door_state_near,
@@ -802,6 +844,42 @@ class ActionExecutor:
             dests = self._clear_ring_points(
                 dests, WorldOrigin(x=int(pinned[0]), y=int(pinned[1]))
             )
+            if dests:
+                from app._04_decision.pathfinding import waypoint_to_content
+
+                rel0 = relative_tile_of_content(dests[0])
+                click_tile = (
+                    int(pinned[0]) + int(rel0[0]),
+                    int(pinned[1]) + int(rel0[1]),
+                )
+                guide = (
+                    list(getattr(self._blackboard, "nav_path", None) or [])
+                    if self._blackboard is not None
+                    else []
+                )
+                door_tile = closed_door_before_click(guide, pinned, click_tile)
+                if door_tile is not None:
+                    content = waypoint_to_content(
+                        door_tile,
+                        WorldOrigin(x=int(pinned[0]), y=int(pinned[1])),
+                    )
+                    sx, sy = self._screen_point(content.x, content.y, bounds)
+                    client_h = float(getattr(bounds, "height", 600) or 600)
+                    if sweep_click_closed_door(self, sx, sy, client_h):
+                        self.last_travel_click_relative = (
+                            int(door_tile[0]) - int(pinned[0]),
+                            int(door_tile[1]) - int(pinned[1]),
+                        )
+                        self.last_travel_cursor_stats = {
+                            "ok": True,
+                            "probes": 1,
+                            "dialog_seen": 0,
+                            "labels_seen": ["door"],
+                            "click_label": "door",
+                            "door": "close",
+                            "intent_reason": str(getattr(action, "reason", "") or ""),
+                        }
+                        return
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
