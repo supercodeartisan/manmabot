@@ -34,13 +34,41 @@ TELEPORTER_META_COST_TILES = 15
 NEAR_ENTRANCE_NO_TELEPORTER_TILES = 50
 
 
+_behaviors_cache: tuple[int, list[Any]] | None = None
+
+
+def _cached_behaviors() -> list[Any]:
+    """NPC catalog for planning. Reread only when the yaml file changes."""
+    global _behaviors_cache
+    from shop.behaviors import BEHAVIORS_PATH, load_behaviors
+
+    try:
+        stamp = int(BEHAVIORS_PATH.stat().st_mtime_ns)
+    except OSError:
+        stamp = -1
+    if _behaviors_cache is not None and _behaviors_cache[0] == stamp:
+        return _behaviors_cache[1]
+    rows = load_behaviors()
+    try:
+        stamp = int(BEHAVIORS_PATH.stat().st_mtime_ns)
+    except OSError:
+        stamp = -1
+    _behaviors_cache = (stamp, rows)
+    return rows
+
+
+def warm_teleporter_catalog() -> None:
+    """Read the NPC catalog once, before a route asks for teleporter links."""
+    _cached_behaviors()
+
+
 def list_world_nav_teleporter_base_ids(
     catalog: Iterable[Any] | None = None,
 ) -> tuple[str, ...]:
     """Korean (non-``_ch``) teleporter ids with ``world_nav`` enabled."""
-    from shop.behaviors import ACTION_TELEPORTER, load_behaviors
+    from shop.behaviors import ACTION_TELEPORTER
 
-    rows = catalog if catalog is not None else load_behaviors()
+    rows = catalog if catalog is not None else _cached_behaviors()
     out: list[str] = []
     seen: set[str] = set()
     for b in rows:
@@ -127,16 +155,16 @@ def load_npc_teleporter_links(
     ``adena``: when set, skip links whose fare exceeds current adena.
     Behaviors with ``destination_dungeon == 0`` are skipped.
     """
-    from shop.behaviors import ACTION_TELEPORTER, behavior_by_id, load_behaviors
+    from shop.behaviors import ACTION_TELEPORTER, behavior_by_id
 
     from . import pack_ids
 
+    catalog = _cached_behaviors()
     want = (
         behavior_ids
         if behavior_ids is not None
         else resolve_world_nav_teleporter_ids()
     )
-    catalog = load_behaviors()
     npcs: list[tuple[Any, int, int, int, int]] = []
     for bid in sorted(want):
         b = behavior_by_id(bid, catalog)

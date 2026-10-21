@@ -12290,7 +12290,7 @@
     },
     {
       "id": "tmo:23:1",
-      "kind": "passage",
+      "kind": "floor_ladder",
       "cross_map": true,
       "from": {
         "mapId": 23,
@@ -12315,7 +12315,7 @@
       "meta": {
         "portal_id": "23:1",
         "portal_name": "toWW",
-        "category": "dungeon passage link",
+        "category": "dungeon floor change",
         "source": "10_3_data/portals_all.csv",
         "pc_clone": false,
         "world_nav_match": null
@@ -12620,7 +12620,7 @@
     },
     {
       "id": "tmo:29:1",
-      "kind": "passage",
+      "kind": "floor_ladder",
       "cross_map": true,
       "from": {
         "mapId": 29,
@@ -12645,7 +12645,7 @@
       "meta": {
         "portal_id": "29:1",
         "portal_name": "to23",
-        "category": "dungeon passage link",
+        "category": "dungeon floor change",
         "source": "10_3_data/portals_all.csv",
         "pc_clone": false,
         "world_nav_match": null

@@ -1,6 +1,6 @@
 """Live body action at ActionComponent+0xC0, and the command at +0x58.
 
-Standing is BreathAction (0x11E02F8). A failed read is None, not standing.
+Standing is BreathAction (0x11EB4D8, bodyact VFT_BREATHACT). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
 CharacterData status used when that decode succeeds. Level uses that same
 status (LEVEL), then the HUD ST_LEVEL. Exp percent is the module f64
@@ -15,29 +15,26 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-BREATH_VFT = 0x11E02F8
-MOVE_VFTS = frozenset({0x11E0590, 0x11E0548})  # MovingAction, MovingBackAction
+BREATH_VFT = 0x11EB4D8
+MOVE_VFTS = frozenset({0x11EB7B8, 0x11EB770})  # MovingAction, MovingBackAction
 BODY = {
-    0x11E02F8: "stand",
-    0x11E0590: "walk",
-    0x11E04A8: "attack",
-    0x11E04F0: "actionbase",
-    0x11E0220: "turn",
-    0x11E0190: "default",
-    0x11E03D0: "spell",
-    0x11E0340: "death",
-    0x11E0418: "damaged",
-    0x11E01D8: "shop",
-    0x11E0548: "walkback",
-    0x11E02B0: "effect",
-    0x11E0148: "fixedframe",
-    0x11E0388: "npcstate",
-    0x11E0268: "zapwand",
+    0x11EB4D8: "stand",
+    0x11EB7B8: "walk",
+    0x11EB770: "walkback",
+    0x11EB490: "attack",
+    0x11EB718: "actionbase",
+    0x11EB5B0: "turn",
+    0x11EB3B8: "spell",
+    0x11EB400: "death",
+    0x11EB568: "death",
+    0x11EB448: "damaged",
+    0x11EB520: "damaged",
+    0x11EB370: "effect",
 }
 CMD = {
-    0x11E0830: "move",
-    0x11E09B0: "attack",
-    0x11E0868: "interact",
+    0x11EBA50: "move",
+    0x11EBBD0: "attack",
+    0x11EBA88: "interact",
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -145,8 +142,63 @@ def _module_base(pid: int) -> tuple[int, int]:
     return 0, 0
 
 
+# Entity list that owns MyPlayer. entity_offsets.txt overrides these.
+# The walk/stand class numbers above are not enough: this chain is how the
+# body slot is found. A stale manager or MyPlayer id makes every read fail.
+_FIND = {
+    "MGR": 0x16ED640,
+    "ACTOR_VFT": 0x11E9430,
+    "MY_PLAYER": 0x11EC4C8,
+}
+_find_ready = False
+
+
+def _load_find() -> None:
+    """Manager, actor list, and MyPlayer id from the live entity table."""
+    global _find_ready
+    if _find_ready:
+        return
+    path = Path(__file__).resolve().parents[2] / "analysis" / "entities" / "entity_offsets.txt"
+    if path.is_file():
+        classes = ""
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            text = line.strip()
+            if not text or text.startswith("#") or "=" not in text:
+                continue
+            key, raw = text.split("=", 1)
+            key = key.strip()
+            raw = raw.strip()
+            if key == "CLASSES":
+                classes = raw
+                continue
+            if key not in ("MGR", "ACTOR_VFT"):
+                continue
+            try:
+                _FIND[key] = int(raw, 0)
+            except ValueError:
+                continue
+        for part in classes.split(","):
+            rva, _, name = part.partition(":")
+            if name.strip() != "MyPlayer":
+                continue
+            try:
+                _FIND["MY_PLAYER"] = int(rva.strip(), 16)
+            except ValueError:
+                pass
+            break
+    _find_ready = True
+
+
+def _is_my_player(ent: int) -> bool:
+    if not _heap(ent) or _vrva(ent) != _FIND["MY_PLAYER"]:
+        return False
+    # Live entity rows are self-referential at +8.
+    return _q(_pid, ent + 8) == ent
+
+
 def _find_my_player() -> int:
-    mgr = _q(_pid, _base + 0x16DEE80)
+    _load_find()
+    mgr = _q(_pid, _base + _FIND["MGR"])
     if not _heap(mgr):
         return 0
     holder = _q(_pid, mgr + 0xD0)
@@ -160,7 +212,7 @@ def _find_my_player() -> int:
     count = min(64, (end - beg) // 16)
     for index in range(count):
         sub = _q(_pid, beg + index * 16)
-        if _heap(sub) and _vrva(sub) == 0x11DE3B8:
+        if _heap(sub) and _vrva(sub) == _FIND["ACTOR_VFT"]:
             actor = sub
             break
     if not actor:
@@ -170,7 +222,7 @@ def _find_my_player() -> int:
     if _heap(vb) and ve > vb and (ve - vb) < 0x200000:
         for index in range(min(8000, (ve - vb) // 16)):
             ent = _q(_pid, vb + index * 16)
-            if _heap(ent) and _vrva(ent) == 0x11E12A8:
+            if _is_my_player(ent):
                 return ent
     for head in (0x798, 0x7D8):
         sent = _q(_pid, actor + head + 8)
@@ -185,7 +237,7 @@ def _find_my_player() -> int:
             if _heap(b) and _heap(e) and e >= b:
                 for index in range(min(5000, (e - b) // 8)):
                     ent = _q(_pid, b + index * 8)
-                    if _heap(ent) and _vrva(ent) == 0x11E12A8:
+                    if _is_my_player(ent):
                         return ent
             cur = _q(_pid, cur + 0x08)
     return 0
@@ -213,7 +265,8 @@ def read_action() -> tuple[int | None, int | None]:
     global _me
     if not _ensure():
         return None, None
-    if not _me or _vrva(_me) != 0x11E12A8:
+    _load_find()
+    if not _me or _vrva(_me) != _FIND["MY_PLAYER"]:
         _me = _find_my_player()
     if not _me:
         return None, None

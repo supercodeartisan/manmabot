@@ -113,6 +113,110 @@ def _near_tile(blackboard: "Blackboard", tile: tuple[int, int]) -> bool:
     return bool(terrain.can_step(ox, oy, int(tile[0]), int(tile[1])))
 
 
+def _route_anchor(tiles: list[tuple[int, int]], px: int, py: int) -> int:
+    """Guide index of the live tile, or the nearest guide tile."""
+    here = (int(px), int(py))
+    for index, tile in enumerate(tiles):
+        if tile == here:
+            return index
+    best_i = 0
+    best_d = 10**9
+    for index, (x, y) in enumerate(tiles):
+        dist = max(abs(x - px), abs(y - py))
+        if dist < best_d:
+            best_d = dist
+            best_i = index
+    return best_i
+
+
+def _route_cell_clickable(
+    terrain: object,
+    origin: object,
+    start: tuple[int, int],
+    tile: tuple[int, int],
+    bodies: set[tuple[int, int]],
+    hop: int,
+) -> bool:
+    """True when a click from the live tile walks this route cell."""
+    from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
+    from app._04_decision.avoidance import click_clear
+
+    if tile_chebyshev(start[0], start[1], tile[0], tile[1]) > int(hop):
+        return False
+    if not terrain.is_walkable(tile[0], tile[1]):
+        return False
+    rx, ry = absolute_to_relative(tile[0], tile[1], origin)
+    if not in_battle_click_region(rx, ry):
+        return False
+    return click_clear(terrain, bodies, start, tile)
+
+
+def _next_route_click(
+    terrain: object,
+    origin: object,
+    guide: list[tuple[int, int]],
+    goal: tuple[int, int] | None,
+    bodies: set[tuple[int, int]],
+    *,
+    max_hop: int,
+) -> tuple[int, int] | None:
+    """Farthest route cell the live tile can click without leaving the path.
+
+    The scan stops at the first cell whose client walk hits a wall, a fence,
+    or a body, and keeps the last cell that was still clear. A closed door is
+    the click. An open door's click is the tile just past the doorway. Cells
+    past the goal are left out.
+    """
+    from app._04_decision.doors import door_state_at
+
+    if not guide:
+        return None
+    tiles = [(int(x), int(y)) for x, y in guide]
+    px, py = int(origin.x), int(origin.y)
+    start = (px, py)
+    anchor = _route_anchor(tiles, px, py)
+    goal_at: int | None = None
+    if goal is not None:
+        goal_tile = (int(goal[0]), int(goal[1]))
+        for index, tile in enumerate(tiles):
+            if tile == goal_tile and index >= anchor:
+                goal_at = index
+                break
+    hop = int(max_hop)
+    best: tuple[int, int] | None = None
+    index = anchor + 1
+    while index < len(tiles):
+        if goal_at is not None and index > goal_at:
+            break
+        tile = tiles[index]
+        state = door_state_at(tile[0], tile[1])
+        if state == "close":
+            if _route_cell_clickable(terrain, origin, start, tile, bodies, hop):
+                best = tile
+            break
+        if state == "open":
+            beyond: tuple[int, int] | None = None
+            for follow in tiles[index + 1 :]:
+                if door_state_at(follow[0], follow[1]) == "open":
+                    continue
+                beyond = follow
+                break
+            if beyond is not None and _route_cell_clickable(
+                terrain, origin, start, beyond, bodies, hop + 1
+            ):
+                best = beyond
+            break
+        if not _route_cell_clickable(terrain, origin, start, tile, bodies, hop):
+            break
+        best = tile
+        if goal_at is not None and index == goal_at:
+            break
+        index += 1
+    if best == start:
+        return None
+    return best
+
+
 def _client_line_continues(
     start: tuple[int, int],
     waypoint: tuple[int, int],
@@ -122,6 +226,7 @@ def _client_line_continues(
 
     ``game_client_walk_tiles`` is diagonal first, then the leftover axis.
     The step into W and the step out of W must be the same vector.
+    Field travel uses this. Dungeon travel follows the route cell instead.
     """
     from app._04_decision.pathfinding import game_client_walk_tiles
 
@@ -150,8 +255,8 @@ def _straight_extend_waypoint(
 ) -> tuple[int, int] | None:
     """Farthest guide tile past the current click that stays on the same line.
 
-    The hop cap, click region, and arrival radius are unchanged. An open door
-    or the final goal ends the scan so those hops still use the existing click.
+    Field travel only. The hop cap, click region, and arrival radius are
+    unchanged. An open door or the final goal ends the scan.
     """
     from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
     from app._04_decision.avoidance import click_clear, travel_max_hop
@@ -202,6 +307,43 @@ def _straight_extend_waypoint(
     if best == current:
         return None
     return best
+
+
+def _chain_route_click(
+    blackboard: "Blackboard",
+    terrain: object,
+    state: object | None,
+    waypoint: tuple[int, int],
+) -> tuple[int, int] | None:
+    """Next dungeon route click from the live tile, or None to keep ``waypoint``.
+
+    A sidestep that is off the guide is kept until a route cell is clear again.
+    Field travel does not call this.
+    """
+    from app._04_decision.avoidance import collect_body_tiles, travel_max_hop
+    from app._04_decision.doors import refresh_live_doors
+
+    origin = blackboard.world_origin
+    guide = [(int(x), int(y)) for x, y in blackboard.nav_path]
+    if not guide:
+        return None
+    snap = getattr(state, "last_print_state", None) if state is not None else None
+    if isinstance(snap, dict):
+        refresh_live_doors(snap)
+    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    goal = blackboard.nav_goal
+    nxt = _next_route_click(
+        terrain,
+        origin,
+        guide,
+        (int(goal[0]), int(goal[1])) if goal is not None else None,
+        bodies,
+        max_hop=int(travel_max_hop()),
+    )
+    current = (int(waypoint[0]), int(waypoint[1]))
+    if nxt is None or nxt == current:
+        return None
+    return nxt
 
 
 def _reset_stuck(blackboard: "Blackboard") -> None:
@@ -683,10 +825,37 @@ def emit_travel_hop(
         blackboard.scratch["travel_hop_miss"] = miss
         return False
 
-    # Active hop: wait near waypoint (or unstick tile).
+    # Active hop. Dungeon chains the next clear route cell while walking.
+    # Field still extends only along a straight line, two tiles before arrival.
     if blackboard.travel_hop_active and blackboard.nav_waypoint is not None:
-        wp = blackboard.nav_waypoint
-        if _near_tile(blackboard, wp):
+        wp = (int(blackboard.nav_waypoint[0]), int(blackboard.nav_waypoint[1]))
+        from app._04_decision.dungeon import is_dungeon_map
+        from app._04_decision.mode_control import PURPOSE_ENTER_FARM
+
+        if is_dungeon_map():
+            chained = None
+            if not blackboard.travel_unstick_active:
+                chained = _chain_route_click(blackboard, terrain, state, wp)
+            if chained is not None:
+                from app.bot_log import event
+
+                event(
+                    "travel",
+                    "hop chain wp=%s -> %s purpose=%s",
+                    wp,
+                    chained,
+                    blackboard.travel_purpose,
+                )
+                _emit_click(
+                    blackboard,
+                    content=waypoint_to_content(chained, blackboard.world_origin),
+                    waypoint=chained,
+                    reason=reason,
+                    priority=priority,
+                    mid_act=False,
+                )
+                return True
+        elif _near_tile(blackboard, wp):
             from app.bot_log import event
 
             event(
@@ -702,22 +871,18 @@ def emit_travel_hop(
             if travel_arrived(blackboard):
                 blackboard.scratch["travel_hop_miss"] = "hop_arrive_final"
                 return False
-            # Fall through to plan the next hop this tick.
+            # Fall through and plan the next field hop this tick.
         else:
-            from app._04_decision.mode_control import PURPOSE_ENTER_FARM
             from app._05_action.body_pose import body_is_moving
 
-            # Straight line only: while still walking, and one tile before
-            # today's arrival, click a farther tile on that same line.
-            # Corners, doors, and the final goal fall through unchanged.
             if (
                 body_is_moving() is True
                 and not blackboard.travel_unstick_active
                 and tile_chebyshev(
                     int(blackboard.world_origin.x),
                     int(blackboard.world_origin.y),
-                    int(wp[0]),
-                    int(wp[1]),
+                    wp[0],
+                    wp[1],
                 )
                 == 2
             ):
@@ -751,6 +916,7 @@ def emit_travel_hop(
                     )
                     return True
 
+        if is_dungeon_map() or not _near_tile(blackboard, wp):
             _ticks, elapsed = _stuck_sample(blackboard)
             if try_movement_unstick(
                 blackboard,

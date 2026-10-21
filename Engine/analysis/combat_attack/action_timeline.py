@@ -14,26 +14,23 @@ SECONDS = 300
 POLL_S = 0.02
 
 BODY = {
-    0x11E02F8: "stand",
-    0x11E0590: "walk",
-    0x11E04A8: "attack",
-    0x11E04F0: "actionbase",
-    0x11E0220: "turn",
-    0x11E0190: "default",
-    0x11E03D0: "spell",
-    0x11E0340: "death",
-    0x11E0418: "damaged",
-    0x11E01D8: "shop",
-    0x11E0548: "walkback",
-    0x11E02B0: "effect",
-    0x11E0148: "fixedframe",
-    0x11E0388: "npcstate",
-    0x11E0268: "zapwand",
+    0x11EB4D8: "stand",
+    0x11EB7B8: "walk",
+    0x11EB770: "walkback",
+    0x11EB490: "attack",
+    0x11EB718: "actionbase",
+    0x11EB5B0: "turn",
+    0x11EB3B8: "spell",
+    0x11EB400: "death",
+    0x11EB568: "death",
+    0x11EB448: "damaged",
+    0x11EB520: "damaged",
+    0x11EB370: "effect",
 }
 CMD = {
-    0x11E0830: "move",
-    0x11E09B0: "attack",
-    0x11E0868: "interact",
+    0x11EBA50: "move",
+    0x11EBBD0: "attack",
+    0x11EBA88: "interact",
 }
 
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)

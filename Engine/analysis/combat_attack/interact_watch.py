@@ -15,29 +15,26 @@ SECONDS = 90
 POLL_S = 0.015
 
 NAMES = {
-    0x11E0830: "MoveCommand",
-    0x11E0868: "InteractCommand",
-    0x11E09B0: "AttackCommand",
-    0x11E0980: "ActorController",
-    0x11E02F8: "BreathAction",
-    0x11E0590: "MovingAction",
-    0x11E04A8: "AttackAction",
-    0x11E0190: "DefaultAction",
-    0x11E01D8: "ShopAction",
-    0x11E03D0: "SpellAction",
-    0x11E0418: "DamagedAction",
-    0x11E0340: "DeathAction",
-    0x11E0548: "MovingBackAction",
-    0x11E0220: "ChangeDirection",
-    0x11E02B0: "EffectAction",
-    0x11E0148: "FixedLastFrameAction",
-    0x11E0388: "ChangeNpcStateAction",
-    0x11E0268: "ZapWandAction",
-    0x11E04F0: "ActionBase",
+    0x11EBA50: "MoveCommand",
+    0x11EBA88: "InteractCommand",
+    0x11EBBD0: "AttackCommand",
+    0x11EBBA0: "ActorController",
+    0x11EB4D8: "BreathAction",
+    0x11EB7B8: "MovingAction",
+    0x11EB490: "AttackAction",
+    0x11EB3B8: "SpellAction",
+    0x11EB448: "DamagedAction",
+    0x11EB520: "DamagedReaction",
+    0x11EB400: "DeathAction",
+    0x11EB568: "DeadBody",
+    0x11EB770: "MovingBackAction",
+    0x11EB5B0: "ChangeDirection",
+    0x11EB370: "EffectAction",
+    0x11EB718: "ActionBase",
     0x11E10B8: "Item",
     0x11E12A8: "MyPlayer",
     0x11E0E28: "InteractionComponent",
-    0x11E0760: "ActionComponent",
+    0x11EB908: "ActionComponent",
     0x11E1270: "Player",
     0x11E1160: "Monster",
 }
@@ -290,7 +287,7 @@ def main():
                 "[%d] INIT cell=%s cmd=%s body=%s"
                 % (ms, cur["cell"], tag(cur["cmd_v"]), tag(cur["act_v"]))
             )
-            if cur["act_v"] == 0x11E04F0:
+            if cur["act_v"] == 0x11EB718:
                 n_base += 1
                 dump_body(cur)
             prev = cur
@@ -306,7 +303,7 @@ def main():
                     "[%d] cell=%s cmd=%s body=%s%s"
                     % (ms, cur["cell"], tag(cur["cmd_v"]), tag(cur["act_v"]), extra)
                 )
-                if body_changed and cur["act_v"] == 0x11E04F0:
+                if body_changed and cur["act_v"] == 0x11EB718:
                     n_base += 1
                     dump_body(cur)
                 if body_changed:

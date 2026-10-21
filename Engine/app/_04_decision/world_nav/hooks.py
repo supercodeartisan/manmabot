@@ -18,6 +18,12 @@ from .session import (
 SCRATCH_WORLD_NAV = "world_nav_session"
 SCRATCH_ROUTINE = "routine_cursor"
 SCRATCH_NEED_WORLD_NAV = "need_world_nav"
+# Map id + absolute xy at the Teleport to Mother press. One retreat, first press.
+SCRATCH_MOTHER_TREE_DEPART = "mother_tree_depart_pose"
+# Set while arm refuses a split pose. Cleared once a pose is trusted.
+SCRATCH_WORLD_NAV_ARM_WAIT = "world_nav_arm_wait"
+# Chebyshev tiles. Mother-tree landings clear this. A step on the same floor does not.
+_MOTHER_TREE_DEPART_JUMP_TILES = 40
 SCRATCH_WORLD_NAV_GATE = "world_nav_gate"
 SCRATCH_WORLD_NAV_PAUSE = "world_nav_pause_request"
 SCRATCH_RUNTIME_CONFIG = "runtime_config"
@@ -490,6 +496,89 @@ def cursor_map(blackboard: Any) -> str | None:
     return str(entry.get("map_id") or "") or None
 
 
+def xy_inside_map_image(map_id: int, x: int, y: int) -> bool | None:
+    """True when absolute ``x,y`` lies on this mapId's nav image.
+
+    None when the pack or the image size is unknown. Callers treat None as
+    "not proven outside" and keep the existing plan.
+    """
+    from . import pack_ids
+    from .ready.map_assets import pack_image_size
+
+    pack = pack_ids.pack_for_map_id(int(map_id))
+    if pack is None:
+        return None
+    size = pack_image_size(pack)
+    if size is None:
+        return None
+    return bool(pack.contains_world(int(x), int(y), size[0], size[1]))
+
+
+def _live_map_is_dungeon(map_id: int) -> bool:
+    """True when this MapSubsystem id is a dungeon pack, not mainland or TI."""
+    from app._04_decision.dungeon import is_dungeon_map
+    from app._04_decision.dungeon_floor_route import floor_of_pack
+
+    from . import pack_ids
+
+    pack_id = pack_ids.map_id_to_pack_id(int(map_id))
+    if not pack_id:
+        return False
+    if is_dungeon_map(pack_id, pack_id):
+        return True
+    return floor_of_pack(pack_id) is not None
+
+
+def remember_mother_tree_depart(blackboard: Any, state: Any) -> None:
+    """Save mapId and absolute xy once, at the Teleport to Mother press."""
+    if blackboard.scratch.get(SCRATCH_MOTHER_TREE_DEPART):
+        return
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return
+    blackboard.scratch[SCRATCH_MOTHER_TREE_DEPART] = {
+        "map_id": int(pose.map_id),
+        "x": int(pose.x),
+        "y": int(pose.y),
+    }
+    get_logger("nav").info(
+        "mother tree depart map=%s xy=(%s,%s)",
+        int(pose.map_id),
+        int(pose.x),
+        int(pose.y),
+    )
+
+
+def _defer_arm_until_pose_settles(blackboard: Any, reason: str, detail: str) -> bool:
+    """Keep the world-nav request and retry next tick. No walk is armed."""
+    request_world_nav(blackboard, reason)
+    prev = blackboard.scratch.get(SCRATCH_WORLD_NAV_ARM_WAIT)
+    blackboard.scratch[SCRATCH_WORLD_NAV_ARM_WAIT] = detail
+    if prev != detail:
+        get_logger("nav").info(
+            "world nav arm deferred (%s) reason=%s",
+            detail,
+            reason,
+        )
+    return False
+
+
+def _mother_tree_left_dungeon(blackboard: Any, pose: Any) -> bool:
+    """True when post-retreat xy jumped but mapId is still the dungeon floor."""
+    stamp = blackboard.scratch.get(SCRATCH_MOTHER_TREE_DEPART)
+    if not isinstance(stamp, dict) or pose is None:
+        return False
+    try:
+        depart_map = int(stamp["map_id"])
+        dx, dy = int(stamp["x"]), int(stamp["y"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if int(pose.map_id) != depart_map or not _live_map_is_dungeon(depart_map):
+        return False
+    jump = max(abs(int(pose.x) - dx), abs(int(pose.y) - dy))
+    return jump > _MOTHER_TREE_DEPART_JUMP_TILES
+
+
 def _dungeon_live_pack(pose: Any, target: str) -> str | None:
     """Pack for this pose when it is a listed floor of ``target``'s complex.
 
@@ -512,6 +601,13 @@ def _dungeon_live_pack(pose: Any, target: str) -> str | None:
         return None
     choice = choice_for_raw_map(map_id)
     if choice is None or not same_dungeon_family(choice.pack_id, target):
+        return None
+    # Stale dungeon mapId with world-tree xy is not "already on this floor".
+    try:
+        px, py = int(pose.x), int(pose.y)
+    except (TypeError, ValueError):
+        return None
+    if xy_inside_map_image(map_id, px, py) is False:
         return None
     live = get_active_map_pack()
     live_id = "" if live is None else str(live.id)
@@ -559,10 +655,12 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
     """Plan world nav to the active routine goal. Returns False on plan fail."""
     cursor: RoutineCursor | None = blackboard.scratch.get(SCRATCH_ROUTINE)
     if cursor is None or not cursor.entries:
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_ARM_WAIT, None)
         get_logger("nav").warning("world nav arm skipped: no routine")
         return False
     entry = cursor.active()
     if entry is None:
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_ARM_WAIT, None)
         return False
 
     # Pose must come from a later tick if missing — stash need and retry.
@@ -570,9 +668,26 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
     state = blackboard.scratch.get("_world_nav_pose_state")
     pose = live_pose_from_state(state) if state is not None else None
     if pose is None:
+        blackboard.scratch.pop(SCRATCH_WORLD_NAV_ARM_WAIT, None)
         request_world_nav(blackboard, reason)
         get_logger("nav").info("world nav arm deferred (no pose) reason=%s", reason)
         return False
+
+    # Map id and absolute xy are different snapshots. A tree xy on the hunt
+    # map's image is not a route yet. Mainland hunts stay inside map 4, so
+    # they plan on this tick.
+    if xy_inside_map_image(int(pose.map_id), int(pose.x), int(pose.y)) is False:
+        return _defer_arm_until_pose_settles(
+            blackboard, reason, "world nav wait map xy"
+        )
+    if str(reason or "") == "post_retreat" and _mother_tree_left_dungeon(
+        blackboard, pose
+    ):
+        return _defer_arm_until_pose_settles(
+            blackboard, reason, "world nav wait dungeon mapId"
+        )
+    blackboard.scratch.pop(SCRATCH_WORLD_NAV_ARM_WAIT, None)
+    blackboard.scratch.pop(SCRATCH_MOTHER_TREE_DEPART, None)
 
     target = str(entry.get("map_id") or "").strip()
     live_pack = _dungeon_live_pack(pose, target)
@@ -882,6 +997,22 @@ def tick_world_nav(state: Any, blackboard: Any) -> Status | None:
     if session is None and need:
         arm_world_nav(blackboard, str(need))
         session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+
+    wait = blackboard.scratch.get(SCRATCH_WORLD_NAV_ARM_WAIT)
+    if (
+        session is None
+        and wait
+        and blackboard.scratch.get(SCRATCH_NEED_WORLD_NAV)
+    ):
+        from app._03_world import ActionType
+
+        blackboard.current_goal = "world_nav"
+        blackboard.emit(
+            ActionType.IDLE,
+            priority=0.4,
+            reason=str(wait),
+        )
+        return Status.SUCCESS
 
     if session is None:
         leave_world_nav_mode_if_idle(blackboard)

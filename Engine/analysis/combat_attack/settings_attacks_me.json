@@ -1,17 +1,17 @@
 {
   "_comment": "attacks_me.dll / attacks_me.exe — AttackAction tgt==meGuid. Defaults match print_state 26.10.07.",
   "process_name": "LC.exe",
-  "ent_mgr_offset": "0x16DEE80",
-  "grid_vft": "0x11DE3B8",
-  "act_vft": "0x11E0760",
-  "attack_act_vft": "0x11E04A8",
+  "ent_mgr_offset": "0x16ED640",
+  "grid_vft": "0x11E9430",
+  "act_vft": "0x11EB908",
+  "attack_act_vft": "0x11EB490",
   "off_atk_owner": "0x80",
   "off_atk_tgt": "0x88",
   "off_ent_guid": "0x18",
   "off_ent_cell_x": "0x50",
   "off_ent_cell_y": "0x54",
-  "vft_self": "0x11E12A8",
-  "vft_player": "0x11E1270",
-  "vft_monster": "0x11E1160",
-  "vft_summon": "0x11E1708"
+  "vft_self": "0x11EC4C8",
+  "vft_player": "0x11EC490",
+  "vft_monster": "0x11EC380",
+  "vft_summon": "0x11EC930"
 }

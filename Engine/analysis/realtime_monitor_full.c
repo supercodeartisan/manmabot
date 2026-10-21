@@ -110,7 +110,7 @@ static uint32_t g_chKXor = 0x2f8b1064u, g_chKMul = 0x7f4a7c15u;
 static uint32_t g_chHolder = 0xD0u, g_chSubBeg = 0x180u, g_chSubEnd = 0x188u;
 static uint32_t g_chStr = 0x128u, g_chInt = 0x134u, g_chCon = 0x140u;
 static uint32_t g_chDex = 0x14Cu, g_chWis = 0x158u, g_chCha = 0x164u;
-static uint32_t g_chLevel = 0x248u, g_chHp = 0x2C4u, g_chMp = 0x2D0u, g_chMaxMp = 0x2DCu;
+static uint32_t g_chLevel = 0x248u, g_chHp = 0x2B8u, g_chMaxHp = 0x2C4u, g_chMp = 0x2D0u, g_chMaxMp = 0x2DCu;
 static uint32_t g_chFood = 0x2F4u, g_chWeight = 0x300u, g_chWeightCur = 0x3ACu, g_chWeightMax = 0x3B0u;
 static uint32_t g_chLawful = 0x30Cu, g_chAc = 0x348u;
 static uint32_t g_stBlock = 0x1668630u, g_stX = 0x10u, g_stY = 0x14u;
@@ -397,6 +397,7 @@ static void loadCharOffsets(const char* path) {
         else if (!strcmp(k, "CHA")) g_chCha = v;
         else if (!strcmp(k, "LEVEL")) g_chLevel = v;
         else if (!strcmp(k, "HP")) g_chHp = v;
+        else if (!strcmp(k, "MAXHP")) g_chMaxHp = v;
         else if (!strcmp(k, "MP")) g_chMp = v;
         else if (!strcmp(k, "MAXMP")) g_chMaxMp = v;
         else if (!strcmp(k, "FOOD")) g_chFood = v;
@@ -659,7 +660,7 @@ static void readPlayer(PlayerData* p) {
             int ni = 0, i;
             offs[ni++] = g_chStr; offs[ni++] = g_chDex; offs[ni++] = g_chCon;
             offs[ni++] = g_chInt; offs[ni++] = g_chWis; offs[ni++] = g_chCha;
-            offs[ni++] = g_chLevel; offs[ni++] = g_chHp; offs[ni++] = g_chMp;
+            offs[ni++] = g_chLevel; offs[ni++] = g_chHp; offs[ni++] = g_chMaxHp; offs[ni++] = g_chMp;
             offs[ni++] = g_chMaxMp; offs[ni++] = g_chFood; offs[ni++] = g_chLawful;
             offs[ni++] = g_chAc; offs[ni++] = g_chWeight;
             for (i = 0; i < ni; i++) if (offs[i] + 12 > need) need = offs[i] + 12;
@@ -675,6 +676,7 @@ static void readPlayer(PlayerData* p) {
                 if (decodeBuf(stb, need, g_chCha, &v)) { p->statsOk[5] = 1; p->stats[5] = v; }
                 if (decodeBuf(stb, need, g_chLevel, &v) && v) p->level = v;
                 if (decodeBuf(stb, need, g_chHp, &v) && v) p->hp = v;
+                if (decodeBuf(stb, need, g_chMaxHp, &v) && v) p->maxHp = v;
                 if (decodeBuf(stb, need, g_chMp, &v)) p->mp = v;
                 if (decodeBuf(stb, need, g_chMaxMp, &v) && v) p->maxMp = v;
                 if (decodeBuf(stb, need, g_chFood, &v)) { p->foodOk = 1; p->food = (int32_t)v; }
@@ -693,6 +695,7 @@ static void readPlayer(PlayerData* p) {
                 v = decodeAt(st, g_chCha, &ok); if (ok) { p->statsOk[5] = 1; p->stats[5] = v; }
                 v = decodeAt(st, g_chLevel, &ok); if (ok && v) p->level = v;
                 v = decodeAt(st, g_chHp, &ok); if (ok && v) p->hp = v;
+                v = decodeAt(st, g_chMaxHp, &ok); if (ok && v) p->maxHp = v;
                 v = decodeAt(st, g_chMp, &ok); if (ok) p->mp = v;
                 v = decodeAt(st, g_chMaxMp, &ok); if (ok && v) p->maxMp = v;
                 v = decodeAt(st, g_chFood, &ok); if (ok) { p->foodOk = 1; p->food = (int32_t)v; }

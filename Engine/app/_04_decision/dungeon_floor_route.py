@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -66,11 +67,11 @@ class PickedPoint:
 
     @property
     def world_x(self) -> int:
-        return self.choice.origin_x + self.nav_x * self.choice.pixel_scale
+        return self.choice.origin_x + self.nav_x
 
     @property
     def world_y(self) -> int:
-        return self.choice.origin_y + self.nav_y * self.choice.pixel_scale
+        return self.choice.origin_y + self.nav_y
 
 
 @dataclass(frozen=True)
@@ -373,10 +374,14 @@ class _Router:
         allow_entrance: bool,
         seen: frozenset[str],
     ) -> Optional[list[RouteSegment]]:
-        if map_name in seen or len(seen) > _MAX_DEPTH:
+        if len(seen) > _MAX_DEPTH:
             return None
         choice = self.by_kr.get(map_name)
         if choice is None:
+            return None
+        # The two training-dungeon yards are both 아덴 대륙. A second visit is
+        # the next yard, not a loop. Other maps still cannot be re-entered.
+        if choice.pack_id != "mainland" and map_name in seen:
             return None
         if map_name == goal_name:
             if self.arrive_on_floor:
@@ -387,7 +392,10 @@ class _Router:
 
         options: list[tuple[int, PortalEdge, list[tuple[int, int]]]] = []
         for edge in self._leaving(map_name, allow_entrance=allow_entrance):
-            if edge.dst_name in seen or edge.dst_name not in self.by_kr:
+            dst = self.by_kr.get(edge.dst_name)
+            if dst is None:
+                continue
+            if edge.dst_name in seen and dst.pack_id != "mainland":
                 continue
             gate = self._snap_world(choice, edge.src_xy)
             if gate is None:
@@ -397,7 +405,7 @@ class _Router:
                 continue
             options.append((len(path), edge, path))
         options.sort(key=lambda item: item[0])
-        seen_next = seen | {map_name}
+        seen_next = seen if choice.pack_id == "mainland" else seen | {map_name}
         for _cost, edge, path in options:
             landing_choice = self.by_kr[edge.dst_name]
             landing = self._snap_world(landing_choice, edge.dst_xy)
@@ -531,6 +539,14 @@ class _Router:
         if snapped_start is None or snapped_goal is None:
             self._paths[key] = []
             return []
+        # Mainland door yards are about a hundred tiles. A walk that is still
+        # going after this many cells has left the yard for the open field,
+        # and the next door is not there.
+        if choice.pack_id == "mainland" and not _yard_reaches(
+            terrain, snapped_start, snapped_goal, limit=2000
+        ):
+            self._paths[key] = []
+            return []
         from app._04_decision.pathfinding import find_path
 
         path = [(int(x), int(y)) for x, y in find_path(terrain, snapped_start, snapped_goal)]
@@ -550,10 +566,11 @@ class _Router:
         choice: MapChoice,
         world: tuple[int, int],
     ) -> Optional[tuple[int, int]]:
-        scale = choice.pixel_scale
+        # Terrain cells are already one world tile. pixel_scale only groups
+        # source pixels; dividing again jumped a one-tile wall.
         nav = (
-            int(world[0] - choice.origin_x) // scale,
-            int(world[1] - choice.origin_y) // scale,
+            int(world[0] - choice.origin_x),
+            int(world[1] - choice.origin_y),
         )
         terrain = self._terrain_for(choice)
         if terrain is None:
@@ -585,6 +602,30 @@ def _terrain_from_nav(path: Path, pixel_scale: int):
         blocks = walkable[: th * ps, : tw * ps].reshape(th, ps, tw, ps)
         walkable = blocks.mean(axis=(1, 3)) >= 0.5
     return TerrainMap.from_array(walkable)
+
+
+def _yard_reaches(terrain, start: tuple[int, int], goal: tuple[int, int], *, limit: int) -> bool:
+    """True when ``goal`` sits in the same small walk as ``start``.
+
+    Stops after ``limit`` cells. The open mainland is larger than a door yard,
+    so a search that hits the limit has not found the next door.
+    """
+    if start == goal:
+        return True
+    pending: deque[tuple[int, int]] = deque([start])
+    seen = {start}
+    while pending:
+        current = pending.popleft()
+        if len(seen) > limit:
+            return False
+        for nxt in terrain.neighbors8(current[0], current[1]):
+            if nxt in seen:
+                continue
+            if nxt == goal:
+                return True
+            seen.add(nxt)
+            pending.append(nxt)
+    return False
 
 
 def _snap(terrain, tile: tuple[int, int]) -> Optional[tuple[int, int]]:
@@ -628,7 +669,6 @@ def _clicks_for(
 ) -> list[ClickPoint]:
     hops = _mouse_hops(path)
     clicks: list[ClickPoint] = []
-    scale = choice.pixel_scale
     for index, (x, y) in enumerate(hops):
         last = index == len(hops) - 1
         name = final_name if last else f"click_{index + 1}"
@@ -636,8 +676,8 @@ def _clicks_for(
             ClickPoint(
                 nav_x=x,
                 nav_y=y,
-                world_x=choice.origin_x + x * scale,
-                world_y=choice.origin_y + y * scale,
+                world_x=choice.origin_x + x,
+                world_y=choice.origin_y + y,
                 name=name,
             )
         )
@@ -876,9 +916,46 @@ def same_dungeon_family(current_pack: str, target_pack: str) -> bool:
     return current.complex_name == target.complex_name
 
 
+# Own field door. World nav walks to that floor's ground_enter and the
+# usual gate clicks it. These floors are not climbed from another floor.
+_DIRECT_FIELD_DOOR_PACKS = frozenset(
+    {
+        "windawood_castle_dungeon_F2",
+        "ant_cave_dungeon_F2",
+        "ant_cave_dungeon_F3",
+        "ant_cave_dungeon_F4",
+        "ant_cave_dungeon_F5",
+        "ant_cave_dungeon_F6",
+        "ant_cave_dungeon_F7",
+        "ant_cave_dungeon_F8",
+    }
+)
+
+
+def is_direct_field_door_map(map_id: int) -> bool:
+    """True when this map is entered at its own field door, not by a stair."""
+    try:
+        target = int(map_id)
+    except (TypeError, ValueError):
+        return False
+    for pack_id in _DIRECT_FIELD_DOOR_PACKS:
+        row = floor_of_pack(pack_id)
+        if row is not None and int(row.map_id) == target:
+            return True
+    return False
+
+
 def needs_floor_route(target_pack: str) -> bool:
-    """True when the scheduled floor is deeper than that complex's entrance floor."""
-    target = floor_of_pack(target_pack)
+    """True when the scheduled floor is deeper than that complex's entrance floor.
+
+    Packs in ``_DIRECT_FIELD_DOOR_PACKS`` keep the world-nav goal on their own
+    map. The mainland ground enter is the door, the same way talking island
+    dungeon floor 1 is entered.
+    """
+    key = str(target_pack or "").strip()
+    if key in _DIRECT_FIELD_DOOR_PACKS:
+        return False
+    target = floor_of_pack(key)
     if target is None:
         return False
     door = entrance_floor(target.complex_name)

@@ -79,12 +79,11 @@ def _routine_clock_from_board(blackboard) -> dict | None:
         kind = str(active.get("kind") or "").strip().lower()
     if not kind:
         kind = str(scratch.get("routine_kind") or "").strip().lower()
-    session = scratch.get("world_nav_session")
-    need = bool(scratch.get("need_world_nav"))
-    navigating = session is not None or need
-    # Break stay must show a countdown, not a stuck "Moving" if need lingered.
-    if kind == "break" and session is None:
-        navigating = False
+    from app._04_decision.world_nav.routine import routine_hunt_zone_inside
+
+    # "Moving" is the walk before the hunt zone. Inside the zone the
+    # countdown runs even while world nav is still walking to the center.
+    navigating = kind != "break" and not routine_hunt_zone_inside(blackboard)
     return {
         "index": index % len(ids),
         "elapsed_s": elapsed_s,
@@ -186,15 +185,12 @@ def _freeze_stay_clocks(blackboard) -> None:
 
 
 def _resume_stay_clocks(blackboard) -> None:
-    """Continue both stays from the seconds already committed."""
-    scratch = getattr(blackboard, "scratch", None)
-    cursor = scratch.get("routine_cursor") if isinstance(scratch, dict) else None
-    from app._04_decision.world_nav.routine import ROUTINE_CLOCK_HELD
+    """Continue the farm-area stay. The routine row opens only inside its zone.
 
-    held = isinstance(scratch, dict) and bool(scratch.get(ROUTINE_CLOCK_HELD))
-    resume = getattr(cursor, "resume", None)
-    if callable(resume) and not held:
-        resume()
+    Resuming the row clock here would count the walk. ``sample_routine_zone_clock``
+    opens it on the next decide when the character is inside. A dungeon hold
+    stays closed until the hunt floor releases it.
+    """
     from app._04_decision.farm_time import resume_farm_clock
 
     resume_farm_clock(blackboard)

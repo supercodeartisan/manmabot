@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageTk
 from tkinter import messagebox
 
 from i18n.localized_names import route_point_display_name
-from settings.map_previews import open_real_map_image
+from settings.map_previews import open_legacy_nav_preview, open_real_map_image
 from session.paths import assert_userdata_write, ensure_userdata, manmabot_root
 from ui import design_system as ui_theme
 from session.probes import (
@@ -530,9 +530,14 @@ class MapEditor(ctk.CTkFrame):
             self._redraw()
             return
         try:
-            self._base = open_real_map_image(self.map_id)
+            self._base = open_legacy_nav_preview(self._pack)
         except Exception:
             self._base = None
+        if self._base is None:
+            try:
+                self._base = open_real_map_image(self.map_id)
+            except Exception:
+                self._base = None
         if self._base is None and self._pack is not None:
             try:
                 self._base = Image.open(self._pack.terrain_path).convert("RGBA")

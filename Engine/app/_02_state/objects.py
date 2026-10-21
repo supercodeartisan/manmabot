@@ -276,6 +276,8 @@ class WorldObject:
     # Latched after AttackAction has targeted me. Kept when the row drops.
     # Cleared on death, bait, leaving the monster list, or a map change.
     attacked_me: bool = False
+    # This tick's AttackAction targets me. Cleared when that row is absent.
+    attacking_me_now: bool = False
     # Self-defense: keep sticky until this mob is confirmed dead (not just
     # until AttackAction ends).
     finish_kill_until_dead: bool = False

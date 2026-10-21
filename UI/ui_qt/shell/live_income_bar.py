@@ -64,8 +64,10 @@ _COPY = {
         "adena_label": "아데나 보유량",
         "adena_rate_label": "시간당 획득량",
         "gained_label": "획득한 아데나",
+        "runtime_label": "가동시간",
         "about": "약",
         "under_minute": "약 1분 미만",
+        "runtime_under_minute": "1분 미만",
         "hour": "시간",
         "minute": "분",
     },
@@ -77,8 +79,10 @@ _COPY = {
         "adena_label": "金币持有量",
         "adena_rate_label": "每小时获得",
         "gained_label": "获得金币",
+        "runtime_label": "运行时间",
         "about": "约",
         "under_minute": "约1分钟以内",
+        "runtime_under_minute": "1分钟以内",
         "hour": "小时",
         "minute": "分",
     },
@@ -89,6 +93,32 @@ def _copy(language: str) -> dict[str, str]:
     if str(language or "").lower().startswith("zh"):
         return _COPY["zh"]
     return _COPY["ko"]
+
+
+_RUNTIME_GAP = 12.0
+_RUNTIME_VALUE_SIZE = 12
+
+
+def runtime_phrase(elapsed: float | None, language: str = "ko") -> str:
+    """``1시간 10분``. ``elapsed`` is the same running-only clock the Adena rate uses."""
+    text = _copy(language)
+    if elapsed is None:
+        return "—"
+    total_min = int(float(elapsed) // 60.0)
+    if total_min <= 0:
+        return text["runtime_under_minute"]
+    whole, minutes = divmod(total_min, 60)
+    if str(language or "").lower().startswith("zh"):
+        if whole and minutes:
+            return f"{whole}{text['hour']}{minutes}{text['minute']}"
+        if whole:
+            return f"{whole}{text['hour']}"
+        return f"{minutes}{text['minute']}"
+    if whole and minutes:
+        return f"{whole}{text['hour']} {minutes}{text['minute']}"
+    if whole:
+        return f"{whole}{text['hour']}"
+    return f"{minutes}{text['minute']}"
 
 
 def eta_phrase(
@@ -194,6 +224,7 @@ class _Meter:
             "adena": self.hold_adena,
             "adena_rate": per_hour(self.adena_gain, elapsed) if show_rate else None,
             "adena_gained": self.adena_gain if show_rate else None,
+            "elapsed": elapsed if show_rate else None,
         }
 
 
@@ -320,6 +351,7 @@ class LiveIncomeBar(QWidget):
             "adena": None,
             "adena_rate": None,
             "adena_gained": None,
+            "elapsed": None,
         }
         self._session = _session()
         self._session.bind(running or (lambda: False), buying or (lambda: False))
@@ -348,6 +380,8 @@ class LiveIncomeBar(QWidget):
         left = 3.0
         usable = max(0.0, self.width() - left - gap - 1.0)
         adena_w = self._adena_width(painter)
+        # The level card keeps most of a narrow bar. Adena takes its content
+        # width only when the level card still has room for its columns.
         if usable >= adena_w + 360.0:
             level_w = usable - adena_w
         else:
@@ -376,6 +410,10 @@ class LiveIncomeBar(QWidget):
         )
         rate_text = self._exp_rate_value(rate)
         gutter = 18.0
+        level_need = self._block_width(
+            painter,
+            (("Lv. 999", 15, True), (f"{text['exp']} 100.0%", 11, False)),
+        )
         eta_w = self._block_width(
             painter,
             ((text["eta_label"], 11, False), (text["eta_reserve"], 15, True)),
@@ -387,16 +425,18 @@ class LiveIncomeBar(QWidget):
         body_left = avatar.right() + 12.0
         body_right = rect.right() - 12.0
         available = max(0.0, body_right - body_left)
-        text_need = eta_w + rate_w + gutter * 2.0
-        if text_need > available and available > 0:
+        side = eta_w + rate_w + gutter * 2.0
+        if level_need + side <= available:
+            level_w = available - side
+        else:
             gutter = 8.0
-            room = max(0.0, available - 64.0)
-            scale = room / (eta_w + rate_w + gutter * 2.0) if eta_w + rate_w else 1.0
-            scale = min(1.0, scale)
-            eta_w *= scale
-            rate_w *= scale
-            text_need = eta_w + rate_w + gutter * 2.0
-        level_w = max(0.0, available - text_need)
+            level_w = min(level_need, available)
+            room = max(0.0, available - level_w - gutter * 2.0)
+            pair = eta_w + rate_w
+            if pair > room and pair > 0:
+                scale = room / pair
+                eta_w *= scale
+                rate_w *= scale
         level_rect = QRectF(body_left, rect.top() + 8, level_w, rect.height() - 16)
         eta_x = body_left + level_w + gutter
         rate_x = eta_x + eta_w + gutter
@@ -451,14 +491,37 @@ class LiveIncomeBar(QWidget):
         self._text(painter, hold_rect.adjusted(0, 18, 0, 0), 0, amount, 18, "#1f2937", bold=True)
         gained_dy = 52.0
         label = text["gained_label"]
+        gained_number = self._gained_number()
         label_w = self._advance(painter, label + " ", 11, False)
+        number_w = self._advance(painter, gained_number, 14, True)
+        runtime_x = label_w + number_w + _RUNTIME_GAP
+        runtime_label = text["runtime_label"]
+        runtime_label_w = self._advance(painter, runtime_label + " ", 11, False)
         self._text(painter, hold_rect, gained_dy + 3, label, 11, "#8a6a32", bold=False)
         self._text(
             painter,
             hold_rect.adjusted(label_w, 0, 0, 0),
             gained_dy,
-            self._gained_number(),
+            gained_number,
             14,
+            "#1f2937",
+            bold=True,
+        )
+        self._text(
+            painter,
+            hold_rect.adjusted(runtime_x, 0, 0, 0),
+            gained_dy + 3,
+            runtime_label,
+            11,
+            "#8a6a32",
+            bold=False,
+        )
+        self._text(
+            painter,
+            hold_rect.adjusted(runtime_x + runtime_label_w, 0, 0, 0),
+            gained_dy + 2,
+            self._runtime_text(),
+            _RUNTIME_VALUE_SIZE,
             "#1f2937",
             bold=True,
         )
@@ -490,13 +553,21 @@ class LiveIncomeBar(QWidget):
         return 14.0 + 46.0 + 12.0 + hold_w + 18.0 + rate_w + 16.0
 
     def _hold_column_width(self, painter: QPainter, text: dict[str, str]) -> float:
-        gained = self._advance(painter, text["gained_label"] + " ", 11, False)
-        gained += self._advance(painter, "999,999,999", 14, True)
-        return max(
+        """Holdings column. Runtime sits on the gained line and must not push the rate off."""
+        base = max(
             self._advance(painter, text["adena_label"], 11, False),
             self._advance(painter, "999,999,999", 18, True),
-            gained,
-        ) + 4.0
+            self._advance(painter, text["gained_label"] + " ", 11, False)
+            + self._advance(painter, "999,999,999", 14, True),
+        )
+        bottom = (
+            self._advance(painter, text["gained_label"] + " ", 11, False)
+            + self._advance(painter, self._gained_number(), 14, True)
+            + _RUNTIME_GAP
+            + self._advance(painter, text["runtime_label"] + " ", 11, False)
+            + self._advance(painter, self._runtime_text(), _RUNTIME_VALUE_SIZE, True)
+        )
+        return max(base, bottom) + 4.0
 
     def _block_width(
         self,
@@ -609,6 +680,12 @@ class LiveIncomeBar(QWidget):
         if value < 0:
             return f"-{abs(value):.1f}%"
         return f"{value:.1f}%"
+
+    def _runtime_text(self) -> str:
+        elapsed = self._view.get("elapsed")
+        if not isinstance(elapsed, (int, float)):
+            return "—"
+        return runtime_phrase(float(elapsed), self._language)
 
     def _gained_number(self) -> str:
         gained = self._view.get("adena_gained")
