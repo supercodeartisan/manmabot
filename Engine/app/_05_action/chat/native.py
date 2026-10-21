@@ -1,4 +1,4 @@
-"""ctypes binding for ``analysis/enter_chat/bin/enter_chat.dll`` (ABI 1.0.0).
+"""ctypes binding for ``analysis/enter_chat/bin/enter_chat.dll`` (ABI 1.0.0+).
 
 Mirrors ``analysis/enter_chat/include/enter_chat.h``. x64 only; ``wchar_t`` is
 UTF-16. The DLL looks ``interception.dll`` up by name, so it is preloaded by

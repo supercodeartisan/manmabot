@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-10-22 — party: invite accept 30 s after the notice, typed Y, logic moved to `_06_party`
+
+Intent: user asked for a 30 s wait after the leader's invite notice, Y through the same typing module as the leader's `/초대`, and less party code in `bot_controller`.
+Shared: new `app/_06_party/accept.py` `InviteAccepter` (`on_notice` / `tick` / `status` / `reset`): Y via `send_chat_line("y", open_chat=False, press_enter=False)` (enter_chat; ASCII goes as `WM_CHAR`). A repeat notice while one is queued keeps the first due time (the leader repeats every 20 s). No press if party memory shows a join by then. New `app/_06_party/workflow.py` (`leader_workflow` / `member_workflow`) — moved out of `bot_controller`. Controller keeps one hook `_member_invite_accept`. Python wrappers for `ec_press_key` removed (the DLL export stays, unused).
+Affects: member invite accept only (timing 0.8 s → 30 s, key path physical scancode → typed `y`). Side effect candidate: if the popup only reacts to a key event and not to `WM_CHAR`, Y does nothing — then switch `type_accept_key` back to a physical key. Supersedes the 0.8 s / scancode part of the entry below.
+Consent: user request.
+Result: simulated: no press at 29.9 s, one `y` at 30 s despite a 20 s repeat notice; no press when joined meanwhile. Not run in game.
+
+## 2026-10-22 — party: member auto-accepts the invite (Y) on a leader socket notice
+
+Intent: the leader's `/초대` reached the game but the member never accepted. Nothing on the member read the [Yes]/[No] popup (enter_chat only types; no popup / chat memory sensor exists). Now the leader tells the member over the socket right after typing, and the member presses Y.
+Shared: new wire type `party_invite` (`to`, `invite_id`, `session`) from `LeaderInvites.tick` after a typed `/초대 <to>` (`announce_invite` → `party_orders.publish_invite`). `MemberOrders` keeps the latest notice (`take_invite`); dropped on a new leader session. Controller `_queue_member_invite_accept` / `_member_invite_accept_tick`: press Y 0.8 s after the notice, once per notice. Skipped when party memory already says in a party, or when the notice names another roster name than this character (an unconfirmed local name never vetoes). Key: new `enter_chat` export `ec_press_key` (ABI 1.1.0, Interception only, no message/SendInput fallback) → `GameChat.press_key` / `press_game_key`, under the same `bot_input_released` handoff as chat.
+Affects: member only, in the member tick before `decide`. One Y key press per leader invite (every 20 s until party memory shows the join). Side effect candidate: if the popup is not open (closed by hand, refused, late), Y reaches the game as a plain key. Leader invite timing unchanged. Monitor: member Workflow step `Accept`; leader Invite step counts accept notices. Wire: leader and member run this build together; the member PC needs the rebuilt `enter_chat.dll` 1.1.0.
+Consent: user chose Y, socket notice only (no OCR), and approved the scope.
+Result: simulated: notice → Y after the delay (scancode 0x15), skip when already in party / addressed to another roster name; DLL export loads and rejects a bad hwnd. Not run in game.
+
 ## 2026-10-22 — party: leader session id; member resets on a new leader run
 
 Intent: every leader Start is a new party run. The member cannot tell from the socket alone whether the leader restarted (a reconnect looks the same), so the leader stamps a run id on every frame and the member starts its party state over when the id changes, then takes the new leader settings.

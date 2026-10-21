@@ -37,9 +37,9 @@ extern "C" {
 #endif
 
 #define EC_VERSION_MAJOR 1
-#define EC_VERSION_MINOR 0
+#define EC_VERSION_MINOR 1
 #define EC_VERSION_PATCH 0
-#define EC_VERSION_STRING L"1.0.0"
+#define EC_VERSION_STRING L"1.1.0"
 
 /* ------------------------------------------------------------------------- */
 /* Status codes                                                              */
@@ -135,6 +135,14 @@ EC_API int __cdecl ec_run(const EcRequest* request, EcResult* result);
 EC_API int __cdecl ec_run_utf8(const char* text_utf8, DWORD pid,
                                double chars_per_second, int jitter_ms,
                                BOOL press_enter, EcResult* result);
+
+/* Press one physical key (set-1 scancode, e0 for extended) in the target
+ * window: focus -> Interception down/up -> done.  Interception only (no
+ * message / SendInput fallback).  hwnd may be NULL when pid is set.
+ * hold_ms <= 0 selects 30.  Returns (int)result->status. */
+EC_API int __cdecl ec_press_key(DWORD pid, HWND hwnd, int scancode, int e0,
+                                int hold_ms, DWORD focus_timeout_ms,
+                                EcResult* result);
 
 /* Decompose one Hangul character into 2-beolsik QWERTY keys.
  * Uppercase letters mean "with Shift".  Returns key count, 0 if unsupported.

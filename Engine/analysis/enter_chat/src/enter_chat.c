@@ -442,6 +442,83 @@ cleanup_no_ctx:
     return (int)res->status;
 }
 
+int __cdecl ec_press_key(DWORD pid, HWND hwnd, int scancode, int e0,
+                         int hold_ms, DWORD focus_timeout_ms, EcResult* result)
+{
+    EcResult local_result;
+    EcResult* res;
+    EcContext ctx;
+    HWND target = hwnd;
+    DWORD target_pid = 0;
+    DWORD t0;
+
+    InitOnceExecuteOnce(&g_lock_once, ec_init_lock, NULL, NULL);
+    EnterCriticalSection(&g_lock);
+
+    if (!result) result = &local_result;
+    res = result;
+    memset(res, 0, sizeof(*res));
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.res = res;
+    t0 = GetTickCount();
+
+    if (scancode <= 0 || scancode > 0xFF) {
+        ec_set_error(res, EC_E_ARGUMENT, L"scancode out of range");
+        goto done;
+    }
+    if (target) {
+        if (!IsWindow(target)) {
+            ec_set_error(res, EC_E_WINDOW, L"target hwnd is not a valid window");
+            goto done;
+        }
+        GetWindowThreadProcessId(target, &target_pid);
+        if (pid && target_pid != pid) {
+            ec_set_error(res, EC_E_PID, L"target hwnd belongs to a different pid");
+            goto done;
+        }
+    } else if (pid) {
+        target = ec_find_window_for_pid(pid);
+        if (!target) {
+            ec_set_error(res, EC_E_PID, L"no usable window found for the pid");
+            goto done;
+        }
+        target_pid = pid;
+    } else {
+        ec_set_error(res, EC_E_ARGUMENT, L"set pid or hwnd");
+        goto done;
+    }
+    ctx.hwnd = GetAncestor(target, GA_ROOT);
+    if (!ctx.hwnd) ctx.hwnd = target;
+    res->pid = target_pid;
+    res->hwnd = target;
+
+    /* Interception strokes land in the foreground window. */
+    if (!ec_force_foreground(ctx.hwnd,
+                             focus_timeout_ms ? focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT)) {
+        ec_set_error(res, EC_E_FOCUS, L"could not bring the target to the foreground");
+        goto done;
+    }
+    if (!ec_ic_open(&ctx)) {
+        ec_set_error(res, EC_E_INTERCEPTION,
+            L"Interception unavailable (interception.dll / driver not installed, or no keyboard slot 1-10 accepts strokes)");
+        goto done;
+    }
+    if (ec_ic_press(&ctx, scancode, e0 ? 1 : 0, hold_ms > 0 ? hold_ms : 30)) {
+        res->keys = 1;
+        res->status = EC_OK;
+    } else {
+        res->failed = 1;
+        ec_set_error(res, EC_E_TEXT, L"key stroke rejected");
+        ec_result_message(res, L" (keyboard slot %d)", ctx.ic_keyboard);
+    }
+    ec_ic_close(&ctx);
+
+done:
+    res->elapsed_ms = GetTickCount() - t0;
+    LeaveCriticalSection(&g_lock);
+    return (int)res->status;
+}
+
 int __cdecl ec_run_utf8(const char* text_utf8, DWORD pid,
                         double chars_per_second, int jitter_ms,
                         BOOL press_enter, EcResult* result)

@@ -14,6 +14,9 @@ act on it yet.
 Policy (``party_policy``, leader → members) carries a ``policy_id``. A member
 answers every policy frame it applied with ``policy_ack`` echoing that id; the
 leader invites a roster name only once its ack matches the current id.
+
+Invite (``party_invite``, leader → members): sent right after ``/초대 <to>`` was
+typed. The named member presses the popup's accept key (Y) once per frame.
 """
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ RECOVERY = "recovery"
 REPORT = "report"
 POLICY = "party_policy"
 POLICY_ACK = "policy_ack"
+PARTY_INVITE = "party_invite"
 
 STAGE_START = "start"
 STAGE_PLANNED = "planned"
@@ -175,6 +179,18 @@ def policy_ack_message(*, name: str, policy_id: str) -> dict[str, Any]:
         "policy_id": str(policy_id or ""),
         "ok": True,
     }
+
+
+def invite_message(*, to: str) -> dict[str, Any]:
+    """Leader → members: ``/초대 <to>`` was just typed in game."""
+    body = leader_message(kind=PARTY_INVITE, action="accept_invite", map_id=None, x=None, y=None)
+    body["to"] = str(to or "").strip()
+    body["invite_id"] = uuid.uuid4().hex[:8]
+    return body
+
+
+def publish_invite(*, to: str) -> int:
+    return _publish(invite_message(to=to))
 
 
 def seat_role_for_name(roster: Any, name: str) -> str:
@@ -409,6 +425,7 @@ class MemberOrders:
         self.gather: Optional[dict[str, Any]] = None
         self.recovery: Optional[dict[str, Any]] = None
         self.policy: Optional[dict[str, Any]] = None
+        self.invite: Optional[dict[str, Any]] = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
@@ -426,10 +443,16 @@ class MemberOrders:
         self.gather = None
         self.recovery = None
         self.policy = None
+        self.invite = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
         self._policy_dirty = False
+
+    def take_invite(self) -> Optional[dict[str, Any]]:
+        """The latest ``party_invite`` frame once, else None."""
+        body, self.invite = self.invite, None
+        return body
 
     def clear(self) -> None:
         self._drop_orders()
@@ -469,6 +492,9 @@ class MemberOrders:
             if kind == POLICY:
                 self.policy = dict(body)
                 self._policy_dirty = True
+                continue
+            if kind == PARTY_INVITE:
+                self.invite = dict(body)
                 continue
             if kind != RALLY:
                 continue
@@ -560,6 +586,9 @@ def reset_orders() -> None:
 
 __all__ = [
     "ARRIVE_TILES",
+    "PARTY_INVITE",
+    "invite_message",
+    "publish_invite",
     "POLICY",
     "POLICY_ACK",
     "PolicyAcks",

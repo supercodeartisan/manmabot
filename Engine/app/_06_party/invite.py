@@ -305,6 +305,7 @@ class LeaderInvites:
         publish_policy: Callable[[], Any] = lambda: None,
         ws_clients: Callable[[], int] = lambda: 0,
         policy_acked: Callable[[str], bool] = lambda _name: True,
+        announce_invite: Callable[[str], Any] = lambda _name: 0,
         send_chat: Optional[Callable[[str], bool]] = None,
         wait: Callable[[float], Any] = time.sleep,
         log: Callable[[str], None] = lambda _m: None,
@@ -315,6 +316,8 @@ class LeaderInvites:
         self._publish_policy = publish_policy
         self._ws_clients = ws_clients
         self._policy_acked = policy_acked
+        self._announce_invite = announce_invite
+        self._announced: dict[str, int] = {}
         self._send_chat = send_chat
         self._wait = wait
         self._log = log
@@ -401,11 +404,29 @@ class LeaderInvites:
         line = inviter.tick(
             snapshot, send_line=self._say, can_send=can_send, ready=self._acked
         )
+        if line and line.startswith(INVITE_PREFIX):
+            self._announce(line[len(INVITE_PREFIX):].strip())
         info = inviter.status()
         for row in info.get("rows") or []:
-            row["policy_acked"] = self._acked(str(row.get("name") or ""))
+            name = str(row.get("name") or "")
+            row["policy_acked"] = self._acked(name)
+            row["announced"] = self._announced.get(name.casefold(), 0)
         self.info = info
         return line
+
+    def _announce(self, name: str) -> None:
+        """Tell the member socket the popup is up, so it presses accept."""
+        try:
+            sent = int(self._announce_invite(name) or 0)
+        except Exception as exc:
+            self._log(f"Party invite notice for {name} failed: {exc}")
+            return
+        if sent:
+            key = name.casefold()
+            self._announced[key] = self._announced.get(key, 0) + 1
+            _note_monitor(f"invite notice → {name} (accept with Y) to {sent} socket(s)")
+        else:
+            self._log(f"Party invite notice for {name}: no member socket")
 
 
 __all__ = [
