@@ -49,6 +49,62 @@ def _chev(ax: int, ay: int, bx: int, by: int) -> int:
     return max(abs(int(ax) - int(bx)), abs(int(ay) - int(by)))
 
 
+def retarget_walk_from_after_gate(
+    steps: list[Any],
+    transition_index: int,
+    old_to: Any,
+    landing_map: int,
+    landing_x: int,
+    landing_y: int,
+) -> bool:
+    """Point the walk after a rewritten gate at that gate's inside cell.
+
+    The walk's ``from`` is the interior of the door the planner chose. When
+    the teleporter lands nearer a different door, the transition step is
+    replaced and this walk still names the first door. The walk then waits
+    until live xy is within 24 tiles of that cell.
+    """
+    if not isinstance(old_to, dict):
+        return False
+    walk_i = int(transition_index) + 1
+    if walk_i < 0 or walk_i >= len(steps):
+        return False
+    walk = steps[walk_i]
+    if str(getattr(walk, "op", "") or "") != "walk":
+        return False
+    detail = getattr(walk, "detail", None)
+    if not isinstance(detail, dict):
+        return False
+    frm = detail.get("from")
+    if not isinstance(frm, dict):
+        return False
+    try:
+        same_door = (
+            int(frm["mapId"]) == int(old_to["mapId"])
+            and int(frm["x"]) == int(old_to["x"])
+            and int(frm["y"]) == int(old_to["y"])
+        )
+        land_map = int(landing_map)
+        land_x = int(landing_x)
+        land_y = int(landing_y)
+    except (KeyError, TypeError, ValueError):
+        return False
+    if not same_door:
+        return False
+    if (
+        int(frm["mapId"]) == land_map
+        and int(frm["x"]) == land_x
+        and int(frm["y"]) == land_y
+    ):
+        return False
+    frm["mapId"] = land_map
+    frm["x"] = land_x
+    frm["y"] = land_y
+    detail.pop("path", None)
+    detail["from_retargeted_after_teleporter"] = True
+    return True
+
+
 def stale_exit_outside_landing(
     prev_map: int,
     map_id: int,
@@ -967,6 +1023,7 @@ class WorldNavSession:
         )
         if tr is None:
             return False
+        old_to = nxt.detail.get("to") if isinstance(nxt.detail, dict) else None
         nxt.detail = {
             "edge_id": tr.edge_id,
             "edge_type": tr.edge_type,
@@ -976,6 +1033,26 @@ class WorldNavSession:
             "resolved_after_teleporter": True,
             "destination_dungeon": int(destination_dungeon),
         }
+        if self.plan is not None and retarget_walk_from_after_gate(
+            self.plan.steps,
+            self.step_i + 1,
+            old_to,
+            int(tr.to_map),
+            int(tr.to_x),
+            int(tr.to_y),
+        ):
+            from app.bot_log import get_logger
+
+            ox = old_to.get("x") if isinstance(old_to, dict) else None
+            oy = old_to.get("y") if isinstance(old_to, dict) else None
+            get_logger("nav").info(
+                "walk from retargeted after teleporter (%s,%s) -> (%s,%s) map=%s",
+                ox,
+                oy,
+                int(tr.to_x),
+                int(tr.to_y),
+                int(tr.to_map),
+            )
         return True
 
     def note_gate_result(self, ok: bool, pose: Any | None, error: str = "") -> None:

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-22 — teleporter door swap also moves the inside walk start
+
+Intent: after the silver-knight teleporter lands nearer the other training-dungeon floor-1 door, the inside walk starts at that door's landing cell. The character then walks to the first patrol point. Standing still on `world nav wait land xy` after a successful mapId 4→25 entry ends.
+Shared: `retarget_walk_from_after_gate`, called from `_rewrite_next_gate_from_live_pose`. The gate rewrite still picks the nearest `ground_enter`. `_start_walk` still waits until live xy is within 24 tiles of the walk's `from`. Combat, HP, login, and patrol order are unchanged.
+Affects: world-nav trips whose teleporter step is followed by a gate and then a walk on the destination map. Training dungeon floor 1 is the case in `v77.log`: planned door `tmo:4:85` interior `(32738, 32805)`, live door `tmo:4:88` interior `(32808, 32810)`. A walk whose `from` is not the replaced gate's old interior is left as planned. The stored A* polyline for that one walk is dropped because it started at the other door; the hop still paths from the live cell to the same goal.
+Consent: user agreed to this change after the v77 review.
+Result: retarget checked on the v77 step pair (walk `from` moves to `(32808, 32810)`, a same-door plan stays put, a walk that does not start at the old interior stays put). Not run in game.
+
 ## 2026-10-21 — an attacked-me lock stays until that monster is dead
 
 Intent: while the current sticky has attacked me and is still alive, a lower known level does not take the lock. When the lock is empty, the lowest known level is engaged, then held the same way. A sticky that has not attacked me still yields immediately. Who attacked first is the monster already on the lock; monsters that appear in the same scan are still ordered by known level. Unknown level still ranks after every known level. The previous target is not given up.

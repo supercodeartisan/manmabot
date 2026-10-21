@@ -2211,11 +2211,14 @@ class UnifiedTaskEditor(ttk.Frame):
             return
 
     def _add_routine_map(self, kind: str) -> None:
+        from ui.reachable_battle_maps import battle_picker_choices
+
         self._load_map_catalog()
-        choices = [
-            item for item in self._map_choices
-            if kind != "break" or not item[2]
-        ]
+        choices = list(self._map_choices)
+        if kind == "break":
+            choices = [item for item in choices if not item[2]]
+        else:
+            choices = battle_picker_choices(choices)
         if not choices:
             key = "routine_break_general_only" if kind == "break" else "probe_map_missing"
             messagebox.showinfo(self.t["title"], self.t[key], parent=self)

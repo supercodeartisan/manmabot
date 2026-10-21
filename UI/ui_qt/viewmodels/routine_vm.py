@@ -9,6 +9,7 @@ from typing import Any
 from settings.farm_schedule import MAX_ROUTINE_MINUTES, normalize_routine, routine_is_break_only
 from session.probes import list_farms_for_map, list_map_choices, list_patrol_entries
 from ui.hangul_sort import map_choice_sort_key
+from ui.reachable_battle_maps import battle_picker_choices
 
 _FARM_MAP_IDS = frozenset({"talking_island", "mainland"})
 
@@ -109,7 +110,7 @@ class RoutineViewModel:
     def map_choices(self, *, kind: str) -> list[tuple[str, str, bool]]:
         if kind == "break":
             return [item for item in self._map_choices if not item[2]]
-        return list(self._map_choices)
+        return battle_picker_choices(self._map_choices)
 
     def add_row(self, kind: str, map_id: str) -> str | None:
         kind = "break" if kind == "break" else "battle"
