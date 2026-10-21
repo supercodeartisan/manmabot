@@ -129,12 +129,46 @@ class EnterChatLibrary:
             lib.ec_version.restype = ctypes.c_wchar_p
             lib.ec_is_elevated.argtypes = []
             lib.ec_is_elevated.restype = wintypes.BOOL
+            if hasattr(lib, "ec_press_key"):
+                lib.ec_press_key.argtypes = [
+                    wintypes.DWORD,
+                    wintypes.HWND,
+                    ctypes.c_int,
+                    ctypes.c_int,
+                    ctypes.c_int,
+                    wintypes.DWORD,
+                    ctypes.POINTER(EcResult),
+                ]
+                lib.ec_press_key.restype = ctypes.c_int
             self._lib = lib
             return lib
 
     def run(self, request: EcRequest) -> EcResult:
         result = EcResult()
         self._load().ec_run(ctypes.byref(request), ctypes.byref(result))
+        return result
+
+    def press_key(
+        self,
+        *,
+        hwnd: int,
+        scancode: int,
+        e0: bool = False,
+        hold_ms: int = 40,
+        focus_timeout_ms: int = 1500,
+    ) -> EcResult:
+        """One physical key through Interception (``ec_press_key``, ABI 1.1.0)."""
+        lib = self._load()
+        if not hasattr(lib, "ec_press_key"):
+            raise EnterChatUnavailable(
+                f"enter_chat.dll {self.version() or '?'} has no ec_press_key "
+                f"(needs 1.1.0): {self._dll_path}"
+            )
+        result = EcResult()
+        lib.ec_press_key(
+            0, hwnd, int(scancode), int(bool(e0)), int(hold_ms), int(focus_timeout_ms),
+            ctypes.byref(result),
+        )
         return result
 
     def decompose_hangul(self, ch: str) -> str:

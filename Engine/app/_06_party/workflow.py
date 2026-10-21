@@ -163,8 +163,11 @@ def member_workflow(*, sock, policy, party, orders, accept, now) -> list:
     elif accept.get("error"):
         acc, adetail = "bad", f"Y failed: {accept.get('error')}"
     elif pressed_at:
-        acc = "done" if in_party else "active"
-        adetail = f"Y typed {int(accept.get('presses') or 0)}× · {_ago(pressed_at, now)}"
+        missed = int(accept.get("join_missed") or 0)
+        acc = "done" if in_party else ("bad" if missed else "active")
+        adetail = f"Y pressed {int(accept.get('presses') or 0)}× · {_ago(pressed_at, now)}"
+        if missed and not in_party:
+            adetail += f" · no join after {missed} press(es)"
     elif accept.get("skipped"):
         acc, adetail = ("done" if in_party else "wait"), str(accept.get("skipped"))
     else:

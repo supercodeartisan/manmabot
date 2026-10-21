@@ -124,6 +124,36 @@ class GameChat:
         )
 
 
+    def press_key(self, scancode: int, *, label: str = "", hold_ms: int = 40) -> ChatResult:
+        """One physical key in the game window (a key event, not ``WM_CHAR``)."""
+        name = label or f"scan 0x{int(scancode):02X}"
+        hwnd = self._find_hwnd()
+        if not hwnd:
+            return ChatResult(
+                text=name, status=EcStatus.PID, message=f"{GAME_PROCESS} window not found"
+            )
+        with self._lock:
+            with self._input_handoff():
+                raw = self._library.press_key(
+                    hwnd=int(hwnd),
+                    scancode=int(scancode),
+                    hold_ms=int(hold_ms),
+                    focus_timeout_ms=int(self._pace.focus_timeout_ms),
+                )
+        try:
+            status = EcStatus(int(raw.status))
+        except ValueError:
+            status = EcStatus.INTERNAL
+        return ChatResult(
+            text=name,
+            status=status,
+            message=str(raw.message or "").strip(),
+            keys=int(raw.keys),
+            failed=int(raw.failed),
+            elapsed_ms=int(raw.elapsed_ms),
+        )
+
+
 _default_chat: Optional[GameChat] = None
 _default_lock = threading.Lock()
 

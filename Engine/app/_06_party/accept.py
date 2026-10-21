@@ -3,7 +3,8 @@
 The leader sends ``party_invite`` right after ``/초대 <to>`` reached its game.
 The popup ([Yes]/[No]) has no memory sensor, so the notice is the only signal.
 Y goes out through the same typing module as the leader's ``/초대`` line
-(``app._05_action.chat`` → enter_chat), without opening chat and without Enter.
+(``app._05_action.chat`` → enter_chat), as a physical key through Interception:
+a typed ``y`` (``WM_CHAR``) reaches the game but the popup ignores it.
 
 The leader repeats the invite every 20 s; a notice while one is already queued
 keeps the first due time, so the repeats never push the press back.
@@ -13,16 +14,19 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Iterable, Optional
 
-ACCEPT_TEXT = "y"
+# Set-1 scancode of the Y key.
+ACCEPT_SCANCODE = 0x15
 ACCEPT_DELAY_S = 30.0
+# After Y, party memory should show the join within this time.
+JOIN_CHECK_S = 5.0
 
 
 def type_accept_key() -> str:
-    """Type Y into the game window. Returns "" on success, else the error."""
-    from app._05_action.chat import send_chat_line
+    """Press Y in the game window. Returns "" on success, else the error."""
+    from app._05_action.chat import default_game_chat
 
     try:
-        result = send_chat_line(ACCEPT_TEXT, open_chat=False, press_enter=False)
+        result = default_game_chat().press_key(ACCEPT_SCANCODE, label="Y (party invite)")
     except Exception as exc:
         return str(exc)
     return "" if result.ok else result.describe()
@@ -53,6 +57,8 @@ class InviteAccepter:
         self._clock = clock
         self._log = log
         self._due: Optional[float] = None
+        self._check_at: Optional[float] = None
+        self.join_missed = 0
         self.to = ""
         self.received_at: Optional[float] = None
         self.pressed_at: Optional[float] = None
@@ -66,6 +72,8 @@ class InviteAccepter:
 
     def reset(self) -> None:
         self._due = None
+        self._check_at = None
+        self.join_missed = 0
         self.to = ""
         self.received_at = None
         self.pressed_at = None
@@ -102,10 +110,20 @@ class InviteAccepter:
             return
         self.received_at = time.time()
         self._due = self._clock() + self.delay_s
-        self._log(f"Party invite notice for {to or '—'} — typing Y in {int(self.delay_s)}s")
+        self._log(f"Party invite notice for {to or '—'} — pressing Y in {int(self.delay_s)}s")
 
     def tick(self, *, in_party: bool = False) -> bool:
-        """Type Y once the delay is over. True when Y reached the game this tick."""
+        """Press Y once the delay is over. True when Y reached the game this tick."""
+        if self._check_at is not None and self._clock() >= self._check_at:
+            self._check_at = None
+            if in_party:
+                self._log("Party invite accept: joined after Y")
+            else:
+                self.join_missed += 1
+                self._log(
+                    f"Party invite accept: still not in a party {int(JOIN_CHECK_S)}s after Y "
+                    "(popup closed / expired, or the key did not reach it)"
+                )
         if self._due is None or self._clock() < self._due:
             return False
         self._due = None
@@ -121,8 +139,9 @@ class InviteAccepter:
             return False
         self.pressed_at = time.time()
         self.presses += 1
-        self._log(f"Party invite accept: Y typed for {self.to or '—'}")
-        _note_monitor("Y typed (accept invite)")
+        self._check_at = self._clock() + JOIN_CHECK_S
+        self._log(f"Party invite accept: Y key pressed for {self.to or '—'}")
+        _note_monitor("Y key pressed (accept invite)")
         return True
 
     def status(self) -> dict[str, Any]:
@@ -137,6 +156,7 @@ class InviteAccepter:
             "received_at": self.received_at,
             "pressed_at": self.pressed_at,
             "presses": self.presses,
+            "join_missed": self.join_missed,
             "error": self.error,
             "skipped": self.skipped,
         }
@@ -144,7 +164,7 @@ class InviteAccepter:
 
 __all__ = [
     "ACCEPT_DELAY_S",
-    "ACCEPT_TEXT",
+    "ACCEPT_SCANCODE",
     "InviteAccepter",
     "type_accept_key",
 ]

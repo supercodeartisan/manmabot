@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-22 — party: invite accept Y as a physical key (typed `y` was ignored)
+
+Intent: live test (leader 05:14–05:16, member clock ≈1 h 3.4 s behind): 4 invites typed, 4 notices received, Y "typed" OK twice (enter_chat status OK), but party memory never showed a join. An ASCII `y` goes out as `WM_CHAR`; the popup only reacts to a key event.
+Shared: `accept.type_accept_key` → `GameChat.press_key(0x15)` → enter_chat `ec_press_key` (same typing module, Interception key down/up, needs DLL 1.1.0). `InviteAccepter` logs 5 s after Y whether party memory shows the join (`join_missed` on the monitor Accept step).
+Affects: member invite accept only; 30 s delay unchanged. Open: whether the popup stays open 30 s while the leader re-invites every 20 s — the 5 s join check tells.
+Consent: fixes the agreed accept path (popup key Y) under the user's "use the invite sender's typing module".
+Result: simulated: one scancode 0x15 press at 30 s; join check logs a miss. DLL 1.1.0 export loads. Not run in game.
+
 ## 2026-10-22 — party: invite accept 30 s after the notice, typed Y, logic moved to `_06_party`
 
 Intent: user asked for a 30 s wait after the leader's invite notice, Y through the same typing module as the leader's `/초대`, and less party code in `bot_controller`.

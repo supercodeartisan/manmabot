@@ -205,7 +205,7 @@ comms/
 | `recovery` | L→M | 마더트리 좌표 | 송신 live / **멤버 본처리 미완** |
 | `party_policy` | L→M | leader_mode·루팅·야드·party_size·roster·`policy_id` (farm_mode·거리는 멤버 자신) | live (멤버 `merge_leader_policy`) |
 | `policy_ack` | M→L | 정책 적용 확인 (`from`, `policy_id`). 리더 초대 게이트 | live |
-| `party_invite` | L→M | `/초대 <to>` 타이핑 직후 (`to`, `invite_id`). 해당 멤버가 30s 뒤 **Y** 1회 타이핑 (`accept.InviteAccepter`, 초대 문구와 같은 `send_chat_line`, 채팅 열지 않음·Enter 없음) | live |
+| `party_invite` | L→M | `/초대 <to>` 타이핑 직후 (`to`, `invite_id`). 해당 멤버가 30s 뒤 **Y 물리 키** 1회 (`accept.InviteAccepter`, 초대 문구와 같은 enter_chat 모듈의 `ec_press_key`; 타이핑 `y`=WM_CHAR는 팝업이 무시). 5s 뒤 가입 여부 로그 | live |
 | `report` | M→L | 위치·도착 | live |
 
 **의존 방향 (목표 달성)**
