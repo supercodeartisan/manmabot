@@ -291,11 +291,26 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         loot_priority = "follow"
     set_value("party_loot_priority", loot_priority)
     farm_mode = str(
-        party.get("farm_mode", getattr(profile, "party_farm_mode", "party")) or "party"
+        party.get("farm_mode", getattr(profile, "party_farm_mode", "party"))
+        or "party"
     ).strip().lower()
     if farm_mode not in ("party", "solo"):
         farm_mode = "party"
     set_value("party_farm_mode", farm_mode)
+    leader_mode = str(
+        party.get("leader_mode", getattr(profile, "party_leader_mode", "turret"))
+        or "turret"
+    ).strip().lower()
+    if leader_mode not in ("turret", "moving"):
+        leader_mode = "turret"
+    set_value("party_leader_mode", leader_mode)
+    try:
+        lag_tiles = int(
+            party.get("lag_tiles", getattr(profile, "party_lag_tiles", 30)) or 30
+        )
+    except (TypeError, ValueError):
+        lag_tiles = 30
+    set_value("party_lag_tiles", max(5, min(100, lag_tiles)))
     set_value(
         "party_roster",
         normalize_party_roster(

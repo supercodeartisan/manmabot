@@ -112,7 +112,9 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 14 | `farm.upkeep` | `_try_farm_upkeep` | — | handoff **traveling** | — |
 | 15 | `farm.post_shop_return` | `_maybe_post_shop_farm_return` | nav request | emit / pass | — |
 | 16 | `nav.hunt_map` | `_maybe_scroll_to_hunt_map` | scroll / world_nav | emit | — |
+| 16a | `party.turret_leash` | `step_party_turret_leash` | `TRAVELING` (back to anchor) | emit / pass (party leader turret only) | — |
 | 17 | `farm.engage` | `farm_loot_or_combat` | `ATTACK`, `PICKUP`, approach | emit | fail |
+| 17a | `party.turret_idle` | `step_party_turret_idle` | `TRAVELING` / `IDLE` | emit (party leader turret only) | — |
 | 18 | `farm.enter` | `_enter_farm_if_needed` | `TRAVELING`, `IDLE` | emit / handoff traveling | fail |
 | 19 | `farm.search` | `_search_inside_farm` | `SEARCHING`, `IDLE` | emit | fail |
 
@@ -141,7 +143,9 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 12 | `nav.hunt_map` | shared | — |
 | 13 | `dungeon.off_floor` | `IDLE` if wrong floor | fail |
 | 14 | `dungeon.blocked` | `try_blocked_step` → walk / `IDLE` | gap |
+| 14a | `party.turret_leash` | shared (party leader turret only) | — |
 | 15 | `farm.engage` | shared | fail |
+| 15a | `party.turret_idle` | shared (party leader turret only) | — |
 | 16 | `dungeon.patrol` | handoff traveling | — |
 | 17 | `dungeon.idle_nudge` | `try_idle_nudge` | gap |
 
@@ -202,6 +206,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | `survival.mp_safe` | island, dungeon, traveling | — |
 | `survival.return_vitals` | island, dungeon, traveling | — |
 | `party.hold_ground` | world_nav, island, dungeon, traveling | — |
+| `party.turret_leash` / `party.turret_idle` | island, dungeon | — |
 | `survival.return_idle` | island, dungeon | — |
 | `survival.inplace_hp` | retreating | — |
 | `shop.before_world_nav` | island, dungeon | wait |

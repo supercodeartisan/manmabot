@@ -53,6 +53,13 @@ class PolicyInput:
     need_combat_step: bool = False
     # Solo farm: own target fights inside the assist leash, leader fight or not.
     solo_farm: bool = False
+    # Turret yard: member / target currently inside the farm box.
+    in_farm_yard: bool = True
+    target_in_yard: bool = True
+    # Same assist target as last tick (a fight already in progress).
+    assist_sticky: bool = False
+    # Turret: no live target and not on the radial seat around the leader.
+    off_turret_seat: bool = False
 
 
 @dataclass(frozen=True)
@@ -92,38 +99,41 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             f"follow_off_ui dist={dist}",
         )
 
-    # --- Solo farm: hunt own target while the leader is within the leash ---
-    if inp.solo_farm and inp.assist_ready and dist <= int(cfg.assist_leash_tiles):
-        if inp.need_combat_step:
-            return PolicyResult(
-                MemberKind.CLOSE_IN,
-                False,
-                f"solo_close_in dist={dist}",
-            )
+    in_leash = dist <= int(cfg.assist_leash_tiles)
+
+    # --- Leader turret mode: back into the yard unless a fight holds us out ---
+    # A fight already in progress may finish outside the yard; a new target
+    # outside the yard does not pull a member that is already out.
+    fighting_out = inp.assist_ready and (inp.assist_sticky or inp.target_in_yard)
+    if cfg.turret_farm and in_leash and not inp.in_farm_yard and not fighting_out:
         return PolicyResult(
-            MemberKind.ASSIST,
-            False,
-            f"solo_farm dist={dist}",
+            MemberKind.FOLLOW,
+            True,
+            f"turret_rejoin_yard dist={dist}",
         )
 
-    # --- Party farm: attack the leader's target when resolved ---
+    # --- Combat: party = the leader's target, solo = own target ---
     # assist_ready alone is enough (contested / print_state atk/tgt). Do not
     # require leader_farming — that flag can lag one tick behind the resolve.
-    if (
-        not inp.solo_farm
-        and inp.assist_ready
-        and dist <= int(cfg.assist_leash_tiles)
-    ):
-        if inp.need_combat_step:
+    if inp.assist_ready and in_leash:
+        yard = "turret_" if cfg.turret_farm else ""
+        out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
+        if not inp.need_combat_step:
+            what = "solo_farm" if inp.solo_farm else "assist"
             return PolicyResult(
-                MemberKind.CLOSE_IN,
-                False,
-                f"close_in dist={dist}",
+                MemberKind.ASSIST, False, f"{yard}{what}{out} dist={dist}"
             )
+        what = "solo_close_in" if inp.solo_farm else "close_in"
         return PolicyResult(
-            MemberKind.ASSIST,
-            False,
-            f"assist dist={dist}",
+            MemberKind.CLOSE_IN, False, f"{yard}{what}{out} dist={dist}"
+        )
+
+    # --- Turret: idle members take their radial seat around the leader ---
+    if cfg.turret_farm and in_leash and inp.off_turret_seat:
+        return PolicyResult(
+            MemberKind.FOLLOW,
+            True,
+            f"turret_seat dist={dist}",
         )
 
     # --- Combat leash: leader fighting but no live assist target yet ---

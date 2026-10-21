@@ -22,6 +22,10 @@ from app._04_decision.behaviors.mode_actions import (
 )
 from app._04_decision.behaviors import search as search_beh
 from app._04_decision.behaviors.hold_ground import step_party_hold_ground
+from app._04_decision.behaviors.party_turret import (
+    step_party_turret_idle,
+    step_party_turret_leash,
+)
 from app._04_decision.behaviors.search_hop import emit_search_hop
 from app._04_decision.behaviors.travel import (
     clear_travel,
@@ -2078,7 +2082,9 @@ def _handlers_farming_island() -> dict:
         "farm.upkeep": _try_farm_upkeep,
         "farm.post_shop_return": _maybe_post_shop_farm_return,
         "nav.hunt_map": _maybe_scroll_to_hunt_map,
+        "party.turret_leash": step_party_turret_leash,
         "farm.engage": _step_farm_engage,
+        "party.turret_idle": step_party_turret_idle,
         "farm.enter": _enter_farm_if_needed,
         "farm.search": _search_inside_farm,
     }
@@ -2107,7 +2113,9 @@ def _handlers_farming_dungeon() -> dict:
         "nav.hunt_map": _maybe_scroll_to_hunt_map,
         "dungeon.off_floor": _step_dungeon_off_floor,
         "dungeon.blocked": _step_dungeon_blocked,
+        "party.turret_leash": step_party_turret_leash,
         "farm.engage": _step_farm_engage,
+        "party.turret_idle": step_party_turret_idle,
         "dungeon.idle_nudge": _step_dungeon_idle_nudge,
         "dungeon.patrol": _step_dungeon_patrol,
     }

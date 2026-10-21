@@ -549,9 +549,8 @@ def _assist_excluded_ids(blackboard: Any) -> set[int]:
         return set()
     try:
         from app._04_decision.attack_feedback import excluded_target_ids
-        from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
 
-        return set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+        return set(excluded_target_ids(blackboard))
     except Exception:
         return set()
 
@@ -630,9 +629,8 @@ def pick_solo_farm_target(
     if blackboard is not None:
         try:
             from app._04_decision.attack_feedback import excluded_target_ids
-            from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
 
-            skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+            skip = set(excluded_target_ids(blackboard))
         except Exception:
             skip = set()
 

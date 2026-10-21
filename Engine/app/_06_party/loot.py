@@ -219,7 +219,6 @@ def find_party_pickup_range_loot(
 ) -> Optional["WorldObject"]:
     """Nearest lootable pile already within pickup tiles."""
     from app._04_decision.attack_feedback import excluded_target_ids
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
     from app._04_decision.behaviors.loot_hop import recently_clicked_loot
     from app._04_decision.behaviors.mode_actions import _effective_loot_mode
     from app._04_decision.combat_query import (
@@ -235,7 +234,7 @@ def find_party_pickup_range_loot(
 
     loot_mode = _effective_loot_mode(state)
     origin = blackboard.world_origin
-    skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
         for tid in blackboard.loot_clicked_ids
@@ -300,7 +299,6 @@ def try_party_hold_loot(
     from app._03_world import ObjectType
     from app._04_decision.attack_feedback import excluded_target_ids
     from app._04_decision.behavior_tree import Status
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
     from app._04_decision.behaviors.loot_hop import (
         begin_loot_item,
         clear_loot_hop,
@@ -328,7 +326,7 @@ def try_party_hold_loot(
             return intent
 
     loot_mode = _effective_loot_mode(state)
-    skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
         for tid in blackboard.loot_clicked_ids

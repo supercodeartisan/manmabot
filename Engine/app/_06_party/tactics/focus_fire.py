@@ -6,6 +6,10 @@ are added until their combined damage covers the target's HP times
 then distance. A boss, or a target whose HP is unknown, takes every shooter
 that can reach it. Shooters left after every target is covered pile onto the
 focus target.
+
+Library only — not wired into the session. Inputs it needs before wiring:
+per-target HP (``Target.hp`` / ``max_hp``), per-member ``expected_damage``,
+and a leader → member assignment message.
 """
 from __future__ import annotations
 

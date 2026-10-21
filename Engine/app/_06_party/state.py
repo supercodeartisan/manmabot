@@ -49,6 +49,11 @@ class MemberRuntime:
     travel_offset: Optional[tuple[int, int]] = None
     # Last travel click tile on the walk path (in-transit check).
     follow_hop: Optional[tuple[int, int]] = None
+    # Turret radial seat around the leader; last seat that had no path.
+    turret_seat: Optional[tuple[int, int]] = None
+    turret_seat_bad: Optional[tuple[int, int]] = None
+    # Moving-mode area reading, e.g. "narrow:trail_seat0" / "open:open_field".
+    formation: str = ""
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 
@@ -57,6 +62,8 @@ class MemberRuntime:
             "chasing": self.chasing,
             "approach_goal": self.approach_goal,
             "settle_stand": self.settle_stand,
+            "turret_seat": self.turret_seat,
+            "formation": self.formation,
             "paused": self.paused,
             "last_reason": self.last_reason,
             "last_kind": self.last_kind,

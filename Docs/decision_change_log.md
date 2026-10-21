@@ -1,5 +1,136 @@
 # Decision change log
 
+## 2026-10-21 — party invites in one module (`_06_party/invite.py`)
+
+Request: "파티초대를 한개의 모듈로 정리하라". Refactor only, behaviour unchanged.
+
+`setup.py` (PartyInviter, roster names, leave check) and `chat_commands.py` (`/파티 `, `파티탈퇴`) are merged into `invite.py` and deleted. The invite glue that lived in `bot_controller` (`_send_party_chat`, `_party_ws_clients`, `_INVITE_UNSAFE_ACTIONS`, `POLICY_BEFORE_INVITE_WAIT_S`, the per-tick policy / socket / action checks, the "Party setup:" log) moved into `invite.LeaderInvites` (`start`, `tick`, `info`, `deadline`) with `deliver_chat`, `action_allows_chat`, `POLICY_WAIT_S`, `UNSAFE_ACTIONS`. The controller keeps the profile gate + party probe in `_run_leader_party_setup`, a one-line `_leader_invite_tick`, and holds `self._party_invites` (snapshot and rally deadline read it). The "Party setup:" log line now lists the names actually invited (self skipped).
+
+Result: party suites 221 passing (2 skipped); new `LeaderInvitesTests`.
+
+## 2026-10-21 — party start: 15 min invite + rally window, /파티 every 20 s, exclusions; member socket error text
+
+Consent: user ("초대를 15 분시간을 크게 잡고 20초간격으로 초대를 보내 … 15분후에도 연결되지 않는 성원에 대해서는 배제하고 그 상태를 파티 모니터에 보여주어야 한다", "15분안에 파티초대 및 집결을 완결하고 그 후에는 사냥터에로의 진입"); AskQuestion: invites run in parallel with travel; error shown in status line + log + monitor; go = yes.
+
+**Invites** (`_06_party/setup.PartyInviter`, replaces blocking `configure_party_from_roster`). Setup once: publish policy, `/탈퇴` if in someone else's party, arm the inviter. Each tick (`bot_controller._leader_invite_tick`): one `/파티 <name>` at most, every 20 s per roster name not in party memory; stops for a name once it is listed. First invites wait for all member sockets or 20 s (policy before invite, no longer blocking). A tick is skipped when the previous action was `shop_run` / `shop_stop` / `gate` / `teleport` / `use_talking_scroll` / `return_to_mother_tree` / `respawn` / `dismiss_level_up` (chat must not hit an NPC dialog or a teleport). Window 15 min from setup → names still missing are excluded; a late join clears the exclusion.
+
+**Rally** (`LeaderStartRally.begin(deadline=)`): the same deadline. At the deadline the rally ends in any state (await_plan / hold_at / waiting), records `left_behind`, and the leader goes on to the hunt. Without a deadline the old 15 min from wait start still applies (tests).
+
+**Monitor**: leader session `phase` {forming | rally | hunting, remaining_s, excluded, not_arrived}; roster rows add invites / invite age / state (pending · invited · joined · ready · not_arrived · excluded). Dashboard: PHASE badge, INVITE `n/m JOINED|FORMED|EXPIRED`, roster Invites + Status columns.
+
+**Member socket error**: `party_ws_unreachable` text (EN/KO/ZH) in the header status; `start_error` in the party monitor note (red); log line unchanged.
+
+Shared: `set_party_hold` path unchanged (rally waiting only). Not touched: member logic, turret / moving, combat, HP. Side effects: while the leader travels, invite lines are typed between steps; a teleport/NPC step skips that tick's invite.
+
+Left as is (by request): member invite accept (not automated), member `recovery` handling, explicit party end / leave.
+
+Result: implemented. Tests: `test_party_invite_setup` rewritten (inviter interval, join stop, window/exclusion, late join, unsafe action skip, leave first), `test_party_rally` shared-deadline tests; party suites 216 passing (2 skipped).
+
+## 2026-10-21 — moving mode: member single-file trail in narrow areas; leader waits for lagging members
+
+Consent: user — member "yes" (moving mode, NARROW → trail tile); leader "반수이상의 성원들이 뒤떨어지면 잠간기다리라, 6타일은 너무 작이 30 타일정도로 하라 그리고 파티장 대면부에서 타일개수를 설정하게 하라".
+
+**Tactics cleanup** — `tactics/teleport_sync.py` and `tactics/stagger.py` deleted; `focus_fire` stays library-only. New `_06_party/formation.py` composes `terrain_kind` + `trail`.
+
+**Member** (`manager._formation_trail_tile`): moving mode only (`leader_mode != turret`), leader on the same map. `MemberFormation` records the leader tile each tick and reads the area (re-read every 2 leader tiles, hysteresis). While the leader walks (not stopped, not farming) and the area is NARROW and the member has a roster seat, the FOLLOW goal is the trail tile `spacing 2 × (seat+1)` behind the leader (sticky, `stand_reason=follow_trail`) instead of the formation slot. OPEN / no seat / no reading → existing travel slot. Not touched: turret seat, settle stand (leader stopped), combat, loot, join_map. Status: `runtime.formation`.
+
+**Leader** (`bot_controller._leader_line_hold` → `set_party_hold`): party on + role leader + `party_leader_mode == moving` + start rally not waiting. `LeaderLineWatch` records the leader's `world_origin`; followers come from party memory (`world.last_party`, non-leader rows; other map = behind; no tile = ignored). Lag = max(Chebyshev, steps behind on the leader trail). When half or more known members lag more than `party_lag_tiles` (default 30, 5–100) the leader holds via the existing `party.hold_ground` (counterattack in reach, else IDLE) for at most 8 s, then walks on for 6 s before it may wait again. Any terrain. Shared path: `set_party_hold` (same flag as the start rally; rally takes priority).
+
+**Setting** — `party_lag_tiles` (profile, task_runtime, schedule, settings bag `party.lag_tiles`), Party tab leader card spin box "뒤처짐 대기 (타일)" (enabled in Moving), i18n EN/KO/ZH. Monitor: leader MODE badge `MOVING ⏸` + "Line wait" metric.
+
+Side effects: a member that disconnects from party memory is ignored; a member on another map (e.g. shopping) counts as behind and causes 8 s waits every 14 s until it returns. While waiting the leader does not search for new mobs.
+
+Result: implemented. Tests: `test_party_formation` (majority rule, corner lag by trail steps, other map, setting, timeout/cooldown, party rows, member trail in manager); party suites 207 passing (2 skipped).
+
+## 2026-10-21 — turret: leader anchor, member CLOSE_IN out of yard, radial seats; member loot/assist import fix
+
+Consent: user ("터렛에서 대상이 야드 밖이면 HOLD → CLOSE_IN and return naturally", "터렛모드에서 리더가 중심이 돼서 사냥을 조직한다. 선택된 사냥지점을 떠나지 않고 거의 그 자리에서 사냥한다. 1-2 타일의 움직임은 감수한다", "tactics", "구현할것은 구현하고 수정할것은 수정하라").
+
+**Leader turret** (new `app._04_decision.behaviors.party_turret`). Session arms it each tick via `set_party_turret` only when party on + role leader + `party_leader_mode == turret` + start rally not waiting. Anchor = first tile inside the active farm (or first hunt tile when no farm rect), stored per live mapId; dropped if >40 tiles away.
+- `party.turret_leash` (island + dungeon columns, right before `farm.engage`): monsters farther than leash 2 (+ reach for ranged) from the anchor and items farther than 2 are written to scratch; `excluded_target_ids` now unions them (empty unless turret is armed). Sticky target / item outside the zone is released. Leader >3 tiles from the anchor walks back unless its current target is within reach.
+- `party.turret_idle` (right after `farm.engage`): nothing to do → walk back (>1 tile) or IDLE on the anchor; `farm.enter` / `farm.search` / `dungeon.patrol` do not run.
+- Shared function touched: `excluded_target_ids` (one extra set, empty for solo / moving). Not touched: `farm_loot_or_combat`, survival, retreat, shop, world nav (all run before the turret steps).
+
+**Member turret** (`decide_policy`, `manager`): target outside the yard → CLOSE_IN (unclamped) instead of HOLD. Yard rejoin is skipped while a fight is in progress (`assist_sticky` = same target as last tick, or target inside the yard); after it ends the member walks back. A member already outside the yard ignores a new outside-yard target and rejoins first.
+
+**Tactics** — `tactics.radial` wired: new `turret_seat.py`. Policy carries roster order → `seat_index_for_name` → `PartyMemberConfig.seat_index`. In turret, a member with no target walks to its ring seat (`fan_slots` full ring, radius ≤2 inside the yard, `resolve_slot` for blocked / no-sight tiles) — reason `turret_seat`; the seat also replaces the random settle stand as the FOLLOW goal. Moving mode unchanged. Other tactics (trail, stagger, teleport_sync, focus_fire) still library-only.
+
+**Bug fix** — `_06_party/loot.py` and `assist.py` imported the removed `GIVE_UP_COOLDOWN_TICKS` and called `excluded_target_ids(bb, ticks)`. The ImportError was swallowed: member primary hold-loot (`try_party_hold_loot`) never ran and assist / solo-farm skip sets were always empty. Now `excluded_target_ids(bb)`.
+
+Side effects: leader in turret ignores far ranged attackers it cannot reach from the zone (members still fight them inside their leash); a farm with no mobs near the anchor means the leader waits instead of searching. Monitor: leader MODE badge `TURRET ⚓` + "Turret anchor" metric.
+
+Result: implemented. Tests: new `test_party_turret` (anchor, zone exclusions, leash, idle, per-map anchor, assist skip regression) + policy/seat tests; party suites 194 passing (2 skipped without LC.exe). Full discover: 15 pre-existing errors unrelated (missing `game_geom`/`gameflow`/`pipeline` modules, stale `GIVE_UP_COOLDOWN_TICKS` / `on_dungeon_return_town` imports in tests, account store env).
+
+## 2026-10-21 — member party: require leader socket at Start, watch + reconnect during party
+
+Consent: user (wait 60s at Start; while disconnected keep farming on the last policy; implement).
+
+Intent: a member with party enabled must not run without the leader's socket. During the party a drop must reconnect.
+
+Start (`BotController._worker` → `_start_party_client`): member + party on → start client, `PartyComms.wait_member_connected(MEMBER_CONNECT_WAIT_S=60, stopped=stop_event)`. No client (empty Leader IP) or timeout → log + party event, `stop(reason="party_ws_unreachable")`, bot loop never runs (no login / movement). Leader and solo bots unaffected. User Stop during the wait aborts it.
+
+During party (`_member_party_tick`, read phase): `PartyComms.watch_member` logs drop #n / reconnected after Ns, and restarts the client IO thread if it died (throttled 5s). `PartyClient` already retries every 2s. Behaviour while down is unchanged: follow/fight via in-game memory + last policy overlay.
+
+Monitor: socket snapshot adds `drops` / `restarts` / `down_s` and state `reconnecting`; dashboard WS badge shows `RECONNECTING #n`.
+
+Side effects: member started before the leader now stops after 60s; wrong Leader IP stops the member instead of farming alone. Watch only runs inside the in-game loop (during login the client still auto-retries).
+
+Result: implemented. Tests: `test_party_member_link` (new) + party suites, 140 run, all passing (2 skipped without LC.exe). Fixed `test_party_invite_setup` fixture missing `_party_comms` (broken by the earlier policy-before-invite change). Live check against a local `PartyServerWatchdog`: gate False with no server, True once up; stop server → drop #1 → reconnected ~1s after restart.
+
+## 2026-10-21 — split farming method: leader turret / moving, member party / solo
+
+Consent: user ("team leader option: turret and moving (이동). Member side: party and solo. Fix related codes").
+
+Intent: the leader picks `leader_mode` (`turret` default, `moving`) and sends it in `party_policy`. Each member picks its own `farm_mode` (`party` default, `solo`), which the leader no longer overrides. `PartyMemberConfig.turret_farm` now reads `leader_mode == "turret"`, so the yard rules apply to both party and solo members while the leader is in turret mode (before: solo skipped the yard). In moving mode there is no yard: party = assist + close-in, solo = own target, as before.
+
+Shared: `decide_policy` combat branch merged (yard rejoin → assist / close-in / hold-out-of-yard). Reasons kept: `assist`, `close_in`, `solo_farm`, `solo_close_in`, with a `turret_` prefix in turret mode. Profile: `party_farm_mode` (party|solo, default party; old `turret` → party), new `party_leader_mode` (turret|moving). Party tab: leader card = Turret / Moving combo; member panel = Party / Solo combo. Dashboard: MODE + FARM badges.
+
+Not changed: the leader's own hunt routine is the same in turret and moving (it only steers members). A leader "hold the spot" behaviour for turret would need a separate change.
+
+Result: implemented. Party policy / member / monitor tests: 84 run, all passing (2 skipped without LC.exe).
+
+## 2026-10-21 — follow / stop / assist are member settings
+
+Consent: user ("따라가기 / 정지 / 어시스트 — these for member bot").
+
+Intent: movement distances are tuned per member bot (class range differs), so the leader no longer sends them. `policy_message` drops `follow_tiles` / `stop_tiles` / `approach_tiles` / `assist_leash_tiles`. `merge_leader_policy` always keeps the member's own values, even if an older leader still sends them. The Party tab moves the three spin boxes from the leader card to the member panel.
+
+Leader policy now carries farm method, loot mode / priority, roster seats + loot, and party size (yard).
+
+Result: implemented. `test_party_farm_policy.py` has 10 tests, all passing.
+
+## 2026-10-21 — party policy sent before invite; member overlay is temporary
+
+Consent: user ("send the profile settings to each member before the party invite… temporarily merge… solo must use origin profile… implement this cleanly").
+
+Intent: the leader pushes `party_policy` before the first `/파티`, waiting up to 20 s (`POLICY_BEFORE_INVITE_WAIT_S`) for roster members to connect over WebSocket and re-sending to each newcomer. The periodic 5 s resend still covers late members. On the member, the policy is an in-memory overlay: `PartyMemberManager.base_config` keeps the member's own knobs, `apply_leader_policy` merges on top, `clear_leader_policy` restores them. Leader identity and member-only knobs (potion ratio, defend) survive. The overlay is re-applied when the policy or the member's own name changes.
+
+Shared: `_run_leader_party_setup` (new pre-invite step), `_send_party_policy_before_invite`, `_apply_member_party_policy`, `PartyMemberConfig.with_knobs_from`. The profile is never written, so a solo run (party off, no `party_brain`) always uses the member's original profile.
+
+Side effects to watch: leader invites can start up to 20 s later when members are not connected.
+
+Result: implemented. `test_party_farm_policy.py` has 10 tests, all passing. Not yet run in game.
+
+## 2026-10-21 — turret farm default + leader party_policy
+
+Consent: user ("implement… base farming mode… main setting… team leader… roster roles… looting solo/responsible… farming method global").
+
+Intent: member base farm is turret (yard assist around the leader). Leader owns global farm method, loot mode, follow knobs, and roster seats (mage default; shopkeeper optional). Leader broadcasts `party_policy`; members `merge_leader_policy` (per-name seat + loot).
+
+Shared: `farm_yard.py`, `PartyMemberConfig.merge_leader_policy`, `policy` turret branch, `party_orders.policy_message` / `MemberOrders.policy`, `PartyComms.publish_policy`, `BotController` publish/apply. UI Party tab: farm/loot on leader; roster Role+Loot; member WS-only. Profile/task_runtime default `party_farm_mode=turret`.
+
+Affects: party member decide (turret yard), leader ticks (policy publish). Solo hunt / HP / login unchanged.
+
+Result: implemented. `Others/tests/test_party_farm_policy.py` added.
+
+## 2026-10-20 — party `comms/` facade (wire unchanged)
+
+Intent: all party WebSocket I/O goes through `app._06_party.comms` so session and behaviour modules do not import `websocket.party_orders` / leader ticks directly.
+Shared: new `comms/` (`PartyComms`, `orders`, `link`, `publish`, `ingest`, `status`). `leader_rally` / `manager` import `comms.orders`. `BotController` socket lifecycle and leader/member ticks use `PartyComms`. JSON envelope and body `type`s unchanged. Invite chat still `_05_action.chat` (not socket).
+Affects: party session glue only. Combat, HP, login, solo decide columns unchanged.
+Consent: user ("go on" after README modularization plan).
+Result: implemented. README §4 updated. Party unit tests to verify.
+
 ## 2026-10-20 — invite retry: 30 s × up to 3 after each failed `/파티`
 
 Intent: when an invite line fails, wait 30 s and try again, up to 3 retries (`INVITE_RETRIES` / `INVITE_RETRY_S`), then move to the next roster name.

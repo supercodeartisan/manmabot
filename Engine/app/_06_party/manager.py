@@ -17,6 +17,7 @@ from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
 from .follow import travel_band
 from .follow_field import FollowField, FollowFieldCache, field_radius
+from .formation import MemberFormation
 from .intents import intent_for_kind, pick_settle_stand, plan_field_follow
 from .join_map import PartyJoinNav
 from .leader import (
@@ -50,17 +51,38 @@ class PartyMemberManager:
 
     def __init__(self, config: PartyMemberConfig | dict | None = None) -> None:
         self.config = PartyMemberConfig.from_mapping(config)
+        # Member's own profile knobs. The leader policy is an in-memory overlay
+        # on top; it is never written back to the profile.
+        self.base_config = self.config
+        self.leader_policy: Optional[dict[str, Any]] = None
         self.runtime = MemberRuntime()
         self.world_origin: Any = None
         self._rng = random.Random()
         self.decision_history: deque[dict[str, Any]] = deque(maxlen=_DECISION_HISTORY)
         self._join_nav = PartyJoinNav()
         self._field_cache = FollowFieldCache()
+        self._formation = MemberFormation()
         # Solo DecisionManager blackboard — required for WORLD_NAV join (scroll/gate).
         self._nav_blackboard: Any = None
 
     def configure(self, config: PartyMemberConfig | dict | None) -> None:
         self.config = PartyMemberConfig.from_mapping(config)
+        self.base_config = self.config
+        self.leader_policy = None
+
+    def apply_leader_policy(self, policy: dict[str, Any], *, self_name: str = "") -> None:
+        """Overlay leader ``party_policy`` on the member's own knobs (temporary)."""
+        merged = self.base_config.merge_leader_policy(policy, self_name=self_name)
+        self.config = self.config.with_knobs_from(merged)
+        self.leader_policy = dict(policy)
+
+    def clear_leader_policy(self) -> bool:
+        """Back to the member's own knobs. Returns True when an overlay was active."""
+        if self.leader_policy is None:
+            return False
+        self.config = self.config.with_knobs_from(self.base_config)
+        self.leader_policy = None
+        return True
 
     def pause(self) -> None:
         self.runtime.paused = True
@@ -167,6 +189,7 @@ class PartyMemberManager:
             "stop_tiles": self.config.stop_tiles,
             "assist_leash_tiles": self.config.assist_leash_tiles,
             "farm_mode": self.config.farm_mode,
+            "leader_mode": self.config.leader_mode,
         }
         snap["decision_history"] = list(self.decision_history)
         return snap
@@ -441,6 +464,62 @@ class PartyMemberManager:
                 need_combat_step = True
                 close_in_tile = assist_monster_tile(assist_obj, origin)
 
+        from .farm_yard import (
+            clamp_to_yard,
+            in_yard,
+            tile_from_obj,
+            yard_half_extents,
+        )
+
+        half_w, half_h = yard_half_extents(
+            int(cfg.party_size),
+            half_w=cfg.yard_half_w,
+            half_h=cfg.yard_half_h,
+            scale_with_roster=bool(cfg.yard_scale_with_roster),
+        )
+        me_tile = (
+            (int(origin.x), int(origin.y)) if origin_ok and origin is not None else None
+        )
+        in_farm_yard = True
+        target_in_yard = True
+        if cfg.turret_farm and leader_tile is not None:
+            in_farm_yard = in_yard(
+                me_tile, leader_tile, half_w=half_w, half_h=half_h
+            )
+            tgt_tile = tile_from_obj(assist_obj, origin)
+            if tgt_tile is None and close_in_tile is not None:
+                tgt_tile = close_in_tile
+            target_in_yard = (
+                True
+                if tgt_tile is None
+                else in_yard(tgt_tile, leader_tile, half_w=half_w, half_h=half_h)
+            )
+            if close_in_tile is not None and target_in_yard:
+                close_in_tile = clamp_to_yard(
+                    close_in_tile, leader_tile, half_w=half_w, half_h=half_h
+                )
+
+        seat = self._turret_seat_tile(
+            cfg,
+            leader_tile=leader_tile if leader_present else None,
+            half_w=half_w,
+            half_h=half_h,
+        )
+        self.runtime.turret_seat = seat
+        assist_sticky = (
+            assist_obj is not None
+            and prev_assist_id is not None
+            and self.runtime.assist_track_id == prev_assist_id
+        )
+        off_turret_seat = False
+        if seat is not None and me_tile is not None and assist_obj is None:
+            from .follow import ARRIVAL_TOLERANCE as _SEAT_TOL
+
+            off_turret_seat = (
+                max(abs(me_tile[0] - seat[0]), abs(me_tile[1] - seat[1]))
+                > _SEAT_TOL
+            )
+
         leader_stopped = self._leader_looks_stopped(
             leader_tile=leader_tile if leader_present else None,
             farming=bool(view.farming),
@@ -486,15 +565,26 @@ class PartyMemberManager:
                 ):
                     self.runtime.approach_goal = None
 
+        trail_tile = self._formation_trail_tile(
+            cfg, leader_tile=leader_tile if leader_present else None
+        )
         travel_spot: Optional[tuple[int, int]] = None
-        if (
+        walking = (
             origin_ok
             and leader_present
             and leader_tile is not None
             and not leader_stopped
             and not bool(view.farming)
-            and follow_field is not None
-        ):
+        )
+        if walking and trail_tile is not None:
+            # Narrow passage: single file on the leader's own path.
+            self.runtime.travel_offset = None
+            travel_spot = sticky_goal_tile(
+                trail_tile,
+                self.runtime.approach_goal,
+                slack=STICKY_GOAL_SLACK,
+            )
+        elif walking and follow_field is not None:
 
             move_dir = self._leader_move_dir()
             band = travel_band(cfg.follow_tiles)
@@ -530,6 +620,8 @@ class PartyMemberManager:
             me = (int(origin.x), int(origin.y))
             at_travel_spot = tile_chebyshev(me, travel_spot) <= ARRIVAL_TOLERANCE
         stand = settle_stand if settle_stand is not None else travel_spot
+        if seat is not None:
+            stand = seat
 
         result = decide_policy(
             PolicyInput(
@@ -552,6 +644,10 @@ class PartyMemberManager:
                 leader_walk_dist=leader_walk_dist if leader_present else None,
                 need_combat_step=need_combat_step,
                 solo_farm=cfg.solo_farm,
+                in_farm_yard=in_farm_yard,
+                target_in_yard=target_in_yard,
+                assist_sticky=assist_sticky,
+                off_turret_seat=off_turret_seat,
             )
         )
         self.runtime.chasing = result.chasing
@@ -762,7 +858,17 @@ class PartyMemberManager:
                     close_in_tile=close_in_tile,
                     settle_stand=stand,
                     stand_reason=(
-                        "follow_settle" if settle_stand is not None else "follow_slot"
+                        "turret_seat"
+                        if seat is not None
+                        else (
+                            "follow_settle"
+                            if settle_stand is not None
+                            else (
+                                "follow_trail"
+                                if trail_tile is not None and travel_spot is not None
+                                else "follow_slot"
+                            )
+                        )
                     ),
                     mid_act=(
                         result.kind
@@ -772,7 +878,9 @@ class PartyMemberManager:
                     ),
                 )
             if result.kind is MemberKind.FOLLOW and detail == "no_path":
-                if settle_stand is not None:
+                if seat is not None:
+                    self.runtime.turret_seat_bad = seat
+                elif settle_stand is not None:
                     self.runtime.settle_blocked.add(settle_stand)
                     self.runtime.settle_stand = None
                 elif travel_spot is not None:
@@ -824,7 +932,7 @@ class PartyMemberManager:
         if dead or self.runtime.paused:
             return None
         try:
-            from websocket.party_orders import member_orders
+            from app._06_party.comms.orders import member_orders
         except Exception:
             return None
         order = member_orders.gather
@@ -919,6 +1027,62 @@ class PartyMemberManager:
             )
         except Exception as exc:
             _log.debug("party follow field failed: %s", exc)
+            return None
+
+    def _formation_trail_tile(
+        self,
+        cfg: PartyMemberConfig,
+        *,
+        leader_tile: Optional[tuple[int, int]],
+    ) -> Optional[tuple[int, int]]:
+        """Moving mode in a narrow area: this seat's tile on the leader's trail."""
+        rt = self.runtime
+        if cfg.turret_farm or leader_tile is None:
+            self._formation.reset()
+            rt.formation = ""
+            return None
+        try:
+            from app._04_decision.nav_config import get_terrain_map
+
+            self._formation.observe(
+                get_terrain_map(), (int(leader_tile[0]), int(leader_tile[1]))
+            )
+            target = self._formation.target(cfg.seat_index)
+        except Exception as exc:
+            _log.debug("party formation failed: %s", exc)
+            rt.formation = ""
+            return None
+        rt.formation = f"{target.kind}:{target.reason}"
+        return target.tile
+
+    def _turret_seat_tile(
+        self,
+        cfg: PartyMemberConfig,
+        *,
+        leader_tile: Optional[tuple[int, int]],
+        half_w: int,
+        half_h: int,
+    ) -> Optional[tuple[int, int]]:
+        """Radial seat for this roster slot while the leader is in turret mode."""
+        if not cfg.turret_farm or cfg.seat_index is None or leader_tile is None:
+            self.runtime.turret_seat_bad = None
+            return None
+        try:
+            from app._04_decision.nav_config import get_terrain_map
+
+            from .turret_seat import seat_radius, turret_seat
+
+            bad = self.runtime.turret_seat_bad
+            return turret_seat(
+                get_terrain_map(),
+                (int(leader_tile[0]), int(leader_tile[1])),
+                cfg.seat_index,
+                int(cfg.party_size),
+                radius=seat_radius(half_w, half_h),
+                avoid=(bad,) if bad is not None else (),
+            )
+        except Exception as exc:
+            _log.debug("party turret seat failed: %s", exc)
             return None
 
     def _update_settle_stand(

@@ -53,7 +53,9 @@ FARMING_ISLAND: tuple[str, ...] = (
     "farm.upkeep",
     "farm.post_shop_return",
     "nav.hunt_map",
+    "party.turret_leash",  # party leader turret only
     "farm.engage",
+    "party.turret_idle",  # party leader turret only
     "farm.enter",
     "farm.search",
 )
@@ -74,7 +76,9 @@ FARMING_DUNGEON: tuple[str, ...] = (
     "nav.hunt_map",
     "dungeon.off_floor",
     "dungeon.blocked",
+    "party.turret_leash",  # party leader turret only
     "farm.engage",
+    "party.turret_idle",  # party leader turret only
     "dungeon.patrol",
     "dungeon.idle_nudge",
 )

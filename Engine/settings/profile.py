@@ -181,14 +181,18 @@ class Profile:
     party_loot_role: str = "none"
     # follow = loot only while holding. loot = party drops before follow.
     party_loot_priority: str = "follow"
-    # party = assist the leader's fight; solo = follow the leader, farm own mobs.
+    # Member farm: party = attack the leader's target; solo = own mobs near leader.
     party_farm_mode: str = "party"
+    # Leader mode (sent to members): turret = hold a yard; moving = roam.
+    party_leader_mode: str = "turret"
+    # Moving leader waits briefly when half or more members are this far behind.
+    party_lag_tiles: int = 30
     # member = existing follow/assist. leader = this PC hosts the party socket.
     party_role: str = "member"
     party_ws_port: int = 8765
     # Member client: address of the leader PC's party socket.
     party_leader_host: str = ""
-    # Leader roster: [{"name": str, "role": "member"|"mage"|"shopkeeper"}].
+    # Leader roster: name, seat role, optional loot (none|responsible).
     party_roster: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -451,6 +455,20 @@ class Profile:
         if "party_loot_priority" in kwargs:
             priority = str(kwargs.get("party_loot_priority") or "follow").strip().lower()
             kwargs["party_loot_priority"] = priority if priority in ("follow", "loot") else "follow"
+        if "party_farm_mode" in kwargs:
+            mode = str(kwargs.get("party_farm_mode") or "party").strip().lower()
+            kwargs["party_farm_mode"] = mode if mode in ("party", "solo") else "party"
+        if "party_leader_mode" in kwargs:
+            lead = str(kwargs.get("party_leader_mode") or "turret").strip().lower()
+            kwargs["party_leader_mode"] = (
+                lead if lead in ("turret", "moving") else "turret"
+            )
+        if "party_lag_tiles" in kwargs:
+            try:
+                lag = int(kwargs.get("party_lag_tiles"))
+            except (TypeError, ValueError):
+                lag = 30
+            kwargs["party_lag_tiles"] = max(5, min(100, lag))
         if "party_role" in kwargs:
             role = str(kwargs.get("party_role") or "member").strip().lower()
             kwargs["party_role"] = role if role in ("member", "leader") else "member"
@@ -474,10 +492,11 @@ class Profile:
 
 
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
+_ROSTER_LOOT = ("none", "responsible")
 
 
 def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
-    """Leader seat list: name plus member, mage, or shopkeeper."""
+    """Leader seat list: name, seat (default mage), optional loot seat."""
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
     items = raw if isinstance(raw, (list, tuple)) else []
@@ -491,10 +510,13 @@ def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
         if key in seen:
             continue
         seen.add(key)
-        role = str(item.get("role") or "member").strip().lower()
+        role = str(item.get("role") or "mage").strip().lower()
         if role not in _ROSTER_ROLES:
-            role = "member"
-        rows.append({"name": name, "role": role})
+            role = "mage"
+        loot = str(item.get("loot") or item.get("loot_role") or "none").strip().lower()
+        if loot not in _ROSTER_LOOT:
+            loot = "none"
+        rows.append({"name": name, "role": role, "loot": loot})
     return rows
 
 

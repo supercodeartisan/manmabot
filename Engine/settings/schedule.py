@@ -177,12 +177,22 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "loot_priority": str(
                 getattr(profile, "party_loot_priority", "follow") or "follow"
             ),
-            "farm_mode": str(getattr(profile, "party_farm_mode", "party") or "party"),
+            "farm_mode": str(
+                getattr(profile, "party_farm_mode", "party") or "party"
+            ),
+            "leader_mode": str(
+                getattr(profile, "party_leader_mode", "turret") or "turret"
+            ),
+            "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
             "roster": [
-                {"name": str(row.get("name") or ""), "role": str(row.get("role") or "member")}
+                {
+                    "name": str(row.get("name") or ""),
+                    "role": str(row.get("role") or "mage"),
+                    "loot": str(row.get("loot") or "none"),
+                }
                 for row in (getattr(profile, "party_roster", None) or [])
                 if isinstance(row, dict)
             ],

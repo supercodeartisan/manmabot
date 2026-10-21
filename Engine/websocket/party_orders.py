@@ -18,6 +18,7 @@ from typing import Any, Optional
 RALLY = "rally"
 RECOVERY = "recovery"
 REPORT = "report"
+POLICY = "party_policy"
 
 STAGE_START = "start"
 STAGE_PLANNED = "planned"
@@ -96,6 +97,94 @@ def recovery_message(
         y=y,
         destination=dest,
     )
+
+
+def policy_message(
+    *,
+    leader_mode: str = "turret",
+    random_loot: bool = False,
+    loot_role: str = "none",
+    loot_priority: str = "follow",
+    yard_half_w: Optional[int] = None,
+    yard_half_h: Optional[int] = None,
+    yard_scale_with_roster: bool = True,
+    party_size: int = 1,
+    roster: Optional[list] = None,
+) -> dict[str, Any]:
+    """Global party farm knobs from the leader. Members merge into their config.
+
+    ``leader_mode`` is turret | moving. Party / solo farm and follow / stop /
+    assist distances are per-member and never sent.
+    """
+    body = leader_message(
+        kind=POLICY,
+        action="farm_policy",
+        map_id=None,
+        x=None,
+        y=None,
+    )
+    body.update(
+        {
+            "leader_mode": str(leader_mode or "turret"),
+            "random_loot": bool(random_loot),
+            "loot_role": str(loot_role or "none"),
+            "loot_priority": str(loot_priority or "follow"),
+            "yard_half_w": yard_half_w,
+            "yard_half_h": yard_half_h,
+            "yard_scale_with_roster": bool(yard_scale_with_roster),
+            "party_size": max(1, int(party_size)),
+            "roster": list(roster or []),
+        }
+    )
+    return body
+
+
+def seat_role_for_name(roster: Any, name: str) -> str:
+    """Roster seat for ``name`` (member|mage|shopkeeper). Default mage."""
+    want = str(name or "").strip().casefold()
+    if not want or not isinstance(roster, (list, tuple)):
+        return "mage"
+    for row in roster:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("name") or "").strip().casefold() != want:
+            continue
+        role = str(row.get("role") or "mage").strip().lower()
+        return role if role in ("member", "mage", "shopkeeper") else "mage"
+    return "mage"
+
+
+def seat_index_for_name(roster: Any, name: str) -> Optional[int]:
+    """0-based position of ``name`` among named roster rows, or None."""
+    want = str(name or "").strip().casefold()
+    if not want or not isinstance(roster, (list, tuple)):
+        return None
+    i = 0
+    for row in roster:
+        raw = row.get("name") if isinstance(row, dict) else row
+        key = str(raw or "").strip().casefold()
+        if not key:
+            continue
+        if key == want:
+            return i
+        i += 1
+    return None
+
+
+def loot_role_for_name(roster: Any, name: str, *, default: str = "none") -> str:
+    """Per-player loot seat: none | responsible."""
+    want = str(name or "").strip().casefold()
+    fallback = "responsible" if str(default or "").strip().lower() == "responsible" else "none"
+    if not want or not isinstance(roster, (list, tuple)):
+        return fallback
+    for row in roster:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("name") or "").strip().casefold() != want:
+            continue
+        loot = str(row.get("loot") or row.get("loot_role") or fallback).strip().lower()
+        return loot if loot in ("none", "responsible") else fallback
+    return fallback
 
 
 def party_member_names(snapshot: Any) -> set[str]:
@@ -276,14 +365,16 @@ def _report_at_rally(order: dict[str, Any], report: dict[str, Any]) -> bool:
 
 
 class MemberOrders:
-    """Member side: the rally point to walk to. Recovery is stored and ignored."""
+    """Member side: rally point, recovery, and leader farm policy."""
 
     def __init__(self) -> None:
         self.gather: Optional[dict[str, Any]] = None
         self.recovery: Optional[dict[str, Any]] = None
+        self.policy: Optional[dict[str, Any]] = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
+        self._policy_dirty = False
 
     @property
     def order_kind(self) -> str:
@@ -292,9 +383,18 @@ class MemberOrders:
     def clear(self) -> None:
         self.gather = None
         self.recovery = None
+        self.policy = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
+        self._policy_dirty = False
+
+    def take_policy(self) -> Optional[dict[str, Any]]:
+        """Return the latest policy once when it changes."""
+        if not self._policy_dirty or self.policy is None:
+            return None
+        self._policy_dirty = False
+        return dict(self.policy)
 
     def ingest(self, frames: list[Any]) -> None:
         for frame in frames:
@@ -304,6 +404,10 @@ class MemberOrders:
             kind = str(body.get("type") or "")
             if kind == RECOVERY:
                 self.recovery = dict(body)
+                continue
+            if kind == POLICY:
+                self.policy = dict(body)
+                self._policy_dirty = True
                 continue
             if kind != RALLY:
                 continue
@@ -346,6 +450,7 @@ def reset_orders() -> None:
 
 __all__ = [
     "ARRIVE_TILES",
+    "POLICY",
     "RALLY",
     "RALLY_STAGES",
     "RECOVERY",
@@ -359,9 +464,13 @@ __all__ = [
     "member_orders",
     "order_tag",
     "party_member_names",
+    "policy_message",
     "rally",
     "rally_message",
     "recovery_message",
     "reset_orders",
+    "loot_role_for_name",
+    "seat_index_for_name",
+    "seat_role_for_name",
     "self_name_from_party",
 ]

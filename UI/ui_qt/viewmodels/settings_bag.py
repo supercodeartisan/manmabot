@@ -48,6 +48,8 @@ _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "loot_role": "none",
     "loot_priority": "follow",
     "farm_mode": "party",
+    "leader_mode": "turret",
+    "lag_tiles": 30,
     "role": "member",
     "ws_port": 8765,
     "leader_host": "",

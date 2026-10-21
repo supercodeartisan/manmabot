@@ -6,14 +6,16 @@
   landing of the last teleport, travel, then send the real landing tile and
   wait there.
 
-Waits for every roster member, or 15 minutes, then continues. Used once per Start.
+Waits for every roster member, then continues. With ``deadline`` (the shared
+invite + rally window from Start) it gives up at that time in any state;
+without it, 15 minutes after the wait starts. Used once per Start.
 """
 from __future__ import annotations
 
 import time
 from typing import Any, Callable, Optional
 
-from websocket.party_orders import (
+from app._06_party.comms.orders import (
     STAGE_LANDED,
     STAGE_PLANNED,
     STAGE_START,
@@ -74,6 +76,10 @@ class LeaderStartRally:
         self.hold_step: Optional[int] = None
         self._want: Optional[dict[str, Any]] = None
         self._wait_started: Optional[float] = None
+        # Shared invite + rally deadline (clock time); None = WAIT_TIMEOUT_S from wait start.
+        self.deadline: Optional[float] = None
+        # Expected names not at the rally point when the window closed.
+        self.left_behind: list[str] = []
         self._log_at = float("-inf")
         self._rally.clear()
 
@@ -94,10 +100,26 @@ class LeaderStartRally:
         self.state = "done"
         self._log(f"Party start rally skipped — {why}")
 
-    def begin(self, expected: set[str], *, travel: bool, pose: Any) -> None:
+    def remaining_s(self) -> Optional[float]:
+        if self.deadline is not None:
+            return max(0.0, self.deadline - self._clock())
+        if self._wait_started is not None:
+            return max(0.0, self._wait_started + WAIT_TIMEOUT_S - self._clock())
+        return None
+
+    def begin(
+        self,
+        expected: set[str],
+        *,
+        travel: bool,
+        pose: Any,
+        deadline: Optional[float] = None,
+    ) -> None:
         """Party start. ``travel`` = the hunt needs a cross-map world-nav trip."""
         if self.state != "off":
             return
+        if deadline is not None:
+            self.deadline = float(deadline)
         self.expected = {str(n).strip() for n in expected if str(n).strip()}
         if not self.expected:
             self.skip("roster empty")
@@ -141,6 +163,18 @@ class LeaderStartRally:
 
     def update(self, connected: int, snapshot: Any) -> None:
         """Each tick: resend if needed, count arrivals, finish when all are in."""
+        if (
+            self.deadline is not None
+            and self.state not in ("off", "done")
+            and self._clock() >= self.deadline
+        ):
+            self.left_behind = self._rally.missing(self.expected)
+            missing = ", ".join(self.left_behind) or "—"
+            self.skip(
+                f"party window over ({int(WAIT_TIMEOUT_S // 60)} min), "
+                f"not arrived: {missing} — continue to the hunt"
+            )
+            return
         if self.state not in ("hold_at", "waiting") or self._want is None:
             return
         self._rally.arm(self._want)
@@ -153,7 +187,7 @@ class LeaderStartRally:
             return
         now = self._clock()
         started = self._wait_started
-        if started is not None and now - started >= WAIT_TIMEOUT_S:
+        if self.deadline is None and started is not None and now - started >= WAIT_TIMEOUT_S:
             mins = int(WAIT_TIMEOUT_S // 60)
             self.skip(f"wait timed out ({mins} min)")
             return

@@ -110,7 +110,7 @@ class HoldDecision:
 
 def leader_hold(
     trail: LeaderTrail,
-    followers: Sequence[Tile],
+    followers: Sequence[Optional[Tile]],
     *,
     spacing: int = 2,
     corner_clear_steps: int = 1,
@@ -120,6 +120,7 @@ def leader_hold(
     """Whether the leader should stop and let the line catch up.
 
     Follower ``i`` is expected ``spacing * (i + 1)`` steps behind the head.
+    A ``None`` entry (position unknown) keeps its slot but is not checked.
     The leader holds when:
 
     - ``corner``: the leader is past the last corner by that expected lag plus
@@ -134,6 +135,8 @@ def leader_hold(
     corner = trail.last_corner()
     step = max(1, int(spacing))
     for i, tile in enumerate(followers):
+        if tile is None:
+            continue
         expected = step * (i + 1)
         p = trail.progress_of(tile)
         if p is None:
