@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from session.bot_controller import BotController
-from ui_qt.debug.party_dashboard import PartyDashboard
+from ui_qt.debug.party_dashboard import PartyDashboard, split_messages
 from ui_qt.debug.party_etview import PartyEtView, capture_lc_client
 
 
@@ -351,6 +351,21 @@ def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
 
 _LIVE_W = 360
 _LIVE_H = 240
+_RIGHT_W = _LIVE_W + 60
+
+
+def _log_title(text: str) -> QLabel:
+    label = QLabel(text)
+    font = QFont(label.font())
+    font.setBold(True)
+    label.setFont(font)
+    return label
+
+
+def _log_titles(role: str) -> tuple[str, str]:
+    if role == "member":
+        return "Leader → this member (IN)", "This member → leader (OUT)"
+    return "Leader → members (OUT · chat typing)", "Members → leader (IN)"
 
 
 class PartyMonitorWindow(QMainWindow):
@@ -372,8 +387,8 @@ class PartyMonitorWindow(QMainWindow):
         self._sized_to_client = False
         self.t = t or {}
         self.setWindowTitle(self.t.get("party_monitor_title", "Party monitor"))
-        self.resize(1180, 760)
-        self.setMinimumSize(900, 560)
+        self.resize(1320, 860)
+        self.setMinimumSize(960, 600)
 
         root = QWidget()
         self.setCentralWidget(root)
@@ -406,10 +421,13 @@ class PartyMonitorWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll.setWidget(self.dashboard)
+        scroll.setMinimumWidth(480)
         main.addWidget(scroll)
 
-        # ---- right: small live view + socket messages ----
+        # ---- right: small live view + leader / member message logs ----
         right = QWidget()
+        right.setMinimumWidth(_RIGHT_W)
+        right.setMaximumWidth(_RIGHT_W + 220)
         right_l = QVBoxLayout(right)
         right_l.setContentsMargins(0, 0, 0, 0)
         right_l.setSpacing(4)
@@ -417,15 +435,38 @@ class PartyMonitorWindow(QMainWindow):
         self.etview.setMinimumSize(_LIVE_W, _LIVE_H)
         self.etview.setFixedSize(_LIVE_W, _LIVE_H)
         right_l.addWidget(self.etview, alignment=Qt.AlignmentFlag.AlignHCenter)
-        right_l.addWidget(QLabel(self.t.get("party_messages", "Messages")))
-        self.messages = _message_view()
-        right_l.addWidget(self.messages, stretch=1)
+
+        logs = QSplitter(Qt.Orientation.Vertical)
+        logs.setChildrenCollapsible(False)
+        top_box = QWidget()
+        top_l = QVBoxLayout(top_box)
+        top_l.setContentsMargins(0, 0, 0, 0)
+        top_l.setSpacing(2)
+        self.out_title = _log_title("")
+        top_l.addWidget(self.out_title)
+        self.out_messages = _message_view()
+        top_l.addWidget(self.out_messages, stretch=1)
+        bottom_box = QWidget()
+        bottom_l = QVBoxLayout(bottom_box)
+        bottom_l.setContentsMargins(0, 0, 0, 0)
+        bottom_l.setSpacing(2)
+        self.in_title = _log_title("")
+        bottom_l.addWidget(self.in_title)
+        self.in_messages = _message_view()
+        bottom_l.addWidget(self.in_messages, stretch=1)
+        logs.addWidget(top_box)
+        logs.addWidget(bottom_box)
+        logs.setSizes([300, 300])
+        right_l.addWidget(logs, stretch=1)
+        # Older callers read ``.messages``; it is the leader-side log.
+        self.messages = self.out_messages
         main.addWidget(right)
 
         self._splitter = main
-        main.setStretchFactor(0, 3)
-        main.setStretchFactor(1, 2)
-        main.setSizes([720, 440])
+        main.setChildrenCollapsible(False)
+        main.setStretchFactor(0, 1)
+        main.setStretchFactor(1, 0)
+        main.setSizes([1320 - _RIGHT_W - 40, _RIGHT_W + 40])
         layout.addWidget(main, stretch=1)
 
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -470,7 +511,15 @@ class PartyMonitorWindow(QMainWindow):
             snap["probe_error"] = str(exc)
 
         self.dashboard.apply(snap)
-        _fill_messages(self.messages, list(snap.get("messages") or []))
+        session = snap.get("session") if isinstance(snap.get("session"), dict) else {}
+        role = str(session.get("role") or "leader")
+        top_title, bottom_title = _log_titles(role)
+        if self.out_title.text() != top_title:
+            self.out_title.setText(top_title)
+            self.in_title.setText(bottom_title)
+        top, bottom = split_messages(list(snap.get("messages") or []), role)
+        _fill_messages(self.out_messages, top)
+        _fill_messages(self.in_messages, bottom)
         if self.live_on.isChecked():
             self._refresh_etview(snap, _status_bits(snap))
 

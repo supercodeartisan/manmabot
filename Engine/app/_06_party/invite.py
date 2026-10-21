@@ -1,14 +1,15 @@
 """Party invites — everything the leader needs to build the in-game party.
 
-- Chat lines: ``/파티 <name>`` (invite), ``파티탈퇴`` (leave).
+- Chat lines: ``/초대 <name>`` (invite), ``파티탈퇴`` (leave).
 - ``PartyInviter``: pure state machine, one step per bot tick. Every roster
   name not in party memory gets an invite every ``INVITE_EVERY_S``; a name
   stops getting invites once party memory lists it. When ``FORM_WINDOW_S``
   runs out, names still missing are excluded (a late join clears that).
 - ``LeaderInvites``: one per Start. Sends the party policy first, leaves a
   party this character does not lead, then drives ``PartyInviter`` each tick:
-  first invites wait for every member socket or ``POLICY_WAIT_S``, and no
-  line is typed right after an action that opens an NPC dialog or teleports.
+  a roster name is invited only after that member answered the current
+  policy with ``policy_ack``, and no line is typed right after an action that
+  opens an NPC dialog or teleports.
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
 injects policy publish, socket count and wait.
@@ -19,16 +20,13 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-INVITE_PREFIX = "/파티 "
+INVITE_PREFIX = "/초대 "
 LEAVE_COMMAND = "파티탈퇴"
 
 # Invite + rally must finish inside this window; then the leader hunts.
 FORM_WINDOW_S = 15 * 60
-# Re-send ``/파티 <name>`` to a missing member this often.
+# Re-send ``/초대 <name>`` to a missing member this often.
 INVITE_EVERY_S = 20.0
-# Members usually connect within seconds of their own Start; the first
-# invites wait this long for their sockets (policy before invite).
-POLICY_WAIT_S = 20.0
 # Chat would type into an NPC dialog or break a gate / teleport / shop click.
 UNSAFE_ACTIONS = frozenset(
     {
@@ -133,17 +131,26 @@ def deliver_chat(line: str, *, log: Callable[[str], None], why: str = "") -> boo
     from app._05_action.chat import send_chat_line
 
     log(f'Party chat "{line}"{f" ({why})" if why else ""}')
-    result = send_chat_line(line)
-    if not result.ok:
-        log(f'Party chat "{line}" failed: {result.describe()}')
+    try:
+        result = send_chat_line(line)
+        error = "" if result.ok else result.describe()
+    except Exception as exc:
+        error = str(exc)
+    if error:
+        log(f'Party chat "{line}" failed: {error}')
+        _note_monitor(f'chat "{line}" FAILED: {error}')
         return False
+    _note_monitor(f'chat "{line}" typed')
+    return True
+
+
+def _note_monitor(text: str) -> None:
     try:
         from websocket.traffic_log import note_local
 
-        note_local(f'chat "{line}"')
+        note_local(text)
     except Exception:
         pass
-    return True
 
 
 @dataclass
@@ -216,8 +223,12 @@ class PartyInviter:
         *,
         send_line: Callable[[str], bool],
         can_send: bool = True,
+        ready: Optional[Callable[[str], bool]] = None,
     ) -> Optional[str]:
-        """One step: update joins, expire, or send at most one due invite."""
+        """One step: update joins, expire, or send at most one due invite.
+
+        ``ready(name)`` False keeps that name waiting (no invite, no retry clock).
+        """
         self.observe(snapshot)
         if self.state != FORMING:
             return None
@@ -241,7 +252,9 @@ class PartyInviter:
             return None
         due = [
             r for r in self.rows
-            if not r.joined and (r.last_at is None or now - r.last_at >= self.every_s)
+            if not r.joined
+            and (r.last_at is None or now - r.last_at >= self.every_s)
+            and (ready is None or ready(r.name))
         ]
         if not due:
             return None
@@ -291,23 +304,23 @@ class LeaderInvites:
         *,
         publish_policy: Callable[[], Any] = lambda: None,
         ws_clients: Callable[[], int] = lambda: 0,
+        policy_acked: Callable[[str], bool] = lambda _name: True,
         send_chat: Optional[Callable[[str], bool]] = None,
         wait: Callable[[float], Any] = time.sleep,
         log: Callable[[str], None] = lambda _m: None,
         clock: Callable[[], float] = time.monotonic,
         window_s: Optional[float] = None,
         every_s: Optional[float] = None,
-        policy_wait_s: Optional[float] = None,
     ) -> None:
         self._publish_policy = publish_policy
         self._ws_clients = ws_clients
+        self._policy_acked = policy_acked
         self._send_chat = send_chat
         self._wait = wait
         self._log = log
         self._clock = clock
         self.window_s = float(FORM_WINDOW_S if window_s is None else window_s)
         self.every_s = float(INVITE_EVERY_S if every_s is None else every_s)
-        self.policy_wait_s = float(POLICY_WAIT_S if policy_wait_s is None else policy_wait_s)
         self.inviter: Optional[PartyInviter] = None
         self.info: dict[str, Any] = {}
         self._policy_clients = 0
@@ -362,10 +375,16 @@ class LeaderInvites:
         self.info = self.inviter.status()
         self._log(
             f"Party invite window {int(self.window_s // 60)} min: "
-            f"/파티 every {int(self.every_s)}s until each member joins "
+            f"/초대 every {int(self.every_s)}s after each member confirms the policy "
             f"({', '.join(wanted) or '—'})"
         )
         return True
+
+    def _acked(self, name: str) -> bool:
+        try:
+            return bool(self._policy_acked(name))
+        except Exception:
+            return False
 
     def tick(self, snapshot: Any, last_action: Any = None) -> Optional[str]:
         """One invite step; returns the line typed this tick, if any."""
@@ -378,12 +397,14 @@ class LeaderInvites:
             if clients > self._policy_clients:
                 self._policy_clients = clients
                 self._publish()
-            policy_ready = clients >= len(inviter.rows) or (
-                self._clock() - inviter.started_at >= self.policy_wait_s
-            )
-            can_send = policy_ready and action_allows_chat(last_action)
-        line = inviter.tick(snapshot, send_line=self._say, can_send=can_send)
-        self.info = inviter.status()
+            can_send = action_allows_chat(last_action)
+        line = inviter.tick(
+            snapshot, send_line=self._say, can_send=can_send, ready=self._acked
+        )
+        info = inviter.status()
+        for row in info.get("rows") or []:
+            row["policy_acked"] = self._acked(str(row.get("name") or ""))
+        self.info = info
         return line
 
 
@@ -396,7 +417,6 @@ __all__ = [
     "INVITE_PREFIX",
     "LEAVE_COMMAND",
     "LEAVE_FAILED",
-    "POLICY_WAIT_S",
     "UNSAFE_ACTIONS",
     "InviteRow",
     "LeaderInvites",

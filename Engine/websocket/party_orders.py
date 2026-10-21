@@ -10,15 +10,23 @@ The leader waits on the point until every roster member has arrived.
 
 Recovery (``recovery``): mother-tree decision. Sent immediately. Members do not
 act on it yet.
+
+Policy (``party_policy``, leader → members) carries a ``policy_id``. A member
+answers every policy frame it applied with ``policy_ack`` echoing that id; the
+leader invites a roster name only once its ack matches the current id.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import time
 from typing import Any, Optional
 
 RALLY = "rally"
 RECOVERY = "recovery"
 REPORT = "report"
 POLICY = "party_policy"
+POLICY_ACK = "policy_ack"
 
 STAGE_START = "start"
 STAGE_PLANNED = "planned"
@@ -123,20 +131,35 @@ def policy_message(
         x=None,
         y=None,
     )
-    body.update(
-        {
-            "leader_mode": str(leader_mode or "turret"),
-            "random_loot": bool(random_loot),
-            "loot_role": str(loot_role or "none"),
-            "loot_priority": str(loot_priority or "follow"),
-            "yard_half_w": yard_half_w,
-            "yard_half_h": yard_half_h,
-            "yard_scale_with_roster": bool(yard_scale_with_roster),
-            "party_size": max(1, int(party_size)),
-            "roster": list(roster or []),
-        }
-    )
+    knobs = {
+        "leader_mode": str(leader_mode or "turret"),
+        "random_loot": bool(random_loot),
+        "loot_role": str(loot_role or "none"),
+        "loot_priority": str(loot_priority or "follow"),
+        "yard_half_w": yard_half_w,
+        "yard_half_h": yard_half_h,
+        "yard_scale_with_roster": bool(yard_scale_with_roster),
+        "party_size": max(1, int(party_size)),
+        "roster": list(roster or []),
+    }
+    body.update(knobs)
+    body["policy_id"] = _policy_id(knobs)
     return body
+
+
+def _policy_id(knobs: dict[str, Any]) -> str:
+    raw = json.dumps(knobs, sort_keys=True, default=str, ensure_ascii=False)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10]
+
+
+def policy_ack_message(*, name: str, policy_id: str) -> dict[str, Any]:
+    """Member → leader: this policy is applied on top of the member's profile."""
+    return {
+        "type": POLICY_ACK,
+        "from": str(name or "member").strip() or "member",
+        "policy_id": str(policy_id or ""),
+        "ok": True,
+    }
 
 
 def seat_role_for_name(roster: Any, name: str) -> str:
@@ -439,18 +462,71 @@ class MemberOrders:
         return True
 
 
+class PolicyAcks:
+    """Leader side: which roster names confirmed which ``policy_id``."""
+
+    def __init__(self) -> None:
+        self.rows: dict[str, dict[str, Any]] = {}
+
+    def clear(self) -> None:
+        self.rows.clear()
+
+    def note(self, who: str, body: dict[str, Any], names: Optional[set[str]] = None) -> str:
+        """Record one ack; returns the roster name it was booked to ("" = ignored).
+
+        A member that does not know its own name yet sends ``member``; with
+        exactly one roster name still unconfirmed, the ack goes to that name.
+        """
+        name = str(who or body.get("from") or "").strip()
+        if not name or name == "leader":
+            return ""
+        pid = str(body.get("policy_id") or "")
+        roster = {str(n).strip() for n in (names or set()) if str(n).strip()}
+        by_key = {n.casefold(): n for n in roster}
+        if name.casefold() in by_key:
+            name = by_key[name.casefold()]
+        elif name == "member" and roster:
+            open_names = [n for n in roster if not self.acked(n, pid)]
+            if len(open_names) != 1:
+                return ""
+            name = open_names[0]
+        prev = self.rows.get(name.casefold()) or {}
+        self.rows[name.casefold()] = {
+            "name": name,
+            "policy_id": pid,
+            "at": time.time(),
+            "count": int(prev.get("count", 0)) + 1,
+        }
+        return name
+
+    def acked(self, name: str, policy_id: Optional[str]) -> bool:
+        row = self.rows.get(str(name or "").strip().casefold())
+        if row is None:
+            return False
+        return policy_id is None or str(row.get("policy_id") or "") == str(policy_id)
+
+    def row(self, name: str) -> dict[str, Any]:
+        return dict(self.rows.get(str(name or "").strip().casefold()) or {})
+
+
 rally = Rally()
 member_orders = MemberOrders()
+policy_acks = PolicyAcks()
 
 
 def reset_orders() -> None:
     rally.clear()
     member_orders.clear()
+    policy_acks.clear()
 
 
 __all__ = [
     "ARRIVE_TILES",
     "POLICY",
+    "POLICY_ACK",
+    "PolicyAcks",
+    "policy_ack_message",
+    "policy_acks",
     "RALLY",
     "RALLY_STAGES",
     "RECOVERY",

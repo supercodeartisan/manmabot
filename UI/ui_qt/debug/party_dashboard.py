@@ -8,14 +8,14 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLayout,
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
@@ -91,18 +91,71 @@ class Badge(QLabel):
         self.setToolTip(tip)
 
 
+class FlowLayout(QLayout):
+    """Left-to-right layout that wraps to a new line instead of widening the parent."""
+
+    def __init__(self, parent: QWidget | None = None, spacing: int = 6) -> None:
+        super().__init__(parent)
+        self._items: list[Any] = []
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setSpacing(spacing)
+
+    def addItem(self, item) -> None:
+        self._items.append(item)
+
+    def count(self) -> int:
+        return len(self._items)
+
+    def itemAt(self, index: int):
+        return self._items[index] if 0 <= index < len(self._items) else None
+
+    def takeAt(self, index: int):
+        return self._items.pop(index) if 0 <= index < len(self._items) else None
+
+    def hasHeightForWidth(self) -> bool:
+        return True
+
+    def heightForWidth(self, width: int) -> int:
+        return self._place(QRect(0, 0, width, 0), apply=False)
+
+    def setGeometry(self, rect: QRect) -> None:
+        super().setGeometry(rect)
+        self._place(rect, apply=True)
+
+    def sizeHint(self) -> QSize:
+        return self.minimumSize()
+
+    def minimumSize(self) -> QSize:
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        return size
+
+    def _place(self, rect: QRect, *, apply: bool) -> int:
+        x, y, line_h = rect.x(), rect.y(), 0
+        gap = self.spacing()
+        for item in self._items:
+            hint = item.sizeHint()
+            if x > rect.x() and x + hint.width() > rect.right() + 1:
+                x = rect.x()
+                y += line_h + gap
+                line_h = 0
+            if apply:
+                item.setGeometry(QRect(QPoint(x, y), hint))
+            x += hint.width() + gap
+            line_h = max(line_h, hint.height())
+        return y + line_h - rect.y()
+
+
 class BadgeRow(QWidget):
     def __init__(self, labels: list[str], parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        lay = QHBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(6)
+        lay = FlowLayout(self, spacing=6)
         self.badges: dict[str, Badge] = {}
         for label in labels:
             badge = Badge(label, self)
             self.badges[label] = badge
             lay.addWidget(badge)
-        lay.addStretch(1)
 
     def __getitem__(self, label: str) -> Badge:
         return self.badges[label]
@@ -129,6 +182,7 @@ class Metrics(QWidget):
                 k = QLabel(key)
                 k.setStyleSheet("color:#9ca3af;")
                 v = QLabel()
+                v.setWordWrap(True)
                 v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 vf = QFont(v.font())
                 vf.setBold(True)
@@ -140,6 +194,62 @@ class Metrics(QWidget):
                 self._cells[key] = cell
             if cell[1].text() != value:
                 cell[1].setText(value)
+
+
+STEP_TONE = {"done": "ok", "active": "info", "wait": "warn", "bad": "bad", "off": "off"}
+STEP_WORD = {
+    "done": "DONE",
+    "active": "IN PROGRESS",
+    "wait": "WAITING",
+    "bad": "FAILED",
+    "off": "—",
+}
+
+
+class WorkflowSteps(QWidget):
+    """Numbered start-up steps: pill · state word · one-line detail."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._grid = QGridLayout(self)
+        self._grid.setContentsMargins(0, 0, 0, 0)
+        self._grid.setHorizontalSpacing(10)
+        self._grid.setVerticalSpacing(4)
+        self._grid.setColumnStretch(2, 1)
+        self._rows: list[tuple[Badge, QLabel, QLabel]] = []
+
+    def set(self, steps: list[dict[str, Any]]) -> None:
+        while len(self._rows) < len(steps):
+            r = len(self._rows)
+            pill = Badge("", self)
+            pill.setMinimumWidth(120)
+            word = QLabel(self)
+            wf = QFont(word.font())
+            wf.setBold(True)
+            word.setFont(wf)
+            word.setMinimumWidth(92)
+            detail = QLabel(self)
+            detail.setWordWrap(True)
+            detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            self._grid.addWidget(pill, r, 0)
+            self._grid.addWidget(word, r, 1)
+            self._grid.addWidget(detail, r, 2)
+            self._rows.append((pill, word, detail))
+        for i, (pill, word, detail) in enumerate(self._rows):
+            shown = i < len(steps)
+            for w in (pill, word, detail):
+                w.setVisible(shown)
+            if not shown:
+                continue
+            step = steps[i] if isinstance(steps[i], dict) else {}
+            state = str(step.get("state") or "off")
+            tone = STEP_TONE.get(state, "off")
+            text = str(step.get("detail") or "")
+            pill.set(f"{i + 1}  {str(step.get('label') or '').upper()}", tone, text)
+            word.setText(STEP_WORD.get(state, state.upper()))
+            word.setStyleSheet(f"color:{TONES[tone]};")
+            if detail.text() != text:
+                detail.setText(text)
 
 
 def card(title: str) -> tuple[QFrame, QVBoxLayout]:
@@ -195,6 +305,28 @@ def message_counts(lines: list[Any]) -> tuple[int, int, str]:
     return n_in, n_out, last
 
 
+def split_messages(lines: list[Any], role: str) -> tuple[list[str], list[str]]:
+    """``(leader_side, member_side)`` traffic lines.
+
+    Leader process: its OUT frames and local notes (chat typing) on top, member
+    IN frames below. Member process: leader IN frames on top, its own OUT and
+    local notes below.
+    """
+    top: list[str] = []
+    bottom: list[str] = []
+    member = str(role or "") == "member"
+    for raw in lines or []:
+        line = str(raw)
+        if not line.strip():
+            continue
+        is_in = "  IN   " in line
+        if member:
+            (top if is_in else bottom).append(line)
+        else:
+            (bottom if is_in else top).append(line)
+    return top, bottom
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -214,6 +346,11 @@ class PartyDashboard(QWidget):
         self.note.setStyleSheet("color:#9ca3af;")
         root.addWidget(self.note)
 
+        self.flow_box, flow_lay = card("Workflow")
+        self.workflow = WorkflowSteps()
+        flow_lay.addWidget(self.workflow)
+        root.addWidget(self.flow_box)
+
         comm_box, comm_lay = card("Communication")
         self.comm = Metrics(columns=2)
         comm_lay.addWidget(self.comm)
@@ -226,7 +363,7 @@ class PartyDashboard(QWidget):
         self.lead_metrics = Metrics(columns=2)
         lead_lay.addWidget(self.lead_metrics)
         self.roster = _table(
-            ["Name", "Seat", "Loot", "Invites", "In party", "At rally", "Status"], 150
+            ["Name", "Seat", "Loot", "Policy", "Invites", "In party", "At rally", "Status"], 150
         )
         lead_lay.addWidget(self.roster)
         root.addWidget(self.leader_box)
@@ -271,6 +408,9 @@ class PartyDashboard(QWidget):
         self.leader_box.setVisible(role == "leader")
         self.member_box.setVisible(role == "member")
         self.solo_box.setVisible(role not in ("leader", "member"))
+        steps = list(session.get("workflow") or [])
+        self.flow_box.setVisible(role in ("leader", "member") and bool(steps))
+        self.workflow.set(steps)
         if role == "leader":
             self._apply_leader(session, now)
         elif role == "member":
@@ -427,7 +567,6 @@ class PartyDashboard(QWidget):
 
         istate = str(invite.get("state") or "")
         irows = [r for r in (invite.get("rows") or []) if isinstance(r, dict)]
-        names = list(invite.get("names") or [])
         sent_lines = [s for s in (invite.get("sent") or []) if str(s).startswith("/")]
         joined = sum(1 for r in irows if r.get("joined"))
         if istate == "forming":
@@ -454,10 +593,7 @@ class PartyDashboard(QWidget):
             [
                 ("Roster", f"{len(roster)} member(s), {in_party} in party"),
                 ("Party size (yard)", _fmt(policy.get("party_size"))),
-                ("Policy last sent", _age(policy.get("at"), now) if policy.get("at") else "—"),
-                ("Policy sends", _fmt(policy.get("sends"), "0")),
                 ("Phase", f"{pname} — {left_txt} left" if left is not None else pname),
-                ("Invites", f"{len(sent_lines)} sent, {joined}/{len(names)} joined" if names else "—"),
                 ("Invite every", f"{_fmt(invite.get('every_s'))}s, window {_duration(invite.get('window_s')) if invite.get('window_s') else '—'}"),
                 ("Excluded", ", ".join(excluded) or "—"),
                 ("Not arrived", ", ".join(not_arrived) or "—"),
@@ -491,17 +627,25 @@ class PartyDashboard(QWidget):
                                               "accent" if r.get("role") == "shopkeeper" else "info"))
             resp = str(r.get("loot") or "none") == "responsible"
             self.roster.setItem(row, 2, _cell("RESP" if resp else "—", "ok" if resp else "off"))
+            acked = bool(r.get("policy_acked"))
+            self.roster.setItem(row, 3, _cell("OK" if acked else "WAIT", "ok" if acked else "warn"))
             n_inv = int(r.get("invites") or 0)
+            n_fail = int(r.get("invite_failed") or 0)
             ago = r.get("invite_ago_s")
             inv_txt = f"{n_inv}" + (f" ({_duration(ago)} ago)" if ago is not None and n_inv else "")
-            self.roster.setItem(row, 3, _cell(inv_txt if n_inv else "—", "info" if n_inv else "off"))
-            self.roster.setItem(row, 4, _cell("YES" if r.get("in_party") else "NO",
+            if n_fail:
+                inv_txt = (inv_txt if n_inv else "0") + f"  ✗{n_fail}"
+            self.roster.setItem(row, 4, _cell(
+                inv_txt if (n_inv or n_fail) else "—",
+                "bad" if n_fail and not n_inv else ("info" if n_inv else "off"),
+            ))
+            self.roster.setItem(row, 5, _cell("YES" if r.get("in_party") else "NO",
                                               "ok" if r.get("in_party") else "bad"))
             at = r.get("at_rally")
-            self.roster.setItem(row, 5, _cell("YES" if at else ("…" if rally.get("armed") else "—"),
+            self.roster.setItem(row, 6, _cell("YES" if at else ("…" if rally.get("armed") else "—"),
                                               "ok" if at else ("warn" if rally.get("armed") else "off")))
             st = str(r.get("state") or "pending")
-            self.roster.setItem(row, 6, _cell(
+            self.roster.setItem(row, 7, _cell(
                 {"ready": "READY", "joined": "JOINED", "invited": "INVITED", "pending": "PENDING",
                  "excluded": "EXCLUDED", "not_arrived": "NOT ARRIVED"}.get(st, st.upper()),
                 {"ready": "ok", "joined": "ok", "invited": "warn", "pending": "off",
@@ -605,4 +749,13 @@ class PartyDashboard(QWidget):
                 self.members.setItem(row, col, item)
 
 
-__all__ = ["Badge", "BadgeRow", "Metrics", "PartyDashboard", "message_counts"]
+__all__ = [
+    "Badge",
+    "BadgeRow",
+    "FlowLayout",
+    "Metrics",
+    "PartyDashboard",
+    "WorkflowSteps",
+    "message_counts",
+    "split_messages",
+]

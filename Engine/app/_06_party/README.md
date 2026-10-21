@@ -113,7 +113,7 @@ _06_party     websocket/        _05_action/chat
 | 경로 | 역할 |
 |------|------|
 | `Engine/websocket/` | `PartyServer`/`PartyClient`, `party_orders`, `leader_decisions`, `member_status` |
-| `Engine/app/_05_action/chat/` | `/파티`·`파티탈퇴` 타이핑 |
+| `Engine/app/_05_action/chat/` | `/초대`·`파티탈퇴` 타이핑 |
 | `session/bot_controller.py` | `_start_party_*`, `_run_leader_party_setup`, `_leader_party_tick`, `_member_party_tick`, `_drain_party_reports`, `_install_party_nav_hooks` |
 
 ---
@@ -139,8 +139,8 @@ _member_party_tick(send=True)
 (once) _run_leader_party_setup → invite.LeaderInvites.start
   → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (15분 창)
 (매 틱) _leader_invite_tick → LeaderInvites.tick  — 블로킹 없음, 틱당 최대 1줄
-  → 파티에 없는 로스터 이름마다 20s 간격 /파티 (가입 확인되면 중단)
-  → 첫 초대는 WS 멤버 전원 연결 또는 20s 후 (정책 먼저)
+  → 파티에 없는 로스터 이름마다 20s 간격 /초대 (가입 확인되면 중단)
+  → 이름별 초대는 그 멤버가 현재 정책(policy_id)에 policy_ack 보낸 뒤에만 (타임아웃 없음)
   → 직전 행동이 상점·게이트·텔레포트·스크롤·리스폰이면 그 틱은 건너뜀
   → 15분 끝: 미가입 = 배제(excluded). 이후 늦게 가입하면 배제 해제
 LeaderStartRally.begin(deadline=초대 창 끝) → (travel 시) on_plan / should_hold
@@ -161,7 +161,7 @@ LeaderStartRally.begin(deadline=초대 창 끝) → (travel 시) on_plan / shoul
 | `follow*` / `intents` | 추종·정착 Intent |
 | `assist` / `loot` / `support` | 전투·루팅·물약 |
 | `join_map` | 리더 맵 합류 내비 |
-| `invite` | 초대 전부: 채팅 문구(`/파티 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(15분 창·20s 간격·배제), `LeaderInvites`(정책 먼저·소켓 대기·위험 행동 회피·틱 진행), `deliver_chat` |
+| `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(15분 창·20s 간격·배제), `LeaderInvites`(정책 먼저·소켓 대기·위험 행동 회피·틱 진행), `deliver_chat` |
 | `leader_rally` | 첫 사냥 집결 FSM, WorldNav `hold_at_step` |
 | `party_log` | `Engine/logs/party-*.log` 채널 |
 | `brains/*` | `make_brain(role)` 스텁 — **세션 미사용** |
@@ -199,7 +199,8 @@ comms/
 | `decision` | L→M | 리더 행동 | 송신 live |
 | `rally` + `stage` | L→M | 집결 `start`/`planned`/`landed` | live |
 | `recovery` | L→M | 마더트리 좌표 | 송신 live / **멤버 본처리 미완** |
-| `party_policy` | L→M | leader_mode·루팅·야드·party_size·roster (farm_mode·거리는 멤버 자신) | live (멤버 `merge_leader_policy`) |
+| `party_policy` | L→M | leader_mode·루팅·야드·party_size·roster·`policy_id` (farm_mode·거리는 멤버 자신) | live (멤버 `merge_leader_policy`) |
+| `policy_ack` | M→L | 정책 적용 확인 (`from`, `policy_id`). 리더 초대 게이트 | live |
 | `report` | M→L | 위치·도착 | live |
 
 **의존 방향 (목표 달성)**

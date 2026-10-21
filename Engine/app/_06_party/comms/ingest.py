@@ -20,13 +20,15 @@ def drain_leader_reports(
     server: Any,
     start_rally: Any = None,
     party_snapshot: Any = None,
+    roster_names: Optional[set[str]] = None,
     log: Optional[LogFn] = None,
 ) -> int:
-    """Apply member ``report`` frames to the rally; advance ``start_rally``.
+    """Apply member ``report`` frames to the rally and ``policy_ack`` frames to
+    ``policy_acks``; advance ``start_rally``.
 
     Returns the current WebSocket client count (0 when there is no server).
     """
-    from .orders import REPORT, party_member_names, rally
+    from .orders import POLICY_ACK, REPORT, party_member_names, policy_acks, rally
 
     note = log or (lambda _m: None)
     if server is None:
@@ -41,9 +43,18 @@ def drain_leader_reports(
     )
     for frame in frames:
         body = getattr(frame, "message", None)
-        if not isinstance(body, dict) or str(body.get("type") or "") != REPORT:
+        if not isinstance(body, dict):
             continue
+        kind = str(body.get("type") or "")
         who = str(body.get("from") or getattr(frame, "sender", "") or "")
+        if kind == POLICY_ACK:
+            first = not policy_acks.acked(who, body.get("policy_id"))
+            booked = policy_acks.note(who, body, roster_names or names)
+            if booked and first:
+                note(f"Party policy confirmed by {booked} (id {body.get('policy_id') or '—'})")
+            continue
+        if kind != REPORT:
+            continue
         rally.note_report(who, body, names)
     try:
         connected = int(server.client_count())

@@ -44,4 +44,17 @@ def send_member_status(
     )
 
 
-__all__ = ["send_member_status"]
+def send_policy_ack(client: Any, *, name: str, policy_id: str) -> bool:
+    """Tell the leader this member applied ``policy_id``. False = link down."""
+    from websocket.protocol import PartyMessage
+
+    from .orders import policy_ack_message
+
+    if client is None or not getattr(client, "connected", False):
+        return False
+    body = policy_ack_message(name=name, policy_id=policy_id)
+    client.send(PartyMessage(sender=body["from"], message=body))
+    return True
+
+
+__all__ = ["send_member_status", "send_policy_ack"]

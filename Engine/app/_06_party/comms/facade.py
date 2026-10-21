@@ -192,12 +192,14 @@ class PartyComms:
         *,
         start_rally: Any = None,
         party_snapshot: Any = None,
+        roster_names: Optional[set[str]] = None,
         log: Optional[LogFn] = None,
     ) -> int:
         return ingest.drain_leader_reports(
             server=self.server,
             start_rally=start_rally,
             party_snapshot=party_snapshot,
+            roster_names=roster_names,
             log=log,
         )
 
@@ -205,6 +207,9 @@ class PartyComms:
 
     def ingest_orders(self) -> None:
         ingest.ingest_member_orders(self.client)
+
+    def send_policy_ack(self, *, name: str, policy_id: str) -> bool:
+        return status.send_policy_ack(self.client, name=name, policy_id=policy_id)
 
     def send_status(
         self,

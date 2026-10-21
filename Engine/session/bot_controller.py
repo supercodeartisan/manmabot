@@ -268,6 +268,7 @@ class BotController:
         self._party_wait_log_at = 0.0
         self._party_policy_key = ""
         self._party_policy_at = 0.0
+        self._party_policy_id = ""
         self._member_policy_sig = ""
         # Monitor-only records (read by ``party_monitor_snapshot``).
         self._party_invites = None
@@ -771,12 +772,16 @@ class BotController:
                     return "invited"
                 return "pending"
 
+            from app._06_party.comms.orders import policy_acks
+
+            pid = str(getattr(self, "_party_policy_id", "") or "")
             out["roster"] = []
             for row in roster:
                 key = row["name"].casefold()
                 joined = key in in_party_names
                 at = key in arrived
                 irow = invite_rows.get(key) or {}
+                ack = policy_acks.row(row["name"])
                 out["roster"].append(
                     {
                         "name": row["name"],
@@ -784,13 +789,25 @@ class BotController:
                         "loot": row.get("loot", "none"),
                         "in_party": joined,
                         "at_rally": at,
+                        "policy_acked": policy_acks.acked(row["name"], pid or None),
+                        "ack_at": ack.get("at"),
                         "invites": int(irow.get("invites") or 0),
+                        "invite_failed": int(irow.get("failed") or 0),
                         "invite_ago_s": irow.get("last_ago_s"),
                         "state": _member_state(key, joined, at, irow),
                     }
                 )
             out["invite"] = invite
             out["policy"] = dict(getattr(self, "_party_policy_info", {}) or {})
+            out["workflow"] = _leader_workflow(
+                sock=snap.get("socket") if isinstance(snap.get("socket"), dict) else {},
+                roster=out["roster"],
+                policy=out["policy"],
+                invite=invite,
+                rally=out["rally"],
+                phase=phase,
+                now=out["now"],
+            )
             out["turret"] = dict(getattr(self, "_party_turret_info", {}) or {})
             out["line_wait"] = dict(getattr(self, "_party_line_info", {}) or {})
             out["settings"] = {
@@ -842,6 +859,13 @@ class BotController:
                 "arrived": bool(member_orders.arrived),
                 "recovery": member_orders.recovery is not None,
             }
+            out["workflow"] = _member_workflow(
+                sock=snap.get("socket") if isinstance(snap.get("socket"), dict) else {},
+                policy=out["policy"],
+                party=party,
+                orders=out["orders"],
+                now=out["now"],
+            )
         return out
 
     def _publish_party_monitor(
@@ -1539,12 +1563,12 @@ class BotController:
             _log(
                 "Party roster: "
                 + ", ".join(roster)
-                + " — /파티 after the game world is ready (not the WS local test)."
+                + " — /초대 after the game world is ready (not the WS local test)."
             )
         else:
             _log(
                 "Party roster empty — add names on the leader Party tab "
-                "or no /파티 will be typed."
+                "or no /초대 will be typed."
             )
 
     def _stop_party_socket(self) -> None:
@@ -1764,6 +1788,7 @@ class BotController:
         invites = LeaderInvites(
             publish_policy=lambda: self._publish_party_policy(force=True),
             ws_clients=_ws_clients,
+            policy_acked=self._leader_policy_acked,
             wait=self._stop_event.wait,
             log=_setup_log,
         )
@@ -1902,8 +1927,11 @@ class BotController:
         import json
         import time as _time
 
+        from app._06_party.comms.orders import policy_message
+
         kwargs = self._leader_party_policy_kwargs()
         key = json.dumps(kwargs, sort_keys=True, default=str)
+        self._party_policy_id = str(policy_message(**kwargs).get("policy_id") or "")
         now = _time.time()
         last_at = float(getattr(self, "_party_policy_at", 0.0) or 0.0)
         if (
@@ -1920,6 +1948,7 @@ class BotController:
             "at": now,
             "sent": sent,
             "sends": int(prev.get("sends", 0)) + 1,
+            "policy_id": self._party_policy_id,
             "leader_mode": kwargs["leader_mode"],
             "random_loot": kwargs["random_loot"],
             "party_size": kwargs["party_size"],
@@ -1952,12 +1981,29 @@ class BotController:
         self._drain_party_reports(world)
 
     def _drain_party_reports(self, world) -> int:
-        """Feed member reports to the rally and advance the start rally."""
+        """Feed member reports to the rally, policy acks to the invite gate."""
+        from app._06_party.invite import roster_invite_names
+        from settings.profile import normalize_party_roster
+
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        snap = getattr(world, "last_party", None)
+
+        def _note(msg: str) -> None:
+            self.log(msg)
+            self._party_event("socket", msg)
+
         return self._party_comms.drain_reports(
             start_rally=getattr(self, "_start_rally", None),
-            party_snapshot=getattr(world, "last_party", None),
-            log=self.log,
+            party_snapshot=snap,
+            roster_names=set(roster_invite_names(rows, _player_chat_name(world, snap))),
+            log=_note,
         )
+
+    def _leader_policy_acked(self, name: str) -> bool:
+        """Invite gate: ``name`` confirmed the policy currently being sent."""
+        from app._06_party.comms.orders import policy_acks
+
+        return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
 
     def _begin_leader_start_rally(self, world, blackboard) -> None:
         """Party start: rally on this tile, or on the last teleport landing of the route."""
@@ -2019,10 +2065,12 @@ class BotController:
         self._member_policy_sig = sig
         party_brain.apply_leader_policy(policy, self_name=name)
         cfg = party_brain.config
+        prev = self._member_policy_info or {}
         self._member_policy_info = {
+            **prev,
             "applied_at": time.time(),
             "as_name": name or "",
-            "applies": int((self._member_policy_info or {}).get("applies", 0)) + 1,
+            "applies": int(prev.get("applies", 0)) + 1,
         }
         self.log(
             f"Party policy applied (temporary) mode={cfg.leader_mode} "
@@ -2031,6 +2079,28 @@ class BotController:
             f"loot={'solo' if cfg.random_loot else cfg.loot_role} "
             f"follow={cfg.follow_tiles}/{cfg.stop_tiles} as={name or '—'}"
         )
+
+    def _send_member_policy_ack(self, policy: dict) -> None:
+        """Answer each applied policy frame so the leader may invite this member."""
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        name = str(info.get("as_name") or "")
+        pid = str(policy.get("policy_id") or "")
+        try:
+            sent = self._party_comms.send_policy_ack(name=name, policy_id=pid)
+        except Exception as exc:
+            self.log(f"Party policy ack send failed: {exc}")
+            return
+        if not sent:
+            return
+        first = pid != str(info.get("acked_id") or "")
+        info["acked_at"] = time.time()
+        info["acked_id"] = pid
+        info["acks"] = int(info.get("acks", 0)) + 1
+        self._member_policy_info = info
+        if first:
+            msg = f"Party policy confirmed to leader as={name or 'member'} id={pid or '—'}"
+            self.log(msg)
+            self._party_event("socket", msg)
 
     def _member_party_tick(
         self, world, map_id, *, send: bool, party_brain=None
@@ -2047,11 +2117,13 @@ class BotController:
                 self._party_comms.ingest_orders()
             except Exception as exc:
                 self.log(f"Party member order read failed: {exc}")
-            member_orders.take_policy()
+            fresh = member_orders.take_policy()
             if party_brain is not None and member_orders.policy is not None:
                 self._apply_member_party_policy(
                     world, map_id, party_brain, member_orders.policy
                 )
+                if fresh is not None:
+                    self._send_member_policy_ack(fresh)
             return
         pose = live_pose_from_state(world)
         px = py = None
@@ -2308,8 +2380,12 @@ class BotController:
         self._member_policy_sig = ""
         self._member_policy_info = {}
         self._party_policy_info = {}
+        self._party_policy_id = ""
         self._party_invites = None
         self._party_brain_ref = None
+        from app._06_party.comms.orders import policy_acks
+
+        policy_acks.clear()
         if party_mode:
             party_brain = PartyMemberManager(party_cfg)
             self._party_brain_ref = party_brain
@@ -3036,6 +3112,167 @@ class BotController:
         except Exception:
             pass
         self._action_executor = None
+
+
+def _ago(ts, now) -> str:
+    try:
+        return f"{max(0, int(float(now) - float(ts)))}s ago"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _step(key: str, label: str, state: str, detail: str) -> dict:
+    """One monitor workflow step. ``state``: done | active | wait | bad | off."""
+    return {"key": key, "label": label, "state": state, "detail": detail}
+
+
+def _leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list:
+    """Leader start: server → connect → policy → confirm → invite → rally → hunt."""
+    n = len(roster)
+    sock_state = str(sock.get("state") or "off")
+    clients = int(sock.get("clients") or 0)
+    listening = sock_state == "listening"
+    steps = [
+        _step(
+            "server",
+            "Server",
+            "done" if listening else ("wait" if sock_state in ("idle", "starting") else "bad"),
+            f"{sock.get('advertise') or '—'}:{sock.get('port') or '—'} {sock_state}",
+        )
+    ]
+
+    if not listening:
+        conn = "off"
+    elif n and clients >= n:
+        conn = "done"
+    else:
+        conn = "active" if clients else "wait"
+    steps.append(_step("connect", "Connect", conn, f"{clients}/{n} member socket(s)"))
+
+    sent = int(policy.get("sent") or 0)
+    at = policy.get("at")
+    if not at:
+        pol, pdetail = ("wait" if conn in ("active", "done") else "off"), "not sent yet"
+    elif sent > 0:
+        pol = "done"
+        pdetail = f"→{sent} client(s) · {_ago(at, now)} · id {policy.get('policy_id') or '—'}"
+    else:
+        pol, pdetail = "wait", f"no socket to send to · {_ago(at, now)}"
+    steps.append(_step("policy", "Policy", pol, pdetail))
+
+    acked = [r for r in roster if r.get("policy_acked")]
+    if n and len(acked) >= n:
+        ack = "done"
+    elif acked:
+        ack = "active"
+    else:
+        ack = "wait" if pol == "done" else "off"
+    adetail = f"{len(acked)}/{n} confirmed"
+    if acked:
+        adetail += ": " + ", ".join(str(r.get("name") or "") for r in acked)
+    steps.append(_step("ack", "Confirm", ack, adetail))
+
+    joined = [r for r in roster if r.get("in_party")]
+    typed = sum(int(r.get("invites") or 0) for r in roster)
+    failed = sum(int(r.get("invite_failed") or 0) for r in roster)
+    istate = str(invite.get("state") or "")
+    if n and len(joined) >= n:
+        inv = "done"
+    elif istate == "expired" or (failed and not typed):
+        inv = "bad"
+    elif typed or acked:
+        inv = "active"
+    else:
+        inv = "off"
+    idetail = f"{len(joined)}/{n} joined · {typed} /초대 typed"
+    if failed:
+        idetail += f" · {failed} failed"
+    if istate == "expired":
+        idetail += " · window over"
+    steps.append(_step("invite", "Invite", inv, idetail))
+
+    rstate = str(rally.get("state") or "off")
+    expected = list(rally.get("expected") or [])
+    arrived = list(rally.get("arrived") or [])
+    rmap = {"done": "done", "waiting": "active", "hold_at": "active", "await_plan": "active"}
+    steps.append(
+        _step(
+            "rally",
+            "Rally",
+            rmap.get(rstate, "off"),
+            f"{rstate} · {len(arrived)}/{len(expected)} arrived · stage {rally.get('stage') or '—'}",
+        )
+    )
+    hunting = phase == "hunting"
+    steps.append(_step("hunt", "Hunt", "done" if hunting else "off", phase))
+    return steps
+
+
+def _member_workflow(*, sock, policy, party, orders, now) -> list:
+    """Member start: connect → policy → apply → confirm → in party → rally."""
+    sock_state = str(sock.get("state") or "off")
+    connected = sock_state == "connected"
+    steps = [
+        _step(
+            "connect",
+            "Connect",
+            "done" if connected else ("wait" if sock_state in ("connecting", "reconnecting", "idle") else "bad"),
+            f"{sock.get('uri') or '—'} {sock_state}",
+        )
+    ]
+    received = bool(policy.get("received"))
+    steps.append(
+        _step(
+            "policy",
+            "Policy",
+            "done" if received else ("wait" if connected else "off"),
+            "received from leader" if received else "waiting for leader policy",
+        )
+    )
+    applied = bool(policy.get("overlay"))
+    steps.append(
+        _step(
+            "apply",
+            "Apply",
+            "done" if applied else ("wait" if received else "off"),
+            (
+                f"temporary overlay as {policy.get('as_name') or '—'} · {_ago(policy.get('applied_at'), now)}"
+                if applied
+                else "own profile"
+            ),
+        )
+    )
+    acked_at = policy.get("acked_at")
+    steps.append(
+        _step(
+            "ack",
+            "Confirm",
+            "done" if acked_at else ("wait" if applied else "off"),
+            (
+                f"sent {int(policy.get('acks') or 0)}× · {_ago(acked_at, now)} · id {policy.get('acked_id') or '—'}"
+                if acked_at
+                else "not sent"
+            ),
+        )
+    )
+    in_party = bool(isinstance(party, dict) and party.get("in_party"))
+    steps.append(
+        _step(
+            "party",
+            "In party",
+            "done" if in_party else ("wait" if acked_at else "off"),
+            "joined" if in_party else "waiting for /초대",
+        )
+    )
+    stage = str(orders.get("gather_stage") or "")
+    if not stage:
+        rst, rdetail = "off", "no rally order"
+    elif orders.get("arrived"):
+        rst, rdetail = "done", f"{stage} · arrived"
+    else:
+        rst, rdetail = "active", f"{stage} · walking"
+    steps.append(_step("rally", "Rally", rst, rdetail))
+    return steps
 
 
 def _player_chat_name(world, snapshot) -> str:

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-22 — party start: invite only after the member confirms the policy (`policy_ack`); `/초대`; monitor workflow
+
+Intent: the leader start runs in order: socket server → member sockets connect → `party_policy` sent → each member applies it (temporary overlay) and answers `policy_ack` → only then `/초대 <name>` for that roster name → rally → hunt. The in-game invite command is `/초대 <name>` (was `/파티 <name>`, which the game does not accept).
+Shared: `invite.PartyInviter.tick(ready=…)` skips names that have not confirmed (no invite, no retry clock). `invite.LeaderInvites(policy_acked=…)` replaces the "all sockets or 20 s" shortcut; `POLICY_WAIT_S` is removed. `deliver_chat` turns an exception (e.g. missing `enter_chat.dll`) into a failed send instead of an uncaught invite-tick error, and posts typed / FAILED lines to the monitor. `websocket.party_orders`: `party_policy` now carries `policy_id` (hash of the knobs), new `policy_ack` frame, `PolicyAcks` / `policy_acks` (cleared by `reset_orders` and at Start). `comms.ingest.drain_leader_reports` books acks (a member that does not know its name yet sends `member`; booked to the only unconfirmed roster name). Member `_member_party_tick` acks every applied policy frame (leader resends every 5 s). `party_monitor_snapshot` adds `session.workflow` (leader 7 steps, member 6) and roster `policy_acked` / `invite_failed`.
+Affects: leader party invites only. A member bot without this build never confirms, so it is never invited until it is updated (wire: leader and member must be deployed together). Rally, hunt, combat, HP, movement, and login are unchanged. Party monitor: left dashboard keeps its width (right column fixed ~420–640 px, wrapping badge rows), Workflow card on top, log split into leader messages (top) and member messages (bottom).
+Consent: user asked for this workflow (socket → policy → member response → invite) and the `/초대` command; hard ACK (no timeout) as described.
+Result: logs 03:48 and 04:03 showed `/파티` then `/초대` "typed" while the main log had `Party invite tick failed: enter_chat.dll not found` every 20 s — `Engine/analysis/enter_chat/bin` was never built after the move. Rebuilt with `build.bat` (BUILD_OK, DLL loads). Gate simulated: no invite before ack, invite right after, stale `policy_id` rejected, failed chat counts as failed. Monitor rendered offscreen. Not run in game.
+
 ## 2026-10-22 — teleporter door swap also moves the inside walk start
 
 Intent: after the silver-knight teleporter lands nearer the other training-dungeon floor-1 door, the inside walk starts at that door's landing cell. The character then walks to the first patrol point. Standing still on `world nav wait land xy` after a successful mapId 4→25 entry ends.
