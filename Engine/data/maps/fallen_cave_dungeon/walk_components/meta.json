@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "rule": "white4",
+  "origin_x": 32512,
+  "origin_y": 32832,
+  "pixel_scale": 1,
+  "width": 512,
+  "height": 512,
+  "source_sha256": "920c35dc07bf436ba7d01a03e5e0f85c801bb28fe03d0d51c34253b6e9be21df",
+  "source_size": 22474,
+  "source_mtime_ns": 1792217973809163400
+}

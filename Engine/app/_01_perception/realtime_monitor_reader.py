@@ -18,7 +18,15 @@ _SHARED: Optional["RealtimeMonitorReader"] = None
 
 
 def default_dll_path() -> Path:
-    return _ANALYSIS / "realtime_monitor.dll"
+    """Newest monitor image. A locked live DLL keeps the previous build beside it."""
+    candidates = [
+        _ANALYSIS / "realtime_monitor.new.dll",
+        _ANALYSIS / "realtime_monitor.dll",
+    ]
+    found = [path for path in candidates if path.is_file()]
+    if not found:
+        return candidates[-1]
+    return max(found, key=lambda path: path.stat().st_mtime)
 
 
 def default_offsets_path() -> Path:

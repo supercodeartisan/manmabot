@@ -379,8 +379,14 @@ class LiveIncomeBar(QWidget):
         gap = 10.0
         left = 3.0
         usable = max(0.0, self.width() - left - gap - 1.0)
-        adena_w = min(self._adena_width(painter), usable)
-        level_w = max(0.0, usable - adena_w)
+        adena_w = self._adena_width(painter)
+        # The level card keeps most of a narrow bar. Adena takes its content
+        # width only when the level card still has room for its columns.
+        if usable >= adena_w + 360.0:
+            level_w = usable - adena_w
+        else:
+            level_w = usable * 0.62
+            adena_w = usable - level_w
         height = self.height() - 2.0
         self._paint_progress(painter, QRectF(left, 0, level_w, height))
         self._paint_adena(painter, QRectF(left + level_w + gap, 0, adena_w, height))
@@ -404,6 +410,10 @@ class LiveIncomeBar(QWidget):
         )
         rate_text = self._exp_rate_value(rate)
         gutter = 18.0
+        level_need = self._block_width(
+            painter,
+            (("Lv. 999", 15, True), (f"{text['exp']} 100.0%", 11, False)),
+        )
         eta_w = self._block_width(
             painter,
             ((text["eta_label"], 11, False), (text["eta_reserve"], 15, True)),
@@ -415,16 +425,18 @@ class LiveIncomeBar(QWidget):
         body_left = avatar.right() + 12.0
         body_right = rect.right() - 12.0
         available = max(0.0, body_right - body_left)
-        text_need = eta_w + rate_w + gutter * 2.0
-        if text_need > available and available > 0:
+        side = eta_w + rate_w + gutter * 2.0
+        if level_need + side <= available:
+            level_w = available - side
+        else:
             gutter = 8.0
-            room = max(0.0, available - 64.0)
-            scale = room / (eta_w + rate_w + gutter * 2.0) if eta_w + rate_w else 1.0
-            scale = min(1.0, scale)
-            eta_w *= scale
-            rate_w *= scale
-            text_need = eta_w + rate_w + gutter * 2.0
-        level_w = max(0.0, available - text_need)
+            level_w = min(level_need, available)
+            room = max(0.0, available - level_w - gutter * 2.0)
+            pair = eta_w + rate_w
+            if pair > room and pair > 0:
+                scale = room / pair
+                eta_w *= scale
+                rate_w *= scale
         level_rect = QRectF(body_left, rect.top() + 8, level_w, rect.height() - 16)
         eta_x = body_left + level_w + gutter
         rate_x = eta_x + eta_w + gutter

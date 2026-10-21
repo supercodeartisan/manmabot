@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 
 from i18n.localized_names import route_point_display_name
 from i18n.strings import ui_strings
-from settings.map_previews import open_real_map_image
+from settings.map_previews import open_legacy_nav_preview, open_real_map_image
 from session.paths import assert_userdata_write, ensure_userdata, manmabot_root
 from session.probes import (
     farms_yaml_path,
@@ -53,7 +53,6 @@ from ui_qt.dialogs.mainland_region_overlay import (
     MainlandRegionOverlay,
     build_mainland_overlay,
     draw_visible_image,
-    region_button_text,
 )
 from ui_qt.theme import tokens
 
@@ -103,7 +102,7 @@ class MapCanvas(QWidget):
 
     def leaveEvent(self, event) -> None:
         self.editor._hover_tile = None
-        self.editor._hover_canvas = None
+        self.editor._sync_map_readout()
         if (
             not self.editor._panning
             and self.editor._drag is None
@@ -263,10 +262,8 @@ class MapEditorWidget(QWidget):
         self._drag_origin: dict | tuple | None = None
         self._rect_anchor: tuple[int, int] | None = None
         self._hover_tile: tuple[int, int] | None = None
-        self._hover_canvas: tuple[float, float] | None = None
         self._hover_move: tuple[int, int] | None = None
         self._region_overlay: MainlandRegionOverlay | None = None
-        self._show_regions = True
         self._live_nav: tuple[int, int] | None = None
         self._live_timer: QTimer | None = None
         self._live_anim_timer: QTimer | None = None
@@ -321,12 +318,6 @@ class MapEditorWidget(QWidget):
         tools.addWidget(zoom_out)
         tools.addWidget(self.zoom_label)
         tools.addWidget(zoom_in)
-        self._regions_btn = QPushButton(region_button_text(self.language))
-        self._regions_btn.setCheckable(True)
-        self._regions_btn.setChecked(True)
-        self._regions_btn.setVisible(False)
-        self._regions_btn.toggled.connect(self._toggle_regions)
-        tools.addWidget(self._regions_btn)
         root.addLayout(tools)
 
         split = QSplitter(Qt.Orientation.Horizontal)
@@ -357,6 +348,18 @@ class MapEditorWidget(QWidget):
         self.canvas = MapCanvas(self)
         self._canvas_scroll.setWidget(self.canvas)
         canvas_host_w.addWidget(self._canvas_scroll, stretch=1)
+        from ui_qt.theme.fonts import body_font
+
+        self.map_readout = QLabel("")
+        self.map_readout.setFont(body_font(self.language, 13))
+        self.map_readout.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.map_readout.setStyleSheet(
+            "color: #ffffff; background: #0f172a; padding: 5px 12px;"
+        )
+        self.map_readout.setMinimumHeight(30)
+        canvas_host_w.addWidget(self.map_readout)
         self.status = QLabel("")
         self.status.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
         canvas_host_w.addWidget(self.status)
@@ -367,15 +370,6 @@ class MapEditorWidget(QWidget):
         split.setSizes([250, 750])
         root.addWidget(split, stretch=1)
         self._sync_tools()
-
-    def _toggle_regions(self, checked: bool) -> None:
-        self._show_regions = bool(checked)
-        btn = getattr(self, "_regions_btn", None)
-        if btn is not None:
-            btn.setStyleSheet(
-                f"background: {tokens.ACCENT}; color: white;" if checked else ""
-            )
-        self.canvas.update()
 
     def _set_tool(self, tool: str) -> None:
         if not self._can_edit() and tool != "select":
@@ -470,12 +464,18 @@ class MapEditorWidget(QWidget):
             self._refresh_list()
             self._fill_inspector()
             self._sync_canvas_size()
+            self._sync_map_readout()
             self.canvas.update()
             return
         try:
-            pil = open_real_map_image(self.map_id)
+            pil = open_legacy_nav_preview(self._pack)
         except Exception:
             pil = None
+        if pil is None:
+            try:
+                pil = open_real_map_image(self.map_id)
+            except Exception:
+                pil = None
         if pil is None and self._pack is not None:
             try:
                 from PIL import Image
@@ -507,17 +507,6 @@ class MapEditorWidget(QWidget):
                 )
             except Exception:
                 self._region_overlay = None
-        if hasattr(self, "_regions_btn"):
-            self._regions_btn.setText(region_button_text(self.language))
-            self._regions_btn.setVisible(self._region_overlay is not None)
-            self._regions_btn.blockSignals(True)
-            self._regions_btn.setChecked(self._show_regions)
-            self._regions_btn.blockSignals(False)
-            self._regions_btn.setStyleSheet(
-                f"background: {tokens.ACCENT}; color: white;"
-                if self._show_regions
-                else ""
-            )
         if not self._dungeon:
             try:
                 self._load_farms()
@@ -539,6 +528,7 @@ class MapEditorWidget(QWidget):
         self._fill_inspector()
         self._fit()
         self._sync_canvas_size()
+        self._sync_map_readout()
         self.canvas.update()
 
     def _recompute_patrol_paths(self) -> None:
@@ -732,20 +722,6 @@ class MapEditorWidget(QWidget):
         draw_visible_image(
             painter, self._base, ox, oy, self._scale, widget.width(), widget.height()
         )
-        ps = self._pixel_scale()
-        overlay = self._region_overlay
-        if overlay is not None and self._show_regions:
-            overlay.paint(
-                painter,
-                origin=(ox, oy),
-                scale=self._scale,
-                pixel_scale=ps,
-                tile_to_canvas=self._tile_to_canvas,
-                view_w=widget.width(),
-                view_h=widget.height(),
-                hover_tile=None if self._panning else self._hover_tile,
-                pointer=None if self._panning else self._hover_canvas,
-            )
         if not self._dungeon:
             for i, f in enumerate(self.farms):
                 x0, y0 = self._tile_to_canvas(f["x0"], f["y0"])
@@ -798,27 +774,30 @@ class MapEditorWidget(QWidget):
             lx, ly = self._live_nav
             cx, cy = self._tile_to_canvas(lx + 0.5, ly + 0.5)
             self._paint_live_marker(painter, cx, cy)
+        self.zoom_label.setText(f"{int(round(self._zoom * 100))}%")
+
+    def _map_readout_text(self) -> str:
+        parts: list[str] = []
         if self._hover_tile is not None:
             hx, hy = self._hover_tile
-            painter.setPen(QColor("#1e3a5f"))
-            hover = self.s.editor_hover.format(x=hx, y=hy)
-            if overlay is not None and self._show_regions:
+            parts.append(self.s.editor_hover.format(x=hx, y=hy))
+            overlay = self._region_overlay
+            if overlay is not None:
                 where = overlay.hover_text(hx, hy)
                 if where:
-                    hover = f"{hover}  ·  {where}"
-            if self._live_nav is not None:
-                lx, ly = self._live_nav
-                hover = f"{hover}  ·  {self.s.editor_you_tile.format(x=lx, y=ly)}"
-            painter.drawText(8, max(widget.height() - 10, 16), hover)
-        elif self._live_nav is not None:
+                    parts.append(where)
+        if self._live_nav is not None:
             lx, ly = self._live_nav
-            painter.setPen(QColor("#0e7490"))
-            painter.drawText(
-                8,
-                max(widget.height() - 10, 16),
-                self.s.editor_you_tile.format(x=lx, y=ly),
-            )
-        self.zoom_label.setText(f"{int(round(self._zoom * 100))}%")
+            parts.append(self.s.editor_you_tile.format(x=lx, y=ly))
+        return "  ·  ".join(parts)
+
+    def _sync_map_readout(self) -> None:
+        label = getattr(self, "map_readout", None)
+        if label is None:
+            return
+        text = self._map_readout_text()
+        if label.text() != text:
+            label.setText(text)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -915,6 +894,7 @@ class MapEditorWidget(QWidget):
         self._live_nav = nav
         self._sync_live_anim_timer()
         if changed:
+            self._sync_map_readout()
             self.canvas.update()
 
     def _anchor_image_point(self, canvas_x: float, canvas_y: float) -> tuple[float, float]:
@@ -1083,7 +1063,7 @@ class MapEditorWidget(QWidget):
             return
         tx, ty = self._canvas_to_tile(cx, cy)
         self._hover_tile = (tx, ty)
-        self._hover_canvas = (cx, cy)
+        self._sync_map_readout()
         self._sync_canvas_cursor(cx, cy)
         if not self._can_edit():
             self.canvas.update()

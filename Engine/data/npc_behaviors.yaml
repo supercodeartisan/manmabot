@@ -1139,7 +1139,7 @@ behaviors:
   click_offset_uv:
   - 0.002872692913385766
   - -0.06053278370323564
-  destination_dungeon: 7779
+  destination_dungeon: 25
   id: teleport_silver
   map: mainland
   name: Teleport Silver
@@ -1256,7 +1256,7 @@ behaviors:
   click_offset_uv:
   - 0.002872692913385766
   - -0.06053278370323564
-  destination_dungeon: 7779
+  destination_dungeon: 25
   id: teleport_silver_ch
   map: mainland
   name: Teleport Silver ch

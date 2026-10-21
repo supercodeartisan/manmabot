@@ -88,7 +88,7 @@ static uint32_t g_deadByte = 0x49u, g_deadVal = 1u;
 static uint32_t g_baitOff = 0x40u, g_baitVal = 0x78u;
 static uint32_t g_deathVft = 0x1180AE8u, g_deadBodyVft = 0x11808A8u;
 /* AttackAction inside the AC block. owner/tgt sit past the 0x140 fingerprint. */
-static uint32_t g_attackActVft = 0x11E04A8u;
+static uint32_t g_attackActVft = 0x11EB490u;
 static uint32_t g_offAtkOwner = 0x80u, g_offAtkTgt = 0x88u;
 static uint64_t g_camGlob = 0x180A150ull;
 static uint32_t g_entVft[24];
@@ -101,6 +101,13 @@ static float g_feetDx = 0.f, g_feetDy = 0.f;
 static int g_cfgClientW = 0, g_cfgClientH = 0;
 static uint32_t g_vftSelf = 0x11819F0u;
 static uint32_t g_vftItem = 0x1181838u;
+/* CharacterData vitals (charread). The static HUD block is not the HP source. */
+static uint32_t g_cdMgr = 0, g_cdVft = 0, g_cdOff = 0x498u, g_vftStatus = 0;
+static uint32_t g_kXor = 0x2f8b1064u, g_kMul = 0x7f4a7c15u;
+static uint32_t g_cdHolder = 0xD0u, g_cdSubBeg = 0x180u, g_cdSubEnd = 0x188u;
+static uint32_t g_statHp = 0x2B8u, g_statMaxHp = 0x2C4u, g_statMp = 0x2D0u;
+static uint32_t g_statMaxMp = 0x2DCu, g_statLv = 0x248u;
+static int g_charVitals = 0;
 
 typedef struct { uint32_t vft; char type[32]; } ClsMap;
 static ClsMap g_cls[MAXCLS];
@@ -234,6 +241,127 @@ static void siblingPath(const char* cfg, const char* name, char* out, int cap) {
     if (n + (int)strlen(name) + 1 > cap) return;
     memcpy(out, cfg, (size_t)n);
     strcpy(out + n, name);
+}
+static void charOffsetsPath(const char* cfg, char* out, int cap) {
+    const char* slash;
+    const char* slash2;
+    char tmp[MAX_PATH];
+    int n;
+    out[0] = 0;
+    if (!cfg || (!strchr(cfg, '\\') && !strchr(cfg, '/'))) {
+        strncpy(out, "..\\char_offsets.txt", cap - 1);
+        out[cap - 1] = 0;
+        return;
+    }
+    slash = strrchr(cfg, '\\');
+    slash2 = strrchr(cfg, '/');
+    if (slash2 > slash) slash = slash2;
+    n = (int)(slash - cfg);
+    if (n <= 0 || n >= MAX_PATH) return;
+    memcpy(tmp, cfg, (size_t)n);
+    tmp[n] = 0;
+    slash = strrchr(tmp, '\\');
+    slash2 = strrchr(tmp, '/');
+    if (slash2 > slash) slash = slash2;
+    if (!slash) {
+        strncpy(out, "..\\char_offsets.txt", cap - 1);
+        out[cap - 1] = 0;
+        return;
+    }
+    n = (int)(slash - tmp + 1);
+    if (n + 18 >= cap) return;
+    memcpy(out, tmp, (size_t)n);
+    strcpy(out + n, "char_offsets.txt");
+}
+static void loadCharVitals(const char* cfg) {
+    char path[MAX_PATH];
+    FILE* f;
+    char line[160];
+    charOffsetsPath(cfg, path, sizeof(path));
+    f = fopen(path, "r");
+    if (!f) return;
+    g_charVitals = 1;
+    while (fgets(line, sizeof(line), f)) {
+        char* s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        if (*s == '#' || *s == '\r' || *s == '\n' || *s == 0) continue;
+        if (!strncmp(s, "MGR=", 4)) g_cdMgr = (uint32_t)strtoul(s + 4, 0, 16);
+        else if (!strncmp(s, "CD_VFT=", 7)) g_cdVft = (uint32_t)strtoul(s + 7, 0, 16);
+        else if (!strncmp(s, "CD_OFF=", 7)) g_cdOff = (uint32_t)strtoul(s + 7, 0, 16);
+        else if (!strncmp(s, "VFT_STATUS=", 11)) g_vftStatus = (uint32_t)strtoul(s + 11, 0, 16);
+        else if (!strncmp(s, "K_XOR=", 6)) g_kXor = (uint32_t)strtoul(s + 6, 0, 16);
+        else if (!strncmp(s, "K_MUL=", 6)) g_kMul = (uint32_t)strtoul(s + 6, 0, 16);
+        else if (!strncmp(s, "HOLDER_OFF=", 11)) g_cdHolder = (uint32_t)strtoul(s + 11, 0, 16);
+        else if (!strncmp(s, "SUBLIST_BEG=", 12)) g_cdSubBeg = (uint32_t)strtoul(s + 12, 0, 16);
+        else if (!strncmp(s, "SUBLIST_END=", 12)) g_cdSubEnd = (uint32_t)strtoul(s + 12, 0, 16);
+        else if (!strncmp(s, "HP=", 3)) g_statHp = (uint32_t)strtoul(s + 3, 0, 16);
+        else if (!strncmp(s, "MAXHP=", 6)) g_statMaxHp = (uint32_t)strtoul(s + 6, 0, 16);
+        else if (!strncmp(s, "MP=", 3)) g_statMp = (uint32_t)strtoul(s + 3, 0, 16);
+        else if (!strncmp(s, "MAXMP=", 6)) g_statMaxMp = (uint32_t)strtoul(s + 6, 0, 16);
+        else if (!strncmp(s, "LEVEL=", 6)) g_statLv = (uint32_t)strtoul(s + 6, 0, 16);
+    }
+    fclose(f);
+}
+static int decodeTriple(const uint8_t* b, uint32_t n, uint32_t off, uint32_t* out) {
+    uint32_t k, mid, c, u8v;
+    if (off + 12 > n) return 0;
+    memcpy(&k, b + off, 4);
+    memcpy(&mid, b + off + 4, 4);
+    memcpy(&c, b + off + 8, 4);
+    u8v = mid ^ k;
+    if (c != ((k + g_kXor) ^ ~u8v)) return 0;
+    *out = u8v - (k * g_kMul ^ g_kXor);
+    return 1;
+}
+/* HP/MP/level from CharacterDataSubsystem, same chain as dist charread. */
+static int readCharVitals(uint32_t* hp, uint32_t* maxhp, uint32_t* mp, uint32_t* maxmp, uint32_t* lv) {
+    uint64_t mgr, holder, bgn, end, cd = 0;
+    long i, nsub;
+    uint8_t stb[0x800];
+    uint32_t need;
+    if (!g_charVitals || !g_cdMgr || !g_cdVft) return 0;
+    mgr = rq(g_base + g_cdMgr);
+    if (!isHeap(mgr)) return 0;
+    holder = rq(mgr + g_cdHolder);
+    if (!isHeap(holder)) return 0;
+    bgn = rq(holder + g_cdSubBeg);
+    end = rq(holder + g_cdSubEnd);
+    if (!isHeap(bgn) || end <= bgn) return 0;
+    nsub = (long)((end - bgn) / 16);
+    if (nsub < 1 || nsub > 128) return 0;
+    for (i = 0; i < nsub; i++) {
+        uint64_t s = rq(bgn + 16ull * (uint64_t)i);
+        if (!isHeap(s)) continue;
+        if (vrva(s) == g_cdVft) { cd = s; break; }
+    }
+    if (!cd) return 0;
+    need = g_statLv + 12;
+    if (g_statHp + 12 > need) need = g_statHp + 12;
+    if (g_statMaxHp + 12 > need) need = g_statMaxHp + 12;
+    if (g_statMp + 12 > need) need = g_statMp + 12;
+    if (g_statMaxMp + 12 > need) need = g_statMaxMp + 12;
+    if (need > sizeof(stb)) need = (uint32_t)sizeof(stb);
+    if (!rm(cd + g_cdOff, stb, need)) return 0;
+    /* The triple checksum is the field check. A stale status vft must not zero HP. */
+    if (!decodeTriple(stb, need, g_statHp, hp)) return 0;
+    if (!decodeTriple(stb, need, g_statMaxHp, maxhp)) *maxhp = 0;
+    if (!decodeTriple(stb, need, g_statMp, mp)) *mp = 0;
+    if (!decodeTriple(stb, need, g_statMaxMp, maxmp)) *maxmp = 0;
+    if (!decodeTriple(stb, need, g_statLv, lv)) *lv = 0;
+    return 1;
+}
+static void fillPlayerVitals(uint32_t* px, uint32_t* py, uint32_t* hp, uint32_t* maxhp,
+    uint32_t* mp, uint32_t* maxmp, uint32_t* lv) {
+    *px = g_offPlayerX ? rd(g_base + g_offPlayerX) : 0;
+    *py = g_offPlayerY ? rd(g_base + g_offPlayerY) : 0;
+    *hp = *maxhp = *mp = *maxmp = *lv = 0;
+    if (readCharVitals(hp, maxhp, mp, maxmp, lv)) return;
+    if (g_charVitals) return;
+    if (g_offPlayerHp) *hp = rd(g_base + g_offPlayerHp);
+    if (g_offPlayerMaxHp) *maxhp = rd(g_base + g_offPlayerMaxHp);
+    if (g_offPlayerMp) *mp = rd(g_base + g_offPlayerMp);
+    if (g_offPlayerMaxMp) *maxmp = rd(g_base + g_offPlayerMaxMp);
+    if (g_offPlayerLv) *lv = rd(g_base + g_offPlayerLv);
 }
 static uint8_t rd8(uint64_t a) { uint8_t v = 0; rm(a, &v, 1); return v; }
 static uint64_t actionComp(uint64_t e) {
@@ -610,6 +738,7 @@ static void loadSettings(const char* path) {
         siblingPath(path, "entity_offsets.txt", reg, sizeof(reg));
         loadEntityOffsets(reg);
     }
+    loadCharVitals(path);
 }
 static int isItemVft(uint32_t vft) {
     if (vft == g_vftItem) return 1;
@@ -1361,13 +1490,8 @@ __declspec(dllexport) int print_state_snapshot(const char* cfgPath, char* out, i
     HWND gwnd = findLCWnd(g_pid);
     int W = 0, H = 0;
     resolveClientSize(gwnd, &W, &H);
-    uint32_t px = rd(g_base + g_offPlayerX);
-    uint32_t py = rd(g_base + g_offPlayerY);
-    uint32_t hp = rd(g_base + g_offPlayerHp);
-    uint32_t maxhp = rd(g_base + g_offPlayerMaxHp);
-    uint32_t mp = rd(g_base + g_offPlayerMp);
-    uint32_t maxmp = rd(g_base + g_offPlayerMaxMp);
-    uint32_t lv = rd(g_base + g_offPlayerLv);
+    uint32_t px, py, hp, maxhp, mp, maxmp, lv;
+    fillPlayerVitals(&px, &py, &hp, &maxhp, &mp, &maxmp, &lv);
     int n = tickTracks((int32_t)px, (int32_t)py);
     Out wrapped; memset(&wrapped, 0, sizeof(wrapped));
     wrapped.buf = out;
@@ -1436,13 +1560,8 @@ int main(int argc, char** argv) {
         resolveClientSize(gwnd, &W, &H);
         pg_reset();
 
-        uint32_t px = rd(g_base + g_offPlayerX);
-        uint32_t py = rd(g_base + g_offPlayerY);
-        uint32_t hp = rd(g_base + g_offPlayerHp);
-        uint32_t maxhp = rd(g_base + g_offPlayerMaxHp);
-        uint32_t mp = rd(g_base + g_offPlayerMp);
-        uint32_t maxmp = rd(g_base + g_offPlayerMaxMp);
-        uint32_t lv = rd(g_base + g_offPlayerLv);
+        uint32_t px, py, hp, maxhp, mp, maxmp, lv;
+        fillPlayerVitals(&px, &py, &hp, &maxhp, &mp, &maxmp, &lv);
 
         int n = tickTracks((int32_t)px, (int32_t)py);
         Out wrapped; memset(&wrapped, 0, sizeof(wrapped)); wrapped.file = out;

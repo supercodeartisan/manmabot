@@ -1,5 +1,101 @@
 # Decision change log
 
+## 2026-10-21 — an attacked-me lock stays until that monster is dead
+
+Intent: while the current sticky has attacked me and is still alive, a lower known level does not take the lock. When the lock is empty, the lowest known level is engaged, then held the same way. A sticky that has not attacked me still yields immediately. Who attacked first is the monster already on the lock; monsters that appear in the same scan are still ordered by known level. Unknown level still ranks after every known level. The previous target is not given up.
+Shared: `prefer_attacked_me_sticky`. `attacked_me_rank` still orders an empty lock. `list_attacked_me_targets`, `rebind_sticky_target`, dungeon wall release, cursor reject, species-filter idle, bait, map change, and the exp-kill release stay.
+Affects: farm engage, travel engage, and world-nav walk combat. Heal still waits while the living sticky is held, so a higher-level first attacker delays heal. Loot still waits. Field wall detour still holds the lock. A dungeon shot line that closes still drops the lock, and the next empty-lock choice is the lowest known level that can be shot.
+Consent: user agreed after the review (keep the monster already being attacked until it dies; then take attacked-me monsters from weakest, each until death).
+Result: the lower-level steal is gone. Not run in game.
+
+## 2026-10-21 — silver knight teleporter lands at desert dungeon floor 1
+
+Intent: a trip to training dungeon floor 1 uses the silver knight village teleporter the same way Gludin and Giran do. Talking scroll to 은기사 마을/텔레포터, click that NPC, land in front of a floor-1 door, then the existing cursor check enters. The long walk from the village to `(32950, 33502)` or `(32970, 33511)` is no longer the planned approach.
+Shared: `teleport_silver` and `teleport_silver_ch` `destination_dungeon` is 25 (사막 던전 1층). The existing NPC-teleporter link, shop click, and gate rewrite are unchanged. Gludin (7) and Giran (53) are unchanged.
+Affects: world nav into training dungeon floor 1, and any deeper desert floor whose world-nav stop is that entrance. A character already within 50 tiles of a floor-1 door still walks and clicks it. Combat, HP, and login are unchanged.
+Consent: user (use the silver knight teleporter to reach desert dungeon floor 1, the same way the village teleporters reach Gludin and Giran).
+Result: both behaviors now name map 25. That map's mainland doors are 130 and 126 tiles from the NPC `(33080, 33385)`, inside the 400-tile link. The old value 7779 is the PC clone and has no mainland door, so the planner scrolled to the village and walked. Not run in game.
+
+## 2026-10-21 — path refusal logs P, M, and the closed tile together
+
+Intent: one path refusal can be replayed from a single line. The line names the character tile, the monster tile the shot used, the closed tile, the live MapSubsystem id, and the loaded pack. The sampled tile list is debug only.
+Shared: `attack_line_refusal_text` reads `attack_line_block` and `tiles_on_segment`. `describe_attackable_filter_skips` still returns the same summary and, when asked, fills that line. The dungeon sticky release uses the same line. `tiles_on_segment`, `diagonal_open`, `attack_line_clear`, and `can_engage_target` are unchanged.
+Affects: screen-combat skip logs and a dungeon sticky release when the shot line is closed. Who is attacked, give-up, and blacklist stay the same. Field shots, travel, loot, and HP are unchanged.
+Consent: user asked for this line before the next hunt, and said not to change the segment or diagonal rules until a real case shows a walk-blocked tile that the game still lets an arrow cross.
+Result: the line is written. Not run in game.
+
+## 2026-10-21 — dungeon attack skip logs the closed nav tile
+
+Intent: when a straight shot is refused, the combat log names the first nav tile or fence that closed it. Who can be attacked stays the same.
+Shared: `los_block_label` (same walk as `line_of_sight_clear`). `describe_attackable_filter_skips` appends `@block=(x,y)` or `@fence=(x,y,N|E)` on a path skip. The dungeon sticky release log `wall/fence — dungeon skip` includes that same label. `attack_line_clear` and `can_engage_target` still return the same yes or no.
+Affects: dungeon screen-combat skip lines, and dropping a dungeon sticky because the shot line closed. Field shots, travel, loot, and HP are unchanged.
+Consent: user agreed this scope (log the blocking tile only; do not change the engage decision).
+Result: label added on both logs. Checked against a small grid: a black middle tile, two closed diagonal shoulders, and a north fence match the old clear/blocked result. Not run in game.
+
+## 2026-10-21 — dungeon teleport with no heal or potion goes to the world tree
+
+Intent: after one escape teleport off Talking Island and the mainland, HP still under the operator retreat percent, heal blocked by the existing MP floor, and no HP potion, start the existing Mother Tree trip instead of waiting for 95%. When HP is already above that retreat percent but still under 95%, and neither heal nor a potion can run, leave the retreat and resume the hunt. Heal or potion still fills to 95% everywhere. Scroll landings keep the 50% mother-tree check. A mother-tree trip still stands until 95%.
+Shared: `maybe_mother_tree_before_passive_wait`, `retreat_exit_ready`, `begin_retreat(use_mother_tree=True)`, `finish_retreat`. `apply_hp_actions`, `apply_inplace_hp_support`, the one under-fire teleport, and potion sides are unchanged.
+Affects: HP retreat after the escape teleport has landed, and any HP retreat that can no longer heal or drink. MP retreat, return retreat, and recharge at the tree stay on their current exits.
+Consent: user agreed both gates (dungeon post-teleport mother tree; resume hunt above the retreat percent when heal and potion cannot run).
+Result: both gates added. Not run in game.
+
+## 2026-10-21 — a filtered species is attacked only while it is hitting me
+
+Intent: a species the operator filter skips is never chosen, and an existing lock on it is dropped, unless its AttackAction targets the character this tick. One earlier hit is not enough. Allowed species still keep the attacked-me latch and finish-kill.
+Shared: `sync_attacks_me_force_targets` (`attacking_me_now`), `species_filter_blocks_target`, `list_attacked_me_targets`, `rebind_sticky_target`, `_living_same_species`. `nearest_attackable` still skips every filtered species. Session target blacklist and give-up stay.
+Affects: field and dungeon engage. A filtered monster that stops attacking is released the same tick, including a 2-tile rematch onto another of that species. A filtered monster that is attacking can still take the lock.
+Consent: user asked to make sure a blacklist monster is not attacked when it is not attacking the character.
+Result: current-tick flag added and idle filtered targets released. Not run in game.
+
+## 2026-10-21 — dungeon fights a blacklisted species that is attacking
+
+Intent: in a dungeon, a monster whose AttackAction targets the character is engaged even when the operator species filter would otherwise skip it. A blacklisted species that is not attacking stays off the normal attack list. Field self-defense was already this way.
+Shared: `monster_hitting_me`, `list_attacked_me_targets`, `nearest_attacks_me_force`, `continue_sticky_combat`. `_dungeon_ignores_blacklisted_attacker` is gone. Session target blacklist (`blacklisted_target_ids`), give-up, dungeon line of sight, and the dungeon path cap stay. `nearest_attackable` still skips a blacklisted species that has not attacked.
+Affects: dungeon hunt and patrol engage, and HP retreat while under attack. A blacklisted attacker can take the sticky lock and make `monster_hitting_me` true, so the one teleport-under-fire attempt can run. Field loot and field combat are unchanged.
+Consent: user agreed this scope (dungeon attackers bypass the species blacklist; non-attackers stay filtered; session blacklist and give-up stay).
+Result: filters removed. Not run in game.
+
+## 2026-10-21 — body reader finds MyPlayer on the current entity list
+
+Intent: ground clicks repeated the same screen point for a full second because the body slot read failed. The character walked past adena, so the in-range F4 never ran. Walk and stand class ids were already current. The player object was still looked up with the previous manager, actor list, and MyPlayer id.
+Shared: `body_pose._find_my_player` / `read_action`. Manager, actor vft, and MyPlayer come from `entity_offsets.txt` (`0x16ED640`, `0x11E9430`, `0x11EC4C8`). The click-until-walk loop, loot approach, and F4 press are unchanged.
+Affects: ground-click stop, travel reclick, and loot hop hold. A readable walk stops the repeat. A readable stand lets the next loot tick correct or press F4 once the tile is within one. Combat clicks, potions, and login do not read this slot.
+Consent: user (update it so the approach-then-F4 workflow works).
+Result: finder reads the live entity table. A live read returned walk `0x11EB7B8` and move command `0x11EBA50`. The approach-then-F4 path was not replayed in a hunt.
+
+## 2026-10-21 — world nav reuses white-tile component ids
+
+Intent: the first world-nav plan was flooding the mainland once per hub inside the decision tick, so the character stood for about 20 seconds after the startup buffs. The route itself was a scroll plus a 155-tile walk.
+Shared: `WalkService.same_component`, `label_walk_components`, `shared_walk_service`, `WorldNavPlanner` (one shared walk service), `_warm_walk_components` on map load. White-tile 4-connected ids are stored beside `nav.png` as `walk_components/`. They are not `nav_prebuild/labels.npy`. Ground A* still runs on the chosen walk. The 80,000-cell optimistic flood remains only when those ids cannot be built.
+Affects: the first world-nav plan after Start, and later plans in the same process. Live hops, combat, loot, and HP still use the fence-aware prebuild.
+Consent: user (prepare the static map once and reuse it; do not change the route).
+Result: closed yards and blocked corners match a finished flood. The logged plan no longer lands at 은기사 마을/여관. Exact white-tile ids allow 은기사 마을/허수아비 수련장, then a 106-tile walk (cost 116). The old 155-tile inn walk (cost 165, 27.8s) was a false wall left by the 80,000-cell flood. That 106-tile A* matches a fresh PNG grid. Map load reads the component files and the NPC catalog. After that the same plan is about 0.4s, and a repeat is about 0.2s. Not run in game.
+
+## 2026-10-21 — body and command class RVAs follow bodyact
+
+Intent: the live body reader was still on the 10.14 class numbers. bodyact on the current client reads stand as `VFT_BREATHACT` `0x11EB4D8`. Copy that table into the bot and the action monitors.
+Shared: `body_pose.py` `BREATH_VFT` / `MOVE_VFTS` / `BODY` / `CMD`, `action_timeline.py`, `interact_watch.py`, `probe_my_anim.c` defaults, print_state attack-action default. Walk is still MovingAction, walk-back is still MovingBackAction. Decision branches are unchanged.
+Affects: `body_is_moving`, ground-click stop, travel reclick, loot hop hold, action view labels.
+Consent: user (if bodyact is the accurate one, bring its constants into the project).
+Result: constants written. Shop, default, fixed-frame, npc-state, and zap-wand have no bodyact key, so those old numbers were dropped. Not run in game.
+
+## 2026-10-21 — memory readers follow the 26.10.20.2001 registry
+
+Intent: point the live readers at the current client using `D:\dist` registry RVAs. HP/MP/level come from CharacterData (`STAT_*`), world position from `PLAYER_X`/`PLAYER_Y`. The retired HUD block is not used. Dialog watch list stays the existing six windows.
+Shared: offset files, `lc930` registry RVAs, `shop_listen.c` anchors, and the print_state/realtime_monitor vital decode. Decision, login, movement, combat, and potion code are unchanged.
+Affects: every live memory read (player, entities, bag, hotbar, buffs, dialogs, shop).
+Consent: user (update the readers so the project runs on the current game, using how dist reads the fields whose constants were not refreshed).
+Result: constants written. `print_state.new.dll`, `realtime_monitor.new.dll`, and `shop_listen.new.dll` built; the live copies were locked, and the readers load the newer image. Not run in game.
+
+## 2026-10-21 — ant cave floors 2–8 use their own mainland doors
+
+Intent: ant cave floors 2 through 8 are entered at their own mainland doors, the same way talking island dungeon floor 1 is found and entered. Floor 9 stays without a mainland door.
+Shared: `needs_floor_route` treats `ant_cave_dungeon_F2` through `F8` as direct field doors. World nav keeps the goal on that floor's map, skips interior ladders, and uses that floor's mainland ground-enter cells. `plan_floor_steps` is not used for these floors. Floor 1 and other dungeon stairs are unchanged.
+Affects: a hunt set to ant cave floor 2, 3, 4, 5, 6, 7, or 8. The walk goes to that floor's mainland cell and the existing gate clicks it. Combat, HP, and login are unchanged.
+Consent: user (connect floors 2–8 with the database entrance cells, the same way talking island dungeon floor 1 is entered, then verify each link from the mainland).
+Result: from mainland `(33092, 33407)` with scroll and NPC teleports off, each floor plan is one field walk and that floor's own door. Floor 2 `(32912, 33223)` → `(32799, 32754)`, floor 3 `(32789, 33256)` → `(32776, 32730)`, floor 4 `(32845, 33292)` → `(32787, 32794)`, floor 5 `(32836, 33171)` → `(32795, 32744)`, floor 6 `(32796, 33189)` → `(32796, 32741)`, floor 7 `(32926, 33249)` → `(32800, 32781)`, floor 8 `(32757, 33205)` → `(32769, 32803)`. Not run in game.
+
 ## 2026-10-21 — route chaining stays inside dungeons
 
 Intent: the route-cell chain belongs on dungeon walks only. Field travel keeps the straight-line extend and still waits for arrival on a bend.

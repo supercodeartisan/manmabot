@@ -561,6 +561,10 @@ def retreat_exit_ready(blackboard: "Blackboard", state: "GameState") -> bool:
         return False
     if blackboard.nav_goal is not None and not travel_arrived(blackboard):
         return False
+    from app._04_decision.behaviors.mode_actions import resume_hunt_above_retreat_limit
+
+    if resume_hunt_above_retreat_limit(state, blackboard):
+        return True
     return is_almost_full_hp(state)
 
 

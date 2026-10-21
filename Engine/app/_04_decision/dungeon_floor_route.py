@@ -916,16 +916,41 @@ def same_dungeon_family(current_pack: str, target_pack: str) -> bool:
     return current.complex_name == target.complex_name
 
 
-# Own field door. The shallow floor of this complex has no stair up to here,
-# so world nav enters this map through its ground_enter and the usual gate.
-_DIRECT_FIELD_DOOR_PACKS = frozenset({"windawood_castle_dungeon_F2"})
+# Own field door. World nav walks to that floor's ground_enter and the
+# usual gate clicks it. These floors are not climbed from another floor.
+_DIRECT_FIELD_DOOR_PACKS = frozenset(
+    {
+        "windawood_castle_dungeon_F2",
+        "ant_cave_dungeon_F2",
+        "ant_cave_dungeon_F3",
+        "ant_cave_dungeon_F4",
+        "ant_cave_dungeon_F5",
+        "ant_cave_dungeon_F6",
+        "ant_cave_dungeon_F7",
+        "ant_cave_dungeon_F8",
+    }
+)
+
+
+def is_direct_field_door_map(map_id: int) -> bool:
+    """True when this map is entered at its own field door, not by a stair."""
+    try:
+        target = int(map_id)
+    except (TypeError, ValueError):
+        return False
+    for pack_id in _DIRECT_FIELD_DOOR_PACKS:
+        row = floor_of_pack(pack_id)
+        if row is not None and int(row.map_id) == target:
+            return True
+    return False
 
 
 def needs_floor_route(target_pack: str) -> bool:
     """True when the scheduled floor is deeper than that complex's entrance floor.
 
-    ``windawood_castle_dungeon_F2`` is not climbed from floor 1. Its door is
-    the mainland ground enter, and world nav keeps the goal on that floor.
+    Packs in ``_DIRECT_FIELD_DOOR_PACKS`` keep the world-nav goal on their own
+    map. The mainland ground enter is the door, the same way talking island
+    dungeon floor 1 is entered.
     """
     key = str(target_pack or "").strip()
     if key in _DIRECT_FIELD_DOOR_PACKS:

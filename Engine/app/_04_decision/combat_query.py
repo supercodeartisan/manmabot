@@ -267,6 +267,84 @@ def attack_line_clear(
     return line_of_sight_clear(terrain, start, goal)
 
 
+def attack_line_block(
+    obj: WorldObject,
+    origin: WorldOrigin,
+    terrain: Optional["TerrainMap"] = None,
+) -> str:
+    """First closed tile or fence on the shot line. Empty when the line is clear.
+
+    Missing terrain is clear, matching ``attack_line_clear``.
+    """
+    from app._04_decision.dungeon import los_block_label
+    from app._04_decision.nav_config import get_terrain_map
+
+    if terrain is None:
+        terrain = get_terrain_map()
+    if terrain is None:
+        return ""
+    start = (int(origin.x), int(origin.y))
+    goal = object_absolute_tile(obj, origin)
+    return los_block_label(terrain, start, goal)
+
+
+def _attack_skip_reason(blocked: str) -> str:
+    """Short cause for a closed shot. Does not decide engage."""
+    if blocked.startswith("fence="):
+        return "fence"
+    if blocked.startswith("gap="):
+        return "gap"
+    if "+" in blocked:
+        return "both_shoulders"
+    return "black_cell"
+
+
+def _attack_skip_place(game_state: GameState | None) -> tuple[str, str]:
+    """Live MapSubsystem id and the loaded pack id. ``-`` when unread."""
+    from app._03_world.merge.memory_sync import player_map_id_from_snapshot
+    from app._03_world.space.map_pack import get_active_map_pack
+
+    mid = None
+    snap = getattr(game_state, "last_memory_snapshot", None) if game_state else None
+    if isinstance(snap, dict):
+        mid = player_map_id_from_snapshot(snap)
+    pack = get_active_map_pack()
+    floor = str(getattr(pack, "id", "") or "").strip() or "-"
+    return (str(int(mid)) if mid is not None else "-", floor)
+
+
+def attack_line_refusal_text(
+    obj: WorldObject,
+    origin: WorldOrigin,
+    game_state: GameState | None = None,
+    terrain: Optional["TerrainMap"] = None,
+) -> tuple[str, str] | None:
+    """One path-refusal record and its sample tiles.
+
+    The first string is the info line body (P, M, block, map, floor, reason).
+    The second is ``segment=[...]`` for a debug log. ``None`` when the shot
+    line is clear. Does not change engage.
+    """
+    blocked = attack_line_block(obj, origin, terrain)
+    if not blocked:
+        return None
+    from app._04_decision.dungeon import tiles_on_segment
+
+    start = (int(origin.x), int(origin.y))
+    goal = object_absolute_tile(obj, origin)
+    segment = tiles_on_segment(start[0], start[1], goal[0], goal[1])
+    block = blocked[len("block=") :] if blocked.startswith("block=") else blocked
+    map_id, floor = _attack_skip_place(game_state)
+    tid = int(getattr(obj, "track_id", 0) or 0)
+    info = (
+        f"target_id={tid} P=({start[0]},{start[1]}) M=({goal[0]},{goal[1]}) "
+        f"block={block} map={map_id} floor={floor} "
+        f"reason={_attack_skip_reason(blocked)}"
+    )
+    tiles = ",".join(f"({x},{y})" for x, y in segment)
+    return info, f"segment=[{tiles}]"
+
+
 # Last dungeon path-cap skips from ``list_attackable`` / ``list_lootable``
 # (debug UI / dungeon combat GUI). Kind-scoped so loot does not wipe combat.
 _PATH_CAP_SKIPS: list[dict] = []
@@ -491,6 +569,7 @@ def describe_attackable_filter_skips(
     screen_only: bool = True,
     check_path: bool = True,
     limit: int = 6,
+    path_details: list[tuple[str, str]] | None = None,
 ) -> str:
     """Compact why base candidates failed screen/path filters (debug).
 
@@ -538,7 +617,15 @@ def describe_attackable_filter_skips(
             continue
         if check_path and origin is not None:
             if not can_engage_target(obj, origin):
-                buckets["path"].append(label)
+                blocked = attack_line_block(obj, origin)
+                if blocked:
+                    buckets["path"].append(f"{label}@{blocked}")
+                    if path_details is not None:
+                        record = attack_line_refusal_text(obj, origin, game_state)
+                        if record is not None:
+                            path_details.append(record)
+                else:
+                    buckets["path"].append(label)
                 continue
             apply_cap, steps = dungeon_engage_path_measure(obj, origin)
             if apply_cap and (
@@ -1163,29 +1250,44 @@ def sync_attacks_me_force_targets(game_state: GameState) -> list[WorldObject]:
             getattr(obj, "bait", False)
         ):
             obj.attacked_me = False
+    now_ids: set[int] = set()
+    for obj in out:
+        try:
+            now_ids.add(int(obj.track_id))
+        except (TypeError, ValueError):
+            continue
+    for obj in game_state.monsters():
+        try:
+            tid = int(obj.track_id)
+        except (TypeError, ValueError):
+            obj.attacking_me_now = False
+            continue
+        obj.attacking_me_now = tid in now_ids
     return out
 
 
 def monster_hitting_me(game_state: GameState) -> bool:
     """True when a monster or summon is attacking me this tick.
 
-    Uses the AttackAction row only. A blocked path still counts. A dungeon
-    blacklisted species does not.
+    Uses the AttackAction row only. A blocked path still counts. A species
+    on the operator blacklist still counts, including inside a dungeon.
     """
     try:
         attackers = sync_attacks_me_force_targets(game_state)
     except Exception:
         return False
-    return any(not _dungeon_ignores_blacklisted_attacker(obj) for obj in attackers)
+    return bool(attackers)
 
 
-def _dungeon_ignores_blacklisted_attacker(obj: WorldObject) -> bool:
-    """True when a dungeon must not fight this species even if it attacks us."""
-    from app._04_decision.dungeon import is_dungeon_map
+def species_filter_blocks_target(obj: WorldObject) -> bool:
+    """True when the operator species filter forbids attacking this monster.
 
-    if not is_dungeon_map():
+    A filtered species (blacklist, or absent from a whitelist) is allowed
+    only while its AttackAction targets me this tick.
+    """
+    if not is_blacklisted_object(obj):
         return False
-    return is_blacklisted_object(obj)
+    return not bool(getattr(obj, "attacking_me_now", False))
 
 
 def list_attacked_me_targets(
@@ -1198,10 +1300,10 @@ def list_attacked_me_targets(
     """Living monsters latched as having attacked me, ready to engage.
 
     The latch survives a missing ``attacks_me`` row. Dead, bait, and a mob
-    already dropped by this sweep are omitted. Species blacklist is bypassed
-    outside dungeons. In a dungeon a blacklisted species that attacks us is
-    ignored. Unknown catalog level is not treated as level 0; callers sort
-    with ``attacked_me_rank``.
+    already dropped by this sweep are omitted. A filtered species stays in
+    this list only while it is attacking me this tick; the latch alone does
+    not keep it. Unknown catalog level is not treated as level 0; callers
+    sort with ``attacked_me_rank``.
     """
     skip = set(exclude or ())
     living: list[WorldObject] = []
@@ -1220,7 +1322,7 @@ def list_attacked_me_targets(
             continue
         if tid in skip:
             continue
-        if _dungeon_ignores_blacklisted_attacker(obj):
+        if species_filter_blocks_target(obj):
             continue
         living.append(obj)
     if not living:
@@ -1260,12 +1362,13 @@ def nearest_attacks_me_force(
 ) -> Optional[WorldObject]:
     """Nearest living monster/summon whose AttackAction targets MyPlayer.
 
-    Bypasses species blacklist outside dungeons and does not require the mob
-    to already be in the print_state monster list — missing entries are
-    synthesized and tracked until their AttackAction ends. A dungeon ignores
-    a blacklisted species. Honors give-up / session ``exclude`` so finish_kill
-    priority cannot re-stick a just-abandoned id. Mage range / LOS / dungeon
-    path-cap still apply when ``check_path`` is set.
+    A filtered species is included only while its AttackAction targets me
+    this tick, in the field and in a dungeon. Does not require the mob to
+    already be in the print_state monster list — missing entries are
+    synthesized and tracked until their AttackAction ends.
+    Honors give-up / session ``exclude`` so finish_kill priority cannot
+    re-stick a just-abandoned id. Mage range / LOS / dungeon path-cap still
+    apply when ``check_path`` is set.
     """
     forced = sync_attacks_me_force_targets(game_state)
     if not forced:
@@ -1278,7 +1381,6 @@ def nearest_attacks_me_force(
         and not bool(getattr(o, "bait", False))
         and _reachable(game_state, o)
         and int(getattr(o, "track_id", 0) or 0) not in skip
-        and not _dungeon_ignores_blacklisted_attacker(o)
     ]
     if not living:
         return None
@@ -1402,6 +1504,8 @@ __all__ = [
     "memory_target_gone",
     "attack_path_clickable",
     "attack_line_clear",
+    "attack_line_block",
+    "attack_line_refusal_text",
     "can_engage_target",
     "dungeon_engage_path_measure",
     "dungeon_new_engage_path_ok",
@@ -1413,6 +1517,7 @@ __all__ = [
     "list_lootable",
     "loot_path_clickable",
     "nearest_attackable",
+    "species_filter_blocks_target",
     "list_attacked_me_targets",
     "nearest_attacks_me_force",
     "player_attacking_me",

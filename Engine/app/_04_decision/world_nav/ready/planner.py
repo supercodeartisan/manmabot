@@ -141,7 +141,11 @@ class WorldNavPlanner:
         walk: WalkService | None = None,
     ) -> None:
         self.graph = graph or load_graph()
-        self.walk = walk or WalkService(discover_map_packs())
+        if walk is None:
+            from .nav_path import shared_walk_service
+
+            walk = shared_walk_service()
+        self.walk = walk
 
     def reload(self, manifest_path: Path | None = None) -> None:
         self.graph = load_graph(manifest_path)
@@ -219,6 +223,11 @@ class WorldNavPlanner:
                 dungeon_floors.add(int(t.to_map))
         # Once the search is on this map, leaving it cannot help a hunt there.
         goal_is_dungeon_floor = int(goal.map_id) in dungeon_floors
+        # These maps are entered at their own mainland door. An interior
+        # ladder would step in through another floor.
+        from app._04_decision.dungeon_floor_route import is_direct_field_door_map
+
+        own_field_door = is_direct_field_door_map(int(goal.map_id))
 
         teleporters_from: dict[NodeKey, list[Any]] = {}
         for link in tp_links:
@@ -331,6 +340,8 @@ class WorldNavPlanner:
                 )
                 for t in transitions_from.get(u, []):
                     if on_goal_floor and int(t.to_map) != int(u[0]):
+                        continue
+                    if own_field_door and t.edge_type == "floor_ladder":
                         continue
                     v = t.to_key
                     w = 0
