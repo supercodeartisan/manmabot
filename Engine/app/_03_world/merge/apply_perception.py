@@ -133,6 +133,9 @@ def apply_perception_buffer(
     if buffer.uidialog_ok and isinstance(buffer.uidialog, dict):
         world.last_uidialog = buffer.uidialog
 
+    if buffer.party_ok and isinstance(buffer.party, dict):
+        world.last_party = buffer.party
+
     return result
 
 

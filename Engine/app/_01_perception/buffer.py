@@ -24,6 +24,7 @@ class PerceptionBuffer:
     shop: Optional[dict[str, Any]] = None
     buff: Optional[dict[str, Any]] = None
     uidialog: Optional[dict[str, Any]] = None
+    party: Optional[dict[str, Any]] = None
     # True only when the matching DLL returned a usable payload this capture.
     player_ok: bool = False
     print_state_ok: bool = False
@@ -32,6 +33,7 @@ class PerceptionBuffer:
     shop_ok: bool = False
     buff_ok: bool = False
     uidialog_ok: bool = False
+    party_ok: bool = False
     errors: list[str] = field(default_factory=list)
 
     def clear(self) -> None:
@@ -45,6 +47,7 @@ class PerceptionBuffer:
         self.shop = None
         self.buff = None
         self.uidialog = None
+        self.party = None
         self.player_ok = False
         self.print_state_ok = False
         self.inventory_ok = False
@@ -52,6 +55,7 @@ class PerceptionBuffer:
         self.shop_ok = False
         self.buff_ok = False
         self.uidialog_ok = False
+        self.party_ok = False
         self.errors.clear()
 
     def stamp(self) -> None:

@@ -42,6 +42,16 @@ MP_POTION_RATIO = 0.30
 USE_MP_POTION = False
 RESURRECT_IF_DEAD = True
 
+# Hunt attack method (UI Attack radios): ranged | magic | melee.
+# Mage + ranged → bow clicks (elf strategy). Mage + magic → spell cast.
+ATTACK_MODE = "magic"
+
+
+def uses_spell_aim() -> bool:
+    """True when combat uses mage spell key + cast-circle aim."""
+    return str(ATTACK_MODE or "magic").strip().lower() == "magic"
+
+
 # Mage: return to nearest safe when MP falls to this ratio.
 MP_ESCAPE_ENABLED = False
 MP_LOW_RATIO = 0.15
@@ -273,6 +283,8 @@ __all__ = [
     "LOOT_ADENA_WEIGHT_RATIO",
     "IGNORE_SMALL_ADENA",
     "IGNORE_SMALL_ADENA_QTY",
+    "ATTACK_MODE",
+    "uses_spell_aim",
     "TARGET_DELAY_ENABLED",
     "TARGET_DELAY_MIN_MS",
     "TARGET_DELAY_MAX_MS",

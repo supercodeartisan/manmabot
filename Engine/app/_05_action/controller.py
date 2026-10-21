@@ -34,11 +34,15 @@ class ActionExecutor:
         humanize: bool = True,
         humanize_move: Optional[bool] = None,
         rng: Optional[random.Random] = None,
+        attack_mode: Optional[str] = None,
     ):
         self.character = character
         self.humanize = humanize
         self._rng = rng if rng is not None else random.Random()
-        self._combat: CombatStrategy = combat_strategy_for(character)
+        self.attack_mode = str(attack_mode or "").strip().lower() or None
+        self._combat: CombatStrategy = combat_strategy_for(
+            character, attack_mode=self.attack_mode
+        )
 
         self.keyboard = KeyboardController(
             enabled=enabled, humanize=humanize, rng=self._rng
@@ -807,6 +811,7 @@ class ActionExecutor:
         from app._05_action.cursor_verify import (
             click_closed_door,
             sweep_click_closed_door,
+            cancel_spell_aim,
             travel_click,
         )
         from app._05_action.travel_click import (
@@ -884,6 +889,8 @@ class ActionExecutor:
         dialog_seen = 0
         seen_labels: list[str] = []
         door_note = ""
+        spell_cancel_done = False
+        intent_reason = str(getattr(action, "reason", "") or "")
         index = 0
         while index < len(dests):
             content = dests[index]
@@ -917,7 +924,7 @@ class ActionExecutor:
                     "labels_seen": seen_labels,
                     "click_label": label,
                     "door": door_state or door_note or "-",
-                    "intent_reason": str(getattr(action, "reason", "") or ""),
+                    "intent_reason": intent_reason,
                 }
                 return
             match = getattr(self, "last_cursor_match", None)
@@ -928,6 +935,35 @@ class ActionExecutor:
                     seen_labels.append(label)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
+            # Leftover mage/buff cast circle: Esc once, retry this tile.
+            if not spell_cancel_done and (
+                label.startswith("spell") or category is CursorCategory.SPELL
+            ):
+                cancel_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
+                spell_cancel_done = True
+                probes += 1
+                if travel_click(self, x, y):
+                    self.last_travel_click_relative = rel
+                    match = getattr(self, "last_cursor_match", None)
+                    label = str(getattr(match, "label", "") or "")
+                    self.last_travel_cursor_stats = {
+                        "ok": True,
+                        "probes": probes,
+                        "dialog_seen": dialog_seen,
+                        "labels_seen": seen_labels,
+                        "click_label": label,
+                        "door": door_state or door_note or "-",
+                        "intent_reason": intent_reason,
+                    }
+                    return
+                match = getattr(self, "last_cursor_match", None)
+                label = str(getattr(match, "label", "") or "")
+                category = getattr(match, "category", None)
+                if label:
+                    if label not in seen_labels:
+                        seen_labels.append(label)
+                    if label == "dialog" or category is CursorCategory.DIALOG:
+                        dialog_seen += 1
             door_cursor = label == "door" or category is CursorCategory.DOOR
             if door_cursor:
                 door_note = door_state or "unknown"
@@ -941,7 +977,7 @@ class ActionExecutor:
                         "labels_seen": seen_labels,
                         "click_label": "door",
                         "door": "close",
-                        "intent_reason": str(getattr(action, "reason", "") or ""),
+                        "intent_reason": intent_reason,
                     }
                     return
                 if door_state == "open":
@@ -955,7 +991,7 @@ class ActionExecutor:
             "labels_seen": seen_labels,
             "last_reject": str(self.last_cursor_reject_reason or ""),
             "door": door_note or "-",
-            "intent_reason": str(getattr(action, "reason", "") or ""),
+            "intent_reason": intent_reason,
         }
 
     def _loot(

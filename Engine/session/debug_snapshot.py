@@ -10,6 +10,7 @@ STATUS_SECTIONS: tuple[str, ...] = (
     "overview",
     "player",
     "decision",
+    "party",
     "world",
     "navigation",
     "nav_show",

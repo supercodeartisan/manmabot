@@ -11,7 +11,17 @@ from typing import Any
 from settings.farm_schedule import normalize_routine
 from settings.spell_defaults import spell_slot_bindings
 
-TOP_SECTIONS = ("move", "hunt", "recovery", "magic", "equipment", "other")
+# ``party`` must stay here — otherwise trial/schedule save strips party-member mode
+# and Start silently runs solo DecisionManager.
+TOP_SECTIONS = (
+    "move",
+    "hunt",
+    "party",
+    "recovery",
+    "magic",
+    "equipment",
+    "other",
+)
 
 
 def empty_settings() -> dict[str, dict[str, Any]]:

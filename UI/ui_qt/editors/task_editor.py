@@ -28,6 +28,7 @@ from ui_qt.editors.hunt_tab import HuntTab
 from ui_qt.editors.magic_tab import MagicTab
 from ui_qt.editors.move_tab import MoveTab
 from ui_qt.editors.other_tab import OtherTab
+from ui_qt.editors.party_tab import PartyTab
 from ui_qt.editors.recovery_tab import RecoveryTab
 from ui_qt.facade.qt_bridge import QtBridge
 from ui_qt.theme import tokens
@@ -94,6 +95,7 @@ class TaskEditor(QWidget):
         self.recovery_tab: RecoveryTab | None = None
         self.magic_tab: MagicTab | None = None
         self.equipment_tab: EquipmentTab | None = None
+        self.party_tab: PartyTab | None = None
         self.other_tab: OtherTab | None = None
         self._build()
 
@@ -194,6 +196,14 @@ class TaskEditor(QWidget):
             on_log=self.on_log,
         )
         tabs.addTab(self.equipment_tab, self.t.get("equipment", "equipment"))
+
+        self.party_tab = PartyTab(
+            bag=self.bag,
+            strings=self.t,
+            language=self.language,
+            on_log=self.on_log,
+        )
+        tabs.addTab(self.party_tab, self.t.get("party", "Party"))
 
         self.other_tab = OtherTab(
             profile=self.profile,
@@ -479,6 +489,8 @@ class TaskEditor(QWidget):
         self.bag.load_task(self.task)
         if self.recovery_tab is not None:
             self.recovery_tab.reload_from_bag()
+        if self.party_tab is not None:
+            self.party_tab.reload_from_bag()
         if self.move_tab is not None:
             self.move_tab.load_from_move_settings(
                 self.task.settings.get("move"),

@@ -261,6 +261,13 @@ def live_pose_from_state(state: Any, *, fresh: bool = False) -> Any | None:
     return api.Pose(int(mid), int(xy[0]), int(xy[1]))
 
 
+class WorldNavHooks:
+    """Optional party hooks. Unset for solo, so a plan never waits on a rally."""
+
+    on_plan = None  # callable(plan) — leader announces an NPC teleporter
+    allow_npc_teleport = None  # callable(detail) -> bool
+
+
 @dataclass
 class WorldNavSession:
     reason: str = ""
@@ -339,6 +346,12 @@ class WorldNavSession:
             cost=self.plan.total_cost_tiles,
         )
         self.phase = "ready"
+        hook = WorldNavHooks.on_plan
+        if hook is not None:
+            try:
+                hook(self.plan)
+            except Exception:
+                pass
         return True
 
     @property
@@ -849,6 +862,14 @@ class WorldNavSession:
                 f"want ({nx},{ny}) r≤{NPC_TP_APPROACH}"
             )
             return Status.FAILURE
+        allow = WorldNavHooks.allow_npc_teleport
+        if allow is not None:
+            try:
+                opened = bool(allow(det))
+            except Exception:
+                opened = True
+            if not opened:
+                return self._idle(blackboard, "party rally wait members")
         behavior = behavior_by_id(bid)
         if behavior is None or str(behavior.action) != ACTION_TELEPORTER:
             self.fail(f"unknown teleporter behavior {bid}")
