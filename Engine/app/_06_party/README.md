@@ -72,7 +72,8 @@ _06_party/
   leader.py · follow*.py · intents.py
   assist.py · loot.py · support.py · join_map.py
   invite.py                 # 파티 초대 전부 (채팅 문구 · PartyInviter · LeaderInvites)
-  accept.py                 # 멤버 초대 수락 (party_invite 알림 → 30s → Y 타이핑)
+  accept.py                 # 멤버 초대 수락 (party_invite 알림 → 30s → Y 물리 키, invite_id 중복 무시, phase)
+  sync.py                   # 리더↔멤버 상태 동기화: member_state 보고 / MemberStates / InviteGate
   workflow.py               # 모니터 Workflow 단계 (리더/멤버, 순수 함수)
   leader_rally.py
   party_log.py
@@ -142,7 +143,10 @@ _member_party_tick(send=True)
   → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (15분 창)
 (매 틱) _leader_invite_tick → LeaderInvites.tick  — 블로킹 없음, 틱당 최대 1줄
   → 파티에 없는 로스터 이름마다 20s 간격 /초대 (가입 확인되면 중단)
-  → 이름별 초대는 그 멤버가 현재 정책(policy_id)에 policy_ack 보낸 뒤에만 (타임아웃 없음)
+  → 이름별 초대는 그 멤버가 현재 정책(policy_id)을 확인한 뒤에만 (member_state 또는 policy_ack, 타임아웃 없음)
+  → 멤버 member_state가 직전 invite_id를 waiting/pressed로 보고하는 동안 새 /초대 보류 (최대 60s)
+  → 알림(party_invite)은 member_state가 invite_id를 되돌려줄 때까지 3s 간격 최대 3회 재전송
+  → 가입 = 리더 파티 메모리에 이름 OR 멤버 member_state의 자기 파티 메모리(in_party + 리더 이름 일치)
   → 직전 행동이 상점·게이트·텔레포트·스크롤·리스폰이면 그 틱은 건너뜀
   → 15분 끝: 미가입 = 배제(excluded). 이후 늦게 가입하면 배제 해제
 LeaderStartRally.begin(deadline=초대 창 끝) → (travel 시) on_plan / should_hold
@@ -196,7 +200,9 @@ comms/
 {"sender": "<name>", "ts": <float>, "message": <str|object>}
 ```
 
-리더 프레임 `message`에는 항상 `session` (리더 Start마다 새 8자리 id). 멤버는 새 id를 처음 보면 주문·정책 오버레이·ack 기록을 버리고 자기 프로필로 돌아간 뒤 새 정책을 적용·확인한다 (같은 id 재연결은 유지).
+리더 프레임 `message`에는 항상 `session` (리더 Start마다 새 8자리 id). 멤버는 새 id를 처음 보면 주문·정책 오버레이·ack 기록을 버리고 자기 프로필로 돌아간 뒤 새 정책을 적용·확인한다 (같은 id 재연결은 유지). 서버는 멤버 프레임도 다른 멤버에게 중계하므로 session은 `from == "leader"` 프레임에서만 읽는다.
+
+파티 메모리 (`party_listen.dll`): 앵커는 `analysis/lc930/registry/LC930_REGISTRY.txt` (다른 리더와 동일), 파티 키만 `analysis/party/registry/PARTY_SEC17.txt`. 리더기가 둘을 합쳐 `_merged_party_registry.txt`를 쓴다. 스냅샷 `subs_ok`=PartySubsystem vft 일치 (파티 밖에서도 판정). false면 이웃 패치 이동량으로 자동 보정 1회, 그래도 false면 스냅샷 = "모름"(None) — "파티 없음"으로 취급하지 않음. 수동 확인: (관리자) `python Engine/analysis/party/tools/probe_party_vft.py`. DLL 빌드: `analysis/party/build.bat`.
 
 | `message.type` | 방향 | 의미 | 상태 |
 |----------------|------|------|------|
@@ -205,7 +211,8 @@ comms/
 | `recovery` | L→M | 마더트리 좌표 | 송신 live / **멤버 본처리 미완** |
 | `party_policy` | L→M | leader_mode·루팅·야드·party_size·roster·`policy_id` (farm_mode·거리는 멤버 자신) | live (멤버 `merge_leader_policy`) |
 | `policy_ack` | M→L | 정책 적용 확인 (`from`, `policy_id`). 리더 초대 게이트 | live |
-| `party_invite` | L→M | `/초대 <to>` 타이핑 직후 (`to`, `invite_id`). 해당 멤버가 30s 뒤 **Y 물리 키** 1회 (`accept.InviteAccepter`, 초대 문구와 같은 enter_chat 모듈의 `ec_press_key`; 타이핑 `y`=WM_CHAR는 팝업이 무시). 5s 뒤 가입 여부 로그 | live |
+| `party_invite` | L→M | `/초대 <to>` 타이핑 직후 (`to`, `invite_id`). 해당 멤버가 30s 뒤 **Y 물리 키** 1회 (`accept.InviteAccepter`, 초대 문구와 같은 enter_chat 모듈의 `ec_press_key`; 타이핑 `y`=WM_CHAR는 팝업이 무시). 같은 `invite_id` 재전송은 무시. 5s 뒤 가입 여부 로그 | live |
+| `member_state` | M→L | 2s마다 + 변경 즉시: `session`, 적용 `policy_id`, `party` {`mem` ok/blind, `in_party`, `leader`, `names`}, `invite` {`id`, `phase` idle/waiting/pressed/joined/missed/unverified/skipped/failed}, `seq`, `changed`. 리더 `sync.MemberStates` (7s 지나면 stale, 다른 session은 무시). 레벨 트리거: 늦은 시작·재연결은 다음 프레임으로 맞춰짐 | live |
 | `report` | M→L | 위치·도착 | live |
 
 **의존 방향 (목표 달성)**

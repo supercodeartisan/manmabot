@@ -57,4 +57,14 @@ def send_policy_ack(client: Any, *, name: str, policy_id: str) -> bool:
     return True
 
 
-__all__ = ["send_member_status", "send_policy_ack"]
+def send_member_state(client: Any, body: dict) -> bool:
+    """One ``member_state`` frame (built by ``sync.MemberStateReporter``)."""
+    from websocket.protocol import PartyMessage
+
+    if client is None or not getattr(client, "connected", False):
+        return False
+    client.send(PartyMessage(sender=str(body.get("from") or "member"), message=body))
+    return True
+
+
+__all__ = ["send_member_state", "send_member_status", "send_policy_ack"]

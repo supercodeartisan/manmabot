@@ -639,8 +639,22 @@ class PartyDashboard(QWidget):
                 inv_txt if (n_inv or n_fail) else "—",
                 "bad" if n_fail and not n_inv else ("info" if n_inv else "off"),
             ))
-            self.roster.setItem(row, 5, _cell("YES" if r.get("in_party") else "NO",
-                                              "ok" if r.get("in_party") else "bad"))
+            src = str(r.get("in_party_src") or "")
+            leader_blind = str(session.get("party_mem") or "ok") != "ok"
+            member_blind = not r.get("state_fresh") or str(r.get("state_mem") or "") != "ok"
+            if r.get("in_party"):
+                p_txt, p_tone = ("YES" if src == "leader memory" else f"YES ({src})"), "ok"
+            elif leader_blind and member_blind:
+                p_txt, p_tone = "?", "warn"
+            else:
+                p_txt, p_tone = "NO", ("bad" if not leader_blind and not member_blind else "warn")
+            p_item = _cell(p_txt, p_tone)
+            p_item.setToolTip(
+                f"member state: {'fresh' if r.get('state_fresh') else 'none/stale'}"
+                f" · mem {r.get('state_mem') or '—'} · invite {r.get('state_invite') or '—'}"
+                + (f" · hold: {r.get('invite_hold')}" if r.get("invite_hold") else "")
+            )
+            self.roster.setItem(row, 5, p_item)
             at = r.get("at_rally")
             self.roster.setItem(row, 6, _cell("YES" if at else ("…" if rally.get("armed") else "—"),
                                               "ok" if at else ("warn" if rally.get("armed") else "off")))

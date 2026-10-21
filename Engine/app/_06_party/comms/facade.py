@@ -8,6 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Optional
 
+from ..sync import member_states
 from . import ingest, link, publish, status
 from .orders import member_orders, reset_orders, self_name_from_party
 
@@ -57,6 +58,7 @@ class PartyComms:
 
     def start_leader(self, *, port: Any = 8765, log: Optional[LogFn] = None) -> bool:
         self.stop_leader(log=log)
+        member_states.clear()
         self._leader = link.start_leader_link(port=port, log=log)
         return self._leader is not None
 
@@ -163,6 +165,7 @@ class PartyComms:
         self.stop_leader(log=log)
         self.stop_member(log=log)
         reset_orders()
+        member_states.clear()
 
     # --- leader ticks ---
 
@@ -210,6 +213,9 @@ class PartyComms:
 
     def send_policy_ack(self, *, name: str, policy_id: str) -> bool:
         return status.send_policy_ack(self.client, name=name, policy_id=policy_id)
+
+    def send_member_state(self, body: dict) -> bool:
+        return status.send_member_state(self.client, body)
 
     def send_status(
         self,

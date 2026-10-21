@@ -6,8 +6,13 @@ Y goes out through the same typing module as the leader's ``/초대`` line
 (``app._05_action.chat`` → enter_chat), as a physical key through Interception:
 a typed ``y`` (``WM_CHAR``) reaches the game but the popup ignores it.
 
-The leader repeats the invite every 20 s; a notice while one is already queued
-keeps the first due time, so the repeats never push the press back.
+The leader may resend one notice (same ``invite_id``) until this member's
+``member_state`` echoes it; a repeated id is ignored. A new id while one is
+queued keeps the first due time, so repeats never push the press back.
+
+``phase`` (sent to the leader in ``member_state``):
+idle · waiting (Y queued) · pressed (join check running) · joined · missed
+(no join after Y) · unverified (party memory unreadable) · skipped · failed.
 """
 from __future__ import annotations
 
@@ -56,15 +61,7 @@ class InviteAccepter:
         self._press = press
         self._clock = clock
         self._log = log
-        self._due: Optional[float] = None
-        self._check_at: Optional[float] = None
-        self.join_missed = 0
-        self.to = ""
-        self.received_at: Optional[float] = None
-        self.pressed_at: Optional[float] = None
-        self.presses = 0
-        self.error = ""
-        self.skipped = ""
+        self.reset()
 
     @property
     def pending(self) -> bool:
@@ -73,13 +70,33 @@ class InviteAccepter:
     def reset(self) -> None:
         self._due = None
         self._check_at = None
+        self._seen_ids: list[str] = []
+        self.invite_id = ""
         self.join_missed = 0
+        self.joined = False
+        self.unverified = False
         self.to = ""
-        self.received_at = None
-        self.pressed_at = None
+        self.received_at: Optional[float] = None
+        self.pressed_at: Optional[float] = None
         self.presses = 0
         self.error = ""
         self.skipped = ""
+
+    @property
+    def phase(self) -> str:
+        if self._due is not None:
+            return "waiting"
+        if self.error:
+            return "failed"
+        if self.skipped:
+            return "joined" if self.joined else "skipped"
+        if self._check_at is not None:
+            return "pressed"
+        if self.pressed_at is not None:
+            if self.joined:
+                return "joined"
+            return "unverified" if self.unverified else "missed"
+        return "idle"
 
     def on_notice(
         self,
@@ -87,14 +104,22 @@ class InviteAccepter:
         *,
         self_name: str = "",
         roster_names: Iterable[str] = (),
-        in_party: bool = False,
+        in_party: Optional[bool] = False,
     ) -> None:
+        """``in_party`` None = party memory unreadable (does not block Y)."""
+        iid = str(invite.get("invite_id") or "")
+        if iid:
+            if iid in self._seen_ids:
+                return
+            self._seen_ids = (self._seen_ids + [iid])[-32:]
+            self.invite_id = iid
         to = str(invite.get("to") or "").strip()
         roster = {str(n or "").strip().casefold() for n in roster_names if str(n or "").strip()}
         name = str(self_name or "").strip()
         skip = ""
         if in_party:
             skip = "already in a party — Y not pressed"
+            self.joined = True
         # Only a confirmed roster name may veto; a wrong local name must not block accept.
         elif name and to and name.casefold() != to.casefold() and name.casefold() in roster:
             skip = f"invite is for {to}, this is {name} — Y not pressed"
@@ -110,14 +135,31 @@ class InviteAccepter:
             return
         self.received_at = time.time()
         self._due = self._clock() + self.delay_s
-        self._log(f"Party invite notice for {to or '—'} — pressing Y in {int(self.delay_s)}s")
+        self._log(
+            f"Party invite notice for {to or '—'} (id {iid or '—'}) — "
+            f"pressing Y in {int(self.delay_s)}s"
+        )
 
-    def tick(self, *, in_party: bool = False) -> bool:
-        """Press Y once the delay is over. True when Y reached the game this tick."""
-        if self._check_at is not None and self._clock() >= self._check_at:
+    def tick(self, *, in_party: Optional[bool] = False) -> bool:
+        """Press Y once the delay is over. True when Y reached the game this tick.
+
+        ``in_party`` None = party memory unreadable: the join is "unverified".
+        """
+        if in_party and self.pressed_at is not None and not self.joined:
+            self.joined = True
+            self.unverified = False
+            if self._check_at is None:
+                self._log("Party invite accept: joined (party memory)")
+        if self._check_at is not None and (in_party or self._clock() >= self._check_at):
             self._check_at = None
             if in_party:
                 self._log("Party invite accept: joined after Y")
+            elif in_party is None:
+                self.unverified = True
+                self._log(
+                    "Party invite accept: party memory unreadable — "
+                    "join after Y not verified"
+                )
             else:
                 self.join_missed += 1
                 self._log(
@@ -128,6 +170,7 @@ class InviteAccepter:
             return False
         self._due = None
         if in_party:
+            self.joined = True
             self.skipped = "joined before the delay — Y not pressed"
             self._log(f"Party invite accept: {self.skipped}")
             return False
@@ -139,6 +182,8 @@ class InviteAccepter:
             return False
         self.pressed_at = time.time()
         self.presses += 1
+        self.joined = False
+        self.unverified = False
         self._check_at = self._clock() + JOIN_CHECK_S
         self._log(f"Party invite accept: Y key pressed for {self.to or '—'}")
         _note_monitor("Y key pressed (accept invite)")
@@ -149,6 +194,8 @@ class InviteAccepter:
         if self._due is not None:
             due_in = round(max(0.0, self._due - self._clock()), 1)
         return {
+            "phase": self.phase,
+            "invite_id": self.invite_id,
             "pending": self.pending,
             "due_in_s": due_in,
             "delay_s": self.delay_s,

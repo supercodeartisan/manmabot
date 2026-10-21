@@ -17,8 +17,12 @@ def _step(key: str, label: str, state: str, detail: str) -> dict:
     return {"key": key, "label": label, "state": state, "detail": detail}
 
 
-def leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list:
-    """Leader start: server → connect → policy → confirm → invite → rally → hunt."""
+def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_mem="ok") -> list:
+    """Leader start: server → connect → policy → confirm → invite → rally → hunt.
+
+    Joined comes from either side's party memory (``in_party_src``); with the
+    leader's own party memory blind, member reports still count.
+    """
     n = len(roster)
     sock_state = str(sock.get("state") or "off")
     clients = int(sock.get("clients") or 0)
@@ -39,7 +43,15 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list:
         conn = "done"
     else:
         conn = "active" if clients else "wait"
-    steps.append(_step("connect", "Connect", conn, f"{clients}/{n} member socket(s)"))
+    reporting = [r for r in roster if r.get("state_fresh")]
+    steps.append(
+        _step(
+            "connect",
+            "Connect",
+            conn,
+            f"{clients}/{n} member socket(s) · {len(reporting)}/{n} reporting state",
+        )
+    )
 
     sent = int(policy.get("sent") or 0)
     at = policy.get("at")
@@ -78,10 +90,18 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list:
         inv = "off"
     notices = sum(int(r.get("invite_notices") or 0) for r in roster)
     idetail = f"{len(joined)}/{n} joined · {typed} /초대 typed · {notices} accept notice(s)"
+    by_report = [r for r in joined if r.get("in_party_src") == "member report"]
+    if by_report:
+        idetail += f" · {len(by_report)} by member report"
+    holds = [f"{r.get('name')} {r.get('invite_hold')}" for r in roster if r.get("invite_hold")]
+    if holds:
+        idetail += " · holding: " + ", ".join(holds)
     if failed:
         idetail += f" · {failed} failed"
     if istate == "expired":
         idetail += " · window over"
+    if party_mem != "ok":
+        idetail += " · leader party memory unreadable"
     steps.append(_step("invite", "Invite", inv, idetail))
 
     rstate = str(rally.get("state") or "off")
@@ -101,8 +121,12 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list:
     return steps
 
 
-def member_workflow(*, sock, policy, party, orders, accept, now) -> list:
-    """Member start: connect → policy → apply → confirm → accept → in party → rally."""
+def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> list:
+    """Member start: connect → policy → apply → confirm → sync → accept → in party → rally.
+
+    ``party`` None = party memory unreadable: "In party" is unknown, never failed.
+    """
+    sync = sync or {}
     sock_state = str(sock.get("state") or "off")
     connected = sock_state == "connected"
     steps = [
@@ -154,33 +178,74 @@ def member_workflow(*, sock, policy, party, orders, accept, now) -> list:
             ),
         )
     )
-    in_party = bool(isinstance(party, dict) and party.get("in_party"))
+    sent_at = sync.get("sent_at")
+    if sent_at:
+        stale = float(now) - float(sent_at) > 7.0
+        steps.append(
+            _step(
+                "sync",
+                "Sync",
+                "wait" if stale or not connected else "done",
+                f"state → leader #{int(sync.get('seq') or 0)} · {_ago(sent_at, now)}",
+            )
+        )
+    else:
+        steps.append(
+            _step(
+                "sync",
+                "Sync",
+                "wait" if connected else "off",
+                "no state sent yet (waiting for a leader frame)",
+            )
+        )
+
+    mem_ok = isinstance(party, dict)
+    in_party = bool(mem_ok and party.get("in_party"))
+    phase = str(accept.get("phase") or "idle")
     pressed_at = accept.get("pressed_at")
-    if accept.get("pending"):
-        due = accept.get("due_in_s")
+    presses = int(accept.get("presses") or 0)
+    tag = f" · id {accept.get('invite_id')}" if accept.get("invite_id") else ""
+    if phase == "waiting":
         acc = "active"
-        adetail = f"invite for {accept.get('to') or '—'} · Y in {int(due or 0)}s"
-    elif accept.get("error"):
+        adetail = f"invite for {accept.get('to') or '—'} · Y in {int(accept.get('due_in_s') or 0)}s"
+    elif phase == "failed":
         acc, adetail = "bad", f"Y failed: {accept.get('error')}"
-    elif pressed_at:
+    elif phase == "pressed":
+        acc, adetail = "active", f"Y pressed {presses}× · {_ago(pressed_at, now)} · checking join"
+    elif phase == "joined":
+        acc = "done"
+        adetail = (
+            f"Y pressed {presses}× · {_ago(pressed_at, now)} · joined"
+            if pressed_at
+            else str(accept.get("skipped") or "joined")
+        )
+    elif phase == "unverified":
+        acc = "active"
+        adetail = f"Y pressed {presses}× · {_ago(pressed_at, now)} · party memory unreadable"
+    elif phase == "missed":
         missed = int(accept.get("join_missed") or 0)
-        acc = "done" if in_party else ("bad" if missed else "active")
-        adetail = f"Y pressed {int(accept.get('presses') or 0)}× · {_ago(pressed_at, now)}"
-        if missed and not in_party:
-            adetail += f" · no join after {missed} press(es)"
-    elif accept.get("skipped"):
-        acc, adetail = ("done" if in_party else "wait"), str(accept.get("skipped"))
+        acc = "bad"
+        adetail = (
+            f"Y pressed {presses}× · {_ago(pressed_at, now)} · no join after "
+            f"{missed} press(es) — waiting for the next /초대"
+        )
+    elif phase == "skipped":
+        acc, adetail = "wait", str(accept.get("skipped"))
     else:
         acc, adetail = ("done" if in_party else ("wait" if acked_at else "off")), "no invite notice yet"
-    steps.append(_step("accept", "Accept", acc, adetail))
-    steps.append(
-        _step(
-            "party",
-            "In party",
-            "done" if in_party else ("wait" if acked_at else "off"),
-            "joined" if in_party else "waiting for /초대",
-        )
-    )
+    steps.append(_step("accept", "Accept", acc, adetail + tag))
+
+    if not mem_ok:
+        pst = "active" if pressed_at else ("wait" if acked_at else "off")
+        pdetail = "unknown — party memory unreadable (registry / not elevated)"
+    elif in_party:
+        lead = str(party.get("leader_name") or "")
+        if isinstance(party.get("leader"), dict):
+            lead = str(party["leader"].get("name") or lead)
+        pst, pdetail = "done", f"joined · leader {lead or '—'} · {int(party.get('count') or 0)} in party"
+    else:
+        pst, pdetail = ("wait" if acked_at else "off"), "not in a party · waiting for /초대"
+    steps.append(_step("party", "In party", pst, pdetail))
     stage = str(orders.get("gather_stage") or "")
     if not stage:
         rst, rdetail = "off", "no rally order"

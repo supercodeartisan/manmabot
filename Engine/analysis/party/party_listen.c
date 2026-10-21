@@ -128,10 +128,14 @@ static int party_vft_ok(uint64_t party) {
     return v == g_base + (uint64_t)P_VFT_RC;
 }
 
+/* 1 when PartySubsystem resolved on the last read (vft right, party or not). */
+static int g_subs_ok = 0;
+
 static uint64_t resolve_party(void) {
     uint64_t psub, a, b, party;
     psub = lc_subsGet(P_VFT_SUBS);
-    if (!isHeap(psub)) return 0;
+    g_subs_ok = isHeap(psub) ? 1 : 0;
+    if (!g_subs_ok) return 0;
     a = q64(psub + P_REF);
     if (!isHeap(a)) return 0;
     b = q64(a + P_HOP1);
@@ -197,7 +201,8 @@ static int write_party_json(char* out, int cap) {
     leader[0] = 0;
     io0 = g_sd_ioctls;
     if (g_party && !party_vft_ok(g_party)) g_party = 0;
-    if (!g_party) g_party = resolve_party();
+    if (g_party) g_subs_ok = 1;
+    else g_party = resolve_party();
     if (!g_party) {
         g_anchored = 0;
         if (lc_anchor()) {
@@ -250,9 +255,9 @@ static int write_party_json(char* out, int cap) {
     }
 
     used = jadd(out, cap, 0,
-        "{\"cmd\":\"party\",\"in_party\":%s,\"count\":%d,\"header_count\":%u,"
+        "{\"cmd\":\"party\",\"subs_ok\":%s,\"in_party\":%s,\"count\":%d,\"header_count\":%u,"
         "\"leader_name\":\"",
-        n > 0 ? "true" : "false", n, headerCount);
+        g_subs_ok ? "true" : "false", n > 0 ? "true" : "false", n, headerCount);
     json_esc(leader, esc, (int)sizeof(esc));
     used = jadd(out, cap, used, "%s\",\"leader\":", esc);
     if (leaderIdx >= 0) {

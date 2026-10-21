@@ -520,9 +520,15 @@ class PerceptionSensors:
         except Exception as exc:
             buf.errors.append(f"party: {exc}")
             return
-        if isinstance(snap, dict) and "leader" in snap:
+        # subs_ok false: wrong party vfts for this build → unknown, not "no party".
+        if isinstance(snap, dict) and "leader" in snap and snap.get("subs_ok") is not False:
             buf.party = snap
             buf.party_ok = True
+
+    @property
+    def party_calibration(self) -> Optional[dict[str, Any]]:
+        """Party vft calibration result once the party DLL anchored, else None."""
+        return getattr(self._party, "calibration", None) if self._party else None
 
     def _capture_buff_and_uidialog_sync(self, buf: PerceptionBuffer) -> None:
         """Fresh buff + uidialog DLL reads on separate threads (join before return)."""

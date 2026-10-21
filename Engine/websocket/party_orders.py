@@ -16,7 +16,15 @@ answers every policy frame it applied with ``policy_ack`` echoing that id; the
 leader invites a roster name only once its ack matches the current id.
 
 Invite (``party_invite``, leader → members): sent right after ``/초대 <to>`` was
-typed. The named member presses the popup's accept key (Y) once per frame.
+typed, with an ``invite_id``. The leader may resend the same id until the
+member's state echoes it; the member acts once per id.
+
+Member state (``member_state``, member → leader, every ~2 s and on change):
+the member's whole view — leader session it follows, applied ``policy_id``,
+its own party memory (``in_party`` / party leader / names), and where it is
+with the last ``invite_id`` (``waiting`` / ``pressed`` / ``joined`` / ...).
+Level-triggered: a late start or a reconnect is reconciled by the next frame,
+nothing depends on one edge message arriving.
 """
 from __future__ import annotations
 
@@ -32,6 +40,7 @@ REPORT = "report"
 POLICY = "party_policy"
 POLICY_ACK = "policy_ack"
 PARTY_INVITE = "party_invite"
+MEMBER_STATE = "member_state"
 
 STAGE_START = "start"
 STAGE_PLANNED = "planned"
@@ -181,16 +190,44 @@ def policy_ack_message(*, name: str, policy_id: str) -> dict[str, Any]:
     }
 
 
-def invite_message(*, to: str) -> dict[str, Any]:
+def new_invite_id() -> str:
+    return uuid.uuid4().hex[:8]
+
+
+def invite_message(*, to: str, invite_id: str = "") -> dict[str, Any]:
     """Leader → members: ``/초대 <to>`` was just typed in game."""
     body = leader_message(kind=PARTY_INVITE, action="accept_invite", map_id=None, x=None, y=None)
     body["to"] = str(to or "").strip()
-    body["invite_id"] = uuid.uuid4().hex[:8]
+    body["invite_id"] = str(invite_id or "") or new_invite_id()
     return body
 
 
-def publish_invite(*, to: str) -> int:
-    return _publish(invite_message(to=to))
+def publish_invite(*, to: str, invite_id: str = "") -> int:
+    return _publish(invite_message(to=to, invite_id=invite_id))
+
+
+def member_state_message(
+    *,
+    name: str,
+    session: str,
+    policy_id: str,
+    party: dict[str, Any],
+    invite: dict[str, Any],
+    seq: int,
+    changed: bool,
+) -> dict[str, Any]:
+    """Member → leader: full member view (see module doc). ``changed`` = differs
+    from the previous frame (the rest are keep-alive repeats)."""
+    return {
+        "type": MEMBER_STATE,
+        "from": str(name or "member").strip() or "member",
+        "session": str(session or ""),
+        "policy_id": str(policy_id or ""),
+        "party": dict(party or {}),
+        "invite": dict(invite or {}),
+        "seq": int(seq),
+        "changed": bool(changed),
+    }
 
 
 def seat_role_for_name(roster: Any, name: str) -> str:
@@ -479,6 +516,9 @@ class MemberOrders:
             body = getattr(frame, "message", None)
             if not isinstance(body, dict):
                 continue
+            # Other members' frames are relayed too; only the leader sets the session.
+            if str(body.get("from") or "") != "leader":
+                continue
             session = str(body.get("session") or "")
             if session and session != self.session:
                 self._drop_orders()
@@ -586,8 +626,11 @@ def reset_orders() -> None:
 
 __all__ = [
     "ARRIVE_TILES",
+    "MEMBER_STATE",
     "PARTY_INVITE",
     "invite_message",
+    "member_state_message",
+    "new_invite_id",
     "publish_invite",
     "POLICY",
     "POLICY_ACK",

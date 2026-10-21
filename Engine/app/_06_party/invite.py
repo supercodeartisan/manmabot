@@ -2,14 +2,16 @@
 
 - Chat lines: ``/초대 <name>`` (invite), ``파티탈퇴`` (leave).
 - ``PartyInviter``: pure state machine, one step per bot tick. Every roster
-  name not in party memory gets an invite every ``INVITE_EVERY_S``; a name
-  stops getting invites once party memory lists it. When ``FORM_WINDOW_S``
+  name not joined gets an invite every ``INVITE_EVERY_S``; a name stops
+  getting invites once it joined. When ``FORM_WINDOW_S``
   runs out, names still missing are excluded (a late join clears that).
 - ``LeaderInvites``: one per Start. Sends the party policy first, leaves a
   party this character does not lead, then drives ``PartyInviter`` each tick:
-  a roster name is invited only after that member answered the current
-  policy with ``policy_ack``, and no line is typed right after an action that
-  opens an NPC dialog or teleports.
+  a roster name is invited only after that member confirmed the current
+  policy, not while its ``member_state`` says it is still accepting the last
+  invite (``sync.InviteGate``), and no line is typed right after an action
+  that opens an NPC dialog or teleports. Joined = party memory on either side
+  (``sync.MemberStates.joined``).
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
 injects policy publish, socket count and wait.
@@ -202,20 +204,33 @@ class PartyInviter:
     def excluded(self) -> list[str]:
         return [r.name for r in self.rows if r.excluded]
 
-    def observe(self, snapshot: Any) -> None:
-        """Mark names party memory now lists (late joins after the window too)."""
+    def observe(self, snapshot: Any, reported: Callable[[str], bool] = lambda _n: False) -> None:
+        """Mark joined names (late joins after the window too): this leader's
+        party memory lists them, or ``reported(name)`` — the member's own party
+        memory says it is in this party."""
         in_party = bool(isinstance(snapshot, dict) and snapshot.get("in_party"))
         present = _member_names(snapshot) if in_party else set()
         now = self._clock()
         for row in self.rows:
-            if row.joined_at is None and row.name.casefold() in present:
-                row.joined_at = now
-                was_out = row.excluded
-                row.excluded = False
-                self._log(
-                    f'Party: "{row.name}" joined'
-                    + (" (after the window)" if was_out else f" after {row.invites} invite(s)")
-                )
+            if row.joined_at is not None:
+                continue
+            if row.name.casefold() in present:
+                how = "leader party memory"
+            else:
+                try:
+                    how = "member report" if reported(row.name) else ""
+                except Exception:
+                    how = ""
+            if not how:
+                continue
+            row.joined_at = now
+            was_out = row.excluded
+            row.excluded = False
+            self._log(
+                f'Party: "{row.name}" joined'
+                + (" (after the window)" if was_out else f" after {row.invites} invite(s)")
+                + f" — {how}"
+            )
 
     def tick(
         self,
@@ -224,12 +239,13 @@ class PartyInviter:
         send_line: Callable[[str], bool],
         can_send: bool = True,
         ready: Optional[Callable[[str], bool]] = None,
+        reported: Callable[[str], bool] = lambda _n: False,
     ) -> Optional[str]:
         """One step: update joins, expire, or send at most one due invite.
 
         ``ready(name)`` False keeps that name waiting (no invite, no retry clock).
         """
-        self.observe(snapshot)
+        self.observe(snapshot, reported)
         if self.state != FORMING:
             return None
         if all(r.joined for r in self.rows):
@@ -306,6 +322,8 @@ class LeaderInvites:
         ws_clients: Callable[[], int] = lambda: 0,
         policy_acked: Callable[[str], bool] = lambda _name: True,
         announce_invite: Callable[[str], Any] = lambda _name: 0,
+        gate: Any = None,
+        reported_joined: Callable[[str], bool] = lambda _name: False,
         send_chat: Optional[Callable[[str], bool]] = None,
         wait: Callable[[float], Any] = time.sleep,
         log: Callable[[str], None] = lambda _m: None,
@@ -317,6 +335,9 @@ class LeaderInvites:
         self._ws_clients = ws_clients
         self._policy_acked = policy_acked
         self._announce_invite = announce_invite
+        # ``sync.InviteGate``: notice ids, resend until echoed, hold while accepting.
+        self._gate = gate
+        self._reported_joined = reported_joined
         self._announced: dict[str, int] = {}
         self._send_chat = send_chat
         self._wait = wait
@@ -389,6 +410,11 @@ class LeaderInvites:
         except Exception:
             return False
 
+    def _ready(self, name: str) -> bool:
+        if not self._acked(name):
+            return False
+        return self._gate is None or bool(self._gate.may_invite(name))
+
     def tick(self, snapshot: Any, last_action: Any = None) -> Optional[str]:
         """One invite step; returns the line typed this tick, if any."""
         inviter = self.inviter
@@ -401,8 +427,14 @@ class LeaderInvites:
                 self._policy_clients = clients
                 self._publish()
             can_send = action_allows_chat(last_action)
+            if self._gate is not None:
+                self._gate.tick(inviter.missing())
         line = inviter.tick(
-            snapshot, send_line=self._say, can_send=can_send, ready=self._acked
+            snapshot,
+            send_line=self._say,
+            can_send=can_send,
+            ready=self._ready,
+            reported=self._reported_joined,
         )
         if line and line.startswith(INVITE_PREFIX):
             self._announce(line[len(INVITE_PREFIX):].strip())
@@ -411,13 +443,18 @@ class LeaderInvites:
             name = str(row.get("name") or "")
             row["policy_acked"] = self._acked(name)
             row["announced"] = self._announced.get(name.casefold(), 0)
+            if self._gate is not None:
+                row.update(self._gate.row(name))
         self.info = info
         return line
 
     def _announce(self, name: str) -> None:
         """Tell the member socket the popup is up, so it presses accept."""
         try:
-            sent = int(self._announce_invite(name) or 0)
+            if self._gate is not None:
+                sent = int(self._gate.announce(name) or 0)
+            else:
+                sent = int(self._announce_invite(name) or 0)
         except Exception as exc:
             self._log(f"Party invite notice for {name} failed: {exc}")
             return

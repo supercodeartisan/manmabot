@@ -271,6 +271,7 @@ class BotController:
         self._party_policy_id = ""
         self._member_policy_sig = ""
         self._invite_accepter = None
+        self._member_state_reporter = None
         # Monitor-only records (read by ``party_monitor_snapshot``).
         self._party_invites = None
         self._party_start_error = ""
@@ -695,7 +696,8 @@ class BotController:
         if not party_on:
             role = "solo"
         out: dict = {"role": role, "now": time.time()}
-        party = snap.get("party") if isinstance(snap.get("party"), dict) else {}
+        party_raw = snap.get("party") if isinstance(snap.get("party"), dict) else None
+        party = party_raw or {}
         in_party_names = {
             str(m.get("name") or "").strip().casefold()
             for m in (party.get("members") or [])
@@ -774,21 +776,41 @@ class BotController:
                 return "pending"
 
             from app._06_party.comms.orders import policy_acks
+            from app._06_party.sync import member_states
 
             pid = str(getattr(self, "_party_policy_id", "") or "")
+            out["party_mem"] = "ok" if party_raw is not None else "blind"
             out["roster"] = []
             for row in roster:
                 key = row["name"].casefold()
-                joined = key in in_party_names
-                at = key in arrived
                 irow = invite_rows.get(key) or {}
+                mstate = member_states.row(row["name"])
+                if key in in_party_names:
+                    joined, joined_src = True, "leader memory"
+                elif member_states.joined(row["name"]) or (irow.get("joined") and mstate.get("fresh")):
+                    joined, joined_src = True, "member report"
+                elif irow.get("joined"):
+                    joined, joined_src = True, "seen joined"
+                else:
+                    joined, joined_src = False, ""
+                at = key in arrived
                 ack = policy_acks.row(row["name"])
+                mparty = mstate.get("party") or {}
+                minv = mstate.get("invite") or {}
                 out["roster"].append(
                     {
                         "name": row["name"],
                         "role": row.get("role", "mage"),
                         "loot": row.get("loot", "none"),
                         "in_party": joined,
+                        "in_party_src": joined_src,
+                        "state_fresh": bool(mstate.get("fresh")),
+                        "state_age_s": mstate.get("age_s"),
+                        "state_mem": str(mparty.get("mem") or ""),
+                        "state_in_party": mparty.get("in_party"),
+                        "state_invite": f"{minv.get('id') or '—'}:{minv.get('phase') or 'idle'}",
+                        "invite_hold": str(irow.get("hold") or ""),
+                        "notice_echoed": bool(irow.get("notice_echoed")),
                         "at_rally": at,
                         "policy_acked": policy_acks.acked(row["name"], pid or None),
                         "ack_at": ack.get("at"),
@@ -811,6 +833,7 @@ class BotController:
                 rally=out["rally"],
                 phase=phase,
                 now=out["now"],
+                party_mem=out["party_mem"],
             )
             out["turret"] = dict(getattr(self, "_party_turret_info", {}) or {})
             out["line_wait"] = dict(getattr(self, "_party_line_info", {}) or {})
@@ -867,13 +890,16 @@ class BotController:
 
             accepter = getattr(self, "_invite_accepter", None)
             out["accept"] = accepter.status() if accepter is not None else {}
+            reporter = getattr(self, "_member_state_reporter", None)
+            out["sync"] = reporter.status() if reporter is not None else {}
             out["workflow"] = member_workflow(
                 sock=snap.get("socket") if isinstance(snap.get("socket"), dict) else {},
                 policy=out["policy"],
-                party=party,
+                party=party_raw,
                 orders=out["orders"],
                 accept=out["accept"],
                 now=out["now"],
+                sync=out["sync"],
             )
         return out
 
@@ -1794,22 +1820,24 @@ class BotController:
         def _ws_clients() -> int:
             return int(server.client_count()) if server is not None else 0
 
+        from app._06_party.comms.orders import publish_invite
+        from app._06_party.sync import InviteGate, member_states
+
         invites = LeaderInvites(
             publish_policy=lambda: self._publish_party_policy(force=True),
             ws_clients=_ws_clients,
             policy_acked=self._leader_policy_acked,
-            announce_invite=self._announce_party_invite,
+            gate=InviteGate(
+                member_states,
+                publish=lambda name, iid: publish_invite(to=name, invite_id=iid),
+                log=_setup_log,
+            ),
+            reported_joined=lambda name: member_states.joined(name, self_name),
             wait=self._stop_event.wait,
             log=_setup_log,
         )
         self._party_invites = invites
         invites.start(names, snapshot=snap, self_name=self_name)
-
-    @staticmethod
-    def _announce_party_invite(name: str) -> int:
-        from app._06_party.comms.orders import publish_invite
-
-        return publish_invite(to=name)
 
     def _leader_invite_tick(self, world, last_action) -> None:
         """One invite step per tick while the party window is open."""
@@ -1900,9 +1928,10 @@ class BotController:
             ws = str(sock.get("state") or "")
         except Exception:
             ws = ""
+        mem = f"in_party={in_party} count={count}" if isinstance(party, dict) else "party_mem=blind"
         msg = (
             "Party wait: "
-            f"role={party_role} in_party={in_party} count={count} "
+            f"role={party_role} {mem} "
             f"mem_leader={mem_lead or '—'} xy={xy or '—'} map={pmap or '—'} "
             f"seen={leader_name or '—'} dist={dist} kind={kind or '—'} "
             f"reason={reason or '—'} ws={ws or '—'}"
@@ -2086,6 +2115,7 @@ class BotController:
         self._member_policy_info = {
             **prev,
             "applied_at": time.time(),
+            "applied_id": str(policy.get("policy_id") or ""),
             "as_name": name or "",
             "applies": int(prev.get("applies", 0)) + 1,
         }
@@ -2113,6 +2143,8 @@ class BotController:
         self._member_policy_sig = ""
         if self._invite_accepter is not None:
             self._invite_accepter.reset()
+        if self._member_state_reporter is not None:
+            self._member_state_reporter.reset()
         self._member_policy_info = {
             "session": session,
             "session_at": time.time(),
@@ -2159,8 +2191,10 @@ class BotController:
                 self._party_event("socket", msg)
 
             self._invite_accepter = InviteAccepter(log=_log)
+        from app._06_party.sync import memory_in_party
+
         snap = getattr(world, "last_party", None)
-        in_party = bool(isinstance(snap, dict) and snap.get("in_party"))
+        in_party = memory_in_party(snap)
         if invite is not None:
             info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
             roster = (member_orders.policy or {}).get("roster") or []
@@ -2171,6 +2205,31 @@ class BotController:
                 in_party=in_party,
             )
         self._invite_accepter.tick(in_party=in_party)
+
+    def _member_state_report(self, world) -> None:
+        """Send ``member_state`` (party memory, policy, invite phase) on change / every 2 s."""
+        from app._06_party.comms.orders import member_orders
+        from app._06_party.sync import MemberStateReporter, party_view
+
+        if not member_orders.session:
+            return
+        if self._member_state_reporter is None:
+            self._member_state_reporter = MemberStateReporter()
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        acc = self._invite_accepter
+        invite = (
+            {"id": acc.invite_id, "phase": acc.phase, "presses": acc.presses}
+            if acc is not None
+            else {"id": "", "phase": "idle", "presses": 0}
+        )
+        self._member_state_reporter.tick(
+            self._party_comms.send_member_state,
+            name=str(info.get("as_name") or "") or "member",
+            session=member_orders.session,
+            policy_id=str(info.get("applied_id") or ""),
+            party=party_view(getattr(world, "last_party", None)),
+            invite=invite,
+        )
 
     def _member_party_tick(
         self, world, map_id, *, send: bool, party_brain=None
@@ -2198,6 +2257,7 @@ class BotController:
                 if fresh is not None:
                     self._send_member_policy_ack(fresh)
             self._member_invite_accept(world, member_orders.take_invite())
+            self._member_state_report(world)
             return
         pose = live_pose_from_state(world)
         px = py = None
@@ -2454,6 +2514,7 @@ class BotController:
         self._member_policy_sig = ""
         self._member_policy_info = {}
         self._invite_accepter = None
+        self._member_state_reporter = None
         self._party_policy_info = {}
         self._party_policy_id = ""
         self._party_invites = None
@@ -2564,6 +2625,22 @@ class BotController:
         # Party init is lazy inside capture_tick — surface those errors now.
         for err in list(sensors.buffer.errors):
             self.log(f"Perception sensor: {err}")
+        if want_party:
+            calib = sensors.party_calibration
+            if calib is None:
+                self.log("Party memory: not anchored (LC not running, not elevated, or old party_listen.dll)")
+            elif calib.get("subs_ok"):
+                delta = int(calib.get("delta") or 0)
+                self.log(
+                    "Party memory: OK"
+                    + (f" (party vfts calibrated {delta:+#x} vs PARTY_SEC17.txt)" if delta else "")
+                )
+            else:
+                self.log(
+                    "Party memory: PartySubsystem not found for this LC build — party "
+                    "state comes from member reports only. Run (elevated) "
+                    "Engine/analysis/party/tools/probe_party_vft.py"
+                )
         if party_mode:
             from app._01_perception.party_listen_reader import default_dll_path
 
@@ -2576,7 +2653,7 @@ class BotController:
                 dll_name = default_dll_path().name
                 self.log(
                     f"Party member mode BLOCKED: {dll_name} missing. "
-                    "Build Engine/analysis/party/build_party_listen_dll.bat "
+                    "Build Engine/analysis/party/build.bat "
                     "(needs VS Build Tools with VCTools), then restart."
                 )
                 self._publish_party_monitor(
