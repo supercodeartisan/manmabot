@@ -75,11 +75,20 @@ BOOL ec_ic_open(EcContext* ctx)
     ctx->ic = g_ic_create();
     if (!ctx->ic) return FALSE;
 
-    ctx->ic_keyboard = 1;   /* INTERCEPTION_KEYBOARD(0) */
-    if (g_ic_is_kb) {
-        for (int d = 1; d <= 10; ++d) {
-            if (g_ic_is_kb(d)) { ctx->ic_keyboard = d; break; }
-        }
+    /* The physical keyboard's slot (1..10) differs per machine, and a send to
+     * an empty slot returns 0.  Probe with a key-UP of an unpressed key (a
+     * no-op for the OS), the same probe autologin/bot/win/interception.py uses. */
+    ctx->ic_keyboard = 0;
+    for (int d = 1; d <= 10; ++d) {
+        if (g_ic_is_kb && !g_ic_is_kb(d)) continue;
+        ctx->ic_keyboard = d;
+        if (ec_ic_key(ctx, 0x04, 0, 1)) break;
+        ctx->ic_keyboard = 0;
+    }
+    if (!ctx->ic_keyboard) {
+        g_ic_destroy(ctx->ic);
+        ctx->ic = NULL;
+        return FALSE;
     }
     ctx->interception_ok = TRUE;
     return TRUE;

@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+import uuid
 from typing import Any, Optional
 
 RALLY = "rally"
@@ -35,6 +36,20 @@ RALLY_STAGES = (STAGE_START, STAGE_PLANNED, STAGE_LANDED)
 
 # Arrival band around the gather point.
 ARRIVE_TILES = 7
+
+# One id per leader Start, stamped on every leader frame (``session``). A member
+# that sees a new id drops everything it kept from the previous leader run.
+_leader_session = ""
+
+
+def new_leader_session() -> str:
+    global _leader_session
+    _leader_session = uuid.uuid4().hex[:8]
+    return _leader_session
+
+
+def leader_session() -> str:
+    return _leader_session
 
 
 def _chev(ax: int, ay: int, bx: int, by: int) -> int:
@@ -398,12 +413,16 @@ class MemberOrders:
         self._reported = False
         self._report_pending = False
         self._policy_dirty = False
+        # Leader run id; a new one means the leader bot was started again.
+        self.session = ""
+        self.session_resets = 0
+        self._session_changed = False
 
     @property
     def order_kind(self) -> str:
         return order_tag(self.gather)
 
-    def clear(self) -> None:
+    def _drop_orders(self) -> None:
         self.gather = None
         self.recovery = None
         self.policy = None
@@ -411,6 +430,19 @@ class MemberOrders:
         self._reported = False
         self._report_pending = False
         self._policy_dirty = False
+
+    def clear(self) -> None:
+        self._drop_orders()
+        self.session = ""
+        self.session_resets = 0
+        self._session_changed = False
+
+    def take_session_change(self) -> Optional[str]:
+        """The new leader session id once after it first appears, else None."""
+        if not self._session_changed:
+            return None
+        self._session_changed = False
+        return self.session
 
     def take_policy(self) -> Optional[dict[str, Any]]:
         """Return the latest policy once when it changes."""
@@ -424,6 +456,12 @@ class MemberOrders:
             body = getattr(frame, "message", None)
             if not isinstance(body, dict):
                 continue
+            session = str(body.get("session") or "")
+            if session and session != self.session:
+                self._drop_orders()
+                self.session = session
+                self.session_resets += 1
+                self._session_changed = True
             kind = str(body.get("type") or "")
             if kind == RECOVERY:
                 self.recovery = dict(body)
@@ -525,6 +563,8 @@ __all__ = [
     "POLICY",
     "POLICY_ACK",
     "PolicyAcks",
+    "leader_session",
+    "new_leader_session",
     "policy_ack_message",
     "policy_acks",
     "RALLY",

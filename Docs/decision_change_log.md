@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-10-22 — party: leader session id; member resets on a new leader run
+
+Intent: every leader Start is a new party run. The member cannot tell from the socket alone whether the leader restarted (a reconnect looks the same), so the leader stamps a run id on every frame and the member starts its party state over when the id changes, then takes the new leader settings.
+Shared: `websocket.party_orders.new_leader_session` / `leader_session` (8-hex id, made at leader Start in the run loop). `leader_decisions.publish_body` adds `session` to every leader frame (policy, rally, recovery, decision). `MemberOrders.ingest`: a new `session` drops gather / recovery / policy / arrived before the frame is read; `take_session_change()` reports it once. Controller `_reset_member_for_leader_session`: `PartyMemberManager.reset_for_new_leader_session()` (policy overlay off → own profile knobs, formation trail cleared), policy apply signature and ack records cleared, so the new policy is applied and confirmed (`policy_ack`) as on a fresh member start. At every Start both roles clear `member_orders` and `policy_acks`.
+Affects: member party state only, on the first leader frame of a new run (first contact counts too). A member reconnect to the same leader run keeps everything. Rally walking toward an old gather point stops; the new run's rally replaces it. Join-map world nav in progress and solo decision state are not touched. Wire: leader and member must run this build together.
+Consent: user asked that a newly started leader resets all member party logic to the leader's new settings.
+Result: simulated: same-id resend keeps orders, a new id drops the old rally/arrived and applies the new policy (turret → moving). Monitor shows the session id on the Server (leader) / Connect (member) step. Not run in game.
+
+## 2026-10-22 — enter_chat: probe the Interception keyboard slot (fixes `/초대` "failed: text")
+
+Intent: Hangul in chat lines is sent only through Interception. `ec_ic_open` always used keyboard slot 1 (`interception_is_keyboard` is only a range check). On this PC the keyboard is slot 2 (autologin probe: `keyboard=2 mouse=12`); slot 1 returns 0 strokes, so every Hangul key of `/초대 번개공격` failed while `/`, space, and Enter went through fallbacks → `EC_E_TEXT` with no message.
+Shared: `ec_keyboard.c ec_ic_open` now probes slots 1–10 with a key-UP of scancode 0x04 (no-op, same probe as `autologin/bot/win/interception.py`) and keeps the first slot that accepts; none → `EC_E_INTERCEPTION`. `EC_E_TEXT` now reports "N of M character(s) failed (keyboard slot X)".
+Affects: every `send_chat_line` caller (party invite / leave). Mouse, login input, and decisions are unchanged.
+Consent: user asked to find and fix why the party invite failed.
+Result: live probe on this PC: slot 1 → 0, slot 2 → 1, slot 3 → 1. DLL rebuilt (BUILD_OK; the loaded copy was renamed to `bin/enter_chat.old.dll`, picked up after the bot restarts). Not run in game.
+
 ## 2026-10-22 — party start: invite only after the member confirms the policy (`policy_ack`); `/초대`; monitor workflow
 
 Intent: the leader start runs in order: socket server → member sockets connect → `party_policy` sent → each member applies it (temporary overlay) and answers `policy_ack` → only then `/초대 <name>` for that roster name → rally → hunt. The in-game invite command is `/초대 <name>` (was `/파티 <name>`, which the game does not accept).

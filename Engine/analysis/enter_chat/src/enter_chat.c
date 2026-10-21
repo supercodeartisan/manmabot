@@ -275,7 +275,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     if (plan.has_hangul) {
         if (!ec_ic_open(&ctx)) {
             ec_set_error(res, EC_E_INTERCEPTION,
-                L"Interception unavailable (interception.dll / driver not installed)");
+                L"Interception unavailable (interception.dll / driver not installed, or no keyboard slot 1-10 accepts strokes)");
             goto cleanup;
         }
     } else if (need_ic) {
@@ -424,6 +424,9 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     res->failed = failed;
     res->skipped = skipped;
     res->status = failed > 0 ? EC_E_TEXT : EC_OK;
+    if (failed > 0)
+        ec_result_message(res, L"%d of %d character(s) failed (keyboard slot %d)",
+                          failed, failed + sent_chars, ctx.ic_keyboard);
 
 cleanup:
     if (ctx.hangul_started) ec_hangul_done(&ctx);

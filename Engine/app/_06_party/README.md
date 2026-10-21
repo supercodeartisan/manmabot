@@ -194,6 +194,8 @@ comms/
 {"sender": "<name>", "ts": <float>, "message": <str|object>}
 ```
 
+리더 프레임 `message`에는 항상 `session` (리더 Start마다 새 8자리 id). 멤버는 새 id를 처음 보면 주문·정책 오버레이·ack 기록을 버리고 자기 프로필로 돌아간 뒤 새 정책을 적용·확인한다 (같은 id 재연결은 유지).
+
 | `message.type` | 방향 | 의미 | 상태 |
 |----------------|------|------|------|
 | `decision` | L→M | 리더 행동 | 송신 live |

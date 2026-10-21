@@ -84,6 +84,15 @@ class PartyMemberManager:
         self.leader_policy = None
         return True
 
+    def reset_for_new_leader_session(self) -> None:
+        """Leader bot started again: back to own knobs, forget the old leader trail.
+
+        The new policy is applied on top right after (same tick when it arrived
+        with the session change).
+        """
+        self.clear_leader_policy()
+        self._formation.reset()
+
     def pause(self) -> None:
         self.runtime.paused = True
 

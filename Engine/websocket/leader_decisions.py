@@ -54,11 +54,15 @@ def publish_leader_decision(
 def publish_body(body: dict[str, Any]) -> int:
     """Broadcast one leader payload. Returns how many clients received it."""
     from .active import current
+    from .party_orders import leader_session
     from .protocol import PartyMessage
 
     watchdog = current()
     if watchdog is None or not watchdog.running or not watchdog.server.listening:
         return 0
+    session = leader_session()
+    if session and isinstance(body, dict):
+        body = {**body, "session": session}
     try:
         return int(
             watchdog.server.broadcast(PartyMessage(sender="leader", message=body))

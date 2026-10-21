@@ -1927,7 +1927,7 @@ class BotController:
         import json
         import time as _time
 
-        from app._06_party.comms.orders import policy_message
+        from app._06_party.comms.orders import leader_session, policy_message
 
         kwargs = self._leader_party_policy_kwargs()
         key = json.dumps(kwargs, sort_keys=True, default=str)
@@ -1949,6 +1949,7 @@ class BotController:
             "sent": sent,
             "sends": int(prev.get("sends", 0)) + 1,
             "policy_id": self._party_policy_id,
+            "session": leader_session(),
             "leader_mode": kwargs["leader_mode"],
             "random_loot": kwargs["random_loot"],
             "party_size": kwargs["party_size"],
@@ -2080,6 +2081,33 @@ class BotController:
             f"follow={cfg.follow_tiles}/{cfg.stop_tiles} as={name or '—'}"
         )
 
+    def _reset_member_for_leader_session(self, session: str, party_brain) -> None:
+        """New leader run seen: start the member's party state from scratch.
+
+        Orders from the old run are already dropped in ``member_orders``; here the
+        policy overlay and its apply/ack records go, so the new leader policy is
+        applied and confirmed as if this member had just started.
+        """
+        from app._06_party.comms.orders import member_orders
+
+        if party_brain is not None:
+            party_brain.reset_for_new_leader_session()
+        prev = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        first = not prev.get("session")
+        self._member_policy_sig = ""
+        self._member_policy_info = {
+            "session": session,
+            "session_at": time.time(),
+            "session_resets": int(member_orders.session_resets),
+        }
+        msg = (
+            f"Party leader session {session} — "
+            + ("first contact" if first else f"leader restarted (was {prev.get('session')})")
+            + ": orders and policy reset, waiting for the new leader policy"
+        )
+        self.log(msg)
+        self._party_event("socket", msg)
+
     def _send_member_policy_ack(self, policy: dict) -> None:
         """Answer each applied policy frame so the leader may invite this member."""
         info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
@@ -2117,6 +2145,9 @@ class BotController:
                 self._party_comms.ingest_orders()
             except Exception as exc:
                 self.log(f"Party member order read failed: {exc}")
+            session = member_orders.take_session_change()
+            if session is not None:
+                self._reset_member_for_leader_session(session, party_brain)
             fresh = member_orders.take_policy()
             if party_brain is not None and member_orders.policy is not None:
                 self._apply_member_party_policy(
@@ -2383,9 +2414,18 @@ class BotController:
         self._party_policy_id = ""
         self._party_invites = None
         self._party_brain_ref = None
-        from app._06_party.comms.orders import policy_acks
+        from app._06_party.comms.orders import (
+            member_orders,
+            new_leader_session,
+            policy_acks,
+        )
 
         policy_acks.clear()
+        member_orders.clear()
+        if party_role == "leader":
+            session = new_leader_session()
+            self.log(f"Party leader session {session} (members reset on this id)")
+            self._party_event("session", f"leader session {session}")
         if party_mode:
             party_brain = PartyMemberManager(party_cfg)
             self._party_brain_ref = party_brain
@@ -3137,7 +3177,8 @@ def _leader_workflow(*, sock, roster, policy, invite, rally, phase, now) -> list
             "server",
             "Server",
             "done" if listening else ("wait" if sock_state in ("idle", "starting") else "bad"),
-            f"{sock.get('advertise') or '—'}:{sock.get('port') or '—'} {sock_state}",
+            f"{sock.get('advertise') or '—'}:{sock.get('port') or '—'} {sock_state}"
+            f" · session {policy.get('session') or '—'}",
         )
     ]
 
@@ -3217,7 +3258,13 @@ def _member_workflow(*, sock, policy, party, orders, now) -> list:
             "connect",
             "Connect",
             "done" if connected else ("wait" if sock_state in ("connecting", "reconnecting", "idle") else "bad"),
-            f"{sock.get('uri') or '—'} {sock_state}",
+            f"{sock.get('uri') or '—'} {sock_state} · leader session "
+            f"{policy.get('session') or '—'}"
+            + (
+                f" (reset {int(policy.get('session_resets') or 0)}×)"
+                if int(policy.get("session_resets") or 0) > 1
+                else ""
+            ),
         )
     ]
     received = bool(policy.get("received"))
