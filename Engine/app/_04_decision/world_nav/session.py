@@ -1058,6 +1058,46 @@ class WorldNavSession:
     def note_gate_result(self, ok: bool, pose: Any | None, error: str = "") -> None:
         tokens = api.state_tokens()
         if ok and pose is not None and self.gate is not None:
+            g = self.gate
+            if self.plan is not None:
+                try:
+                    planned_to = {
+                        "mapId": int(g["to_map"]),
+                        "x": int(g["tx"]),
+                        "y": int(g["ty"]),
+                    }
+                    same_cell = (
+                        int(pose.map_id) == planned_to["mapId"]
+                        and int(pose.x) == planned_to["x"]
+                        and int(pose.y) == planned_to["y"]
+                    )
+                except (KeyError, TypeError, ValueError):
+                    planned_to = None
+                    same_cell = True
+                if (
+                    planned_to is not None
+                    and not same_cell
+                    and int(pose.map_id) == planned_to["mapId"]
+                    and retarget_walk_from_after_gate(
+                        self.plan.steps,
+                        self.step_i,
+                        planned_to,
+                        int(pose.map_id),
+                        int(pose.x),
+                        int(pose.y),
+                    )
+                ):
+                    from app.bot_log import get_logger
+
+                    get_logger("nav").info(
+                        "walk from retargeted after gate land "
+                        "(%s,%s) -> (%s,%s) map=%s",
+                        planned_to["x"],
+                        planned_to["y"],
+                        int(pose.x),
+                        int(pose.y),
+                        int(pose.map_id),
+                    )
             api.emit_state(
                 tokens.TRANSITION_LANDED,
                 map=pose.map_id,

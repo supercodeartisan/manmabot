@@ -38,11 +38,40 @@ CMD = {
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+_k32.CreateFileW.restype = wintypes.HANDLE
+_k32.CreateFileW.argtypes = [
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.HANDLE,
+]
+_k32.CloseHandle.restype = wintypes.BOOL
+_k32.CloseHandle.argtypes = [wintypes.HANDLE]
+_k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+_k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+_k32.DeviceIoControl.restype = wintypes.BOOL
+_k32.DeviceIoControl.argtypes = [
+    wintypes.HANDLE,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+    ctypes.c_void_p,
+]
+# Shared with the in-process monitor. An exclusive open loses to whichever
+# side attached first and then every later read stays empty.
+_FILE_SHARE_READ_WRITE = 0x1 | 0x2
 _handle = None
 _pid = 0
 _base = 0
 _size = 0
 _me = 0
+_pose_fail_key: str | None = None
 
 
 class _PROCESSENTRY32W(ctypes.Structure):
@@ -243,28 +272,98 @@ def _find_my_player() -> int:
     return 0
 
 
+def _handle_live(handle) -> bool:
+    return handle not in (None, 0, -1, ctypes.c_void_p(-1).value)
+
+
+def _log_pose_fail(key: str, text: str) -> None:
+    """One line per distinct failure until a later read succeeds."""
+    global _pose_fail_key
+    if _pose_fail_key == key:
+        return
+    _pose_fail_key = key
+    try:
+        from app.bot_log import event
+
+        event("pose", "%s", text)
+    except Exception:
+        return
+
+
+def _log_pose_ok() -> None:
+    global _pose_fail_key
+    _pose_fail_key = None
+
+
+def _close_handle() -> None:
+    global _handle
+    if _handle_live(_handle):
+        _k32.CloseHandle(_handle)
+    _handle = None
+
+
+def _drop_locate() -> None:
+    global _base, _size, _me
+    _base = 0
+    _size = 0
+    _me = 0
+
+
 def _ensure() -> bool:
+    """Open WinNotify and resolve LC.exe. False leaves the action slot unread.
+
+    The handle is not treated as ready until the module base is known. A
+    failed base walk is retried on the next call instead of sticking for
+    the life of the process.
+    """
     global _handle, _pid, _base, _size, _me
-    if _handle not in (None, 0, -1, ctypes.c_void_p(-1).value):
+    if _handle_live(_handle) and _pid and _base and _size:
         return True
     pid = _find_pid()
-    handle = _k32.CreateFileW(
-        "\\\\.\\WinNotify", 0x80000000 | 0x40000000, 0, None, 3, 0, None
-    )
-    if not pid or handle in (None, 0, -1, ctypes.c_void_p(-1).value):
+    if not pid:
+        _log_pose_fail("nopid", "body pose: lc.exe not found")
         return False
-    _handle = handle
+    if _pid and pid != _pid:
+        _close_handle()
+        _drop_locate()
+        _pid = 0
+    if not _handle_live(_handle):
+        handle = _k32.CreateFileW(
+            "\\\\.\\WinNotify",
+            0x80000000 | 0x40000000,
+            _FILE_SHARE_READ_WRITE,
+            None,
+            3,
+            0,
+            None,
+        )
+        if not _handle_live(handle):
+            err = int(ctypes.get_last_error())
+            _log_pose_fail(
+                f"open:{err}",
+                f"body pose: WinNotify open failed winerr={err}",
+            )
+            return False
+        _handle = handle
+        _pid = pid
+        _drop_locate()
+    if not _base or not _size:
+        _base, _size = _module_base(pid)
+        _me = 0
+    if not _base or not _size:
+        err = int(ctypes.get_last_error())
+        _log_pose_fail(
+            f"base:{err}",
+            f"body pose: module base unread winerr={err}",
+        )
+        return False
     _pid = pid
-    _base, _size = _module_base(pid)
-    _me = 0
-    return bool(_base and _size)
+    return True
 
 
-def read_action() -> tuple[int | None, int | None]:
-    """(body vft, command vft). None means that slot could not be read."""
+def _read_slots() -> tuple[int | None, int | None]:
+    """(body vft, command vft) from the cached player. None if that walk fails."""
     global _me
-    if not _ensure():
-        return None, None
     _load_find()
     if not _me or _vrva(_me) != _FIND["MY_PLAYER"]:
         _me = _find_my_player()
@@ -285,6 +384,50 @@ def read_action() -> tuple[int | None, int | None]:
     if _heap(ctl):
         command = _q(_pid, ctl + 0x58)
         cmd = _vrva(command) if _heap(command) else 0
+    return body, cmd
+
+
+def _relocate() -> bool:
+    """Walk the module and player again after an empty slot. The handle stays."""
+    global _pid, _base, _size, _me
+    pid = _find_pid()
+    if not pid:
+        _log_pose_fail("nopid", "body pose: lc.exe not found")
+        return False
+    if pid != _pid:
+        _close_handle()
+        _pid = 0
+        _drop_locate()
+        return _ensure()
+    _me = 0
+    _base, _size = _module_base(pid)
+    if not _base or not _size:
+        err = int(ctypes.get_last_error())
+        _log_pose_fail(
+            f"base:{err}",
+            f"body pose: module base unread winerr={err}",
+        )
+        return False
+    return True
+
+
+def read_action() -> tuple[int | None, int | None]:
+    """(body vft, command vft). None means that slot could not be read."""
+    if not _ensure():
+        return None, None
+    body, cmd = _read_slots()
+    if body is not None:
+        _log_pose_ok()
+        return body, cmd
+    # A base or player cached while the game was still coming up used to
+    # stick until the process exited. Drop it and walk once more.
+    if not _relocate():
+        return None, None
+    body, cmd = _read_slots()
+    if body is None:
+        _log_pose_fail("slot", "body pose: action slot unread")
+        return None, None
+    _log_pose_ok()
     return body, cmd
 
 

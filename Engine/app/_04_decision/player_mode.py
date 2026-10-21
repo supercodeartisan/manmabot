@@ -119,6 +119,10 @@ LOOT_HOP_ARRIVE_TILES = 1
 # Approach stuck: unchanged WCS while walking toward an item (then 360° sweep).
 LOOT_APPROACH_STUCK_TICKS = 8
 LOOT_APPROACH_STUCK_SECONDS = 5.0
+# Unread body slot during a loot hop. A live tile that is still changing
+# keeps the click. The same tile this long is standing, so the hop reclicks.
+# Dungeon mode turns the 5s unstick sweep off; this window does not use it.
+LOOT_POSE_UNKNOWN_STILL_S = 0.8
 # After a pickup click, skip that pile until memory drops it (or this many ticks).
 LOOT_CLICKED_COOLDOWN_TICKS = 8
 # After a confirmed pickup click, do not stand idle. Next loot/combat is immediate.

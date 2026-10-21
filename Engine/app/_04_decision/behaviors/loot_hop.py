@@ -20,6 +20,8 @@ from app._04_decision.nav_config import get_terrain_map
 from app._04_decision import player_mode as pm
 
 _SCRATCH_LOOT_CLICK_AT = "loot_approach_click_at"
+_SCRATCH_LOOT_STILL_TILE = "loot_pose_still_tile"
+_SCRATCH_LOOT_STILL_SINCE = "loot_pose_still_since"
 
 if TYPE_CHECKING:  # pragma: no cover
     from app._03_world import GameState
@@ -38,6 +40,8 @@ def clear_loot_hop(blackboard: "Blackboard") -> None:
     blackboard.loot_stuck_since_time = 0.0
     blackboard.loot_pickup_since_time = 0.0  # unused; kept for blackboard compat
     blackboard.scratch.pop(_SCRATCH_LOOT_CLICK_AT, None)
+    blackboard.scratch.pop(_SCRATCH_LOOT_STILL_TILE, None)
+    blackboard.scratch.pop(_SCRATCH_LOOT_STILL_SINCE, None)
     reset_unstick_tries(blackboard)
 
 
@@ -190,21 +194,66 @@ def _near_tile(origin: tuple[int, int], tile: tuple[int, int]) -> bool:
     )
 
 
+def _arm_pose_still(blackboard: "Blackboard", origin) -> None:
+    """Start the unread-pose stillness clock at this live tile."""
+    blackboard.scratch[_SCRATCH_LOOT_STILL_TILE] = (int(origin.x), int(origin.y))
+    blackboard.scratch[_SCRATCH_LOOT_STILL_SINCE] = time.time()
+
+
+def _pose_unknown_as_stand(blackboard: "Blackboard", origin) -> bool:
+    """True when the live tile has not changed for the unread-pose window.
+
+    A tile change only resets the clock. The next still window can fire.
+    """
+    tile = (int(origin.x), int(origin.y))
+    prev = blackboard.scratch.get(_SCRATCH_LOOT_STILL_TILE)
+    now = time.time()
+    if prev != tile:
+        blackboard.scratch[_SCRATCH_LOOT_STILL_TILE] = tile
+        blackboard.scratch[_SCRATCH_LOOT_STILL_SINCE] = now
+        return False
+    since = float(blackboard.scratch.get(_SCRATCH_LOOT_STILL_SINCE) or 0.0)
+    if since <= 0.0:
+        blackboard.scratch[_SCRATCH_LOOT_STILL_SINCE] = now
+        return False
+    return (now - since) >= float(pm.LOOT_POSE_UNKNOWN_STILL_S)
+
+
+def _loot_motion(blackboard: "Blackboard", origin) -> tuple[bool | None, bool | None]:
+    """(raw body_is_moving, value the loot hop should follow).
+
+    An unread slot stays unread while the live tile is changing. Once that
+    tile sits still, the hop follows the standing path and can reclick.
+    A real walk or a real stand is returned unchanged.
+    """
+    from app._05_action.body_pose import body_is_moving
+
+    raw = body_is_moving()
+    if raw is True:
+        # A live walk restarts the unread window so one missed sample
+        # does not reclick over a step that is already underway.
+        _arm_pose_still(blackboard, origin)
+        return raw, raw
+    if raw is None and _pose_unknown_as_stand(blackboard, origin):
+        return raw, False
+    return raw, raw
+
+
 def _loot_click_still_open(
     state: "GameState",
     origin,
     click: tuple[int, int],
     *,
     terrain,
+    moving: bool | None,
 ) -> bool:
     """True while this click should be repeated instead of replanned.
 
-    A walking body, or an unread action slot, keeps the click. A standing
-    body replans when the click line is no longer clear.
+    A walking body keeps the click. An unread slot keeps it only while the
+    caller still passes None (the live tile is changing). A standing body,
+    including an unread slot whose tile has stayed put, replans when the
+    click line is no longer clear.
     """
-    from app._05_action.body_pose import body_is_moving
-
-    moving = body_is_moving()
     if moving is True or moving is None or terrain is None:
         return True
     from app._04_decision.avoidance import click_clear, collect_body_tiles
@@ -369,6 +418,7 @@ def _emit_approach(
     blackboard.loot_approach_active = True
     if not mid_act:
         blackboard.scratch[_SCRATCH_LOOT_CLICK_AT] = time.time()
+        _arm_pose_still(blackboard, blackboard.world_origin)
         from app._04_decision.clickgap import note_plan
 
         note_plan(f"loot-walk item={item_id} wp={waypoint} reason={reason}")
@@ -464,63 +514,69 @@ def tick_loot_item(
                     reason="loot target nearby",
                 )
                 return Status.SUCCESS
-        elif dest is not None and _loot_click_still_open(
-            state, origin, wp, terrain=get_terrain_map()
-        ):
-            from app._04_decision.avoidance import classify_ground_reclick, log_ground_pause
-            from app._05_action.body_pose import body_is_moving
-
-            if try_movement_unstick(
-                blackboard,
-                stuck=_approach_stuck(blackboard),
-                action=ActionType.SEARCHING,
-                reason="unstick nearby",
-                priority=0.3,
-                target_id=item_id,
-                state=state,
-                on_walk=lambda tile, hop: _emit_approach(
-                    blackboard,
-                    destination=hop,
-                    waypoint=tile,
-                    item_id=item_id,
-                    reason="unstick nearby",
-                    mid_act=False,
-                ),
+        elif dest is not None:
+            raw, moving = _loot_motion(blackboard, origin)
+            if _loot_click_still_open(
+                state,
+                origin,
+                wp,
+                terrain=get_terrain_map(),
+                moving=moving,
             ):
-                if blackboard.scratch.pop(SCRATCH_ESCAPED, None):
-                    clear_loot_hop(blackboard)
-                return Status.SUCCESS
-            moving = body_is_moving()
-            now = time.time()
-            clicked_at = float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0)
-            follow = classify_ground_reclick(
-                moving,
-                clicked_at,
-                now=now,
-            )
-            if follow == "repeat":
-                log_ground_pause(
-                    "loot",
-                    wp,
+                from app._04_decision.avoidance import classify_ground_reclick, log_ground_pause
+
+                if try_movement_unstick(
+                    blackboard,
+                    stuck=_approach_stuck(blackboard),
+                    action=ActionType.SEARCHING,
+                    reason="unstick nearby",
+                    priority=0.3,
+                    target_id=item_id,
+                    state=state,
+                    on_walk=lambda tile, hop: _emit_approach(
+                        blackboard,
+                        destination=hop,
+                        waypoint=tile,
+                        item_id=item_id,
+                        reason="unstick nearby",
+                        mid_act=False,
+                    ),
+                ):
+                    if blackboard.scratch.pop(SCRATCH_ESCAPED, None):
+                        clear_loot_hop(blackboard)
+                    return Status.SUCCESS
+                now = time.time()
+                clicked_at = float(blackboard.scratch.get(_SCRATCH_LOOT_CLICK_AT) or 0.0)
+                follow = classify_ground_reclick(
                     moving,
                     clicked_at,
-                    now,
-                    "walk onto item",
+                    now=now,
                 )
-            _emit_approach(
-                blackboard,
-                destination=dest,
-                waypoint=wp,
-                item_id=item_id,
-                reason="walk onto item",
-                mid_act=follow != "repeat",
-            )
-            return Status.SUCCESS
-        else:
-            if dest is not None:
-                from app._04_decision.behaviors.unstick import note_confined_line_closed
+                if follow == "repeat":
+                    log_ground_pause(
+                        "loot",
+                        wp,
+                        raw,
+                        clicked_at,
+                        now,
+                        "walk onto item",
+                    )
+                _emit_approach(
+                    blackboard,
+                    destination=dest,
+                    waypoint=wp,
+                    item_id=item_id,
+                    reason="walk onto item",
+                    mid_act=follow != "repeat",
+                )
+                return Status.SUCCESS
+            from app._04_decision.behaviors.unstick import note_confined_line_closed
 
-                note_confined_line_closed(blackboard)
+            note_confined_line_closed(blackboard)
+            blackboard.loot_approach_active = False
+            blackboard.loot_approach_destination = None
+            blackboard.loot_approach_waypoint = None
+        else:
             blackboard.loot_approach_active = False
             blackboard.loot_approach_destination = None
             blackboard.loot_approach_waypoint = None

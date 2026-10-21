@@ -1,5 +1,37 @@
 # Decision change log
 
+## 2026-10-22 — ivory tower land cell, and no entrance ring after the map flips
+
+Intent: a click that already entered ivory tower floor 1 counts as landed at `(32763, 32902)`. A second entrance ring does not run once the live map is the destination, so the cursor stays off the desktop corner. When the live cell is outside the planned interior, the following walk starts at the live cell.
+Shared: `ground_enter:oren-ivory` `to`. `dest_entry_pose` / `run_gate_click` / `_one_gate_attempt`. `note_gate_result` calls `retarget_walk_from_after_gate` when the landed cell differs from the planned interior and the next walk still starts there. `gate_land_watch`, combat, HP, and login are unchanged.
+Affects: every world-nav and dungeon-floor gate click. A landing within 24 tiles of the planned interior still succeeds as before. A dest-map pose still within 24 of the entrance or the pre-click cell fails the gate with `dest map with source xy` and does not advance. A dest-map pose outside both neighborhoods succeeds and, when the next walk's `from` is the planned interior, that `from` moves to the live cell and its stored polyline is dropped. Floor routes share the same click helper, so they also stop the ring and accept that landing by map id.
+Consent: user agreed to this scope (fix the ivory tower interior cell, and do not circle the entrance once the destination map is live).
+Result: both edge files use interior `(32763, 32902)`. The 02:44 pose `(32763, 32902)` classifies as landed against that cell, and as relocated against the old `(32765, 32866)`. A dest map still sitting on `(34041, 32156)` classifies as stale. Not run in game.
+
+## 2026-10-22 — ivory tower floor 1 cursor centers on (34041, 32155)
+
+Intent: after the Oren teleporter lands in front of ivory tower floor 1, the dungeon-entrance cursor circles `(34041, 32155)` on the mainland. The previous center was `(34041, 32158)`.
+Shared: edge `world_nav:ground_enter:oren-ivory` `from` only. `run_gate_click` still circles that cell. Teleporter clicks, gate rewrite, and the portal rows `tmo:4:127` / `tmo:4:128` stay as they are.
+Affects: world-nav entry into ivory tower floor 1 (`teleport_oren` / `teleport_oren_ch`, destination map 75). A landing at `(34041, 32158)` is still within the 5-tile approach, so the circle starts without an extra walk. Combat, HP, and login are unchanged.
+Consent: user asked to move the entrance cursor to mainland `(34041, 32155)` and circle there.
+Result: both the live `map_transitions.json` edge and the provider `30_edges_ground_enter.json` now use `(34041, 32155)`. Not run in game.
+
+## 2026-10-22 — unread body pose no longer freezes a loot hop
+
+Intent: a loot hop whose body slot stays unread must not treat that as "still walking" for the rest of the process. The same live tile for 0.8s follows the standing path and repeats the ground click. A tile that is still changing keeps the click. The reader itself retries a failed module/player walk instead of caching the failure, and opens WinNotify shared.
+Shared: `body_pose._ensure` / `read_action` / `body_is_moving`; `loot_hop._loot_click_still_open` and the `tick_loot_item` hold. `classify_ground_reclick`, `try_movement_unstick`, and dungeon `unstick_disabled` are unchanged. A failed read is still None, not standing.
+Affects: loot approach on a dungeon and on the field. Travel and search still hold while the slot is unread. While the slot reads a real walk, the hop holds as before. One missed sample during a walk waits out the 0.8s window before a reclick. If the live tile is frozen while the character is actually walking and the slot is unread, that reclick can cancel the step.
+Consent: user agreed this scope (recover the pose read; loot uses the live tile when the read stays empty; do not change the reclick classifier or dungeon unstick).
+Result: pose open no longer sticks after a failed base walk, and a loot hop at a still tile reclicks while the slot is unread. Not run in game.
+
+## 2026-10-22 — a nearby body no longer pulls a loot click off the item line
+
+Intent: when the guide toward an item is clear, the hop click stays on that line. A living body inside the 10-tile window moves the click aside only when it, or a wall, actually closes the guide hop.
+Shared: `choose_body_click`. It now takes `_farthest_guide_click`, then `_adjacent_guide_step`, and calls `plan_avoidance_click` only when those two have no click. `plan_body_click`, `click_clear`, and `unstick nearby` are unchanged.
+Affects: loot approach, world-nav hops, and farm search, because they all click through `plan_body_click`. A monster standing off the line no longer bends the 5-tile hop. A monster or wall on the line still steps aside. The 5-second nearby sweep still runs when the tile does not change.
+Consent: user agreed this scope for the main tree and the release they ran (`release\portable\ZF`).
+Result: on an open field, adena 292's off-line body `(3,-7)` now clicks `(612,1211)` on the item line; the old click was `(612,1206)`. Adena 324's body six tiles north now clicks `(368,1259)` on the item line. A body standing on that hop still steps aside (`(612,1206)` and `(368,1255)`). Release pyd and `SHA256SUMS.txt` updated in `release\portable\ZF`, and the same two files replaced in `release\ManmabotV1.zip`. Not run in game.
+
 ## 2026-10-22 — teleporter door swap also moves the inside walk start
 
 Intent: after the silver-knight teleporter lands nearer the other training-dungeon floor-1 door, the inside walk starts at that door's landing cell. The character then walks to the first patrol point. Standing still on `world nav wait land xy` after a successful mapId 4→25 entry ends.
