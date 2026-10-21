@@ -72,6 +72,88 @@ def tiles_on_segment(
     return out
 
 
+def _join_los_blocks(left: str, right: str) -> str:
+    """Two closed shoulders as ``block=(a,b)+(c,d)`` when both are tiles."""
+    prefix = "block="
+    if (
+        left.startswith(prefix)
+        and right.startswith(prefix)
+        and "+" not in left
+        and "+" not in right
+    ):
+        return f"{left}+{right[len(prefix):]}"
+    return f"{left}+{right}"
+
+
+def _los_step_block(
+    terrain: TerrainMap,
+    ax: int,
+    ay: int,
+    bx: int,
+    by: int,
+) -> str:
+    """Empty when the shared edge is open. Otherwise the closed tile or fence.
+
+    Same gate as before: endpoints may be non-walkable, a diagonal still
+    needs one walkable shoulder, and N/E fences block an open pair of cells.
+    """
+    from app._03_world.space.terrain_map import diagonal_open
+
+    dx, dy = bx - ax, by - ay
+    adx, ady = abs(dx), abs(dy)
+    if adx > 1 or ady > 1 or (dx == 0 and dy == 0):
+        return f"gap=({ax},{ay})->({bx},{by})"
+    if not terrain.has_edge_fences:
+        if adx + ady == 1:
+            return ""
+        if diagonal_open(terrain.walkable, ax, ay, bx, by):
+            return ""
+        return f"block=({bx},{ay})+({ax},{by})"
+
+    assert terrain.block_n is not None and terrain.block_e is not None
+
+    def fence_label(x0: int, y0: int, x1: int, y1: int) -> str:
+        sx, sy = x1 - x0, y1 - y0
+        if abs(sx) + abs(sy) != 1:
+            return f"gap=({x0},{y0})->({x1},{y1})"
+        if sy == -1:
+            if not bool(terrain.block_n[y0, x0]):
+                return ""
+            return f"fence=({x0},{y0},N)"
+        if sy == 1:
+            if not bool(terrain.block_n[y1, x1]):
+                return ""
+            return f"fence=({x1},{y1},N)"
+        if sx == 1:
+            if not bool(terrain.block_e[y0, x0]):
+                return ""
+            return f"fence=({x0},{y0},E)"
+        if sx == -1:
+            if not bool(terrain.block_e[y1, x1]):
+                return ""
+            return f"fence=({x1},{y1},E)"
+        return f"gap=({x0},{y0})->({x1},{y1})"
+
+    if adx + ady == 1:
+        return fence_label(ax, ay, bx, by)
+
+    mx, my = ax + dx, ay + dy
+
+    def via_block(cx: int, cy: int) -> str:
+        if not terrain.is_walkable(cx, cy):
+            return f"block=({cx},{cy})"
+        edge = fence_label(ax, ay, cx, cy)
+        if edge:
+            return edge
+        return fence_label(cx, cy, bx, by)
+
+    via_x = via_block(mx, ay)
+    via_y = via_block(ax, my)
+    if not via_x or not via_y:
+        return ""
+    return _join_los_blocks(via_x, via_y)
+
+
 def _los_step_open(
     terrain: TerrainMap,
     ax: int,
@@ -79,54 +161,36 @@ def _los_step_open(
     bx: int,
     by: int,
 ) -> bool:
-    """True when the shared edge between adjacent tiles is not fenced.
+    """True when the shared edge between adjacent tiles is not fenced."""
+    return _los_step_block(terrain, ax, ay, bx, by) == ""
 
-    Unlike ``TerrainMap.can_step``, endpoints may be non-walkable (monster
-    standing on a blocked nav cell). Intermediate L-path tiles for a
-    diagonal still must be walkable.
+
+def los_block_label(
+    terrain: TerrainMap,
+    a: tuple[int, int],
+    b: tuple[int, int],
+) -> str:
+    """Empty when the segment is clear. Otherwise the first closed tile or fence.
+
+    Intermediate black tiles are ``block=(x,y)``. A diagonal whose two
+    shoulders are both closed is ``block=(x,y)+(x,y)``. A fence edge is
+    ``fence=(x,y,N)`` or ``fence=(x,y,E)``. Endpoints are not blockers.
     """
-    from app._03_world.space.terrain_map import diagonal_open
-
-    dx, dy = bx - ax, by - ay
-    adx, ady = abs(dx), abs(dy)
-    if adx > 1 or ady > 1 or (dx == 0 and dy == 0):
-        return False
-    if not terrain.has_edge_fences:
-        if adx + ady == 1:
-            return True
-        return diagonal_open(terrain.walkable, ax, ay, bx, by)
-
-    assert terrain.block_n is not None and terrain.block_e is not None
-
-    def axis_open(x0: int, y0: int, x1: int, y1: int) -> bool:
-        sx, sy = x1 - x0, y1 - y0
-        if abs(sx) + abs(sy) != 1:
-            return False
-        if sy == -1:
-            return not bool(terrain.block_n[y0, x0])
-        if sy == 1:
-            return not bool(terrain.block_n[y1, x1])
-        if sx == 1:
-            return not bool(terrain.block_e[y0, x0])
-        if sx == -1:
-            return not bool(terrain.block_e[y1, x1])
-        return False
-
-    if adx + ady == 1:
-        return axis_open(ax, ay, bx, by)
-
-    mx, my = ax + dx, ay + dy
-    via_x = (
-        terrain.is_walkable(mx, ay)
-        and axis_open(ax, ay, mx, ay)
-        and axis_open(mx, ay, bx, by)
-    )
-    via_y = (
-        terrain.is_walkable(ax, my)
-        and axis_open(ax, ay, ax, my)
-        and axis_open(ax, my, bx, by)
-    )
-    return via_x or via_y
+    ax, ay = a
+    bx, by = b
+    if ax == bx and ay == by:
+        return ""
+    tiles = tiles_on_segment(ax, ay, bx, by)
+    last = len(tiles) - 1
+    for i, (x, y) in enumerate(tiles):
+        if 0 < i < last and not terrain.is_walkable(x, y):
+            return f"block=({x},{y})"
+        if i < last:
+            nx, ny = tiles[i + 1]
+            step = _los_step_block(terrain, x, y, nx, ny)
+            if step:
+                return step
+    return ""
 
 
 def line_of_sight_clear(
@@ -142,20 +206,7 @@ def line_of_sight_clear(
     cells are open). Endpoints may be non-walkable; the edge into them is
     still checked.
     """
-    ax, ay = a
-    bx, by = b
-    if ax == bx and ay == by:
-        return True
-    tiles = tiles_on_segment(ax, ay, bx, by)
-    last = len(tiles) - 1
-    for i, (x, y) in enumerate(tiles):
-        if 0 < i < last and not terrain.is_walkable(x, y):
-            return False
-        if i < last:
-            nx, ny = tiles[i + 1]
-            if not _los_step_open(terrain, x, y, nx, ny):
-                return False
-    return True
+    return los_block_label(terrain, a, b) == ""
 
 
 def dungeon_max_hop_tiles() -> int:
@@ -182,6 +233,7 @@ __all__ = [
     "get_dungeon_mode_override",
     "is_dungeon_map",
     "tiles_on_segment",
+    "los_block_label",
     "line_of_sight_clear",
     "dungeon_max_hop_tiles",
     "dungeon_arrive_tiles",

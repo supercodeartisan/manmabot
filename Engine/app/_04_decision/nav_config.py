@@ -333,6 +333,31 @@ def _seal_silver_knight_inn(terrain: Any, pack_id: str) -> None:
             walkable[_INN_SOUTH_WALL_Y, x] = False
 
 
+def _warm_walk_components(pack: Any) -> None:
+    """Read white-tile component ids while the map is loading.
+
+    The active pack is first. Every other pack the walk service knows is
+    read from its file too, so the decision tick compares ids. A failure
+    here leaves planning on its own load.
+    """
+    try:
+        from app._04_decision.world_nav.ready.nav_path import shared_walk_service
+
+        service = shared_walk_service()
+        if pack is not None:
+            service.preload_pack(str(pack.id))
+        service.preload_known()
+        from app._04_decision.world_nav.npc_teleporters import warm_teleporter_catalog
+
+        warm_teleporter_catalog()
+    except Exception as exc:
+        get_logger("nav").warning(
+            "walk components skipped pack=%s (%s)",
+            getattr(pack, "id", ""),
+            exc,
+        )
+
+
 def _load_navigation_graphs(section: dict[str, Any]) -> None:
     """Load offline nav prebuild into terrain / coarse / portal globals.
 
@@ -385,6 +410,7 @@ def _load_navigation_graphs(section: dict[str, Any]) -> None:
         meta.cluster,
         (time.perf_counter() - t0) * 1000.0,
     )
+    _warm_walk_components(pack)
 
 
 def configure_navigation(config: Optional[dict[str, Any]] = None) -> WorldOrigin:

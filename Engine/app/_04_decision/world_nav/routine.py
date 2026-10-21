@@ -79,9 +79,10 @@ class RoutineCursor:
     fail_mask: set[int] = field(default_factory=set)
     cycle_start_index: int = 0
 
-    def _start_clock(self) -> None:
+    def _zero_clock(self) -> None:
+        """Drop the stay. Sampling starts it again inside the hunt zone."""
         self.elapsed_s = 0.0
-        self.running_since = time.monotonic()
+        self.running_since = 0.0
 
     def elapsed(self, now: float | None = None) -> float:
         total = float(self.elapsed_s)
@@ -112,9 +113,8 @@ class RoutineCursor:
     def from_entries(cls, entries: list[dict[str, Any]] | None) -> "RoutineCursor":
         """Build from already-normalized routine rows (session inject path)."""
         rows = [dict(e) for e in (entries or []) if isinstance(e, dict)]
-        cursor = cls(entries=rows, index=0)
-        cursor._start_clock()
-        return cursor
+        # Stay at zero until the character is inside this row's hunt zone.
+        return cls(entries=rows, index=0)
 
     @classmethod
     def from_routine(cls, raw: Any) -> "RoutineCursor":
@@ -150,9 +150,14 @@ class RoutineCursor:
         return self.entries[self.index % len(self.entries)]
 
     def mark_arrived(self, *, reset_clock: bool = True) -> None:
-        """Record arrival. Return trips keep the row clock that is already running."""
-        if reset_clock:
-            self._start_clock()
+        """Record arrival.
+
+        The row clock is not started or cleared here. ``reset_clock`` remains
+        so existing callers keep working, and it is ignored: reaching the
+        center must not erase time already counted from the zone edge.
+        ``advance`` zeros a new row. Stop drops the cursor.
+        """
+        del reset_clock
         self.fail_mask.discard(self.index)
 
     def duration_expired(self) -> bool:
@@ -166,7 +171,7 @@ class RoutineCursor:
         if not self.entries:
             return None
         self.index = (self.index + 1) % len(self.entries)
-        self._start_clock()
+        self._zero_clock()
         return self.active()
 
     def mark_fail(self) -> None:
@@ -345,3 +350,102 @@ def release_dungeon_routine_clock(blackboard: Any) -> bool:
         cursor.elapsed(),
     )
     return True
+
+
+def routine_hunt_zone_inside(blackboard: Any) -> bool:
+    """True when this battle row should be counting.
+
+    A field row counts inside any selected farm rectangle on its map.
+    A dungeon row counts on the hunt floor. A row with no rectangles counts
+    once the live map is that pack. Break rows are not a hunt zone.
+    """
+    cursor = _routine_cursor(blackboard)
+    entry = cursor.active() if cursor is not None else None
+    if not isinstance(entry, dict):
+        return False
+    if str(entry.get("kind") or "battle").strip().lower() == "break":
+        return False
+    pack_id = str(entry.get("map_id") or "").strip()
+    if not pack_id:
+        return False
+    if _routine_row_is_dungeon(blackboard):
+        from app._03_world.space.map_pack import get_active_map_pack
+        from app._04_decision.dungeon_floor_route import (
+            arrived_on_hunt_floor,
+            needs_floor_route,
+        )
+
+        live = get_active_map_pack()
+        live_id = "" if live is None else str(live.id)
+        if needs_floor_route(pack_id):
+            return bool(arrived_on_hunt_floor(live_id, pack_id))
+        return live_id == pack_id
+
+    from app._04_decision.farm_time import _live_map_matches_pack
+
+    if not _live_map_matches_pack(blackboard, pack_id):
+        return False
+    names = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
+    if not names:
+        return True
+    from app._04_decision.farm_area import farm_rect_from_mapping
+    from app._04_decision.world_nav.overlays import farm_rects_selected
+
+    rects = farm_rects_selected(blackboard, pack_id, names)
+    if not rects:
+        return False
+    origin = getattr(blackboard, "world_origin", None)
+    if origin is None:
+        return False
+    try:
+        x = int(origin.x)
+        y = int(origin.y)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    for index, raw in enumerate(rects):
+        if not isinstance(raw, dict):
+            continue
+        try:
+            farm = farm_rect_from_mapping(raw, index=index)
+        except (KeyError, TypeError, ValueError):
+            continue
+        if farm.contains(x, y):
+            return True
+    return False
+
+
+def sample_routine_zone_clock(blackboard: Any) -> None:
+    """Open the row clock only while the project is deciding inside the zone.
+
+    Leaving the zone commits the seconds and holds them. The next entry
+    continues. A dungeon retreat hold stays frozen until the hunt floor
+    releases it. Pause never reaches this sampler.
+    """
+    cursor = _routine_cursor(blackboard)
+    if cursor is None:
+        return
+    scratch = getattr(blackboard, "scratch", None)
+    if isinstance(scratch, dict) and scratch.get(ROUTINE_CLOCK_HELD):
+        return
+    entry = cursor.active()
+    kind = "battle"
+    if isinstance(entry, dict):
+        kind = str(entry.get("kind") or "battle").strip().lower()
+    counting = kind == "break" or routine_hunt_zone_inside(blackboard)
+    if not counting:
+        cursor.freeze()
+        return
+    fresh = (not cursor.ticking()) and cursor.elapsed() <= 0.0
+    cursor.resume()
+    if not fresh:
+        return
+    from app.bot_log import get_logger
+
+    origin = getattr(blackboard, "world_origin", None)
+    get_logger("nav").info(
+        "routine clock start map=%s kind=%s at (%s,%s)",
+        None if not isinstance(entry, dict) else entry.get("map_id"),
+        kind,
+        getattr(origin, "x", "-"),
+        getattr(origin, "y", "-"),
+    )

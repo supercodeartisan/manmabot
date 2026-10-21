@@ -150,6 +150,24 @@ def discover_map_packs() -> list[MapPack]:
     return packs
 
 
+_IMAGE_SIZE: dict[str, tuple[int, int]] = {}
+
+
+def pack_image_size(pack: MapPack) -> tuple[int, int] | None:
+    """Pixel size of the pack nav image. Header only; cached per path."""
+    key = str(pack.image_path)
+    hit = _IMAGE_SIZE.get(key)
+    if hit is not None:
+        return hit
+    try:
+        with Image.open(pack.image_path) as im:
+            size = (int(im.size[0]), int(im.size[1]))
+    except OSError:
+        return None
+    _IMAGE_SIZE[key] = size
+    return size
+
+
 def open_pack_image(pack: MapPack) -> Image.Image:
     im = Image.open(pack.image_path)
     im.load()

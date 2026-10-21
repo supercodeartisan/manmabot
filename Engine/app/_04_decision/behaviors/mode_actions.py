@@ -431,7 +431,7 @@ def hp_potion_reason(state: "GameState") -> str:
 HP_RETREAT_STARTED = object()
 _SCRATCH_HP_RETREAT = "hp_retreat_kind"
 _SCRATCH_HP_TP_ONCE = "hp_teleport_once_fired"
-# After HP TP / talking-scroll land: try mother tree once before 50% wait.
+# After HP TP / talking-scroll land: try mother tree once before passive wait.
 _SCRATCH_POST_LAND_TREE = "hp_post_land_tree_tried"
 
 
@@ -1327,24 +1327,122 @@ def _log_hp_idle(
     )
 
 
-def maybe_mother_tree_before_passive_wait(
+def _live_nav_pack(blackboard: "Blackboard") -> str:
+    """Pack synced from MapSubsystem mapId, else the pack already loaded."""
+    from app._03_world.space.map_pack import get_active_map_pack
+    from app._04_decision.live_map_pack import SCRATCH_LIVE_MAP_PACK
+
+    pack = str(blackboard.scratch.get(SCRATCH_LIVE_MAP_PACK) or "").strip()
+    if pack:
+        return pack
+    active = get_active_map_pack()
+    return str(getattr(active, "id", "") or "").strip()
+
+
+def _retreat_limit_ratio() -> float | None:
+    """Operator retreat percent. None when that row is off."""
+    from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
+
+    actions = pm.HP_ACTIONS or normalize_hp_actions(None)
+    limit = action_threshold(actions, "retreat")
+    if limit is None:
+        return None
+    return float(limit)
+
+
+def _dungeon_teleport_mother_tree_due(
+    state: "GameState", blackboard: "Blackboard"
+) -> bool:
+    """After an escape teleport off Talking Island and the mainland.
+
+    HP is still under the operator retreat percent, heal cannot spend MP,
+    and no HP potion can be used. Field packs keep the 50% scroll/teleport rule.
+    """
+    from app._04_decision.mode_control import hp_ratio
+    from app._04_decision.world_nav.hooks import FIELD_WORLD_NAV_PACKS
+
+    pack = _live_nav_pack(blackboard)
+    if not pack or pack in FIELD_WORLD_NAV_PACKS:
+        return False
+    ratio = hp_ratio(state)
+    limit = _retreat_limit_ratio()
+    if ratio is None or limit is None or ratio >= limit:
+        return False
+    if not heal_blocked_by_mana(state, blackboard, role="heal"):
+        return False
+    if _can_potion_now(state):
+        return False
+    return True
+
+
+def resume_hunt_above_retreat_limit(
+    state: "GameState", blackboard: "Blackboard"
+) -> bool:
+    """Leave an HP retreat when recovery items cannot run and HP is above the retreat line.
+
+    Under 95% is still a retreat while heal or a potion can be used, and while
+    a mother-tree trip is in progress. MP and return retreats do not use this.
+    """
+    from app._04_decision.mode_control import RETREAT_FOR_HP, hp_ratio
+    from app.bot_log import get_logger
+
+    if blackboard.scratch.get("retreat_for") != RETREAT_FOR_HP:
+        return False
+    if blackboard.scratch.get("mother_tree_trip"):
+        return False
+    ratio = hp_ratio(state)
+    limit = _retreat_limit_ratio()
+    if ratio is None or limit is None or ratio <= limit:
+        return False
+    if ratio >= float(pm.HP_ALMOST_FULL_RATIO):
+        return False
+    if can_active_hp_recover(state):
+        return False
+    get_logger("hp").info(
+        "hp retreat resume hunt (no heal/potion, hp=%.2f limit=%.2f)",
+        float(ratio),
+        float(limit),
+    )
+    return True
+
+
+def _arm_post_land_mother_tree(
     state: "GameState",
     blackboard: "Blackboard",
+    *,
+    detail: str,
 ) -> Status | object | None:
-    """After HP TP/scroll land with no heal/items and HP < 50%: world tree once.
-
-    Escape order is unchanged. This only runs on the post-landing wait that
-    would otherwise idle until ``HP_PASSIVE_RECOVER_RATIO``.
-    """
     from app._04_decision.mode_control import (
         RETREAT_FOR_HP,
         begin_retreat,
         elf_uses_mother_tree,
-        hp_ratio,
     )
+    from app.bot_log import get_logger
+
+    if not elf_uses_mother_tree(state, blackboard):
+        blackboard.scratch[_SCRATCH_POST_LAND_TREE] = True
+        return None
+    blackboard.scratch[_SCRATCH_POST_LAND_TREE] = True
+    if begin_retreat(blackboard, reason=RETREAT_FOR_HP, use_mother_tree=True):
+        blackboard.scratch[_SCRATCH_HP_RETREAT] = "mother_tree"
+        get_logger("hp").info("%s", detail)
+        return HP_RETREAT_STARTED
+    return None
+
+
+def maybe_mother_tree_before_passive_wait(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> Status | object | None:
+    """After HP TP/scroll land, world tree once when in-place recovery cannot run.
+
+    A dungeon escape teleport uses the operator retreat percent when MP blocks
+    heal and no potion remains. Scroll landings, and field teleports, still use
+    HP under ``HP_PASSIVE_RECOVER_RATIO`` with no heal and no potion.
+    """
+    from app._04_decision.mode_control import RETREAT_FOR_HP, hp_ratio
     from app._04_decision.player_mode import PlayerMode
     from app._04_decision.talking_scroll import SCRATCH_HP_SAFE_SCROLLED
-    from app.bot_log import get_logger
 
     if blackboard.player_mode is not PlayerMode.RETREATING:
         return None
@@ -1363,22 +1461,27 @@ def maybe_mother_tree_before_passive_wait(
     )
     if not landed_scroll and not landed_tp:
         return None
+    if landed_tp and _dungeon_teleport_mother_tree_due(state, blackboard):
+        ratio = hp_ratio(state)
+        limit = _retreat_limit_ratio()
+        return _arm_post_land_mother_tree(
+            state,
+            blackboard,
+            detail=(
+                "hp post-teleport mother tree (mp blocked, no potion, hp=%.2f limit=%.2f)"
+                % (float(ratio or 0.0), float(limit or 0.0))
+            ),
+        )
     if can_active_hp_recover(state):
         return None
     ratio = hp_ratio(state)
     if ratio is None or ratio >= float(pm.HP_PASSIVE_RECOVER_RATIO):
         return None
-    if not elf_uses_mother_tree(state, blackboard):
-        blackboard.scratch[_SCRATCH_POST_LAND_TREE] = True
-        return None
-    blackboard.scratch[_SCRATCH_POST_LAND_TREE] = True
-    if begin_retreat(blackboard, reason=RETREAT_FOR_HP, use_mother_tree=True):
-        blackboard.scratch[_SCRATCH_HP_RETREAT] = "mother_tree"
-        get_logger("hp").info(
-            "hp post-land mother tree (no heal/items, hp=%.2f)", float(ratio)
-        )
-        return HP_RETREAT_STARTED
-    return None
+    return _arm_post_land_mother_tree(
+        state,
+        blackboard,
+        detail="hp post-land mother tree (no heal/items, hp=%.2f)" % float(ratio),
+    )
 
 
 def arm_hp_escape_fallback(
@@ -1622,12 +1725,37 @@ def continue_or_start_combat(
                         # No wall detour in dungeons — release sticky without
                         # give-up cooldown so the mob stays selectable when LOS
                         # clears. nearest_attackable already skips no-LOS.
+                        from app._04_decision.combat_query import attack_line_block
                         from app.bot_log import get_logger
 
-                        get_logger("combat").info(
-                            "wall/fence — dungeon skip id=%s (no give-up)",
-                            tid,
-                        )
+                        blocked = attack_line_block(obj, origin)
+                        if blocked:
+                            from app._04_decision.combat_query import (
+                                attack_line_refusal_text,
+                            )
+
+                            record = attack_line_refusal_text(obj, origin, state)
+                            if record is not None:
+                                info, segment = record
+                                get_logger("combat").info(
+                                    "dungeon skip %s (no give-up)",
+                                    info,
+                                )
+                                get_logger("combat").debug(
+                                    "dungeon skip %s",
+                                    segment,
+                                )
+                            else:
+                                get_logger("combat").info(
+                                    "wall/fence — dungeon skip id=%s %s (no give-up)",
+                                    tid,
+                                    blocked,
+                                )
+                        else:
+                            get_logger("combat").info(
+                                "wall/fence — dungeon skip id=%s (no give-up)",
+                                tid,
+                            )
                         from app._04_decision.clickgap import log_sticky_release
 
                         log_sticky_release(state, blackboard, "dungeon-wall")
@@ -1888,13 +2016,16 @@ def farm_loot_or_combat(
 
     1. A living sticky target is finished before any new loot click, unless
        a monster that has attacked me should take the lock. The sticky
-       yields when it has not attacked me. Among monsters that have, the
-       lower known level takes the lock. Same level keeps the current
-       sticky. The previous target is not given up.
+       yields when it has not attacked me. A living sticky that has
+       attacked me stays until that monster is dead or the lock is cleared.
+       A lower known level does not take it. When the lock is empty, the
+       lower known level is engaged. The previous target is not given up.
     2. Else force-engage a monster/summon whose AttackAction targets me
-       (species blacklist bypass). That target is ``finish_kill`` — engage
-       priority only; give-up / abandon still clear sticky. Loot waits
-       while the sticky is held.
+       this tick. A filtered species is included only while that row is
+       live, in the field and in a dungeon. That target is ``finish_kill``
+       for an allowed species. A filtered species is dropped when it stops
+       attacking. Give-up / abandon still clear sticky. Loot waits while
+       the sticky is held.
     3. Else pick up on-screen (or memory-near) ground items — loot is priority
        over nearby non-attacking threats (no 5-tile interrupt). Adena is
        preferred over other piles; sticky non-adena yields to adena.
@@ -2033,6 +2164,7 @@ def farm_loot_or_combat(
             state, blackboard, allow_new=True, screen_only=True, chosen=enemy
         )
     # When nothing passes screen/path, log nearest filter drops (1s throttle).
+    path_details: list[tuple[str, str]] = []
     try:
         detail = describe_attackable_filter_skips(
             state,
@@ -2040,15 +2172,23 @@ def farm_loot_or_combat(
             origin=origin,
             screen_only=True,
             check_path=True,
+            path_details=path_details,
         )
     except Exception:
         detail = ""
+        path_details = []
     if detail:
         now = time.time()
         last = float(blackboard.scratch.get("_screen_combat_skip_log_at") or 0.0)
         if now - last >= 1.0:
             blackboard.scratch["_screen_combat_skip_log_at"] = now
             event("combat", "screen_combat skips: %s", detail)
+            from app.bot_log import get_logger
+
+            combat_log = get_logger("combat")
+            for info, segment in path_details:
+                event("combat", "screen_combat skip %s", info)
+                combat_log.debug("screen_combat skip %s", segment)
     event("search", "farm branch=none (wander/search next)")
     return None
 

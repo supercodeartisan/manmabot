@@ -6,18 +6,18 @@
   "output_rotate_ms": 60000,
   "once": 0,
 
-  "player_x_offset": "0x16DED30",
-  "player_y_offset": "0x16DED34",
+  "player_x_offset": "0x16ED4F0",
+  "player_y_offset": "0x16ED4F4",
   "player_hp_offset": "0x16DED3C",
   "player_maxhp_offset": "0x16DED40",
   "player_mp_offset": "0x16DED44",
   "player_maxmp_offset": "0x16DED48",
   "player_level_offset": "0x16DED4C",
-  "ent_mgr_offset": "0x16DEE80",
-  "grid_vft": "0x11DE3B8",
+  "ent_mgr_offset": "0x16ED640",
+  "grid_vft": "0x11E9430",
 
-  "vft_pres_a": "0x11DD5E8",
-  "vft_pres_b": "0x11E0FB8",
+  "vft_pres_a": "0x11E8858",
+  "vft_pres_b": "0x11EC1D8",
 
   "off_live_u": "0x78",
   "off_live_v": "0x7C",
@@ -49,13 +49,13 @@
   "client_h": 0,
 
   "classes": {
-    "0x11E1160": "Monster",
-    "0x11E1080": "InteractiveNPC",
-    "0x11E10B8": "Item",
-    "0x11E12A8": "MyPlayer",
-    "0x11E1610": "SegmentProp",
-    "0x11E1580": "Ship",
-    "0x11E1708": "SummonedMonster",
-    "0x11E1270": "Player"
+    "0x11EC380": "Monster",
+    "0x11EC2A0": "InteractiveNPC",
+    "0x11EC2D8": "Item",
+    "0x11EC4C8": "MyPlayer",
+    "0x11EC830": "SegmentProp",
+    "0x11EC7A0": "Ship",
+    "0x11EC930": "SummonedMonster",
+    "0x11EC490": "Player"
   }
 }

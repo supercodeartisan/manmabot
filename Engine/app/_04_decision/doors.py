@@ -1,7 +1,8 @@
 """Live door tiles from the print_state snapshot.
 
-``not_permitted`` tiles are walls for pathfinding. A door cursor clicks only
-when the nearest door is ``close``. ``open`` and ``unknown`` skip that point.
+``not_permitted`` tiles are walls for pathfinding. A closed door on this hop's
+guide is opened from its memory tile with the entrance cursor rings. ``open``
+and ``unknown`` skip that point.
 """
 from __future__ import annotations
 
@@ -60,6 +61,39 @@ def door_state_at(x: int, y: int) -> str | None:
     for dx, dy, state in _DOORS:
         if dx == ax and dy == ay:
             return state
+    return None
+
+
+def closed_door_before_click(
+    guide: list[tuple[int, int]] | tuple[tuple[int, int], ...],
+    start: tuple[int, int],
+    click: tuple[int, int] | None,
+) -> tuple[int, int] | None:
+    """First ``close`` door on the guide from ``start`` through ``click``.
+
+    ``None`` when this hop's click does not cross a closed door. A door past
+    the click, or a click that is not on the guide, is left for a later hop.
+    """
+    if click is None:
+        return None
+    sx, sy = int(start[0]), int(start[1])
+    click_t = (int(click[0]), int(click[1]))
+    if click_t == (sx, sy):
+        return None
+    tiles = [(int(raw[0]), int(raw[1])) for raw in guide]
+    if click_t not in tiles:
+        return None
+    seen_start = (sx, sy) not in tiles
+    for tile in tiles:
+        if tile == (sx, sy):
+            seen_start = True
+            continue
+        if not seen_start:
+            continue
+        if door_state_at(tile[0], tile[1]) == "close":
+            return tile
+        if tile == click_t:
+            return None
     return None
 
 

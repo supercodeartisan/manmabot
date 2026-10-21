@@ -19,7 +19,15 @@ _LAST_SHOP_SNAPSHOT_AT: float = 0.0
 
 
 def default_dll_path() -> Path:
-    return _NPC_CONV / "shop_listen.dll"
+    """Newest shop image. A locked live DLL keeps the previous build beside it."""
+    candidates = [
+        _NPC_CONV / "shop_listen.new.dll",
+        _NPC_CONV / "shop_listen.dll",
+    ]
+    found = [path for path in candidates if path.is_file()]
+    if not found:
+        return candidates[-1]
+    return max(found, key=lambda path: path.stat().st_mtime)
 
 
 class ShopListenReader:

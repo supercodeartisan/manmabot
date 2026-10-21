@@ -1,14 +1,9 @@
 """Mainland region overlay for the map editor.
 
 ``map4_boundaries.tsv`` is in game-world coordinates. The mainland pack
-stores nav tiles relative to ``origin_x/y``. The tint covers only the
-large fields (켄트, 하이네, 오렌, 오크 숲, and the rest of
-``_MAIN_REGIONS``). 오렌 includes the snow wall. 화룡의 둥지 is drawn
-from its own rectangle. Village footprints use the surrounding field
-color, and their names are not drawn.
-
-The walkability image is left unchanged. This overlay is drawn on top
-while an area is being edited.
+stores nav tiles relative to ``origin_x/y``. Region colors and dividing
+lines are not drawn. The editor status line still reports the region
+under the cursor. User-drawn farm rectangles are painted by the editor.
 """
 
 from __future__ import annotations
@@ -17,15 +12,15 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QImage, QPainter
 
 from i18n.localized_names import mainland_region_display
 
 HAIRLINE = 4
 FILL_ALPHA = 72
 
-# Large fields that get a tint and a name.
+# Large fields that get a tint. Names stay off the picture.
 _MAIN_REGIONS = frozenset({
     "글루디오",
     "켄트",
@@ -77,22 +72,6 @@ def _area_name(name_a: str, name_b: str) -> str:
         if main:
             return main
     return ""
-
-
-_BUTTON = {
-    "ko": "지역 경계",
-    "zh": "区域边界",
-    "en": "Region borders",
-}
-
-
-def region_button_text(language: str) -> str:
-    code = str(language or "en").lower()
-    if code.startswith("ko"):
-        return _BUTTON["ko"]
-    if code.startswith("zh"):
-        return _BUTTON["zh"]
-    return _BUTTON["en"]
 
 
 def _find_tsv(pack_root: Path) -> Path | None:
@@ -226,122 +205,6 @@ class MainlandRegionOverlay:
             self._label_cache[name] = cached
         return cached
 
-    def paint(
-        self,
-        painter: QPainter,
-        *,
-        origin: tuple[float, float],
-        scale: float,
-        pixel_scale: int,
-        tile_to_canvas,
-        view_w: int,
-        view_h: int,
-        hover_tile: tuple[int, int] | None = None,
-        pointer: tuple[float, float] | None = None,
-    ) -> None:
-        ox, oy = origin
-        ps = max(1, int(pixel_scale))
-        tile_px = ps * scale
-        draw_visible_image(
-            painter, self.image, ox, oy, tile_px, view_w, view_h
-        )
-        hover_place = None
-        hover_region = ""
-        if hover_tile is not None:
-            hover_place = self.place_at(hover_tile[0], hover_tile[1])
-            hover_region = self.region_at(hover_tile[0], hover_tile[1])
-            if hover_place is not None and not hover_region:
-                hover_region = hover_place.parent
-
-        if tile_px >= 1.35:
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(QColor(255, 248, 220, 210), 1.25))
-            for x0, y0, x1, y1 in self.borders:
-                ax0, ay0 = tile_to_canvas(x0, y0)
-                ax1, ay1 = tile_to_canvas(x1, y1)
-                if max(ax0, ax1) < 0 or min(ax0, ax1) > view_w:
-                    continue
-                if max(ay0, ay1) < 0 or min(ay0, ay1) > view_h:
-                    continue
-                painter.drawLine(QPointF(ax0, ay0), QPointF(ax1, ay1))
-
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        clip = painter.clipBoundingRect()
-        if not clip.isValid() or clip.isEmpty():
-            clip = QRectF(0, 0, view_w, view_h)
-        taken: list[QRectF] = []
-        place_font = QFont("", 9)
-        region_font = QFont("", 11, QFont.Weight.DemiBold)
-        for place in self.places:
-            cx, cy = tile_to_canvas(
-                (place.x0 + place.x1) / 2.0,
-                (place.y0 + place.y1) / 2.0,
-            )
-            if cx < clip.left() - 40 or cy < clip.top() - 20 or cx > clip.right() + 40 or cy > clip.bottom() + 20:
-                continue
-            hot = hover_place is not None and (
-                place.x0 == hover_place.x0 and place.y0 == hover_place.y0
-            )
-            painter.setFont(place_font)
-            _place_label(
-                painter,
-                taken,
-                clip,
-                cx,
-                cy,
-                self._label(place.name),
-                fill=QColor(15, 23, 42, 230 if hot else 188),
-                outline=QColor(255, 248, 220, 240) if hot else None,
-                center=True,
-                force=True,
-            )
-        painter.setFont(region_font)
-        hot_label: tuple[float, float, str] | None = None
-        for region in self.regions:
-            cx, cy = tile_to_canvas(region.cx, region.cy)
-            hot = bool(hover_region) and region.name == hover_region
-            if hot:
-                hot_label = (cx, cy, region.name)
-                continue
-            if cx < clip.left() - 40 or cy < clip.top() - 20 or cx > clip.right() + 40 or cy > clip.bottom() + 20:
-                continue
-            _place_label(
-                painter,
-                taken,
-                clip,
-                cx,
-                cy,
-                self._label(region.name),
-                fill=QColor(15, 23, 42, 150),
-                center=True,
-                force=True,
-            )
-        if hot_label is not None:
-            cx, cy, name = hot_label
-            painter.setFont(region_font)
-            _place_label(
-                painter,
-                taken,
-                clip,
-                cx,
-                cy,
-                self._label(name),
-                fill=QColor(15, 23, 42, 235),
-                center=True,
-                outline=QColor(255, 248, 220, 240),
-                force=True,
-            )
-        if pointer is not None and (hover_region or hover_place is not None):
-            place_name = "" if hover_place is None else hover_place.name
-            if place_name and hover_region and place_name != hover_region:
-                caption = f"{self._label(hover_region)}  ·  {self._label(place_name)}"
-            else:
-                caption = self._label(place_name or hover_region)
-            painter.setFont(place_font)
-            _chip(painter, pointer[0], pointer[1], caption, view_w, view_h)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-
-
 def draw_visible_image(
     painter: QPainter,
     image: QImage,
@@ -374,68 +237,6 @@ def draw_visible_image(
         image,
         QRectF(float(sx0), float(sy0), float(sx1 - sx0), float(sy1 - sy0)),
     )
-
-
-def _fits(rect: QRectF, taken: list[QRectF], clip: QRectF) -> bool:
-    if not rect.intersects(clip):
-        return False
-    return not any(rect.intersects(other) for other in taken)
-
-
-def _place_label(
-    painter: QPainter,
-    taken: list[QRectF],
-    clip: QRectF,
-    x: float,
-    y: float,
-    text: str,
-    *,
-    fill: QColor,
-    center: bool = False,
-    outline: QColor | None = None,
-    force: bool = False,
-) -> None:
-    if not text:
-        return
-    metrics = painter.fontMetrics()
-    width = metrics.horizontalAdvance(text) + 14
-    height = max(18, metrics.height() + 4)
-    rect = (
-        QRectF(x - width / 2, y - height / 2, width, height)
-        if center
-        else QRectF(x, y, width, height)
-    )
-    if not force and not _fits(rect, taken, clip):
-        return
-    painter.setPen(Qt.PenStyle.NoPen if outline is None else QPen(outline, 1.4))
-    painter.setBrush(fill)
-    painter.drawRoundedRect(rect, 7, 7)
-    painter.setPen(QColor(255, 251, 235))
-    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
-    taken.append(rect)
-
-
-def _chip(
-    painter: QPainter,
-    x: float,
-    y: float,
-    text: str,
-    view_w: int,
-    view_h: int,
-) -> None:
-    if not text:
-        return
-    metrics = painter.fontMetrics()
-    width = metrics.horizontalAdvance(text) + 16
-    height = max(22, metrics.height() + 8)
-    left = min(max(8.0, x + 16), max(8.0, view_w - width - 8))
-    top = min(max(8.0, y + 18), max(8.0, view_h - height - 8))
-    rect = QRectF(left, top, width, height)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor(15, 23, 42, 228))
-    painter.drawRoundedRect(rect, 8, 8)
-    painter.setPen(QColor(255, 251, 235))
-    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
 
 
 def _box(row: dict[str, str]) -> tuple[int, int, int, int]:

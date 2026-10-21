@@ -1759,10 +1759,10 @@ class UnifiedTaskEditor(ttk.Frame):
         self._refresh_routine_summary()
 
     def _load_map_catalog(self) -> None:
-        from ui.hangul_sort import hangul_sort_key
+        from ui.hangul_sort import map_choice_sort_key
 
         choices = list(list_map_choices(self.app.language))
-        choices.sort(key=lambda item: hangul_sort_key(item[1]))
+        choices.sort(key=map_choice_sort_key)
         self._map_choices = choices
         self._map_labels = {map_id: label for map_id, label, _dungeon in choices}
         self._map_ids = {label: map_id for map_id, label, _dungeon in choices}
@@ -2211,11 +2211,14 @@ class UnifiedTaskEditor(ttk.Frame):
             return
 
     def _add_routine_map(self, kind: str) -> None:
+        from ui.reachable_battle_maps import battle_picker_choices
+
         self._load_map_catalog()
-        choices = [
-            item for item in self._map_choices
-            if kind != "break" or not item[2]
-        ]
+        choices = list(self._map_choices)
+        if kind == "break":
+            choices = [item for item in choices if not item[2]]
+        else:
+            choices = battle_picker_choices(choices)
         if not choices:
             key = "routine_break_general_only" if kind == "break" else "probe_map_missing"
             messagebox.showinfo(self.t["title"], self.t[key], parent=self)

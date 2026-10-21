@@ -485,12 +485,20 @@ _MOTHER_TREE_BUFF_SETTLE_S = 2.0
 _MOTHER_TREE_RECAST_MP = 10
 
 
-def _emit_return_to_mother_tree(blackboard: "Blackboard") -> Status:
+def _emit_return_to_mother_tree(
+    blackboard: "Blackboard",
+    state: "GameState | None" = None,
+    *,
+    remember_depart: bool = False,
+) -> Status:
     """Press Teleport to Mother once and start the 2 s buff settle."""
     import time
 
     from app._04_decision.spells import mark_slot_used
+    from app._04_decision.world_nav.hooks import remember_mother_tree_depart
 
+    if remember_depart and state is not None:
+        remember_mother_tree_depart(blackboard, state)
     mark_slot_used(blackboard, "mother_tree")
     blackboard.scratch[_SCRATCH_MOTHER_TREE_CAST_AT] = time.time()
     blackboard.scratch["mother_tree_trip"] = "recharge"
@@ -559,7 +567,7 @@ def _hold_until_world_tree_blessing(
     if not _mother_tree_recast_mp_ok(state, blackboard):
         return _mother_tree_idle(blackboard, "waiting for mother tree mp")
     get_logger("hp").info("mother tree blessing missing, recast teleport to mother")
-    return _emit_return_to_mother_tree(blackboard)
+    return _emit_return_to_mother_tree(blackboard, state)
 
 
 def _tick_mother_tree_retreat(
@@ -585,7 +593,13 @@ def _tick_mother_tree_retreat(
     from app._04_decision.mode_control import hp_ratio
 
     if stage == "cast":
-        return _emit_return_to_mother_tree(blackboard)
+        from app._04_decision.world_nav.hooks import SCRATCH_MOTHER_TREE_DEPART
+
+        # First press of this retreat. A recast must not replace the hunt pose.
+        blackboard.scratch.pop(SCRATCH_MOTHER_TREE_DEPART, None)
+        return _emit_return_to_mother_tree(
+            blackboard, state, remember_depart=True
+        )
 
     # Recovered HP ends the retreat before another mother-tree press.
     ratio = hp_ratio(state)

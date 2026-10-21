@@ -68,6 +68,58 @@ def open_real_map_image(map_id: str):
         return None
 
 
+# Editor canvas only. Walkability stays on each pack's ``nav.png``.
+_LEGACY_PREVIEW_IDS = frozenset({"mainland", "talking_island"})
+
+
+def open_legacy_nav_preview(pack):
+    """Map-editor picture from ``legacy/nav.png``. Game logic keeps ``nav.png``.
+
+    The legacy file may match ``nav.png`` pixel for pixel, or be one pixel per
+    nav tile (``nav.png`` divided by ``pixel_scale``). The one-pixel case is
+    scaled up with nearest-neighbor so farm boxes stay on the same tiles.
+    Other maps, a missing file, or any other size returns None.
+    """
+    if pack is None or str(getattr(pack, "id", "") or "") not in _LEGACY_PREVIEW_IDS:
+        return None
+    root = getattr(pack, "root", None)
+    terrain = getattr(pack, "terrain_path", None)
+    if root is None or terrain is None:
+        return None
+    legacy = Path(root) / "legacy" / "nav.png"
+    terrain_path = Path(terrain)
+    if not legacy.is_file() or not terrain_path.is_file():
+        return None
+    from PIL import Image
+
+    try:
+        art = Image.open(legacy)
+        art.load()
+        with Image.open(terrain_path) as ref:
+            target = ref.size
+        scale = max(1, int(getattr(pack, "pixel_scale", 1) or 1))
+        tile_size = (target[0] // scale, target[1] // scale)
+        if art.size == target:
+            shown = art
+        elif (
+            scale > 1
+            and target[0] % scale == 0
+            and target[1] % scale == 0
+            and art.size == tile_size
+        ):
+            shown = art.resize(target, Image.Resampling.NEAREST)
+        else:
+            return None
+        return shown.convert("RGBA")
+    except OSError:
+        return None
+
+
+def open_mainland_legacy_preview(pack):
+    """Backward-compatible name for :func:`open_legacy_nav_preview`."""
+    return open_legacy_nav_preview(pack)
+
+
 def map_preview_path(map_id: str) -> Optional[Path]:
     """``images/Fantasy_Maps/<map_id>.png`` (or jpg/webp). Setup tab only."""
     return _find_named_image(MAP_PREVIEW_FOLDERS, map_id)
