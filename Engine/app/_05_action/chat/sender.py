@@ -7,6 +7,7 @@ input line and sends it. No clipboard and no SendInput.
 from __future__ import annotations
 
 import threading
+import time
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -124,30 +125,57 @@ class GameChat:
         )
 
 
-    def press_key(self, scancode: int, *, label: str = "", hold_ms: int = 40) -> ChatResult:
-        """One physical key in the game window (a key event, not ``WM_CHAR``)."""
+    def press_key(
+        self,
+        scancode: int,
+        *,
+        label: str = "",
+        hold_ms: int = 40,
+        english: bool = False,
+    ) -> ChatResult:
+        """One physical key in the game window (a key event, not ``WM_CHAR``).
+
+        ``english`` = hold the game IME out of 한글 mode for this key (a letter
+        key in 한글 mode is a jamo composition, not the letter)."""
         name = label or f"scan 0x{int(scancode):02X}"
         hwnd = self._find_hwnd()
         if not hwnd:
             return ChatResult(
                 text=name, status=EcStatus.PID, message=f"{GAME_PROCESS} window not found"
             )
+        ime_note = ""
         with self._lock:
             with self._input_handoff():
-                raw = self._library.press_key(
-                    hwnd=int(hwnd),
-                    scancode=int(scancode),
-                    hold_ms=int(hold_ms),
-                    focus_timeout_ms=int(self._pace.focus_timeout_ms),
-                )
+                if english:
+                    from .ime import english_ime
+
+                    with english_ime(int(hwnd)) as ime_note:
+                        raw = self._library.press_key(
+                            hwnd=int(hwnd),
+                            scancode=int(scancode),
+                            hold_ms=int(hold_ms),
+                            focus_timeout_ms=int(self._pace.focus_timeout_ms),
+                        )
+                        # The game reads the key after we return; keep English until then.
+                        time.sleep(0.15)
+                else:
+                    raw = self._library.press_key(
+                        hwnd=int(hwnd),
+                        scancode=int(scancode),
+                        hold_ms=int(hold_ms),
+                        focus_timeout_ms=int(self._pace.focus_timeout_ms),
+                    )
         try:
             status = EcStatus(int(raw.status))
         except ValueError:
             status = EcStatus.INTERNAL
+        message = str(raw.message or "").strip()
+        if ime_note:
+            message = f"{message} [ime {ime_note}]".strip()
         return ChatResult(
             text=name,
             status=status,
-            message=str(raw.message or "").strip(),
+            message=message,
             keys=int(raw.keys),
             failed=int(raw.failed),
             elapsed_ms=int(raw.elapsed_ms),

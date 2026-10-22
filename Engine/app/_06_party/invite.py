@@ -9,13 +9,14 @@
 - ``LeaderInvites``: one per Start. Sends the party policy first, leaves a
   party this character does not lead, then drives ``PartyInviter`` each tick:
   a roster name is invited only after that member confirmed the current
-  policy, not while its ``member_state`` says it is still accepting the last
-  invite (``sync.InviteGate``), and no line is typed right after an action
-  that opens an NPC dialog or teleports, nor right after a combat action
-  (unless combat has held a due invite for ``COMBAT_HOLD_MAX_S``). Joined =
-  party memory on either side (``sync.MemberStates.joined``); left = the
-  member reports it is out and the leader memory does not list it, for
-  ``LEFT_CONFIRM_S``.
+  policy, not while its ``member_state`` says its invite popup is still open
+  (``sync.InviteHold``), and no line is typed right after an action that
+  opens an NPC dialog or teleports, nor right after a combat action (unless
+  combat has held a due invite for ``COMBAT_HOLD_MAX_S``). No socket notice
+  is sent: the member sees the popup itself. Joined = leader party memory, or
+  the member accepted the popup (``invite_accept``) / its party memory says
+  so (``sync.reported_joined``); left = the member reports it is out and the
+  leader memory does not list it, for ``LEFT_CONFIRM_S``.
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
 injects policy publish, socket count and wait.
@@ -404,8 +405,7 @@ class LeaderInvites:
         publish_policy: Callable[[], Any] = lambda: None,
         ws_clients: Callable[[], int] = lambda: 0,
         policy_acked: Callable[[str], bool] = lambda _name: True,
-        announce_invite: Callable[[str], Any] = lambda _name: 0,
-        gate: Any = None,
+        hold: Any = None,
         reported_joined: Callable[[str], bool] = lambda _name: False,
         reported_out: Callable[[str], bool] = lambda _name: False,
         send_chat: Optional[Callable[[str], bool]] = None,
@@ -418,12 +418,10 @@ class LeaderInvites:
         self._publish_policy = publish_policy
         self._ws_clients = ws_clients
         self._policy_acked = policy_acked
-        self._announce_invite = announce_invite
-        # ``sync.InviteGate``: notice ids, resend until echoed, hold while accepting.
-        self._gate = gate
+        # ``sync.InviteHold``: no new /초대 while the member's invite popup is open.
+        self._hold = hold
         self._reported_joined = reported_joined
         self._reported_out = reported_out
-        self._announced: dict[str, int] = {}
         self._send_chat = send_chat
         self._wait = wait
         self._log = log
@@ -499,7 +497,7 @@ class LeaderInvites:
     def _ready(self, name: str) -> bool:
         if not self._acked(name):
             return False
-        return self._gate is None or bool(self._gate.may_invite(name))
+        return self._hold is None or bool(self._hold.may_invite(name))
 
     def tick(self, snapshot: Any, last_action: Any = None) -> Optional[str]:
         """One invite step; returns the line typed this tick, if any."""
@@ -515,8 +513,6 @@ class LeaderInvites:
             can_send = action_allows_chat(last_action) and self._combat_allows(
                 inviter, last_action
             )
-            if self._gate is not None:
-                self._gate.tick(inviter.missing())
         line = inviter.tick(
             snapshot,
             send_line=self._say,
@@ -525,15 +521,12 @@ class LeaderInvites:
             reported=self._reported_joined,
             reported_out=self._reported_out,
         )
-        if line and line.startswith(INVITE_PREFIX):
-            self._announce(line[len(INVITE_PREFIX):].strip())
         info = inviter.status()
         for row in info.get("rows") or []:
             name = str(row.get("name") or "")
             row["policy_acked"] = self._acked(name)
-            row["announced"] = self._announced.get(name.casefold(), 0)
-            if self._gate is not None:
-                row.update(self._gate.row(name))
+            if self._hold is not None:
+                row.update(self._hold.row(name))
         info["combat_hold_s"] = (
             round(self._clock() - self._combat_hold_at, 1)
             if self._combat_hold_at is not None
@@ -554,23 +547,6 @@ class LeaderInvites:
             return False
         self._combat_hold_at = None
         return True
-
-    def _announce(self, name: str) -> None:
-        """Tell the member socket the popup is up, so it presses accept."""
-        try:
-            if self._gate is not None:
-                sent = int(self._gate.announce(name) or 0)
-            else:
-                sent = int(self._announce_invite(name) or 0)
-        except Exception as exc:
-            self._log(f"Party invite notice for {name} failed: {exc}")
-            return
-        if sent:
-            key = name.casefold()
-            self._announced[key] = self._announced.get(key, 0) + 1
-            _note_monitor(f"invite notice → {name} (accept with Y) to {sent} socket(s)")
-        else:
-            self._log(f"Party invite notice for {name}: no member socket")
 
 
 __all__ = [

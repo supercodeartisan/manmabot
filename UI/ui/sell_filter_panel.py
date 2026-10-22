@@ -24,6 +24,7 @@ if _engine not in sys.path:
 from app._03_world.catalog.game_catalog import (
     ItemCatalogRow,
     item_by_key,
+    item_image_path,
     list_item_rows,
     resolve_item_key,
 )
@@ -167,7 +168,11 @@ def _owned_from_snapshot(
         seen.add(key)
         source_cat = ""
         if entry is not None:
-            shown = item_catalog_display_name(entry.name_ko, language) or entry.name_ko
+            shown = (
+                memory_name_for_ui(name, language)
+                or item_catalog_display_name(entry.name_ko, language)
+                or entry.name_ko
+            )
             icon = entry.image_path()
             source_cat = (
                 item_category_display_name(
@@ -178,7 +183,10 @@ def _owned_from_snapshot(
             )
         else:
             shown = memory_name_for_ui(name or key, language) or key
-            icon = None
+            icon = item_image_path(
+                [name, shown, key],
+                [item_id] if item_id else (),
+            )
         rows.append(
             _SellListRow(
                 key=key,

@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-_LIST = Path(__file__).resolve().parents[1] / "analysis" / "list" / "korean" / "spell.json"
+_LIST = Path(__file__).resolve().parents[1] / "data" / "catalog" / "list" / "korean" / "spell.json"
 _DIGITS = re.compile(r"\d+")
 _INSTANT = frozenset({"순간", "瞬間", "instant"})
 _SKIP_KO = frozenset({"힐", "텔레포트"})

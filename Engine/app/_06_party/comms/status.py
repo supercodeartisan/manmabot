@@ -67,4 +67,19 @@ def send_member_state(client: Any, body: dict) -> bool:
     return True
 
 
-__all__ = ["send_member_state", "send_member_status", "send_policy_ack"]
+def send_invite_accept(client: Any, body: dict) -> bool:
+    """One ``invite_accept`` frame (built by ``accept.InviteAccepter``)."""
+    from websocket.protocol import PartyMessage
+
+    if client is None or not getattr(client, "connected", False):
+        return False
+    client.send(PartyMessage(sender=str(body.get("from") or "member"), message=body))
+    return True
+
+
+__all__ = [
+    "send_invite_accept",
+    "send_member_state",
+    "send_member_status",
+    "send_policy_ack",
+]

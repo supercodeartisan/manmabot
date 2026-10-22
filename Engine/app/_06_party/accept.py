@@ -1,37 +1,52 @@
-"""Member side of the in-game invite: leader notice → wait → type Y.
+"""Member side of the in-game invite: invite popup → Y → ``invite_accept``.
 
-The leader sends ``party_invite`` right after ``/초대 <to>`` reached its game.
-The popup ([Yes]/[No]) has no memory sensor, so the notice is the only signal.
-Y goes out through the same typing module as the leader's ``/초대`` line
-(``app._05_action.chat`` → enter_chat), as a physical key through Interception:
-a typed ``y`` (``WM_CHAR``) reaches the game but the popup ignores it.
+The member reads the Yes/No invite popup itself (``invite_popup.party_invite``
+on the uidialog snapshot) — no leader notice, no delay. Y goes out as a
+physical key through Interception (``app._05_action.chat`` → enter_chat; a
+typed ``y`` as ``WM_CHAR`` is ignored by the popup), with the game IME held in
+English for the key (in 한글 mode Y is the jamo ``ㅛ``).
 
-The leader may resend one notice (same ``invite_id``) until this member's
-``member_state`` echoes it; a repeated id is ignored. A new id while one is
-queued keeps the first due time, so repeats never push the press back.
+Accepted = the popup closed after Y. The member then sends ``invite_accept``
+to the leader (repeated ``ACK_SENDS`` times, same ``accept_id``) and reports
+phase ``accepted`` in ``member_state``. Y is pressed again if the popup is
+still open ``REPRESS_S`` after a press, at most ``MAX_PRESSES`` per popup.
+
+A popup from someone other than the leader (``leader_name`` from the policy,
+when known) is left alone. Once party memory showed the join, losing it for
+``LEFT_CONFIRM_S`` turns ``accepted`` into ``left`` so the leader invites again.
 
 ``phase`` (sent to the leader in ``member_state``):
-idle · waiting (Y queued) · pressed (join check running) · joined · missed
-(no join after Y) · unverified (party memory unreadable) · skipped · failed.
+idle · popup (open, Y due) · pressed · accepted · left · missed (closed before
+Y) · skipped (not from the leader) · failed (Y did not reach the game / popup
+stayed open after every press).
 """
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Optional
+
+from .invite_popup import same_name
 
 # Set-1 scancode of the Y key.
 ACCEPT_SCANCODE = 0x15
-ACCEPT_DELAY_S = 30.0
-# After Y, party memory should show the join within this time.
-JOIN_CHECK_S = 5.0
+# Popup still open this long after Y: press again.
+REPRESS_S = 2.0
+MAX_PRESSES = 3
+# ``invite_accept`` is sent this many times (the leader books one per id).
+ACK_SENDS = 3
+ACK_EVERY_S = 2.0
+# Party memory lost this long after it showed the join = left the party.
+LEFT_CONFIRM_S = 10.0
 
 
 def type_accept_key() -> str:
-    """Press Y in the game window. Returns "" on success, else the error."""
+    """Press Y in the game window (IME held in English). "" on success, else the error."""
     from app._05_action.chat import default_game_chat
 
     try:
-        result = default_game_chat().press_key(ACCEPT_SCANCODE, label="Y (party invite)")
+        result = default_game_chat().press_key(
+            ACCEPT_SCANCODE, label="Y (party invite)", english=True
+        )
     except Exception as exc:
         return str(exc)
     return "" if result.ok else result.describe()
@@ -47,171 +62,217 @@ def _note_monitor(text: str) -> None:
 
 
 class InviteAccepter:
-    """One per member run. ``on_notice`` queues, ``tick`` presses when due."""
+    """One per member run; ``tick`` every bot tick with the current popup."""
 
     def __init__(
         self,
         *,
-        delay_s: float = ACCEPT_DELAY_S,
         press: Callable[[], str] = type_accept_key,
+        send_ack: Callable[[dict[str, Any]], bool] = lambda _body: False,
         clock: Callable[[], float] = time.monotonic,
         log: Callable[[str], None] = lambda _m: None,
     ) -> None:
-        self.delay_s = max(0.0, float(delay_s))
         self._press = press
+        self._send_ack = send_ack
         self._clock = clock
         self._log = log
         self.reset()
 
-    @property
-    def pending(self) -> bool:
-        return self._due is not None
-
     def reset(self) -> None:
-        self._due = None
-        self._check_at = None
-        self._seen_ids: list[str] = []
-        self.invite_id = ""
-        self.join_missed = 0
-        self.joined = False
-        self.unverified = False
-        self.to = ""
-        self.received_at: Optional[float] = None
+        self.phase = "idle"
+        self.accept_id = ""
+        self.inviter = ""
+        self.msg = ""
+        self.ask = 0
+        self.seen_at: Optional[float] = None
         self.pressed_at: Optional[float] = None
+        self.accepted_at: Optional[float] = None
         self.presses = 0
+        self.popups = 0
         self.error = ""
         self.skipped = ""
+        self.acks_sent = 0
+        self._open = False
+        self._last_press: Optional[float] = None
+        self._ack_at: Optional[float] = None
+        self._mem_seen = False
+        self._mem_out_since: Optional[float] = None
 
-    @property
-    def phase(self) -> str:
-        if self._due is not None:
-            return "waiting"
-        if self.error:
-            return "failed"
-        if self.skipped:
-            return "joined" if self.joined else "skipped"
-        if self._check_at is not None:
-            return "pressed"
-        if self.pressed_at is not None:
-            if self.joined:
-                return "joined"
-            return "unverified" if self.unverified else "missed"
-        return "idle"
-
-    def on_notice(
+    def tick(
         self,
-        invite: dict[str, Any],
+        popup: Optional[dict[str, Any]],
         *,
-        self_name: str = "",
-        roster_names: Iterable[str] = (),
-        in_party: Optional[bool] = False,
-    ) -> None:
-        """``in_party`` None = party memory unreadable (does not block Y)."""
-        iid = str(invite.get("invite_id") or "")
-        if iid:
-            if iid in self._seen_ids:
-                return
-            self._seen_ids = (self._seen_ids + [iid])[-32:]
-            self.invite_id = iid
-        to = str(invite.get("to") or "").strip()
-        roster = {str(n or "").strip().casefold() for n in roster_names if str(n or "").strip()}
-        name = str(self_name or "").strip()
-        skip = ""
-        if in_party:
-            skip = "already in a party — Y not pressed"
-            self.joined = True
-        # Only a confirmed roster name may veto; a wrong local name must not block accept.
-        elif name and to and name.casefold() != to.casefold() and name.casefold() in roster:
-            skip = f"invite is for {to}, this is {name} — Y not pressed"
-        self.to = to
-        if skip:
-            self._due = None
-            self.skipped = skip
-            self._log(f"Party invite notice: {skip}")
-            return
-        self.skipped = ""
-        self.error = ""
-        if self._due is not None:
-            return
-        self.received_at = time.time()
-        self._due = self._clock() + self.delay_s
-        self._log(
-            f"Party invite notice for {to or '—'} (id {iid or '—'}) — "
-            f"pressing Y in {int(self.delay_s)}s"
-        )
+        leader_name: str = "",
+        name: str = "",
+        session: str = "",
+        in_party: Optional[bool] = None,
+    ) -> bool:
+        """One step. ``popup`` = ``invite_popup.party_invite`` (None = no invite
+        popup open). ``in_party`` None = party memory unreadable. True when Y
+        reached the game this tick."""
+        pressed = False
+        if popup is not None:
+            pressed = self._on_open(popup, leader_name)
+        elif self._open:
+            self._on_closed()
+        self._track_membership(in_party)
+        self._maybe_ack(name, session)
+        return pressed
 
-    def tick(self, *, in_party: Optional[bool] = False) -> bool:
-        """Press Y once the delay is over. True when Y reached the game this tick.
+    def _on_open(self, popup: dict[str, Any], leader_name: str) -> bool:
+        if not self._open:
+            from .comms.orders import new_invite_id
 
-        ``in_party`` None = party memory unreadable: the join is "unverified".
-        """
-        if in_party and self.pressed_at is not None and not self.joined:
-            self.joined = True
-            self.unverified = False
-            if self._check_at is None:
-                self._log("Party invite accept: joined (party memory)")
-        if self._check_at is not None and (in_party or self._clock() >= self._check_at):
-            self._check_at = None
-            if in_party:
-                self._log("Party invite accept: joined after Y")
-            elif in_party is None:
-                self.unverified = True
-                self._log(
-                    "Party invite accept: party memory unreadable — "
-                    "join after Y not verified"
-                )
-            else:
-                self.join_missed += 1
-                self._log(
-                    f"Party invite accept: still not in a party {int(JOIN_CHECK_S)}s after Y "
-                    "(popup closed / expired, or the key did not reach it)"
-                )
-        if self._due is None or self._clock() < self._due:
+            self._open = True
+            self.popups += 1
+            self.accept_id = new_invite_id()
+            self.inviter = str(popup.get("inviter") or "")
+            self.msg = str(popup.get("msg") or "")
+            self.ask = int(popup.get("ask") or 0)
+            self.seen_at = time.time()
+            self.pressed_at = None
+            self.accepted_at = None
+            self.presses = 0
+            self.error = ""
+            self.skipped = ""
+            self.acks_sent = 0
+            self._ack_at = None
+            self._last_press = None
+            self._mem_seen = False
+            self._mem_out_since = None
+            if leader_name and self.inviter and not same_name(self.inviter, leader_name):
+                self.skipped = f"invite from {self.inviter}, leader is {leader_name} — Y not pressed"
+                self.phase = "skipped"
+                self._log(f"Party invite popup: {self.skipped}")
+                return False
+            self.phase = "popup"
+            self._log(
+                f"Party invite popup from {self.inviter or '—'} (ask {self.ask}) — pressing Y"
+            )
+            _note_monitor(f"invite popup from {self.inviter or '—'}")
+        if self.phase not in ("popup", "pressed"):
             return False
-        self._due = None
-        if in_party:
-            self.joined = True
-            self.skipped = "joined before the delay — Y not pressed"
-            self._log(f"Party invite accept: {self.skipped}")
+        now = self._clock()
+        if self._last_press is not None and now - self._last_press < REPRESS_S:
+            return False
+        if self.presses >= MAX_PRESSES:
+            if self.phase != "failed":
+                self.phase = "failed"
+                self.error = f"popup still open after {self.presses} Y presses"
+                self._log(f"Party invite accept failed: {self.error}")
+                _note_monitor(f"Y FAILED: {self.error}")
             return False
         error = self._press()
+        self._last_press = now
         if error:
+            self.presses += 1
             self.error = error
             self._log(f"Party invite accept (Y) failed: {error}")
             _note_monitor(f"Y FAILED: {error}")
             return False
-        self.pressed_at = time.time()
         self.presses += 1
-        self.joined = False
-        self.unverified = False
-        self._check_at = self._clock() + JOIN_CHECK_S
-        self._log(f"Party invite accept: Y key pressed for {self.to or '—'}")
-        _note_monitor("Y key pressed (accept invite)")
+        self.error = ""
+        self.pressed_at = time.time()
+        self.phase = "pressed"
+        self._log(f"Party invite accept: Y pressed (#{self.presses}) for {self.inviter or '—'}")
+        _note_monitor(f"Y key pressed #{self.presses} (accept invite)")
         return True
 
+    def _on_closed(self) -> None:
+        self._open = False
+        if self.phase == "pressed":
+            self.phase = "accepted"
+            self.accepted_at = time.time()
+            self._log(
+                f"Party invite accepted: popup closed after Y "
+                f"(from {self.inviter or '—'}, {self.presses} press(es))"
+            )
+            _note_monitor("invite accepted (popup closed after Y)")
+        elif self.phase == "popup":
+            self.phase = "missed"
+            self._log("Party invite popup closed before Y was pressed")
+
+    def _track_membership(self, in_party: Optional[bool]) -> None:
+        if self.phase != "accepted" or in_party is None:
+            self._mem_out_since = None
+            return
+        if in_party:
+            self._mem_seen = True
+            self._mem_out_since = None
+            return
+        if not self._mem_seen:
+            return
+        now = self._clock()
+        if self._mem_out_since is None:
+            self._mem_out_since = now
+            return
+        if now - self._mem_out_since >= LEFT_CONFIRM_S:
+            self.phase = "left"
+            self._log(
+                f"Party: party memory lost the party for {int(LEFT_CONFIRM_S)}s "
+                "after the accept — reported as left"
+            )
+
+    def _maybe_ack(self, name: str, session: str) -> None:
+        if self.phase != "accepted" or self.acks_sent >= ACK_SENDS:
+            return
+        now = self._clock()
+        if self._ack_at is not None and now - self._ack_at < ACK_EVERY_S:
+            return
+        from .comms.orders import invite_accept_message
+
+        body = invite_accept_message(
+            name=name,
+            session=session,
+            accept_id=self.accept_id,
+            inviter=self.inviter,
+            presses=self.presses,
+        )
+        try:
+            ok = bool(self._send_ack(body))
+        except Exception:
+            ok = False
+        if not ok:
+            return
+        self._ack_at = now
+        self.acks_sent += 1
+        if self.acks_sent == 1:
+            self._log(f"Party invite accept sent to leader (id {self.accept_id})")
+            _note_monitor(f"invite_accept → leader (id {self.accept_id})")
+
+    def report(self) -> dict[str, Any]:
+        """The ``invite`` part of ``member_state``."""
+        return {
+            "id": self.accept_id,
+            "phase": self.phase,
+            "presses": self.presses,
+            "inviter": self.inviter,
+        }
+
     def status(self) -> dict[str, Any]:
-        due_in = None
-        if self._due is not None:
-            due_in = round(max(0.0, self._due - self._clock()), 1)
         return {
             "phase": self.phase,
-            "invite_id": self.invite_id,
-            "pending": self.pending,
-            "due_in_s": due_in,
-            "delay_s": self.delay_s,
-            "to": self.to,
-            "received_at": self.received_at,
+            "accept_id": self.accept_id,
+            "inviter": self.inviter,
+            "ask": self.ask,
+            "msg": self.msg,
+            "popup_open": self._open,
+            "popups": self.popups,
+            "seen_at": self.seen_at,
             "pressed_at": self.pressed_at,
+            "accepted_at": self.accepted_at,
             "presses": self.presses,
-            "join_missed": self.join_missed,
+            "acks_sent": self.acks_sent,
             "error": self.error,
             "skipped": self.skipped,
         }
 
 
 __all__ = [
-    "ACCEPT_DELAY_S",
     "ACCEPT_SCANCODE",
+    "ACK_SENDS",
     "InviteAccepter",
+    "MAX_PRESSES",
+    "REPRESS_S",
     "type_accept_key",
 ]

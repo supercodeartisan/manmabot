@@ -1536,3 +1536,22 @@ Live result: pending. The next Start log should read `character=elf` and the rou
 Consent: user asked to stop the `Party wait` log while party is off.
 
 Change: `_log_party_until_farm` in `Engine/session/bot_controller.py` returns early when `profile.party_enabled` is false. The function is log only. Decisions, movement and the party socket are unchanged. With party on, the log is the same as before.
+
+## 2026-10-22 — party invite accept from the in-game popup
+
+Consent: user asked to read the invite dialog like `uidialogmon_930.c`, press Y when the text is a party invite, send an ack to the leader over the socket, drop the leader's invite notice and the member's 30 s wait, use the dist registry keys, and hold the IME in English for Y. User accepted that both PCs must run the same version (socket format changes).
+
+Intent: the member accepts on what it sees on screen, not on a socket notice, and the leader counts the member joined once Y closed the popup.
+
+Change:
+- `uidialog_listen.c` (DLL rebuilt) lists open Yes/No confirms (`HudChatLayoutPCImpl` chat confirm panel + popup classes) under `confirm` with the text; registry keys `CHATCONFIRM_*` / `UICONFIRM_CLASSES` / `POPUP_VIS_OFF` copied from the dist registry. Popups are not added as `UIDLG_WIN_*`, so the Esc window gate does not close them.
+- Member: `_06_party/invite_popup.py` matches the Korean invite text (파티 + 초대합니다 + 승낙; any 거래 text is never an invite) and the inviter name. `accept.InviteAccepter` rewritten: Y at once, again after 2 s if the popup is still open (max 3), accepted = popup closed after Y, then `invite_accept` to the leader (3 sends, one `accept_id`). A popup from someone other than the policy `leader_name` is left alone. Phase `left` once party memory showed the join and lost it for 10 s.
+- Y: `GameChat.press_key(english=True)` clears 한글 mode on the game's default IME window (`WM_IME_CONTROL`) for the key and restores it after.
+- Socket: `party_invite` / `publish_invite` / `take_invite` removed; new `invite_accept` frame (member → leader); policy carries `leader_name`.
+- Leader: no notice and no `InviteGate`. `InviteHold` holds a new `/초대` while the member reports the popup open (max 30 s). Joined = leader party memory, or `sync.reported_joined` (member accepted the popup, or its own party memory). The 20 s `/초대` retry and the start wait are unchanged.
+
+Affected modes: party member invite accept, leader invite/joined bookkeeping and the party monitor. Single-bot logic and the rally, follow, combat and HP code are unchanged.
+
+Side effects to watch: a popup closed by its own timeout right after Y counts as accepted; a member restarted after an accept is not joined until it accepts or its memory shows the party. When the leader name cannot be read at setup, the member accepts any invite popup.
+
+Live result: popup reading verified on a trade popup (ask 252). Invite accept and IME switch pending a live run on both PCs.

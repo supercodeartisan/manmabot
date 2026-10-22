@@ -9,6 +9,9 @@
  *    3) Poll      : 매 snapshot(=매 틱) 창당 헤더 1 read → OPEN/CLOSED JSON.
  *    4) 창 식별    : RTTI *Layout[PCImpl] @ ui::lineage — registry UIDLG_WIN_*.
  *    5) 툴 scan()  : 동일 컨테이너 walk (+선택 힙 진단). 실시간 경로와 분리.
+ *    6) confirm   : 통보문(확인 패널 chat+CHATCONFIRM_PANEL_OFF, UICONFIRM_CLASSES 팝업)
+ *                   문구/ask/type → JSON "confirm". 원본 uidialogmon_930.c 와 같은 판독.
+ *                   감시창(UIDLG_WIN_*)과 분리 — "open" 목록에 넣지 않는다.
  */
 #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
@@ -24,10 +27,65 @@ static uint32_t RG_UVFT, RG_VIS, RG_VISMASK, RG_VISOPEN, RG_NODEREAD, RG_MAXNODE
 static char     RG_SUFFIX[32], RG_NS[64];
 static int      RG_RESCAN=2000;
 static uint32_t g_chead[8], g_cnext[8]; static int g_ncont=0;
+static uint32_t RG_CPANEL, RG_CFN, RG_CMSG, RG_CTYPE, RG_CASK, RG_POPVIS, RG_MSGMS;
+static char     RG_CHATLAYOUT[96];
 
 /* ── 고속 읽기(MmCopy, VirtualQueryEx 생략) — 컨테이너 walk 전용 ───────── */
 static int      rmf(uint64_t a, void*b, uint32_t s){ int drv=0; int ok=pg_read((uint64_t)g_pid,a,b,s,&drv); g_ioctl += (unsigned)drv; return ok; }
 static uint64_t q64f(uint64_t a){ uint64_t v=0; rmf(a,&v,8); return v; }
+
+/* ── confirm(통보문) 대상 창: 채팅 레이아웃(확인 패널) + UICONFIRM_CLASSES ── */
+#define CFC_MAX 8
+static char CFC[CFC_MAX][96]; static int CFC_N=0;
+#define CWIN_MAX 8
+typedef struct { char cls[96]; uint64_t inst; int chat; } CWIN;
+static CWIN g_cwin[CWIN_MAX]; static int g_ncwin=0;
+static int confirmClass(const char*sh){
+    if(!sh || !sh[0]) return 0;
+    if(RG_CHATLAYOUT[0] && !strcmp(sh,RG_CHATLAYOUT)) return 2;
+    for(int i=0;i<CFC_N;i++) if(!strcmp(sh,CFC[i])) return 1;
+    return 0;
+}
+static void addConfirmWin(const char*sh, uint64_t inst, int chat){
+    for(int k=0;k<g_ncwin;k++) if(g_cwin[k].inst==inst) return;
+    if(g_ncwin>=CWIN_MAX) return;
+    strncpy(g_cwin[g_ncwin].cls,sh,95); g_cwin[g_ncwin].cls[95]=0;
+    g_cwin[g_ncwin].inst=inst; g_cwin[g_ncwin].chat=chat; g_ncwin++;
+}
+
+/* ── 문자열 판독(std::string 정본 + 레거시 {ptr,size} 폴백) ─────────────── */
+static int decU8(const uint8_t*b,int n,char*out,int cap){
+    wchar_t wb[512];
+    int wn=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,(const char*)b,n,wb,512);
+    if(wn<=0) wn=MultiByteToWideChar(949,0,(const char*)b,n,wb,512);
+    if(wn<=0) return 0;
+    int un=WideCharToMultiByte(CP_UTF8,0,wb,wn,out,cap-1,0,0);
+    if(un<0) un=0; out[un]=0; return un>0;
+}
+static int readStdStr(uint64_t p, char*out, int cap){
+    out[0]=0;
+    if(!isHeap(p)) return 0;
+    uint8_t h[0x20];
+    if(!rmf(p,h,sizeof h)) return 0;
+    uint64_t sz, cp; memcpy(&sz,h+0x10,8); memcpy(&cp,h+0x18,8);
+    if(!(sz>0 && sz<0x600 && cp>=sz && cp<0x100000)) return 0;
+    static uint8_t b[0x600];
+    if(cp<0x10) memcpy(b,h,(size_t)sz);
+    else { uint64_t q; memcpy(&q,h,8); if(!isHeap(q) || !rmf(q,b,(uint32_t)sz)) return 0; }
+    return decU8(b,(int)sz,out,cap);
+}
+static int readMsgStr(uint64_t obj, char*buf, int cap){
+    if(readStdStr(obj+RG_CMSG,buf,cap)) return 1;
+    uint64_t dp=q64f(obj+RG_CMSG), sz=q64f(obj+RG_CMSG+8);
+    if(!isHeap(dp) || sz==0 || sz>0x600) return 0;
+    static uint8_t b[0x600]; if(!rmf(dp,b,(uint32_t)sz)) return 0;
+    return decU8(b,(int)sz,buf,cap);
+}
+static uint32_t askOf(uint64_t panel){
+    uint64_t cb=q64f(panel+RG_CASK);
+    if(!isHeap(cb)) return 0;
+    return (uint32_t)(q64f(cb+0x10)>>32);
+}
 
 /* ── 감시 대상(registry UIDLG_WIN_*) ──────────────────────────────────── */
 #define MAXWATCH 32
@@ -99,7 +157,7 @@ static void addWin(const char*label, const char*sh, uint64_t lay, uint32_t vft){
     for(int i=0;i<g_nwatch;i++) if(!strcmp(g_watch[i].label,label)) g_watch[i].found=1;
 }
 static void containerScan(uint64_t ui){
-    g_nwin=0; g_nall=0; g_nallcls=0;
+    g_nwin=0; g_nall=0; g_nallcls=0; g_ncwin=0;
     for(int i=0;i<g_nwatch;i++) g_watch[i].found=0;
     if(!isHeap(ui) || g_ncont<=0) return;
     for(int c=0;c<g_ncont;c++){
@@ -111,6 +169,7 @@ static void containerScan(uint64_t ui){
                 if(isMod(vf)){
                     char nm[128],sh[96];
                     classOf(vf,nm,sizeof(nm)); shortName(nm,sh,sizeof(sh));
+                    { int cc=confirmClass(sh); if(cc) addConfirmWin(sh,lay,cc==2); }
                     if(isLayout(nm)){
                         g_nall++;
                         { int d=0; for(int k=0;k<g_nallcls;k++) if(!strcmp(g_allcls[k],sh)){d=1;break;}
@@ -577,6 +636,22 @@ static int uidlgEnsure(const char* registryPath) {
         }
         snprintf(RG_SUFFIX, sizeof(RG_SUFFIX), "%s", lcreg_str("UI_LAYOUT_SUFFIX", "Layout"));
         snprintf(RG_NS, sizeof(RG_NS), "%s", lcreg_str("UI_LAYOUT_NS", "ui::lineage"));
+        RG_CPANEL = lcreg_u32("CHATCONFIRM_PANEL_OFF", 0x150);
+        RG_CFN    = lcreg_u32("CHATCONFIRM_FN_OFF", 0x78);
+        RG_CMSG   = lcreg_u32("CHATCONFIRM_MSG_OFF", 0xC8);
+        RG_CTYPE  = lcreg_u32("CHATCONFIRM_TYPE_OFF", 0xC0);
+        RG_CASK   = lcreg_u32("CHATCONFIRM_ASK_CB_OFF", 0x1C0);
+        RG_POPVIS = lcreg_u32("POPUP_VIS_OFF", 0x78);
+        RG_MSGMS  = lcreg_u32("UICONFIRM_MSG_MS", 500);
+        snprintf(RG_CHATLAYOUT, sizeof(RG_CHATLAYOUT), "%s", lcreg_str("CHAT_LAYOUT_CLASS", "HudChatLayoutPCImpl"));
+        CFC_N = 0;
+        {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "%s",
+                     lcreg_str("UICONFIRM_CLASSES", "CommonMessagePopup,CommonBigMessagePopup,ChatConfirmPanel"));
+            for (char* t = strtok(buf, ","); t && CFC_N < CFC_MAX; t = strtok(0, ","))
+                snprintf(CFC[CFC_N++], sizeof(CFC[0]), "%s", t);
+        }
         g_nwatch = 0;
         for (int i = 0; i < LCREG_N && g_nwatch < MAXWATCH; i++) {
             if (strncmp(LCREG_K[i], "UIDLG_WIN_", 10) == 0) {
@@ -627,6 +702,8 @@ static int uidlgEnsure(const char* registryPath) {
     return 1;
 }
 
+static void writeConfirmJson(FILE* f);
+
 static int writeUidlgJson(FILE* f) {
     int nopen = 0, first = 1;
     fprintf(f,
@@ -662,8 +739,74 @@ static int writeUidlgJson(FILE* f) {
         first = 0;
         fprintf(f, "\"%s\"", g_win[i].label);
     }
-    fprintf(f, "],\"n_open\":%d,\"n_watch\":%d}", nopen, g_nwatch);
+    fprintf(f, "],\"n_open\":%d,\"n_watch\":%d", nopen, g_nwatch);
+    writeConfirmJson(f);
+    fputc('}', f);
     return 1;
+}
+
+/* ── confirm 판독: 표시중인 통보문만. 문자열은 새로 뜬 경우 / RG_MSGMS 주기로만 ── */
+#define UICF_MAX 8
+typedef struct { uint64_t inst; uint32_t ask, type; DWORD lastMs; int chat; char cls[96]; char msg[512]; } CF;
+static CF g_cf[UICF_MAX]; static int g_ncf = 0;
+
+static void readConfirms(void) {
+    CF cur[UICF_MAX];
+    int n = 0;
+    DWORD now = GetTickCount();
+    for (int i = 0; i < g_ncwin && n < UICF_MAX; i++) {
+        uint64_t obj = g_cwin[i].inst;
+        if (!isHeap(obj)) continue;
+        if (g_cwin[i].chat) {
+            obj = q64f(obj + RG_CPANEL);
+            if (!isHeap(obj) || !q64f(obj + RG_CFN)) continue;
+        } else if (!q64f(obj + RG_POPVIS)) {
+            continue;
+        }
+        int j = -1;
+        for (int k = 0; k < g_ncf; k++) if (g_cf[k].inst == obj) { j = k; break; }
+        if (j >= 0 && (DWORD)(now - g_cf[j].lastMs) < RG_MSGMS) { cur[n++] = g_cf[j]; continue; }
+        CF* c = &cur[n];
+        memset(c, 0, sizeof(*c));
+        c->inst = obj; c->lastMs = now; c->chat = g_cwin[i].chat;
+        snprintf(c->cls, sizeof(c->cls), "%s", g_cwin[i].cls);
+        if (c->chat) {
+            c->type = (uint32_t)q64f(obj + RG_CTYPE);
+            c->ask = askOf(obj);
+        }
+        readMsgStr(obj, c->msg, (int)sizeof(c->msg));
+        if (!c->chat && !c->msg[0]) continue;
+        n++;
+    }
+    memcpy(g_cf, cur, sizeof(CF) * (size_t)n);
+    g_ncf = n;
+}
+
+/* JSON string body: drops control bytes; a colour code (\f + one byte) goes whole. */
+static void confEsc(const char* in, char* out, int cap) {
+    int o = 0;
+    for (int i = 0; in && in[i] && o < cap - 2; i++) {
+        unsigned char c = (unsigned char)in[i];
+        if (c == 0x0C) { if (in[i + 1] && (unsigned char)in[i + 1] < 0x80) i++; continue; }
+        if (c < 0x20) continue;
+        if (c == '"' || c == '\\') { if (o + 2 >= cap - 1) break; out[o++] = '\\'; }
+        out[o++] = (char)c;
+    }
+    out[o] = 0;
+}
+
+static void writeConfirmJson(FILE* f) {
+    static char esc[1100];
+    readConfirms();
+    fprintf(f, ",\"confirm\":[");
+    for (int i = 0; i < g_ncf; i++) {
+        confEsc(g_cf[i].msg, esc, (int)sizeof(esc));
+        if (i) fputc(',', f);
+        fprintf(f, "{\"src\":\"%s\",\"cls\":\"%s\",\"inst\":\"0x%llX\",\"ask\":%u,\"type\":%u,\"msg\":\"%s\"}",
+                g_cf[i].chat ? "panel" : "popup", g_cf[i].cls,
+                (unsigned long long)g_cf[i].inst, g_cf[i].ask, g_cf[i].type, esc);
+    }
+    fprintf(f, "],\"n_confirm_src\":%d", g_ncwin);
 }
 
 static void jsonEsc(const char* in, char* out, int cap) {
@@ -815,6 +958,8 @@ __declspec(dllexport) void uidialog_listen_shutdown(void) {
     g_pid = 0;
     g_base = 0;
     g_nwin = 0;
+    g_ncwin = 0;
+    g_ncf = 0;
 }
 
 #ifndef UIDIALOG_LISTEN_DLL

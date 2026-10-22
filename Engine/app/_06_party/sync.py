@@ -5,17 +5,17 @@ step may depend on one edge message arriving. Instead:
 
 - Member → leader ``member_state`` every ``STATE_EVERY_S`` and on change:
   the member's whole view (leader session, applied policy id, its own party
-  memory, last invite id + accept phase). ``MemberStateReporter``.
+  memory, last invite popup + accept phase). ``MemberStateReporter``.
+- Member → leader ``invite_accept`` once Y closed its invite popup
+  (``InviteAccepts`` on the leader).
 - Leader keeps the latest frame per roster name (``MemberStates``) and
   reconciles each tick: policy confirmed = state echoes the current policy id;
-  joined = leader party memory lists the name OR the member's own party memory
-  says it is in this leader's party; a fresh ``/초대`` waits while the member
-  reports it is still handling the last one.
-- Frames carry ids (``policy_id``, ``invite_id``, ``session``) so repeats are
+  joined = leader party memory lists the name OR the member accepted the
+  invite popup (``invite_accept`` / phase ``accepted``) OR the member's own
+  party memory says it is in this leader's party; a fresh ``/초대`` waits while
+  the member reports its invite popup is still open.
+- Frames carry ids (``policy_id``, ``accept_id``, ``session``) so repeats are
   harmless; a state older than ``STALE_S`` is ignored (member gone / restarted).
-
-Leader frames go out at-least-once (policy every 5 s, invite notice resent
-until echoed); the member acts once per id.
 """
 from __future__ import annotations
 
@@ -25,14 +25,12 @@ from typing import Any, Callable, Iterable, Optional
 
 STATE_EVERY_S = 2.0
 STALE_S = 7.0
-# Resend an invite notice the member state has not echoed after this long.
-NOTICE_RESEND_S = 3.0
-NOTICE_RESENDS = 3
-# Hold a new /초대 while the member handles the last one, at most this long.
-ACCEPT_HOLD_S = 60.0
+# Hold a new /초대 while the member's invite popup is open, at most this long.
+ACCEPT_HOLD_S = 30.0
 
-HANDLING_PHASES = ("waiting", "pressed")
-DONE_PHASES = ("joined",)
+HANDLING_PHASES = ("popup", "pressed")
+ACCEPTED_PHASE = "accepted"
+LEFT_PHASE = "left"
 
 
 def _key(name: Any) -> str:
@@ -227,10 +225,13 @@ class MemberStates:
         return policy_id is None or str(row.get("policy_id") or "") == str(policy_id)
 
     def joined(self, name: str, leader_name: str = "") -> bool:
-        """The member's own party memory says it is in this leader's party."""
+        """The member accepted the invite popup, or its own party memory says
+        it is in this leader's party."""
         row = self.rows.get(_key(name))
         if not row or not self.fresh(name):
             return False
+        if str((row.get("invite") or {}).get("phase") or "") == ACCEPTED_PHASE:
+            return True
         party = row.get("party") or {}
         if party.get("mem") != "ok" or not party.get("in_party"):
             return False
@@ -242,7 +243,8 @@ class MemberStates:
         return not me or not names or me in names
 
     def out_of_party(self, name: str, leader_name: str = "") -> bool:
-        """The member's own party memory (fresh, readable) says it is not in this party."""
+        """The member's own party memory (fresh, readable) says it is not in
+        this party, and it does not report an accepted invite."""
         row = self.rows.get(_key(name))
         if not row or not self.fresh(name):
             return False
@@ -259,106 +261,142 @@ class MemberStates:
         return str(inv.get("id") or ""), str(inv.get("phase") or "")
 
 
-class InviteGate:
-    """Leader: one notice per ``/초대``, resent until echoed; holds a new
-    ``/초대`` while the member is still handling the last one."""
+class InviteAccepts:
+    """Leader side: ``invite_accept`` frames — Y closed the member's invite popup."""
+
+    def __init__(self) -> None:
+        self.rows: dict[str, dict[str, Any]] = {}
+
+    def clear(self) -> None:
+        self.rows.clear()
+
+    def note(
+        self,
+        who: str,
+        body: dict[str, Any],
+        roster: Iterable[str] = (),
+        *,
+        session: str = "",
+    ) -> tuple[str, bool]:
+        """Book one frame: (roster name or "", first time for this ``accept_id``).
+
+        A frame for another leader session is ignored. A member that does not
+        know its name (``member``) is booked to the only roster name without an
+        accept yet.
+        """
+        if session and str(body.get("session") or "") != session:
+            return "", False
+        name = str(who or body.get("from") or "").strip()
+        if not name or name == "leader":
+            return "", False
+        names = [str(n).strip() for n in roster if str(n).strip()]
+        by_key = {n.casefold(): n for n in names}
+        if name.casefold() in by_key:
+            name = by_key[name.casefold()]
+        elif name == "member" and names:
+            open_names = [n for n in names if _key(n) not in self.rows]
+            if len(open_names) != 1:
+                return "", False
+            name = open_names[0]
+        aid = str(body.get("accept_id") or "")
+        prev = self.rows.get(_key(name)) or {}
+        first = not prev or str(prev.get("accept_id") or "") != aid
+        self.rows[_key(name)] = {
+            "name": name,
+            "accept_id": aid,
+            "inviter": str(body.get("inviter") or ""),
+            "presses": int(body.get("presses") or 0),
+            "at": float(prev.get("at") or 0.0) if not first else time.time(),
+            "count": int(prev.get("count", 0)) + 1,
+        }
+        return name, first
+
+    def accepted(self, name: str) -> bool:
+        return _key(name) in self.rows
+
+    def row(self, name: str) -> dict[str, Any]:
+        return dict(self.rows.get(_key(name)) or {})
+
+
+def reported_joined(
+    name: str,
+    leader_name: str = "",
+    *,
+    states: Optional["MemberStates"] = None,
+    accepts: Optional[InviteAccepts] = None,
+) -> bool:
+    """Joined as the member tells it: accepted invite popup or own party memory.
+
+    With a fresh ``member_state`` the ``invite_accept`` counts only while the
+    state still carries that ``accept_id`` and not ``left`` (a restarted member
+    or one that left must not stay joined on an old accept)."""
+    states = states if states is not None else member_states
+    accepts = accepts if accepts is not None else invite_accepts
+    if states.joined(name, leader_name):
+        return True
+    if not accepts.accepted(name):
+        return False
+    if not states.fresh(name):
+        return True
+    iid, phase = states.invite_phase(name)
+    aid = str(accepts.row(name).get("accept_id") or "")
+    return bool(aid) and iid == aid and phase != LEFT_PHASE
+
+
+class InviteHold:
+    """Leader: no new ``/초대`` while the member reports its invite popup open
+    (``popup`` / ``pressed``), at most ``ACCEPT_HOLD_S`` per popup."""
 
     def __init__(
         self,
         states: MemberStates,
         *,
-        publish: Callable[[str, str], int],
         clock: Callable[[], float] = time.monotonic,
-        log: Callable[[str], None] = lambda _m: None,
     ) -> None:
         self._states = states
-        self._publish = publish
         self._clock = clock
-        self._log = log
-        self.last: dict[str, dict[str, Any]] = {}
-
-    def announce(self, name: str) -> int:
-        """``/초대 name`` was typed: send a notice with a new id."""
-        from .comms.orders import new_invite_id
-
-        iid = new_invite_id()
-        sent = self._send(name, iid)
-        self.last[_key(name)] = {
-            "id": iid, "at": self._clock(), "sent": sent, "resends": 0, "echoed": False,
-        }
-        return sent
-
-    def _send(self, name: str, iid: str) -> int:
-        try:
-            return int(self._publish(name, iid) or 0)
-        except Exception as exc:
-            self._log(f"Party invite notice for {name} failed: {exc}")
-            return 0
-
-    def tick(self, names: Iterable[str]) -> None:
-        """Resend notices the member state has not echoed yet."""
-        now = self._clock()
-        for name in names:
-            last = self.last.get(_key(name))
-            if last is None or last["echoed"]:
-                continue
-            iid, _phase = self._states.invite_phase(name)
-            if iid == last["id"]:
-                last["echoed"] = True
-                continue
-            if last["resends"] >= NOTICE_RESENDS or now - last["at"] < NOTICE_RESEND_S * (last["resends"] + 1):
-                continue
-            last["resends"] += 1
-            sent = self._send(name, last["id"])
-            last["sent"] = max(int(last["sent"]), sent)
-            self._log(
-                f"Party invite notice resent → {name} (id {last['id']}, "
-                f"#{last['resends']}, not echoed by member state yet)"
-            )
+        self._since: dict[str, tuple[str, float]] = {}
 
     def may_invite(self, name: str) -> bool:
-        """False while the member reports it is accepting the last invite."""
-        last = self.last.get(_key(name))
-        if last is None:
-            return True
         iid, phase = self._states.invite_phase(name)
-        if iid != last["id"]:
+        key = _key(name)
+        if phase not in HANDLING_PHASES:
+            self._since.pop(key, None)
             return True
-        if phase in HANDLING_PHASES and self._clock() - last["at"] < ACCEPT_HOLD_S:
-            return False
-        return True
-
-    def hold_reason(self, name: str) -> str:
-        if self.may_invite(name):
-            return ""
-        _iid, phase = self._states.invite_phase(name)
-        return f"member {phase}"
+        prev = self._since.get(key)
+        if prev is None or prev[0] != iid:
+            prev = (iid, self._clock())
+            self._since[key] = prev
+        return self._clock() - prev[1] >= ACCEPT_HOLD_S
 
     def row(self, name: str) -> dict[str, Any]:
-        last = self.last.get(_key(name)) or {}
         iid, phase = self._states.invite_phase(name)
         return {
-            "invite_id": last.get("id", ""),
-            "notice_sent": int(last.get("sent") or 0),
-            "notice_resends": int(last.get("resends") or 0),
-            "notice_echoed": bool(last.get("echoed")) or (bool(iid) and iid == last.get("id")),
-            "member_phase": phase if iid and iid == last.get("id") else "",
-            "hold": self.hold_reason(name),
+            "accept_id": iid,
+            "member_phase": phase,
+            "hold": "" if self.may_invite(name) else f"member {phase}",
         }
 
 
 member_states = MemberStates()
+invite_accepts = InviteAccepts()
 
 
 __all__ = [
+    "ACCEPTED_PHASE",
     "ACCEPT_HOLD_S",
-    "InviteGate",
+    "HANDLING_PHASES",
+    "InviteAccepts",
+    "InviteHold",
+    "LEFT_PHASE",
     "MemberStateReporter",
     "MemberStates",
-    "NOTICE_RESEND_S",
     "STALE_S",
     "STATE_EVERY_S",
+    "invite_accepts",
     "member_states",
     "memory_in_party",
     "party_view",
+    "reported_joined",
 ]
+

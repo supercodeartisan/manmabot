@@ -803,6 +803,15 @@ class EquipmentTab(QWidget):
                 )
             else:
                 shown = memory_name_for_ui(name or key, self.language) or key
+                try:
+                    from app._03_world.catalog.game_catalog import item_image_path
+
+                    icon = item_image_path(
+                        [name, shown, key],
+                        [item_id] if item_id else (),
+                    )
+                except Exception:
+                    icon = None
             rows.append(
                 _SellRow(
                     key=key,

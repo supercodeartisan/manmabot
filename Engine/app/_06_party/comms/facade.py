@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Optional
 
-from ..sync import member_states
+from ..sync import invite_accepts, member_states
 from . import ingest, link, publish, status
 from .orders import member_orders, reset_orders, self_name_from_party
 
@@ -59,6 +59,7 @@ class PartyComms:
     def start_leader(self, *, port: Any = 8765, log: Optional[LogFn] = None) -> bool:
         self.stop_leader(log=log)
         member_states.clear()
+        invite_accepts.clear()
         self._leader = link.start_leader_link(port=port, log=log)
         return self._leader is not None
 
@@ -166,6 +167,7 @@ class PartyComms:
         self.stop_member(log=log)
         reset_orders()
         member_states.clear()
+        invite_accepts.clear()
 
     # --- leader ticks ---
 
@@ -216,6 +218,9 @@ class PartyComms:
 
     def send_member_state(self, body: dict) -> bool:
         return status.send_member_state(self.client, body)
+
+    def send_invite_accept(self, body: dict) -> bool:
+        return status.send_invite_accept(self.client, body)
 
     def send_status(
         self,

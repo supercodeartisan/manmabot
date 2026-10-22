@@ -15,14 +15,15 @@ Policy (``party_policy``, leader → members) carries a ``policy_id``. A member
 answers every policy frame it applied with ``policy_ack`` echoing that id; the
 leader invites a roster name only once its ack matches the current id.
 
-Invite (``party_invite``, leader → members): sent right after ``/초대 <to>`` was
-typed, with an ``invite_id``. The leader may resend the same id until the
-member's state echoes it; the member acts once per id.
+Invite: the leader only types ``/초대 <to>``; no socket notice. The member reads
+the in-game invite popup itself, presses Y, and once the popup closed answers
+``invite_accept`` (member → leader, with an ``accept_id``; sent a few times,
+the leader books it once per id).
 
 Member state (``member_state``, member → leader, every ~2 s and on change):
 the member's whole view — leader session it follows, applied ``policy_id``,
-its own party memory (``in_party`` / party leader / names), and where it is
-with the last ``invite_id`` (``waiting`` / ``pressed`` / ``joined`` / ...).
+its own party memory (``in_party`` / party leader / names), and the last
+invite popup it handled (``popup`` / ``pressed`` / ``accepted`` / ...).
 Level-triggered: a late start or a reconnect is reconciled by the next frame,
 nothing depends on one edge message arriving.
 """
@@ -39,7 +40,7 @@ RECOVERY = "recovery"
 REPORT = "report"
 POLICY = "party_policy"
 POLICY_ACK = "policy_ack"
-PARTY_INVITE = "party_invite"
+INVITE_ACCEPT = "invite_accept"
 MEMBER_STATE = "member_state"
 
 STAGE_START = "start"
@@ -146,11 +147,13 @@ def policy_message(
     yard_scale_with_roster: bool = True,
     party_size: int = 1,
     roster: Optional[list] = None,
+    leader_name: str = "",
 ) -> dict[str, Any]:
     """Global party farm knobs from the leader. Members merge into their config.
 
     ``leader_mode`` is turret | moving. Party / solo farm and follow / stop /
-    assist distances are per-member and never sent.
+    assist distances are per-member and never sent. ``leader_name`` = the
+    leader character; a member accepts invite popups only from it (when set).
     """
     body = leader_message(
         kind=POLICY,
@@ -170,6 +173,8 @@ def policy_message(
         "party_size": max(1, int(party_size)),
         "roster": list(roster or []),
     }
+    if str(leader_name or "").strip():
+        knobs["leader_name"] = str(leader_name).strip()
     body.update(knobs)
     body["policy_id"] = _policy_id(knobs)
     return body
@@ -194,16 +199,24 @@ def new_invite_id() -> str:
     return uuid.uuid4().hex[:8]
 
 
-def invite_message(*, to: str, invite_id: str = "") -> dict[str, Any]:
-    """Leader → members: ``/초대 <to>`` was just typed in game."""
-    body = leader_message(kind=PARTY_INVITE, action="accept_invite", map_id=None, x=None, y=None)
-    body["to"] = str(to or "").strip()
-    body["invite_id"] = str(invite_id or "") or new_invite_id()
-    return body
-
-
-def publish_invite(*, to: str, invite_id: str = "") -> int:
-    return _publish(invite_message(to=to, invite_id=invite_id))
+def invite_accept_message(
+    *,
+    name: str,
+    session: str,
+    accept_id: str,
+    inviter: str = "",
+    presses: int = 0,
+) -> dict[str, Any]:
+    """Member → leader: Y closed this member's party invite popup (accepted)."""
+    return {
+        "type": INVITE_ACCEPT,
+        "from": str(name or "member").strip() or "member",
+        "session": str(session or ""),
+        "accept_id": str(accept_id or ""),
+        "inviter": str(inviter or ""),
+        "presses": int(presses or 0),
+        "at": time.time(),
+    }
 
 
 def member_state_message(
@@ -465,7 +478,6 @@ class MemberOrders:
         self.gather: Optional[dict[str, Any]] = None
         self.recovery: Optional[dict[str, Any]] = None
         self.policy: Optional[dict[str, Any]] = None
-        self.invite: Optional[dict[str, Any]] = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
@@ -483,16 +495,10 @@ class MemberOrders:
         self.gather = None
         self.recovery = None
         self.policy = None
-        self.invite = None
         self.arrived = False
         self._reported = False
         self._report_pending = False
         self._policy_dirty = False
-
-    def take_invite(self) -> Optional[dict[str, Any]]:
-        """The latest ``party_invite`` frame once, else None."""
-        body, self.invite = self.invite, None
-        return body
 
     def clear(self) -> None:
         self._drop_orders()
@@ -535,9 +541,6 @@ class MemberOrders:
             if kind == POLICY:
                 self.policy = dict(body)
                 self._policy_dirty = True
-                continue
-            if kind == PARTY_INVITE:
-                self.invite = dict(body)
                 continue
             if kind != RALLY:
                 continue
@@ -630,11 +633,10 @@ def reset_orders() -> None:
 __all__ = [
     "ARRIVE_TILES",
     "MEMBER_STATE",
-    "PARTY_INVITE",
-    "invite_message",
+    "INVITE_ACCEPT",
+    "invite_accept_message",
     "member_state_message",
     "new_invite_id",
-    "publish_invite",
     "POLICY",
     "POLICY_ACK",
     "PolicyAcks",

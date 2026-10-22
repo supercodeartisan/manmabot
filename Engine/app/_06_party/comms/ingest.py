@@ -24,13 +24,15 @@ def drain_leader_reports(
     log: Optional[LogFn] = None,
 ) -> int:
     """Apply member ``report`` frames to the rally, ``member_state`` frames to
-    ``sync.member_states`` (and their ``policy_id`` to ``policy_acks``), legacy
-    ``policy_ack`` frames to ``policy_acks``; advance ``start_rally``.
+    ``sync.member_states`` (and their ``policy_id`` to ``policy_acks``),
+    ``invite_accept`` frames to ``sync.invite_accepts``, legacy ``policy_ack``
+    frames to ``policy_acks``; advance ``start_rally``.
 
     Returns the current WebSocket client count (0 when there is no server).
     """
-    from ..sync import member_states
+    from ..sync import invite_accepts, member_states
     from .orders import (
+        INVITE_ACCEPT,
         MEMBER_STATE,
         POLICY_ACK,
         REPORT,
@@ -77,6 +79,17 @@ def drain_leader_reports(
                     f"in_party={party.get('in_party')} leader={party.get('leader') or '—'} "
                     f"invite={inv.get('id') or '—'}:{inv.get('phase') or '—'} "
                     f"seq={row.get('seq')}"
+                )
+            continue
+        if kind == INVITE_ACCEPT:
+            booked, first = invite_accepts.note(
+                who, body, roster_names or names, session=leader_session()
+            )
+            if booked and first:
+                note(
+                    f"Party invite accepted by {booked} (Y closed the popup, "
+                    f"id {body.get('accept_id') or '—'}, inviter "
+                    f"{body.get('inviter') or '—'}, {int(body.get('presses') or 0)} press(es))"
                 )
             continue
         if kind == POLICY_ACK:

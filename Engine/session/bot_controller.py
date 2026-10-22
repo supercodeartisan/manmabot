@@ -269,6 +269,7 @@ class BotController:
         self._party_policy_key = ""
         self._party_policy_at = 0.0
         self._party_policy_id = ""
+        self._party_leader_name = ""
         self._member_policy_sig = ""
         self._invite_accepter = None
         self._member_state_reporter = None
@@ -774,14 +775,14 @@ class BotController:
                     return "late_offline" if irow.get("late") else "offline"
                 if not acked:
                     return "policy_wait"
-                if mphase in ("waiting", "pressed"):
+                if mphase in ("popup", "pressed"):
                     return "accepting"
                 if irow.get("late"):
                     return "late"
                 return "inviting"
 
             from app._06_party.comms.orders import policy_acks
-            from app._06_party.sync import member_states
+            from app._06_party.sync import invite_accepts, member_states, reported_joined
             from app._06_party.workflow import roster_member_steps
 
             pid = str(getattr(self, "_party_policy_id", "") or "")
@@ -791,9 +792,13 @@ class BotController:
                 key = row["name"].casefold()
                 irow = invite_rows.get(key) or {}
                 mstate = member_states.row(row["name"])
+                iacc = invite_accepts.row(row["name"])
                 if key in in_party_names:
                     joined, joined_src = True, "leader memory"
-                elif member_states.joined(row["name"]) or (irow.get("joined") and mstate.get("fresh")):
+                elif reported_joined(row["name"], self._party_leader_name):
+                    accepted = bool(iacc) or (mstate.get("invite") or {}).get("phase") == "accepted"
+                    joined, joined_src = True, "member accept" if accepted else "member report"
+                elif irow.get("joined") and mstate.get("fresh"):
                     joined, joined_src = True, "member report"
                 elif irow.get("joined"):
                     joined, joined_src = True, "seen joined"
@@ -823,13 +828,14 @@ class BotController:
                         "state_in_party": mparty.get("in_party"),
                         "state_invite": f"{minv.get('id') or '—'}:{minv.get('phase') or 'idle'}",
                         "invite_hold": str(irow.get("hold") or ""),
-                        "notice_echoed": bool(irow.get("notice_echoed")),
+                        "invite_accepted": bool(iacc),
+                        "invite_accept_id": str(iacc.get("accept_id") or ""),
+                        "invite_accept_at": iacc.get("at"),
                         "at_rally": at,
                         "policy_acked": acked,
                         "ack_at": ack.get("at"),
                         "invites": int(irow.get("invites") or 0),
                         "invite_failed": int(irow.get("failed") or 0),
-                        "invite_notices": int(irow.get("announced") or 0),
                         "invite_ago_s": irow.get("last_ago_s"),
                         "state": _member_state(
                             key, joined, at, irow, fresh, acked,
@@ -1851,19 +1857,15 @@ class BotController:
         def _ws_clients() -> int:
             return int(server.client_count()) if server is not None else 0
 
-        from app._06_party.comms.orders import publish_invite
-        from app._06_party.sync import InviteGate, member_states
+        from app._06_party.sync import InviteHold, member_states, reported_joined
 
+        self._party_leader_name = self_name
         invites = LeaderInvites(
             publish_policy=lambda: self._publish_party_policy(force=True),
             ws_clients=_ws_clients,
             policy_acked=self._leader_policy_acked,
-            gate=InviteGate(
-                member_states,
-                publish=lambda name, iid: publish_invite(to=name, invite_id=iid),
-                log=_setup_log,
-            ),
-            reported_joined=lambda name: member_states.joined(name, self_name),
+            hold=InviteHold(member_states),
+            reported_joined=lambda name: reported_joined(name, self_name),
             reported_out=lambda name: member_states.out_of_party(name, self_name),
             wait=self._stop_event.wait,
             log=_setup_log,
@@ -1999,6 +2001,7 @@ class BotController:
             "yard_scale_with_roster": True,
             "party_size": max(1, len(roster) + 1),
             "roster": roster,
+            "leader_name": str(getattr(self, "_party_leader_name", "") or ""),
         }
 
     def _publish_party_policy(self, *, force: bool = False) -> int:
@@ -2214,31 +2217,30 @@ class BotController:
             self.log(msg)
             self._party_event("socket", msg)
 
-    def _member_invite_accept(self, world, invite) -> None:
-        """Hand the leader's invite notice to the party accepter; it types Y when due."""
+    def _member_invite_accept(self, world) -> None:
+        """Invite popup on screen → Y; once it closed, ``invite_accept`` to the leader."""
         from app._06_party.accept import InviteAccepter
         from app._06_party.comms.orders import member_orders
+        from app._06_party.invite_popup import party_invite
+        from app._06_party.sync import memory_in_party
 
         if self._invite_accepter is None:
             def _log(msg: str) -> None:
                 self.log(msg)
                 self._party_event("socket", msg)
 
-            self._invite_accepter = InviteAccepter(log=_log)
-        from app._06_party.sync import memory_in_party
-
-        snap = getattr(world, "last_party", None)
-        in_party = memory_in_party(snap)
-        if invite is not None:
-            info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
-            roster = (member_orders.policy or {}).get("roster") or []
-            self._invite_accepter.on_notice(
-                invite,
-                self_name=str(info.get("as_name") or "") or _player_chat_name(world, snap),
-                roster_names=[r.get("name") for r in roster if isinstance(r, dict)],
-                in_party=in_party,
+            self._invite_accepter = InviteAccepter(
+                send_ack=self._party_comms.send_invite_accept, log=_log
             )
-        self._invite_accepter.tick(in_party=in_party)
+        snap = getattr(world, "last_party", None)
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        self._invite_accepter.tick(
+            party_invite(getattr(world, "last_uidialog", None)),
+            leader_name=str((member_orders.policy or {}).get("leader_name") or ""),
+            name=str(info.get("as_name") or "") or _player_chat_name(world, snap) or "member",
+            session=member_orders.session,
+            in_party=memory_in_party(snap),
+        )
 
     def _member_state_report(self, world) -> None:
         """Send ``member_state`` (party memory, policy, invite phase) on change / every 2 s."""
@@ -2252,9 +2254,9 @@ class BotController:
         info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
         acc = self._invite_accepter
         invite = (
-            {"id": acc.invite_id, "phase": acc.phase, "presses": acc.presses}
+            acc.report()
             if acc is not None
-            else {"id": "", "phase": "idle", "presses": 0}
+            else {"id": "", "phase": "idle", "presses": 0, "inviter": ""}
         )
         snap = getattr(world, "last_party", None)
         name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
@@ -2321,7 +2323,7 @@ class BotController:
                 )
                 if fresh is not None:
                     self._send_member_policy_ack(fresh)
-            self._member_invite_accept(world, member_orders.take_invite())
+            self._member_invite_accept(world)
             self._member_state_report(world)
             return
         pose = live_pose_from_state(world)
@@ -2582,6 +2584,7 @@ class BotController:
         self._member_state_reporter = None
         self._party_policy_info = {}
         self._party_policy_id = ""
+        self._party_leader_name = ""
         self._party_invites = None
         self._party_brain_ref = None
         from app._06_party.comms.orders import (
@@ -2589,9 +2592,11 @@ class BotController:
             new_leader_session,
             policy_acks,
         )
+        from app._06_party.sync import invite_accepts
 
         policy_acks.clear()
         member_orders.clear()
+        invite_accepts.clear()
         if party_role == "leader":
             session = new_leader_session()
             self.log(f"Party leader session {session} (members reset on this id)")

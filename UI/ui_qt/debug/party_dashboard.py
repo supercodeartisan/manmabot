@@ -865,7 +865,8 @@ class PartyDashboard(QWidget):
                 ("Invite (member)", _fmt(row.get("state_invite"))),
                 (
                     "Invites",
-                    f"{int(row.get('invites') or 0)} typed, {int(row.get('invite_notices') or 0)} notice(s)"
+                    f"{int(row.get('invites') or 0)} typed, "
+                    f"{'accepted' if row.get('invite_accepted') else 'no accept yet'}"
                     + (f", {int(row.get('invite_failed'))} failed" if row.get("invite_failed") else ""),
                 ),
                 (

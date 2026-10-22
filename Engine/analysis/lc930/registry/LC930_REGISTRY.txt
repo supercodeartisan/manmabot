@@ -524,3 +524,21 @@ WINSLOT_NAMEW=0x18
 WINSLOT_CNTW=0x28
 WIDGET_RENDERER=0x740
 LABEL_TEXT_OFF=0x378
+
+# ── UI confirm (통보문) — from D:\Projects\Lineage\dist registry (uidialogmon_930, 2026-10-20) ──
+#   확인 패널 = CHAT_LAYOUT_CLASS 인스턴스 + CHATCONFIRM_PANEL_OFF. 표시중 = panel+CHATCONFIRM_FN_OFF != 0.
+#   메시지 = panel+CHATCONFIRM_MSG_OFF (std::string, UTF-8). type=+0xC0, ask=(+0x1C0 functor)+0x10 상위32bit.
+#   팝업 창(UICONFIRM_CLASSES): 표시중 = +POPUP_VIS_OFF != 0, 메시지 = +CHATCONFIRM_MSG_OFF.
+#   UIDLG_WIN_* 로 등록하지 않는다(Esc 비의도창 처리에 걸리지 않게).
+CHAT_LAYOUT_CLASS=HudChatLayoutPCImpl
+CHATCONFIRM_PANEL_OFF=0x150
+CHATCONFIRM_FN_OFF=0x78
+CHATCONFIRM_FN2_OFF=0xB8
+CHATCONFIRM_MSG_OFF=0xC8
+CHATCONFIRM_TYPE_OFF=0xC0
+CHATCONFIRM_ASK_CB_OFF=0x1C0
+POPUP_VIS_OFF=0x78
+UICONFIRM_CLASSES=CommonMessagePopup,CommonBigMessagePopup,ChatConfirmPanel
+UICONFIRM_MSG_MS=500
+#   실측(2026-10-20): 954(0x3BA)=파티초대, 252(0xFC)=아이템거래. hex 로 적는다.
+CHATMON_ASK_TYPES=3BA:파티초대,FC:아이템거래

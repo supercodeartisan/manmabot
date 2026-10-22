@@ -88,11 +88,11 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
         inv = "active"
     else:
         inv = "off"
-    notices = sum(int(r.get("invite_notices") or 0) for r in roster)
-    idetail = f"{len(joined)}/{n} joined · {typed} /초대 typed · {notices} accept notice(s)"
-    by_report = [r for r in joined if r.get("in_party_src") == "member report"]
+    accepts = [r for r in roster if r.get("invite_accepted")]
+    idetail = f"{len(joined)}/{n} joined · {typed} /초대 typed · {len(accepts)} accept(s) from members"
+    by_report = [r for r in joined if r.get("in_party_src") != "leader memory"]
     if by_report:
-        idetail += f" · {len(by_report)} by member report"
+        idetail += f" · {len(by_report)} by member accept/report"
     holds = [f"{r.get('name')} {r.get('invite_hold')}" for r in roster if r.get("invite_hold")]
     if holds:
         idetail += " · holding: " + ", ".join(holds)
@@ -166,7 +166,10 @@ def roster_member_steps(row: dict, *, phase: str) -> list:
         idetail += " · late (start wait over)"
     steps.append(_step("invite", "Invite", ist, idetail))
     mphase = str(row.get("state_invite") or "").partition(":")[2] or "idle"
-    amap = {"waiting": "active", "pressed": "active", "joined": "done", "failed": "bad", "missed": "bad"}
+    amap = {
+        "popup": "active", "pressed": "active", "accepted": "done",
+        "failed": "bad", "missed": "bad", "left": "wait",
+    }
     steps.append(
         _step(
             "accept",
@@ -283,35 +286,28 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
     phase = str(accept.get("phase") or "idle")
     pressed_at = accept.get("pressed_at")
     presses = int(accept.get("presses") or 0)
-    tag = f" · id {accept.get('invite_id')}" if accept.get("invite_id") else ""
-    if phase == "waiting":
-        acc = "active"
-        adetail = f"invite for {accept.get('to') or '—'} · Y in {int(accept.get('due_in_s') or 0)}s"
+    tag = f" · id {accept.get('accept_id')}" if accept.get("accept_id") else ""
+    inviter = str(accept.get("inviter") or "—")
+    if phase == "popup":
+        acc, adetail = "active", f"invite popup from {inviter} · pressing Y"
     elif phase == "failed":
         acc, adetail = "bad", f"Y failed: {accept.get('error')}"
     elif phase == "pressed":
-        acc, adetail = "active", f"Y pressed {presses}× · {_ago(pressed_at, now)} · checking join"
-    elif phase == "joined":
+        acc, adetail = "active", f"Y pressed {presses}× · {_ago(pressed_at, now)} · popup still open"
+    elif phase == "accepted":
         acc = "done"
         adetail = (
-            f"Y pressed {presses}× · {_ago(pressed_at, now)} · joined"
-            if pressed_at
-            else str(accept.get("skipped") or "joined")
+            f"accepted (popup closed after Y) · from {inviter} · "
+            f"{_ago(accept.get('accepted_at'), now)} · told leader {int(accept.get('acks_sent') or 0)}×"
         )
-    elif phase == "unverified":
-        acc = "active"
-        adetail = f"Y pressed {presses}× · {_ago(pressed_at, now)} · party memory unreadable"
+    elif phase == "left":
+        acc, adetail = "wait", "left the party after the accept — waiting for the next invite"
     elif phase == "missed":
-        missed = int(accept.get("join_missed") or 0)
-        acc = "bad"
-        adetail = (
-            f"Y pressed {presses}× · {_ago(pressed_at, now)} · no join after "
-            f"{missed} press(es) — waiting for the next /초대"
-        )
+        acc, adetail = "bad", "popup closed before Y — waiting for the next /초대"
     elif phase == "skipped":
         acc, adetail = "wait", str(accept.get("skipped"))
     else:
-        acc, adetail = ("done" if in_party else ("wait" if acked_at else "off")), "no invite notice yet"
+        acc, adetail = ("done" if in_party else ("wait" if acked_at else "off")), "no invite popup yet"
     steps.append(_step("accept", "Accept", acc, adetail + tag))
 
     if not mem_ok:
