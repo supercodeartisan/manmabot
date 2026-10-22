@@ -1,5 +1,38 @@
 # Decision change log
 
+## 2026-10-22 — hunt input: live data COM only, shown as a label
+
+Intent: choosing Raspberry Pi should read the plugged-in data port. A saved COM must not stay selected, including the REPL.
+Shared: `find_pico_data_port` is the hunt port. `resolve_pico_port` ignores a saved name. `MANMABOT_PICO_COM` still overrides. Toolbar and driver dialogs show that port as a label.
+Affects: which COM the next hunt start opens. Click/key behavior unchanged.
+Consent: user asked to drop the port selector and the remembered COM, and to detect when Raspberry Pi is selected.
+Result: not run as a hunt session. A scan of the plugged-in board is what produced COM5 earlier; that number is not stored in the code.
+
+## 2026-10-22 — hunt input: Detect COM button on the main toolbar
+
+Intent: the COM box can keep a saved port that is still plugged in, including the REPL. Users need one button that writes the data port.
+Shared: toolbar `Detect COM` calls `find_pico_data_port` and saves `pico_com`. Visible only while Raspberry Pi is selected. Stopped sessions only.
+Affects: which COM the next hunt start opens. Click/key behavior unchanged.
+Consent: user asked for a detect button on the bot control UI.
+Result: live ports at the time of the request were COM4 (`x.0`, REPL) and COM5 (`x.2`, data). The button selects COM5.
+
+## 2026-10-22 — hunt input: Pico data COM is filled from Windows
+
+Intent: plugging the Pico should not require typing a COM name, and a saved name that disappeared after a different USB socket should be replaced.
+Shared: `find_pico_data_port` / `resolve_pico_port` (vendor `0x2E8A` or `0x239A`, hardware id `x.2`, same as the Pico lab scripts). A saved COM that is still in the Windows list is kept. Toolbar, driver dialogs, and `prepare` use that. `MANMABOT_PICO_COM` still overrides.
+Affects: which serial port hunt input opens. Click/key behavior unchanged.
+Consent: user asked to auto-get the COM and combine it with a manual choice.
+Result: not run against a plugged-in board.
+
+## 2026-10-22 — hunt input: Interception or Pico, chosen in the driver window
+
+Intent: farm clicks and keys can use either the Interception driver or the Pico HID board. Both stay available. Login and party chat keep Interception.
+Shared: `app._05_action.input_backend` (`InterceptionHuntInput`, `PicoHuntInput`). `MouseController` / `KeyboardController`, talking-scroll wheel, and shop scroll call it. Profile `input_backend`, `pico_com`, `pico_baud` (trial `other`). Driver setup (Qt and Tk) radios plus data COM. `bot_input_released` drops devices only when the farm path holds Interception, so a Pico session does not close COM for chat.
+Affects: hunt mouse, keyboard, and scroll transport. Untouched: decision, retreat, HP, login `win.interception`, enter_chat DLL.
+Side effect candidates: Pico aim adds a short cursor check before each click; pointer acceleration is off while a Pico hunt session is open and restored on Stop; a failed Pico open stops the farm loop; Interception hunt behavior matches the previous device bind.
+Consent: user asked to implement both input modules on the control UI for hunting.
+Result: not run on hardware in this change.
+
 ## 2026-10-22 — party: start order free (leader / members any order), per-member invites, leader member picker
 
 Intent: only 1:1 tested so far, but real runs have several accounts. The start order was strict: a member stopped if the leader socket was not up within 60 s, and the leader invited only inside a 15 min window from its own Start (late members, or members that left the party, were never invited again). The leader monitor summed all members into one line. User asked for free start order and a member selector to manage members one by one.

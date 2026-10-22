@@ -1,7 +1,7 @@
 """Lend the Interception devices to ``enter_chat`` for one call.
 
-The bot's mouse/keyboard context holds the devices exclusively; ``ec_run``
-opens its own context and fails if they are still held.
+The farm path holds those devices only while hunt input is Interception.
+A Pico session leaves the COM port open; chat opens Interception itself.
 """
 from __future__ import annotations
 
@@ -24,8 +24,9 @@ def bot_input_released(
     """Release the bot's capture if held, and take it back afterwards."""
     if is_captured is None or release is None or reacquire is None:
         from app._05_action import mouse
+        from app._05_action.input_backend import holds_interception_devices
 
-        is_captured = is_captured or mouse.is_captured
+        is_captured = is_captured or holds_interception_devices
         release = release or mouse.release_capture
         reacquire = reacquire or mouse.prepare_capture
 

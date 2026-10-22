@@ -1,0 +1,6 @@
+﻿LIVE TEST 2026-10-18
+Pico VID_2E8A COM4=REPL COM5=data
+precision_smoke: ABS closed err<=2 PASS; REL_Y WEAK
+farm_probe open-loop abs FAIL
+farm_probe2: PING~60ms; ABS_CLOSED err<=2 ~130-180ms PASS; open-loop FAIL
+HOTBAR/F4/click cadence PASS

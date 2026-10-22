@@ -2496,13 +2496,13 @@ class MainWindow(ctk.CTk):
             self._refresh_buttons()
             return
 
-        from session.driver_setup import interception_ready
+        from session.driver_setup import hunt_input_ready
         from ui.driver_setup import show_driver_setup
 
-        input_ready, input_detail = interception_ready()
+        input_ready, input_detail = hunt_input_ready(self.profile)
         if not input_ready:
             show_driver_setup(self, require_ready=False)
-            input_ready, input_detail = interception_ready()
+            input_ready, input_detail = hunt_input_ready(self.profile)
         if not input_ready:
             messagebox.showerror(self.s.cannot_start, input_detail, parent=self)
             self._refresh_lamps()

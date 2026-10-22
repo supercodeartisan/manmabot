@@ -152,6 +152,10 @@ class Profile:
     humanize: bool = True
     # Curved mouse path. Off jumps the cursor. On finishes each move within 0.02s.
     humanize_move: bool = True
+    # Hunt clicks/keys. Login and party chat stay on Interception.
+    input_backend: str = "interception"
+    pico_com: str = ""
+    pico_baud: int = 115200
     show_preview: bool = False
     hotkeys: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_HOTKEYS))
     spell_slots: dict[str, dict] = field(default_factory=default_spell_bindings)
@@ -397,6 +401,21 @@ class Profile:
         )
         if "show_preview" in kwargs:
             kwargs["show_preview"] = bool(kwargs["show_preview"])
+        if "input_backend" in kwargs:
+            name = str(kwargs.get("input_backend") or "").strip().lower()
+            kwargs["input_backend"] = (
+                "pico"
+                if name in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            )
+        if "pico_com" in kwargs:
+            kwargs["pico_com"] = str(kwargs.get("pico_com") or "").strip()
+        if "pico_baud" in kwargs:
+            try:
+                baud = int(kwargs.get("pico_baud") or 115200)
+            except (TypeError, ValueError):
+                baud = 115200
+            kwargs["pico_baud"] = baud if 1200 <= baud <= 1_000_000 else 115200
         if "selected_account_id" in kwargs:
             selected = kwargs["selected_account_id"]
             kwargs["selected_account_id"] = (

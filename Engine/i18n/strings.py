@@ -359,6 +359,13 @@ class UiStrings:
     drivers_setup_hint: str
     interception_driver: str
     install_interception: str
+    hunt_input: str
+    hunt_input_interception: str
+    hunt_input_pico: str
+    pico_port: str
+    pico_refresh_ports: str
+    pico_check: str
+    hunt_input_saved: str
     setup_memory_reader: str
     check_again: str
     driver_ready: str
@@ -740,9 +747,16 @@ _EN = UiStrings(
     driver_ok="{msg}\n\nApprove UAC if prompted, then use Start monitor & connect.",
     driver_fail_prefix="{msg}",
     drivers_setup="Set up drivers",
-    drivers_setup_hint="Both drivers must be ready before ZF can start.",
+    drivers_setup_hint="Memory must be ready. Choose the hunt input below. Login and party chat keep using Interception.",
     interception_driver="Interception input",
     install_interception="Install input driver (admin)…",
+    hunt_input="Hunt input",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="Data COM",
+    pico_refresh_ports="Refresh ports",
+    pico_check="Check Pico",
+    hunt_input_saved="Hunt input saved.",
     setup_memory_reader="Set up memory reader (admin)…",
     check_again="Check again",
     driver_ready="Ready",
@@ -1249,9 +1263,16 @@ _KO = UiStrings(
     driver_ok="{msg}\n\nUAC가 뜨면 승인한 뒤 모니터 시작 & 연결을 사용하세요.",
     driver_fail_prefix="{msg}",
     drivers_setup="드라이버 설정",
-    drivers_setup_hint="종횡을 시작하려면 두 드라이버가 모두 준비되어야 합니다.",
+    drivers_setup_hint="메모리는 준비되어 있어야 합니다. 아래에서 사냥 입력을 고르세요. 로그인과 파티 채팅은 Interception을 그대로 씁니다.",
     interception_driver="Interception 입력",
     install_interception="입력 드라이버 설치 (관리자)…",
+    hunt_input="사냥 입력",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="데이터 COM",
+    pico_refresh_ports="포트 새로고침",
+    pico_check="Pico 확인",
+    hunt_input_saved="사냥 입력을 저장했습니다.",
     setup_memory_reader="메모리 읽기 설정 (관리자)…",
     check_again="다시 확인",
     driver_ready="준비됨",
@@ -1753,9 +1774,16 @@ _ZH = UiStrings(
     driver_ok="{msg}\n\n如出现 UAC 请批准，然后使用“启动监视器并连接”。",
     driver_fail_prefix="{msg}",
     drivers_setup="设置驱动程序",
-    drivers_setup_hint="启动纵锋前，两个驱动程序都必须准备就绪。",
+    drivers_setup_hint="内存必须就绪。在下方选择狩猎输入。登录和队伍聊天仍使用 Interception。",
     interception_driver="Interception 输入",
     install_interception="安装输入驱动（管理员）…",
+    hunt_input="狩猎输入",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="数据 COM",
+    pico_refresh_ports="刷新端口",
+    pico_check="检查 Pico",
+    hunt_input_saved="已保存狩猎输入。",
     setup_memory_reader="设置内存读取（管理员）…",
     check_again="重新检查",
     driver_ready="已就绪",

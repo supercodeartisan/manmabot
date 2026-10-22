@@ -789,6 +789,27 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         "humanize_move",
         bool(other.get("humanize_move", getattr(profile, "humanize_move", True))),
     )
+    backend_name = str(
+        other.get("input_backend", getattr(profile, "input_backend", "interception"))
+        or "interception"
+    ).strip().lower()
+    set_value(
+        "input_backend",
+        "pico"
+        if backend_name in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+        else "interception",
+    )
+    set_value(
+        "pico_com",
+        str(other.get("pico_com", getattr(profile, "pico_com", "")) or "").strip(),
+    )
+    try:
+        pico_baud = int(other.get("pico_baud", getattr(profile, "pico_baud", 115200)) or 115200)
+    except (TypeError, ValueError):
+        pico_baud = 115200
+    if pico_baud < 1200 or pico_baud > 1_000_000:
+        pico_baud = 115200
+    set_value("pico_baud", pico_baud)
     set_value(
         "game_language",
         normalize_game_language(str(other.get("game_language", profile.game_language))),

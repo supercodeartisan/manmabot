@@ -1449,12 +1449,10 @@ class ActionExecutor:
             self.mouse.move(hx, hy, snap=True)
             time.sleep(0.2)
             try:
-                from app._05_action.mouse import _ensure_captured, _get_interception
+                from app._05_action.input_backend import scroll_wheel
 
-                _ensure_captured()
-                ix = _get_interception()
                 for i in range(wheels):
-                    ix.scroll("down")
+                    scroll_wheel("down")
                     time.sleep(0.06 if i < 8 else 0.05)
                 time.sleep(0.25)
             except Exception:

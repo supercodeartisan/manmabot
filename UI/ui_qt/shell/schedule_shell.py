@@ -457,6 +457,38 @@ class ScheduleShell(QMainWindow):
         self.humanize_move.toggled.connect(self._on_humanize_move)
         row.addWidget(self.humanize_move)
 
+        self.hunt_input = QComboBox()
+        self.hunt_input.setToolTip(
+            self.t.get(
+                "hunt_input_tip",
+                "Hunt clicks and keys. Login and party chat stay on Interception.",
+            )
+        )
+        self.hunt_input.addItem(
+            self.t.get("hunt_input_interception", "Interception"), "interception"
+        )
+        self.hunt_input.addItem(
+            self.t.get("hunt_input_pico", "Raspberry Pi"), "pico"
+        )
+        self.pico_port = QLabel("—")
+        self.pico_port.setMinimumWidth(72)
+        self.pico_port.setToolTip(
+            self.t.get(
+                "pico_port_tip",
+                "The Pico data port found when Raspberry Pi is selected.",
+            )
+        )
+        self._hunt_input_loading = True
+        self._select_hunt_input_combo()
+        if self._hunt_backend_name() == "pico":
+            self._show_live_pico_port()
+            save_profile(self.profile)
+        self._hunt_input_loading = False
+        self.hunt_input.currentIndexChanged.connect(self._on_hunt_input)
+        row.addWidget(self.hunt_input)
+        row.addWidget(self.pico_port)
+        self._sync_pico_port_visible()
+
         if not is_portable():
             debug_btn = QPushButton(self.t.get("debug", "Debug"))
             debug_btn.clicked.connect(self.open_debug)
@@ -768,6 +800,73 @@ class ScheduleShell(QMainWindow):
         save_profile(self.profile)
         self.bridge.coordinator.profile = self.profile
         self.bridge.coordinator.controller.set_humanize_move(bool(checked))
+
+    def _hunt_backend_name(self) -> str:
+        name = str(getattr(self.profile, "input_backend", "interception") or "").strip().lower()
+        return "pico" if name == "pico" else "interception"
+
+    def _select_hunt_input_combo(self) -> None:
+        index = self.hunt_input.findData(self._hunt_backend_name())
+        if index < 0:
+            index = 0
+        self.hunt_input.setCurrentIndex(index)
+
+    def _show_live_pico_port(self) -> str:
+        from app._05_action.input_backend import find_pico_data_port
+
+        found = find_pico_data_port()
+        self.profile.pico_com = found
+        self.pico_port.setText(found or "—")
+        return found
+
+    def _sync_pico_port_visible(self) -> None:
+        show = self._hunt_backend_name() == "pico"
+        self.pico_port.setVisible(show)
+
+    def _hunt_change_blocked(self) -> bool:
+        if self.bridge.controller.state == RunState.STOPPED:
+            return False
+        self.footer.showMessage(
+            self.t.get("hunt_input_busy", "Stop ZF before changing hunt input.")
+        )
+        return True
+
+    def _store_hunt_input(self) -> None:
+        save_profile(self.profile)
+        self.bridge.coordinator.profile = self.profile
+        from app._05_action.input_backend import configure_hunt_input
+
+        configure_hunt_input(self.profile)
+
+    def _on_hunt_input(self, _index: int) -> None:
+        if self._hunt_input_loading:
+            return
+        if self._hunt_change_blocked():
+            self._hunt_input_loading = True
+            self._select_hunt_input_combo()
+            self._hunt_input_loading = False
+            return
+        name = str(self.hunt_input.currentData() or "interception")
+        self.profile.input_backend = "pico" if name == "pico" else "interception"
+        found = ""
+        if name == "pico":
+            found = self._show_live_pico_port()
+        self._sync_pico_port_visible()
+        self._store_hunt_input()
+        if name == "pico":
+            if found:
+                self.footer.showMessage(
+                    self.t.get("pico_detect_found", "Pico data port: {port}").format(
+                        port=found
+                    )
+                )
+            else:
+                self.footer.showMessage(
+                    self.t.get(
+                        "pico_detect_missing",
+                        "Pico data port was not found. Plug in the board and try again.",
+                    )
+                )
 
     def _on_user_stop(self) -> None:
         self._disarm_schedule()

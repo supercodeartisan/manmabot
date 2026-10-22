@@ -2778,11 +2778,16 @@ class BotController:
         world.hotbar_layout = executor.hotbar_layout
         self._action_executor = executor
         try:
+            from app._05_action.input_backend import backend_name, configure_hunt_input
             from app._05_action.mouse import prepare_capture
 
+            configure_hunt_input(profile)
             prepare_capture()
         except Exception as exc:
             self.log(f"Input capture failed: {exc}")
+            if backend_name() == "pico":
+                self._stop_event.set()
+                self._set_state(RunState.STOPPED, f"Input capture failed: {exc}")
 
         from hotbar.inspect import HotbarInspectError, inspect_hotbars
 

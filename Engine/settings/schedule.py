@@ -290,6 +290,16 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "item_pickup_names": list(getattr(profile, "item_pickup_names", []) or []),
             "game_language": profile.game_language,
             "humanize": profile.humanize,
+            "input_backend": (
+                "pico"
+                if str(getattr(profile, "input_backend", "interception") or "")
+                .strip()
+                .lower()
+                in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            ),
+            "pico_com": str(getattr(profile, "pico_com", "") or "").strip(),
+            "pico_baud": int(getattr(profile, "pico_baud", 115200) or 115200),
             "show_preview": False,
             "notes": "",
         },
