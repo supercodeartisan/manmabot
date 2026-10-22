@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-10-22 — world-nav: same-map talking scroll competes on cost
+
+Intent: Farm on mainland Dragon Valley from another mainland tile planned as walk~560 to Giran NPC then field TP. User expected talking-scroll to the Giran hub (cheaper). Planner had `allow_scroll = … and not same_map`, so scroll never entered the cost graph on same map.
+Shared: `ready/planner.py` — drop the same-map ban; keep `not near_entrance`. Meta-search already compares `scroll_cost_tiles` vs walk.
+Affects: same-map world-nav (scroll vs walk vs field TP). Cross-map and near-entrance behavior unchanged.
+Consent: user (“같은 맵이라도 비용계산해서 싼쪽으로… 수정해줘”).
+Result: implemented; replay start(33961,33257)→farm picks scroll→giran hub→field TP.
+
+## 2026-10-22 — wire teleport_giran_dragonvalley into world-nav (goal filter + zh)
+
+Intent: User added `teleport_giran_dragonvalley` (field_land, world_nav) in Shopping Practice. Engine already loaded the link, but (1) zh locale looked up missing `_ch` and dropped it, (2) planner treated any dungeon_gate shutter as a 15-tile blink, so Gludin→dungeon7 beat Giran→Dragon Valley on paths to map 30.
+Shared: `filter_teleporter_links_for_goal` / `dungeon_gate_serves_goal` (dungeon_gate only if dest serves goal map via floor_ladder); `resolve_world_nav_teleporter_ids` falls back to Korean base when `_ch` absent; YAML `teleport_giran_dragonvalley_ch` (same land/adena; recalibrate zh option UV in the tool).
+Affects: world-nav teleporter selection. Buy/sell/combat/HP/login unchanged. Giran→53 dungeon_gate still plans.
+Consent: user (“shopping practice로 추가… 엔진에서 정확히 동작하려면… 고칠거 있음 고쳐”).
+Result: from Giran NPC → map30 uses field_land; unrelated shutters no longer steal DV routes; zh resolves `_ch`.
+
+## 2026-10-22 — NPC teleporter field_land (mainland region TP, e.g. Giran → Dragon Valley)
+
+Intent: Shopping Practice / world-nav already model dungeon shutter TPs (`destination_dungeon` → nearest `ground_enter`). User needs same dialog flow for village teleporters that land on another mainland field (same mapId, new xy; e.g. Giran option → Dragon Valley for 187 adena) without walking from the village.
+Shared: `ShoppingBehavior.teleport_kind` (`dungeon_gate` | `field_land`) + `land_map_id`/`land_world`; Behaviors editor Teleport kind + Land map/xy + Fill land from memory; `list_land_map_choices`; `npc_teleporters` field links; planner allows same-map field TP only (dungeon_gate still off-map); session settle waits near planned land and retargets next walk (no gate rewrite).
+Affects: world-nav plan/execute for teleporters; Shopping Practice Behaviors tab; probe catalog labels. Buy/sell/login/combat/HP unchanged. Existing dungeon_gate YAML rows keep working (kind defaults to dungeon_gate).
+Consent: user (“엔진의 연결부문에까지 제대로 구현… 다른 영향이 없게”).
+Result: implemented. No sample field_land row added to yaml — calibrate per destination in the tool.
+
 ## 2026-10-22 — ivory tower land cell, and no entrance ring after the map flips
 
 Intent: a click that already entered ivory tower floor 1 counts as landed at `(32763, 32902)`. A second entrance ring does not run once the live map is the destination, so the cursor stays off the desktop corner. When the live cell is outside the planned interior, the following walk starts at the live cell.

@@ -80,11 +80,16 @@ class PlanStep:
         if self.op == "npc_teleporter":
             a = self.detail["from"]
             b = self.detail["to"]
+            kind = self.detail.get("teleport_kind") or "dungeon_gate"
             dest = self.detail.get("destination_dungeon")
+            land = f"land map{b['mapId']}({b['x']},{b['y']})"
+            if kind == "field_land":
+                where = land
+            else:
+                where = f"gate ({b['x']},{b['y']}) dest_map={dest}"
             return (
                 f"NPC_TP {self.detail.get('behavior_id', '')} "
-                f"map{a['mapId']}({a['x']},{a['y']}) -> gate "
-                f"({b['x']},{b['y']}) dest_map={dest} "
+                f"map{a['mapId']}({a['x']},{a['y']}) -> {where} "
                 f"adena={self.detail.get('adena_cost', 0)} "
                 f"[+{self.cost_tiles}]"
             )
@@ -183,12 +188,33 @@ class WorldNavPlanner:
                 radius=NEAR_ENTRANCE_NO_TELEPORTER_TILES,
             )
         )
-        allow_npc_tp = bool(use_npc_teleporters) and not same_map and not near_entrance
-        # The same door check. Standing at the ground enter walks and clicks it.
+        # Same-map field teleporters (e.g. Giran → Dragon Valley field) must stay
+        # eligible; dungeon_gate links remain useful mainly when leaving the map.
+        # Near a goal ground_enter: prefer walk — no NPC TP.
+        allow_npc_tp = bool(use_npc_teleporters) and not near_entrance
+        # Talking scroll is allowed on the same map too: meta-search compares
+        # scroll_cost vs walk (e.g. scroll to Giran hub then field TP beats a
+        # 500+ tile walk to the NPC). Near a goal ground_enter: prefer walk.
         allow_scroll = bool(has_talking_scroll) and not near_entrance
         tp_links = (
             _teleporter_links(g.transitions, adena=adena) if allow_npc_tp else []
         )
+        if tp_links:
+            from app._04_decision.world_nav.npc_teleporters import (
+                filter_teleporter_links_for_goal,
+            )
+
+            # dungeon_gate only when its destination serves the goal map;
+            # field_land always eligible (same-map region hops). Stops e.g.
+            # Gludin→dungeon7 shutter from winning a path to Dragon Valley.
+            tp_links = filter_teleporter_links_for_goal(
+                tp_links,
+                g.transitions,
+                goal_map=int(goal.map_id),
+                same_map=same_map,
+            )
+            if not tp_links:
+                allow_npc_tp = False
 
         nodes: set[NodeKey] = {start.key()}
         for h in g.hubs:
@@ -303,8 +329,8 @@ class WorldNavPlanner:
                     )
                     heapq.heappush(pq, (nc, v))
 
-            # Scroll: when already on goal map, only same-map hubs (no inter-map).
-            # Near the goal door this edge is omitted; the ground enter is the step.
+            # Talking scroll to a hub (same map or cross-map). Cost is compared
+            # with walk; near the goal door this edge is omitted above.
             if allow_scroll:
                 for h in g.hubs:
                     if same_map and int(h.map_id) != int(goal.map_id):
@@ -366,44 +392,55 @@ class WorldNavPlanner:
                         )
                         heapq.heappush(pq, (nc, v))
 
-            # NPC teleporter: same-map shortcut to a nearby ground_enter cell.
-            # Planned ``to`` is the gate approach tile; live land xy comes after execute.
-            # Disabled when same-map or already near the destination entrance.
+            # NPC teleporter: dialog shortcut to a planned arrival cell.
+            # dungeon_gate → gate approach (live land rewritten after execute).
+            # field_land → absolute land xy (often same mainland map).
+            # Disabled when already near the destination entrance.
             for link in teleporters_from.get(u, []):
-                v = link.gate_key
+                v = link.land_key
                 w = int(link.cost_tiles)
                 nc = cost + w
                 if nc < dist.get(v, 10**18):
                     dist[v] = nc
-                    prev[v] = _Prev(
-                        u,
-                        "npc_teleporter",
-                        w,
-                        {
-                            "behavior_id": link.behavior_id,
-                            "name": link.name,
-                            "adena_cost": link.adena_cost,
-                            "destination_dungeon": link.destination_dungeon,
-                            "gate_edge_id": link.gate_edge_id,
-                            "from": {
-                                "mapId": link.map_id,
-                                "x": link.npc_x,
-                                "y": link.npc_y,
-                            },
-                            "to": {
-                                "mapId": link.map_id,
-                                "x": link.gate_x,
-                                "y": link.gate_y,
-                            },
-                            "land_map_id": link.map_id,
-                            "land_xy": "after_execute",
-                            "gate_to": {
-                                "mapId": link.destination_dungeon,
-                                "x": link.gate_to_x,
-                                "y": link.gate_to_y,
-                            },
-                        },
+                    kind = str(
+                        getattr(link, "teleport_kind", None) or "dungeon_gate"
                     )
+                    detail: dict[str, Any] = {
+                        "behavior_id": link.behavior_id,
+                        "name": link.name,
+                        "adena_cost": link.adena_cost,
+                        "teleport_kind": kind,
+                        "destination_dungeon": int(link.destination_dungeon),
+                        "gate_edge_id": str(
+                            getattr(link, "gate_edge_id", "") or ""
+                        ),
+                        "from": {
+                            "mapId": link.map_id,
+                            "x": link.npc_x,
+                            "y": link.npc_y,
+                        },
+                        "to": {
+                            "mapId": int(link.land_map_id),
+                            "x": int(link.land_x),
+                            "y": int(link.land_y),
+                        },
+                        "land_map_id": int(link.land_map_id),
+                        "land_xy": [int(link.land_x), int(link.land_y)],
+                    }
+                    if kind != "field_land" and int(link.destination_dungeon) > 0:
+                        detail["gate_to"] = {
+                            "mapId": link.destination_dungeon,
+                            "x": int(getattr(link, "gate_to_x", 0) or 0),
+                            "y": int(getattr(link, "gate_to_y", 0) or 0),
+                        }
+                        # Dungeon shutter TPs stay on the NPC map until the gate walk.
+                        detail["land_map_id"] = int(link.map_id)
+                        detail["to"] = {
+                            "mapId": int(link.map_id),
+                            "x": int(link.land_x),
+                            "y": int(link.land_y),
+                        }
+                    prev[v] = _Prev(u, "npc_teleporter", w, detail)
                     heapq.heappush(pq, (nc, v))
 
         meta = {

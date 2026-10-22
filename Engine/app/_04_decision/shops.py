@@ -271,8 +271,16 @@ def list_map_ids() -> list[str]:
     return found or ["talking_island", "mainland"]
 
 
-def list_destination_dungeon_choices() -> list[tuple[int, str]]:
-    """``(mapId, label)`` for teleporter destination_dungeon (is_dungeon maps)."""
+def _map_transition_map_choices(
+    *,
+    dungeons_only: bool | None = None,
+) -> list[tuple[int, str]]:
+    """``(mapId, label)`` from ``map_transitions.json``.
+
+    ``dungeons_only=True`` → ``is_dungeon`` maps (Dest dungeon).
+    ``dungeons_only=False`` → non-dungeon maps (field land).
+    ``dungeons_only=None`` → every map.
+    """
     path = _PROJECT_ROOT / "data" / "world" / "map_transitions.json"
     if not path.is_file():
         return []
@@ -289,21 +297,34 @@ def list_destination_dungeon_choices() -> list[tuple[int, str]]:
     if not isinstance(items, list):
         items = list(items) if maps else []
     for m in items:
-        if not isinstance(m, dict) or not m.get("is_dungeon"):
+        if not isinstance(m, dict) or m.get("mapId") is None:
             continue
-        if m.get("mapId") is None:
+        is_dungeon = bool(m.get("is_dungeon"))
+        if dungeons_only is True and not is_dungeon:
+            continue
+        if dungeons_only is False and is_dungeon:
             continue
         try:
             mid = int(m["mapId"])
         except (TypeError, ValueError):
             continue
-        if mid in seen or mid <= 0:
+        if mid in seen or mid < 0:
             continue
         seen.add(mid)
         name = str(m.get("kr") or m.get("en") or mid).strip()
         out.append((mid, f"{mid} · {name}" if name else str(mid)))
     out.sort(key=lambda t: t[0])
     return out
+
+
+def list_destination_dungeon_choices() -> list[tuple[int, str]]:
+    """``(mapId, label)`` for teleporter destination_dungeon (is_dungeon maps)."""
+    return _map_transition_map_choices(dungeons_only=True)
+
+
+def list_land_map_choices() -> list[tuple[int, str]]:
+    """``(mapId, label)`` for teleporter field_land (non-dungeon maps)."""
+    return _map_transition_map_choices(dungeons_only=False)
 
 
 def shop_ui_uv(px: tuple[float, float]) -> Position:
@@ -324,6 +345,7 @@ __all__ = [
     "list_scroll_spot_choices",
     "list_map_ids",
     "list_destination_dungeon_choices",
+    "list_land_map_choices",
     "shop_ui_uv",
     "shop_ui_clicks",
     "ARROW_BUY_QTY",

@@ -65,13 +65,21 @@ def load_catalog() -> Catalog:
         )
     links = load_npc_teleporter_links(graph.transitions, adena=None)
     for link in links:
+        if getattr(link, "is_field_land", False):
+            dest_bit = (
+                f"→ field map{link.land_map_id} ({link.land_x},{link.land_y})"
+            )
+            key_tail = f"field:{link.land_map_id}:{link.land_x}:{link.land_y}"
+        else:
+            dest_bit = f"→ dungeon {link.destination_dungeon}"
+            key_tail = link.gate_edge_id or f"dungeon:{link.destination_dungeon}"
         goals.append(
             GoalChoice(
-                key=f"npc:{link.behavior_id}:{link.gate_edge_id}",
+                key=f"npc:{link.behavior_id}:{key_tail}",
                 label=(
                     f"npc {link.behavior_id}  {link.name}  "
                     f"map {link.map_id} ({link.npc_x},{link.npc_y}) "
-                    f"→ dungeon {link.destination_dungeon}"
+                    f"{dest_bit}"
                 ),
                 kind="point",
                 map_id=link.map_id,
@@ -146,11 +154,18 @@ def catalog_report(catalog: Catalog) -> str:
     if not links:
         lines.append("  (none)")
     for link in links:
+        if getattr(link, "is_field_land", False):
+            dest_bit = (
+                f"field map{link.land_map_id} ({link.land_x},{link.land_y})"
+            )
+        else:
+            dest_bit = (
+                f"gate {link.gate_edge_id} ({link.land_x},{link.land_y}) "
+                f"dest {link.destination_dungeon}"
+            )
         lines.append(
             f"  {link.behavior_id}  {link.name}  map {link.map_id} "
-            f"({link.npc_x},{link.npc_y}) fare={link.adena_cost} "
-            f"gate {link.gate_edge_id} ({link.gate_x},{link.gate_y}) "
-            f"dest {link.destination_dungeon}"
+            f"({link.npc_x},{link.npc_y}) fare={link.adena_cost} {dest_bit}"
         )
     if g.gaps:
         lines.append("")
