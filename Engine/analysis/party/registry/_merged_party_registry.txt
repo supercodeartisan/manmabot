@@ -1,0 +1,584 @@
+# =============================================================================
+#  LC930_REGISTRY.txt — Lineage Classic (LC.exe) 26.10.14.2 통합 상수표
+# =============================================================================
+#  — 프로젝트 "단일 진실 공급처(Single Source of Truth)".
+#    모든 도구/실행파일은 이 파일을 읽어 동작. 코드에 상수 하드코딩 금지.
+#    갱신(패치/빌드 변동) → 이 파일만 수정 → 전체 동작.
+#
+#  형식: KEY=VALUE   (# 주석, 공백 무시, 0x16진/10진 허용)
+#  기준: 2026-10-14 LC.exe (module size 0x3F5F000) LIVE-VERIFIED
+#  읽기: signeddrv.sys MmCopy (SignedReadMemory/SignedReadFast) ONLY
+#  갱신 절차는 docs/REGISTRY_GUIDE.md 참조.
+# =============================================================================
+
+REGISTRY_VERSION=31
+BUILD=26.10.18.2
+REGISTRY_UPDATED=2026-10-19.door-state
+MODULE_SIZE=0x3F74000
+
+# =============================================================================
+# [SEC-1] 전역 앵커 체인
+#   mgr=*(BASE+MGR); guard=*(u8)(mgr+GUARD_OFF)==1;
+#   holder=*(mgr+HOLDER_OFF); sub[i]=*(holder+SUBB+SUB_STRIDE*i)
+#   모든 서버시스템은 vft(RTTI)로 식별. 인덱스 금지.
+# =============================================================================
+MGR=0x16ED640
+GUARD_OFF=0xD8
+GUARD_VAL=1
+HOLDER_OFF=0xD0
+SUBB=0x180
+SUB_STRIDE=16
+SUBCOUNT=64
+
+# =============================================================================
+# [SEC-2] 서버시스템 vft (RVA)
+# =============================================================================
+VFT_ACTORSUBS=0x11E9430
+VFT_MAPSUBS=0x1233630
+VFT_BEHAVIORS=0x11EDA40
+VFT_NETWORK=0x1205098
+VFT_INVENTORY=0x1231BB8
+VFT_CHARDATA=0x11F00E8
+VFT_HUDSLOT=0x11ED890
+VFT_BUFF=0x1226AB8
+VFT_SPELL=0x12364C0
+VFT_SHOP=0x12353E0
+VFT_PLAYERSHOP=0x1235070
+VFT_EQUIPINFO=0x1231808
+VFT_DUNGEON=0x1230DD0
+VFT_STORAGE=0x1236A38
+VFT_MAIL=0x11EDAB0
+VFT_CAMERA=0x11F62D0
+VFT_INPUT=0x11EDCF8
+VFT_GAMESTATE=0x11EDE48
+VFT_CHAT=0x1227208
+VFT_RESOURCE=0x11EDD78
+VFT_WORLDENV=0x1228590
+VFT_RENDERSPRITE=0x11F18D8
+VFT_UISUBSYSTEM=0x11EDB98
+VFT_NGUARD=0x11EDDC8
+VFT_ACTORCTL=0x11EBBA0
+VFT_PORTALACT=0x11F3E50
+
+# =============================================================================
+# [SEC-3] 엔티티 / 액터 계층
+#   entity e { vft@0x00, self@0x08, GUID@0x18, H@0x20 }
+#   ActorSubsystem → 셀(sentinel) → node{next,cellX,cellY,vec(begin,end)}
+# =============================================================================
+VFT_SELF=0x11EC4C8
+VFT_PLAYER=0x11EC490
+VFT_MONSTER=0x11EC380
+VFT_ITEM=0x11EC2D8
+VFT_NPC=0x11EC2A0
+VFT_SEGPROP=0x11EC830
+VFT_ACTOR=0x11E88C8
+VFT_SHIP=0x11EC7A0
+VFT_SUMMON=0x11EC930
+ENT_SELF=0x08
+ENT_GUID=0x18
+ENT_H=0x20
+ENT_SPECIES=0x38
+H_AC_OFF=0x10
+# 셀 노드
+CELL_NEXT=0x08
+CELL_X=0x10
+CELL_Y=0x14
+CELL_VEC_BEG=0x18
+CELL_VEC_END=0x20
+# H 컴포넌트 테이블
+VFT_PRES_A=0x11E8858
+VFT_PRES_B=0x11EC1D8
+VFT_AC=0x11EB908
+VFT_ATTACKACT=0x11EB490
+VFT_DEATH=0x11EB400
+VFT_DEADBODY=0x11EB568
+VFT_BREATHACT=0x11EB4D8
+# AC+0xC0 / Controller+0x58. bodyact on 26.10.20.2001.
+VFT_MOVINGACT=0x11EB7B8
+VFT_MOVINGBACK=0x11EB770
+VFT_CHANGEDIR=0x11EB5B0
+VFT_SPELLACT=0x11EB3B8
+VFT_ACTIONBASE=0x11EB718
+VFT_DAMAGEDACTION=0x11EB448
+VFT_DAMAGEDREACTION=0x11EB520
+VFT_EFFECTACTION=0x11EB370
+VFT_CMDMOVE=0x11EBA50
+VFT_CMDATTACK=0x11EBBD0
+VFT_CMDINTERACT=0x11EBA88
+VFT_INTERACTCOMP=0x11E0E28
+VFT_ACTORCTL=0x11EBBA0
+VFT_ACTORATTR=0x11EBA20
+VFT_COOLDOWN=0x11EBE20
+ACT_IDX=2
+COMP_TABLE=0x20
+# AttackAction 필드
+ACT_ATK_OWNER=0x80
+ACT_ATK_TARGET=0x88
+# ActionComponent 상태
+ACT_DEAD_OFF=0x49
+ACT_DEAD_VAL=1
+ACT_BAIT_OFF=0x40
+ACT_BAIT_VAL=0x78
+CTRL_STEP_MS=516.0
+REF_H=600
+# ActorSubsystem 셀헤드 heads (폴백; CELL_MAP_OFF → SEC-4) 
+CELL_MAP_OFF1=0x7A0
+CELL_MAP_OFF2=0x7E0
+# 컴포넌트 오프셋 (H 기준)
+PRESB_A_OFF=0x50
+PRESB_B_OFF=0x78
+PRESB_STRIDE=0x40
+PRESB_BATCH_LEN=0x48
+# 이름 (H → NameObject)
+NAME_H=0x20
+NAME_OBJ=0x20
+NAME_BYTES=0x40
+NAME_LEN=0x50
+
+# ── 코드 하드코딩 제거용 오프셋 스캔한계 (2026-10-05, lcore.h 전환) ──
+# ground item 추가 필드
+ENT_ITEM_FLAG=0x48
+OFF_ITEM_CONTRIB=0x44
+# 소스몹 guid 인접 허용(delta)은 SEC-14 LH_DELTA_MAX (decimal 16).
+# PRES_B 배치 읽기 (한 번의 IOCTL) : base ~ base+BATCH_LEN
+PRESB_BATCH_BASE=0x40
+PRESB_BATCH_LEN=0x48
+# 스캔 한계 (구조 → 컴포넌트/포인터 탐색 )
+PRESB_SCAN_LEN=0x200
+AC_SCAN_LEN=0x140
+# ground item 소유자 스캔 범위
+ITEM_OWN_SCAN_BEG=0x10
+ITEM_OWN_SCAN_END=0xC0
+
+# =============================================================================
+# [SEC-4] 캐릭터 정보
+#   cd = sub[vft==VFT_CHARDATA] ; status = cd + CD_OFF
+#   status 검증: *(status) vft == VFT_STATUS
+#   트리 난독화 필드: (k,b,c) 3×u32 @ offset
+#       u8 = b ^ k ; check: c == ((k+K_XOR) ^ ~u8)
+#       value = u8 - (k*K_MUL ^ K_XOR)     (mod 2^32, int32)
+#   plain 필드(난독화 아님): WEIGHT_CUR / WEIGHT_MAX
+# =============================================================================
+CD_VFT=0x11F00E8
+VFT_STATUS=0x11F0158
+CD_OFF=0x498
+K_MUL=0x7F4A7C15
+K_XOR=0x2F8B1064
+STAT_STR=0x128
+STAT_DEX=0x14C
+STAT_CON=0x140
+STAT_WIS=0x158
+STAT_CHA=0x164
+STAT_INT=0x134
+STAT_LEVEL=0x248
+STAT_HP=0x2B8
+STAT_MAXHP=0x2C4
+STAT_MP=0x2D0
+STAT_MAXMP=0x2DC
+STAT_TIMER=0x2E8
+STAT_FOOD=0x2F4
+STAT_WEIGHT=0x300
+STAT_WEIGHT_CUR=0x3AC
+STAT_WEIGHT_MAX=0x3B0
+STAT_LAWFUL=0x30C
+STAT_AC=0x348
+# CharacterInfo (vft 아래, wrapper+CI_BASE)
+CI_VFT=0x11F0030
+CI_BASE=0x10
+CI_HP=0x5C
+CI_MAXHP=0x68
+CI_LEVEL=0x80
+CI_STR=0x8C
+CI_DEX=0x98
+CI_CON=0xA4
+CI_WIS=0xB0
+CI_CHA=0xBC
+CI_INT=0xC8
+# static player block (모듈 상대)
+ST_BLOCK=0x16DED30
+ST_X=0x0
+ST_Y=0x4
+ST_HEADING=0x8
+ST_HP=0xC
+ST_MAXHP=0x10
+ST_MP=0x14
+ST_MAXMP=0x18
+ST_LEVEL=0x1C
+# ActorSubsystem 셀 맵 (9.30: +0x7A0, stride/sentinel)
+CELL_MAP_OFF=0x7A0
+
+# =============================================================================
+# [SEC-5] 실시간 화면좌표 보간 (world cell → screen px)
+# =============================================================================
+PLAYER_X=0x16ED4F0
+PLAYER_Y=0x16ED4F4
+CAM_GLOB=0x1886820
+PPS=0.53
+VP_DX=1.8
+VP_DY=63.0
+REF_W=800
+REF_H=600
+FEET_DX=0
+FEET_DY=0
+ANCHOR_DU=0
+ANCHOR_DV=24
+# iso(등각) 좌표: U=ISO_U_SCALE*(cx+cy)-ISO_U_BIAS ; V=ISO_V_SCALE*(cx-cy)
+ISO_U_SCALE=48.0
+ISO_U_BIAS=3145680.0
+ISO_V_SCALE=24.0
+
+# =============================================================================
+# [SEC-6] 버프 읽기 — BuffSubsystem unordered_map walk (E:\Lineage\extra / lbuff.h)
+#   앵커: lc_subsGet(VFT_BUFF). BFS/HudSlot 체인 폐기(2026-10-06).
+# =============================================================================
+HUD_VFT=0x11ED860
+HUD_CONT_OFF=0x20
+RECORD_VFT_RVA=0x1226938
+RECORD_VFT_ABS=0x7FF6ABC1B628
+OFF_CASTER=0x10
+OFF_SKILLID=0x14
+OFF_DURATION=0x18
+OFF_STRID=0x2C
+OFF_REMAIN=0x84
+# 버프 레코드 = _Ref_count_obj2<BuffInstance> 제어블록: vft(+0), _Uses(+8), _Weaks(+C), 객체(+10)
+# _Uses==0 = 소유자 없음(고아/만료) → 표시 제외
+OFF_REFCOUNT=0x08
+# map=*(bsub+BUFF_MAP_OFF); vec/mask/end; bucket→node walk; record=_Rep
+BUFF_MAP_OFF=0x260
+BUFF_VEC_OFF=0x18
+BUFF_MASK_OFF=0x30
+BUFF_END_OFF=0x08
+BUFF_BUCKET_PTR=0x08
+BUFF_NODE_KEY=0x10
+BUFF_NODE_NEXT=0x08
+BUFF_NODE_REP=0x20
+# 하위호환(구 BFS 도구용, buff_listen.dll 미사용)
+CHAIN_A=0x00,0x40,0x58,0x30
+CHAIN_A_LEAF1=0x60,0x68
+CHAIN_A_LEAF2=0x20,0x50
+CHAIN_B=0x10,0x50,0x08,0x68,0x58,0x08,0x10,0x30
+CHAIN_C=0x48,0x50,0x60,0x70,0x60,0x20
+CONT_SCAN_BYTES=0x400
+
+# =============================================================================
+# [SEC-7] 인벤토리
+# =============================================================================
+INV_VFT=0x1231BB8
+INV_VEC_BEG=0x3D8
+INV_VEC_END=0x3E0
+INV_VEC_CAP=0x3E8
+ITEM_VFT=0x12319D0
+ITEM_ID=0x18
+ITEM_TEMPLATE=0x20
+ITEM_CFG=0x30
+ITEM_COUNT=0x38
+ITEM_ENCHANT=0x3C
+ITEM_KIND=0x44
+ITEM_FMT=0x68
+WITEM_VFT=0x1254120
+WITEM_TYPE=0x18
+WITEM_QTY=0x38
+
+# =============================================================================
+# [SEC-8] 핫바 슬롯 (HudSlotDataSubsystem → 슬롯 std::map<int,Slot*>)
+#   slot value: +V_TYPE(1=SPELL,2=ITEM), +V_CFG(스킬id/item cfg),
+#               +V_STR/$NNN 문자열(스킬명 or 아이템토큰), +V_ID
+# =============================================================================
+HSD_MAP_HEAD=0x8
+HSD_MAP_SIZE=0x10
+HSD_MAP_ALT=0x1D8
+HSD_MAP_OFF=0xD8
+NODE_L=0x0
+NODE_PARENT=0x8
+NODE_R=0x10
+NODE_NIL=0x19
+NODE_KEY=0x20
+NODE_VAL=0x28
+V_RAW=0x00
+V_TYPE=0x8
+V_CFG=0x0C
+V_T10=0x10
+V_STR=0x30
+V_STRLEN=0x40
+V_CAP=0x48
+V_ID=0xC0
+# 슬롯 종류:
+SLOT_TYPE_SPELL=1
+SLOT_TYPE_ITEM=2
+SLOT_EMPTY=0xFFFFFFFF
+# 핫바 이름: SPELL→슬롯 문자열(V_STR) / ITEM→"$NNN" 또는 인벤토리 조인
+
+# =============================================================================
+# [SEC-9] 상점 리스트
+# =============================================================================
+SHOP_VFT2=0x11E8F98
+SHOP_STATE=0x28
+SHOP_BUY_BEGIN=0x40
+SHOP_BUY_END=0x48
+SHOP_BUY_CAP=0x50
+BUY_STRIDE=0x90
+SHOP_SELL_BEGIN=0x58
+SHOP_SELL_END=0x60
+SELL_STRIDE=0x20
+SELLLISTITEM_VFT=0x124A2D0
+SLI_ID=0x18
+SLI_UNIT=0x1C
+BUYLISTITEM_VFT=0x1249D88
+BLI_KEY=0x30
+BLI_KEY_BACK=0x2
+BLI_ORDER=0x38
+BLI_ITEMID=0x3C
+BLI_TEMPLATE=0x40
+BLI_PRICE=0x44
+
+# =============================================================================
+# [SEC-10] UI 대화창 감시 (UIdialogMonitor · RTTI 클래스식별 · 9.30 실측 2026-10-06)
+# =============================================================================
+# ── 고정앙커 (실제 UISubsystem=sub[5]; 종전 0x1183190 은 ScreenshotSubsystem) ──
+VFT_UISUBSYSTEM=0x11EDB98
+UISUBSYSTEM_IDX=5
+# ── 창 식별: RTTI 클래스명 패턴(버전 무관). 클래스명 = "…<SUFFIX>[PCImpl|MobileImpl]::<NS>"
+UI_LAYOUT_SUFFIX=Layout
+UI_LAYOUT_NS=ui::lineage
+# ── 고정체인: UISubsystem 레이아웃 컨테이너 walk (런타임 BFS 없음) ──
+#   head:next 쌍 + 값(Layout*) 오프셋. ≈29노드에서 레이아웃 25개(창고 포함).
+UIDLG_CONT=0x38:0x18,0x28:0x28
+UIDLG_CONT_VAL=0x38
+# ── (진단용) 구 BFS 키 — 봇 실시간 경로에서는 사용하지 않음 ──
+UI_BFS_NODE_READ=0x100
+UI_BFS_MAX_NODES=60000
+UI_BFS_STOP_AT_LAYOUT=1
+# ── 폴링 상한 / 컨테이너 rediscover 주기(ms). 봇: discover=2s, poll=매 틱 ──
+UIDLG_MAX_CALLS_PER_SEC=500
+UIDLG_SCAN_MS=2000
+UIDLG_RESCAN_MS=2000
+# ── 상태 ──
+VIS_FLAG=0x70
+VIS_MASK=0xFF
+VIS_OPEN=1
+# ── 감시 대상 대화창: UIDLG_WIN_<Label>=<RTTI 클래스 short-name> ──
+UIDLG_WIN_NPCDialog=NPCDialogLayoutPCImpl
+UIDLG_WIN_NPCShop=NPCShopLayoutPCImpl
+UIDLG_WIN_NPCStorage=NPCStorageLayoutPCImpl
+UIDLG_WIN_Inventory=InventoryLayoutPCImpl
+# "말하는 두루마리" = 순간이동 목록창. PCImpl 변형 없음.
+UIDLG_WIN_TalkingScroll=TeleportBookLayout
+# ── 명명 창 vft (툴 힙스캔 폴백; 실시간은 컨테이너 walk) ──
+WINDOW_NPCDialog=0x126A2F8
+WINDOW_NPCShop=0x1274830
+WINDOW_Inventory=0x1263A70
+WINDOW_NPCStorage=0x12780C8
+WINDOW_TalkingScroll=0x12788E8
+WINDOW_HudSlot=0x1261990
+WINDOW_PlayerShop=0x0
+DLG_SCRIPT_ID=0xD8
+NODE_NAME=0x1A8
+NODE_NAME_LEN=0x1A0
+DESIGN_W=1280
+DESIGN_H=960
+SCREEN_W=800
+SCREEN_H=600
+SCALE=0.625
+
+# =============================================================================
+# [SEC-11] 지도 / 던전
+# =============================================================================
+DUNGEONSUBS_VFT=0x1230DD0
+MAP_BG_VFT=0x11F7DA0
+TRANSPTILE_VFT=0x121C148
+BITMAPTILE_VFT=0x121C130
+TMXTILEDMAP_VFT=0x12C1790
+TMXLAYER_VFT=0x12BDD38
+MAP_PLAYER_X=0x16BB9A0
+MAP_PLAYER_Y=0x16BB9A4
+MAPDATA_DIR=T3_maps/dec
+MAP_REGION_JSON=data_region.jsonc.lcf.bin
+MAP_BG_JSON=data_map_background.jsonc.lcf
+MAP_VIEW_JSON=data_map_view_data.jsonc.lcf.bin
+# 현재 맵 사각형 탐색 (MapSubsystem → +MAP_CHILD_OFF 자식 → +0x3C)
+MAP_CHILD_OFF=0x768
+MAP_RECT_SCAN_LEN=0x400
+MAP_SCAN_LEN=0x800
+# MapSubsystem 현재맵 체인 (map/probe 실측값)
+VFT_MAPSUBS=0x1233630
+MAP_ID_OFF=0x718
+MAP_AREA_OFF=0x768
+MAP_AREA_STRIDE=0x2C
+MAP_AREA_COUNT=256
+MAP_AREA_SEQ=0x00
+MAP_AREA_ID=0x04
+MAP_AREA_FLAG=0x08
+MAP_AREA_X0=0x10
+MAP_AREA_Y0=0x14
+MAP_AREA_X1=0x18
+MAP_AREA_Y1=0x1C
+# 지역명 정적 테이블 (region_table.tsv: id,nameId,mapId,name,left,top,right,bottom,isDungeon)
+#  원천 정본 = 10_2/map/db/lcdt_930/decoded/data_region.jsonc.lcf.dec (226항목/169개)
+# Engine/analysis/lc930 기준 상대경로 (Manmabot vendored stand)
+REGIONS_CSV=registry/region_table.tsv
+REGIONS_DIST=registry/region_table.tsv
+REGIONS_SRC=data_region.jsonc.lcf.dec
+# 던전 정본자료 (단일 통합파일; 외부 정본자료 규격, 실행파일 아님)
+#   schema: kind,map,name,x,y,x2,y2,id,type,note,src
+#   kind: map|region|entrance|inout|portal|exit|gate|entermap|uml|name
+DUNGEON_TSV=dungeon/dungeon.tsv
+PORTAL_JUMP_TILES=8
+
+# =============================================================================
+# [SEC-12] 이름 테이블 (파일 경로 = lc930 루트 기준 상대)
+# =============================================================================
+STRINGS_CSV=data/data_string.csv.lcf.out.plain
+STRINGS_DIST=data/data_string.csv.lcf.out.plain
+STRINGS_KR_FIELD=3
+SPELL_LIST_JSONC=
+SPELL_BIN=
+INVENTORY_OFFSETS=
+
+# -- 정적 이름테이블(아이템/NPC 등) FNV1a 버킷 해시 경로 --------------------
+#   anchor = *(BASE + MSG_ANCHOR_RVA)
+#   idx    = FNV1a("1_<mid>") & MSG_BUCKET_MASK
+#   rec    = *(anchor + idx*MSG_BUCKET_STRIDE)
+#   while recMid(rec)!=mid : rec = *(rec+MSG_REC_NEXT)
+#   name   = readSSO( *(*(rec+MSG_REC_NAME)+MSG_NAME_KR) + MSG_NODE_TEXT )
+MSG_ANCHOR_RVA=0x16ED668
+MSG_BUCKET_STRIDE=0x10
+MSG_BUCKET_MASK=0xFFFF
+MSG_FNV_OFFSET=0xCBF29CE484222325
+MSG_FNV_PRIME=0x100000001B3
+MSG_REC_NEXT=0x00
+MSG_REC_PREV=0x08
+MSG_REC_KEY=0x10
+MSG_REC_NAME=0x38
+MSG_REC_DESC=0x50
+MSG_NAME_KR=0x00
+MSG_NAME_TW=0x08
+MSG_NODE_LANG=0x10
+MSG_NODE_TEXT=0x30
+
+# =============================================================================
+# [SEC-13] 성능 / 읽기 규격
+#   공통 기본값(DEFAULT_*) + 프로그램별 override(POLL_<PROG>_*)
+#   프로그램은 자기 이름의 키를 먼저 찾고, 없으면 DEFAULT_* 값을 사용한다.
+#   - INTERVAL_MS : 기본 폴링 간격 (ms, 0=연속)
+#   - JITTER_MS   : 랜덤 지터(ms, 0=고정). 실제 간격 = interval + rand(0..jitter)
+#   - MAX_READS   : 1회 갱신당 드라이버 읽기 상한 (0=무제한)
+# =============================================================================
+# 공통 기본
+DEFAULT_INTERVAL_MS=100
+DEFAULT_JITTER_MS=0
+DEFAULT_MAX_READS=10000
+
+# 프로그램별 (없으면 DEFAULT 사용). 프로그램 식별자 = 도구 이름 접두
+POLL_CHAR_INTERVAL_MS=200
+POLL_CHAR_JITTER_MS=20
+POLL_ENTVIEW_INTERVAL_MS=50
+POLL_ENTVIEW_JITTER_MS=10
+POLL_ENTTRACK_INTERVAL_MS=100
+POLL_ENTTRACK_JITTER_MS=15
+POLL_ATTACK_INTERVAL_MS=50
+POLL_ATTACK_JITTER_MS=5
+POLL_MONSTER_INTERVAL_MS=300
+POLL_MONSTER_JITTER_MS=30
+POLL_SHOP_INTERVAL_MS=500
+POLL_SHOP_JITTER_MS=0
+POLL_UIDLG_INTERVAL_MS=200
+POLL_UIDLG_JITTER_MS=25
+POLL_BUFF_INTERVAL_MS=250
+POLL_BUFF_JITTER_MS=20
+# 구 BFS 키(하위호환). buff_listen.dll(lbuff map walk)는 매 폴 전체 walk — 미사용.
+BUFF_RESCAN_MS=20000
+BUFF_STABLE_FRAMES=8
+BUFF_ROOT_ENTRIES=0x10,0x30,0x40,0x50
+BUFF_FINDMAX=400000
+BUFF_FIND_DEPTH=10
+POLL_INVENTORY_INTERVAL_MS=500
+POLL_INVENTORY_JITTER_MS=0
+POLL_MAP_INTERVAL_MS=1000
+POLL_MAP_JITTER_MS=0
+# 맵 지도 / 지역테이블 재적재 주기(ms). 0=최초 1회만.
+MAP_RESCAN_MS=2000
+POLL_HOTBAR_INTERVAL_MS=400
+POLL_HOTBAR_JITTER_MS=0
+
+# 공통 읽기
+CACHE_MAX=64
+SCAN_GUARD=200000
+
+# =============================================================================
+# [SEC-14] ground-item drop claim (extra_ent / print_state)
+# =============================================================================
+LH_DELTA_MAX=16
+
+# 창고 창(NPCStorageLayoutPCImpl) 슬롯 문자열. storewin.dll
+UIDLG_WIN_BMStorage=BMStorageLayoutPCImpl
+OFF_REC_HDR=0x10
+OFF_STR_LEN=0x10
+OFF_STR_CAP=0x18
+RTTI_COL_TD_OFF=0xC
+RTTI_TD_NAME_OFF=0x10
+STR_SSO_MAX=0x10
+WINSLOT_WINCLS=NPCStorageLayoutPCImpl
+WINSLOT_VEC=0x100
+WINSLOT_STRIDE=0x10
+WINSLOT_NAMEW=0x18
+WINSLOT_CNTW=0x28
+WIDGET_RENDERER=0x740
+LABEL_TEXT_OFF=0x378
+
+
+# =============================================================================
+# [SEC-17] 파티 (PartySubsystem → Party → std::vector<shared_ptr<PartyPlayer>>)
+#   party_listen_reader merges this onto analysis/lc930/registry/LC930_REGISTRY.txt
+#   (anchors MGR / VFT_ACTORSUBS / … come from there — single source of truth).
+#   Patch: update lc930 first, then the three PARTY_VFT_* below.
+#
+#   앵커  : PartySubsystem = lc_subsGet(PARTY_VFT_SUBS)
+#   해석  : 고정체인  subs+PARTY_REF_OFF → +PARTY_HOP1_OFF → +PARTY_HOP2_OFF = Party(+0x10 of ctrl)
+#           검증: Q(Party-0x10) == base+PARTY_VFT_RC  (_Ref_count_obj2<Party>)
+#   멤버  : Party+PARTY_VEC_BEG = begin, +PARTY_VEC_END = end (원소 stride 0x10)
+#           원소 = shared_ptr{_Ptr@+0, _Rep@+8}; *(_Rep) vft == base+PARTY_VFT_RC_PLAYER
+#
+#   BUILD 26.10.16.1 (live 2026-10-09): SUBS=0x1228B10 RC=0x1228A58 RC_PLAYER=0x1228A30
+#   BUILD 26.10.18.2: +0xB5E0 — the shift of both neighbours (VFT_MAPSUBS 0x1228050→0x1233630,
+#     VFT_SHOP 0x1229E00→0x12353E0). NOT live-verified yet: run (elevated, in a party)
+#     python Engine/analysis/party/tools/probe_party_vft.py
+# =============================================================================
+PARTY_BUILD=26.10.18.2
+PARTY_VFT_SUBS=0x12340F0
+PARTY_VFT_RC=0x1234038
+PARTY_VFT_RC_PLAYER=0x1234010
+# 고정체인 (PartySubsystem → Party)
+PARTY_REF_OFF=0x4A0
+PARTY_HOP1_OFF=0x00
+PARTY_HOP2_OFF=0x28
+PARTY_HOP_CTRL=0x10
+# Party 헤더/벡터
+PARTY_LEADER_NAME=0x08
+PARTY_LEADER_LVL=0x28
+PARTY_VEC_BEG=0x30
+PARTY_VEC_END=0x38
+PARTY_VEC_CAP=0x40
+PARTY_MEMBER_COUNT=0x48
+# PartyPlayer (런타임 멤버)
+PM_SELF=0x00
+PM_NAME=0x08
+PM_NAME_LEN=0x18
+PM_NAME_CAP=0x20
+PM_GUID=0x28
+PM_NAME2=0x30
+PM_NAME2_LEN=0x40
+PM_NAME2_CAP=0x48
+PM_LEVEL=0x50
+PM_F54=0x54
+PM_F60=0x60
+PM_CLASS=0x58
+PM_F5C=0x5C
+PM_HP=0x64
+PM_MP=0x68
+PM_MAPID=0x6C
+PM_X=0x70
+PM_Y=0x74
+PM_LEVEL2=0x90
+PARTY_STR_SSO=0x10
+PARTY_MAX_MEMBERS=8
+
