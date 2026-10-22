@@ -1023,14 +1023,19 @@ class ScheduleShell(QMainWindow):
     def _overlay_party_from_editor(self) -> None:
         """Push live Party-tab settings onto profile (schedule Start can wipe it)."""
         try:
+            import copy
+
             from settings.schedule import ScheduleTask
             from settings.task_runtime import apply_runtime_settings
 
             party = dict(self.editor.bag.section("party") or {})
-            apply_runtime_settings(
-                ScheduleTask(settings={"party": party}),
-                self.profile,
-            )
+            # A party-only task still resets character/routine/etc. to
+            # ScheduleTask defaults; stage it and copy back party_* only.
+            staged = copy.deepcopy(self.profile)
+            apply_runtime_settings(ScheduleTask(settings={"party": party}), staged)
+            for name, value in vars(staged).items():
+                if name.startswith("party_"):
+                    setattr(self.profile, name, value)
             save_profile(self.profile)
             self.bridge.profile = self.profile
             self.bridge.coordinator.profile = self.profile

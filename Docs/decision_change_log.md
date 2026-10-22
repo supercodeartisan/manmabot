@@ -1518,3 +1518,21 @@ Unchanged: global A*, combat clicks, `try_movement_unstick`, the 2-second reclic
 Affected modes: travel, search, loot, and any mode that walks through those hops.
 
 Live result: code removed. In-game walk after restart is pending.
+
+## 2026-10-21 — schedule Start keeps the schedule character and routine
+
+Consent: user asked to fix it on `impl/party-leader-logic` without touching single-bot logic and keeping party logic as is.
+
+Intent: on Start, `_overlay_party_from_editor` re-applied the Party tab through a bare `ScheduleTask`. Its default `character="mage"` and empty routine overwrote the schedule just applied by `apply_task`. The schedule (elf, area_6 60 min) then ran as mage with `routine (0 entries)`, and the trial file was saved that way.
+
+Change: only `UI/ui_qt/shell/schedule_shell.py` `_overlay_party_from_editor`. It applies the Party tab to a copy of the profile and copies back `party_*` fields only. `apply_runtime_settings` and the `ScheduleTask` defaults are unchanged.
+
+Affected modes: main-window Start and scheduled login Start. Single-bot decision, movement, combat and HP code are unchanged. Party values are the same as before, checked for party off, leader on and member on.
+
+Live result: pending. The next Start log should read `character=elf` and the routine should have 1 entry.
+
+## 2026-10-21 — party wait log only when party is on
+
+Consent: user asked to stop the `Party wait` log while party is off.
+
+Change: `_log_party_until_farm` in `Engine/session/bot_controller.py` returns early when `profile.party_enabled` is false. The function is log only. Decisions, movement and the party socket are unchanged. With party on, the log is the same as before.

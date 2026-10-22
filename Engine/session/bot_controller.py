@@ -1888,6 +1888,8 @@ class BotController:
         """Repeat wait reasons until follow/farm actually starts."""
         if self._party_farm_started:
             return
+        if not bool(getattr(self._profile, "party_enabled", False)):
+            return
         kind = ""
         reason = ""
         leader_name = ""
