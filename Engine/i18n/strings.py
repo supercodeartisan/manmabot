@@ -829,8 +829,8 @@ _EN = UiStrings(
             "Stopped — ZF worker crashed. Check the log, then press Start."
         ),
         "party_ws_unreachable": (
-            "Stopped — could not connect to the leader socket within 60 s. "
-            "Start the leader bot first and check the leader IP / port on the Party tab."
+            "Stopped — no leader socket address. "
+            "Set the leader IP / port on the Party tab."
         ),
         "map_missing": "Cannot start — map data is missing.",
     },
@@ -1338,8 +1338,8 @@ _KO = UiStrings(
             "중지됨 — 종횡 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
         ),
         "party_ws_unreachable": (
-            "중지됨 — 60초 안에 파티장 소켓에 연결하지 못했습니다. "
-            "파티장 봇을 먼저 시작하고, 파티 탭의 파티장 IP·포트를 확인하세요."
+            "중지됨 — 파티장 소켓 주소가 없습니다. "
+            "파티 탭에서 파티장 IP·포트를 설정하세요."
         ),
         "map_missing": "시작할 수 없음 — 맵 데이터가 없습니다.",
     },
@@ -1840,8 +1840,8 @@ _ZH = UiStrings(
             "已停止 — 纵锋工作线程异常退出。请查看日志后再次点击开始。"
         ),
         "party_ws_unreachable": (
-            "已停止 — 60 秒内未能连接队长套接字。"
-            "请先启动队长机器人，并检查队伍页上的队长 IP 和端口。"
+            "已停止 — 没有队长套接字地址。"
+            "请在队伍页设置队长 IP 和端口。"
         ),
         "map_missing": "无法启动 — 缺少地图数据。",
     },

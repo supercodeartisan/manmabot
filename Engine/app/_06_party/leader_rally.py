@@ -6,9 +6,10 @@
   landing of the last teleport, travel, then send the real landing tile and
   wait there.
 
-Waits for every roster member, then continues. With ``deadline`` (the shared
-invite + rally window from Start) it gives up at that time in any state;
-without it, 15 minutes after the wait starts. Used once per Start.
+Waits for every roster member, then continues. With ``deadline`` (the leader
+start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
+state; without it, ``WAIT_TIMEOUT_S`` after the wait starts. Members still out
+then join later by following the leader. Used once per Start.
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ from app._06_party.comms.orders import (
 
 TELEPORT_OPS = ("npc_teleporter", "talking_scroll")
 WAIT_LOG_EVERY_S = 5.0
-WAIT_TIMEOUT_S = 15 * 60
+WAIT_TIMEOUT_S = 5 * 60
 
 
 def last_teleport_index(plan: Any) -> Optional[int]:
@@ -76,9 +77,9 @@ class LeaderStartRally:
         self.hold_step: Optional[int] = None
         self._want: Optional[dict[str, Any]] = None
         self._wait_started: Optional[float] = None
-        # Shared invite + rally deadline (clock time); None = WAIT_TIMEOUT_S from wait start.
+        # Leader start-wait end (clock time); None = WAIT_TIMEOUT_S from wait start.
         self.deadline: Optional[float] = None
-        # Expected names not at the rally point when the window closed.
+        # Expected names not at the rally point when the start wait ended.
         self.left_behind: list[str] = []
         self._log_at = float("-inf")
         self._rally.clear()
@@ -171,8 +172,8 @@ class LeaderStartRally:
             self.left_behind = self._rally.missing(self.expected)
             missing = ", ".join(self.left_behind) or "—"
             self.skip(
-                f"party window over ({int(WAIT_TIMEOUT_S // 60)} min), "
-                f"not arrived: {missing} — continue to the hunt"
+                f"start wait over, not arrived: {missing} — continue to the hunt "
+                "(late members follow the leader)"
             )
             return
         if self.state not in ("hold_at", "waiting") or self._want is None:

@@ -13,9 +13,13 @@ from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
+    QHBoxLayout,
     QHeaderView,
     QLabel,
     QLayout,
+    QListWidget,
+    QListWidgetItem,
+    QPlainTextEdit,
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
@@ -305,6 +309,46 @@ def message_counts(lines: list[Any]) -> tuple[int, int, str]:
     return n_in, n_out, last
 
 
+# Leader roster row ``state`` → (label, tone). Unknown states show upper-cased.
+MEMBER_STATE = {
+    "ready": ("AT RALLY", "ok"),
+    "following": ("HUNTING", "ok"),
+    "joined": ("JOINED", "ok"),
+    "not_arrived": ("NOT ARRIVED", "warn"),
+    "accepting": ("ACCEPTING", "info"),
+    "inviting": ("INVITING", "info"),
+    "late": ("LATE · INVITING", "warn"),
+    "policy_wait": ("POLICY…", "warn"),
+    "offline": ("OFFLINE", "off"),
+    "late_offline": ("LATE · OFFLINE", "bad"),
+}
+_SETTLED = ("ready", "following", "joined")
+
+
+def member_state_label(state: str) -> tuple[str, str]:
+    return MEMBER_STATE.get(state, (str(state or "—").upper(), "off"))
+
+
+def pick_member(roster: list[dict[str, Any]], current: str) -> str:
+    """Keep the selected name; else the first member that needs attention; else the first."""
+    names = [str(r.get("name") or "") for r in roster if r.get("name")]
+    if current and current in names:
+        return current
+    for r in roster:
+        if str(r.get("state") or "") not in _SETTLED and r.get("name"):
+            return str(r["name"])
+    return names[0] if names else ""
+
+
+def member_messages(lines: list[Any], name: str, limit: int = 80) -> list[str]:
+    """Traffic lines that mention ``name`` (sender, ``to``, or body), newest last."""
+    key = str(name or "").strip().casefold()
+    if not key:
+        return []
+    out = [str(l) for l in (lines or []) if key in str(l).casefold()]
+    return out[-limit:]
+
+
 def split_messages(lines: list[Any], role: str) -> tuple[list[str], list[str]]:
     """``(leader_side, member_side)`` traffic lines.
 
@@ -362,6 +406,52 @@ class PartyDashboard(QWidget):
         lead_lay.addWidget(self.lead_flags)
         self.lead_metrics = Metrics(columns=2)
         lead_lay.addWidget(self.lead_metrics)
+
+        # Member picker (left) + the picked member's steps / live state / frames (right).
+        pick_head = QLabel("Members — pick one to see its details")
+        pick_head.setStyleSheet("color:#9ca3af;")
+        lead_lay.addWidget(pick_head)
+        pick_row = QHBoxLayout()
+        pick_row.setSpacing(10)
+        self.member_list = QListWidget()
+        self.member_list.setFixedWidth(210)
+        self.member_list.setMinimumHeight(220)
+        self.member_list.currentItemChanged.connect(self._on_member_picked)
+        pick_row.addWidget(self.member_list, 0)
+        detail = QVBoxLayout()
+        detail.setSpacing(6)
+        self.member_title = QLabel("—")
+        tf = QFont(self.member_title.font())
+        tf.setBold(True)
+        tf.setPointSize(tf.pointSize() + 1)
+        self.member_title.setFont(tf)
+        detail.addWidget(self.member_title)
+        self.member_steps = WorkflowSteps()
+        detail.addWidget(self.member_steps)
+        self.member_metrics = Metrics(columns=2)
+        detail.addWidget(self.member_metrics)
+        self.member_log = QPlainTextEdit()
+        self.member_log.setReadOnly(True)
+        self.member_log.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.member_log.setFixedHeight(130)
+        mono = QFont("Consolas")
+        mono.setStyleHint(QFont.StyleHint.Monospace)
+        mono.setPointSize(9)
+        self.member_log.setFont(mono)
+        self.member_log.setStyleSheet(
+            "QPlainTextEdit { background:#111827; color:#e5e7eb;"
+            " border:1px solid #374151; border-radius:4px; }"
+        )
+        detail.addWidget(self.member_log)
+        pick_row.addLayout(detail, 1)
+        lead_lay.addLayout(pick_row)
+        self._picked = ""
+        self._last_session: dict[str, Any] = {}
+        self._last_messages: list[Any] = []
+
+        over_head = QLabel("Overview")
+        over_head.setStyleSheet("color:#9ca3af;")
+        lead_lay.addWidget(over_head)
         self.roster = _table(
             ["Name", "Seat", "Loot", "Policy", "Invites", "In party", "At rally", "Status"], 150
         )
@@ -413,6 +503,7 @@ class PartyDashboard(QWidget):
         self.workflow.set(steps)
         if role == "leader":
             self._apply_leader(session, now)
+            self._apply_member_picker(session, list(snap.get("messages") or []))
         elif role == "member":
             self._apply_member(snap, session, status, now)
         self._apply_members(party)
@@ -467,11 +558,20 @@ class PartyDashboard(QWidget):
                 "ok" if same or lm == rm else "warn",
             )
         start_err = str(snap.get("start_error") or "").strip()
-        err = start_err or str(snap.get("probe_error") or "").strip()
+        wait = snap.get("start_wait") if isinstance(snap.get("start_wait"), dict) else {}
+        if start_err:
+            err, style = start_err, "color:#f87171;font-weight:600;"
+        elif wait.get("since"):
+            err = (
+                f"Waiting for the leader socket {wait.get('uri') or '—'} — "
+                f"{_duration(wait.get('waited_s'))} (no timeout; start the leader "
+                "any time, Stop to cancel). Nothing moves or fights until it connects."
+            )
+            style = "color:#fbbf24;font-weight:600;"
+        else:
+            err, style = str(snap.get("probe_error") or "").strip(), "color:#9ca3af;"
         self.note.setText(err)
-        self.note.setStyleSheet(
-            "color:#f87171;font-weight:600;" if start_err else "color:#9ca3af;"
-        )
+        self.note.setStyleSheet(style)
         self.note.setVisible(bool(err))
 
     def _apply_comm(self, snap, now) -> None:
@@ -548,19 +648,22 @@ class PartyDashboard(QWidget):
         pname = str(phase.get("name") or "off")
         left = phase.get("remaining_s")
         left_txt = _duration(left) if left is not None else "—"
-        excluded = list(phase.get("excluded") or [])
+        late = list(phase.get("late") or [])
         not_arrived = list(phase.get("not_arrived") or [])
         if pname == "forming":
-            f["PHASE"].set(f"FORMING {left_txt}", "warn", "Inviting the roster; window closes at 0")
+            f["PHASE"].set(
+                f"START WAIT {left_txt}", "warn",
+                "Inviting members as they connect; the hunt starts when all are in or at 0",
+            )
         elif pname == "rally":
             f["PHASE"].set(f"RALLY {left_txt}", "warn", "Gathering; hunt starts when all arrive or at 0")
         elif pname == "hunting":
-            short = excluded or not_arrived
+            short = sorted(set(late) | set(not_arrived))
             f["PHASE"].set(
-                "HUNTING" + (f" −{len(excluded) + len(not_arrived)}" if short else ""),
+                "HUNTING" + (f" −{len(short)}" if short else ""),
                 "warn" if short else "ok",
-                ("excluded: " + ", ".join(excluded) if excluded else "")
-                + ("  not arrived: " + ", ".join(not_arrived) if not_arrived else ""),
+                ("late (still invited): " + ", ".join(late) if late else "")
+                + ("  not arrived (following): " + ", ".join(not_arrived) if not_arrived else ""),
             )
         else:
             f["PHASE"].set("OFF", "off")
@@ -573,8 +676,11 @@ class PartyDashboard(QWidget):
             f["INVITE"].set(f"{joined}/{len(irows)} JOINED", "info", f"{len(sent_lines)} invite(s) sent")
         elif istate == "formed":
             f["INVITE"].set(f"{joined}/{len(irows)} FORMED", "ok")
-        elif istate == "expired":
-            f["INVITE"].set(f"{joined}/{len(irows)} EXPIRED", "warn", "excluded: " + (", ".join(excluded) or "—"))
+        elif istate == "open":
+            f["INVITE"].set(
+                f"{joined}/{len(irows)} OPEN", "warn",
+                "Start wait over; still inviting: " + (", ".join(r.get("name") for r in irows if not r.get("joined")) or "—"),
+            )
         elif istate:
             f["INVITE"].set(istate.upper(), "bad" if "fail" in istate else "info")
         else:
@@ -594,8 +700,8 @@ class PartyDashboard(QWidget):
                 ("Roster", f"{len(roster)} member(s), {in_party} in party"),
                 ("Party size (yard)", _fmt(policy.get("party_size"))),
                 ("Phase", f"{pname} — {left_txt} left" if left is not None else pname),
-                ("Invite every", f"{_fmt(invite.get('every_s'))}s, window {_duration(invite.get('window_s')) if invite.get('window_s') else '—'}"),
-                ("Excluded", ", ".join(excluded) or "—"),
+                ("Invite every", f"{_fmt(invite.get('every_s'))}s, start wait {_duration(invite.get('start_wait_s')) if invite.get('start_wait_s') else '—'}, no cut-off"),
+                ("Late", ", ".join(late) or "—"),
                 ("Not arrived", ", ".join(not_arrived) or "—"),
                 ("Rally stage", _fmt(rally.get("stage"))),
                 ("Rally wait", _duration(rally.get("wait_s")) if rally.get("wait_s") is not None else "—"),
@@ -658,13 +764,121 @@ class PartyDashboard(QWidget):
             at = r.get("at_rally")
             self.roster.setItem(row, 6, _cell("YES" if at else ("…" if rally.get("armed") else "—"),
                                               "ok" if at else ("warn" if rally.get("armed") else "off")))
-            st = str(r.get("state") or "pending")
-            self.roster.setItem(row, 7, _cell(
-                {"ready": "READY", "joined": "JOINED", "invited": "INVITED", "pending": "PENDING",
-                 "excluded": "EXCLUDED", "not_arrived": "NOT ARRIVED"}.get(st, st.upper()),
-                {"ready": "ok", "joined": "ok", "invited": "warn", "pending": "off",
-                 "excluded": "bad", "not_arrived": "warn"}.get(st, "off"),
-            ))
+            st_txt, st_tone = member_state_label(str(r.get("state") or ""))
+            self.roster.setItem(row, 7, _cell(st_txt, st_tone))
+
+    def _on_member_picked(self, current, _previous=None) -> None:
+        if current is None:
+            return
+        name = str(current.data(Qt.ItemDataRole.UserRole) or "")
+        if not name or name == self._picked:
+            return
+        self._picked = name
+        self._show_member(self._last_session, self._last_messages)
+
+    def _apply_member_picker(self, session: dict[str, Any], messages: list[Any]) -> None:
+        self._last_session = session
+        self._last_messages = messages
+        roster = [r for r in (session.get("roster") or []) if isinstance(r, dict)]
+        self._picked = pick_member(roster, self._picked)
+        lst = self.member_list
+        lst.blockSignals(True)
+        try:
+            want = len(roster) + (1 if session.get("unnamed_member") else 0)
+            while lst.count() > want:
+                lst.takeItem(lst.count() - 1)
+            while lst.count() < want:
+                lst.addItem(QListWidgetItem())
+            for i, r in enumerate(roster):
+                name = str(r.get("name") or "")
+                label, tone = member_state_label(str(r.get("state") or ""))
+                item = lst.item(i)
+                item.setText(f"{name}\n  {label}")
+                item.setData(Qt.ItemDataRole.UserRole, name)
+                item.setBackground(QColor(TONES.get(tone, TONES["off"])))
+                item.setForeground(QColor("#ffffff"))
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                item.setToolTip(
+                    " → ".join(
+                        f"{s.get('label')}: {s.get('state')}" for s in (r.get("steps") or [])
+                    )
+                )
+                if name == self._picked:
+                    lst.setCurrentRow(i)
+            if session.get("unnamed_member"):
+                item = lst.item(len(roster))
+                item.setText("? unnamed member\n  reporting, name unknown")
+                item.setData(Qt.ItemDataRole.UserRole, "")
+                item.setBackground(QColor(TONES["warn"]))
+                item.setForeground(QColor("#ffffff"))
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                item.setToolTip(
+                    "A member bot sends state without its character name, and more than "
+                    "one roster name is open — the leader cannot tell which one it is. "
+                    "It is booked once its name is read in game."
+                )
+        finally:
+            lst.blockSignals(False)
+        self._show_member(session, messages)
+
+    def _show_member(self, session: dict[str, Any], messages: list[Any]) -> None:
+        roster = [r for r in (session.get("roster") or []) if isinstance(r, dict)]
+        row = next((r for r in roster if str(r.get("name") or "") == self._picked), None)
+        if row is None:
+            self.member_title.setText("No roster members" if not roster else "—")
+            self.member_steps.set([])
+            self.member_metrics.set([])
+            if self.member_log.toPlainText():
+                self.member_log.setPlainText("")
+            return
+        label, tone = member_state_label(str(row.get("state") or ""))
+        self.member_title.setText(f"{row.get('name')}  ·  {label}")
+        self.member_title.setStyleSheet(f"color:{TONES.get(tone, TONES['off'])};")
+        self.member_steps.set(list(row.get("steps") or []))
+        live = row.get("live") if isinstance(row.get("live"), dict) else {}
+        xy = live.get("xy") or []
+
+        def _hp(cur: str, top: str) -> str:
+            if live.get(cur) is None:
+                return "—"
+            return f"{live.get(cur)}/{live.get(top)}" if live.get(top) else str(live.get(cur))
+
+        age = row.get("state_age_s")
+        self.member_metrics.set(
+            [
+                ("Seat / loot", f"{_fmt(row.get('role'))} / {_fmt(row.get('loot'))}"),
+                (
+                    "Last report",
+                    (f"{_duration(age)} ago" + ("" if row.get("state_fresh") else " (stale)"))
+                    if age is not None
+                    else "never",
+                ),
+                ("Bot", _fmt(live.get("bot"))),
+                (
+                    "Map / XY",
+                    f"{_fmt(live.get('map_id'))} / "
+                    + (f"{xy[0]},{xy[1]}" if len(xy) >= 2 else "—"),
+                ),
+                ("HP / MP", f"{_hp('hp', 'max_hp')} / {_hp('mp', 'max_mp')}"),
+                ("Brain", f"{_fmt(live.get('kind'))} · {_fmt(live.get('reason'))}"),
+                ("Party memory", f"{_fmt(row.get('state_mem'))} · in party {_fmt(row.get('state_in_party'))}"),
+                ("Invite (member)", _fmt(row.get("state_invite"))),
+                (
+                    "Invites",
+                    f"{int(row.get('invites') or 0)} typed, {int(row.get('invite_notices') or 0)} notice(s)"
+                    + (f", {int(row.get('invite_failed'))} failed" if row.get("invite_failed") else ""),
+                ),
+                (
+                    "Left / late",
+                    f"left {int(row.get('left') or 0)}× · {'late' if row.get('late') else 'on time'}",
+                ),
+            ]
+        )
+        text = "\n".join(member_messages(messages, str(row.get("name") or "")))
+        if self.member_log.toPlainText() != text:
+            self.member_log.setPlainText(text)
+            bar = self.member_log.verticalScrollBar()
+            bar.setValue(bar.maximum())
 
     def _apply_member(self, snap, session, status, now) -> None:
         policy = session.get("policy") or {}
@@ -767,9 +981,13 @@ __all__ = [
     "Badge",
     "BadgeRow",
     "FlowLayout",
+    "MEMBER_STATE",
     "Metrics",
     "PartyDashboard",
     "WorkflowSteps",
+    "member_messages",
+    "member_state_label",
     "message_counts",
+    "pick_member",
     "split_messages",
 ]

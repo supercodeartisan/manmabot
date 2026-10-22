@@ -275,6 +275,7 @@ class BotController:
         # Monitor-only records (read by ``party_monitor_snapshot``).
         self._party_invites = None
         self._party_start_error = ""
+        self._party_start_wait: dict = {}
         self._party_turret_info: dict = {}
         self._party_line_info: dict = {}
         self._party_line_watch = None
@@ -650,6 +651,10 @@ class BotController:
         snap.setdefault("bot_state", self.state.value)
         snap.setdefault("bot_reason", self.reason)
         snap["start_error"] = str(getattr(self, "_party_start_error", "") or "")
+        wait = dict(getattr(self, "_party_start_wait", None) or {})
+        if wait.get("since"):
+            wait["waited_s"] = round(max(0.0, time.time() - float(wait["since"])), 1)
+        snap["start_wait"] = wait
         snap.setdefault(
             "worker_alive",
             self._thread is not None and self._thread.is_alive(),
@@ -742,7 +747,6 @@ class BotController:
                 if inviter is not None
                 else (start.remaining_s() if start is not None else None)
             )
-            excluded = {str(n).casefold() for n in (invite.get("excluded") or [])}
             left_behind = {
                 str(n).casefold() for n in (getattr(start, "left_behind", None) or [])
             }
@@ -754,29 +758,31 @@ class BotController:
             out["phase"] = {
                 "name": phase,
                 "remaining_s": round(remaining, 1) if remaining is not None else None,
-                "window_s": invite.get("window_s"),
-                "excluded": list(invite.get("excluded") or []),
-                "not_arrived": [
-                    n for n in (getattr(start, "left_behind", None) or [])
-                    if str(n).casefold() not in excluded
-                ],
+                "start_wait_s": invite.get("start_wait_s"),
+                "late": list(invite.get("late") or []),
+                "not_arrived": list(getattr(start, "left_behind", None) or []),
             }
 
-            def _member_state(key: str, joined: bool, at: bool, irow: dict) -> str:
-                if key in excluded:
-                    return "excluded"
+            def _member_state(key, joined, at, irow, fresh, acked, mphase) -> str:
                 if joined and at:
                     return "ready"
                 if joined and key in left_behind:
                     return "not_arrived"
                 if joined:
-                    return "joined"
-                if irow.get("invites"):
-                    return "invited"
-                return "pending"
+                    return "following" if phase == "hunting" else "joined"
+                if not fresh:
+                    return "late_offline" if irow.get("late") else "offline"
+                if not acked:
+                    return "policy_wait"
+                if mphase in ("waiting", "pressed"):
+                    return "accepting"
+                if irow.get("late"):
+                    return "late"
+                return "inviting"
 
             from app._06_party.comms.orders import policy_acks
             from app._06_party.sync import member_states
+            from app._06_party.workflow import roster_member_steps
 
             pid = str(getattr(self, "_party_policy_id", "") or "")
             out["party_mem"] = "ok" if party_raw is not None else "blind"
@@ -797,6 +803,8 @@ class BotController:
                 ack = policy_acks.row(row["name"])
                 mparty = mstate.get("party") or {}
                 minv = mstate.get("invite") or {}
+                fresh = bool(mstate.get("fresh"))
+                acked = policy_acks.acked(row["name"], pid or None)
                 out["roster"].append(
                     {
                         "name": row["name"],
@@ -804,23 +812,35 @@ class BotController:
                         "loot": row.get("loot", "none"),
                         "in_party": joined,
                         "in_party_src": joined_src,
-                        "state_fresh": bool(mstate.get("fresh")),
+                        "state_fresh": fresh,
                         "state_age_s": mstate.get("age_s"),
+                        "state_frames": int(mstate.get("frames") or 0),
+                        "live": dict(mstate.get("live") or {}),
+                        "late": bool(irow.get("late")),
+                        "left": int(irow.get("left") or 0),
+                        "leaving_s": irow.get("leaving_s"),
                         "state_mem": str(mparty.get("mem") or ""),
                         "state_in_party": mparty.get("in_party"),
                         "state_invite": f"{minv.get('id') or '—'}:{minv.get('phase') or 'idle'}",
                         "invite_hold": str(irow.get("hold") or ""),
                         "notice_echoed": bool(irow.get("notice_echoed")),
                         "at_rally": at,
-                        "policy_acked": policy_acks.acked(row["name"], pid or None),
+                        "policy_acked": acked,
                         "ack_at": ack.get("at"),
                         "invites": int(irow.get("invites") or 0),
                         "invite_failed": int(irow.get("failed") or 0),
                         "invite_notices": int(irow.get("announced") or 0),
                         "invite_ago_s": irow.get("last_ago_s"),
-                        "state": _member_state(key, joined, at, irow),
+                        "state": _member_state(
+                            key, joined, at, irow, fresh, acked,
+                            str(minv.get("phase") or ""),
+                        ),
                     }
                 )
+                out["roster"][-1]["steps"] = roster_member_steps(
+                    out["roster"][-1], phase=phase
+                )
+            out["unnamed_member"] = member_states.unnamed_recent()
             out["invite"] = invite
             out["policy"] = dict(getattr(self, "_party_policy_info", {}) or {})
             from app._06_party.workflow import leader_workflow
@@ -1610,7 +1630,8 @@ class BotController:
         self._party_comms.stop_leader(log=self.log)
         self._sync_party_handles()
 
-    MEMBER_CONNECT_WAIT_S = 60.0
+    # Log line cadence while a member waits for the leader socket.
+    MEMBER_WAIT_NOTE_S = 30.0
 
     def _leader_turret_on(self) -> bool:
         """Party leader with leader mode turret: hunt from one anchor tile."""
@@ -1700,27 +1721,37 @@ class BotController:
             self.log(msg)
             self._party_event("socket", msg)
             return False
-        wait_s = float(self.MEMBER_CONNECT_WAIT_S)
+        # No timeout: the leader may start before or after this member.
+        # Nothing moves or fights until the leader socket is up.
+        started = time.monotonic()
+        self._party_start_wait = {"since": time.time(), "uri": f"{host}:{port}"}
         self.log(
-            f"Party member: waiting up to {wait_s:.0f}s for the leader socket "
-            f"{host}:{port} (start the leader bot first)"
+            f"Party member: waiting for the leader socket {host}:{port} "
+            "(no timeout — start the leader any time, Stop to cancel)"
         )
-        if self._party_comms.wait_member_connected(
-            wait_s, stopped=self._stop_event.is_set
-        ):
-            self.log(f"Party member: connected to leader {host}:{port}")
-            self._party_event("socket", f"connected {host}:{port}")
-            return True
-        if self._stop_event.is_set():
-            return False
-        msg = (
-            f"Party member: leader socket {host}:{port} unreachable after "
-            f"{wait_s:.0f}s — bot not started. Start the leader bot or "
-            "disable party."
-        )
-        self._party_start_error = msg
-        self.log(msg)
-        self._party_event("socket", msg)
+        try:
+            while not self._stop_event.is_set():
+                if self._party_comms.wait_member_connected(
+                    float(self.MEMBER_WAIT_NOTE_S), stopped=self._stop_event.is_set
+                ):
+                    waited = time.monotonic() - started
+                    self.log(
+                        f"Party member: connected to leader {host}:{port} "
+                        f"after {waited:.0f}s"
+                    )
+                    self._party_event("socket", f"connected {host}:{port}")
+                    return True
+                if self._stop_event.is_set():
+                    break
+                self._party_comms.watch_member(log=self._party_socket_note)
+                self._sync_party_handles()
+                waited = time.monotonic() - started
+                self.log(
+                    f"Party member: still waiting for leader {host}:{port} "
+                    f"({waited:.0f}s)"
+                )
+        finally:
+            self._party_start_wait = {}
         return False
 
     def _stop_party_client(self) -> None:
@@ -1833,6 +1864,7 @@ class BotController:
                 log=_setup_log,
             ),
             reported_joined=lambda name: member_states.joined(name, self_name),
+            reported_out=lambda name: member_states.out_of_party(name, self_name),
             wait=self._stop_event.wait,
             log=_setup_log,
         )
@@ -2222,14 +2254,45 @@ class BotController:
             if acc is not None
             else {"id": "", "phase": "idle", "presses": 0}
         )
+        snap = getattr(world, "last_party", None)
+        name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
         self._member_state_reporter.tick(
             self._party_comms.send_member_state,
-            name=str(info.get("as_name") or "") or "member",
+            name=name or "member",
             session=member_orders.session,
             policy_id=str(info.get("applied_id") or ""),
-            party=party_view(getattr(world, "last_party", None)),
+            party=party_view(snap),
             invite=invite,
+            live=self._member_live_view(world),
         )
+
+    def _member_live_view(self, world) -> dict:
+        """Monitor extras for ``member_state``: bot state, map, xy, hp/mp, brain, rally."""
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.comms.orders import member_orders
+
+        out: dict = {"bot": self.state.value}
+        try:
+            pose = live_pose_from_state(world)
+        except Exception:
+            pose = None
+        if pose is not None:
+            out["map_id"] = int(pose.map_id)
+            out["xy"] = [int(pose.x), int(pose.y)]
+        player = getattr(world, "player", None)
+        for key in ("hp", "mp", "max_hp", "max_mp"):
+            val = getattr(player, key, None) if player is not None else None
+            if isinstance(val, (int, float)):
+                out[key] = int(val)
+        brain = getattr(self, "_party_brain_ref", None)
+        runtime = getattr(brain, "runtime", None)
+        if runtime is not None:
+            out["kind"] = str(getattr(runtime, "last_kind", "") or "")
+            out["reason"] = str(getattr(runtime, "last_reason", "") or "")[:80]
+        gather = member_orders.gather or {}
+        out["rally"] = str(gather.get("stage") or "")
+        out["arrived"] = bool(member_orders.arrived)
+        return out
 
     def _member_party_tick(
         self, world, map_id, *, send: bool, party_brain=None

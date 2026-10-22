@@ -92,7 +92,9 @@ def drain_leader_reports(
         connected = int(server.client_count())
     except Exception:
         connected = 0
-    if rally.repeat_if_members_joined(connected):
+    # After the start rally a late member follows the leader, not the old point.
+    rally_over = start_rally is not None and bool(getattr(start_rally, "done", False))
+    if not rally_over and rally.repeat_if_members_joined(connected):
         note("Party rally repeated for a new member")
     if start_rally is not None:
         start_rally.update(connected, party_snapshot)

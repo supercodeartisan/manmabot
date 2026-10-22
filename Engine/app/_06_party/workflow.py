@@ -82,7 +82,7 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     istate = str(invite.get("state") or "")
     if n and len(joined) >= n:
         inv = "done"
-    elif istate == "expired" or (failed and not typed):
+    elif failed and not typed:
         inv = "bad"
     elif typed or acked:
         inv = "active"
@@ -98,8 +98,8 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
         idetail += " · holding: " + ", ".join(holds)
     if failed:
         idetail += f" · {failed} failed"
-    if istate == "expired":
-        idetail += " · window over"
+    if istate == "open":
+        idetail += " · start wait over, still inviting late members"
     if party_mem != "ok":
         idetail += " · leader party memory unreadable"
     steps.append(_step("invite", "Invite", inv, idetail))
@@ -118,6 +118,85 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     )
     hunting = phase == "hunting"
     steps.append(_step("hunt", "Hunt", "done" if hunting else "off", phase))
+    return steps
+
+
+def roster_member_steps(row: dict, *, phase: str) -> list:
+    """Leader view of one roster member: connect → policy → invite → accept → party → rally/follow."""
+    fresh = bool(row.get("state_fresh"))
+    age = row.get("state_age_s")
+    seen = age is not None
+    steps = [
+        _step(
+            "connect",
+            "Connect",
+            "done" if fresh else ("bad" if seen else "wait"),
+            (
+                f"reporting · last {age}s ago · {int(row.get('state_frames') or 0)} frame(s)"
+                if fresh
+                else (f"silent {age}s — member bot stopped or socket down" if seen else "never connected")
+            ),
+        )
+    ]
+    acked = bool(row.get("policy_acked"))
+    steps.append(
+        _step(
+            "policy",
+            "Policy",
+            "done" if acked else ("wait" if fresh else "off"),
+            "confirmed current policy" if acked else "waiting for the member to confirm",
+        )
+    )
+    joined = bool(row.get("in_party"))
+    invites = int(row.get("invites") or 0)
+    hold = str(row.get("invite_hold") or "")
+    if joined:
+        ist, idetail = "done", f"{invites} /초대 typed"
+    elif not acked:
+        ist, idetail = "off", "after policy confirm"
+    else:
+        ist = "active"
+        ago = row.get("invite_ago_s")
+        idetail = f"{invites} /초대 typed" + (f" · last {ago}s ago" if ago is not None else "")
+        if hold:
+            idetail += f" · holding: {hold}"
+    if int(row.get("invite_failed") or 0):
+        idetail += f" · {int(row.get('invite_failed'))} failed"
+    if row.get("late") and not joined:
+        idetail += " · late (start wait over)"
+    steps.append(_step("invite", "Invite", ist, idetail))
+    mphase = str(row.get("state_invite") or "").partition(":")[2] or "idle"
+    amap = {"waiting": "active", "pressed": "active", "joined": "done", "failed": "bad", "missed": "bad"}
+    steps.append(
+        _step(
+            "accept",
+            "Accept",
+            "done" if joined else amap.get(mphase, "off"),
+            f"member reports {mphase}",
+        )
+    )
+    left = int(row.get("left") or 0)
+    if joined:
+        pst = "done"
+        pdetail = f"joined · {row.get('in_party_src') or '—'}"
+        if row.get("leaving_s") is not None:
+            pst, pdetail = "active", f"reports out of party for {row.get('leaving_s')}s"
+    else:
+        pst, pdetail = ("wait" if acked else "off"), "not in the party"
+    if left:
+        pdetail += f" · left {left}×"
+    steps.append(_step("party", "In party", pst, pdetail))
+    live = row.get("live") or {}
+    if row.get("at_rally"):
+        rst, rdetail = "done", "at the rally point"
+    elif joined and phase == "hunting":
+        rst = "active"
+        rdetail = f"following the leader · {live.get('kind') or '—'}"
+    elif joined and phase == "rally":
+        rst, rdetail = "active", f"walking to the rally ({live.get('rally') or '—'})"
+    else:
+        rst, rdetail = "off", "—"
+    steps.append(_step("rally", "Rally / follow", rst, rdetail))
     return steps
 
 
@@ -257,4 +336,4 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
     return steps
 
 
-__all__ = ["leader_workflow", "member_workflow"]
+__all__ = ["leader_workflow", "member_workflow", "roster_member_steps"]

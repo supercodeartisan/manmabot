@@ -215,9 +215,11 @@ def member_state_message(
     invite: dict[str, Any],
     seq: int,
     changed: bool,
+    live: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Member → leader: full member view (see module doc). ``changed`` = differs
-    from the previous frame (the rest are keep-alive repeats)."""
+    from the previous frame (the rest are keep-alive repeats). ``live`` = monitor
+    extras (bot state, map, xy, hp/mp, current step)."""
     return {
         "type": MEMBER_STATE,
         "from": str(name or "member").strip() or "member",
@@ -225,6 +227,7 @@ def member_state_message(
         "policy_id": str(policy_id or ""),
         "party": dict(party or {}),
         "invite": dict(invite or {}),
+        "live": dict(live or {}),
         "seq": int(seq),
         "changed": bool(changed),
     }

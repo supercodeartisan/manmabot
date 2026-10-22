@@ -125,13 +125,19 @@ _06_party     websocket/        _05_action/chat
 
 ### 3.1 멤버
 
+시작 순서 자유: 리더·멤버 어느 쪽을 먼저 켜도 된다.
+
 ```text
+(Start) _start_party_client — 리더 소켓 연결까지 타임아웃 없이 대기 (30s마다 로그, Stop으로 취소)
+  → 대기 중엔 봇 루프에 들어가지 않음 (이동·전투·HP 없음), 모니터에 노란 "리더 대기 중"
+  → 리더 IP가 비어 있을 때만 party_ws_unreachable로 중지
 _member_party_tick(send=False)
   → member_orders.ingest(client.drain())
 PartyMemberManager.decide(world)
   → policy → join_map | follow | assist | loot | support | gather(walk)
 _member_party_tick(send=True)
   → heartbeat / report
+  → member_state (2s/변경 시) + live(봇 상태·맵·XY·HP/MP·두뇌·집결) — live 변화는 "변경"으로 치지 않음
 ```
 
 `manager`가 gather할 때 `websocket.party_orders.member_orders`를 **lazy import**.
@@ -140,20 +146,26 @@ _member_party_tick(send=True)
 
 ```text
 (once) _run_leader_party_setup → invite.LeaderInvites.start
-  → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (15분 창)
+  → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (시작 대기 5분, 초대 마감 없음)
 (매 틱) _leader_invite_tick → LeaderInvites.tick  — 블로킹 없음, 틱당 최대 1줄
-  → 파티에 없는 로스터 이름마다 20s 간격 /초대 (가입 확인되면 중단)
+  → 파티에 없는 로스터 이름마다 20s 간격 /초대 (가입 확인되면 중단) — 멤버별, 사냥 중에도 계속
+  → 새 소켓이 붙을 때마다 정책 재전송 (끊겼다 다시 붙어도)
   → 이름별 초대는 그 멤버가 현재 정책(policy_id)을 확인한 뒤에만 (member_state 또는 policy_ack, 타임아웃 없음)
   → 멤버 member_state가 직전 invite_id를 waiting/pressed로 보고하는 동안 새 /초대 보류 (최대 60s)
   → 알림(party_invite)은 member_state가 invite_id를 되돌려줄 때까지 3s 간격 최대 3회 재전송
   → 가입 = 리더 파티 메모리에 이름 OR 멤버 member_state의 자기 파티 메모리(in_party + 리더 이름 일치)
   → 직전 행동이 상점·게이트·텔레포트·스크롤·리스폰이면 그 틱은 건너뜀
-  → 15분 끝: 미가입 = 배제(excluded). 이후 늦게 가입하면 배제 해제
-LeaderStartRally.begin(deadline=초대 창 끝) → (travel 시) on_plan / should_hold
+  → 직전 행동이 전투(공격·물약·힐·버프·HP→MP)여도 건너뜀. 단 초대가 전투 때문에 60s 밀리면 보냄
+  → 이탈 = 멤버 member_state가 "파티 아님"(읽기 가능, 신선) AND 리더 메모리에 없음, 10s 지속 → 다시 초대
+  → 5분 끝(시작 대기): 미가입 = late(늦음) 표시, 초대는 계속. 늦게 가입하면 late 해제
+LeaderStartRally.begin(deadline=시작 대기 끝) → (travel 시) on_plan / should_hold
   → Rally.arm: rally stages start | planned | landed
-  → 초대와 병행 (이동하면서 초대). 공통 기한에 어떤 상태든 종료 → 미도착 기록 후 사냥
+  → 초대와 병행 (이동하면서 초대). 5분에 어떤 상태든 종료 → 미도착 기록 후 사냥
+  → 집결이 끝난 뒤 새 소켓에는 집결 지점을 다시 보내지 않음 — 늦은 멤버는 리더 따라가기/맵 합류
 대기 중: set_party_hold + drain reports
-모니터: PHASE (forming / rally / hunting + 남은 시간), 멤버별 초대 횟수·가입·도착·배제/미도착
+모니터: PHASE (START WAIT / rally / hunting + 남은 시간), 멤버 목록(상태 색) + 선택 멤버 상세
+  (단계 Connect→Policy→Invite→Accept→In party→Rally/Follow, 마지막 보고, 봇·맵·XY·HP/MP·두뇌,
+   그 멤버 관련 프레임만), 이름 미확인 멤버 경고
 이후: 솔로 decide → _leader_party_tick(recovery + party_policy) → publish_leader_decision
 ```
 
@@ -167,7 +179,7 @@ LeaderStartRally.begin(deadline=초대 창 끝) → (travel 시) on_plan / shoul
 | `follow*` / `intents` | 추종·정착 Intent |
 | `assist` / `loot` / `support` | 전투·루팅·물약 |
 | `join_map` | 리더 맵 합류 내비 |
-| `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(15분 창·20s 간격·배제), `LeaderInvites`(정책 먼저·소켓 대기·위험 행동 회피·틱 진행), `deliver_chat` |
+| `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(멤버별·시작 대기 5분·20s 간격·마감 없음·이탈 재초대·late), `LeaderInvites`(정책 먼저·새 소켓 재전송·위험/전투 행동 회피·틱 진행), `deliver_chat` |
 | `leader_rally` | 첫 사냥 집결 FSM, WorldNav `hold_at_step` |
 | `party_log` | `Engine/logs/party-*.log` 채널 |
 | `brains/*` | `make_brain(role)` 스텁 — **세션 미사용** |

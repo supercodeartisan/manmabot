@@ -96,8 +96,13 @@ class MemberStateReporter:
         policy_id: str,
         party: dict[str, Any],
         invite: dict[str, Any],
+        live: Optional[dict[str, Any]] = None,
     ) -> bool:
-        """Send when the view changed or the keep-alive is due. True = sent."""
+        """Send when the view changed or the keep-alive is due. True = sent.
+
+        ``live`` (bot state, map, xy, hp …) rides along for the leader monitor
+        but does not count as a change, so walking does not flood frames.
+        """
         from .comms.orders import member_state_message
 
         view = {
@@ -112,6 +117,7 @@ class MemberStateReporter:
         body = member_state_message(
             name=name, session=session, policy_id=policy_id,
             party=party, invite=invite, seq=self.seq + 1, changed=changed,
+            live=live,
         )
         try:
             ok = bool(send(body))
@@ -137,9 +143,15 @@ class MemberStates:
     def __init__(self, *, clock: Callable[[], float] = time.monotonic) -> None:
         self._clock = clock
         self.rows: dict[str, dict[str, Any]] = {}
+        # Last frame from a member that does not know its name and could not be booked.
+        self.unnamed_at: Optional[float] = None
 
     def clear(self) -> None:
         self.rows.clear()
+        self.unnamed_at = None
+
+    def unnamed_recent(self) -> bool:
+        return self.unnamed_at is not None and self._clock() - self.unnamed_at < STALE_S
 
     def note(
         self,
@@ -171,6 +183,7 @@ class MemberStates:
                 if not (self.fresh(n) and self.rows[_key(n)].get("named"))
             ]
             if len(open_names) != 1:
+                self.unnamed_at = self._clock()
                 return ""
             name = open_names[0]
         prev = self.rows.get(_key(name)) or {}
@@ -189,6 +202,7 @@ class MemberStates:
             "policy_id": str(body.get("policy_id") or ""),
             "party": dict(body.get("party") or {}),
             "invite": dict(body.get("invite") or {}),
+            "live": dict(body.get("live") or {}),
             "fresh_at": self._clock(),
             "at": time.time(),
             "frames": int(prev.get("frames", 0)) + 1,
@@ -226,6 +240,15 @@ class MemberStates:
             return lead == me
         names = {_key(n) for n in party.get("names") or []}
         return not me or not names or me in names
+
+    def out_of_party(self, name: str, leader_name: str = "") -> bool:
+        """The member's own party memory (fresh, readable) says it is not in this party."""
+        row = self.rows.get(_key(name))
+        if not row or not self.fresh(name):
+            return False
+        if (row.get("party") or {}).get("mem") != "ok":
+            return False
+        return not self.joined(name, leader_name)
 
     def invite_phase(self, name: str) -> tuple[str, str]:
         """(invite_id, phase) the member last reported, ("", "") when unknown."""

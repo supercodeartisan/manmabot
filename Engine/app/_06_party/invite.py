@@ -1,17 +1,21 @@
 """Party invites — everything the leader needs to build the in-game party.
 
 - Chat lines: ``/초대 <name>`` (invite), ``파티탈퇴`` (leave).
-- ``PartyInviter``: pure state machine, one step per bot tick. Every roster
-  name not joined gets an invite every ``INVITE_EVERY_S``; a name stops
-  getting invites once it joined. When ``FORM_WINDOW_S``
-  runs out, names still missing are excluded (a late join clears that).
+- ``PartyInviter``: pure state machine, one step per bot tick, per member.
+  Every roster name not joined gets an invite every ``INVITE_EVERY_S`` — no
+  cut-off: a member that starts late, or left the party, is invited whenever
+  it is ready. ``START_WAIT_S`` only bounds how long the leader waits before
+  the hunt; names still missing then are "late" (still invited).
 - ``LeaderInvites``: one per Start. Sends the party policy first, leaves a
   party this character does not lead, then drives ``PartyInviter`` each tick:
   a roster name is invited only after that member confirmed the current
   policy, not while its ``member_state`` says it is still accepting the last
   invite (``sync.InviteGate``), and no line is typed right after an action
-  that opens an NPC dialog or teleports. Joined = party memory on either side
-  (``sync.MemberStates.joined``).
+  that opens an NPC dialog or teleports, nor right after a combat action
+  (unless combat has held a due invite for ``COMBAT_HOLD_MAX_S``). Joined =
+  party memory on either side (``sync.MemberStates.joined``); left = the
+  member reports it is out and the leader memory does not list it, for
+  ``LEFT_CONFIRM_S``.
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
 injects policy publish, socket count and wait.
@@ -25,10 +29,26 @@ from typing import Any, Callable, Optional
 INVITE_PREFIX = "/초대 "
 LEAVE_COMMAND = "파티탈퇴"
 
-# Invite + rally must finish inside this window; then the leader hunts.
-FORM_WINDOW_S = 15 * 60
+# Leader waits this long for invites + rally before the hunt; invites go on after.
+START_WAIT_S = 5 * 60
 # Re-send ``/초대 <name>`` to a missing member this often.
 INVITE_EVERY_S = 20.0
+# A joined member counts as gone only after reporting "out" this long.
+LEFT_CONFIRM_S = 10.0
+# Combat may delay a due invite at most this long.
+COMBAT_HOLD_MAX_S = 60.0
+# Typing chat right after these would steal skill / potion keys.
+COMBAT_ACTIONS = frozenset(
+    {
+        "attack",
+        "use_hp_potion",
+        "use_mp_potion",
+        "use_depoison",
+        "heal",
+        "buff",
+        "hp_to_mp",
+    }
+)
 # Chat would type into an NPC dialog or break a gate / teleport / shop click.
 UNSAFE_ACTIONS = frozenset(
     {
@@ -45,7 +65,8 @@ UNSAFE_ACTIONS = frozenset(
 
 FORMING = "forming"
 FORMED = "formed"
-EXPIRED = "expired"
+# Start wait over, someone still missing: hunting, invites go on.
+OPEN = "open"
 LEAVE_FAILED = "leave_failed"
 
 
@@ -122,10 +143,17 @@ def needs_leave(snapshot: Any, self_name: str) -> bool:
     return in_party and not _local_is_leader(snapshot, self_name)
 
 
+def _action_kind(action: Any) -> str:
+    return str(getattr(getattr(action, "action", None), "value", "") or "")
+
+
 def action_allows_chat(action: Any) -> bool:
     """False right after an action that opens an NPC dialog or teleports."""
-    kind = getattr(getattr(action, "action", None), "value", "") or ""
-    return str(kind) not in UNSAFE_ACTIONS
+    return _action_kind(action) not in UNSAFE_ACTIONS
+
+
+def action_is_combat(action: Any) -> bool:
+    return _action_kind(action) in COMBAT_ACTIONS
 
 
 def deliver_chat(line: str, *, log: Callable[[str], None], why: str = "") -> bool:
@@ -162,7 +190,11 @@ class InviteRow:
     failed: int = 0
     last_at: Optional[float] = None
     joined_at: Optional[float] = None
-    excluded: bool = False
+    # First "out of party" sighting while joined (leave confirm timer).
+    out_since: Optional[float] = None
+    left: int = 0
+    # Still missing when the start wait ended.
+    late: bool = False
 
     @property
     def joined(self) -> bool:
@@ -170,30 +202,40 @@ class InviteRow:
 
 
 class PartyInviter:
-    """forming → formed (everyone joined) | expired (window over, rest excluded)."""
+    """forming (start wait) → formed (everyone in) | open (wait over, invites go on).
+
+    A member that leaves turns ``formed`` back into ``forming`` / ``open``.
+    """
 
     def __init__(
         self,
         names: list[str],
         *,
-        window_s: float = FORM_WINDOW_S,
+        start_wait_s: float = START_WAIT_S,
         every_s: float = INVITE_EVERY_S,
+        left_confirm_s: float = LEFT_CONFIRM_S,
         clock: Callable[[], float] = time.monotonic,
         log: Callable[[str], None] = lambda _m: None,
     ) -> None:
         self._clock = clock
         self._log = log
-        self.window_s = float(window_s)
+        self.start_wait_s = float(start_wait_s)
         self.every_s = max(1.0, float(every_s))
+        self.left_confirm_s = max(0.0, float(left_confirm_s))
         self.started_at = clock()
-        self.deadline = self.started_at + self.window_s
+        self.deadline = self.started_at + self.start_wait_s
         self.rows = [InviteRow(n) for n in names]
         self.state = FORMED if not self.rows else FORMING
         self.sent: list[str] = []
 
     @property
     def active(self) -> bool:
+        """Leader still in the start wait (not everyone joined yet)."""
         return self.state == FORMING
+
+    @property
+    def inviting(self) -> bool:
+        return any(not r.joined for r in self.rows)
 
     def remaining_s(self) -> float:
         return max(0.0, self.deadline - self._clock())
@@ -201,36 +243,86 @@ class PartyInviter:
     def missing(self) -> list[str]:
         return [r.name for r in self.rows if not r.joined]
 
-    def excluded(self) -> list[str]:
-        return [r.name for r in self.rows if r.excluded]
+    def late(self) -> list[str]:
+        return [r.name for r in self.rows if r.late and not r.joined]
 
-    def observe(self, snapshot: Any, reported: Callable[[str], bool] = lambda _n: False) -> None:
-        """Mark joined names (late joins after the window too): this leader's
-        party memory lists them, or ``reported(name)`` — the member's own party
-        memory says it is in this party."""
+    def observe(
+        self,
+        snapshot: Any,
+        reported: Callable[[str], bool] = lambda _n: False,
+        reported_out: Callable[[str], bool] = lambda _n: False,
+    ) -> None:
+        """Mark joins and confirmed leaves.
+
+        Joined: this leader's party memory lists the name, or ``reported(name)``
+        (the member's own party memory says it is in this party). Left: a
+        joined member reports ``reported_out(name)`` and the leader memory does
+        not list it, for ``left_confirm_s``.
+        """
         in_party = bool(isinstance(snapshot, dict) and snapshot.get("in_party"))
         present = _member_names(snapshot) if in_party else set()
         now = self._clock()
         for row in self.rows:
-            if row.joined_at is not None:
+            in_leader = row.name.casefold() in present
+            if row.joined_at is None:
+                if in_leader:
+                    how = "leader party memory"
+                else:
+                    how = "member report" if _safe(reported, row.name) else ""
+                if not how:
+                    continue
+                row.joined_at = now
+                row.out_since = None
+                was_late = row.late
+                row.late = False
+                self._log(
+                    f'Party: "{row.name}" joined'
+                    + (" (late)" if was_late else f" after {row.invites} invite(s)")
+                    + f" — {how}"
+                )
                 continue
-            if row.name.casefold() in present:
-                how = "leader party memory"
-            else:
-                try:
-                    how = "member report" if reported(row.name) else ""
-                except Exception:
-                    how = ""
-            if not how:
+            if in_leader or not _safe(reported_out, row.name):
+                row.out_since = None
                 continue
-            row.joined_at = now
-            was_out = row.excluded
-            row.excluded = False
+            if row.out_since is None:
+                row.out_since = now
+                continue
+            if now - row.out_since < self.left_confirm_s:
+                continue
+            row.joined_at = None
+            row.out_since = None
+            row.last_at = None
+            row.left += 1
+            self._log(f'Party: "{row.name}" left the party — inviting again')
+
+    def _update_state(self, now: float) -> None:
+        if all(r.joined for r in self.rows):
+            if self.state != FORMED:
+                self.state = FORMED
+                self._log("Party formed — every roster member joined")
+            return
+        if now < self.deadline:
+            self.state = FORMING
+            return
+        if self.state == FORMING:
+            for row in self.rows:
+                if not row.joined:
+                    row.late = True
+            mins = int(self.start_wait_s // 60)
             self._log(
-                f'Party: "{row.name}" joined'
-                + (" (after the window)" if was_out else f" after {row.invites} invite(s)")
-                + f" — {how}"
+                f"Party start wait over ({mins} min) — hunting; still inviting: "
+                + (", ".join(self.missing()) or "—")
             )
+        self.state = OPEN
+
+    def due(self, ready: Optional[Callable[[str], bool]] = None) -> list[InviteRow]:
+        now = self._clock()
+        return [
+            r for r in self.rows
+            if not r.joined
+            and (r.last_at is None or now - r.last_at >= self.every_s)
+            and (ready is None or ready(r.name))
+        ]
 
     def tick(
         self,
@@ -240,38 +332,18 @@ class PartyInviter:
         can_send: bool = True,
         ready: Optional[Callable[[str], bool]] = None,
         reported: Callable[[str], bool] = lambda _n: False,
+        reported_out: Callable[[str], bool] = lambda _n: False,
     ) -> Optional[str]:
-        """One step: update joins, expire, or send at most one due invite.
+        """One step: update joins / leaves / state, send at most one due invite.
 
         ``ready(name)`` False keeps that name waiting (no invite, no retry clock).
         """
-        self.observe(snapshot, reported)
-        if self.state != FORMING:
-            return None
-        if all(r.joined for r in self.rows):
-            self.state = FORMED
-            self._log("Party formed — every roster member joined")
-            return None
+        self.observe(snapshot, reported, reported_out)
         now = self._clock()
-        if now >= self.deadline:
-            self.state = EXPIRED
-            for row in self.rows:
-                if not row.joined:
-                    row.excluded = True
-            mins = int(self.window_s // 60)
-            self._log(
-                f"Party invite window over ({mins} min) — excluded: "
-                + (", ".join(self.excluded()) or "—")
-            )
+        self._update_state(now)
+        if self.state == FORMED or not can_send:
             return None
-        if not can_send:
-            return None
-        due = [
-            r for r in self.rows
-            if not r.joined
-            and (r.last_at is None or now - r.last_at >= self.every_s)
-            and (ready is None or ready(r.name))
-        ]
+        due = self.due(ready)
         if not due:
             return None
         row = min(due, key=lambda r: (r.last_at is not None, r.last_at or 0.0))
@@ -289,13 +361,13 @@ class PartyInviter:
         now = self._clock()
         return {
             "state": self.state,
-            "window_s": self.window_s,
+            "start_wait_s": self.start_wait_s,
             "every_s": self.every_s,
             "remaining_s": round(self.remaining_s(), 1),
             "elapsed_s": round(now - self.started_at, 1),
             "names": [r.name for r in self.rows],
             "sent": list(self.sent),
-            "excluded": self.excluded(),
+            "late": self.late(),
             "rows": [
                 {
                     "name": r.name,
@@ -305,11 +377,22 @@ class PartyInviter:
                         round(now - r.last_at, 1) if r.last_at is not None else None
                     ),
                     "joined": r.joined,
-                    "excluded": r.excluded,
+                    "late": r.late and not r.joined,
+                    "left": r.left,
+                    "leaving_s": (
+                        round(now - r.out_since, 1) if r.out_since is not None else None
+                    ),
                 }
                 for r in self.rows
             ],
         }
+
+
+def _safe(fn: Callable[[str], bool], name: str) -> bool:
+    try:
+        return bool(fn(name))
+    except Exception:
+        return False
 
 
 class LeaderInvites:
@@ -324,11 +407,12 @@ class LeaderInvites:
         announce_invite: Callable[[str], Any] = lambda _name: 0,
         gate: Any = None,
         reported_joined: Callable[[str], bool] = lambda _name: False,
+        reported_out: Callable[[str], bool] = lambda _name: False,
         send_chat: Optional[Callable[[str], bool]] = None,
         wait: Callable[[float], Any] = time.sleep,
         log: Callable[[str], None] = lambda _m: None,
         clock: Callable[[], float] = time.monotonic,
-        window_s: Optional[float] = None,
+        start_wait_s: Optional[float] = None,
         every_s: Optional[float] = None,
     ) -> None:
         self._publish_policy = publish_policy
@@ -338,16 +422,18 @@ class LeaderInvites:
         # ``sync.InviteGate``: notice ids, resend until echoed, hold while accepting.
         self._gate = gate
         self._reported_joined = reported_joined
+        self._reported_out = reported_out
         self._announced: dict[str, int] = {}
         self._send_chat = send_chat
         self._wait = wait
         self._log = log
         self._clock = clock
-        self.window_s = float(FORM_WINDOW_S if window_s is None else window_s)
+        self.start_wait_s = float(START_WAIT_S if start_wait_s is None else start_wait_s)
         self.every_s = float(INVITE_EVERY_S if every_s is None else every_s)
         self.inviter: Optional[PartyInviter] = None
         self.info: dict[str, Any] = {}
         self._policy_clients = 0
+        self._combat_hold_at: Optional[float] = None
 
     @property
     def active(self) -> bool:
@@ -391,16 +477,16 @@ class LeaderInvites:
             self._wait(1.0)
         self.inviter = PartyInviter(
             wanted,
-            window_s=self.window_s,
+            start_wait_s=self.start_wait_s,
             every_s=self.every_s,
             clock=self._clock,
             log=self._log,
         )
         self.info = self.inviter.status()
         self._log(
-            f"Party invite window {int(self.window_s // 60)} min: "
-            f"/초대 every {int(self.every_s)}s after each member confirms the policy "
-            f"({', '.join(wanted) or '—'})"
+            f"Party start wait {int(self.start_wait_s // 60)} min, then hunt. "
+            f"/초대 every {int(self.every_s)}s to each member that confirmed the "
+            f"policy and is not in the party — no cut-off ({', '.join(wanted) or '—'})"
         )
         return True
 
@@ -420,13 +506,15 @@ class LeaderInvites:
         inviter = self.inviter
         if inviter is None:
             return None
+        clients = self._clients()
+        if clients > self._policy_clients:
+            self._publish()
+        self._policy_clients = clients
         can_send = False
-        if inviter.active:
-            clients = self._clients()
-            if clients > self._policy_clients:
-                self._policy_clients = clients
-                self._publish()
-            can_send = action_allows_chat(last_action)
+        if inviter.inviting:
+            can_send = action_allows_chat(last_action) and self._combat_allows(
+                inviter, last_action
+            )
             if self._gate is not None:
                 self._gate.tick(inviter.missing())
         line = inviter.tick(
@@ -435,6 +523,7 @@ class LeaderInvites:
             can_send=can_send,
             ready=self._ready,
             reported=self._reported_joined,
+            reported_out=self._reported_out,
         )
         if line and line.startswith(INVITE_PREFIX):
             self._announce(line[len(INVITE_PREFIX):].strip())
@@ -445,8 +534,26 @@ class LeaderInvites:
             row["announced"] = self._announced.get(name.casefold(), 0)
             if self._gate is not None:
                 row.update(self._gate.row(name))
+        info["combat_hold_s"] = (
+            round(self._clock() - self._combat_hold_at, 1)
+            if self._combat_hold_at is not None
+            else None
+        )
         self.info = info
         return line
+
+    def _combat_allows(self, inviter: PartyInviter, last_action: Any) -> bool:
+        """No chat right after a combat action, unless a due invite waited too long."""
+        if not action_is_combat(last_action) or not inviter.due(self._ready):
+            self._combat_hold_at = None
+            return True
+        now = self._clock()
+        if self._combat_hold_at is None:
+            self._combat_hold_at = now
+        if now - self._combat_hold_at < COMBAT_HOLD_MAX_S:
+            return False
+        self._combat_hold_at = None
+        return True
 
     def _announce(self, name: str) -> None:
         """Tell the member socket the popup is up, so it presses accept."""
@@ -467,19 +574,23 @@ class LeaderInvites:
 
 
 __all__ = [
-    "EXPIRED",
+    "COMBAT_ACTIONS",
+    "COMBAT_HOLD_MAX_S",
     "FORMED",
     "FORMING",
-    "FORM_WINDOW_S",
     "INVITE_EVERY_S",
     "INVITE_PREFIX",
     "LEAVE_COMMAND",
     "LEAVE_FAILED",
+    "LEFT_CONFIRM_S",
+    "OPEN",
+    "START_WAIT_S",
     "UNSAFE_ACTIONS",
     "InviteRow",
     "LeaderInvites",
     "PartyInviter",
     "action_allows_chat",
+    "action_is_combat",
     "deliver_chat",
     "invite_command",
     "needs_leave",
