@@ -237,6 +237,12 @@ class PerceptionSensors:
         return bool(inv.scanning())
 
     def close(self) -> None:
+        try:
+            from app._01_perception.lc_session import session
+
+            session.stop()
+        except Exception:
+            pass
         if self._monitor is not None:
             try:
                 self._monitor.close()

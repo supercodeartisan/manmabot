@@ -1,0 +1,54 @@
+# =============================================================================
+# [SEC-17] 파티 (PartySubsystem → Party → std::vector<shared_ptr<PartyPlayer>>)
+#   party_listen_reader merges this onto analysis/lc930/registry/LC930_REGISTRY.txt
+#   (anchors MGR / VFT_ACTORSUBS / … come from there — single source of truth).
+#   Patch: update lc930 first, then the three PARTY_VFT_* below.
+#
+#   앵커  : PartySubsystem = lc_subsGet(PARTY_VFT_SUBS)
+#   해석  : 고정체인  subs+PARTY_REF_OFF → +PARTY_HOP1_OFF → +PARTY_HOP2_OFF = Party(+0x10 of ctrl)
+#           검증: Q(Party-0x10) == base+PARTY_VFT_RC  (_Ref_count_obj2<Party>)
+#   멤버  : Party+PARTY_VEC_BEG = begin, +PARTY_VEC_END = end (원소 stride 0x10)
+#           원소 = shared_ptr{_Ptr@+0, _Rep@+8}; *(_Rep) vft == base+PARTY_VFT_RC_PLAYER
+#
+#   BUILD 26.10.16.1 (live 2026-10-09): SUBS=0x1228B10 RC=0x1228A58 RC_PLAYER=0x1228A30
+#   BUILD 26.10.27.2001: copied from dist registry v35 (PARTY_VFT_SUBS/RC/RC_PLAYER).
+#     Chain offsets below are unchanged. Live check: python Engine/analysis/party/tools/probe_party_vft.py
+# =============================================================================
+PARTY_BUILD=26.10.27.2001
+PARTY_VFT_SUBS=0x123D1F0
+PARTY_VFT_RC=0x123D250
+PARTY_VFT_RC_PLAYER=0x123D178
+# 고정체인 (PartySubsystem → Party)
+PARTY_REF_OFF=0x4A0
+PARTY_HOP1_OFF=0x00
+PARTY_HOP2_OFF=0x28
+PARTY_HOP_CTRL=0x10
+# Party 헤더/벡터
+PARTY_LEADER_NAME=0x08
+PARTY_LEADER_LVL=0x28
+PARTY_VEC_BEG=0x30
+PARTY_VEC_END=0x38
+PARTY_VEC_CAP=0x40
+PARTY_MEMBER_COUNT=0x48
+# PartyPlayer (런타임 멤버)
+PM_SELF=0x00
+PM_NAME=0x08
+PM_NAME_LEN=0x18
+PM_NAME_CAP=0x20
+PM_GUID=0x28
+PM_NAME2=0x30
+PM_NAME2_LEN=0x40
+PM_NAME2_CAP=0x48
+PM_LEVEL=0x50
+PM_F54=0x54
+PM_F60=0x60
+PM_CLASS=0x58
+PM_F5C=0x5C
+PM_HP=0x64
+PM_MP=0x68
+PM_MAPID=0x6C
+PM_X=0x70
+PM_Y=0x74
+PM_LEVEL2=0x90
+PARTY_STR_SSO=0x10
+PARTY_MAX_MEMBERS=8

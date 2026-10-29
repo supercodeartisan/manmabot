@@ -1,0 +1,822 @@
+kind	map	mapName	x	y	x2	y2	id	type	note	src
+map	0	말하는 섬	32256	32704	32767	33279		field	complex=말하는 섬	maps.csv
+map	1	말하는 섬 던전 1층	32576	32704	32831	32959	1	dungeon	complex=말하는 섬 던전	maps.csv
+map	2	말하는 섬 던전 2층	32576	32704	32895	32959	2	dungeon	complex=말하는 섬 던전	maps.csv
+map	3	군터의 집	32576	32704	32831	32895		field	complex=군터의 집	maps.csv
+map	4	아덴 대륙	32448	32128	34367	33599		field	complex=아덴 대륙	maps.csv
+map	5	글루딘행 배	32640	32768	32767	32831		field	complex=글루딘행 배	maps.csv
+map	6	말하는 섬행 배	32704	32768	32831	32831		field	complex=말하는 섬행 배	maps.csv
+map	7	글루디오 던전 1층	32640	32640	32895	32895	1	dungeon	complex=글루디오 던전	maps.csv
+map	8	글루디오 던전 2층	32640	32640	32895	32895	2	dungeon	complex=글루디오 던전	maps.csv
+map	9	글루디오 던전 3층	32640	32640	32895	32895	3	dungeon	complex=글루디오 던전	maps.csv
+map	10	글루디오 던전 4층	32640	32640	32831	32895	4	dungeon	complex=글루디오 던전	maps.csv
+map	11	글루디오 던전 5층	32640	32640	32895	32895	5	dungeon	complex=글루디오 던전	maps.csv
+map	12	글루디오 던전 6층	32640	32640	32895	32895	6	dungeon	complex=글루디오 던전	maps.csv
+map	13	글루디오 던전 7층	32640	32640	32895	32895	7	dungeon	complex=글루디오 던전	maps.csv
+map	14	지하 통로	32448	32704	33087	32895		dungeon	complex=지하 통로	maps.csv
+map	15	켄트 내성	32704	32768	32767	32831		field	complex=켄트 내성	maps.csv
+map	16	하딘의 연구소	32640	32704	32831	32895		field	complex=하딘의 연구소	maps.csv
+map	17	네루파의 동굴	32640	32704	32831	32895		dungeon	complex=네루파의 동굴	maps.csv
+map	18	이름 미등록 지도	32640	32704	32831	32895		field	complex=이름 미등록 지도	maps.csv
+map	19	요정숲 던전 1층	32640	32640	32895	32895	1	dungeon	complex=요정숲 던전	maps.csv
+map	20	요정숲 던전 2층	32640	32640	32895	32895	2	dungeon	complex=요정숲 던전	maps.csv
+map	21	요정숲 던전 3층	32640	32640	32895	32895	3	dungeon	complex=요정숲 던전	maps.csv
+map	23	윈다우드 성 던전 1층	32640	32640	32895	32895	1	dungeon	complex=윈다우드 성 던전	maps.csv
+map	24	윈다우드 성 던전 2층	32640	32640	32895	32895	2	dungeon	complex=윈다우드 성 던전	maps.csv
+map	25	사막 던전 1층	32640	32640	32895	32895	1	dungeon	complex=사막 던전	maps.csv
+map	26	사막 던전 2층	32640	32640	32895	32895	2	dungeon	complex=사막 던전	maps.csv
+map	27	사막 던전 3층	32640	32640	32895	32895	3	dungeon	complex=사막 던전	maps.csv
+map	28	사막 던전 4층	32640	32640	32895	32895	4	dungeon	complex=사막 던전	maps.csv
+map	29	윈다우드 내성	32704	32768	32767	32831		field	complex=윈다우드 내성	maps.csv
+map	30	용의 계곡 던전 1층	32640	32640	32895	32895	1	dungeon	complex=용의 계곡 던전	maps.csv
+map	31	용의 계곡 던전 2층	32640	32640	32895	32895	2	dungeon	complex=용의 계곡 던전	maps.csv
+map	32	용의 계곡 던전 3층	32576	32704	32831	32959	3	dungeon	complex=용의 계곡 던전	maps.csv
+map	33	용의 계곡 던전 4층	32576	32704	32831	32959	4	dungeon	complex=용의 계곡 던전	maps.csv
+map	35	용의 계곡 던전 5층	32576	32704	32831	32959	5	dungeon	complex=용의 계곡 던전	maps.csv
+map	36	용의 계곡 던전 6층	32576	32704	32831	32959	6	dungeon	complex=용의 계곡 던전	maps.csv
+map	37	용의 계곡 던전 7층	32576	32704	32831	32959	7	dungeon	complex=용의 계곡 던전	maps.csv
+map	43	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	44	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	45	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	46	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	47	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	48	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	49	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	50	개미굴 던전 1층	32640	32640	32895	32895	1	dungeon	complex=개미굴 던전	maps.csv
+map	51	개미굴 던전 2층	32576	32704	32895	32959	2	dungeon	complex=개미굴 던전	maps.csv
+map	52	기란 내성	32704	32768	32767	32831		field	complex=기란 내성	maps.csv
+map	53	기란 던전 1층	32640	32640	32895	32895	1	dungeon	complex=기란 던전	maps.csv
+map	54	기란 던전 2층	32640	32640	32895	32895	2	dungeon	complex=기란 던전	maps.csv
+map	55	기란 던전 3층	32640	32640	32831	32959	3	dungeon	complex=기란 던전	maps.csv
+map	56	기란 던전 4층	32640	32640	32895	32895	4	dungeon	complex=기란 던전	maps.csv
+map	59	지하 수로 1층	32576	32704	32831	32959	1	dungeon	complex=지하 수로	maps.csv
+map	60	지하 수로 2층	32576	32704	32831	32959	2	dungeon	complex=지하 수로	maps.csv
+map	61	지하 수로 3층	32576	32704	32831	32959	3	dungeon	complex=지하 수로	maps.csv
+map	62	에바의 성지	32640	32768	32831	32895		field	complex=에바의 성지	maps.csv
+map	63	에바왕국	32576	32640	32895	32959		field	complex=에바왕국	maps.csv
+map	64	하이네 내성	32512	32768	32639	32895		field	complex=하이네 내성	maps.csv
+map	65	파푸리온 둥지	32704	32768	32831	32895		dungeon	complex=파푸리온 둥지	maps.csv
+map	66	지저성	32704	32768	32895	32959		field	complex=지저성	maps.csv
+map	67	발라카스 둥지	32640	32704	32831	32895		dungeon	complex=발라카스 둥지	maps.csv
+map	70	잊혀진 섬	32576	32640	33023	33087		field	complex=잊혀진 섬	maps.csv
+map	72	얼음 수정 동굴 1층	32640	32704	32895	32959	1	dungeon	complex=얼음 수정 동굴	maps.csv
+map	73	얼음 수정 동굴 2층	32640	32704	32895	32959	2	dungeon	complex=얼음 수정 동굴	maps.csv
+map	74	얼음 수정 동굴 3층	32640	32768	32895	33023	3	dungeon	complex=얼음 수정 동굴	maps.csv
+map	75	상아탑 1층	32704	32768	32831	32959	1	dungeon	complex=상아탑	maps.csv
+map	76	상아탑 2층	32704	32768	32831	32895	2	dungeon	complex=상아탑	maps.csv
+map	77	상아탑 3층	32704	32768	32831	32895	3	dungeon	complex=상아탑	maps.csv
+map	78	상아탑 4층	32832	32704	32959	32831	4	dungeon	complex=상아탑	maps.csv
+map	79	상아탑 5층	32704	32768	32831	32895	5	dungeon	complex=상아탑	maps.csv
+map	80	상아탑 6층	32704	32768	32831	32895	6	dungeon	complex=상아탑	maps.csv
+map	81	상아탑 7층	32704	32768	32831	32895	7	dungeon	complex=상아탑	maps.csv
+map	82	상아탑 8층	32640	32768	32767	32895	8	dungeon	complex=상아탑	maps.csv
+map	83	잊혀진 섬행 배	32704	32768	32831	32831		field	complex=잊혀진 섬행 배	maps.csv
+map	84	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	89	무한대전	32640	32832	32767	32959		field	complex=무한대전	maps.csv
+map	90	무한대전	32640	32640	33599	32959		field	complex=무한대전	maps.csv
+map	91	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	92	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	93	무한대전	32640	32640	33599	32959		field	complex=무한대전	maps.csv
+map	94	무한대전	32640	32640	33599	32959		field	complex=무한대전	maps.csv
+map	95	무한대전	32640	32640	33599	32959		field	complex=무한대전	maps.csv
+map	96	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	97	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	98	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	99	무한대전	33408	32640	33599	32831		field	complex=무한대전	maps.csv
+map	201	언데드의 던전	32704	32704	33023	33023		dungeon	complex=언데드의 던전	maps.csv
+map	209	가짜 다크마르 은신처	32640	32704	32831	32895		dungeon	complex=가짜 다크마르 은신처	maps.csv
+map	213	다크마르 은신처	32640	32704	32831	32895		dungeon	complex=다크마르 은신처	maps.csv
+map	217	변종 거대 개미 던전	32576	32704	32767	32895		dungeon	complex=변종 거대 개미 던전	maps.csv
+map	221	시련의 던전	32640	32640	32895	32895		dungeon	complex=시련의 던전	maps.csv
+map	237	비밀의 방	32640	32704	32831	32895		field	complex=비밀의 방	maps.csv
+map	238	정령의 심연	32640	32640	32895	32895		dungeon	complex=정령의 심연	maps.csv
+map	244	오염된 축복의 땅	32640	32768	33023	33151		field	complex=오염된 축복의 땅	maps.csv
+map	245	타락한 축복의 땅의 여름	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 여름	maps.csv
+map	246	오염된 축복의 땅(PC)	32640	32768	33023	33151		field	complex=오염된 축복의 땅	maps.csv
+map	247	타락한 축복의 땅의 여름(PC)	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 여름	maps.csv
+map	302	이름 미등록 지도	32704	32832	32767	32895		field	complex=이름 미등록 지도	maps.csv
+map	303	몽환의 섬	32512	32512	32959	32959		field	complex=몽환의 섬	maps.csv
+map	620	픽시의 하늘정원	32704	32704	32831	32831		field	complex=픽시의 하늘정원	maps.csv
+map	666	지옥	32576	32640	32895	32959		field	complex=지옥	maps.csv
+map	667	감옥	32704	32768	32831	32895		field	complex=감옥	maps.csv
+map	668	운영자의 방	32704	32768	32767	32831		field	complex=운영자의 방	maps.csv
+map	777	버림받은 자들의 땅	32512	32832	33023	33343		field	complex=버림받은 자들의 땅	maps.csv
+map	778	버림받은 자들의 땅(PC)	32512	32832	33023	33343		field	complex=버림받은 자들의 땅	maps.csv
+map	779	버림받은 자들의 땅:심연	32512	32832	32767	33087		dungeon	complex=버림받은 자들의 땅:심연	maps.csv
+map	780	버림받은 자들의 땅:심연(PC)	32512	32832	32767	33087		dungeon	complex=버림받은 자들의 땅:심연	maps.csv
+map	997	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	2450	타락한 축복의 땅의 봄	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 봄	maps.csv
+map	2451	타락한 축복의 땅의 봄(PC)	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 봄	maps.csv
+map	2452	타락한 축복의 땅의 가을	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 가을	maps.csv
+map	2453	타락한 축복의 땅의 가을(PC)	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 가을	maps.csv
+map	2454	타락한 축복의 땅의 겨울	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 겨울	maps.csv
+map	2455	타락한 축복의 땅의 겨울(PC)	32640	32768	33023	33151		field	complex=타락한 축복의 땅의 겨울	maps.csv
+map	7770	말하는 섬 던전 1층(PC)	32576	32704	32831	32959	1	dungeon	complex=말하는 섬 던전	maps.csv
+map	7771	말하는 섬 던전 2층(PC)	32576	32704	32895	32959	2	dungeon	complex=말하는 섬 던전	maps.csv
+map	7772	글루디오 던전 1층(PC)	32640	32640	32895	32895	1	dungeon	complex=글루디오 던전	maps.csv
+map	7773	글루디오 던전 2층(PC)	32640	32640	32895	32895	2	dungeon	complex=글루디오 던전	maps.csv
+map	7774	글루디오 던전 3층(PC)	32640	32640	32895	32895	3	dungeon	complex=글루디오 던전	maps.csv
+map	7775	글루디오 던전 4층(PC)	32640	32640	32831	32895	4	dungeon	complex=글루디오 던전	maps.csv
+map	7776	글루디오 던전 5층(PC)	32640	32640	32895	32895	5	dungeon	complex=글루디오 던전	maps.csv
+map	7777	글루디오 던전 6층(PC)	32640	32640	32895	32895	6	dungeon	complex=글루디오 던전	maps.csv
+map	7778	글루디오 던전 7층(PC)	32640	32640	32895	32895	7	dungeon	complex=글루디오 던전	maps.csv
+map	7779	사막 던전 1층(PC)	32640	32640	32895	32895	1	dungeon	complex=사막 던전	maps.csv
+map	7780	사막 던전 2층(PC)	32640	32640	32895	32895	2	dungeon	complex=사막 던전	maps.csv
+map	7781	사막 던전 3층(PC)	32640	32640	32895	32895	3	dungeon	complex=사막 던전	maps.csv
+map	7782	사막 던전 4층(PC)	32640	32640	32895	32895	4	dungeon	complex=사막 던전	maps.csv
+map	10001	습격당한 성장의 섬	32256	32704	32767	33279		field	complex=습격당한 성장의 섬	maps.csv
+map	10002	습격당한 성장의 섬(PC)	32256	32704	32767	33279		field	complex=습격당한 성장의 섬	maps.csv
+map	10003	설탕요정의 놀이터	32576	32832	32831	33087		field	complex=설탕요정의 놀이터	maps.csv
+map	10004	설탕요정의 놀이터	32576	32832	32831	33087		field	complex=설탕요정의 놀이터	maps.csv
+map	10005	설탕요정의 놀이터	32576	32832	32831	33087		field	complex=설탕요정의 놀이터	maps.csv
+map	10006	설탕요정의 놀이터	32576	32832	32831	33087		field	complex=설탕요정의 놀이터	maps.csv
+map	10007	린델의 꿈나라	32704	32768	33023	33087		field	complex=린델의 꿈나라	maps.csv
+map	10008	린델의 꿈나라(PC)	32704	32768	33023	33087		field	complex=린델의 꿈나라	maps.csv
+map	10009	린델의 깊은 꿈나라	32704	32768	33023	33087		field	complex=린델의 깊은 꿈나라	maps.csv
+map	10010	린델의 깊은 꿈나라(PC)	32704	32768	33023	33087		field	complex=린델의 깊은 꿈나라	maps.csv
+map	10011	미리가는 해적섬	32256	32768	32767	33279		field	complex=미리가는 해적섬	maps.csv
+map	10012	미리가는 해적섬(PC)	32256	32768	32767	33279		field	complex=미리가는 해적섬	maps.csv
+map	30000	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30200	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30250	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30450	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30500	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30700	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30750	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	30950	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	31000	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	31200	여관	32704	32768	32767	32831		field	complex=여관	maps.csv
+map	31250	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	31450	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	31500	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	31700	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	31750	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	31950	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+map	32766	이름 미등록 지도	32704	32768	32767	32831		field	complex=이름 미등록 지도	maps.csv
+portal	0	말하는 섬	32478	32851	32669	32802	0:0	world-dungeon entry/exit	to=1:말하는 섬 던전 1층;name=00-01_dungeon;sf=;tf=1	portals_all.csv
+portal	0	말하는 섬	32510	32863	32675	32815	0:1	building/interior	to=3:군터의 집;name=00-03_gunter;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32602	32929	32745	32807	0:3	building/interior	to=30200:여관;name=In02;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32602	32930	32744	32803	0:2	building/interior	to=30000:여관;name=In01;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32629	32982	32732	32796	0:4	ship transport	to=5:글루딘행 배;name=s1;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32630	32983	32733	32796	0:5	ship transport	to=5:글루딘행 배;name=s2;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32631	32983	32734	32796	0:6	ship transport	to=5:글루딘행 배;name=s3;sf=;tf=	portals_all.csv
+portal	0	말하는 섬	32632	32982	32735	32796	0:7	ship transport	to=5:글루딘행 배;name=s4;sf=;tf=	portals_all.csv
+portal	1	말하는 섬 던전 1층	32669	32802	32478	32851	1:0	world-dungeon entry/exit	to=0:말하는 섬;name=00-01_dungeon;sf=1;tf=	portals_all.csv
+portal	1	말하는 섬 던전 1층	32709	32839	32742	32851	1:3	dungeon internal teleport	to=1:말하는 섬 던전 1층;name=inP02a;sf=1;tf=1	portals_all.csv
+portal	1	말하는 섬 던전 1층	32713	32851	32745	32809	1:2	dungeon internal teleport	to=1:말하는 섬 던전 1층;name=inP01b;sf=1;tf=1	portals_all.csv
+portal	1	말하는 섬 던전 1층	32737	32877	32665	32789	1:5	dungeon floor change	to=2:말하는 섬 던전 2층;name=to2;sf=1;tf=2	portals_all.csv
+portal	1	말하는 섬 던전 1층	32742	32852	32709	32838	1:4	dungeon internal teleport	to=1:말하는 섬 던전 1층;name=inP02b;sf=1;tf=1	portals_all.csv
+portal	1	말하는 섬 던전 1층	32745	32810	32713	32851	1:1	dungeon internal teleport	to=1:말하는 섬 던전 1층;name=t1;sf=1;tf=1	portals_all.csv
+portal	2	말하는 섬 던전 2층	32659	32873	32665	32876	2:4	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP02b;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32664	32876	32659	32872	2:3	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP02a;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32665	32788	32737	32877	2:0	dungeon floor change	to=1:말하는 섬 던전 1층;name=to1;sf=2;tf=1	portals_all.csv
+portal	2	말하는 섬 던전 2층	32668	32865	32680	32859	2:2	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP01b;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32679	32859	32668	32864	2:1	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP01a;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32758	32802	32764	32801	2:5	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP04a;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32764	32802	32758	32801	2:6	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP04b;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32789	32821	32808	32837	2:7	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP03b;sf=2;tf=2	portals_all.csv
+portal	2	말하는 섬 던전 2층	32804	32873	32534	32800	2:9	dungeon passage link	to=14:지하 통로;name=to14;sf=2;tf=	portals_all.csv
+portal	2	말하는 섬 던전 2층	32808	32838	32788	32821	2:8	dungeon internal teleport	to=2:말하는 섬 던전 2층;name=inP03a;sf=2;tf=2	portals_all.csv
+portal	3	군터의 집	32675	32815	32510	32863	3:0	building/interior	to=0:말하는 섬;name=00-03_gunter;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32540	32728	32734	32794	4:0	ship transport	to=6:말하는 섬행 배;name=s5;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32542	32728	32735	32794	4:1	ship transport	to=6:말하는 섬행 배;name=s6;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32543	32728	32736	32794	4:2	ship transport	to=6:말하는 섬행 배;name=s7;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32544	32728	32737	32794	4:3	ship transport	to=6:말하는 섬행 배;name=s8;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32551	33478	32808	32813	4:4	world-dungeon entry/exit	to=24:윈다우드 성 던전 2층;name=to24;sf=;tf=2	portals_all.csv
+portal	4	아덴 대륙	32620	33506	32727	32814	4:9	world-dungeon entry/exit	to=23:윈다우드 성 던전 1층;name=WB;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32628	33166	32745	32807	4:8	building/interior	to=30950:여관;name=In08;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32628	33167	32745	32803	4:7	building/interior	to=30750:여관;name=In07;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32631	32749	32745	32807	4:6	building/interior	to=30700:여관;name=In06;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32631	32750	32744	32803	4:5	building/interior	to=30500:여관;name=In05;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32678	33392	32735	32815	4:13	building/interior	to=29:윈다우드 내성;name=entWWinB;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32682	33387	32683	33380	4:11	world/building internal teleport	to=4:아덴 대륙;name=crossWWa;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32683	33381	32682	33388	4:12	world/building internal teleport	to=4:아덴 대륙;name=crossWWb;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32686	33376	32741	32784	4:10	building/interior	to=29:윈다우드 내성;name=WWin;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32728	32929	32812	32724	4:18	world-dungeon entry/exit	to=7:글루디오 던전 1층;name=to7;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32729	32747	32747	32768	4:14	world/building internal teleport	to=4:아덴 대륙;name=PK;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32735	32747	32745	32752	4:15	world/building internal teleport	to=4:아덴 대륙;name=aa;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32744	32752	32736	32747	4:16	world/building internal teleport	to=4:아덴 대륙;name=aa;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32746	32768	32730	32747	4:17	world/building internal teleport	to=4:아덴 대륙;name=PK;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	32756	33205	32768	32803	4:21	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32756	33206	32768	32804	4:20	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32756	33207	32768	32805	4:19	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32757	33205	32769	32803	4:22	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32757	33207	32769	32805	4:26	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32758	33205	32770	32803	4:23	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32758	33206	32770	32804	4:24	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32758	33207	32770	32805	4:25	world-dungeon entry/exit	to=50:개미굴 던전 1층;name=to50;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32789	33256	32776	32730	4:47	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32789	33257	32776	32731	4:46	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32789	33258	32776	32732	4:43	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32790	33146	32784	32749	4:30	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32790	33147	32784	32750	4:29	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32790	33148	32784	32751	4:27	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32790	33256	32777	32730	4:48	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32790	33258	32777	32732	4:44	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32791	33146	32785	32749	4:31	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32791	33148	32785	32751	4:28	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32791	33256	32778	32730	4:49	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32791	33257	32778	32731	4:50	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32791	33258	32778	32732	4:45	world-dungeon entry/exit	to=45:개미굴 던전 1층;name=to45;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32792	33146	32786	32749	4:32	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32792	33147	32786	32750	4:33	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32792	33148	32786	32751	4:34	world-dungeon entry/exit	to=43:개미굴 던전 1층;name=to43;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32796	33189	32796	32741	4:37	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32796	33190	32796	32742	4:36	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32796	33191	32796	32743	4:35	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32797	33189	32797	32741	4:38	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32797	33191	32797	32743	4:42	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32798	33189	32798	32741	4:39	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32798	33190	32798	32742	4:40	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32798	33191	32798	32743	4:41	world-dungeon entry/exit	to=48:개미굴 던전 1층;name=to48;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32836	33171	32795	32744	4:54	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32836	33172	32795	32745	4:53	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32836	33173	32795	32746	4:52	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32837	33171	32796	32744	4:55	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32837	33173	32796	32746	4:51	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32838	33171	32797	32744	4:56	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32838	33172	32797	32745	4:57	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32838	33173	32797	32746	4:58	world-dungeon entry/exit	to=47:개미굴 던전 1층;name=to47;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32845	33292	32787	32794	4:65	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32845	33293	32787	32795	4:66	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32845	33294	32787	32796	4:59	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32846	33292	32788	32794	4:64	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32846	33294	32788	32796	4:60	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32847	33292	32789	32794	4:63	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32847	33293	32789	32795	4:62	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32847	33294	32789	32796	4:61	world-dungeon entry/exit	to=46:개미굴 던전 1층;name=to46;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32880	33511	32807	32813	4:67	world-dungeon entry/exit	to=27:사막 던전 3층;name=to27;sf=;tf=3	portals_all.csv
+portal	4	아덴 대륙	32910	33503	32733	32813	4:86	world-dungeon entry/exit	to=26:사막 던전 2층;name=to26;sf=;tf=2	portals_all.csv
+portal	4	아덴 대륙	32911	33221	32798	32752	4:75	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32911	33222	32798	32753	4:76	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32911	33223	32798	32754	4:69	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32912	33221	32799	32752	4:74	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32912	33223	32799	32754	4:70	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32913	33221	32800	32752	4:73	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32913	33222	32800	32753	4:72	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32913	33223	32800	32754	4:71	world-dungeon entry/exit	to=44:개미굴 던전 1층;name=to44;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32926	33249	32800	32781	4:83	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32926	33250	32800	32782	4:84	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32926	33251	32800	32783	4:77	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32927	33249	32801	32781	4:82	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32927	33251	32801	32783	4:78	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32927	33515	32803	32815	4:87	world-dungeon entry/exit	to=26:사막 던전 2층;name=to25a;sf=;tf=2	portals_all.csv
+portal	4	아덴 대륙	32928	33249	32802	32781	4:81	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32928	33250	32802	32782	4:80	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32928	33251	32802	32783	4:79	world-dungeon entry/exit	to=49:개미굴 던전 1층;name=to49;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32938	32284	32805	32724	4:68	world-dungeon entry/exit	to=19:요정숲 던전 1층;name=to19;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32950	33502	32738	32805	4:85	world-dungeon entry/exit	to=25:사막 던전 1층;name=to25b;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	32970	33511	32808	32810	4:88	world-dungeon entry/exit	to=25:사막 던전 1층;name=to25;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33053	32329	32747	32809	4:89	world-dungeon entry/exit	to=17:네루파의 동굴;name=nerupaAi;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33054	32329	32747	32808	4:90	world-dungeon entry/exit	to=17:네루파의 동굴;name=nerupaBi;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33116	33378	32745	32807	4:92	building/interior	to=30450:여관;name=In04;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33116	33379	32745	32803	4:91	building/interior	to=30250:여관;name=In03;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33171	32759	32736	32811	4:95	building/interior	to=15:켄트 내성;name=ENTain;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33175	32754	33176	32748	4:96	world/building internal teleport	to=4:아덴 대륙;name=crossAa;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33176	32749	33175	32755	4:97	world/building internal teleport	to=4:아덴 대륙;name=crossAb;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33179	32743	32743	32784	4:94	building/interior	to=15:켄트 내성;name=innerKC;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33195	32456	32744	32814	4:93	building/interior	to=16:하딘의 연구소;name=hardinIN;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33311	33061	32810	32731	4:98	world-dungeon entry/exit	to=53:기란 던전 1층;name=to53;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33348	32347	32727	32726	4:99	world-dungeon entry/exit	to=30:용의 계곡 던전 1층;name=to30a;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33374	32385	32742	32777	4:101	world-dungeon entry/exit	to=30:용의 계곡 던전 1층;name=to30d;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33396	32325	32809	32737	4:100	world-dungeon entry/exit	to=30:용의 계곡 던전 1층;name=to30b;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33415	32412	32810	32809	4:102	world-dungeon entry/exit	to=30:용의 계곡 던전 1층;name=to30c;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33423	33502	32733	32794	4:105	ship transport	to=83:잊혀진 섬행 배;name=hr1;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33424	33502	32734	32794	4:106	ship transport	to=83:잊혀진 섬행 배;name=hr2;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33425	33502	32735	32794	4:107	ship transport	to=83:잊혀진 섬행 배;name=hr3;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33426	33502	32736	32794	4:108	ship transport	to=83:잊혀진 섬행 배;name=hr4;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33437	32788	32745	32807	4:104	building/interior	to=31200:여관;name=In10;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33437	32789	32745	32803	4:103	building/interior	to=31000:여관;name=In09;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33522	33385	32572	32861	4:109	building/interior	to=64:하이네 내성;name=toHCin;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33605	33274	32745	32807	4:117	building/interior	to=31450:이름 미등록 지도;name=In12;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33605	33275	32745	32803	4:116	building/interior	to=31250:이름 미등록 지도;name=In11;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33626	32645	32711	32803	4:115	building/interior	to=52:기란 내성;name=to522f;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33627	33502	32709	32789	4:118	world-dungeon entry/exit	to=59:지하 수로 1층;name=to59b;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	33631	32367	32738	32867	4:113	building/interior	to=66:지저성;name=dwarf po(L)4;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33631	32368	32738	32868	4:112	building/interior	to=66:지저성;name=dwarf po(L)3;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33631	32369	32738	32869	4:111	building/interior	to=66:지저성;name=dwarf po(L)2;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33631	32370	32738	32870	4:110	building/interior	to=66:지저성;name=dwarf po(L)1;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33632	32660	32729	32827	4:114	building/interior	to=52:기란 내성;name=to52;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33674	32409	32807	32934	4:122	building/interior	to=66:지저성;name=dwarf po4;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33675	32409	32808	32934	4:121	building/interior	to=66:지저성;name=dwarf po3;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33676	32409	32809	32934	4:120	building/interior	to=66:지저성;name=dwarf po2;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33677	32409	32810	32934	4:119	building/interior	to=66:지저성;name=dwarf po1;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33734	32216	32797	32746	4:124	world-dungeon entry/exit	to=67:발라카스 둥지;name=vol po2;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33735	32216	32797	32745	4:123	world-dungeon entry/exit	to=67:발라카스 둥지;name=vol po1;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	33969	32337	32725	32845	4:125	world-dungeon entry/exit	to=73:얼음 수정 동굴 2층;name=out of ice lake_1;sf=;tf=2	portals_all.csv
+portal	4	아덴 대륙	33969	32338	32725	32846	4:126	world-dungeon entry/exit	to=73:얼음 수정 동굴 2층;name=out of ice lake_2;sf=;tf=2	portals_all.csv
+portal	4	아덴 대륙	34041	32154	32763	32902	4:127	world-dungeon entry/exit	to=75:상아탑 1층;name=sanga in 1;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	34042	32154	32764	32902	4:128	world-dungeon entry/exit	to=75:상아탑 1층;name=sanga in 2;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	34067	32253	32745	32807	4:130	building/interior	to=31950:이름 미등록 지도;name=In16;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	34068	32253	32745	32803	4:129	building/interior	to=31750:이름 미등록 지도;name=In15;sf=;tf=	portals_all.csv
+portal	4	아덴 대륙	34177	32182	32746	32787	4:132	world-dungeon entry/exit	to=72:얼음 수정 동굴 1층;name=ice dungeon 1f_in_2;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	34178	32182	32747	32787	4:131	world-dungeon entry/exit	to=72:얼음 수정 동굴 1층;name=ice dungeon 1f_in;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	34214	32248	32814	32803	4:133	world-dungeon entry/exit	to=72:얼음 수정 동굴 1층;name=ice dungeon 1f in_L;sf=;tf=1	portals_all.csv
+portal	4	아덴 대륙	34214	32249	32814	32804	4:134	world-dungeon entry/exit	to=72:얼음 수정 동굴 1층;name=ice in 1f_L2;sf=;tf=1	portals_all.csv
+portal	5	글루딘행 배	32732	32796	32629	32982	5:0	ship transport	to=0:말하는 섬;name=s1;sf=;tf=	portals_all.csv
+portal	5	글루딘행 배	32733	32796	32630	32983	5:1	ship transport	to=0:말하는 섬;name=s2;sf=;tf=	portals_all.csv
+portal	5	글루딘행 배	32734	32796	32631	32983	5:2	ship transport	to=0:말하는 섬;name=s3;sf=;tf=	portals_all.csv
+portal	5	글루딘행 배	32735	32796	32632	32982	5:3	ship transport	to=0:말하는 섬;name=s4;sf=;tf=	portals_all.csv
+portal	6	말하는 섬행 배	32734	32794	32540	32728	6:0	ship transport	to=4:아덴 대륙;name=s5;sf=;tf=	portals_all.csv
+portal	6	말하는 섬행 배	32735	32794	32542	32728	6:1	ship transport	to=4:아덴 대륙;name=s6;sf=;tf=	portals_all.csv
+portal	6	말하는 섬행 배	32736	32794	32543	32728	6:2	ship transport	to=4:아덴 대륙;name=s7;sf=;tf=	portals_all.csv
+portal	6	말하는 섬행 배	32737	32794	32544	32728	6:3	ship transport	to=4:아덴 대륙;name=s8;sf=;tf=	portals_all.csv
+portal	7	글루디오 던전 1층	32740	32807	32750	32798	7:0	dungeon floor change	to=8:글루디오 던전 2층;name=to8;sf=1;tf=2	portals_all.csv
+portal	7	글루디오 던전 1층	32812	32723	32728	32928	7:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4Dgludio;sf=1;tf=	portals_all.csv
+portal	8	글루디오 던전 2층	32726	32744	32738	32812	8:0	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP04b;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32736	32772	32797	32803	8:5	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP02a;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32738	32813	32727	32744	8:3	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP04a;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32741	32745	32773	32807	8:1	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP03b;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32750	32797	32740	32806	8:4	dungeon floor change	to=7:글루디오 던전 1층;name=to7;sf=2;tf=1	portals_all.csv
+portal	8	글루디오 던전 2층	32767	32734	32811	32761	8:2	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP01b;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32773	32808	32742	32745	8:8	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP03a;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32794	32728	32801	32754	8:7	dungeon floor change	to=9:글루디오 던전 3층;name=to9;sf=2;tf=3	portals_all.csv
+portal	8	글루디오 던전 2층	32797	32804	32737	32772	8:9	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP02b;sf=2;tf=2	portals_all.csv
+portal	8	글루디오 던전 2층	32811	32762	32768	32734	8:6	dungeon internal teleport	to=8:글루디오 던전 2층;name=inP01a;sf=2;tf=2	portals_all.csv
+portal	9	글루디오 던전 3층	32771	32765	32764	32773	9:0	dungeon floor change	to=10:글루디오 던전 4층;name=to10;sf=3;tf=4	portals_all.csv
+portal	9	글루디오 던전 3층	32802	32754	32795	32728	9:1	dungeon floor change	to=8:글루디오 던전 2층;name=to8;sf=3;tf=2	portals_all.csv
+portal	10	글루디오 던전 4층	32726	32737	32729	32723	10:0	dungeon floor change	to=11:글루디오 던전 5층;name=to11;sf=4;tf=5	portals_all.csv
+portal	10	글루디오 던전 4층	32764	32772	32771	32764	10:1	dungeon floor change	to=9:글루디오 던전 3층;name=to9;sf=4;tf=3	portals_all.csv
+portal	11	글루디오 던전 5층	32729	32722	32727	32737	11:2	dungeon floor change	to=10:글루디오 던전 4층;name=to10;sf=5;tf=4	portals_all.csv
+portal	11	글루디오 던전 5층	32735	32739	32768	32805	11:1	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP03b;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32745	32805	32757	32804	11:4	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP02b;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32757	32805	32745	32804	11:3	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP02a;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32763	32738	32773	32765	11:0	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP01a;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32768	32806	32736	32739	11:7	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP03a;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32772	32765	32764	32738	11:5	dungeon internal teleport	to=11:글루디오 던전 5층;name=inP01b;sf=5;tf=5	portals_all.csv
+portal	11	글루디오 던전 5층	32797	32810	32805	32725	11:6	dungeon floor change	to=12:글루디오 던전 6층;name=to12;sf=5;tf=6	portals_all.csv
+portal	12	글루디오 던전 6층	32728	32768	32764	32754	12:1	dungeon internal teleport	to=12:글루디오 던전 6층;name=inP01a;sf=6;tf=6	portals_all.csv
+portal	12	글루디오 던전 6층	32732	32802	32799	32794	12:2	dungeon internal teleport	to=12:글루디오 던전 6층;name=inP02b;sf=6;tf=6	portals_all.csv
+portal	12	글루디오 던전 6층	32764	32755	32729	32768	12:0	dungeon internal teleport	to=12:글루디오 던전 6층;name=inP01b;sf=6;tf=6	portals_all.csv
+portal	12	글루디오 던전 6층	32770	32811	32727	32725	12:4	dungeon floor change	to=13:글루디오 던전 7층;name=to13;sf=6;tf=7	portals_all.csv
+portal	12	글루디오 던전 6층	32799	32795	32733	32802	12:5	dungeon internal teleport	to=12:글루디오 던전 6층;name=inP02a;sf=6;tf=6	portals_all.csv
+portal	12	글루디오 던전 6층	32805	32724	32797	32809	12:3	dungeon floor change	to=11:글루디오 던전 5층;name=to11;sf=6;tf=5	portals_all.csv
+portal	13	글루디오 던전 7층	32727	32724	32770	32810	13:1	dungeon floor change	to=12:글루디오 던전 6층;name=to12;sf=7;tf=6	portals_all.csv
+portal	13	글루디오 던전 7층	32764	32766	32780	32741	13:0	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP02b;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32780	32742	32765	32766	13:3	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP02a;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32786	32795	32811	32729	13:7	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP03a;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32801	32803	32809	32802	13:6	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP01b;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32806	32724	32999	32808	13:2	dungeon passage link	to=14:지하 통로;name=to14;sf=7;tf=	portals_all.csv
+portal	13	글루디오 던전 7층	32808	32802	32800	32803	13:5	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP01a;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32811	32730	32787	32795	13:4	dungeon internal teleport	to=13:글루디오 던전 7층;name=inP03b;sf=7;tf=7	portals_all.csv
+portal	13	글루디오 던전 7층	32812	32810	32726	32788	13:9	dungeon passage link	to=237:비밀의 방;name=quest knight_in_l;sf=7;tf=	portals_all.csv
+portal	13	글루디오 던전 7층	32813	32810	32727	32788	13:8	dungeon passage link	to=237:비밀의 방;name=quest knight_in;sf=7;tf=	portals_all.csv
+portal	14	지하 통로	32533	32800	32803	32872	14:0	dungeon passage link	to=2:말하는 섬 던전 2층;name=to2;sf=;tf=2	portals_all.csv
+portal	14	지하 통로	33000	32808	32807	32724	14:5	dungeon passage link	to=13:글루디오 던전 7층;name=to13;sf=;tf=7	portals_all.csv
+portal	15	켄트 내성	32736	32812	33170	32760	15:1	building/interior	to=4:아덴 대륙;name=kentout;sf=;tf=	portals_all.csv
+portal	15	켄트 내성	32743	32783	33178	32743	15:0	building/interior	to=4:아덴 대륙;name=outerKC;sf=;tf=	portals_all.csv
+portal	16	하딘의 연구소	32744	32815	33195	32457	16:0	building/interior	to=4:아덴 대륙;name=hardinOUT;sf=;tf=	portals_all.csv
+portal	17	네루파의 동굴	32748	32808	33054	32328	17:1	world-dungeon entry/exit	to=4:아덴 대륙;name=nerupaBo;sf=;tf=	portals_all.csv
+portal	17	네루파의 동굴	32748	32809	33053	32328	17:0	world-dungeon entry/exit	to=4:아덴 대륙;name=nerupaAo;sf=;tf=	portals_all.csv
+portal	19	요정숲 던전 1층	32723	32725	32788	32758	19:0	dungeon internal teleport	to=19:요정숲 던전 1층;name=inP01b;sf=1;tf=1	portals_all.csv
+portal	19	요정숲 던전 1층	32727	32797	32796	32795	19:1	dungeon internal teleport	to=19:요정숲 던전 1층;name=inP02a;sf=1;tf=1	portals_all.csv
+portal	19	요정숲 던전 1층	32772	32783	32766	32796	19:5	dungeon floor change	to=20:요정숲 던전 2층;name=to20;sf=1;tf=2	portals_all.csv
+portal	19	요정숲 던전 1층	32787	32758	32724	32725	19:2	dungeon internal teleport	to=19:요정숲 던전 1층;name=inP01a;sf=1;tf=1	portals_all.csv
+portal	19	요정숲 던전 1층	32796	32796	32728	32797	19:4	dungeon internal teleport	to=19:요정숲 던전 1층;name=inP02b;sf=1;tf=1	portals_all.csv
+portal	19	요정숲 던전 1층	32805	32723	32938	32283	19:3	world-dungeon entry/exit	to=4:아덴 대륙;name=to4EF;sf=1;tf=	portals_all.csv
+portal	20	요정숲 던전 2층	32730	32732	32731	32736	20:1	dungeon floor change	to=21:요정숲 던전 3층;name=to21;sf=2;tf=3	portals_all.csv
+portal	20	요정숲 던전 2층	32763	32754	32807	32791	20:0	dungeon internal teleport	to=20:요정숲 던전 2층;name=inP01b;sf=2;tf=2	portals_all.csv
+portal	20	요정숲 던전 2층	32767	32795	32772	32782	20:2	dungeon floor change	to=19:요정숲 던전 1층;name=to19;sf=2;tf=1	portals_all.csv
+portal	20	요정숲 던전 2층	32807	32792	32764	32754	20:3	dungeon internal teleport	to=20:요정숲 던전 2층;name=inP01a;sf=2;tf=2	portals_all.csv
+portal	21	요정숲 던전 3층	32732	32735	32731	32731	21:0	dungeon floor change	to=20:요정숲 던전 2층;name=to20b;sf=3;tf=2	portals_all.csv
+portal	21	요정숲 던전 3층	32732	32736	32731	32732	21:2	dungeon floor change	to=20:요정숲 던전 2층;name=to20;sf=3;tf=2	portals_all.csv
+portal	21	요정숲 던전 3층	32736	32799	32760	32763	21:3	dungeon internal teleport	to=21:요정숲 던전 3층;name=inP02b;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32760	32764	32737	32799	21:1	dungeon internal teleport	to=21:요정숲 던전 3층;name=inP02a;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32776	32796	32658	32871	21:6	dungeon passage link	to=32:용의 계곡 던전 3층;name=to32a;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32777	32795	32657	32872	21:8	dungeon passage link	to=32:용의 계곡 던전 3층;name=to21b;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32777	32796	32658	32872	21:7	dungeon passage link	to=32:용의 계곡 던전 3층;name=to32b;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32800	32735	32801	32799	21:4	dungeon internal teleport	to=21:요정숲 던전 3층;name=inP01a;sf=3;tf=3	portals_all.csv
+portal	21	요정숲 던전 3층	32800	32799	32801	32735	21:5	dungeon internal teleport	to=21:요정숲 던전 3층;name=inP01b;sf=3;tf=3	portals_all.csv
+portal	23	윈다우드 성 던전 1층	32727	32814	32620	33507	23:0	world-dungeon entry/exit	to=4:아덴 대륙;name=to4WB;sf=1;tf=	portals_all.csv
+portal	23	윈다우드 성 던전 1층	32811	32722	32742	32789	23:1	dungeon passage link	to=29:윈다우드 내성;name=toWW;sf=1;tf=	portals_all.csv
+portal	24	윈다우드 성 던전 2층	32808	32814	32551	33479	24:0	world-dungeon entry/exit	to=4:아덴 대륙;name=to4WC;sf=2;tf=	portals_all.csv
+portal	25	사막 던전 1층	32738	32806	32950	33503	25:0	world-dungeon entry/exit	to=4:아덴 대륙;name=to4tta;sf=1;tf=	portals_all.csv
+portal	25	사막 던전 1층	32809	32810	32970	33512	25:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4tt;sf=1;tf=	portals_all.csv
+portal	26	사막 던전 2층	32732	32814	32910	33504	26:0	world-dungeon entry/exit	to=4:아덴 대륙;name=to4WDa;sf=2;tf=	portals_all.csv
+portal	26	사막 던전 2층	32802	32816	32927	33516	26:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4WDb;sf=2;tf=	portals_all.csv
+portal	27	사막 던전 3층	32723	32742	32799	32798	27:1	dungeon floor change	to=28:사막 던전 4층;name=to28;sf=3;tf=4	portals_all.csv
+portal	27	사막 던전 3층	32806	32814	32880	33512	27:2	world-dungeon entry/exit	to=4:아덴 대륙;name=to4WD2f;sf=3;tf=	portals_all.csv
+portal	28	사막 던전 4층	32799	32797	32723	32741	28:1	dungeon floor change	to=27:사막 던전 3층;name=to27;sf=4;tf=3	portals_all.csv
+portal	29	윈다우드 내성	32735	32816	32677	33393	29:2	building/interior	to=4:아덴 대륙;name=entWWout;sf=;tf=	portals_all.csv
+portal	29	윈다우드 내성	32741	32783	32685	33376	29:0	building/interior	to=4:아덴 대륙;name=WWout;sf=;tf=	portals_all.csv
+portal	29	윈다우드 내성	32742	32790	32811	32723	29:1	dungeon passage link	to=23:윈다우드 성 던전 1층;name=to23;sf=;tf=1	portals_all.csv
+portal	30	용의 계곡 던전 1층	32727	32725	33348	32348	30:4	world-dungeon entry/exit	to=4:아덴 대륙;name=to4DV;sf=1;tf=	portals_all.csv
+portal	30	용의 계곡 던전 1층	32732	32813	32760	32781	30:5	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31a;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32733	32813	32761	32781	30:6	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31ab;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32740	32761	32762	32749	30:0	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31b;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32741	32761	32763	32749	30:1	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31bb;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32742	32776	33373	32385	30:7	world-dungeon entry/exit	to=4:아덴 대륙;name=to4DVd;sf=1;tf=	portals_all.csv
+portal	30	용의 계곡 던전 1층	32767	32759	32803	32759	30:3	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31cb;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32767	32760	32803	32760	30:2	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31c;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32772	32774	32788	32781	30:9	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31d;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32772	32775	32788	32782	30:10	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31db;sf=1;tf=2	portals_all.csv
+portal	30	용의 계곡 던전 1층	32810	32737	33396	32326	30:8	world-dungeon entry/exit	to=4:아덴 대륙;name=to4DVb;sf=1;tf=	portals_all.csv
+portal	30	용의 계곡 던전 1층	32811	32809	33414	32412	30:11	world-dungeon entry/exit	to=4:아덴 대륙;name=to4DVc;sf=1;tf=	portals_all.csv
+portal	31	용의 계곡 던전 2층	32726	32809	32708	32818	31:2	dungeon floor change	to=32:용의 계곡 던전 3층;name=to32;sf=2;tf=3	portals_all.csv
+portal	31	용의 계곡 던전 2층	32760	32780	32732	32812	31:3	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30a;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32761	32780	32733	32812	31:4	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30ab;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32762	32748	32740	32760	31:0	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30b;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32763	32748	32741	32760	31:1	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30bb;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32772	32747	32709	32818	31:8	dungeon floor change	to=32:용의 계곡 던전 3층;name=to32b;sf=2;tf=3	portals_all.csv
+portal	31	용의 계곡 던전 2층	32789	32781	32773	32774	31:9	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30d;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32789	32782	32773	32775	31:10	dungeon floor change	to=30:용의 계곡 던전 1층;name=to30db;sf=2;tf=1	portals_all.csv
+portal	31	용의 계곡 던전 2층	32804	32760	32767	32760	31:7	dungeon floor change	to=30:용의 계곡 던전 1층;name=d7;sf=2;tf=1	portals_all.csv
+portal	32	용의 계곡 던전 3층	32657	32871	32776	32795	32:0	dungeon passage link	to=21:요정숲 던전 3층;name=to21a;sf=3;tf=3	portals_all.csv
+portal	32	용의 계곡 던전 3층	32709	32817	32726	32808	32:1	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31;sf=3;tf=2	portals_all.csv
+portal	32	용의 계곡 던전 3층	32710	32817	32773	32747	32:2	dungeon floor change	to=31:용의 계곡 던전 2층;name=to31b;sf=3;tf=2	portals_all.csv
+portal	32	용의 계곡 던전 3층	32746	32859	32670	32868	32:4	dungeon floor change	to=33:용의 계곡 던전 4층;name=to33b;sf=3;tf=4	portals_all.csv
+portal	32	용의 계곡 던전 3층	32747	32859	32671	32868	32:3	dungeon floor change	to=33:용의 계곡 던전 4층;name=to33a;sf=3;tf=4	portals_all.csv
+portal	33	용의 계곡 던전 4층	32670	32867	32746	32858	33:1	dungeon floor change	to=32:용의 계곡 던전 3층;name=to32b;sf=4;tf=3	portals_all.csv
+portal	33	용의 계곡 던전 4층	32671	32867	32747	32858	33:0	dungeon floor change	to=32:용의 계곡 던전 3층;name=to32a;sf=4;tf=3	portals_all.csv
+portal	33	용의 계곡 던전 4층	32728	32825	32746	32800	33:2	dungeon floor change	to=35:용의 계곡 던전 5층;name=to35a;sf=4;tf=5	portals_all.csv
+portal	33	용의 계곡 던전 4층	32729	32825	32746	32801	33:3	dungeon floor change	to=35:용의 계곡 던전 5층;name=to35b;sf=4;tf=5	portals_all.csv
+portal	35	용의 계곡 던전 5층	32660	32838	32664	32846	35:0	dungeon floor change	to=36:용의 계곡 던전 6층;name=to36a;sf=5;tf=6	portals_all.csv
+portal	35	용의 계곡 던전 5층	32660	32839	32665	32846	35:1	dungeon floor change	to=36:용의 계곡 던전 6층;name=to36b;sf=5;tf=6	portals_all.csv
+portal	35	용의 계곡 던전 5층	32747	32800	32728	32824	35:2	dungeon floor change	to=33:용의 계곡 던전 4층;name=to33a;sf=5;tf=4	portals_all.csv
+portal	35	용의 계곡 던전 5층	32747	32801	32729	32824	35:3	dungeon floor change	to=33:용의 계곡 던전 4층;name=to33b;sf=5;tf=4	portals_all.csv
+portal	36	용의 계곡 던전 6층	32664	32845	32661	32838	36:2	dungeon floor change	to=35:용의 계곡 던전 5층;name=to35a;sf=6;tf=5	portals_all.csv
+portal	36	용의 계곡 던전 6층	32665	32845	32661	32839	36:3	dungeon floor change	to=35:용의 계곡 던전 5층;name=to35b;sf=6;tf=5	portals_all.csv
+portal	36	용의 계곡 던전 6층	32746	32824	32668	32867	36:4	dungeon floor change	to=37:용의 계곡 던전 7층;name=to37a;sf=6;tf=7	portals_all.csv
+portal	36	용의 계곡 던전 6층	32747	32824	32668	32868	36:5	dungeon floor change	to=37:용의 계곡 던전 7층;name=to37b;sf=6;tf=7	portals_all.csv
+portal	37	용의 계곡 던전 7층	32669	32867	32746	32823	37:0	dungeon floor change	to=36:용의 계곡 던전 6층;name=to36a;sf=7;tf=6	portals_all.csv
+portal	37	용의 계곡 던전 7층	32669	32868	32747	32823	37:1	dungeon floor change	to=36:용의 계곡 던전 6층;name=to36b;sf=7;tf=6	portals_all.csv
+portal	43	개미굴 던전 1층	32807	32806	32779	32793	43:0	dungeon zone link (same floor)	to=47:개미굴 던전 1층;name=to47;sf=1;tf=1	portals_all.csv
+portal	44	개미굴 던전 1층	32737	32781	32781	32731	44:2	dungeon zone link (same floor)	to=49:개미굴 던전 1층;name=to49a;sf=1;tf=1	portals_all.csv
+portal	44	개미굴 던전 1층	32737	32782	32781	32732	44:3	dungeon zone link (same floor)	to=49:개미굴 던전 1층;name=to49b;sf=1;tf=1	portals_all.csv
+portal	45	개미굴 던전 1층	32769	32791	32746	32759	45:0	dungeon zone link (same floor)	to=50:개미굴 던전 1층;name=to50a;sf=1;tf=1	portals_all.csv
+portal	45	개미굴 던전 1층	32770	32791	32747	32759	45:1	dungeon zone link (same floor)	to=50:개미굴 던전 1층;name=to50b;sf=1;tf=1	portals_all.csv
+portal	46	개미굴 던전 1층	32745	32741	32746	32783	46:0	dungeon zone link (same floor)	to=49:개미굴 던전 1층;name=to49a;sf=1;tf=1	portals_all.csv
+portal	46	개미굴 던전 1층	32746	32741	32747	32783	46:1	dungeon zone link (same floor)	to=49:개미굴 던전 1층;name=to49b;sf=1;tf=1	portals_all.csv
+portal	47	개미굴 던전 1층	32743	32779	32726	32744	47:0	dungeon floor change	to=51:개미굴 던전 2층;name=to51;sf=1;tf=2	portals_all.csv
+portal	47	개미굴 던전 1층	32779	32792	32807	32805	47:1	dungeon zone link (same floor)	to=43:개미굴 던전 1층;name=to43;sf=1;tf=1	portals_all.csv
+portal	47	개미굴 던전 1층	32780	32792	32808	32805	47:2	dungeon zone link (same floor)	to=43:개미굴 던전 1층;name=to43b;sf=1;tf=1	portals_all.csv
+portal	48	개미굴 던전 1층	32740	32756	32806	32762	48:1	dungeon zone link (same floor)	to=50:개미굴 던전 1층;name=to50b;sf=1;tf=1	portals_all.csv
+portal	48	개미굴 던전 1층	32740	32757	32807	32762	48:0	dungeon zone link (same floor)	to=50:개미굴 던전 1층;name=to50a;sf=1;tf=1	portals_all.csv
+portal	48	개미굴 던전 1층	32778	32801	32682	32849	48:3	dungeon floor change	to=51:개미굴 던전 2층;name=to51b;sf=1;tf=2	portals_all.csv
+portal	48	개미굴 던전 1층	32779	32801	32683	32849	48:2	dungeon floor change	to=51:개미굴 던전 2층;name=to51a;sf=1;tf=2	portals_all.csv
+portal	49	개미굴 던전 1층	32742	32740	32793	32846	49:1	dungeon floor change	to=51:개미굴 던전 2층;name=to51b;sf=1;tf=2	portals_all.csv
+portal	49	개미굴 던전 1층	32742	32741	32793	32847	49:0	dungeon floor change	to=51:개미굴 던전 2층;name=to51a;sf=1;tf=2	portals_all.csv
+portal	49	개미굴 던전 1층	32746	32782	32745	32740	49:2	dungeon zone link (same floor)	to=46:개미굴 던전 1층;name=to46a;sf=1;tf=1	portals_all.csv
+portal	49	개미굴 던전 1층	32747	32782	32746	32740	49:3	dungeon zone link (same floor)	to=46:개미굴 던전 1층;name=to46b;sf=1;tf=1	portals_all.csv
+portal	49	개미굴 던전 1층	32782	32731	32738	32781	49:4	dungeon zone link (same floor)	to=44:개미굴 던전 1층;name=to44a;sf=1;tf=1	portals_all.csv
+portal	49	개미굴 던전 1층	32782	32732	32738	32782	49:5	dungeon zone link (same floor)	to=44:개미굴 던전 1층;name=to44b;sf=1;tf=1	portals_all.csv
+portal	50	개미굴 던전 1층	32746	32758	32769	32790	50:2	dungeon zone link (same floor)	to=45:개미굴 던전 1층;name=to45a;sf=1;tf=1	portals_all.csv
+portal	50	개미굴 던전 1층	32747	32758	32770	32790	50:3	dungeon zone link (same floor)	to=45:개미굴 던전 1층;name=to45b;sf=1;tf=1	portals_all.csv
+portal	50	개미굴 던전 1층	32806	32763	32739	32756	50:5	dungeon zone link (same floor)	to=48:개미굴 던전 1층;name=to48b;sf=1;tf=1	portals_all.csv
+portal	50	개미굴 던전 1층	32807	32763	32739	32757	50:4	dungeon zone link (same floor)	to=48:개미굴 던전 1층;name=to48a;sf=1;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32682	32848	32778	32800	51:3	dungeon floor change	to=48:개미굴 던전 1층;name=to48b;sf=2;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32683	32848	32779	32800	51:2	dungeon floor change	to=48:개미굴 던전 1층;name=to48a;sf=2;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32726	32743	32743	32778	51:4	dungeon floor change	to=47:개미굴 던전 1층;name=to47;sf=2;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32727	32743	32744	32778	51:5	dungeon floor change	to=47:개미굴 던전 1층;name=to47b;sf=2;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32794	32846	32741	32740	51:9	dungeon floor change	to=49:개미굴 던전 1층;name=to49b;sf=2;tf=1	portals_all.csv
+portal	51	개미굴 던전 2층	32794	32847	32741	32741	51:8	dungeon floor change	to=49:개미굴 던전 1층;name=to49a;sf=2;tf=1	portals_all.csv
+portal	52	기란 내성	32711	32802	33626	32644	52:0	building/interior	to=4:아덴 대륙;name=to4CF02;sf=;tf=	portals_all.csv
+portal	52	기란 내성	32729	32828	33631	32661	52:1	building/interior	to=4:아덴 대륙;name=GIout;sf=;tf=	portals_all.csv
+portal	53	기란 던전 1층	32732	32787	32810	32793	53:0	dungeon floor change	to=54:기란 던전 2층;name=to54;sf=1;tf=2	portals_all.csv
+portal	53	기란 던전 1층	32811	32730	33312	33061	53:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4GDa;sf=1;tf=	portals_all.csv
+portal	53	기란 던전 1층	32811	32731	33312	33062	53:2	world-dungeon entry/exit	to=4:아덴 대륙;name=to4GDb;sf=1;tf=	portals_all.csv
+portal	54	기란 던전 2층	32728	32811	32735	32728	54:2	dungeon floor change	to=55:기란 던전 3층;name=to55;sf=2;tf=3	portals_all.csv
+portal	54	기란 던전 2층	32735	32726	32750	32774	54:0	dungeon internal teleport	to=54:기란 던전 2층;name=inP01b;sf=2;tf=2	portals_all.csv
+portal	54	기란 던전 2층	32750	32775	32736	32726	54:1	dungeon internal teleport	to=54:기란 던전 2층;name=inP01a;sf=2;tf=2	portals_all.csv
+portal	54	기란 던전 2층	32811	32793	32731	32786	54:3	dungeon floor change	to=53:기란 던전 1층;name=to53a;sf=2;tf=1	portals_all.csv
+portal	54	기란 던전 2층	32811	32794	32732	32786	54:4	dungeon floor change	to=53:기란 던전 1층;name=to53b;sf=2;tf=1	portals_all.csv
+portal	55	기란 던전 3층	32735	32727	32728	32810	55:0	dungeon floor change	to=54:기란 던전 2층;name=to54a;sf=3;tf=2	portals_all.csv
+portal	55	기란 던전 3층	32736	32727	32729	32810	55:1	dungeon floor change	to=54:기란 던전 2층;name=to54b;sf=3;tf=2	portals_all.csv
+portal	55	기란 던전 3층	32736	32855	32769	32730	55:2	dungeon floor change	to=56:기란 던전 4층;name=to56;sf=3;tf=4	portals_all.csv
+portal	56	기란 던전 4층	32769	32729	32736	32854	56:0	dungeon floor change	to=55:기란 던전 3층;name=to55a;sf=4;tf=3	portals_all.csv
+portal	56	기란 던전 4층	32770	32729	32737	32854	56:1	dungeon floor change	to=55:기란 던전 3층;name=to55b;sf=4;tf=3	portals_all.csv
+portal	59	지하 수로 1층	32663	32867	32745	32857	59:0	dungeon floor change	to=60:지하 수로 2층;name=to60a;sf=1;tf=2	portals_all.csv
+portal	59	지하 수로 1층	32709	32788	33627	33503	59:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4heine;sf=1;tf=	portals_all.csv
+portal	59	지하 수로 1층	32747	32851	32744	32838	59:2	dungeon passage link	to=62:에바의 성지;name=to62;sf=1;tf=	portals_all.csv
+portal	60	지하 수로 2층	32706	32809	32728	32807	60:0	dungeon floor change	to=61:지하 수로 3층;name=to61a;sf=2;tf=3	portals_all.csv
+portal	60	지하 수로 2층	32746	32857	32664	32867	60:1	dungeon floor change	to=59:지하 수로 1층;name=to59a;sf=2;tf=1	portals_all.csv
+portal	61	지하 수로 3층	32695	32824	32806	32868	61:0	dungeon passage link	to=63:에바왕국;name=to63;sf=3;tf=	portals_all.csv
+portal	61	지하 수로 3층	32728	32806	32705	32809	61:1	dungeon floor change	to=60:지하 수로 2층;name=to60;sf=3;tf=2	portals_all.csv
+portal	62	에바의 성지	32744	32839	32746	32851	62:0	dungeon passage link	to=59:지하 수로 1층;name=to59c;sf=;tf=1	portals_all.csv
+portal	63	에바왕국	32738	32674	32760	32869	63:0	dungeon passage link	to=65:파푸리온 둥지;name=fafurion room2;sf=;tf=	portals_all.csv
+portal	63	에바왕국	32739	32674	32761	32868	63:1	dungeon passage link	to=65:파푸리온 둥지;name=fafurion room1;sf=;tf=	portals_all.csv
+portal	63	에바왕국	32807	32868	32695	32825	63:2	dungeon passage link	to=61:지하 수로 3층;name=to61;sf=;tf=3	portals_all.csv
+portal	64	하이네 내성	32572	32833	32734	32790	64:0	building/interior	to=62:에바의 성지;name=to heine out;sf=;tf=	portals_all.csv
+portal	64	하이네 내성	32572	32862	33523	33386	64:1	building/interior	to=4:아덴 대륙;name=toHeout;sf=;tf=	portals_all.csv
+portal	65	파푸리온 둥지	32760	32870	32738	32675	65:1	dungeon passage link	to=63:에바왕국;name=fafurion room4;sf=;tf=	portals_all.csv
+portal	65	파푸리온 둥지	32761	32869	32739	32675	65:0	dungeon passage link	to=63:에바왕국;name=fafurion room3;sf=;tf=	portals_all.csv
+portal	66	지저성	32737	32867	33630	32367	66:3	building/interior	to=4:아덴 대륙;name=dwarf po(L)8;sf=;tf=	portals_all.csv
+portal	66	지저성	32737	32868	33630	32368	66:2	building/interior	to=4:아덴 대륙;name=dwarf po(L)7;sf=;tf=	portals_all.csv
+portal	66	지저성	32737	32869	33630	32369	66:1	building/interior	to=4:아덴 대륙;name=dwarf po(L)6;sf=;tf=	portals_all.csv
+portal	66	지저성	32737	32870	33630	32370	66:0	building/interior	to=4:아덴 대륙;name=dwarf po(L)5;sf=;tf=	portals_all.csv
+portal	66	지저성	32807	32935	33674	32410	66:7	building/interior	to=4:아덴 대륙;name=dwarf po8;sf=;tf=	portals_all.csv
+portal	66	지저성	32808	32935	33675	32410	66:6	building/interior	to=4:아덴 대륙;name=dwarf po7;sf=;tf=	portals_all.csv
+portal	66	지저성	32809	32935	33676	32410	66:5	building/interior	to=4:아덴 대륙;name=dwarf po6;sf=;tf=	portals_all.csv
+portal	66	지저성	32810	32935	33677	32410	66:4	building/interior	to=4:아덴 대륙;name=dwarf po5;sf=;tf=	portals_all.csv
+portal	67	발라카스 둥지	32798	32745	33735	32217	67:0	world-dungeon entry/exit	to=4:아덴 대륙;name=vol po3;sf=;tf=	portals_all.csv
+portal	67	발라카스 둥지	32798	32746	33734	32217	67:1	world-dungeon entry/exit	to=4:아덴 대륙;name=vol po4;sf=;tf=	portals_all.csv
+portal	70	잊혀진 섬	32944	33012	32829	32858	70:2	world/building internal teleport	to=70:잊혀진 섬;name=tm3;sf=;tf=	portals_all.csv
+portal	70	잊혀진 섬	32944	33013	32828	32857	70:1	world/building internal teleport	to=70:잊혀진 섬;name=tm2;sf=;tf=	portals_all.csv
+portal	70	잊혀진 섬	32945	33012	32828	32858	70:3	world/building internal teleport	to=70:잊혀진 섬;name=tm4;sf=;tf=	portals_all.csv
+portal	70	잊혀진 섬	32945	33013	32829	32856	70:0	world/building internal teleport	to=70:잊혀진 섬;name=tm1;sf=;tf=	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32726	32861	32755	32870	72:2	dungeon floor change	to=73:얼음 수정 동굴 2층;name=ice dungeon down;sf=1;tf=2	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32726	32862	32755	32871	72:3	dungeon floor change	to=73:얼음 수정 동굴 2층;name=ice dungeon down_2;sf=1;tf=2	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32746	32786	34177	32183	72:1	world-dungeon entry/exit	to=4:아덴 대륙;name=dungeon exit_2;sf=1;tf=	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32747	32786	34178	32183	72:0	world-dungeon entry/exit	to=4:아덴 대륙;name=ice dungeon exit;sf=1;tf=	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32815	32803	34213	32248	72:4	world-dungeon entry/exit	to=4:아덴 대륙;name=ice exit_L;sf=1;tf=	portals_all.csv
+portal	72	얼음 수정 동굴 1층	32815	32804	34213	32249	72:5	world-dungeon entry/exit	to=4:아덴 대륙;name=ice exit _ L2;sf=1;tf=	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32725	32845	33969	32337	73:2	world-dungeon entry/exit	to=4:아덴 대륙;name=out of ice lake_1;sf=2;tf=	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32725	32846	33969	32338	73:3	world-dungeon entry/exit	to=4:아덴 대륙;name=out of ice lake_2;sf=2;tf=	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32756	32870	32727	32861	73:0	dungeon floor change	to=72:얼음 수정 동굴 1층;name=ice dungeon up;sf=2;tf=1	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32756	32871	32727	32862	73:1	dungeon floor change	to=72:얼음 수정 동굴 1층;name=ice dungeon up_2;sf=2;tf=1	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32797	32808	32733	32853	73:4	dungeon floor change	to=74:얼음 수정 동굴 3층;name=ice dungeon 3f;sf=2;tf=3	portals_all.csv
+portal	73	얼음 수정 동굴 2층	32797	32809	32732	32853	73:5	dungeon floor change	to=74:얼음 수정 동굴 3층;name=ice dungeon 3f_2;sf=2;tf=3	portals_all.csv
+portal	74	얼음 수정 동굴 3층	32732	32852	32798	32809	74:1	dungeon floor change	to=73:얼음 수정 동굴 2층;name=ice dungeon 2f up_2;sf=3;tf=2	portals_all.csv
+portal	74	얼음 수정 동굴 3층	32733	32852	32798	32808	74:0	dungeon floor change	to=73:얼음 수정 동굴 2층;name=ice dungeon 2f up;sf=3;tf=2	portals_all.csv
+portal	75	상아탑 1층	32763	32903	34041	32155	75:0	world-dungeon entry/exit	to=4:아덴 대륙;name=sanga out 1;sf=1;tf=	portals_all.csv
+portal	75	상아탑 1층	32764	32903	34042	32155	75:1	world-dungeon entry/exit	to=4:아덴 대륙;name=sanga out 2;sf=1;tf=	portals_all.csv
+portal	75	상아탑 1층	32773	32821	32776	32819	75:2	dungeon floor change	to=76:상아탑 2층;name=sanga up 2f_1;sf=1;tf=2	portals_all.csv
+portal	75	상아탑 1층	32773	32822	32776	32820	75:3	dungeon floor change	to=76:상아탑 2층;name=sanga up 2f_2;sf=1;tf=2	portals_all.csv
+portal	76	상아탑 2층	32777	32819	32772	32821	76:2	dungeon floor change	to=75:상아탑 1층;name=sanga down 1f_1;sf=2;tf=1	portals_all.csv
+portal	76	상아탑 2층	32777	32820	32772	32822	76:3	dungeon floor change	to=75:상아탑 1층;name=sanga down 1f_2;sf=2;tf=1	portals_all.csv
+portal	76	상아탑 2층	32777	32826	32766	32834	76:0	dungeon floor change	to=77:상아탑 3층;name=sanga up 3f_1;sf=2;tf=3	portals_all.csv
+portal	76	상아탑 2층	32777	32827	32766	32835	76:1	dungeon floor change	to=77:상아탑 3층;name=sanga up 3f_2;sf=2;tf=3	portals_all.csv
+portal	77	상아탑 3층	32767	32834	32776	32826	77:0	dungeon floor change	to=76:상아탑 2층;name=sanga down 2f_1;sf=3;tf=2	portals_all.csv
+portal	77	상아탑 3층	32767	32835	32776	32827	77:1	dungeon floor change	to=76:상아탑 2층;name=sanga down 2f_2;sf=3;tf=2	portals_all.csv
+portal	77	상아탑 3층	32767	32841	32894	32770	77:2	dungeon floor change	to=78:상아탑 4층;name=sanga up 4f_1;sf=3;tf=4	portals_all.csv
+portal	77	상아탑 3층	32767	32842	32894	32771	77:3	dungeon floor change	to=78:상아탑 4층;name=sanga up 4f_2;sf=3;tf=4	portals_all.csv
+portal	78	상아탑 4층	32895	32770	32766	32841	78:0	dungeon floor change	to=77:상아탑 3층;name=sanga down 3f_1;sf=4;tf=3	portals_all.csv
+portal	78	상아탑 4층	32895	32771	32766	32842	78:1	dungeon floor change	to=77:상아탑 3층;name=sanga down 3f_2;sf=4;tf=3	portals_all.csv
+portal	78	상아탑 4층	32923	32793	32771	32801	78:2	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_1;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32923	32795	32771	32803	78:9	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_8;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32924	32792	32773	32799	78:3	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_2;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32924	32796	32773	32805	78:8	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_7;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32926	32792	32775	32799	78:4	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_3;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32926	32796	32775	32805	78:7	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_6;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32927	32793	32777	32801	78:5	dungeon floor change	to=79:상아탑 5층;name=sanga up5f_4;sf=4;tf=5	portals_all.csv
+portal	78	상아탑 4층	32927	32795	32777	32803	78:6	dungeon floor change	to=79:상아탑 5층;name=sanga up 5f_5;sf=4;tf=5	portals_all.csv
+portal	79	상아탑 5층	32772	32801	32922	32793	79:8	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_1;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32772	32803	32922	32795	79:15	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_8;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32773	32800	32924	32791	79:9	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32773	32804	32924	32797	79:14	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_7;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32775	32800	32926	32791	79:10	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_3;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32775	32804	32926	32797	79:13	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_6;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32776	32801	32928	32793	79:11	dungeon floor change	to=78:상아탑 4층;name=sanga down4f_4;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32776	32803	32928	32795	79:12	dungeon floor change	to=78:상아탑 4층;name=sanga down 4f_5;sf=5;tf=4	portals_all.csv
+portal	79	상아탑 5층	32803	32826	32746	32797	79:0	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_1;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32803	32828	32746	32799	79:7	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_8;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32804	32825	32748	32795	79:1	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_2;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32804	32829	32748	32801	79:6	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_7;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32806	32825	32750	32795	79:2	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_3;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32806	32829	32750	32801	79:5	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_6;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32807	32826	32752	32797	79:3	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_4;sf=5;tf=6	portals_all.csv
+portal	79	상아탑 5층	32807	32828	32752	32799	79:4	dungeon floor change	to=80:상아탑 6층;name=sanga up 6f_5;sf=5;tf=6	portals_all.csv
+portal	80	상아탑 6층	32747	32797	32802	32826	80:0	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_1;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32747	32799	32802	32828	80:7	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_8;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32748	32796	32804	32824	80:1	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_2;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32748	32800	32804	32830	80:6	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_7;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32750	32796	32806	32824	80:2	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_3;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32750	32800	32806	32830	80:5	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_6;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32751	32797	32808	32826	80:3	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_4;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32751	32799	32808	32828	80:4	dungeon floor change	to=79:상아탑 5층;name=sanga down 5f_5;sf=6;tf=5	portals_all.csv
+portal	80	상아탑 6층	32771	32848	32762	32845	80:8	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_1;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32771	32850	32762	32847	80:15	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_8;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32772	32847	32764	32843	80:9	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_2;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32772	32851	32764	32849	80:14	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_7;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32774	32847	32766	32843	80:10	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_3;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32774	32851	32766	32849	80:13	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_6;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32775	32848	32768	32845	80:11	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_4;sf=6;tf=7	portals_all.csv
+portal	80	상아탑 6층	32775	32850	32768	32847	80:12	dungeon floor change	to=81:상아탑 7층;name=sanga up 7f_5;sf=6;tf=7	portals_all.csv
+portal	81	상아탑 7층	32763	32845	32770	32848	81:0	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_1;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32763	32847	32770	32850	81:7	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_8;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32764	32844	32772	32846	81:1	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_2;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32764	32848	32772	32852	81:6	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_7;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32766	32844	32774	32846	81:2	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_3;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32766	32848	32774	32852	81:5	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_6;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32767	32845	32776	32848	81:3	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_4;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32767	32847	32776	32850	81:4	dungeon floor change	to=80:상아탑 6층;name=sanga down 6f_5;sf=7;tf=6	portals_all.csv
+portal	81	상아탑 7층	32802	32794	32737	32794	81:8	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_1;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32802	32796	32737	32796	81:15	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_8;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32803	32793	32739	32792	81:9	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_2;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32803	32797	32739	32798	81:14	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_7;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32805	32793	32741	32792	81:10	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_3;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32805	32797	32741	32798	81:13	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_6;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32806	32794	32743	32794	81:11	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_4;sf=7;tf=8	portals_all.csv
+portal	81	상아탑 7층	32806	32796	32743	32796	81:12	dungeon floor change	to=82:상아탑 8층;name=sanga up 8f_5;sf=7;tf=8	portals_all.csv
+portal	82	상아탑 8층	32738	32794	32801	32794	82:0	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_1;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32738	32796	32801	32796	82:7	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_8;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32739	32793	32803	32792	82:1	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_2;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32739	32797	32803	32798	82:6	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_7;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32741	32793	32805	32792	82:2	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_3;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32741	32797	32805	32798	82:5	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_6;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32742	32794	32807	32794	82:3	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_4;sf=8;tf=7	portals_all.csv
+portal	82	상아탑 8층	32742	32796	32807	32796	82:4	dungeon floor change	to=81:상아탑 7층;name=sanga down 7f_5;sf=8;tf=7	portals_all.csv
+portal	83	잊혀진 섬행 배	32733	32794	33423	33502	83:0	ship transport	to=4:아덴 대륙;name=hr1;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32734	32794	33424	33502	83:1	ship transport	to=4:아덴 대륙;name=hr2;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32735	32794	33425	33502	83:2	ship transport	to=4:아덴 대륙;name=hr3;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32736	32794	33426	33502	83:3	ship transport	to=4:아덴 대륙;name=hr4;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32737	32795	32741	32792	83:4	world/building internal teleport	to=83:잊혀진 섬행 배;name=UPDown1;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32738	32799	32741	32797	83:6	world/building internal teleport	to=83:잊혀진 섬행 배;name=Updown2;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32741	32792	32737	32795	83:5	world/building internal teleport	to=83:잊혀진 섬행 배;name=UPDown1;sf=;tf=	portals_all.csv
+portal	83	잊혀진 섬행 배	32741	32797	32738	32799	83:7	world/building internal teleport	to=83:잊혀진 섬행 배;name=Updown2;sf=;tf=	portals_all.csv
+portal	84	이름 미등록 지도	32732	32796	32935	33058	84:0	building/interior	to=70:잊혀진 섬;name=rh1;sf=;tf=	portals_all.csv
+portal	84	이름 미등록 지도	32733	32796	32936	33058	84:1	building/interior	to=70:잊혀진 섬;name=rh2;sf=;tf=	portals_all.csv
+portal	84	이름 미등록 지도	32734	32796	32937	33058	84:2	building/interior	to=70:잊혀진 섬;name=rh3;sf=;tf=	portals_all.csv
+portal	84	이름 미등록 지도	32735	32796	32937	33057	84:3	building/interior	to=70:잊혀진 섬;name=rh4;sf=;tf=	portals_all.csv
+portal	201	언데드의 던전	32868	32919	32929	32799	201:1	dungeon internal teleport	to=201:언데드의 던전;name=questmage2 in;sf=;tf=	portals_all.csv
+portal	201	언데드의 던전	32868	32920	32929	32797	201:0	dungeon internal teleport	to=201:언데드의 던전;name=questmage1 in;sf=;tf=	portals_all.csv
+portal	221	시련의 던전	32770	32767	33139	33357	221:0	world-dungeon entry/exit	to=4:아덴 대륙;name=to4GG;sf=;tf=	portals_all.csv
+portal	237	비밀의 방	32726	32789	32812	32809	237:1	dungeon passage link	to=13:글루디오 던전 7층;name=quest knight _ out 02;sf=;tf=7	portals_all.csv
+portal	237	비밀의 방	32727	32789	32813	32809	237:0	dungeon passage link	to=13:글루디오 던전 7층;name=quest knight _ out 01;sf=;tf=7	portals_all.csv
+portal	244	오염된 축복의 땅	32806	32923	32843	32916	244:4	world/building internal teleport	to=244:오염된 축복의 땅;name=WP2;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32810	32966	32849	32940	244:5	world/building internal teleport	to=244:오염된 축복의 땅;name=SP1;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32843	32917	32805	32922	244:9	world/building internal teleport	to=244:오염된 축복의 땅;name=WP1;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32848	32941	32809	32967	244:8	world/building internal teleport	to=244:오염된 축복의 땅;name=SP2;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32875	32941	32939	32990	244:7	world/building internal teleport	to=244:오염된 축복의 땅;name=EP1;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32881	32907	32898	32893	244:6	world/building internal teleport	to=244:오염된 축복의 땅;name=NP2;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32899	32892	32880	32908	244:10	world/building internal teleport	to=244:오염된 축복의 땅;name=NP1;sf=;tf=	portals_all.csv
+portal	244	오염된 축복의 땅	32940	32991	32874	32940	244:11	world/building internal teleport	to=244:오염된 축복의 땅;name=EP2;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32805	32923	32843	32917	245:4	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=West1;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32809	32967	32849	32940	245:5	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=South1;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32842	32916	32806	32922	245:6	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=West2;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32848	32941	32810	32966	245:7	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=south2;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32875	32941	32939	32990	245:8	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=East2;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32881	32908	32899	32892	245:9	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=North2;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32898	32893	32880	32907	245:10	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=North1;sf=;tf=	portals_all.csv
+portal	245	타락한 축복의 땅의 여름	32940	32991	32874	32940	245:11	world/building internal teleport	to=245:타락한 축복의 땅의 여름;name=East1;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32806	32923	32843	32917	246:4	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246wi;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32810	32966	32849	32940	246:5	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246si;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32842	32916	32805	32922	246:6	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246wo;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32848	32941	32809	32967	246:9	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246so;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32875	32941	32940	32991	246:8	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246eo;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32881	32907	32899	32892	246:7	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246no;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32898	32893	32880	32908	246:10	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=256ni;sf=;tf=	portals_all.csv
+portal	246	오염된 축복의 땅(PC)	32939	32990	32874	32940	246:11	world/building internal teleport	to=246:오염된 축복의 땅(PC);name=246ei;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32806	32923	32843	32917	247:4	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_WI;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32810	32966	32849	32940	247:5	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_SI;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32842	32916	32805	32922	247:9	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_WO;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32848	32941	32809	32967	247:8	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_SO;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32875	32941	32939	32990	247:7	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_EO;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32881	32907	32899	32892	247:6	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_NO;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32898	32893	32880	32908	247:10	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_NI;sf=;tf=	portals_all.csv
+portal	247	타락한 축복의 땅의 여름(PC)	32940	32991	32874	32940	247:11	world/building internal teleport	to=247:타락한 축복의 땅의 여름(PC);name=247_EI;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32806	32923	32843	32917	2450:0	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=04_orc-boss;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32810	32966	32849	32940	2450:1	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=03_spirit-boss;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32842	32916	32805	32922	2450:5	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=04_boss-orc;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32848	32941	32809	32967	2450:4	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=03_boss-spirit;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32875	32941	32940	32991	2450:3	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=01_boss-human;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32881	32907	32899	32892	2450:2	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=01_boss-elf;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32898	32893	32880	32908	2450:6	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=01_elf-boss;sf=;tf=	portals_all.csv
+portal	2450	타락한 축복의 땅의 봄	32939	32990	32874	32940	2450:7	world/building internal teleport	to=2450:타락한 축복의 땅의 봄;name=02_human-boss;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32806	32923	32843	32917	2451:0	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=08_orc-boss;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32810	32966	32849	32940	2451:1	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=07_spirit-boss;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32842	32916	32805	32922	2451:5	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=08_boss-orc;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32848	32941	32809	32967	2451:4	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=07_boss-spirit;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32875	32941	32940	32991	2451:3	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=06_boss-human;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32881	32907	32899	32892	2451:2	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=05_boss-elf;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32898	32893	32880	32908	2451:6	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=05_elf-boss;sf=;tf=	portals_all.csv
+portal	2451	타락한 축복의 땅의 봄(PC)	32939	32990	32874	32940	2451:7	world/building internal teleport	to=2451:타락한 축복의 땅의 봄(PC);name=06_human-boss;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32806	32923	32843	32917	2452:0	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=04_orc-boss;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32810	32966	32849	32940	2452:1	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=03_spirit-boss;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32842	32916	32805	32922	2452:5	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=04_boss-orc;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32848	32941	32809	32967	2452:4	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=03_boss-spirit;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32875	32941	32940	32991	2452:3	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=02_boss-human;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32881	32907	32899	32892	2452:2	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=01_boss-elf;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32898	32893	32880	32908	2452:6	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=01_elf-boss;sf=;tf=	portals_all.csv
+portal	2452	타락한 축복의 땅의 가을	32939	32990	32874	32940	2452:7	world/building internal teleport	to=2452:타락한 축복의 땅의 가을;name=02_human-boss;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32806	32923	32843	32917	2453:0	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=08_orc-boss;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32810	32966	32849	32940	2453:1	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=07_spirit-boss;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32842	32916	32805	32922	2453:5	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=08_boss-orc;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32848	32941	32809	32967	2453:4	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=07_boss-spirit;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32875	32941	32940	32991	2453:3	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=06_boss-human;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32881	32907	32899	32892	2453:2	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=05_boss-elf;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32898	32893	32880	32908	2453:6	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=05_elf-boss;sf=;tf=	portals_all.csv
+portal	2453	타락한 축복의 땅의 가을(PC)	32939	32990	32874	32940	2453:7	world/building internal teleport	to=2453:타락한 축복의 땅의 가을(PC);name=06_human-boss;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32806	32923	32843	32917	2454:4	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454W_in;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32810	32966	32849	32940	2454:5	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454S_in;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32842	32916	32805	32922	2454:8	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454w_out;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32848	32941	32809	32967	2454:9	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454S_out;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32875	32941	32940	32991	2454:6	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454E_out;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32881	32908	32905	32889	2454:7	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454N_out;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32904	32890	32880	32909	2454:10	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454N_in;sf=;tf=	portals_all.csv
+portal	2454	타락한 축복의 땅의 겨울	32939	32990	32874	32940	2454:11	world/building internal teleport	to=2454:타락한 축복의 땅의 겨울;name=2454E_in;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32806	32923	32843	32917	2455:4	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455W_in;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32810	32966	32849	32940	2455:5	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455S_in;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32842	32916	32805	32922	2455:7	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455W_out;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32848	32941	32809	32967	2455:6	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455S_out;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32875	32941	32940	32991	2455:9	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455E_out;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32881	32908	32905	32889	2455:8	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455N_out;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32904	32890	32880	32909	2455:10	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455N_in;sf=;tf=	portals_all.csv
+portal	2455	타락한 축복의 땅의 겨울(PC)	32939	32990	32874	32940	2455:11	world/building internal teleport	to=2455:타락한 축복의 땅의 겨울(PC);name=2455E_in;sf=;tf=	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32669	32802	32478	32851	7770:0	world-dungeon entry/exit	to=0:말하는 섬;name=00-01_dungeon;sf=1;tf=	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32709	32839	32742	32851	7770:3	dungeon internal teleport	to=7770:말하는 섬 던전 1층(PC);name=1F_A;sf=1;tf=1	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32713	32851	32745	32809	7770:5	dungeon internal teleport	to=7770:말하는 섬 던전 1층(PC);name=1f_B2;sf=1;tf=1	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32736	32877	32665	32789	7770:2	dungeon floor change	to=7771:말하는 섬 던전 2층(PC);name=IN7771;sf=1;tf=2	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32742	32852	32709	32838	7770:4	dungeon internal teleport	to=7770:말하는 섬 던전 1층(PC);name=1F_A2;sf=1;tf=1	portals_all.csv
+portal	7770	말하는 섬 던전 1층(PC)	32745	32810	32713	32850	7770:1	dungeon internal teleport	to=7770:말하는 섬 던전 1층(PC);name=1F_B1;sf=1;tf=1	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32659	32873	32665	32876	7771:1	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2G_1;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32664	32876	32659	32872	7771:2	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2G_2;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32665	32788	32737	32877	7771:0	dungeon floor change	to=7770:말하는 섬 던전 1층(PC);name=Out7771;sf=2;tf=1	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32668	32865	32680	32859	7771:3	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2Y_1;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32679	32859	32668	32864	7771:4	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2Y_2;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32758	32802	32764	32801	7771:5	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2E;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32764	32802	32758	32801	7771:6	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2E_2;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32789	32821	32808	32837	7771:7	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2A;sf=2;tf=2	portals_all.csv
+portal	7771	말하는 섬 던전 2층(PC)	32808	32838	32790	32821	7771:8	dungeon internal teleport	to=7771:말하는 섬 던전 2층(PC);name=to2B;sf=2;tf=2	portals_all.csv
+portal	7772	글루디오 던전 1층(PC)	32740	32807	32749	32797	7772:0	dungeon floor change	to=7773:글루디오 던전 2층(PC);name=To7773;sf=1;tf=2	portals_all.csv
+portal	7772	글루디오 던전 1층(PC)	32812	32723	32728	32928	7772:1	world-dungeon entry/exit	to=4:아덴 대륙;name=to4Dgludio;sf=1;tf=	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32726	32744	32738	32812	7773:2	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=In8G;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32736	32772	32797	32803	7773:4	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=In8B;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32738	32813	32727	32744	7773:5	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=In8H;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32741	32745	32773	32807	7773:1	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=IN8e;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32750	32797	32740	32806	7773:3	dungeon floor change	to=7772:글루디오 던전 1층(PC);name=To7772;sf=2;tf=1	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32767	32734	32811	32761	7773:0	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=In8c;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32773	32808	32742	32745	7773:9	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=In8F;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32794	32728	32801	32754	7773:6	dungeon floor change	to=7774:글루디오 던전 3층(PC);name=to7774;sf=2;tf=3	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32797	32804	32737	32772	7773:8	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=IN8A;sf=2;tf=2	portals_all.csv
+portal	7773	글루디오 던전 2층(PC)	32811	32762	32768	32734	7773:7	dungeon internal teleport	to=7773:글루디오 던전 2층(PC);name=IN8d;sf=2;tf=2	portals_all.csv
+portal	7774	글루디오 던전 3층(PC)	32771	32765	32763	32772	7774:1	dungeon floor change	to=7775:글루디오 던전 4층(PC);name=to7775;sf=3;tf=4	portals_all.csv
+portal	7774	글루디오 던전 3층(PC)	32802	32754	32795	32728	7774:0	dungeon floor change	to=7773:글루디오 던전 2층(PC);name=to7773;sf=3;tf=2	portals_all.csv
+portal	7775	글루디오 던전 4층(PC)	32726	32737	32729	32722	7775:0	dungeon floor change	to=7776:글루디오 던전 5층(PC);name=to7776;sf=4;tf=5	portals_all.csv
+portal	7775	글루디오 던전 4층(PC)	32764	32772	32771	32764	7775:1	dungeon floor change	to=7774:글루디오 던전 3층(PC);name=to7774;sf=4;tf=3	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32728	32722	32727	32737	7776:0	dungeon floor change	to=7775:글루디오 던전 4층(PC);name=to7775;sf=5;tf=4	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32735	32739	32768	32805	7776:1	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=IN13d;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32745	32805	32757	32804	7776:3	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=IN11A;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32757	32805	32745	32804	7776:4	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=In11B;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32763	32738	32773	32765	7776:2	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=IN11E;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32768	32806	32736	32739	7776:7	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=In13C;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32772	32765	32764	32738	7776:5	dungeon internal teleport	to=7776:글루디오 던전 5층(PC);name=In11F;sf=5;tf=5	portals_all.csv
+portal	7776	글루디오 던전 5층(PC)	32797	32810	32805	32725	7776:6	dungeon floor change	to=7777:글루디오 던전 6층(PC);name=to7777;sf=5;tf=6	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32728	32768	32764	32754	7777:1	dungeon internal teleport	to=7777:글루디오 던전 6층(PC);name=IN12B;sf=6;tf=6	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32732	32802	32799	32794	7777:2	dungeon internal teleport	to=7777:글루디오 던전 6층(PC);name=In12D;sf=6;tf=6	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32764	32755	32729	32768	7777:0	dungeon internal teleport	to=7777:글루디오 던전 6층(PC);name=In12A;sf=6;tf=6	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32770	32811	32727	32725	7777:4	dungeon floor change	to=7778:글루디오 던전 7층(PC);name=dn7778;sf=6;tf=7	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32799	32795	32733	32802	7777:5	dungeon internal teleport	to=7777:글루디오 던전 6층(PC);name=In12C;sf=6;tf=6	portals_all.csv
+portal	7777	글루디오 던전 6층(PC)	32805	32724	32797	32809	7777:3	dungeon floor change	to=7776:글루디오 던전 5층(PC);name=to7776;sf=6;tf=5	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32727	32724	32770	32810	7778:0	dungeon floor change	to=7777:글루디오 던전 6층(PC);name=up7777;sf=7;tf=6	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32764	32766	32780	32741	7778:1	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=In13C;sf=7;tf=7	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32780	32742	32765	32766	7778:3	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=In13d;sf=7;tf=7	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32786	32795	32811	32729	7778:4	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=In01a;sf=7;tf=7	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32801	32803	32809	32802	7778:5	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=IN13f;sf=7;tf=7	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32808	32802	32801	32802	7778:6	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=In13g;sf=7;tf=7	portals_all.csv
+portal	7778	글루디오 던전 7층(PC)	32811	32730	32787	32795	7778:2	dungeon internal teleport	to=7778:글루디오 던전 7층(PC);name=In01b;sf=7;tf=7	portals_all.csv
+portal	30000	여관	32744	32803	32602	32930	30000:0	building/interior	to=0:말하는 섬;name=In01;sf=;tf=	portals_all.csv
+portal	30200	여관	32745	32807	32602	32929	30200:0	building/interior	to=0:말하는 섬;name=In02;sf=;tf=	portals_all.csv
+portal	30250	여관	32745	32803	33116	33379	30250:0	building/interior	to=4:아덴 대륙;name=In03;sf=;tf=	portals_all.csv
+portal	30450	여관	32745	32807	33116	33378	30450:0	building/interior	to=4:아덴 대륙;name=In04;sf=;tf=	portals_all.csv
+portal	30500	여관	32744	32803	32631	32750	30500:0	building/interior	to=4:아덴 대륙;name=In05;sf=;tf=	portals_all.csv
+portal	30700	여관	32745	32807	32631	32749	30700:0	building/interior	to=4:아덴 대륙;name=In06;sf=;tf=	portals_all.csv
+portal	30750	여관	32745	32803	32628	33167	30750:0	building/interior	to=4:아덴 대륙;name=In07;sf=;tf=	portals_all.csv
+portal	30950	여관	32745	32807	32628	33166	30950:0	building/interior	to=4:아덴 대륙;name=In08;sf=;tf=	portals_all.csv
+portal	31000	여관	32745	32803	33437	32789	31000:0	building/interior	to=4:아덴 대륙;name=In09;sf=;tf=	portals_all.csv
+portal	31200	여관	32745	32807	33437	32788	31200:0	building/interior	to=4:아덴 대륙;name=In10;sf=;tf=	portals_all.csv
+portal	31250	이름 미등록 지도	32745	32803	33605	33275	31250:0	building/interior	to=4:아덴 대륙;name=In11;sf=;tf=	portals_all.csv
+portal	31450	이름 미등록 지도	32745	32807	33605	33274	31450:0	building/interior	to=4:아덴 대륙;name=In12;sf=;tf=	portals_all.csv
+portal	31750	이름 미등록 지도	32745	32803	34068	32253	31750:0	building/interior	to=4:아덴 대륙;name=In15;sf=;tf=	portals_all.csv
+portal	31950	이름 미등록 지도	32745	32807	34067	32253	31950:0	building/interior	to=4:아덴 대륙;name=In16;sf=;tf=	portals_all.csv
+portal	32766	이름 미등록 지도	32736	32812	33170	32759	32766:1	building/interior	to=4:아덴 대륙;name=ENTaout;sf=;tf=	portals_all.csv
+portal	32766	이름 미등록 지도	32743	32783	33178	32743	32766:0	building/interior	to=4:아덴 대륙;name=outerKC;sf=;tf=	portals_all.csv
+region	0	말하는 섬	32256	32768	32767	33279	21	field	nameId=15525	regions.csv
+region	0	말하는 섬 마을	32543	32905	32671	32987	0	field	nameId=15516	regions.csv
+region	4	오크 숲	32511	32191	32960	32537	143	field	nameId=15622	regions.csv
+region	4	아덴 대륙	32512	32192	34303	33535	175	field	nameId=15644	regions.csv
+region	4	글루디오	32512	32537	32960	33023	146	field	nameId=15625	regions.csv
+region	4	윈다우드	32512	33023	32960	33535	149	field	nameId=15627	regions.csv
+region	4	윈다우드성	32566	33350	32717	33462	111	field	nameId=15608	regions.csv
+region	4	우드벡 마을	32578	33152	32659	33218	147	field	nameId=15626	regions.csv
+region	4	글루딘 마을	32581	32704	32655	32834	145	field	nameId=15624	regions.csv
+region	4	우드벡 마을	32601	33218	32646	33233	148	field	nameId=15626	regions.csv
+region	4	화전민 마을	32708	32412	32773	32485	142	field	nameId=15621	regions.csv
+region	4	오크 요새	32750	32246	32841	32347	110	field	nameId=15607	regions.csv
+region	4	마법사의 연구실	32838	32770	32895	32827	144	field	nameId=15623	regions.csv
+region	4	은기사 지역	32896	33087	33248	33535	139	field	nameId=15618	regions.csv
+region	4	요정 숲	32960	32191	33216	32511	151	field	nameId=15629	regions.csv
+region	4	켄트	32960	32511	33280	33023	153	field	nameId=15631	regions.csv
+region	4	켄트 마을	33027	32718	33084	32816	152	field	nameId=15630	regions.csv
+region	4	요정 숲 마을	33028	32304	33091	32376	150	field	nameId=15628	regions.csv
+region	4	은기사 마을	33036	33304	33153	33442	136	field	nameId=15617	regions.csv
+region	4	켄트성	33088	32720	33199	32833	109	field	nameId=15606	regions.csv
+region	4	켄트	33088	33023	33280	33087	154	field	nameId=15631	regions.csv
+region	4	용의 계곡	33216	32191	33484	32511	155	field	nameId=15632	regions.csv
+region	4	하이네	33248	33087	33855	33535	167	field	nameId=15639	regions.csv
+region	4	기란	33280	32511	33536	33023	162	field	nameId=15637	regions.csv
+region	4	기란 마을	33332	32632	33502	32895	160	field	nameId=15636	regions.csv
+region	4	하이네성	33457	33308	33575	33500	113	field	nameId=15610	regions.csv
+region	4	로서스 섬	33469	33181	33534	33234	101	field	nameId=15600	regions.csv
+region	4	웰던	33472	32191	33830	32511	158	field	nameId=15635	regions.csv
+region	4	로서스 섬	33498	33172	33523	33182	102	field	nameId=15600	regions.csv
+region	4	기란 마을	33502	32692	33548	32895	161	field	nameId=15636	regions.csv
+region	4	화룡의 둥지	33520	32201	33821	32457	157	field	nameId=15634	regions.csv
+region	4	기란	33536	32434	33827	33023	163	field	nameId=15637	regions.csv
+region	4	웰던	33536	32511	33839	32575	159	field	nameId=15635	regions.csv
+region	4	하이네 마을	33556	33197	33654	33312	164	field	nameId=15638	regions.csv
+region	4	기란성	33558	32599	33709	32759	112	field	nameId=15609	regions.csv
+region	4	하이네 마을	33571	33312	33619	33367	165	field	nameId=15638	regions.csv
+region	4	하이네 마을	33578	33367	33654	33457	166	field	nameId=15638	regions.csv
+region	4	웰던 마을	33679	32471	33755	32531	156	field	nameId=15633	regions.csv
+region	4	거울의 숲	33689	33278	33811	33471	105	field	nameId=15603	regions.csv
+region	4	기란	33826	32591	33898	33024	87	field	nameId=15637	regions.csv
+region	4	오렌	33841	32128	34367	32566	169	field	nameId=15641	regions.csv
+region	4	오렌	33852	32564	33911	32586	88	field	nameId=15641	regions.csv
+region	4	오렌	33897	32584	33913	32621	89	field	nameId=15641	regions.csv
+region	4	오렌	33910	32566	34367	32768	170	field	nameId=15641	regions.csv
+region	4	엘모어 격전지	33997	32387	34109	32570	99	field	nameId=15597	regions.csv
+region	4	오렌 마을	34011	32218	34090	32326	168	field	nameId=15640	regions.csv
+region	4	오렌 설벽	34100	32177	34303	32371	97	field	nameId=15596	regions.csv
+region	4	오렌 설벽	34144	32370	34303	32431	98	field	nameId=15596	regions.csv
+region	4	국경 요새	34238	32268	34272	32317	96	field	nameId=15598	regions.csv

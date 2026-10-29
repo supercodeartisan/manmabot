@@ -1,65 +1,19 @@
-"""In-process contested_mobs sweep. Mobs attacked by other visible players.
-
-Dedicated DLL (analysis/combat_attack/contested_mobs.dll). If the other user
-is not in the entity sweep, the mob is absent (= free).
-"""
+"""Monsters claimed by another player, derived from the enttrack sample."""
 from __future__ import annotations
 
-import ctypes
-import json
-from pathlib import Path
 from typing import Any, Optional
 
-_COMBAT = Path(__file__).resolve().parents[2] / "analysis" / "combat_attack"
+from app._01_perception.lc_session import ModuleReader
 
 
-def default_dll_path() -> Path:
-    return _COMBAT / "contested_mobs.dll"
+class ContestedMobsReader(ModuleReader):
+    module = "enttrack"
+
+    def _read(self) -> Optional[dict[str, Any]]:
+        from app._01_perception.lc_view import contested_mobs
+
+        data = contested_mobs()
+        return data if isinstance(data, dict) else None
 
 
-def default_settings_path() -> Path:
-    return _COMBAT / "settings_contested_mobs.json"
-
-
-class ContestedMobsReader:
-    def __init__(
-        self,
-        dll_path: Optional[Path] = None,
-        settings_path: Optional[Path] = None,
-    ) -> None:
-        dll = Path(dll_path or default_dll_path())
-        settings = Path(settings_path or default_settings_path())
-        if not dll.is_file():
-            raise FileNotFoundError(f"contested_mobs DLL is missing: {dll}")
-        if not settings.is_file():
-            raise FileNotFoundError(
-                f"contested_mobs settings are missing: {settings}"
-            )
-        self._lib = ctypes.CDLL(str(dll))
-        self._snap = self._lib.contested_mobs_snapshot
-        self._snap.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
-        self._snap.restype = ctypes.c_int
-        self._shutdown = self._lib.contested_mobs_shutdown
-        self._shutdown.argtypes = []
-        self._shutdown.restype = None
-        self._cfg = str(settings).encode("utf-8")
-        self._buf = ctypes.create_string_buffer(1 << 20)
-        self._closed = False
-
-    def snapshot(self) -> Optional[dict[str, Any]]:
-        """One contested-mob sweep. None if unavailable / LC not attached."""
-        if self._closed:
-            return None
-        n = int(self._snap(self._cfg, self._buf, len(self._buf)))
-        if n < 0:
-            return None
-        return json.loads(self._buf.raw[:n].decode("utf-8"))
-
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        try:
-            self._shutdown()
-        except Exception:
-            pass
+__all__ = ["ContestedMobsReader"]

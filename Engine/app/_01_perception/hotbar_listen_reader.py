@@ -1,88 +1,33 @@
-"""In-process hotbar_listen. One call reads LC 24 hotbar slots as JSON.
-
-The DLL is the same reader as hotbar_listen.exe. It is not injected into
-LC.exe. Offsets come from analysis/Hotbar/skill_offsets.txt, then
-analysis/inventories/inventory_offsets.txt for item names.
-"""
+"""Hotbar slots from the hotbar module."""
 from __future__ import annotations
 
-import ctypes
-import json
 import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_HOTBAR = Path(__file__).resolve().parents[2] / "analysis" / "Hotbar"
+from app._01_perception.lc_session import ModuleReader
+
+_DLL = Path(__file__).resolve().parents[2] / "analysis" / "dll" / "hotbar.dll"
 _LOCK = threading.Lock()
 _SHARED: Optional["HotbarListenReader"] = None
 
 
 def default_dll_path() -> Path:
-    built = _HOTBAR / "hotbar_listen_build.dll"
-    live = _HOTBAR / "hotbar_listen.dll"
-    if built.is_file() and (
-        not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
-    ):
-        return built
-    return live
+    return _DLL
 
 
 def default_offsets_path() -> Path:
-    return _HOTBAR / "skill_offsets.txt"
+    return Path(__file__).resolve().parents[2] / "analysis" / "registry" / "LC930_REGISTRY.txt"
 
 
-class HotbarListenReader:
-    def __init__(
-        self,
-        dll_path: Optional[Path] = None,
-        offsets_path: Optional[Path] = None,
-    ) -> None:
-        dll = Path(dll_path or default_dll_path())
-        offsets = Path(offsets_path or default_offsets_path())
-        self._closed = False
-        self._lib = None
-        self._snap = None
-        self._shutdown = None
-        self._offsets = str(offsets).encode("utf-8")
-        self._buf = ctypes.create_string_buffer(1 << 16)
-        if not dll.is_file():
-            raise FileNotFoundError(f"hotbar_listen DLL is missing: {dll}")
-        if not offsets.is_file():
-            raise FileNotFoundError(f"hotbar offsets are missing: {offsets}")
-        self._lib = ctypes.CDLL(str(dll))
-        self._snap = self._lib.hotbar_listen_snapshot
-        self._snap.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
-        self._snap.restype = ctypes.c_int
-        self._shutdown = self._lib.hotbar_listen_shutdown
-        self._shutdown.argtypes = []
-        self._shutdown.restype = None
+class HotbarListenReader(ModuleReader):
+    module = "hotbar"
 
-    def snapshot(self) -> Optional[dict[str, Any]]:
-        if self._closed or self._snap is None:
-            return None
-        with _LOCK:
-            n = int(self._snap(self._offsets, self._buf, len(self._buf)))
-        if n < 2:
-            return None
-        try:
-            data = json.loads(self._buf.raw[:n].decode("utf-8"))
-        except Exception:
-            return None
-        if isinstance(data, dict) and isinstance(data.get("slots"), list):
-            return data
-        return None
+    def _read(self) -> Optional[dict[str, Any]]:
+        from app._01_perception.lc_view import hotbar
 
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        if self._shutdown is None:
-            return
-        with _LOCK:
-            try:
-                self._shutdown()
-            except Exception:
-                pass
+        data = hotbar()
+        return data if isinstance(data, dict) else None
 
 
 def shared_hotbar() -> HotbarListenReader:

@@ -1,0 +1,33 @@
+# hotbar / HudSlotDataSubsystem (T4). After a patch: run skilllocate.exe
+# HSD_IDX is decimal. All other keys are hex (0x optional).
+# Aligned with analysis/lc930/registry (stand hotbar_930): vft-first find, then idx fallback.
+# 26.10.07 (HSD map container moved hud+0x18 to +0xD8):
+#   outer HudSlotDataSubsystem vft HSD_VFT2=0x11E2450 (live sub[30])
+#   secondary vft HSD_VFT=0x11E2400
+#   walk from header+N_PARENT (root); nil links == header
+#   SSO uses V_CAP (_Myres@+0x48), not string length
+
+MGR=0x16F8A00
+HOLDER_OFF=0xD0
+SUBLIST_BEG=0x180
+SUBLIST_END=0x188
+HSD_IDX=30
+HSD_ADJ=0xD8
+HSD_VFT=11F6758
+HSD_VFT2=11F66E8
+MAP_HEAD=0x08
+MAP_SIZE=0x10
+N_L=0x00
+N_PARENT=0x08
+N_R=0x10
+N_NIL=0x19
+N_KEY=0x20
+N_VAL=0x28
+V_TYPE=0x08
+V_RAW=0x00
+V_ID=0xC0
+V_CFG=0x0C
+V_T10=0x10
+V_STRLEN=0x40
+V_STR=0x30
+V_CAP=0x48

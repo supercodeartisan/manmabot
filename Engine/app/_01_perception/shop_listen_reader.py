@@ -1,17 +1,14 @@
-"""In-process shop_listen. One call reads ShopSubsystem Buy/Sell lists as JSON.
-
-DLL lives next to shop_listen.c under analysis/NPC_conv. Not injected into LC.exe.
-"""
+"""Shop Buy/Sell lists from the shop module."""
 from __future__ import annotations
 
-import ctypes
-import json
 import threading
 import time
 from pathlib import Path
 from typing import Any, Optional
 
-_NPC_CONV = Path(__file__).resolve().parents[2] / "analysis" / "NPC_conv"
+from app._01_perception.lc_session import ModuleReader
+
+_DLL = Path(__file__).resolve().parents[2] / "analysis" / "dll" / "shop.dll"
 _LOCK = threading.Lock()
 _SHARED: Optional["ShopListenReader"] = None
 _LAST_SHOP_SNAPSHOT: Optional[dict[str, Any]] = None
@@ -19,73 +16,22 @@ _LAST_SHOP_SNAPSHOT_AT: float = 0.0
 
 
 def default_dll_path() -> Path:
-    """Newest shop image. A locked live DLL keeps the previous build beside it."""
-    candidates = [
-        _NPC_CONV / "shop_listen.new.dll",
-        _NPC_CONV / "shop_listen.dll",
-    ]
-    found = [path for path in candidates if path.is_file()]
-    if not found:
-        return candidates[-1]
-    return max(found, key=lambda path: path.stat().st_mtime)
+    return _DLL
 
 
-class ShopListenReader:
-    """ctypes wrapper around shop_listen.dll."""
+class ShopListenReader(ModuleReader):
+    module = "shop"
 
-    def __init__(self, dll_path: Optional[Path] = None) -> None:
-        dll = Path(dll_path or default_dll_path())
-        self._closed = False
-        self._lib = None
-        self._snap = None
-        self._shutdown = None
-        self._buf = ctypes.create_string_buffer(1 << 20)  # 1 MiB
-        if not dll.is_file():
-            return
-        self._lib = ctypes.CDLL(str(dll))
-        self._snap = self._lib.shop_listen_snapshot
-        self._snap.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
-        self._snap.restype = ctypes.c_int
-        self._shutdown = self._lib.shop_listen_shutdown
-        self._shutdown.argtypes = []
-        self._shutdown.restype = None
+    def _read(self) -> Optional[dict[str, Any]]:
+        from app._01_perception.lc_view import shop
 
-    @property
-    def dll_loaded(self) -> bool:
-        return self._snap is not None
-
-    def snapshot(self) -> Optional[dict[str, Any]]:
-        """One shop scan. None when game/driver/DLL unavailable."""
-        if self._closed or self._snap is None:
-            return None
-        with _LOCK:
-            n = int(self._snap(None, self._buf, len(self._buf)))
-        if n < 2:
-            return None
-        try:
-            data = json.loads(self._buf.raw[:n].decode("utf-8"))
-        except Exception:
-            return None
+        data = shop()
         if not isinstance(data, dict):
-            return None
-        if data.get("error") and not isinstance(data.get("sell"), list):
             return None
         global _LAST_SHOP_SNAPSHOT, _LAST_SHOP_SNAPSHOT_AT
         _LAST_SHOP_SNAPSHOT = data
         _LAST_SHOP_SNAPSHOT_AT = time.monotonic()
         return data
-
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        if self._shutdown is None:
-            return
-        with _LOCK:
-            try:
-                self._shutdown()
-            except Exception:
-                pass
 
 
 def shared_shop() -> ShopListenReader:

@@ -572,6 +572,21 @@ def load_profile(path: Path | None = None) -> Profile:
         profile.language = normalize_language(str(app["language"]))
     profile.wizard_completed = bool(app.get("wizard_completed", False))
     profile.always_on_top = bool(app.get("always_on_top", False))
+    if app.get("input_backend"):
+        profile.input_backend = (
+            "pico"
+            if str(app.get("input_backend") or "").strip().lower()
+            in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+            else "interception"
+        )
+    if "pico_com" in app and app.get("pico_com") is not None:
+        profile.pico_com = str(app.get("pico_com") or "").strip()
+    if app.get("pico_baud") not in (None, ""):
+        try:
+            baud = int(app.get("pico_baud") or 115200)
+        except (TypeError, ValueError):
+            baud = 115200
+        profile.pico_baud = baud if 1200 <= baud <= 1_000_000 else 115200
     trial_settings, trial_routine = load_trial()
     has_trial = bool(trial_routine) or any(
         bool(trial_settings.get(section)) for section in TOP_SECTIONS
@@ -589,6 +604,18 @@ def load_profile(path: Path | None = None) -> Profile:
         ScheduleTask(settings=settings, account_id=None, character=char),
         profile,
     )
+    if not app.get("input_backend"):
+        other = trial_settings.get("other") if isinstance(trial_settings, dict) else None
+        if isinstance(other, dict) and other.get("input_backend"):
+            raw_name = str(other.get("input_backend") or "").strip().lower()
+            profile.input_backend = (
+                "pico"
+                if raw_name
+                in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            )
+            if other.get("pico_com"):
+                profile.pico_com = str(other.get("pico_com") or "").strip()
     profile.selected_account_id = None
     return profile
 
@@ -626,6 +653,16 @@ def save_profile(profile: Profile, path: Path | None = None) -> None:
             "language": profile.language,
             "wizard_completed": bool(profile.wizard_completed),
             "always_on_top": bool(profile.always_on_top),
+            "input_backend": (
+                "pico"
+                if str(getattr(profile, "input_backend", "interception") or "")
+                .strip()
+                .lower()
+                in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            ),
+            "pico_com": str(getattr(profile, "pico_com", "") or "").strip(),
+            "pico_baud": int(getattr(profile, "pico_baud", 115200) or 115200),
         }
     )
 

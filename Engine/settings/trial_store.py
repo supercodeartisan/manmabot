@@ -43,6 +43,9 @@ def load_app_state() -> dict[str, Any]:
         "language": str(raw.get("language") or "").strip() or None,
         "wizard_completed": bool(raw.get("wizard_completed", False)),
         "always_on_top": bool(raw.get("always_on_top", False)),
+        "input_backend": str(raw.get("input_backend") or "").strip() or None,
+        "pico_com": str(raw.get("pico_com") or "").strip(),
+        "pico_baud": raw.get("pico_baud"),
     }
 
 
@@ -60,6 +63,9 @@ def save_app_state(state: dict[str, Any]) -> None:
         "language": cur.get("language"),
         "wizard_completed": bool(cur.get("wizard_completed", False)),
         "always_on_top": bool(cur.get("always_on_top", False)),
+        "input_backend": cur.get("input_backend"),
+        "pico_com": str(cur.get("pico_com") or "").strip(),
+        "pico_baud": cur.get("pico_baud"),
     }
     atomic_write_json(assert_userdata_write(APP_PATH), payload)
 

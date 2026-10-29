@@ -2684,7 +2684,7 @@ class BotController:
         if sensors.monitor is not None:
             self.log(
                 "Player memory is read in this process "
-                "(realtime_monitor.dll, offsets.json). No separate console."
+                "(charread and map modules, registry). No separate console."
             )
         else:
             self.log("Memory monitor unavailable at worker start")
@@ -2782,6 +2782,7 @@ class BotController:
             from app._05_action.mouse import prepare_capture
 
             configure_hunt_input(profile)
+            self.log(f"Hunt input: {backend_name()}")
             prepare_capture()
         except Exception as exc:
             self.log(f"Input capture failed: {exc}")

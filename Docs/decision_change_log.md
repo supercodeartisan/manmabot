@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-28 — hunt input: toolbar choice is not replaced by a schedule
+
+Intent: choosing Interception on the toolbar must be the hunt transport. A schedule apply was able to write `input_backend` back onto the profile.
+Shared: schedules no longer store or apply `input_backend` / `pico_com` / `pico_baud`. The choice is saved with the app state. Start logs `Hunt input:`.
+Affects: which transport the next hunt start opens. Click/key behavior unchanged.
+Consent: user reported Interception was selected and the start still opened the Pico.
+Result: the 05:56 start logged `Pico data COM was not found` before the 05:57 save of `interception`. Not re-run after this change.
+
 ## 2026-10-22 — hunt input: live data COM only, shown as a label
 
 Intent: choosing Raspberry Pi should read the plugged-in data port. A saved COM must not stay selected, including the REPL.

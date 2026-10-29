@@ -802,8 +802,9 @@ class ScheduleShell(QMainWindow):
         self.bridge.coordinator.controller.set_humanize_move(bool(checked))
 
     def _hunt_backend_name(self) -> str:
-        name = str(getattr(self.profile, "input_backend", "interception") or "").strip().lower()
-        return "pico" if name == "pico" else "interception"
+        from app._05_action.input_backend import normalize_backend_name
+
+        return normalize_backend_name(getattr(self.profile, "input_backend", "interception"))
 
     def _select_hunt_input_combo(self) -> None:
         index = self.hunt_input.findData(self._hunt_backend_name())
