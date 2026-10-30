@@ -49,11 +49,11 @@
 // ---------------------------------------------------------------------------
 static uint64_t offPlayerBase   = 0x166864CULL;  // PlayerBase (direct=1 => module+off, 9.30)
 static int      offPlayerDirect = 1;             // PlayerBaseDirect
-static uint64_t offPosX         = 0x1668640ULL;  // PosXAbs (module-relative, 9.30)
-static uint64_t offPosY         = 0x1668644ULL;  // PosYAbs (9.30)
+static uint64_t offPosX         = 0x16F88B0ULL;  // PosXAbs (module-relative, 9.30)
+static uint64_t offPosY         = 0x16F88B4ULL;  // PosYAbs (9.30)
 static uint64_t offPosZ         = 0x1668648ULL;  // PosZAbs (9.30)
 static uint64_t offTick         = 0x1668638ULL;  // ServerTick (u64 ms, 9.30)
-static uint64_t offExpPct       = 0x1636BD0ULL;  // ExperiencePct64 (moving f64, 26.10.14.2; twin at -0x10 stays behind)
+static uint64_t offExpPct       = 0x1644BF0ULL;  // ExperiencePct64 (moving f64, 26.10.14.2; twin at -0x10 stays behind)
 static uint64_t offSkills       = 0;             // SkillListBase (stale, zeroed)
 static uint64_t offParty        = 0;             // PartyBase (stale, zeroed)
 static uint64_t offBuffList     = 0;             // BuffListBase (stale, zeroed)
@@ -104,8 +104,8 @@ static int32_t  g_offLawful = -1, g_offWeight = -1, g_offFood = -1, g_offMaxWeig
 static int32_t  g_offStats[6] = { -1,-1,-1,-1,-1,-1 }; // STR,DEX,CON,INT,WIS,CHA
 
 /* CharacterDataSubsystem registry (char_offsets.txt). 26.09.30 defaults. */
-static uint32_t g_chMgr = 0x1668790u, g_chCdVft = 0x1185340u, g_chCdOff = 0x498u;
-static uint32_t g_chVftStatus = 0x11852E0u;
+static uint32_t g_chMgr = 0x16F8A00u, g_chCdVft = 0x11F90D8u, g_chCdOff = 0x498u;
+static uint32_t g_chVftStatus = 0x11F90B8u;
 static uint32_t g_chKXor = 0x2f8b1064u, g_chKMul = 0x7f4a7c15u;
 static uint32_t g_chHolder = 0xD0u, g_chSubBeg = 0x180u, g_chSubEnd = 0x188u;
 static uint32_t g_chStr = 0x128u, g_chInt = 0x134u, g_chCon = 0x140u;
@@ -118,7 +118,7 @@ static uint32_t g_stHp = 0x1Cu, g_stMaxHp = 0x20u, g_stMp = 0x24u, g_stMaxMp = 0
 static int g_charOk = 0;
 /* Live mapId: MapSubsystem (vft MapSubsystemVftRva) + MapIdOff / MapIdPairOff.
  * Source of truth: Extra_data/10_2/2_map_region/offsets.json */
-static uint32_t g_mapSubVft = 0x11C7DF0u;
+static uint32_t g_mapSubVft = 0x123C958u;
 static uint32_t g_mapIdOff = 0x718u;
 static uint32_t g_mapIdPairOff = 0x71Cu;
 

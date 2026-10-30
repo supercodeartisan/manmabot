@@ -44,6 +44,7 @@ Tool_Shopping_Practice_Admin.bat
 *.pdb
 *.ilk
 *.new.dll
+*.old.dll
 **/build_*.bat
 build_*.bat
 install_930_dlls.bat

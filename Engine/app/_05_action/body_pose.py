@@ -1,6 +1,6 @@
-"""Live body action at ActionComponent+0xC0, and the command at +0x58.
+"""Live body action at ActionComponent+0xC8, and the command at +0x58.
 
-Standing is BreathAction (0x11EB4D8, bodyact VFT_BREATHACT). A failed read is None, not standing.
+Standing is BreathAction (0x11F4650, bodyact VFT_BREATHACT). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
 CharacterData status used when that decode succeeds. Level uses that same
 status (LEVEL), then the HUD ST_LEVEL. Exp percent is the module f64
@@ -15,26 +15,26 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-BREATH_VFT = 0x11EB4D8
-MOVE_VFTS = frozenset({0x11EB7B8, 0x11EB770})  # MovingAction, MovingBackAction
+BREATH_VFT = 0x11F4650
+MOVE_VFTS = frozenset({0x11F4780, 0x11F4738})  # MovingAction, MovingBackAction
 BODY = {
-    0x11EB4D8: "stand",
-    0x11EB7B8: "walk",
-    0x11EB770: "walkback",
-    0x11EB490: "attack",
-    0x11EB718: "actionbase",
-    0x11EB5B0: "turn",
-    0x11EB3B8: "spell",
-    0x11EB400: "death",
-    0x11EB568: "death",
-    0x11EB448: "damaged",
-    0x11EB520: "damaged",
-    0x11EB370: "effect",
+    0x11F4650: "stand",
+    0x11F4780: "walk",
+    0x11F4738: "walkback",
+    0x11F4410: "attack",
+    0x11F46E0: "actionbase",
+    0x11F4530: "turn",
+    0x11F4338: "spell",
+    0x11F4380: "death",
+    0x11F44E8: "death",
+    0x11F43C8: "damaged",
+    0x11F4698: "damaged",
+    0x11F44A0: "effect",
 }
 CMD = {
-    0x11EBA50: "move",
-    0x11EBBD0: "attack",
-    0x11EBA88: "interact",
+    0x11F4A18: "move",
+    0x11F4B98: "attack",
+    0x11F4A50: "interact",
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -175,9 +175,9 @@ def _module_base(pid: int) -> tuple[int, int]:
 # The walk/stand class numbers above are not enough: this chain is how the
 # body slot is found. A stale manager or MyPlayer id makes every read fail.
 _FIND = {
-    "MGR": 0x16ED640,
-    "ACTOR_VFT": 0x11E9430,
-    "MY_PLAYER": 0x11EC4C8,
+    "MGR": 0x16F8A00,
+    "ACTOR_VFT": 0x11F24A8,
+    "MY_PLAYER": 0x11F5488,
 }
 _find_ready = False
 
@@ -376,7 +376,7 @@ def _read_slots() -> tuple[int | None, int | None]:
     ctl = _q(_pid, table + 0x90)
     if not _heap(ac):
         return None, None
-    act = _q(_pid, ac + 0xC0)
+    act = _q(_pid, ac + 0xC8)
     body = _vrva(act) if _heap(act) else None
     if body is None:
         return None, None
@@ -452,15 +452,15 @@ def body_is_standing() -> bool | None:
 
 # HUD block + encoded status. char_offsets.txt overrides these defaults.
 _HUD = {
-    "ST_BLOCK": 0x16DED20,
+    "ST_BLOCK": 0,
     "ST_HP": 0x1C,
     "ST_MAXHP": 0x20,
     "ST_MP": 0x24,
     "ST_MAXMP": 0x28,
-    "MGR": 0x16DEE80,
-    "CD_VFT": 0x11E4F38,
+    "MGR": 0x16F8A00,
+    "CD_VFT": 0x11F90D8,
     "CD_OFF": 0x498,
-    "VFT_STATUS": 0x11E4F08,
+    "VFT_STATUS": 0x11F90B8,
     "K_XOR": 0x2F8B1064,
     "K_MUL": 0x7F4A7C15,
     "HOLDER_OFF": 0xD0,
@@ -475,7 +475,7 @@ _HUD = {
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
-_EXP_RVA = 0x1636BD0
+_EXP_RVA = 0x1644BF0
 _exp_ready = False
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 

@@ -1378,28 +1378,6 @@ behaviors:
   click_offset_uv:
   - 0.002872692913385766
   - -0.06053278370323564
-  destination_dungeon: 25
-  id: teleport_silver_copy
-  map: mainland
-  name: Teleport Silver copy
-  npc_world:
-  - 33080
-  - 33385
-  scroll_spot: hub_33
-  teleport_kind: dungeon_gate
-  ui:
-    buy_button:
-    - 0.14309433962264154
-    - 0.3320754716981132
-    confirm_button:
-    - 0.07790128301886794
-    - 0.2881110943396226
-  world_nav: true
-- action: teleporter
-  adena_cost: 195
-  click_offset_uv:
-  - 0.002872692913385766
-  - -0.06053278370323564
   destination_dungeon: 0
   id: teleport_silver_desertoasis
   land_map_id: 4
@@ -1446,6 +1424,81 @@ behaviors:
     confirm_button:
     - 0.17828536963350783
     - 0.2426547602094241
+  world_nav: true
+- action: teleporter
+  adena_cost: 187
+  destination_dungeon: 0
+  id: teleport_giran_dragonvalley_ch
+  land_map_id: 4
+  land_world:
+  - 33433
+  - 32515
+  map: mainland
+  name: Teleport Giran To Dragon Valley Chinese
+  npc_world:
+  - 33437
+  - 32795
+  scroll_spot: giran_teleporter
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.06690848167539266
+    - 0.26351648167539266
+    confirm_button:
+    - 0.1206411392670157
+    - 0.26351648167539266
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_silver_desertoasis_ch
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Silver To dest oasis Chinese
+  npc_world:
+  - 33081
+  - 33385
+  scroll_spot: hub_33
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.07308464921465968
+    - 0.26351648167539266
+    confirm_button:
+    - 0.15119258136125655
+    - 0.23936080418848169
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_woodbeck_desertoasis_ch
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Woodbeck To dest oasis Chinese
+  npc_world:
+  - 32640
+  - 33204
+  scroll_spot: hub_45
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.06587912041884816
+    - 0.2648889633507853
+    confirm_button:
+    - 0.14282387434554975
+    - 0.21788146596858637
   world_nav: true
 garbage_list: []
 keep_list:
@@ -1502,5 +1555,6 @@ keep_list:
 - '페어리: 나랑 놀아줘야 해!'
 - 펫 목걸이
 - 해독제
+- 호박씨
 - 화살
 - 활 골무

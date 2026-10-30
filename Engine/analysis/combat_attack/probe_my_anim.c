@@ -40,21 +40,21 @@ static int g_nh = 2;
 static uint32_t g_offNodeNext = 0x08u, g_offNodeBeg = 0x18u, g_offNodeEnd = 0x20u;
 static uint32_t g_offEntGuid = 0x18u;
 static uint32_t g_offCompTable = 0x20u;
-static uint32_t g_actVft = 0x11EB908u;
+static uint32_t g_actVft = 0x11F48D0u;
 static uint32_t g_actIdx = 2u;
-static uint32_t g_vftSelf = 0x11EC4C8u;
-static uint32_t g_vftCtl = 0x11EBBA0u;
-static uint32_t g_vftAttackAct = 0x11EB490u;
-static uint32_t g_vftDeath = 0x11EB400u;
-static uint32_t g_vftDeadBody = 0x11EB568u;
-static uint32_t g_vftBreath = 0x11EB4D8u;
-/* bodyact: AC+0xC0 / Controller+0x58. */
-static uint32_t g_vftCmdMove = 0x11EBA50u;   /* MoveCommand */
-static uint32_t g_vftCmdAtk  = 0x11EBBD0u;   /* AttackCommand */
-static uint32_t g_vftMoveAct = 0x11EB7B8u;   /* MovingAction */
-static uint32_t g_vftBrief   = 0x11EB5B0u;   /* ChangeDirection */
+static uint32_t g_vftSelf = 0x11F5488u;
+static uint32_t g_vftCtl = 0x11F4B68u;
+static uint32_t g_vftAttackAct = 0x11F4410u;
+static uint32_t g_vftDeath = 0x11F4380u;
+static uint32_t g_vftDeadBody = 0x11F44E8u;
+static uint32_t g_vftBreath = 0x11F4650u;
+/* bodyact: AC+0xC8 / Controller+0x58. */
+static uint32_t g_vftCmdMove = 0x11F4A18u;   /* MoveCommand */
+static uint32_t g_vftCmdAtk  = 0x11F4B98u;   /* AttackCommand */
+static uint32_t g_vftMoveAct = 0x11F4780u;   /* MovingAction */
+static uint32_t g_vftBrief   = 0x11F4530u;   /* ChangeDirection */
 static uint32_t g_baitOff = 0x40u, g_deadByte = 0x49u;
-static uint32_t g_offPlayerX = 0x16DED30u, g_offPlayerY = 0x16DED34u;
+static uint32_t g_offPlayerX = 0x16EA0F0u, g_offPlayerY = 0x16EA0F4u;
 static uint32_t g_offPresCellX = 0x40u, g_offPresCellY = 0x44u;
 static uint32_t g_ctlCmdOff = 0x58u;
 static uint32_t g_hCtlHint = 0x90u;

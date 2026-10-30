@@ -4,19 +4,19 @@
 # bot keeps cfg as `id` for shop matching; chain/vft match analysis/lc930/registry.)
 # 9.30: real ItemEntity slots are odd indices (even = empty markers); names via +0x68 fmt $NNN.
 
-MGR=0x16ED640
+MGR=0x16F8A00
 HOLDER_OFF=0xD0
 SUBLIST_BEG=0x180
 SUBLIST_END=0x188
 
 INV_SUB_IDX=26
-INV_VFT=0x1231BB8
+INV_VFT=0x123B1E0
 
 INV_VEC_BEG=0x3D8
 INV_VEC_END=0x3E0
 INV_VEC_CAP=0x3E8
 
-ITEM_VFT=0x12319D0
+ITEM_VFT=0x123AD68
 ITEM_ID=0x18
 ITEM_TEMPLATE=0x20
 ITEM_CFG=0x30
@@ -26,7 +26,7 @@ ITEM_KIND=0x44
 ITEM_FMT=0x68
 
 # Static name table (FNV-1a, no heap scan)
-MSG_ANCHOR_RVA=0x16ED668
+MSG_ANCHOR_RVA=0x16F8A28
 MSG_BUCKET_STRIDE=0x10
 MSG_BUCKET_MASK=0xFFFF
 MSG_FNV_OFFSET=0xcbf29ce484222325

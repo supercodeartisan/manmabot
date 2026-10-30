@@ -1,6 +1,6 @@
 """Read-only poll of the live command slot during a pickup.
 
-Logs controller+0x58, ActionComponent+0xC0, and InteractionComponent
+Logs controller+0x58, ActionComponent+0xC8, and InteractionComponent
 qword changes. Does not send input.
 """
 import ctypes
@@ -15,26 +15,26 @@ SECONDS = 90
 POLL_S = 0.015
 
 NAMES = {
-    0x11EBA50: "MoveCommand",
-    0x11EBA88: "InteractCommand",
-    0x11EBBD0: "AttackCommand",
-    0x11EBBA0: "ActorController",
-    0x11EB4D8: "BreathAction",
-    0x11EB7B8: "MovingAction",
-    0x11EB490: "AttackAction",
-    0x11EB3B8: "SpellAction",
-    0x11EB448: "DamagedAction",
-    0x11EB520: "DamagedReaction",
-    0x11EB400: "DeathAction",
-    0x11EB568: "DeadBody",
-    0x11EB770: "MovingBackAction",
-    0x11EB5B0: "ChangeDirection",
-    0x11EB370: "EffectAction",
-    0x11EB718: "ActionBase",
+    0x11F4A18: "MoveCommand",
+    0x11F4A50: "InteractCommand",
+    0x11F4B98: "AttackCommand",
+    0x11F4B68: "ActorController",
+    0x11F4650: "BreathAction",
+    0x11F4780: "MovingAction",
+    0x11F4410: "AttackAction",
+    0x11F4338: "SpellAction",
+    0x11F43C8: "DamagedAction",
+    0x11F4698: "DamagedReaction",
+    0x11F4380: "DeathAction",
+    0x11F44E8: "DeadBody",
+    0x11F4738: "MovingBackAction",
+    0x11F4530: "ChangeDirection",
+    0x11F44A0: "EffectAction",
+    0x11F46E0: "ActionBase",
     0x11E10B8: "Item",
     0x11E12A8: "MyPlayer",
     0x11E0E28: "InteractionComponent",
-    0x11EB908: "ActionComponent",
+    0x11F48D0: "ActionComponent",
     0x11E1270: "Player",
     0x11E1160: "Monster",
 }
@@ -164,7 +164,7 @@ def sample(pid, base, size, me):
     ic = q(pid, table + 8 * 8)
     tr = q(pid, table + 0)
     cmd = q(pid, ctl + 0x58) if heap(ctl) else 0
-    act = q(pid, ac + 0xC0) if heap(ac) else 0
+    act = q(pid, ac + 0xC8) if heap(ac) else 0
     cellx = d(pid, tr + 0x40) if heap(tr) else 0
     celly = d(pid, tr + 0x44) if heap(tr) else 0
     cmd_v = vrva(pid, base, size, cmd) if heap(cmd) else 0
@@ -287,7 +287,7 @@ def main():
                 "[%d] INIT cell=%s cmd=%s body=%s"
                 % (ms, cur["cell"], tag(cur["cmd_v"]), tag(cur["act_v"]))
             )
-            if cur["act_v"] == 0x11EB718:
+            if cur["act_v"] == 0x11F46E0:
                 n_base += 1
                 dump_body(cur)
             prev = cur
@@ -303,7 +303,7 @@ def main():
                     "[%d] cell=%s cmd=%s body=%s%s"
                     % (ms, cur["cell"], tag(cur["cmd_v"]), tag(cur["act_v"]), extra)
                 )
-                if body_changed and cur["act_v"] == 0x11EB718:
+                if body_changed and cur["act_v"] == 0x11F46E0:
                     n_base += 1
                     dump_body(cur)
                 if body_changed:

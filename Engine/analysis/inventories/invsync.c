@@ -180,7 +180,7 @@ int main(void){
 
     loadReg("inventory_offsets.txt");
     /* 기존 값 */
-    uint32_t MGR=getKV("MGR",0x1668790), GUARD_OFF=getKV("GUARD_OFF",0xD8), GUARD_VAL=getKV("GUARD_VAL",1);
+    uint32_t MGR=getKV("MGR",0x16F8A00), GUARD_OFF=getKV("GUARD_OFF",0xD8), GUARD_VAL=getKV("GUARD_VAL",1);
     uint32_t HOLDER_OFF=getKV("HOLDER_OFF",0xD0), SUB_BEG=getKV("SUBLIST_BEG",0x180), SUB_END=getKV("SUBLIST_END",0x188);
     uint32_t INV_SUB_IDX=getKV("INV_SUB_IDX",26), INV_VFT=getKV("INV_VFT",0x11C6878);
     uint32_t INV_VEC_BEG=getKV("INV_VEC_BEG",0x3D8), INV_VEC_END=getKV("INV_VEC_END",0x3E0);

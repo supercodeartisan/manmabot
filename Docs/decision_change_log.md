@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-10-30 — exp-rise kill release is off
+
+Intent: stop treating a level or exp rise as a kill. The sticky monster stays the attack target until a memory death signal drops it.
+Shared: `EXP_KILL_RELEASE_ENABLED` in `sample_kill_progress`. While false, a rise only writes a clickgap log. It does not call `_release_sticky_for_kill`, add `exp_kill_ids`, or clear `_attack_aim_lock`. Memory omission, bait, the 2-tile dead window, and `finish-gone` still end the attack.
+Affects: farm and dungeon engage, including `finish_kill`. Loot, movement, HP, and login do not use this switch. A kill with no exp still waits for the row to leave the list, as it already did.
+Consent: user (turn off the exp-rise stop-attack path so it does not run).
+Result: flag set false. Not run in game.
+
+## 2026-10-30 — memory constants moved to registry v35 (26.10.27.2001)
+
+Intent: readers use `D:\dist_10_28` registry v35. Same chains (mgr → holder → vft subsystem, map id at MapSubsystem+0x718, encoded CharacterData status). Moved RVAs and the two shifted fields only.
+Shared: `LC930_REGISTRY.txt`, `char_offsets.txt`, `entity_offsets.txt`, `offsets.json`, inventory/hotbar tables, `body_pose` action vfts. Action pointer is ActionComponent+0xC8. Door frame is +0xE0. `char_offsets` `ST_BLOCK` stays 0. HP decode, move/attack labels, and login clicks are unchanged.
+Affects: map id, cell xy, entity class, buffs, inventory, hotbar, shop list, body stand/walk. `not_permitted` no longer matches door gfx 0x8009.
+Consent: user (apply the folder’s updated offset constants without breaking the running project).
+Result: constants written. Rebuilt `print_state.dll`, `realtime_monitor.dll`, `shop_listen.dll`, `attacks_me.dll`, `contested_mobs.dll`. Buff, dialog, inventory, and hotbar still read their tables at startup. Not run in game.
+
+## 2026-10-22 — Chinese game language uses the new `_ch` teleporters
+
+Intent: Shopping Practice now has Chinese dialog rows for the three new field teleports (`teleport_giran_dragonvalley_ch`, `teleport_silver_desertoasis_ch`, `teleport_woodbeck_desertoasis_ch`). Starting with the UI game language set to Chinese still planned the Korean ids, because teleporter selection followed account `SHOP_LOCALE` (often `ko`) instead of game language.
+Shared: `resolve_world_nav_teleporter_ids`. Omitted locale now reads `get_game_language()` (set from the profile at Start). `zh` still prefers `<base>_ch` and falls back to the Korean row only when `_ch` is missing. An explicit `locale=` argument is unchanged. Buy/sell ids still follow account shop locale. Combat, HP, and login are unchanged.
+Affects: every world-nav NPC teleporter, including the older dungeon gates that already have `_ch` rows. Korean game language keeps the Korean ids even when the account server locale is Chinese.
+Consent: user (“게임 언어를 중국어로 선택하고 프로젝트를 실행시킬때 정상동작하도록 구현해줘”).
+Result: with game language `zh`, the three `_ch` ids are selected and the Korean twins are not. With `ko`, the reverse. Not run in game.
+
 ## 2026-10-22 — world-nav: same-map talking scroll competes on cost
 
 Intent: Farm on mainland Dragon Valley from another mainland tile planned as walk~560 to Giran NPC then field TP. User expected talking-scroll to the Giran hub (cheaper). Planner had `allow_scroll = … and not same_map`, so scroll never entered the cost graph on same map.

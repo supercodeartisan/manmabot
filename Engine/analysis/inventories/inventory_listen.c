@@ -87,7 +87,7 @@ static uint64_t g_heapLo = 0, g_heapHi = 0;
 static uint64_t g_validPtrLo = VALID_PTR_LO, g_validPtrHi = VALID_PTR_HI;
 
 /* InventorySubsystem chain (T7). TXT overlay wins after a service patch. */
-static uint32_t invMgr = 0x1668790u, invHolder = 0xD0u;
+static uint32_t invMgr = 0x16F8A00u, invHolder = 0xD0u;
 static uint32_t invSubBeg = 0x180u, invSubEnd = 0x188u;
 static uint32_t invSubIdx = 26, invSubVft = 0x11C6878u;
 static uint32_t invVecBeg = 0x3D8u, invVecEnd = 0x3E0u;

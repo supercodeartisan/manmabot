@@ -47,14 +47,14 @@ static char g_outPath[MAX_PATH] = "";
 static int g_rotateMs = 60000; /* clear output_file history this often */
 static int g_range = 0; /* 0 = unlimited cellmap window (modify1) */
 /* Defaults match entity_offsets.txt (current service). */
-static uint32_t g_offPlayerX = 0x1668640u;
-static uint32_t g_offPlayerY = 0x1668644u;
-static uint32_t g_offPlayerHp = 0x166864Cu;
-static uint32_t g_offPlayerMaxHp = 0x1668650u;
-static uint32_t g_offPlayerMp = 0x1668654u;
-static uint32_t g_offPlayerMaxMp = 0x1668658u;
-static uint32_t g_offPlayerLv = 0x166865Cu;
-static uint32_t g_offEntMgr = 0x1668790u;
+static uint32_t g_offPlayerX = 0x16F88B0u;
+static uint32_t g_offPlayerY = 0x16F88B4u;
+static uint32_t g_offPlayerHp = 0x16EA0FCu;
+static uint32_t g_offPlayerMaxHp = 0x16EA100u;
+static uint32_t g_offPlayerMp = 0x16EA104u;
+static uint32_t g_offPlayerMaxMp = 0x16EA108u;
+static uint32_t g_offPlayerLv = 0x16EA10Cu;
+static uint32_t g_offEntMgr = 0x16F8A00u;
 static uint32_t g_gridVft = 0x117EAD8u;
 static uint32_t g_vftPresA = 0x117DD28u;
 static uint32_t g_vftPresB = 0x1181738u;
@@ -88,7 +88,7 @@ static uint32_t g_deadByte = 0x49u, g_deadVal = 1u;
 static uint32_t g_baitOff = 0x40u, g_baitVal = 0x78u;
 static uint32_t g_deathVft = 0x1180AE8u, g_deadBodyVft = 0x11808A8u;
 /* AttackAction inside the AC block. owner/tgt sit past the 0x140 fingerprint. */
-static uint32_t g_attackActVft = 0x11EB490u;
+static uint32_t g_attackActVft = 0x11F4410u;
 static uint32_t g_offAtkOwner = 0x80u, g_offAtkTgt = 0x88u;
 static uint64_t g_camGlob = 0x180A150ull;
 static uint32_t g_entVft[24];
@@ -429,12 +429,12 @@ static int readAtkPair(uint64_t slot, uint64_t* owner, uint64_t* tgt) {
     *tgt = t;
     return 1;
 }
-/* Door frame lives in the same AC block (DOOR_STATE.md: +0xD8). */
-#define DOOR_STATE_OFF 0xD8u
+/* Door frame lives in the same AC block (DOOR_STATE.md: +0xE0). */
+#define DOOR_STATE_OFF 0xE0u
 #define DOOR_STATE_OPEN 0x1Cu
 #define DOOR_STATE_CLOSED 0x1Du
 #define DOOR_GFX_OFF 0x38u
-#define DOOR_GFX_LOCKED 0x8009u
+#define DOOR_GFX_LOCKED 0xFFFFFFFFu
 #define DOOR_SP 8u
 
 static void readAcFlags(uint64_t e, int* dead, int* bait,
@@ -917,7 +917,7 @@ typedef struct {
     uint64_t atkOwner;
     uint64_t atkTgt;
     int doorCand;       /* InteractiveNPC species 8 or name Door */
-    uint32_t doorFrame; /* AC+0xD8: 0x1C open / 0x1D close */
+    uint32_t doorFrame; /* AC+0xE0: 0x1C open / 0x1D close */
     uint32_t doorGfx;   /* Presentation+0x38: 0x8009 = not permitted */
     int doorGfxOk;
     char name[NAME_CAP];

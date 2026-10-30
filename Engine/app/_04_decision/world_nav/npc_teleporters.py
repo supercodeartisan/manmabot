@@ -10,7 +10,7 @@ Two arrival models (``ShoppingBehavior.teleport_kind``):
 
 Which teleporters are eligible is ``world_nav: true`` on the behavior in
 ``npc_behaviors.yaml`` (Shopping Practice checkbox). Korean base ids are
-stored; Chinese locale uses ``<base>_ch``.
+stored; the UI game language ``zh`` uses ``<base>_ch`` when that row exists.
 """
 
 from __future__ import annotations
@@ -96,20 +96,23 @@ def list_world_nav_teleporter_base_ids(
 def resolve_world_nav_teleporter_ids(
     locale: object | None = None,
 ) -> frozenset[str]:
-    """YAML teleporter ids for the active shop locale (``ko`` / ``zh``).
+    """YAML teleporter ids for the client language (``ko`` / ``zh``).
 
     Enabled set = teleporters with ``world_nav: true`` (Shopping Practice).
+    When ``locale`` is omitted, the UI game language (set at Start) is used.
+    Account server locale does not pick these dialog clicks.
     ``zh`` → ``<base>_ch`` when that row exists, else the Korean base (so a
     newly calibrated field_land is not dropped until a ``_ch`` UV is saved).
     ``ko`` → base. Missing catalog rows are still skipped by ``behavior_by_id``.
     """
-    from app._04_decision.shops import SHOP_LOCALE, normalize_shop_locale
+    from app._04_decision.shops import normalize_shop_locale
     from shop.behaviors import behavior_by_id
 
-    chinese = (
-        normalize_shop_locale(locale if locale is not None else SHOP_LOCALE)
-        == "zh"
-    )
+    if locale is None:
+        from app._04_decision.game_language import get_game_language
+
+        locale = get_game_language()
+    chinese = normalize_shop_locale(locale) == "zh"
     bases = list_world_nav_teleporter_base_ids()
     if not bases:
         # No flagged rows yet — keep historical three so old YAML still works.

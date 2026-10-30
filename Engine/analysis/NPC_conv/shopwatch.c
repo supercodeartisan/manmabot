@@ -89,7 +89,7 @@ int main(int argc,char**argv){
     printf("watch start (BASE=0x%llX). open the NPC shop; lists auto-capture.\n",(unsigned long long)g_base);
     DWORD t0=GetTickCount();
     for(;;){
-        uint64_t mgr=q64(g_base+0x1668790), holder=q64(mgr+0xD0), subs=q64(holder+0x180);
+        uint64_t mgr=q64(g_base+0x16F8A00), holder=q64(mgr+0xD0), subs=q64(holder+0x180);
         uint64_t shop=q64(subs+16*36), inv=q64(subs+16*26);
         int state=d32(shop+0x28);
         uint64_t vb=q64(shop+0x40),ve=q64(shop+0x48),sb=q64(shop+0x58),se=q64(shop+0x60);

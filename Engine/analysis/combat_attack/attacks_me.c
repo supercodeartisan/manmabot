@@ -35,7 +35,7 @@ static int g_attached;
 
 /* Defaults aligned with print_state / entity_offsets 9.30 */
 static char g_procName[64] = "LC.exe";
-static uint32_t g_offEntMgr = 0x1668790u;
+static uint32_t g_offEntMgr = 0x16F8A00u;
 static uint32_t g_gridVft = 0x117EAD8u;
 static uint32_t g_offHolder = 0xD0u;
 static uint32_t g_offSubBeg = 0x180u, g_offSubEnd = 0x188u;
@@ -62,7 +62,7 @@ static int g_once = 0;
 /* Roster clock already used by print_state (slow_ms=100, resweep after 8 tiles).
  * The decision tick still calls snapshot every time; a fresh driver sweep runs
  * only when that clock says the roster is due. Not dist's 200/50. */
-static uint32_t g_offPlayerX = 0x16DED30u, g_offPlayerY = 0x16DED34u;
+static uint32_t g_offPlayerX = 0x16EA0F0u, g_offPlayerY = 0x16EA0F4u;
 static int g_rosterMs = 100, g_moveTiles = 8;
 static uint32_t g_actorVecOff = 0x8A8u, g_actorVecEnd = 0x8B0u;
 static uint64_t g_actorCache = 0;
