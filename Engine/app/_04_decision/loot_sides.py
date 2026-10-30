@@ -74,6 +74,17 @@ def find_pickup_range_loot(
     if is_hp_zero(state):
         return None
 
+    from app._04_decision.behaviors.mode_actions import (
+        SCRATCH_APPROACH_CORPSE_IDS,
+        SCRATCH_APPROACH_HOLD_FIRE,
+    )
+
+    hold_fire = bool(blackboard.scratch.get(SCRATCH_APPROACH_HOLD_FIRE))
+    corpse_ids = {
+        int(item_id)
+        for item_id in (blackboard.scratch.get(SCRATCH_APPROACH_CORPSE_IDS) or [])
+    }
+
     loot_mode = _effective_loot_mode(state)
     origin = blackboard.world_origin
     skip = set(excluded_target_ids(blackboard))
@@ -86,9 +97,10 @@ def find_pickup_range_loot(
     # Prefer sticky item if still in pickup range.
     sticky_id = blackboard.current_item_id
     if sticky_id is not None and int(sticky_id) not in skip:
-        sticky = state.get_object(int(sticky_id))
-        if sticky is not None and _item_in_pickup_range(state, sticky, origin):
-            return sticky
+        if not hold_fire or int(sticky_id) in corpse_ids:
+            sticky = state.get_object(int(sticky_id))
+            if sticky is not None and _item_in_pickup_range(state, sticky, origin):
+                return sticky
 
     candidates = list_lootable(
         state,
@@ -102,6 +114,8 @@ def find_pickup_range_loot(
     )
     in_range: list = []
     for item in candidates:
+        if hold_fire and int(item.track_id) not in corpse_ids:
+            continue
         if _item_in_pickup_range(state, item, origin):
             in_range.append(item)
     if not in_range:

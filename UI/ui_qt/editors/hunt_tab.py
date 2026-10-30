@@ -247,6 +247,15 @@ class HuntTab(QWidget):
         mid.addWidget(area)
         area_l = area.layout()
         assert isinstance(area_l, QVBoxLayout)
+        add_check(
+            area_l, self.bag, "hunt", "approach_no_engage",
+            self.t.get(
+                "approach_no_engage",
+                "Outside the hunt area, do not attack or pick up stray loot",
+            ),
+            False,
+            self._refresh_attack_summary,
+        )
         add_check_spin(
             area_l, self.bag, "area_empty", False, self.t.get("area_empty_suffix", "empty"),
             "area_empty_seconds", 60, 1, 600, self.t.get("seconds", "s"),
@@ -758,6 +767,8 @@ class HuntTab(QWidget):
         ]
         if priorities:
             lines.append(f"{self.t.get('target_priority', 'Priority')}: {', '.join(priorities)}")
+        if self.bag.get_bool("hunt", "approach_no_engage"):
+            lines.append(self.t.get("approach_no_engage", "No attack outside the area"))
         self.attack_summary.setPlainText("\n".join(f"• {line}" for line in lines))
 
     def apply_to_profile(self) -> None:

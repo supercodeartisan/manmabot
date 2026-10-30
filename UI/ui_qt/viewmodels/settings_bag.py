@@ -17,6 +17,7 @@ _HUNT_UI_DEFAULTS: dict[str, Any] = {
     "prefer_caster": True,
     "exclude_busy": True,
     "stick_target": True,
+    "approach_no_engage": False,
     "use_haste_potion": False,
     "haste_potion_item": "",
     "haste_potion_box": 0,

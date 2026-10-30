@@ -136,6 +136,7 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     farm["area_low_yield_seconds"] = int(getattr(profile, "area_low_yield_seconds", 180))
     farm["area_players"] = bool(getattr(profile, "area_players", False))
     farm["area_player_count"] = int(getattr(profile, "area_player_count", 3))
+    farm["approach_no_engage"] = bool(getattr(profile, "approach_no_engage", False))
     returning = dict(decision_cfg.get("return") or {})
     returning["hp_enabled"] = bool(getattr(profile, "return_hp_enabled", True))
     returning["hp_ratio"] = float(getattr(profile, "return_hp_ratio", 0.30))

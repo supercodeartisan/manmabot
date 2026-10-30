@@ -13,8 +13,12 @@ from app._04_decision.behaviors.mode_actions import (
     HP_RETREAT_STARTED,
     apply_hp_actions,
     apply_inplace_hp_support,
+    SCRATCH_APPROACH_HOLD_FIRE,
+    approach_counterattack,
+    clear_approach_hold_tick,
     continue_or_start_loot,
     farm_loot_or_combat,
+    hold_fire_outside_hunt,
     maybe_escalate_teleport_to_safe,
     maybe_heal_mp_to_hp_at_tree,
     maybe_mother_tree_before_passive_wait,
@@ -293,7 +297,13 @@ def _drive_world_nav(
 
     During ``walk``, combat/loot runs *before* nav hop advance so sticky
     engage is not starved by world-nav waypoint clicks every tick.
+    A hunt-rect or dungeon-entrance arrival finishes before that, so the
+    leftover walk to the center never starts.
     """
+    from app._04_decision.world_nav.hooks import finish_hunt_edge_arrival
+
+    if finish_hunt_edge_arrival(state, blackboard):
+        return None
     from app._04_decision.world_nav import (
         SCRATCH_NEED_WORLD_NAV,
         SCRATCH_ROUTINE_KIND,
@@ -306,10 +316,15 @@ def _drive_world_nav(
     session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
     need = blackboard.scratch.get(SCRATCH_NEED_WORLD_NAV)
     phase = getattr(session, "phase", None) if session is not None else None
-    if phase == "walk":
-        fought = farm_loot_or_combat(
-            state, blackboard, restrict_to_farm=False
-        )
+    if phase == "walk" or (
+        phase == "gate_approach" and hold_fire_outside_hunt(state, blackboard)
+    ):
+        if hold_fire_outside_hunt(state, blackboard):
+            fought = approach_counterattack(state, blackboard)
+        else:
+            fought = farm_loot_or_combat(
+                state, blackboard, restrict_to_farm=False
+            )
         if fought is not None:
             if session is not None or need:
                 ensure_world_nav_mode(blackboard)
@@ -323,9 +338,12 @@ def _drive_world_nav(
     phase = getattr(session, "phase", None) if session is not None else None
     # ready→walk this tick: overlay once after the first hop is armed.
     if phase == "walk":
-        fought = farm_loot_or_combat(
-            state, blackboard, restrict_to_farm=False
-        )
+        if hold_fire_outside_hunt(state, blackboard):
+            fought = approach_counterattack(state, blackboard)
+        else:
+            fought = farm_loot_or_combat(
+                state, blackboard, restrict_to_farm=False
+            )
         if fought is not None:
             return fought
     if status is not None:
@@ -751,6 +769,11 @@ def _step_spell_support(
 def _step_farm_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
+    if hold_fire_outside_hunt(state, blackboard):
+        result = approach_counterattack(state, blackboard)
+        if result is not None:
+            _refresh_combat_activity(state, blackboard)
+        return result
     result = farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
     if result is not None:
         _refresh_combat_activity(state, blackboard)
@@ -892,6 +915,16 @@ def _step_retreat_wait(
 def _step_retreat_exit(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
+    from app._04_decision.behaviors.mode_actions import (
+        HP_RETREAT_STARTED,
+        maybe_hp_return_while_retreating,
+    )
+
+    started = maybe_hp_return_while_retreating(state, blackboard)
+    if started is HP_RETREAT_STARTED:
+        return _tick_mother_tree_retreat(state, blackboard)
+    if started is not None:
+        return started
     if retreat_exit_ready(blackboard, state):
         finish_retreat(blackboard)
         return Status.FAILURE
@@ -1033,6 +1066,24 @@ def _step_travel_hunt_map(
     return None
 
 
+def _step_travel_entered_farm(
+    state: "GameState", blackboard: "Blackboard"
+) -> Status | None:
+    """Inside the hunt rect, farm search takes over. The center is not a goal."""
+    del state
+    if blackboard.travel_purpose not in (PURPOSE_ENTER_FARM, PURPOSE_NEXT_FARM):
+        return None
+    farm = get_active_farm(blackboard.farm_area_index)
+    if farm is None:
+        return None
+    ox, oy = int(blackboard.world_origin.x), int(blackboard.world_origin.y)
+    if not farm.contains(ox, oy):
+        return None
+    complete_travel_arrival(blackboard)
+    blackboard.note_no_intent("entered farm rect -> farming")
+    return Status.FAILURE
+
+
 def _step_travel_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
@@ -1041,6 +1092,10 @@ def _step_travel_engage(
         or _patrol_travel(blackboard)
         or _dungeon_floor_travel(blackboard)
     ):
+        if _enter_farm_travel(blackboard) and hold_fire_outside_hunt(
+            state, blackboard
+        ):
+            return approach_counterattack(state, blackboard)
         return farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
     return None
 
@@ -1179,6 +1234,7 @@ def _handlers_traveling() -> dict:
         "shop.trip": _maybe_shop_trip,
         "travel.training_done": _step_travel_training_done,
         "nav.hunt_map": _step_travel_hunt_map,
+        "travel.entered_farm": _step_travel_entered_farm,
         "farm.engage": _step_travel_engage,
         "travel.push_deeper_farm": _step_travel_push_deeper,
         "travel.arrive": _step_travel_arrive,
@@ -1496,9 +1552,12 @@ def _enter_farm_if_needed(
     hunt_map = _maybe_scroll_to_hunt_map(state, blackboard)
     if hunt_map is not None:
         return hunt_map
-    loot = continue_or_start_loot(
-        state, blackboard, allow_new=True, restrict_to_farm=False
-    )
+    if hold_fire_outside_hunt(state, blackboard):
+        loot = approach_counterattack(state, blackboard)
+    else:
+        loot = continue_or_start_loot(
+            state, blackboard, allow_new=True, restrict_to_farm=False
+        )
     if loot is not None:
         return loot
     goal = farm.interior_walkable(terrain, (ox, oy), margin=farm_area.ARRIVE_TILES)
@@ -2235,6 +2294,9 @@ def tick_mode(state: "GameState", blackboard: "Blackboard") -> Status:
     """Dispatch GLOBAL column then the sticky PlayerMode column."""
     from app._04_decision.steps import GLOBAL, run_column
 
+    clear_approach_hold_tick(blackboard)
+    if hold_fire_outside_hunt(state, blackboard):
+        blackboard.scratch[SCRATCH_APPROACH_HOLD_FIRE] = True
     prefix = run_column(
         GLOBAL,
         {

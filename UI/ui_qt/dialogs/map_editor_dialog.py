@@ -264,6 +264,9 @@ class MapEditorWidget(QWidget):
         self._hover_tile: tuple[int, int] | None = None
         self._hover_move: tuple[int, int] | None = None
         self._region_overlay: MainlandRegionOverlay | None = None
+        self._overlay_attempted = False
+        self._defer_gen = 0
+        self._image_loading = True
         self._live_nav: tuple[int, int] | None = None
         self._live_timer: QTimer | None = None
         self._live_anim_timer: QTimer | None = None
@@ -447,6 +450,9 @@ class MapEditorWidget(QWidget):
         self._terrain = None
         self._base = None
         self._region_overlay = None
+        self._overlay_attempted = False
+        self._hover_tile = None
+        self._defer_gen += 1
         self._zoom = 1.0
         self._pan = [0.0, 0.0]
         if dungeon is None:
@@ -460,6 +466,7 @@ class MapEditorWidget(QWidget):
         self._dirty = False
         self._sync_tools()
         if self._pack is None:
+            self._image_loading = False
             self.status.setText(self.s.map_missing_short)
             self._refresh_list()
             self._fill_inspector()
@@ -499,37 +506,56 @@ class MapEditorWidget(QWidget):
                 self._base = None
         else:
             self.status.setText(self.s.map_missing_short)
-        self._region_overlay = None
-        if not self._dungeon and self._base is not None:
-            try:
-                self._region_overlay = build_mainland_overlay(
-                    self._pack, language=self.language
-                )
-            except Exception:
-                self._region_overlay = None
         if not self._dungeon:
             try:
                 self._load_farms()
             except Exception:
                 self.farms = []
         self.patrol = list_patrol_entries(self.map_id) if self._dungeon else []
-        try:
-            self._terrain = self._load_terrain_for_editor()
-        except Exception:
-            self._terrain = None
+        self._image_loading = False
         self.status.setText(
             self.s.map_missing_short if self._base is None else self._hint()
         )
-        try:
-            self._recompute_patrol_paths()
-        except Exception:
-            self._patrol_paths = []
         self._refresh_list()
         self._fill_inspector()
         self._fit()
         self._sync_canvas_size()
         self._sync_map_readout()
         self.canvas.update()
+        # Draw now, before terrain loading blocks the UI thread again.
+        self.canvas.repaint()
+        gen = self._defer_gen
+        QTimer.singleShot(0, self, lambda g=gen: self._load_terrain_after_paint(g))
+
+    def _load_terrain_after_paint(self, gen: int) -> None:
+        if gen != self._defer_gen:
+            return
+        try:
+            self._terrain = self._load_terrain_for_editor()
+        except Exception:
+            self._terrain = None
+        try:
+            self._recompute_patrol_paths()
+        except Exception:
+            self._patrol_paths = []
+        self.canvas.update()
+
+    def _ensure_region_overlay(self) -> None:
+        """Mainland hover names. Built once, on the first mouse move."""
+        if (
+            self._overlay_attempted
+            or self._dungeon
+            or self._base is None
+            or self._pack is None
+        ):
+            return
+        self._overlay_attempted = True
+        try:
+            self._region_overlay = build_mainland_overlay(
+                self._pack, language=self.language
+            )
+        except Exception:
+            self._region_overlay = None
 
     def _recompute_patrol_paths(self) -> None:
         self._patrol_paths = []
@@ -715,7 +741,12 @@ class MapEditorWidget(QWidget):
         painter.fillRect(widget.rect(), QColor("#e5e7eb"))
         if self._base is None:
             painter.setPen(QColor("#888888"))
-            painter.drawText(10, 20, self.s.map_missing_short)
+            placeholder = (
+                self.s.map_loading_short
+                if self._image_loading
+                else self.s.map_missing_short
+            )
+            painter.drawText(10, 20, placeholder)
             return
         self._fit()
         ox, oy = self._image_origin()
@@ -733,7 +764,7 @@ class MapEditorWidget(QWidget):
                 painter.setPen(QPen(outline, 2))
                 painter.drawRect(QRectF(x0, y0, x1 - x0, y1 - y0))
                 if not preview:
-                    painter.setPen(QColor("#1f2937"))
+                    painter.setPen(outline)
                     painter.drawText(
                         int(x0 + 4),
                         int(max(12, y0 - 4)),
@@ -781,6 +812,7 @@ class MapEditorWidget(QWidget):
         if self._hover_tile is not None:
             hx, hy = self._hover_tile
             parts.append(self.s.editor_hover.format(x=hx, y=hy))
+            self._ensure_region_overlay()
             overlay = self._region_overlay
             if overlay is not None:
                 where = overlay.hover_text(hx, hy)

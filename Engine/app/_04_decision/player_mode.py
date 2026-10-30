@@ -191,6 +191,9 @@ AREA_LOW_YIELD_ADENA = 1000
 AREA_LOW_YIELD_SECONDS = 180.0
 AREA_PLAYERS_ENABLED = False
 AREA_PLAYER_COUNT = 3
+# Outside the destination hunt rect / dungeon entrance: no first strike, no
+# stray loot. Counterattack and that kill's drops still run. Off keeps both.
+APPROACH_NO_ENGAGE = False
 
 
 __all__ = [
@@ -288,4 +291,5 @@ __all__ = [
     "AREA_LOW_YIELD_SECONDS",
     "AREA_PLAYERS_ENABLED",
     "AREA_PLAYER_COUNT",
+    "APPROACH_NO_ENGAGE",
 ]

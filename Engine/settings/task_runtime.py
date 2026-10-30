@@ -207,6 +207,10 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     )
     set_value("area_players", bool(hunt.get("area_players", getattr(profile, "area_players", False))))
     set_value(
+        "approach_no_engage",
+        bool(hunt.get("approach_no_engage", getattr(profile, "approach_no_engage", False))),
+    )
+    set_value(
         "area_player_count",
         _int_range(hunt.get("area_player_count"), getattr(profile, "area_player_count", 3), 1, 20),
     )

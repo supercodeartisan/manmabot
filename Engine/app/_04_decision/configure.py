@@ -286,6 +286,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
         pm.AREA_PLAYERS_ENABLED = bool(farm["area_players"])
     if "area_player_count" in farm:
         pm.AREA_PLAYER_COUNT = max(1, int(farm["area_player_count"]))
+    if "approach_no_engage" in farm:
+        pm.APPROACH_NO_ENGAGE = bool(farm["approach_no_engage"])
 
     if shop:
         from app._04_decision import shops as shops_mod
