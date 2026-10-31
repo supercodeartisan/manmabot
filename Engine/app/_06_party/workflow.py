@@ -24,6 +24,15 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     leader's own party memory blind, member reports still count.
     """
     n = len(roster)
+    if n == 0:
+        return [
+            _step(
+                "roster",
+                "Roster",
+                "bad",
+                "empty — party not started",
+            )
+        ]
     sock_state = str(sock.get("state") or "off")
     clients = int(sock.get("clients") or 0)
     listening = sock_state == "listening"
@@ -39,7 +48,7 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
 
     if not listening:
         conn = "off"
-    elif n and clients >= n:
+    elif clients >= n:
         conn = "done"
     else:
         conn = "active" if clients else "wait"
@@ -108,16 +117,28 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     expected = list(rally.get("expected") or [])
     arrived = list(rally.get("arrived") or [])
     rmap = {"done": "done", "waiting": "active", "hold_at": "active", "await_plan": "active"}
-    steps.append(
-        _step(
-            "rally",
-            "Rally",
-            rmap.get(rstate, "off"),
-            f"{rstate} · {len(arrived)}/{len(expected)} arrived · stage {rally.get('stage') or '—'}",
-        )
+    # Rally / hunt are later steps. They must not show done while earlier
+    # ones (connect / policy / invite) are still waiting.
+    earlier_open = conn in ("wait", "active") or (
+        pol in ("wait", "off") and conn != "done"
     )
+    if earlier_open:
+        rstep, rdetail = "off", "after members connect"
+    else:
+        rstep = rmap.get(rstate, "off")
+        rdetail = (
+            f"{rstate} · {len(arrived)}/{len(expected)} arrived "
+            f"· stage {rally.get('stage') or '—'}"
+        )
+    steps.append(_step("rally", "Rally", rstep, rdetail))
     hunting = phase == "hunting"
-    steps.append(_step("hunt", "Hunt", "done" if hunting else "off", phase))
+    if earlier_open and not hunting:
+        hstep, hdetail = "off", "after invite / rally"
+    elif hunting and (conn == "wait" or (conn != "done" and inv in ("off", "wait"))):
+        hstep, hdetail = "wait", f"{phase} · members not connected"
+    else:
+        hstep, hdetail = ("done" if hunting else "off"), phase
+    steps.append(_step("hunt", "Hunt", hstep, hdetail))
     return steps
 
 

@@ -1594,7 +1594,18 @@ class BotController:
 
     def _start_party_socket(self) -> None:
         """Listen while this worker runs, only when Party is enabled as leader."""
-        if not self._party_leader_on():
+        if not self._party_enabled():
+            return
+        role = str(
+            getattr(self._profile, "party_role", "member") or "member"
+        ).strip().lower()
+        if role != "leader":
+            return
+        if not self._leader_roster_ready():
+            self.log(
+                "Party roster empty — party not started. "
+                "Add member names on the Party tab."
+            )
             return
         profile = self._profile
         self._ensure_party_log(role="leader")
@@ -1619,17 +1630,11 @@ class BotController:
             )
         ]
         roster = [n for n in roster if n]
-        if roster:
-            _log(
-                "Party roster: "
-                + ", ".join(roster)
-                + " — /초대 after the game world is ready (not the WS local test)."
-            )
-        else:
-            _log(
-                "Party roster empty — add names on the leader Party tab "
-                "or no /초대 will be typed."
-            )
+        _log(
+            "Party roster: "
+            + ", ".join(roster)
+            + " — /초대 after the game world is ready (not the WS local test)."
+        )
 
     def _stop_party_socket(self) -> None:
         self._party_comms.stop_leader(log=self.log)
@@ -1642,14 +1647,23 @@ class BotController:
         """Master Party-tab switch. Role leftovers must not bypass this."""
         return bool(getattr(self._profile, "party_enabled", False))
 
+    def _leader_roster_ready(self) -> bool:
+        """Leader party needs at least one named seat."""
+        from settings.profile import normalize_party_roster
+
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        return any(str(row.get("name") or "").strip() for row in rows)
+
     def _party_leader_on(self) -> bool:
-        """True only when Party is enabled and this PC is the leader."""
+        """True only when Party is enabled, this PC is the leader, and a roster exists."""
         if not self._party_enabled():
             return False
         role = str(
             getattr(self._profile, "party_role", "member") or "member"
         ).strip().lower()
-        return role == "leader"
+        if role != "leader":
+            return False
+        return self._leader_roster_ready()
 
     def _leader_turret_on(self) -> bool:
         """Party leader with leader mode turret: hunt from one anchor tile."""
@@ -1830,6 +1844,8 @@ class BotController:
             if not party_on:
                 return
             role_txt = str(role or getattr(profile, "party_role", "") or "").strip()
+            if role_txt.lower() == "leader" and not self._leader_roster_ready():
+                return
             path = party_log.configure(
                 log_dir=manmabot_root() / "logs",
                 level=str(level or "INFO"),
@@ -1855,7 +1871,7 @@ class BotController:
         rows = normalize_party_roster(getattr(profile, "party_roster", None))
         names = [str(row.get("name") or "").strip() for row in rows]
         if not any(names):
-            self.log("Party roster empty — no invitations")
+            self.log("Party roster empty — party not started")
             return
         snap = None
         try:
@@ -2127,6 +2143,38 @@ class BotController:
         from app._06_party.comms.orders import policy_acks
 
         return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
+
+    def _leader_may_begin_start_rally(self, world) -> bool:
+        """Rally is after connect / policy / invite, not on the first hunt tick.
+
+        Empty roster stays off (the leader still farms). A named roster waits
+        until a member socket is up and the start-wait invite window is over
+        or the in-game party is already formed.
+        """
+        if not self._party_leader_on():
+            return False
+        start = getattr(self, "_start_rally", None)
+        if start is None or str(getattr(start, "state", "off") or "off") != "off":
+            return False
+        from app._06_party.invite import roster_invite_names
+        from settings.profile import normalize_party_roster
+
+        snap = getattr(world, "last_party", None)
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        expected = set(roster_invite_names(rows, _player_chat_name(world, snap)))
+        if not expected:
+            return False
+        server = getattr(getattr(self, "_party_comms", None), "server", None)
+        clients = int(server.client_count()) if server is not None else 0
+        if clients <= 0:
+            return False
+        invites = getattr(self, "_party_invites", None)
+        if invites is None:
+            return False
+        inviter = getattr(invites, "inviter", None)
+        if inviter is not None and inviter.active:
+            return False
+        return True
 
     def _begin_leader_start_rally(self, world, blackboard) -> None:
         """Party start: rally on this tile, or on the last teleport landing of the route."""
@@ -2583,7 +2631,8 @@ class BotController:
             f"profile.party_member_enabled="
             f"{bool(getattr(profile, 'party_member_enabled', False))} "
             f"→ party_mode={party_mode} "
-            f"leader_on={self._party_leader_on()}"
+            f"leader_on={self._party_leader_on()} "
+            f"roster={self._leader_roster_ready()}"
         )
         if self._party_leader_on():
             self._install_party_nav_hooks()
@@ -3214,24 +3263,35 @@ class BotController:
                 )
                 if start_rally is not None and start_rally.state == "off":
                     try:
-                        self._begin_leader_start_rally(world, decision.blackboard)
+                        if self._leader_may_begin_start_rally(world):
+                            self._begin_leader_start_rally(world, decision.blackboard)
                     except Exception as rally_exc:
                         start_rally.skip(f"failed: {rally_exc}")
                 rally_hold = start_rally is not None and start_rally.waiting
+                invites_now = getattr(self, "_party_invites", None)
+                inviter_now = (
+                    getattr(invites_now, "inviter", None)
+                    if invites_now is not None
+                    else None
+                )
+                forming_hold = bool(
+                    inviter_now is not None and inviter_now.active
+                )
+                organize_hold = rally_hold or forming_hold
                 line_hold = False
-                if self._party_leader_on() and not rally_hold:
+                if self._party_leader_on() and not organize_hold:
                     try:
                         line_hold = self._leader_line_hold(
                             world, decision.blackboard, last_logged_map_id
                         )
                     except Exception as line_exc:
                         self.log(f"Party line watch failed: {line_exc}")
-                set_party_hold(decision.blackboard, rally_hold or line_hold)
-                if rally_hold:
+                set_party_hold(decision.blackboard, organize_hold or line_hold)
+                if organize_hold:
                     _freeze_stay_clocks(decision.blackboard)
                 set_party_turret(
                     decision.blackboard,
-                    self._leader_turret_on() and not rally_hold,
+                    self._leader_turret_on() and not organize_hold,
                     map_id=last_logged_map_id,
                 )
                 if self._party_leader_on():

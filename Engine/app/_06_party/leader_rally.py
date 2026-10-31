@@ -26,7 +26,7 @@ from app._06_party.comms.orders import (
 
 TELEPORT_OPS = ("npc_teleporter", "talking_scroll")
 WAIT_LOG_EVERY_S = 5.0
-WAIT_TIMEOUT_S = 5 * 60
+WAIT_TIMEOUT_S = 10 * 60
 
 
 def last_teleport_index(plan: Any) -> Optional[int]:
@@ -123,7 +123,9 @@ class LeaderStartRally:
             self.deadline = float(deadline)
         self.expected = {str(n).strip() for n in expected if str(n).strip()}
         if not self.expected:
-            self.skip("roster empty")
+            # Stay ``off`` — ``skip()`` used to mark ``done``, so the monitor
+            # painted Rally/Hunt complete while Connect was still waiting.
+            self._log("Party start rally skipped — roster empty")
             return
         if travel:
             self.state = "await_plan"

@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-10-31 — leader start wait 10 min
+
+Intent: The forming window before hunt (all joined → formed, else late + keep inviting) was 5 min. User asked for 10 min so a multi-member roster has more time to connect, ACK, and arrive.
+Shared: `invite.START_WAIT_S` and `leader_rally.WAIT_TIMEOUT_S` (fallback when no invite deadline). Rally still uses the same start-wait deadline. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader hold/rally/hunt start time with a named roster. Invites still have no cut-off after the window.
+Consent: user (set start wait to 10 mins).
+Result: not run in game.
+
+## 2026-10-31 — empty roster does not start leader party
+
+Intent: With no member names, the leader still armed the party (websocket listen, session, rally hooks, monitor pipeline). Party must not start at all until the roster has at least one name; the bot hunts solo.
+Shared: `_party_leader_on` now requires `_leader_roster_ready`. `_start_party_socket` / `_ensure_party_log` / nav hooks / invite setup all follow that gate. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, hunt loop stay as they are.
+Affects: leader Start with an empty Party-tab roster. Named roster unchanged.
+Consent: user (empty roster must not start party).
+Result: not run in game.
+
+## 2026-10-31 — leader workflow: rally/hunt not done while connect is waiting
+
+Intent: The party monitor listed Server → Connect → Policy → Invite → Rally → Hunt as a sequence, but an empty roster skipped rally to ``done`` and the phase became hunting, so Rally/Hunt went green while Connect/Policy/Invite were still waiting. With a roster, start rally also began on the first tick.
+Shared: `leader_workflow` later steps stay off/wait until connect has members; `LeaderStartRally.begin` with no names stays ``off`` (does not `skip()` to ``done``); `_leader_may_begin_start_rally` waits for a member socket and for the invite start-wait to finish (or the party to form). Forming still uses the existing hold-ground window so the leader does not full-hunt while inviting. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader party monitor badges; when start rally begins. Empty roster: leader still farms; Rally/Hunt stay off. Named roster: Rally starts after connect + invite window, still bounded by the same start-wait deadline.
+Consent: user (rally/hunt active while connect/policy/invite waiting).
+Result: not run in game.
+
 ## 2026-10-30 — member heal/buff on the policy ladder; HP while waiting for the leader socket
 
 Intent: Item 7 was two ladders, not a broken heal. Live heal/buff returned from `apply_party_support` before gather/policy, while `decide_policy` never emitted HEAL/BUFF and `intent_for_kind` idled those kinds. Unify: stash support, skip gather when heal/buff is needed (heal still beats the start rally), policy emits HEAL/BUFF first, manager returns the stash. Item 10: leftover `WorldNavHooks` cleared at `_worker` start (party-off Start already cleared them); `merge_leader_policy` imports `comms.orders` not `websocket.party_orders`; member Start enters the bot loop and runs HP-only (`decide_survival`) until the leader socket connects. There is no 60 s connect timeout — 30 s is log cadence. Empty leader IP still fails immediately.

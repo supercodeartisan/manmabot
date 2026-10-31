@@ -1,8 +1,9 @@
-"""ctypes binding for ``analysis/enter_chat/bin/enter_chat.dll`` (ABI 1.0.0+).
+"""ctypes binding for ``enter_chat.dll`` (ABI 1.0.0+).
 
-Mirrors ``analysis/enter_chat/include/enter_chat.h``. x64 only; ``wchar_t`` is
-UTF-16. The DLL looks ``interception.dll`` up by name, so it is preloaded by
-full path before the first call.
+Looks in ``app/_06_party/enter_chat/bin`` (source tree) then the older
+``analysis/enter_chat/bin``. x64 only; ``wchar_t`` is UTF-16. The DLL looks
+``interception.dll`` up by name, so it is preloaded by full path before the
+first call.
 """
 from __future__ import annotations
 
@@ -14,7 +15,10 @@ from pathlib import Path
 from typing import Optional
 
 _ENGINE = Path(__file__).resolve().parents[3]
-_ENTER_CHAT_BIN = _ENGINE / "analysis" / "enter_chat" / "bin"
+_ENTER_CHAT_BINS = (
+    _ENGINE / "app" / "_06_party" / "enter_chat" / "bin",
+    _ENGINE / "analysis" / "enter_chat" / "bin",
+)
 _INTERCEPTION_FALLBACK = _ENGINE / "autologin" / "bot" / "win" / "interception.dll"
 
 _LOAD_LOCK = threading.Lock()
@@ -78,13 +82,21 @@ class EnterChatUnavailable(RuntimeError):
     """``enter_chat.dll`` could not be loaded."""
 
 
+def _first_existing(name: str) -> Optional[Path]:
+    for folder in _ENTER_CHAT_BINS:
+        path = folder / name
+        if path.is_file():
+            return path
+    return None
+
+
 def default_dll_path() -> Path:
-    return _ENTER_CHAT_BIN / "enter_chat.dll"
+    return _first_existing("enter_chat.dll") or (_ENTER_CHAT_BINS[0] / "enter_chat.dll")
 
 
 def default_interception_path() -> Path:
-    bundled = _ENTER_CHAT_BIN / "interception.dll"
-    return bundled if bundled.is_file() else _INTERCEPTION_FALLBACK
+    bundled = _first_existing("interception.dll")
+    return bundled if bundled is not None else _INTERCEPTION_FALLBACK
 
 
 class EnterChatLibrary:

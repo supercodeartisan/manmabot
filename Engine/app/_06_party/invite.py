@@ -34,7 +34,7 @@ INVITE_PREFIX = "/초대 "
 LEAVE_COMMAND = "파티탈퇴"
 
 # Leader waits this long for invites + rally before the hunt; invites go on after.
-START_WAIT_S = 5 * 60
+START_WAIT_S = 10 * 60
 # Re-send ``/초대 <name>`` to a missing member this often.
 INVITE_EVERY_S = 20.0
 # A joined member counts as gone only after reporting "out" this long.
