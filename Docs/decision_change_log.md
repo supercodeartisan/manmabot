@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-31 — member assist beats follow
+
+Intent: Single member walked to the leader (`follow_off_ui` / turret yard / `follow_combat_near`) and only then assisted. Assist must win over moving.
+Shared: `decide_policy` takes ASSIST/CLOSE_IN as soon as `assist_ready`, before any FOLLOW, and without the assist-leash gate. Out of range is CLOSE_IN to the mob, not FOLLOW to the leader. HP / defend / join-map stay above. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member combat vs follow. Follow still runs when there is no assist target. Assist leash still gates turret yard rejoin and `follow_combat_leash`.
+Consent: user (just make assist higher than moving).
+Result: not run in game.
+
 ## 2026-10-31 — member follow closes on the leader, no reverse to a behind-slot
 
 Intent: Single member did not stop within `stop_tiles` when the leader stopped, and sometimes walked the opposite way. Follow was walking to a Reynolds behind-slot, a random cardinal stand, or the turret ring seat — never "arrive near the leader and hold".
