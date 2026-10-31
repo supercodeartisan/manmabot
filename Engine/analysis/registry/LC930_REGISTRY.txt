@@ -196,9 +196,14 @@ PRESB_BATCH_BASE=0x40
 PRESB_SCAN_LEN=0x200
 AC_SCAN_LEN=0x140
 # 현재 행동(액션) 슬롯: ATTACKACT/DEATH/… 가 위치하는 고정 오프셋 + 확인 윈도우
-AC_ACTION_OFF=0xC0
+# [2026-10-29 재검증] 0xC0 -> 0xC8. 클라 갱신으로 ActionComponent 선두에 8B 가 삽입됨.
+#   라이브 관측: AC+0xC0 은 0/1 bool 로 전환, AC+0xC8 이 MovingAction(0x11F4780)/
+#   BreathAction(0x11F4650)/AttackAction(0x11F4410) 객체를 가리키며 액션과 함께 바뀐다.
+AC_ACTION_OFF=0xC8
 AC_ACTION_WIN=0x20
 # ActionComponent+0xD0: hchurn top during walk (~frame rate). Candidate pre-render phase.
+# [미검증 2026-10-29] AC+0xD0 은 이제 "자기 자신을 가리키는 빈 리스트 센티널"로 보인다.
+#   (구 문서의 frame-rate 후보와 불일치. prerender/hchurn 재확정 필요 — 손대지 않음)
 AC_PHASE_OFF=0xD0
 # AC(행동) 상태 필드: bait(dormant)/dead(corpse) 바이트
 AC_BAIT_OFF=0x40
@@ -517,7 +522,7 @@ UILAY_HudHpMpLayoutPCImpl=0x128A3B0
 UILAY_HudSlotLayoutPCImpl=0x128C858
 UILAY_HudChatLayoutPCImpl=0x1289900
 UILAY_HudCharacterInfoLayoutPCImpl=0x1288A78
-UILAY_HudPartyInfoLayoutPCImpl=0x128BAF8
+UILAY_HudPartyInfoLayoutPCImpl=0x1294C80
 UILAY_HudMenuLayoutPCImpl=0x128A950
 UILAY_HudBuffLayout=0x1288320
 UILAY_HudZoneLayoutPCImpl=0x128CEB0
@@ -525,6 +530,55 @@ UILAY_HudQuickSpellSlotLayout=0x128BD90
 UILAY_HudMessageLayout=0x128AC20
 # [2026-10-17] 창고 창(StorageLayout) 실측 — 런타임 상주/열림 시 검출
 UILAY_NPCStorageLayoutPCImpl=0x12A3B78
+# ── HUD 파티 정보창 (2026-10-30 실측, uiparty) ──────────────────────────
+#   HudPartyInfoLayoutPCImpl = vft 0x1294C80 (registry 구값 0x128BAF8 은 stale)
+#   창 사각형  : LayoutBase +0x60/+0x64 (float x,y) · Node(+0x30) +0x6C/+0x70 (float w,h)
+#                좌표계 = cocos 화면좌표(1280x960, 좌하 원점)
+#   가시성     : +0x70 byte0 == 1
+#   2026-10-30 라이브: pos=(26.0, 281.0) size=(192.0 x 387.0) vis=1
+#   멤버 슬롯  : layout+0xC0 부터 stride 0x10, +0x08 = PartyMemberSlot*(vft 0x1294AD8) x8
+#   슬롯 텍스트: slot+0x60(Text) → +WIDGET_RENDERER(0x740) → +LABEL_TEXT_OFF(0x378) = std::string
+LAYOUT_SIZE_W=0x6C
+LAYOUT_SIZE_H=0x70
+PARTY_HUD_SLOT_OFF=0xC0
+PARTY_HUD_SLOT_STRIDE=0x10
+PARTY_HUD_SLOT_OBJ=0x08
+PARTY_HUD_SLOT_COUNT=8
+PARTY_HUD_SLOT_VFT=0x1294AD8
+PARTY_HUD_SLOT_LABEL_OFF=0xC0
+#   슬롯 실측(2026-10-30, 파티 3명): guid @+0x10, HP% @+0x1C, MP% @+0x20 (float)
+#   비활성 슬롯 = guid 0xFFFFFFFF (hp/mp 0)
+PARTY_HUD_SLOT_GUID_OFF=0x10
+PARTY_HUD_SLOT_HP_OFF=0x1C
+PARTY_HUD_SLOT_MP_OFF=0x20
+PARTY_HUD_SLOT_INACTIVE_GUID=0xFFFFFFFF
+#   위젯(Node) 공통 필드 (2026-10-30 실측, partyhud)
+#     local x,y @+0x3C/+0x40 · 절대(월드) 화면 x,y @+0xB0/+0xB4
+#     size @+0x6C/+0x70 (= LAYOUT_SIZE_W/H) · scale @+0x2C/+0x30
+WIDGET_POS_X=0x3C
+WIDGET_POS_Y=0x40
+WIDGET_ABS_X=0xB0
+WIDGET_ABS_Y=0xB4
+WIDGET_SCALE_X=0x2C
+WIDGET_SCALE_Y=0x30
+#   자식 목록: Node +0x178 = std::vector<Node*>{begin,end,cap}
+WIDGET_CHILDREN=0x178
+# ── 화면 매핑 (2026-10-30, 화면 크기 변경 대응) ─────────────────────────
+#   Node + DIRECTOR_OFF → Director, Director + GLVIEW_IN_DIR → GLViewImpl
+#   GLView: frame(픽셀) / design(디자인 해상도) / viewport / scale
+#   client_px = vp + design * scale   (y 는 좌하 원점 → 출력 시 상단 원점으로 변환)
+UI_DESIGN_W=1280
+UI_DESIGN_H=960
+DIRECTOR_OFF=0x198
+GLVIEW_IN_DIR=0x100
+GLV_FRAME_W=0x10
+GLV_FRAME_H=0x14
+GLV_DESIGN_W=0x18
+GLV_DESIGN_H=0x1C
+GLV_VIEW_X=0x20
+GLV_VIEW_Y=0x24
+GLV_SCALE_X=0x50
+GLV_SCALE_Y=0x54
 # ── 창별 콘텐츠 소스 (델리게이트 구독 실측 2026-10-16, uideleg_1016) ──
 #   델리게이트 객체가 타깃 하위시스템 '내부'에 위치 → 구독 관계로 소스 식별.
 UIDELEG_Inventory_Content=InventorySubsystem,EquipmentInfoSubsystem,MagicDollSubsystem,CharacterDataSubsystem
@@ -1469,26 +1523,35 @@ POPUP_TEXT_INLINE=0x101
 #   폴링 주기(ms)
 WINMON_POLL_MS=300
 
-# ── Door(문) 개폐 상태 — 2026-10-19 확정 (실시간 전이 관측 완료) ──────
+# ── Door(문) 개폐 상태 — 2026-10-19 확정 / 2026-10-29 오프셋 재확정 ────
 #   Door = InteractiveNPC 중 종(SPECIES)=DOOR_SP(8) 이거나 이름이 "Door".
 #
-#   [개폐 상태] = **ActionComponent + DOOR_STATE_OFF(0xD8) dword (애니 프레임)**
+#   [개폐 상태] = **ActionComponent + DOOR_STATE_OFF(0xE0) dword (애니 프레임)**
 #        0x1C = 열림 / 0x1D = 닫힘
-#     확정 근거(60초 라이브, 같은 문 C6C):
-#        t=0s 닫힘(1D) → t=24.9s 열림(1C) → t=32.7s 닫힘(1D)   [양방향 전이 관측]
-#     ※ 무효 후보(반례 확인):  AC+0x108(flag), AC+0xD4(진행도),
-#        PRES+0x1F8(1/2 가 실행마다 뒤바뀜=상태 아님), 엔티티 오프셋 대부분(이웃 힙 노이즈)
+#     2026-10-19 근거(60초 라이브, 같은 문 C6C): 닫힘(1D) → 열림(1C) → 닫힘(1D)
+#     2026-10-29 재확정: 클라 갱신으로 8B 삽입 → 구 0xD8 은 이제 매 프레임 변하는
+#       float(보간 alpha)이고, 프레임 인덱스는 0xE0 으로 이동했다.
+#       라이브 근거: AC+0xE0 == 액션객체(AC+0xC8)+0x10 값이 항상 일치
+#       (Breath 시 0x2B, Attack 시 0x29 — 액션에 따라 변함). 구 레이아웃의
+#       액션포인터↔프레임 간격도 0xC0→0xD8 = 0x18 로 동일하다.
+#       문 3개 실측(33402,32794 등): 0xE0 = 0x1C(열림) / 0x1D(닫힘) **둘 다** 관측.
+#       같은 구역에서 gfx 0x800A(여닫이)·0x8009(열 수 없음)도 함께 관측됨.
+#     ※ 무효 후보(반례 확인):  AC+0x110(flag), AC+0xDC, PRES+0x1F8
 #
-#   [문 종류] = Presentation + DOOR_GFX_OFF(0x38) dword (그래픽 ID)
-#        0x800A = 여닫이 문 / 0x8009 = 열 수 없는(고정) 문
-#     근거: C6C 가 열림↔닫힘을 오가는 동안 gfx 는 0x800A 로 **불변** → 상태가 아니라 종류.
-#       (제랄딘 옆 C6B 는 gfx=0x8009 이며 사용자가 "열 수 없는 문"으로 확인)
+#   [문 모델 ID] = Presentation + DOOR_GFX_OFF(0x38) dword
+#        ⚠ 잠금 판정에 쓰지 않는다. 2026-10-29 반증(사용자 확인):
+#          가장 가까운 문 CBE 가 **열고 닫을 수 있는 문**인데 모델이 0x8009 였다.
+#          → 0x8009 는 잠금 표지가 아니라 이 구역에서 흔한 모델 값이다.
+#          (같은 구역 NPC 들도 같은 번호대를 쓴다)
+#        → DOOR_GFX_LOCKED 를 절대 매치되지 않는 값으로 두어 "열 수 없음" 표시를 끈다.
+#          클라이언트가 잠금 여부를 보유한다는 증거는 아직 확보되지 않았다.
+#          상태는 open / close / unknown 세 가지만 쓴다.
 DOOR_NAME=Door
 DOOR_SP=8
-DOOR_STATE_OFF=0xD8
+DOOR_STATE_OFF=0xE0
 DOOR_STATE_OPEN=0x1C
 DOOR_STATE_CLOSED=0x1D
 DOOR_GFX_OFF=0x38
 DOOR_GFX_NORMAL=0x800A
-DOOR_GFX_LOCKED=0x8009
-DOOR_AC_FLAG_OFF=0x108
+DOOR_GFX_LOCKED=0xFFFFFFFF
+DOOR_AC_FLAG_OFF=0x110
