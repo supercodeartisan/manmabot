@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-31 — member follow closes on the leader, no reverse to a behind-slot
+
+Intent: Single member did not stop within `stop_tiles` when the leader stopped, and sometimes walked the opposite way. Follow was walking to a Reynolds behind-slot, a random cardinal stand, or the turret ring seat — never "arrive near the leader and hold".
+Shared: `follow_kind` is a rubber-band on distance to the leader (close until `stop_tiles`, no slot/stand). Manager FOLLOW uses field descent toward the leader; behind-slot / trail / turret seat are not click goals. Turret ring `FOLLOW turret_seat` removed (yard rejoin stays). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member follow / idle hold only. Multi-member turret spread no longer walks to a ring seat; they hold inside `stop_tiles`.
+Consent: user (stop reversing; leader stops → member reaches stop_tiles).
+Result: not run in game.
+
 ## 2026-10-31 — member Y reached the bot UI, not the invite popup
 
 Intent: Member log showed `Y key pressed #1/#2/#3` then `Y FAILED: popup still open`. `_press()` returning "" only meant hunt `key_down("y")` did not throw. Interception/pico keys go to the foreground window; the bot UI was in front, so Y never hit LC. `enter_chat.dll` in this tree is 1.0.0 with no `ec_press_key`, so the DLL path never runs. First policy contact also `reset()` the accepter mid-press, starting a second 3-press cycle.

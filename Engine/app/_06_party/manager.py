@@ -15,10 +15,9 @@ from .assist import (
 )
 from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
-from .follow import travel_band
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
-from .intents import intent_for_kind, pick_settle_stand, plan_field_follow
+from .intents import intent_for_kind, plan_field_follow
 from .join_map import PartyJoinNav
 from .leader import (
     LeaderView,
@@ -521,104 +520,29 @@ class PartyMemberManager:
             leader_tile=leader_tile if leader_present else None,
             farming=bool(view.farming),
         )
-        settle_stand = self._update_settle_stand(
+        # Close on the leader. Behind-slot / cardinal stand / turret seat are
+        # not click goals — they walked the member around or past the leader.
+        self._update_settle_stand(
             game_state,
             origin,
-            leader_tile=leader_tile if leader_present else None,
-            active=origin_ok and leader_stopped and not bool(view.farming),
+            leader_tile=None,
+            active=False,
             cfg=cfg,
-            field=follow_field,
+            field=None,
         )
-        from .follow import (
-            ARRIVAL_TOLERANCE,
-            STICKY_GOAL_SLACK,
-            sticky_goal_tile,
-            tile_chebyshev,
-        )
+        from .follow import tile_chebyshev
 
-        at_settle_stand: Optional[bool] = None
-        if settle_stand is not None and origin_ok:
-            # Arrive tolerance — same as travel slot (exact tile blocked loot).
+        if origin_ok and leader_tile is not None and self.runtime.approach_goal is not None:
             me = (int(origin.x), int(origin.y))
-            at_settle_stand = (
-                tile_chebyshev(me, settle_stand) <= ARRIVAL_TOLERANCE
-            )
-        # Leader just stopped: drop the walking formation sticky goal so we
-        # settle inward instead of holding the follow-distance travel slot.
-        if leader_stopped and self.runtime.approach_goal is not None:
-            if settle_stand is not None:
-                if (
-                    tile_chebyshev(self.runtime.approach_goal, settle_stand)
-                    > STICKY_GOAL_SLACK
-                ):
-                    self.runtime.approach_goal = None
-            elif leader_dist is not None and int(leader_dist) > int(cfg.stop_tiles):
-                # Far sticky travel goal with no stand yet — clear so approach
-                # hops toward the leader for loot range.
-                goal = self.runtime.approach_goal
-                if (
-                    leader_tile is not None
-                    and tile_chebyshev(goal, leader_tile) > int(cfg.stop_tiles)
-                ):
-                    self.runtime.approach_goal = None
-
-        trail_tile = self._formation_trail_tile(
+            goal = self.runtime.approach_goal
+            if tile_chebyshev(goal, leader_tile) > tile_chebyshev(me, leader_tile):
+                self.runtime.approach_goal = None
+        self._formation_trail_tile(
             cfg, leader_tile=leader_tile if leader_present else None
         )
-        travel_spot: Optional[tuple[int, int]] = None
-        walking = (
-            origin_ok
-            and leader_present
-            and leader_tile is not None
-            and not leader_stopped
-            and not bool(view.farming)
-        )
-        if walking and trail_tile is not None:
-            # Narrow passage: single file on the leader's own path.
-            self.runtime.travel_offset = None
-            travel_spot = sticky_goal_tile(
-                trail_tile,
-                self.runtime.approach_goal,
-                slack=STICKY_GOAL_SLACK,
-            )
-        elif walking and follow_field is not None:
-
-            move_dir = self._leader_move_dir()
-            band = travel_band(cfg.follow_tiles)
-            # Formation depth: between stop and travel band (Reynolds behind-slot).
-            slot_dist = max(1, min(band, max(1, int(cfg.stop_tiles))))
-            lateral = self._travel_lateral(move_dir)
-            offset = follow_field.pick_travel_offset(
-                band,
-                self._rng,
-                self.runtime.travel_offset,
-                move_dir=move_dir,
-                slot_distance=slot_dist,
-                lateral=lateral,
-            )
-            self.runtime.travel_offset = offset
-            if offset is not None:
-                ideal = (
-                    int(leader_tile[0]) + int(offset[0]),
-                    int(leader_tile[1]) + int(offset[1]),
-                )
-                # Sticky absolute goal — do not repath every leader step.
-                travel_spot = sticky_goal_tile(
-                    ideal,
-                    self.runtime.approach_goal,
-                    slack=STICKY_GOAL_SLACK,
-                )
-        else:
-            self.runtime.travel_offset = None
-            self.runtime.scratch.pop("travel_lateral", None)
-        at_travel_spot: Optional[bool] = None
-        if travel_spot is not None and origin_ok:
-            # Arrive tolerance: near the slot is enough (no exact-tile jitter).
-            me = (int(origin.x), int(origin.y))
-            at_travel_spot = tile_chebyshev(me, travel_spot) <= ARRIVAL_TOLERANCE
-        stand = settle_stand if settle_stand is not None else travel_spot
-        if seat is not None:
-            stand = seat
+        self.runtime.travel_offset = None
+        self.runtime.scratch.pop("travel_lateral", None)
+        stand = None
 
         result = decide_policy(
             PolicyInput(
@@ -638,8 +562,8 @@ class PartyMemberManager:
                 leader_other_map=leader_other_map,
                 leader_farming=bool(view.farming),
                 leader_stopped=leader_stopped,
-                at_settle_stand=at_settle_stand,
-                at_travel_spot=at_travel_spot,
+                at_settle_stand=None,
+                at_travel_spot=None,
                 leader_walk_dist=leader_walk_dist if leader_present else None,
                 need_combat_step=need_combat_step,
                 solo_farm=cfg.solo_farm,
@@ -864,17 +788,7 @@ class PartyMemberManager:
                     close_in_tile=close_in_tile,
                     settle_stand=stand,
                     stand_reason=(
-                        "turret_seat"
-                        if seat is not None
-                        else (
-                            "follow_settle"
-                            if settle_stand is not None
-                            else (
-                                "follow_trail"
-                                if trail_tile is not None and travel_spot is not None
-                                else "follow_slot"
-                            )
-                        )
+                        "follow_settle" if leader_stopped else "follow_close"
                     ),
                     mid_act=(
                         result.kind
@@ -884,24 +798,11 @@ class PartyMemberManager:
                     ),
                 )
             if result.kind is MemberKind.FOLLOW and detail == "no_path":
-                if seat is not None:
-                    self.runtime.turret_seat_bad = seat
-                elif settle_stand is not None:
-                    self.runtime.settle_blocked.add(settle_stand)
-                    self.runtime.settle_stand = None
-                elif travel_spot is not None:
-                    self.runtime.travel_offset = None
-                    self.runtime.scratch.pop("travel_lateral", None)
+                self.runtime.approach_goal = None
             if route_detail and result.kind is MemberKind.FOLLOW:
                 detail = f"{detail} | {route_detail}"
             if result.kind in (MemberKind.FOLLOW, MemberKind.CLOSE_IN):
                 self.runtime.approach_goal = goal
-            elif result.kind is MemberKind.HOLD and travel_spot is not None:
-                # Arrive: keep sticky formation goal so the next chase reuses it.
-                if goal is not None:
-                    self.runtime.approach_goal = goal
-                elif self.runtime.approach_goal is None:
-                    self.runtime.approach_goal = travel_spot
             elif result.kind in (
                 MemberKind.HOLD,
                 MemberKind.ASSIST,
@@ -1206,6 +1107,8 @@ class PartyMemberManager:
             rt.settle_blocked.clear()
             rt.settle_leader_tile = tile
         try:
+            from .intents import pick_settle_stand
+
             rt.settle_stand = pick_settle_stand(
                 game_state,
                 origin,

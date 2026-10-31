@@ -27,16 +27,14 @@ def follow_kind(
 ) -> tuple[str, bool]:
     """Return ``(band, chasing)`` where band is follow|near.
 
-    Travel uses Reynolds-style Arrive + leader following:
-    - ``at_travel_spot`` True = within arrival of the formation slot → hold
-    - ``at_travel_spot`` False = have a slot but not arrived → walk to it
-    - None = no slot yet → rubber-band on ``follow_tiles`` / ``stop_tiles``
-    Stopped: walk to the locked settle stand (``at_settle_stand``), else
-    tighten until within ``stop_tiles``.
+    Rubber-band on distance to the leader only. A behind-slot, cardinal stand,
+    or turret seat is not a walk goal (those sent the member past / around the
+    leader). Stopped: close until ``stop_tiles`` then hold. Walking: start at
+    ``follow_tiles`` (minus lag), keep closing until ``stop_tiles``.
     Combat (``leader_farming``): caller handles assist/close-in; here ``near``
     means within the travel leash so policy can assist.
     """
-    del _legacy
+    del _legacy, at_settle_stand, at_travel_spot
     dist = int(distance)
     follow = max(1, int(follow_tiles))
     stop = max(0, min(follow, int(stop_tiles)))
@@ -44,27 +42,14 @@ def follow_kind(
         if dist > follow:
             return "follow", True
         return "near", False
+    if dist <= stop:
+        return "near", False
     if leader_stopped:
-        # Already inside the stop band → hold/loot. Do not keep chasing an
-        # exact cardinal stand while the leader is idle (that blocked looting).
-        if dist <= stop:
-            return "near", False
-        if at_settle_stand is False:
-            return "follow", True
-        if at_settle_stand is None and dist > stop:
-            return "follow", True
-        return "near", False
-    # Arrive: already on/near the formation slot.
-    if at_travel_spot is True:
-        return "near", False
-    # Slot exists but we are outside arrival — close on it (sticky goal handles smoothness).
-    if at_travel_spot is False:
         return "follow", True
-    # No slot yet: classic rubber-band leash.
     start = max(stop + 1, follow - TRAVEL_LEAD_TILES)
     if dist >= start:
         return "follow", True
-    if chasing and dist > stop:
+    if chasing:
         return "follow", True
     return "near", False
 

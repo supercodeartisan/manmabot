@@ -43,9 +43,8 @@ class PolicyInput:
     leader_farming: bool = False
     # Leader pose unchanged long enough (not farming) → settle to stop_tiles.
     leader_stopped: bool = False
-    # Stopped leader: on the locked cardinal stand? None = no stand available.
+    # Kept for callers; follow_kind ignores slot/stand (close on the leader).
     at_settle_stand: Optional[bool] = None
-    # Walking leader: within Arrive tolerance of formation slot? None = no slot.
     at_travel_spot: Optional[bool] = None
     # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
     leader_walk_dist: Optional[int] = None
@@ -136,13 +135,8 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             MemberKind.CLOSE_IN, False, f"{yard}{what}{out} dist={dist}"
         )
 
-    # --- Turret: idle members take their radial seat around the leader ---
-    if cfg.turret_farm and in_leash and inp.off_turret_seat:
-        return PolicyResult(
-            MemberKind.FOLLOW,
-            True,
-            f"turret_seat dist={dist}",
-        )
+    # Turret ring seat is not a walk goal: it pulled the member around the
+    # leader. Idle hold is ``stop_tiles``. Yard rejoin stays above.
 
     # --- Combat leash: leader fighting but no live assist target yet ---
     if inp.leader_farming:
