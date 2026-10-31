@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-31 — member Y reached the bot UI, not the invite popup
+
+Intent: Member log showed `Y key pressed #1/#2/#3` then `Y FAILED: popup still open`. `_press()` returning "" only meant hunt `key_down("y")` did not throw. Interception/pico keys go to the foreground window; the bot UI was in front, so Y never hit LC. `enter_chat.dll` in this tree is 1.0.0 with no `ec_press_key`, so the DLL path never runs. First policy contact also `reset()` the accepter mid-press, starting a second 3-press cycle.
+Shared: hunt Y now AttachThreadInput-focuses LC and does not send Y unless the game is in front; the traffic line records `hunt|enter_chat`, backend, IME. First-contact session no longer resets `InviteAccepter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept only.
+Consent: user (check Y pressed 3× popup still open).
+Result: not run in game.
+
 ## 2026-10-31 — member invite Y without enter_chat.dll
 
 Intent: The member saw the invite popup (uidialog confirm parse works) but Y failed: `enter_chat.dll not found` on `D:\ManmabotV1_final_final_final\...` (that tree has no built DLL). Accept must still press Y via the hunt keyboard.

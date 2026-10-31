@@ -38,26 +38,102 @@ ACK_EVERY_S = 2.0
 # Party memory lost this long after it showed the join = left the party.
 LEFT_CONFIRM_S = 10.0
 
+# Last successful Y: how it was sent (hunt vs enter_chat, IME, focus).
+_last_y_note = ""
+
+
+def _hwnd_is_foreground(hwnd: int) -> bool:
+    """True if the foreground window is ``hwnd`` or a child of the same root."""
+    import ctypes
+
+    from win32_prototypes import bind_user32
+
+    top = int(hwnd or 0)
+    if not top:
+        return False
+    user32 = ctypes.windll.user32
+    bind_user32(user32)
+    fg = int(user32.GetForegroundWindow() or 0)
+    if not fg:
+        return False
+    if fg == top:
+        return True
+    return int(user32.GetAncestor(fg, 2) or 0) == int(
+        user32.GetAncestor(top, 2) or 0
+    )
+
+
+def _force_game_foreground(hwnd: int, timeout_ms: int = 1500) -> bool:
+    """Bring LC to the foreground so Interception/pico Y hits the popup.
+
+    ``SetForegroundWindow`` from a background process is refused unless we
+    attach to the current foreground thread first (same as enter_chat).
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    from win32_prototypes import bind_kernel32, bind_user32
+
+    top = int(hwnd or 0)
+    if not top:
+        return False
+    if _hwnd_is_foreground(top):
+        return True
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    bind_user32(user32)
+    bind_kernel32(kernel32)
+    fg = int(user32.GetForegroundWindow() or 0)
+    pid = wintypes.DWORD(0)
+    fg_tid = (
+        int(user32.GetWindowThreadProcessId(fg, ctypes.byref(pid)) or 0) if fg else 0
+    )
+    my_tid = int(kernel32.GetCurrentThreadId())
+    attached = False
+    if fg_tid and fg_tid != my_tid:
+        attached = bool(user32.AttachThreadInput(my_tid, fg_tid, True))
+    try:
+        if user32.IsIconic(top):
+            user32.ShowWindow(top, 9)
+        user32.BringWindowToTop(top)
+        user32.SetForegroundWindow(top)
+    finally:
+        if attached:
+            user32.AttachThreadInput(my_tid, fg_tid, False)
+    deadline = time.monotonic() + max(0.05, timeout_ms / 1000.0)
+    while time.monotonic() < deadline:
+        if _hwnd_is_foreground(top):
+            return True
+        time.sleep(0.02)
+    return _hwnd_is_foreground(top)
+
 
 def _press_y_hunt() -> str:
-    """Y through the hunt keyboard when ``enter_chat.dll`` is missing."""
+    """Y through the hunt keyboard when ``enter_chat.dll`` cannot press it.
+
+    Interception/pico keys go to the foreground window. Do not send Y unless
+    LC is in front — otherwise the key lands in the bot UI and the popup
+    stays open while we log ``Y key pressed``.
+    """
     from app._05_action import input_backend as ib
     from app._05_action.chat.ime import english_ime
     from app._05_action.window_bounds import find_game_window
 
+    global _last_y_note
     hwnd = find_game_window("LC.exe")
+    if not hwnd:
+        return "LC.exe window not found"
     try:
+        if not _force_game_foreground(int(hwnd)):
+            return "game not in focus"
         ib.ensure_open()
-        if hwnd:
-            with english_ime(int(hwnd)):
-                ib.key_down("y")
-                time.sleep(0.04)
-                ib.key_up("y")
-                time.sleep(0.15)
-        else:
+        ime = "unknown"
+        with english_ime(int(hwnd)) as ime:
             ib.key_down("y")
             time.sleep(0.04)
             ib.key_up("y")
+            time.sleep(0.15)
+        _last_y_note = f" · hunt {ib.backend_name()} ime={ime} focused"
         return ""
     except Exception as exc:
         return str(exc)
@@ -68,12 +144,15 @@ def type_accept_key() -> str:
     from app._05_action.chat import default_game_chat
     from app._05_action.chat.native import EnterChatUnavailable
 
+    global _last_y_note
+    _last_y_note = ""
     dll_error = ""
     try:
         result = default_game_chat().press_key(
             ACCEPT_SCANCODE, label="Y (party invite)", english=True
         )
         if result.ok:
+            _last_y_note = f" · enter_chat {result.describe()}"
             return ""
         dll_error = result.describe()
     except EnterChatUnavailable as exc:
@@ -83,7 +162,9 @@ def type_accept_key() -> str:
     hunt_error = _press_y_hunt()
     if not hunt_error:
         return ""
-    return dll_error or hunt_error
+    if dll_error:
+        return f"{hunt_error} (enter_chat: {dll_error})"
+    return hunt_error
 
 
 def _note_monitor(text: str) -> None:
@@ -219,7 +300,9 @@ class InviteAccepter:
         self.pressed_at = time.time()
         self.phase = "pressed"
         self._log(f"Party invite accept: Y pressed (#{self.presses}) for {self.inviter or '—'}")
-        _note_monitor(f"Y key pressed #{self.presses} (accept invite)")
+        _note_monitor(
+            f"Y key pressed #{self.presses} (accept invite){_last_y_note}"
+        )
         return True
 
     def _on_closed(self) -> None:

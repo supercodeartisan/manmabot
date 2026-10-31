@@ -2268,7 +2268,9 @@ class BotController:
         prev = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
         first = not prev.get("session")
         self._member_policy_sig = ""
-        if self._invite_accepter is not None:
+        # First contact often lands while the uidialog invite is already open.
+        # Resetting here restarts the 3-press Y budget mid-accept.
+        if self._invite_accepter is not None and not first:
             self._invite_accepter.reset()
         if self._member_state_reporter is not None:
             self._member_state_reporter.reset()
