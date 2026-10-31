@@ -68,7 +68,8 @@ Sticky `PlayerMode.WORLD_NAV`. 진입: `begin_world_nav` / farming `nav.world`·
 | 6 | `shop.trip` | `SHOP_*` / scroll / walk | **handoff SHOPPING** (request after_shop) | wait |
 | 7 | `spell.support` | heal | emit | — |
 | 8 | `spell.buffs` | `BUFF` | emit | — |
-| 9 | `world_nav.drive` | `TRAVELING`, `USE_TALKING_SCROLL`, `GATE`, `IDLE`, walk→`ATTACK`/`PICKUP` | emit / handoff farming on arrive | wait |
+| 9 | `unstick.confined` | `TELEPORT`, `USE_TALKING_SCROLL`, `IDLE` | emit on a `walk` / `gate_approach` standstill; after the pose leaves, `request_world_nav` with the same reason | wait |
+| 10 | `world_nav.drive` | `TRAVELING`, `USE_TALKING_SCROLL`, `GATE`, `IDLE`, walk→`ATTACK`/`PICKUP` | emit / handoff farming on arrive | wait |
 
 게이트는 Intent `GATE` → `ActionExecutor._gate` → `apply_gate_result`. worker side-channel 없음.
 
@@ -207,7 +208,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | `nav.hunt_map` | island, dungeon, traveling(enter/patrol) | — |
 | `spell.support` | island, dungeon, traveling, retreating | — |
 | `spell.buffs` | island, dungeon, traveling | — |
-| `unstick.confined` | island, traveling | — |
+| `unstick.confined` | island, traveling, world_nav | — |
 | `farm.engage` | island, dungeon, traveling(enter/patrol) | fail |
 | `farm.search` | island | fail |
 | `farm.enter` | island | fail |

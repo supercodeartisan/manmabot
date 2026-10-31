@@ -127,9 +127,17 @@ LOOT_POSE_UNKNOWN_STILL_S = 0.8
 LOOT_CLICKED_COOLDOWN_TICKS = 8
 # After a confirmed pickup click, do not stand idle. Next loot/combat is immediate.
 LOOT_PICKUP_SETTLE_S = 0.0
-# Max wait for that pile to leave memory before walking. Gone → move immediately.
-# Short hold + re-click while listed; ghosts time out without a long IDLE.
+# Legacy config key. A pile that is still in the world is not released on this
+# timer (that 0.8s drop handed the tick to patrol). Listed piles stay until
+# the entity is gone, the bag count rises, or LOOT_PICKUP_GIVEUP_S.
 LOOT_AWAIT_GONE_S = 0.8
+# Minimum gap between standing F4 presses while the pile is still listed.
+LOOT_F4_GAP_S = 0.4
+# Standing F4s that leave the pile in the world, then walk onto it again.
+LOOT_F4_RECHECK_TRIES = 3
+# Still listed this long after the first F4: stop holding and let farm continue.
+# Ghosts and another player's drop must not pin the character.
+LOOT_PICKUP_GIVEUP_S = 8.0
 
 # Legacy hard-stuck gate (kept for old configs). Live recovery uses unstick_seconds.
 TRAVEL_STUCK_TICKS = 100
@@ -257,6 +265,9 @@ __all__ = [
     "LOOT_CLICKED_COOLDOWN_TICKS",
     "LOOT_PICKUP_SETTLE_S",
     "LOOT_AWAIT_GONE_S",
+    "LOOT_F4_GAP_S",
+    "LOOT_F4_RECHECK_TRIES",
+    "LOOT_PICKUP_GIVEUP_S",
     "TRAVEL_STUCK_TICKS",
     "TRAVEL_STUCK_SECONDS",
     "TRAVEL_UNSTICK_SECONDS",

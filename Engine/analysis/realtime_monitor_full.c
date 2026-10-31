@@ -53,7 +53,7 @@ static uint64_t offPosX         = 0x16F88B0ULL;  // PosXAbs (module-relative, 9.
 static uint64_t offPosY         = 0x16F88B4ULL;  // PosYAbs (9.30)
 static uint64_t offPosZ         = 0x1668648ULL;  // PosZAbs (9.30)
 static uint64_t offTick         = 0x1668638ULL;  // ServerTick (u64 ms, 9.30)
-static uint64_t offExpPct       = 0x1644BF0ULL;  // ExperiencePct64 (moving f64, 26.10.14.2; twin at -0x10 stays behind)
+static uint64_t offExpPct       = 0x1644BF0ULL;  // ExperiencePct64 mirror only; display is the LoadingBar f32
 static uint64_t offSkills       = 0;             // SkillListBase (stale, zeroed)
 static uint64_t offParty        = 0;             // PartyBase (stale, zeroed)
 static uint64_t offBuffList     = 0;             // BuffListBase (stale, zeroed)
@@ -418,7 +418,13 @@ static uint32_t decodeAt(uint64_t obj, uint32_t off, int* ok) {
     return u8 - (k * g_chKMul ^ g_chKXor);
 }
 
-static uint64_t g_cachedChar = 0, g_cachedMap = 0;
+static uint64_t g_cachedChar = 0, g_cachedMap = 0, g_cachedUi = 0;
+static uint64_t g_expBarCache = 0;
+/* HudCharacterInfo LoadingBar. LC930_REGISTRY.txt overrides these. */
+static uint32_t g_exp0 = 0x1B0u, g_exp1 = 0x28u, g_exp2 = 0x110u;
+static uint32_t g_expBarOff = 0xE8u, g_expPctOff = 0x704u;
+static uint32_t g_vftBar = 0x12BE970u, g_vftHci = 0x1291D80u, g_vftUi = 0x11F6A38u;
+static uint32_t g_uiVal = 0x38u, g_rttiCol = 0xCu, g_rttiName = 0x10u;
 
 static uint64_t findSubsystem(uint32_t wantVft, uint64_t* cache) {
     uint64_t mgr, holder, bgn, end, e;
@@ -479,6 +485,116 @@ static uint64_t anchorStatus(void) {
     st = cd + g_chCdOff;
     if (chVrva(st) == g_chVftStatus) return st;
     return 0;
+}
+
+static int expHeap(uint64_t a) {
+    return a >= 0x10000000000ULL && a < 0x80000000000ULL;
+}
+
+static void loadExpRegistry(void) {
+    char path[MAX_PATH];
+    FILE* f;
+    char line[256];
+    pathInDataDir(path, sizeof(path), "lc930\\registry\\LC930_REGISTRY.txt");
+    f = fopen(path, "r");
+    if (!f) return;
+    while (fgets(line, sizeof(line), f)) {
+        char* eq;
+        char* key;
+        unsigned long v;
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+        eq = strchr(line, '=');
+        if (!eq || eq == line) continue;
+        *eq = 0;
+        key = line;
+        v = strtoul(eq + 1, NULL, 0);
+        if (!v) continue;
+        if (!strcmp(key, "EXP_CD_0")) g_exp0 = (uint32_t)v;
+        else if (!strcmp(key, "EXP_CD_1")) g_exp1 = (uint32_t)v;
+        else if (!strcmp(key, "EXP_CD_2")) g_exp2 = (uint32_t)v;
+        else if (!strcmp(key, "EXP_HUD_BAR")) g_expBarOff = (uint32_t)v;
+        else if (!strcmp(key, "EXP_BAR_PCT")) g_expPctOff = (uint32_t)v;
+        else if (!strcmp(key, "VFT_LOADINGBAR")) g_vftBar = (uint32_t)v;
+        else if (!strcmp(key, "VFT_HUDCHARINFO")) g_vftHci = (uint32_t)v;
+        else if (!strcmp(key, "VFT_UISUBSYSTEM")) g_vftUi = (uint32_t)v;
+        else if (!strcmp(key, "UIDLG_CONT_VAL")) g_uiVal = (uint32_t)v;
+        else if (!strcmp(key, "RTTI_COL_TD_OFF")) g_rttiCol = (uint32_t)v;
+        else if (!strcmp(key, "RTTI_TD_NAME_OFF")) g_rttiName = (uint32_t)v;
+    }
+    fclose(f);
+}
+
+static int expClassIs(uint64_t vft) {
+    uint64_t col, slot;
+    uint32_t td;
+    char raw[160];
+    const char* p = raw;
+    static const char want[] = "HudCharacterInfoLayoutPCImpl";
+    if (!chIsMod(vft)) return 0;
+    col = rd64(vft - 8);
+    if (!chIsMod(col)) return 0;
+    td = rd32(col + g_rttiCol);
+    slot = g_base + td;
+    if (!chIsMod(slot)) return 0;
+    memset(raw, 0, sizeof(raw));
+    if (!readMem(slot + g_rttiName, raw, sizeof(raw) - 1)) return 0;
+    if (strncmp(p, ".?AV", 4) == 0) p += 4;
+    return strncmp(p, want, sizeof(want) - 1) == 0 &&
+        (p[sizeof(want) - 1] == '@' || p[sizeof(want) - 1] == 0);
+}
+
+static uint64_t expFindWin(uint64_t ui) {
+    static const uint32_t heads[2] = {0x38u, 0x28u};
+    static const uint32_t nexts[2] = {0x18u, 0x28u};
+    int c, k;
+    if (!expHeap(ui)) return 0;
+    for (c = 0; c < 2; c++) {
+        uint64_t n = rd64(ui + heads[c]);
+        for (k = 0; expHeap(n) && k < 4096; k++) {
+            uint64_t x = rd64(n + g_uiVal);
+            uint64_t nx;
+            if (expHeap(x) && expClassIs(rd64(x))) return x;
+            nx = rd64(n + nexts[c]);
+            if (nx == n) break;
+            n = nx;
+        }
+    }
+    return 0;
+}
+
+static int expBarPct(uint64_t bar, float* out) {
+    float v = 0.f;
+    if (!expHeap(bar) || chVrva(bar) != g_vftBar) return 0;
+    if (!readMem(bar + g_expPctOff, &v, 4)) return 0;
+    if (v != v || v < 0.f || v > 100.f) return 0;
+    *out = v;
+    return 1;
+}
+
+/* Chain first, then the cached LoadingBar, then the UI window search.
+ * The BSS double is not this function. */
+static int readHudExp(double* out) {
+    float v = 0.f;
+    uint64_t cd, p0, p1, p2, bar, ui, hci;
+    cd = findCharDataSubsystem();
+    if (cd) {
+        p0 = rd64(cd + g_exp0);
+        p1 = expHeap(p0) ? rd64(p0 + g_exp1) : 0;
+        p2 = expHeap(p1) ? rd64(p1 + g_exp2) : 0;
+        bar = (expHeap(p2) && chVrva(p2) == g_vftHci) ? rd64(p2 + g_expBarOff) : 0;
+        if (expBarPct(bar, &v)) { g_expBarCache = bar; *out = (double)v; return 1; }
+    }
+    if (expBarPct(g_expBarCache, &v)) { *out = (double)v; return 1; }
+    g_expBarCache = 0;
+    ui = findSubsystem(g_vftUi, &g_cachedUi);
+    hci = expFindWin(ui);
+    bar = expHeap(hci) ? rd64(hci + g_expBarOff) : 0;
+    if (expBarPct(bar, &v)) { g_expBarCache = bar; *out = (double)v; return 1; }
+    return 0;
+}
+
+static int mirrorExpOk(double v) {
+    return v == v && (v == 0.0 || (v >= 1e-4 && v <= 100.0));
 }
  
 // ---------------------------------------------------------------------------
@@ -637,7 +753,12 @@ static void readPlayer(PlayerData* p) {
             readMem(g_base + offTick, &p->tickMs, 8);
         }
     }
-    readMem(g_base + offExpPct, &p->expPct, 8);
+    {
+        double hud = 0.0, mir = 0.0;
+        if (readHudExp(&hud)) p->expPct = hud;
+        else if (readMem(g_base + offExpPct, &mir, 8) && mirrorExpOk(mir)) p->expPct = mir;
+        else p->expPct = 0.0;
+    }
     // Lawful/Weight/MaxWeight/Food from offsets.json are module-relative globals
     // (large offsets >= 0x400000); discovered ones are player-relative (small).
     uint64_t lawfulA = (g_offLawful >= 0) ? (uint64_t)(g_offLawful >= 0x400000 ? g_base + g_offLawful : pb + g_offLawful) : 0;
@@ -1514,6 +1635,8 @@ static void monitorDetach(void) {
     g_pid = 0;
     g_cachedChar = 0;
     g_cachedMap = 0;
+    g_cachedUi = 0;
+    g_expBarCache = 0;
 }
 
 static int monitorEnsure(const char* offsetsPath) {
@@ -1526,6 +1649,7 @@ static int monitorEnsure(const char* offsetsPath) {
         pathInDataDir(chPath, sizeof(chPath), "char_offsets.txt");
         loadCharOffsets(chPath);
     }
+    loadExpRegistry();
     if (!g_nZones) LoadZoneTable();
     if (!g_monClock) {
         QueryPerformanceFrequency(&g_monFreq);
@@ -1632,6 +1756,7 @@ int main(int argc, char** argv) {
 
     loadExtraOffsets();
     loadCharOffsets("char_offsets.txt");
+    loadExpRegistry();
     if (g_extraOk) {
         LOG("Extra offsets loaded: lawful=%d weight=%d maxWeight=%d food=%d stats=%d,%d,%d,%d,%d,%d\n",
             g_offLawful, g_offWeight, g_offMaxWeight, g_offFood,

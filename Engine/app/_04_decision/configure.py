@@ -366,7 +366,11 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
 
     from app._04_decision.game_language import set_game_language
 
-    set_game_language(root.get("game_language"))
+    # Dialog clicks follow the account server language. shop_locale is copied
+    # from that account at start. The profile game_language field is only the
+    # fallback when no account locale was supplied.
+    click_lang = shop.get("shop_locale", root.get("game_language"))
+    set_game_language(click_lang)
 
     if "stuck_ticks" in travel:
         pm.TRAVEL_STUCK_TICKS = int(travel["stuck_ticks"])

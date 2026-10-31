@@ -309,6 +309,46 @@ def _straight_extend_waypoint(
     return best
 
 
+def _dungeon_current_click_holds(
+    blackboard: "Blackboard",
+    terrain: object,
+    state: object | None,
+    waypoint: tuple[int, int],
+) -> bool:
+    """True when the current dungeon click is still a forward walk.
+
+    A bend that only changes the farthest route cell does not drop the click.
+    The click drops when it is no longer ahead on the route, or the client
+    line to it is blocked. Field travel does not call this.
+    """
+    from app._04_decision.avoidance import collect_body_tiles, travel_max_hop
+
+    guide = [(int(x), int(y)) for x, y in blackboard.nav_path]
+    if not guide:
+        return False
+    origin = blackboard.world_origin
+    current = (int(waypoint[0]), int(waypoint[1]))
+    px, py = int(origin.x), int(origin.y)
+    start = (px, py)
+    if start == current:
+        return False
+    try:
+        at = guide.index(current)
+    except ValueError:
+        return False
+    if at <= _route_anchor(guide, px, py):
+        return False
+    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    return _route_cell_clickable(
+        terrain,
+        origin,
+        start,
+        current,
+        bodies,
+        int(travel_max_hop()),
+    )
+
+
 def _chain_route_click(
     blackboard: "Blackboard",
     terrain: object,
@@ -825,8 +865,10 @@ def emit_travel_hop(
         blackboard.scratch["travel_hop_miss"] = miss
         return False
 
-    # Active hop. Dungeon chains the next clear route cell while walking.
-    # Field still extends only along a straight line, two tiles before arrival.
+    # Active hop. Dungeon keeps the current click while that line still
+    # walks forward. A new click is the next route cell only once this one
+    # is blocked or no longer ahead. Field still extends only along a
+    # straight line, two tiles before arrival.
     if blackboard.travel_hop_active and blackboard.nav_waypoint is not None:
         wp = (int(blackboard.nav_waypoint[0]), int(blackboard.nav_waypoint[1]))
         from app._04_decision.dungeon import is_dungeon_map
@@ -834,7 +876,9 @@ def emit_travel_hop(
 
         if is_dungeon_map():
             chained = None
-            if not blackboard.travel_unstick_active:
+            if not blackboard.travel_unstick_active and not _dungeon_current_click_holds(
+                blackboard, terrain, state, wp
+            ):
                 chained = _chain_route_click(blackboard, terrain, state, wp)
             if chained is not None:
                 from app.bot_log import event

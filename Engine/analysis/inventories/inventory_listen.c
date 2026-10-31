@@ -52,6 +52,7 @@
 #define MAX_PROBE_STEPS    8192
 #define VALID_PTR_LO       0x10000000000ULL
 #define VALID_PTR_HI       0x40000000000ULL
+#define MAX_ITEM_COUNT     50000000u       /* stacks through 50,000,000 stay in the bag JSON */
 
 // ItemEntity field offsets (JSON then inventory_offsets.txt).
 // id = ITEM_CFG +0x30 — Python shop matching uses this, not instance/tmpl.
@@ -461,7 +462,7 @@ static void scanWindowItems(const uint8_t* win, uint32_t br, uint64_t winAddr,
             LOG("  [filter] id out of range: %u\n", id);
             continue;
         }
-        if (cnt == 0 || cnt > 1000000) continue;
+        if (cnt == 0 || cnt > MAX_ITEM_COUNT) continue;
         int dup = 0;
         for (int d = 0; d < *nItems; d++)
             if (items[d].addr == obj) { dup = 1; break; }
@@ -523,7 +524,7 @@ static void scanWindowTokens(const uint8_t* win, uint32_t br, uint64_t winAddr,
                         uint32_t cnt = *(uint32_t*)(base + oItemCount);
                         uint32_t kind = *(uint32_t*)(base + oItemKind);
                         if (node == obj + oItemGuid && id > 0 && id <= 500000 &&
-                            cnt > 0 && cnt <= 1000000) {
+                            cnt > 0 && cnt <= MAX_ITEM_COUNT) {
                             int dup = 0;
                             for (int d = 0; d < *nItems; d++)
                                 if (items[d].addr == obj) { dup = 1; break; }
@@ -1244,7 +1245,7 @@ static int inventoryScan(InvItem* items, int max, uint64_t* vecBase, uint64_t* v
             cnt = d32(e + oItemCount);
             kind = d32(e + oItemKind);
             if (id == 0 || id > 500000) continue;
-            if (cnt == 0 || cnt > 1000000) continue;
+            if (cnt == 0 || cnt > MAX_ITEM_COUNT) continue;
             it = &items[nItems++];
             memset(it, 0, sizeof(*it));
             it->addr = e;

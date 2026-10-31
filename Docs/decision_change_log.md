@@ -1,5 +1,45 @@
 # Decision change log
 
+## 2026-10-31 — loot F4 on the matching tile, dungeon keeps a live click
+
+Intent: press F4 on the tick the live tile equals the pile, with no ground click on that tick, and stop reissuing a dungeon walk click just because the next route cell changed.
+Shared: none. `try_unstick_escape`, combat, retreat, and the field branch of `emit_travel_hop` are unchanged. `f4_allowed` still requires a stand unless this loot press set `_loot_f4_match` for that id, so a side F4 during another action does not fire while walking. The 0.4s gap remains only between retries in `try_finish_pending_pickup`. A walkable pile at Chebyshev 1 does not match.
+Affects: sticky loot approach and the dungeon hop while a click is already active. Mainland and Talking Island travel still extend only on a straight line. After three failed presses the pile is walked again. A listed pile still holds the character until it leaves, the bag rises, or the give-up cap.
+Consent: user (adena: loot_hop approach only, F4 when the live tile matches, no stand or 0.4s on that press, hold until the pile is gone, no F4 at distance 1 while moving; dungeon: travel.py dungeon branch only, new click only when the current line is blocked or that direction cannot continue).
+Result: implemented. Checked by a local decision simulation, not by a game log. A portable exe built before this change does not include it.
+
+## 2026-10-31 — world nav uses the 13 s confined teleport
+
+Intent: a world-nav walk that stays inside 3 tiles for 13 seconds uses the hotbar teleport, or the talking scroll when teleport cannot fire, then plans again from the landing to the same routine row.
+Shared: `WORLD_NAV` column and `_maybe_world_nav_confined`. `try_confined_escape` / `try_unstick_teleport` are unchanged, so island and travel escapes stay as they are. The clock runs only in `walk` and `gate_approach`. Scroll, settle, NPC teleporter, and gate click reset it. A hunt-edge arrival is left to `world_nav.drive`. Dungeon maps still disable unstick. After the cast, the live plan is dropped and the mode stays `WORLD_NAV` until the pose leaves that bubble (or 12 seconds pass), then `request_world_nav` uses the same reason. The old step list is not resumed. A mainland scroll's `unstick_scroll_return` flag is cleared here so farming does not idle on it afterward.
+Affects: world-nav walks and gate approaches, including the Talking Island walk from the magic-book merchant. Shop, retreat, combat selection, HP, and login are unchanged. A sticky fight still clears the clock. A second standstill after the new plan can teleport again.
+Consent: user (add the 13-second teleport to world nav, then continue the trip that was in progress; stop first if that would break the existing route).
+Result: implemented. Not run in game.
+
+## 2026-10-31 — account server language picks teleporter clicks again
+
+Intent: account management server language `zh-CN` must select the Chinese dialog rows. On 2026-10-22 teleporter ids were switched from that account locale to the profile game language, which stays `ko`, so a Chinese account still clicked `teleport_gludin`.
+Shared: `configure_decision` copies `shop_locale` (the account locale) into the live click language. `resolve_world_nav_teleporter_ids` and the recover-arrow shop points read that language. Buy/sell ids already used `shop_locale`. Movement, combat, HP, and login are unchanged. A missing `_ch` row still uses the Korean row.
+Affects: world-nav NPC teleporter dialogs, including Gludin. A Korean account keeps the Korean rows. The profile field `game_language` on disk is not rewritten; the session log line `click language=` is the value the clicks use.
+Consent: user (account server language Chinese must use the Chinese settings, as it did before the 2026-10-22 split).
+Result: implemented. A config with `shop_locale=zh` and `game_language=ko` selects `teleport_gludin_ch`. The reverse selects `teleport_gludin`. Not run in game. The profile file still says `game_language=ko`.
+
+## 2026-10-31 — exp percent comes from the LoadingBar, not the BSS mirror
+
+Intent: the income bar and the monitor `expPct` follow charread. Read the HudCharacterInfo LoadingBar float (CharacterData chain, then the UI window). Use ExperiencePct64 only when that bar is missing and the double is a real 0–100 percent. Do not replace the mirror RVA.
+Shared: `body_pose.read_progress`, `realtime_monitor_full.c` `readHudExp`. `EXP_KILL_RELEASE_ENABLED` stays false, so a real percent does not release a sticky target. Movement, combat clicks, loot, HP, and login are unchanged.
+Affects: the hourly exp rate and the monitor field. A running process keeps the old reader until it starts again.
+Consent: user (wire the income bar and monitor expPct to the LoadingBar; keep the mirror as the fallback).
+Result: implemented. Live `read_progress` and a new monitor snapshot both returned level 15 and 25.1605%. A process that already loaded the previous DLL keeps that image until it starts again.
+
+## 2026-10-31 — F4 only after a stop, and a listed pile is not dropped at 0.8s
+
+Intent: press pickup only when the character is on the pile and standing. Do not press during a walk or an attack. Keep the pile until it leaves the world or the bag count rises, instead of releasing it 0.8s after F4 and letting patrol walk away. A failed press rechecks the tile. A side F4 does not run while attack, travel, search, or sticky loot owns the tick.
+Shared: `tick_loot_item`, `try_finish_pending_pickup`, `loot_awaiting_memory_gone`, `mark_loot_clicked`, `f4_allowed`, `arm_loot_side_intent`, `controller._loot`. Combat clicks, travel hops, and `ExperiencePct64` are unchanged. Sticky combat can still preempt loot. After three standing F4s the tile is walked again. A pile still listed 8s after several F4s is released so a ghost does not pin the character.
+Affects: hunt loot and the pickup that used to run beside an attack or a patrol click. Movement geometry and attack selection are unchanged.
+Consent: user (fix the F4 loot path from the log; do not touch the exp address; keep movement and combat impact small).
+Result: implemented. Not run in game.
+
 ## 2026-10-30 — exp-rise kill release is off
 
 Intent: stop treating a level or exp rise as a kill. The sticky monster stays the attack target until a memory death signal drops it.

@@ -81,7 +81,7 @@ decision:
     loot_keep_tiles: 8
     loot_pickup_tiles: 1       # Chebyshev ≤ this → PICKUP/F4; farther → walk onto item
     loot_pickup_settle_s: 0.0  # 0 = after pickup, go to the next pile immediately
-    loot_await_gone_s: 0.8     # hold/re-click clicked pile until gone (or timeout)
+    loot_await_gone_s: 0.8     # legacy load; a listed pile is not dropped on this timer
     loot_hop_arrive_tiles: 1   # loot walk done this close to the hop
     loot_cursor_search_tiles: 0.0  # pile UV + memory cell only; 0.2 neighbor walks away
     # Living attackable monster inside this box (width × height radii) beats loot.

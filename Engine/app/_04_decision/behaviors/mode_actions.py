@@ -2425,8 +2425,10 @@ def farm_loot_or_combat(
        preferred over other piles; sticky non-adena yields to adena.
     4. A missed loot cursor last tick yields to an attackable monster when
        there is nothing left to loot.
-    5. After a pickup click, while that pile remains in memory re-click or
-       walk back (do not roam). Short timeout (~0.8s) then continue.
+    5. After F4, stay on that pile until it leaves the world or the bag
+       count rises. Do not hand the tick to patrol on a short timer.
+       A failed press waits until the body is stopped, then retries or
+       walks onto the tile again.
     6. Else engage the nearest on-screen monster.
     """
     from app.bot_log import event

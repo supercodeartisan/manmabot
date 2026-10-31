@@ -67,42 +67,80 @@ def abandon_loot_item(blackboard: "Blackboard", item_id: int) -> None:
     clear_loot_hop(blackboard)
 
 
-def mark_loot_clicked(blackboard: "Blackboard", item_id: int) -> None:
-    """Remember a successful pickup click so the empty tile is not re-clicked."""
+def mark_loot_clicked(
+    blackboard: "Blackboard",
+    item_id: int,
+    state: "GameState | None" = None,
+) -> None:
+    """Remember an F4 so the pile is held until it leaves or the bag rises."""
     blackboard.loot_clicked_ids[int(item_id)] = int(blackboard.tick_count)
     blackboard.loot_pickup_until = 0.0
+    first = blackboard.loot_await_gone_id != int(item_id)
     blackboard.loot_await_gone_id = int(item_id)
-    blackboard.loot_await_gone_since = time.time()
+    if first or not blackboard.loot_await_gone_since:
+        blackboard.loot_await_gone_since = time.time()
     if blackboard.current_item_id == item_id:
         blackboard.current_item_id = None
     clear_loot_hop(blackboard)
+    obj = state.get_object(int(item_id)) if state is not None else None
+    qty = _bag_qty(state, obj)
+    base = blackboard.scratch.get("_loot_bag_base")
+    if qty is not None and (
+        not isinstance(base, tuple) or len(base) != 2 or int(base[0]) != int(item_id)
+    ):
+        blackboard.scratch["_loot_bag_base"] = (int(item_id), int(qty))
+    blackboard.scratch["_loot_f4_at"] = time.time()
+    blackboard.scratch["_loot_f4_tries"] = int(
+        blackboard.scratch.get("_loot_f4_tries") or 0
+    ) + 1
+    blackboard.scratch["_loot_f4_total"] = int(
+        blackboard.scratch.get("_loot_f4_total") or 0
+    ) + 1
 
 
 def clear_loot_await(blackboard: "Blackboard") -> None:
     blackboard.loot_await_gone_id = None
     blackboard.loot_await_gone_since = 0.0
+    blackboard.scratch.pop("_loot_f4_tries", None)
+    blackboard.scratch.pop("_loot_f4_total", None)
+    blackboard.scratch.pop("_loot_f4_at", None)
+    blackboard.scratch.pop("_loot_bag_base", None)
+    blackboard.scratch.pop("_loot_wait_log", None)
+    blackboard.scratch.pop("_loot_force_reapproach", None)
+    blackboard.scratch.pop("_loot_f4_match", None)
 
 
 def loot_awaiting_memory_gone(
     state: "GameState | None",
     blackboard: "Blackboard",
 ) -> bool:
-    """True while the last clicked pile is still in the memory entity list.
+    """True while the last F4 pile is still on the ground and not in the bag.
 
-    Walking (search / travel / next-pile hop) waits until print_state omits
-    it. A short timeout unblocks ghosts and other-player drops.
+    Patrol may start when the entity leaves the world or the matching bag
+    count rises. A listed pile is not released on the old 0.8s timer.
+    ``LOOT_PICKUP_GIVEUP_S`` releases a ghost that never leaves.
     """
     from app._04_decision.combat_query import memory_target_gone
+    from app.bot_log import event
 
     tid = blackboard.loot_await_gone_id
     if tid is None:
         return False
-    started = float(blackboard.loot_await_gone_since or 0.0)
-    if started and (time.time() - started) >= float(pm.LOOT_AWAIT_GONE_S):
+    obj = state.get_object(int(tid)) if state is not None else None
+    gone = obj is None or memory_target_gone(state, obj)
+    if gone or _bag_rose(state, blackboard, obj):
         clear_loot_await(blackboard)
         return False
-    obj = state.get_object(int(tid)) if state is not None else None
-    if obj is None or memory_target_gone(state, obj):
+    started = float(blackboard.loot_await_gone_since or 0.0)
+    total = int(blackboard.scratch.get("_loot_f4_total") or 0)
+    # A fight that preempts one press must not drop the pile. Give up only
+    # after several real F4s still left it in the world.
+    if (
+        total >= int(pm.LOOT_F4_RECHECK_TRIES)
+        and started
+        and (time.time() - started) >= float(pm.LOOT_PICKUP_GIVEUP_S)
+    ):
+        event("loot", "pickup give up id=%s (still listed)", tid)
         clear_loot_await(blackboard)
         return False
     return True
@@ -124,10 +162,11 @@ def try_finish_pending_pickup(
     state: "GameState | None",
     blackboard: "Blackboard",
 ) -> "Status | None":
-    """While the last clicked pile is still listed: re-click or walk back.
+    """While the last F4 pile is still listed: wait, press again, or walk back.
 
-    Stops search/other-loot from canceling an in-flight pickup. Sticky combat
-    outside this helper may still preempt. Returns None when not awaiting.
+    Does not hand the tick to patrol while the pile is still in the world.
+    Sticky combat outside this helper may still preempt. Returns None when
+    the pile is confirmed gone, the bag rose, or the give-up cap elapsed.
     """
     from app._03_world import ObjectType
     from app._04_decision.behavior_tree import Status
@@ -144,30 +183,52 @@ def try_finish_pending_pickup(
 
     origin = blackboard.world_origin
     item_tile = object_absolute_tile(obj, origin)
-    in_range = _in_pickup_range(origin, obj, item_tile)
+    feet = _feet_on_pickup(origin, item_tile, obj)
     # Named small adena is not walked back to. A pile already underfoot still F4s.
-    if small_adena_ignored(obj) and not in_range:
+    if small_adena_ignored(obj) and not feet and not _in_pickup_range(
+        origin, obj, item_tile
+    ):
         clear_loot_await(blackboard)
         return None
-    if in_range:
-        event("loot", "pickup retry id=%s (await still listed)", tid)
-        _emit_pickup(
-            blackboard,
-            int(tid),
-            mid_act=False,
-            reason="pickup retry",
-        )
-        return Status.SUCCESS
+    if not feet:
+        if small_adena_ignored(obj):
+            clear_loot_await(blackboard)
+            return None
+        event("loot", "pickup re-approach id=%s (await still listed)", tid)
+        blackboard.current_item_id = int(tid)
+        blackboard.current_target_id = None
+        clear_engage_state(blackboard)
+        status = tick_loot_item(state, blackboard, obj, fresh=True)
+        if status is Status.SUCCESS:
+            return Status.SUCCESS
+        return emit_await_pickup_gone(blackboard)
 
-    # Walked off before the server dropped the pile — approach again.
-    event("loot", "pickup re-approach id=%s (await still listed)", tid)
-    blackboard.current_item_id = int(tid)
-    blackboard.current_target_id = None
-    clear_engage_state(blackboard)
-    status = tick_loot_item(state, blackboard, obj, fresh=True)
-    if status is Status.SUCCESS:
+    # Still on the pile. Do not wait for stand. The gap only spaces a retry
+    # after the press that already went out, and it emits no ground click.
+    tries = int(blackboard.scratch.get("_loot_f4_tries") or 0)
+    if tries >= int(pm.LOOT_F4_RECHECK_TRIES):
+        blackboard.scratch["_loot_f4_tries"] = 0
+        blackboard.scratch["_loot_force_reapproach"] = 1
+        event("loot", "pickup recheck id=%s (still listed)", tid)
+        blackboard.current_item_id = int(tid)
+        blackboard.current_target_id = None
+        clear_engage_state(blackboard)
+        status = tick_loot_item(state, blackboard, obj, fresh=True)
+        if status is Status.SUCCESS:
+            return Status.SUCCESS
+        return emit_await_pickup_gone(blackboard)
+    last = float(blackboard.scratch.get("_loot_f4_at") or 0.0)
+    if last and (time.time() - last) < float(pm.LOOT_F4_GAP_S):
+        _emit_wait(blackboard, int(tid), "pickup settle")
         return Status.SUCCESS
-    return emit_await_pickup_gone(blackboard)
+    event("loot", "pickup retry id=%s (await still listed)", tid)
+    _emit_pickup(
+        blackboard,
+        int(tid),
+        mid_act=False,
+        reason="pickup retry",
+    )
+    return Status.SUCCESS
 
 
 def loot_pickup_settling(blackboard: "Blackboard") -> bool:
@@ -371,12 +432,181 @@ def _in_pickup_range(origin, item: "WorldObject", item_tile: tuple[int, int]) ->
 
 def _standing_to_pickup(origin, item_tile: tuple[int, int]) -> bool:
     """True only when the player tile is on or next to the pile."""
-    return tile_chebyshev(
-        int(origin.x),
-        int(origin.y),
-        int(item_tile[0]),
-        int(item_tile[1]),
-    ) <= pm.LOOT_PICKUP_TILES
+    ox, oy = _origin_xy(origin)
+    return tile_chebyshev(ox, oy, int(item_tile[0]), int(item_tile[1])) <= int(
+        pm.LOOT_PICKUP_TILES
+    )
+
+
+def _origin_xy(origin) -> tuple[int, int]:
+    if isinstance(origin, tuple):
+        return int(origin[0]), int(origin[1])
+    return int(origin.x), int(origin.y)
+
+
+def _feet_on_pickup(origin, item_tile: tuple[int, int], item: object | None = None) -> bool:
+    """True when the live origin or the memory player tile is the pile tile.
+
+    A walkable pile one tile away is not a match, including while the body
+    is still walking. Beside the pile counts only for the live origin, and
+    only when that tile cannot be walked.
+    """
+    ix, iy = int(item_tile[0]), int(item_tile[1])
+    tiles = [_origin_xy(origin)]
+    if item is not None:
+        mem = _memory_player_tile(origin, item)
+        if mem is not None and mem not in tiles:
+            tiles.append(mem)
+    for ox, oy in tiles:
+        if ox == ix and oy == iy:
+            return True
+    ox, oy = tiles[0]
+    terrain = get_terrain_map()
+    if terrain is not None and not terrain.is_walkable(ix, iy):
+        return tile_chebyshev(ox, oy, ix, iy) <= int(pm.LOOT_PICKUP_TILES)
+    return False
+
+
+def _body_settled_for_f4(blackboard: "Blackboard", origin) -> bool:
+    """True when the body is standing. Walk and attack are not standing.
+
+    An unread slot uses the same still-tile window as a loot hop.
+    """
+    from app._05_action.body_pose import BODY, read_action
+
+    body, cmd = read_action()
+    if body is None and cmd is None:
+        return _pose_unknown_as_stand(blackboard, origin)
+    return BODY.get(body) == "stand"
+
+
+def _named_adena(item: object) -> bool:
+    species = str(getattr(item, "species_name", None) or "").strip().lower()
+    label = str(getattr(item, "label", None) or "").strip().lower()
+    blob = f"{species} {label}"
+    return "adena" in blob or "아데나" in blob or "金幣" in blob or "金币" in blob
+
+
+def _bag_qty(state: "GameState | None", item: object | None) -> int | None:
+    """Matching bag count, or None when the bag snapshot is not usable."""
+    if state is None or item is None:
+        return None
+    player = getattr(state, "player", None)
+    inv = getattr(player, "inventory", None) if player is not None else None
+    if inv is None or not bool(getattr(inv, "bag_ready", False)):
+        return None
+    if _named_adena(item):
+        try:
+            return int(getattr(inv, "adena", 0) or 0)
+        except (TypeError, ValueError):
+            return None
+    name = str(
+        getattr(item, "species_name", None) or getattr(item, "label", None) or ""
+    ).strip().lower()
+    if not name or name in {"item", "grounditem", "-"}:
+        return None
+    total = 0
+    for row in getattr(inv, "items", None) or []:
+        row_name = str(getattr(row, "name", "") or "").strip().lower()
+        if row_name != name:
+            continue
+        try:
+            total += max(0, int(getattr(row, "quantity", 0) or 0))
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _bag_rose(
+    state: "GameState | None",
+    blackboard: "Blackboard",
+    item: object | None,
+) -> bool:
+    base = blackboard.scratch.get("_loot_bag_base")
+    if item is None or not isinstance(base, tuple) or len(base) != 2:
+        return False
+    try:
+        base_id = int(base[0])
+        base_qty = int(base[1])
+        item_id = int(getattr(item, "track_id", -1))
+    except (TypeError, ValueError):
+        return False
+    if base_id != item_id:
+        return False
+    now = _bag_qty(state, item)
+    return now is not None and int(now) > base_qty
+
+
+def f4_allowed(blackboard, state, item_id) -> bool:
+    """True when this pile is underfoot.
+
+    The loot approach sets ``_loot_f4_match`` for that id, and the key may
+    go out before the body reports stand. Any other caller still needs stand,
+    so a side F4 does not fire while the body is walking past some other pile.
+    """
+    if blackboard is None or state is None or item_id is None:
+        return False
+    try:
+        obj = state.get_object(int(item_id))
+    except (TypeError, ValueError, AttributeError):
+        return False
+    if obj is None:
+        return False
+    origin = getattr(blackboard, "world_origin", None)
+    if origin is None:
+        return False
+    tile = object_absolute_tile(obj, origin)
+    if not _feet_on_pickup(origin, tile, obj):
+        return False
+    try:
+        matched = int(blackboard.scratch.get("_loot_f4_match") or -1)
+    except (TypeError, ValueError):
+        matched = -1
+    if matched == int(item_id):
+        return True
+    return _body_settled_for_f4(blackboard, origin)
+
+
+def _emit_wait(blackboard: "Blackboard", item_id: int, reason: str) -> None:
+    """Hold loot without a key or a ground click."""
+    from app.bot_log import event
+
+    key = (int(item_id), str(reason))
+    if blackboard.scratch.get("_loot_wait_log") != key:
+        blackboard.scratch["_loot_wait_log"] = key
+        event("loot", "pickup hold id=%s reason=%s", int(item_id), reason)
+    blackboard.current_goal = "loot"
+    blackboard.current_item_id = int(item_id)
+    blackboard.emit(
+        ActionType.IDLE,
+        priority=0.4,
+        reason=reason,
+    )
+
+
+def _offer_f4(
+    blackboard: "Blackboard",
+    item_id: int,
+    *,
+    fresh: bool,
+    reason: str,
+) -> "Status":
+    """F4 the moment the caller has the live tile on the pile.
+
+    Stand and the 0.4s retry gap are not required for this press. The gap
+    still spaces a later press in ``try_finish_pending_pickup``.
+    """
+    from app._04_decision.behavior_tree import Status
+    from app.bot_log import event
+
+    event("loot", "pickup match id=%s (f4 now)", item_id)
+    _emit_pickup(
+        blackboard,
+        item_id,
+        mid_act=not fresh,
+        reason=reason,
+    )
+    return Status.SUCCESS
 
 
 def _nudge_content_off_item(content: Position, item: "WorldObject") -> Position:
@@ -452,6 +682,7 @@ def _emit_pickup(
     blackboard.loot_approach_active = False
     blackboard.loot_approach_destination = None
     blackboard.loot_approach_waypoint = None
+    blackboard.scratch["_loot_f4_match"] = int(item_id)
     blackboard.current_goal = "loot"
     if not mid_act:
         from app._04_decision.clickgap import note_plan
@@ -481,18 +712,20 @@ def tick_loot_item(
     origin = blackboard.world_origin
     item_tile = object_absolute_tile(item, origin)
     player_tile = _player_nav_tile(origin, item)
-    adjacent = _in_pickup_range(origin, item, item_tile)
+    recheck = bool(blackboard.scratch.pop("_loot_force_reapproach", None))
 
-    # Click while the live entity is still listed. Ghosts / already-taken
-    # piles are dropped by continue_or_start_loot via memory_target_gone.
-    if adjacent:
-        _emit_pickup(
+    # F4 when the live tile is the pile tile. Distance 1 while walking
+    # does not match, so that press stays off. No ground click on this tick.
+    if not recheck and _feet_on_pickup(origin, item_tile, item):
+        blackboard.loot_approach_active = False
+        blackboard.loot_approach_destination = None
+        blackboard.loot_approach_waypoint = None
+        return _offer_f4(
             blackboard,
             item_id,
-            mid_act=not fresh,
+            fresh=fresh,
             reason="engage item" if fresh else "loot target",
         )
-        return Status.SUCCESS
 
     # Hold the current hop until memory reaches it. Re-planning every tick
     # issued a new ground click and canceled the walk onto the pile.
@@ -506,14 +739,13 @@ def tick_loot_item(
             blackboard.loot_approach_active = False
             blackboard.loot_approach_destination = None
             blackboard.loot_approach_waypoint = None
-            if _in_pickup_range(origin, item, item_tile):
-                _emit_pickup(
+            if not recheck and _feet_on_pickup(origin, item_tile, item):
+                return _offer_f4(
                     blackboard,
                     item_id,
-                    mid_act=not fresh,
+                    fresh=fresh,
                     reason="loot target nearby",
                 )
-                return Status.SUCCESS
         elif dest is not None:
             raw, moving = _loot_motion(blackboard, origin)
             if _loot_click_still_open(
@@ -801,6 +1033,8 @@ __all__ = [
     "loot_stand_tile",
     "tick_loot_item",
     "begin_loot_item",
+    "f4_allowed",
     "_standing_to_pickup",
+    "_feet_on_pickup",
     "_nudge_content_off_item",
 ]

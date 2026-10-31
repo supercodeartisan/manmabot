@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -364,6 +365,14 @@ class MapEditorWidget(QWidget):
         self.map_readout.setMinimumHeight(30)
         canvas_host_w.addWidget(self.map_readout)
         self.status = QLabel("")
+        self.status.setWordWrap(True)
+        # The hint is one long sentence. An unwrapped label's minimum width
+        # grows the dialog after the map has already been fitted. Two lines
+        # are reserved up front so wrapping does not shrink the map either.
+        self.status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self.status.setMinimumHeight(self.status.fontMetrics().lineSpacing() * 2)
         self.status.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
         canvas_host_w.addWidget(self.status)
         split.addWidget(canvas_widget)
@@ -518,6 +527,11 @@ class MapEditorWidget(QWidget):
         )
         self._refresh_list()
         self._fill_inspector()
+        # Settle the hint's wrapped height before fitting, so the first
+        # paint is already the final viewport.
+        host = self.window()
+        if host is not None and host.layout() is not None:
+            host.layout().activate()
         self._fit()
         self._sync_canvas_size()
         self._sync_map_readout()

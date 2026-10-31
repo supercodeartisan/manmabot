@@ -1002,6 +1002,143 @@ def _maybe_confined_escape(
     return None
 
 
+# World-nav walks only. Scroll, settle, NPC teleporter, and gate click stand
+# on purpose and must not burn a teleport.
+_WORLD_NAV_CONFINE_HOLD = "world_nav_confine_hold"
+_WORLD_NAV_CONFINE_PHASES = frozenset({"walk", "gate_approach"})
+_WORLD_NAV_CONFINE_HOLD_S = 12.0
+
+
+def _world_nav_confine_left(state: "GameState", blackboard: "Blackboard", hold: dict) -> bool:
+    """True once the cast has left the 3-tile bubble or the map."""
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision import player_mode as pm
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    ax, ay = int(hold.get("x") or 0), int(hold.get("y") or 0)
+    if tile_chebyshev(
+        int(blackboard.world_origin.x),
+        int(blackboard.world_origin.y),
+        ax,
+        ay,
+    ) > int(pm.UNSTICK_CONFINED_TILES):
+        return True
+    pose = live_pose_from_state(state)
+    anchor_map = hold.get("map_id")
+    if (
+        pose is not None
+        and anchor_map is not None
+        and int(pose.map_id) != int(anchor_map)
+    ):
+        return True
+    return False
+
+
+def _world_nav_at_hunt_edge(state: "GameState", blackboard: "Blackboard", session: object) -> bool:
+    """Arrival belongs to the drive step. Do not teleport off the destination."""
+    from app._04_decision.world_nav.hooks import SCRATCH_ROUTINE
+    from app._04_decision.world_nav.routine import pose_hunt_arrival
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    if getattr(session, "phase", None) != "walk":
+        return False
+    cursor = blackboard.scratch.get(SCRATCH_ROUTINE)
+    entry = cursor.active() if cursor is not None else None
+    if entry is None:
+        return False
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return False
+    return bool(
+        pose_hunt_arrival(
+            pose, entry, blackboard, reason=str(getattr(session, "reason", "") or "")
+        )
+    )
+
+
+def _maybe_world_nav_confined(
+    state: "GameState", blackboard: "Blackboard"
+) -> Status | None:
+    """13 s / 3 tiles during a world-nav walk, then the same teleport or scroll.
+
+    The live plan is dropped. After the pose leaves that bubble the same
+    routine reason is requested again, so the next plan starts from the
+    landing and still aims at the row that was in progress. Scroll, NPC
+    teleporter, and gate-click phases do not start the clock.
+    """
+    import time
+
+    from app._04_decision.behaviors.unstick import reset_confined_progress
+    from app._04_decision.dungeon_policy import unstick_disabled
+    from app._04_decision.world_nav.hooks import (
+        SCRATCH_WORLD_NAV,
+        _drop_world_nav_session,
+        request_world_nav,
+    )
+    from app._04_decision.world_nav.session import live_pose_from_state
+    from app.bot_log import get_logger
+
+    hold = blackboard.scratch.get(_WORLD_NAV_CONFINE_HOLD)
+    if isinstance(hold, dict):
+        since = float(hold.get("since") or 0.0)
+        left = _world_nav_confine_left(state, blackboard, hold)
+        timed_out = since > 0.0 and (time.time() - since) >= _WORLD_NAV_CONFINE_HOLD_S
+        if left or timed_out:
+            reason = str(hold.get("reason") or "start")
+            blackboard.scratch.pop(_WORLD_NAV_CONFINE_HOLD, None)
+            request_world_nav(blackboard, reason)
+            get_logger("nav").info(
+                "world nav confined resume reason=%s how=%s",
+                reason,
+                "land" if left else "timeout",
+            )
+            return None
+        blackboard.current_goal = "world_nav"
+        blackboard.emit(
+            ActionType.IDLE,
+            priority=0.4,
+            reason="world nav confined wait",
+        )
+        return Status.SUCCESS
+
+    session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+    if session is None:
+        return None
+    phase = str(getattr(session, "phase", "") or "")
+    if phase not in _WORLD_NAV_CONFINE_PHASES or unstick_disabled():
+        reset_confined_progress(blackboard)
+        return None
+    if _world_nav_at_hunt_edge(state, blackboard, session):
+        return None
+    status = _maybe_confined_escape(state, blackboard)
+    if status is None:
+        return None
+    pose = live_pose_from_state(state)
+    reason = str(getattr(session, "reason", "") or "start")
+    blackboard.scratch[_WORLD_NAV_CONFINE_HOLD] = {
+        "reason": reason,
+        "map_id": None if pose is None else int(pose.map_id),
+        "x": int(blackboard.world_origin.x),
+        "y": int(blackboard.world_origin.y),
+        "since": time.time(),
+    }
+    _drop_world_nav_session(blackboard)
+    from app._04_decision.talking_scroll import SCRATCH_UNSTICK_SCROLL_RETURN
+
+    # Farming reads this after a mainland unstick scroll. World nav already
+    # resumes the same row, so leaving the flag would idle outside the farm.
+    blackboard.scratch.pop(SCRATCH_UNSTICK_SCROLL_RETURN, None)
+    get_logger("nav").info(
+        "world nav confined escape reason=%s phase=%s anchor=(%s,%s) map=%s",
+        reason,
+        phase,
+        int(blackboard.world_origin.x),
+        int(blackboard.world_origin.y),
+        "-" if pose is None else int(pose.map_id),
+    )
+    return Status.SUCCESS
+
+
 def tick_traveling(state: "GameState", blackboard: "Blackboard") -> Status:
     """L3 column `TRAVELING` — implementation after farm-entry helpers."""
     return _tick_traveling_column(state, blackboard)
@@ -2253,6 +2390,7 @@ def _handlers_world_nav() -> dict:
         "shop.trip": _shop_before_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),
+        "unstick.confined": _maybe_world_nav_confined,
         "world_nav.drive": _drive_world_nav,
     }
 

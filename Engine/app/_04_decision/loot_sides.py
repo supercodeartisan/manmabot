@@ -29,21 +29,36 @@ def _log_side_loot_decide(blackboard: "Blackboard", item: "WorldObject") -> None
     blackboard.scratch["_loot_side_decide"] = key
     event(
         "loot",
-        "loot decide via=side gate=skip id=%s %s",
+        "loot decide via=side gate=arm id=%s %s",
         int(item.track_id),
         claim,
     )
 
 
 def arm_loot_side_intent(state: "GameState", blackboard: "Blackboard") -> None:
-    """Append in-range ``PICKUP`` to ``side_intents`` (does not clear)."""
+    """Append a standing F4 when no attack, walk, or sticky loot owns the tick.
+
+    Combat and travel keep their primary click. A pile already being walked
+    or confirmed stays on the normal loot path so a side F4 cannot clear it.
+    """
+    if blackboard.loot_await_gone_id is not None or blackboard.current_item_id is not None:
+        return
     primary = blackboard.intent
-    if primary is not None and primary.action is ActionType.PICKUP:
+    if primary is not None and primary.action in (
+        ActionType.PICKUP,
+        ActionType.ATTACK,
+        ActionType.SEARCHING,
+        ActionType.TRAVELING,
+    ):
         return
     if any(s.action is ActionType.PICKUP for s in blackboard.side_intents):
         return
     item = find_pickup_range_loot(state, blackboard)
     if item is None:
+        return
+    from app._04_decision.behaviors.loot_hop import f4_allowed
+
+    if not f4_allowed(blackboard, state, int(item.track_id)):
         return
     _log_side_loot_decide(blackboard, item)
     blackboard.side_intents.append(

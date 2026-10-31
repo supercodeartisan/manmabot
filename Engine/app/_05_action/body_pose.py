@@ -3,8 +3,9 @@
 Standing is BreathAction (0x11F4650, bodyact VFT_BREATHACT). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
 CharacterData status used when that decode succeeds. Level uses that same
-status (LEVEL), then the HUD ST_LEVEL. Exp percent is the module f64
-ExperiencePct64.
+status (LEVEL), then the HUD ST_LEVEL. Exp percent is the HudCharacterInfo
+LoadingBar float (the charread chain, then the UI window). ExperiencePct64
+is used only when that bar is missing and the double is a real 0–100 percent.
 """
 from __future__ import annotations
 
@@ -477,6 +478,23 @@ _status_addr = 0
 _status_checked = 0.0
 _EXP_RVA = 0x1644BF0
 _exp_ready = False
+# HudCharacterInfo LoadingBar. Registry overrides; these match LC930 v35.
+_EXP = {
+    "EXP_CD_0": 0x1B0,
+    "EXP_CD_1": 0x28,
+    "EXP_CD_2": 0x110,
+    "EXP_HUD_BAR": 0xE8,
+    "EXP_BAR_PCT": 0x704,
+    "VFT_LOADINGBAR": 0x12BE970,
+    "VFT_HUDCHARINFO": 0x1291D80,
+    "VFT_UISUBSYSTEM": 0x11F6A38,
+    "UIDLG_CONT_VAL": 0x38,
+    "RTTI_COL_TD_OFF": 0xC,
+    "RTTI_TD_NAME_OFF": 0x10,
+}
+_HCI_CLASS = "HudCharacterInfoLayoutPCImpl"
+_exp_chain_ready = False
+_exp_bar = 0
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
 
@@ -614,6 +632,138 @@ def _load_exp_rva() -> None:
     _exp_ready = True
 
 
+def _load_exp_chain() -> None:
+    """LoadingBar offsets from the LC930 registry. Missing keys keep the defaults."""
+    global _exp_chain_ready, _HCI_CLASS
+    if _exp_chain_ready:
+        return
+    path = _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            text = line.strip()
+            if not text or text.startswith("#") or "=" not in text:
+                continue
+            key, raw = text.split("=", 1)
+            key = key.strip()
+            raw = raw.strip()
+            if key == "HCI_CLASS" and raw:
+                _HCI_CLASS = raw
+                continue
+            if key not in _EXP:
+                continue
+            try:
+                _EXP[key] = int(raw, 0)
+            except ValueError:
+                continue
+    _exp_chain_ready = True
+
+
+def _in_module(addr: int) -> bool:
+    return bool(_base) and _base <= addr < _base + _size
+
+
+def _find_subsystem(want: int) -> int:
+    mgr = _q(_pid, _base + _HUD["MGR"])
+    if not _heap(mgr):
+        return 0
+    holder = _q(_pid, mgr + _HUD["HOLDER_OFF"])
+    if not _heap(holder):
+        return 0
+    begin = _q(_pid, holder + _HUD["SUBLIST_BEG"])
+    end = _q(_pid, holder + _HUD["SUBLIST_END"])
+    if not _heap(begin) or end <= begin:
+        return 0
+    count = min(64, (end - begin) // 16)
+    for index in range(count):
+        sub = _q(_pid, begin + index * 16)
+        if _heap(sub) and _vrva(sub) == want:
+            return sub
+    return 0
+
+
+def _rtti_name(vft: int) -> str:
+    if not _in_module(vft):
+        return ""
+    col = _q(_pid, vft - 8)
+    if not _in_module(col):
+        return ""
+    slot = _base + _d(_pid, col + _EXP["RTTI_COL_TD_OFF"])
+    if not _in_module(slot):
+        return ""
+    raw = _read(_pid, slot + _EXP["RTTI_TD_NAME_OFF"], 160)
+    if not raw:
+        return ""
+    text = raw.split(b"\x00", 1)[0].decode("ascii", "replace")
+    if text.startswith(".?AV"):
+        text = text[4:]
+    return text.split("@", 1)[0]
+
+
+def _bar_percent(bar: int) -> float | None:
+    if not _heap(bar) or _vrva(bar) != _EXP["VFT_LOADINGBAR"]:
+        return None
+    blob = _read(_pid, bar + _EXP["EXP_BAR_PCT"], 4)
+    if not blob:
+        return None
+    value = struct.unpack("<f", blob)[0]
+    if value != value or value < 0.0 or value > 100.0:
+        return None
+    return float(value)
+
+
+def _exp_from_chain() -> int:
+    """CharacterData → HudCharacterInfo → LoadingBar. 0 when the slot is empty."""
+    status = _find_status()
+    if not status:
+        return 0
+    cd = status - _HUD["CD_OFF"]
+    p0 = _q(_pid, cd + _EXP["EXP_CD_0"])
+    if not _heap(p0):
+        return 0
+    p1 = _q(_pid, p0 + _EXP["EXP_CD_1"])
+    if not _heap(p1):
+        return 0
+    p2 = _q(_pid, p1 + _EXP["EXP_CD_2"])
+    if not _heap(p2) or _vrva(p2) != _EXP["VFT_HUDCHARINFO"]:
+        return 0
+    bar = _q(_pid, p2 + _EXP["EXP_HUD_BAR"])
+    if _bar_percent(bar) is None:
+        return 0
+    return bar
+
+
+def _find_hud_char(ui: int) -> int:
+    if not _heap(ui):
+        return 0
+    want = _HCI_CLASS
+    val = _EXP["UIDLG_CONT_VAL"]
+    for head, nxt in ((0x38, 0x18), (0x28, 0x28)):
+        node = _q(_pid, ui + head)
+        for _ in range(4096):
+            if not _heap(node):
+                break
+            obj = _q(_pid, node + val)
+            if _heap(obj) and _rtti_name(_q(_pid, obj)) == want:
+                return obj
+            nxt_node = _q(_pid, node + nxt)
+            if nxt_node == node:
+                break
+            node = nxt_node
+    return 0
+
+
+def _mirror_percent() -> float | None:
+    blob = _read(_pid, _base + _EXP_RVA, 8)
+    if not blob:
+        return None
+    value = struct.unpack("<d", blob)[0]
+    # A stale address can be a subnormal that still falls inside 0..100
+    # and then prints as 0.00%. Exact 0 is a real empty bar.
+    if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
+        return float(value)
+    return None
+
+
 def _level_ok(value: int | None) -> int | None:
     if value is None or not (1 <= int(value) <= 255):
         return None
@@ -624,12 +774,15 @@ def read_progress() -> dict | None:
     """Live level and exp percent (0–100). None when the game driver is not open.
 
     Level prefers the encoded CharacterData field, then the HUD block.
-    Exp percent is the live ExperiencePct64 double.
+    Exp percent is the LoadingBar float. The BSS mirror is the fallback
+    only when that float is missing and the double is a real percent.
     """
+    global _exp_bar
     if not _ensure():
         return None
     _load_hud()
     _load_exp_rva()
+    _load_exp_chain()
     level = None
     block = _read(_pid, _base + _HUD["ST_BLOCK"], 0x40)
     if block:
@@ -639,12 +792,19 @@ def read_progress() -> dict | None:
         decoded = _level_ok(_decode(status, _HUD["LEVEL"]))
         if decoded is not None:
             level = decoded
-    exp = None
-    blob = _read(_pid, _base + _EXP_RVA, 8)
-    if blob:
-        value = struct.unpack("<d", blob)[0]
-        # A stale address can be a subnormal that still falls inside 0..100
-        # and then prints as 0.00%. Exact 0 is a real empty bar.
-        if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
-            exp = float(value)
+    bar = _exp_from_chain()
+    if not bar:
+        bar = _exp_bar if _bar_percent(_exp_bar) is not None else 0
+    if not bar:
+        _exp_bar = 0
+        ui = _find_subsystem(_EXP["VFT_UISUBSYSTEM"])
+        hci = _find_hud_char(ui)
+        if _heap(hci):
+            bar = _q(_pid, hci + _EXP["EXP_HUD_BAR"])
+    exp = _bar_percent(bar) if bar else None
+    if exp is None:
+        _exp_bar = 0
+        exp = _mirror_percent()
+    else:
+        _exp_bar = bar
     return {"level": level, "exp_percent": exp}
