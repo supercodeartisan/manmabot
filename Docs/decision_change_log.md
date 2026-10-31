@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-31 — uidialog confirm text reaches invite accept; chat typed logs IME
+
+Intent: Member never saw the in-game invite popup. `uidialogmon` already prints Yes/No confirm text, but `lc_view.uidialog()` kept only window labels, so `invite_popup.party_invite` always got an empty `confirm` list. Leader `typed` also hid IME/char counts, so a Hangul `/초대` that went out as jamo still looked successful.
+Shared: `lc_view.parse_uidialog_text` fills `confirm` from status `msg=` and `[+] CONFIRM` lines; sensors accept a snapshot that has `confirm`. `deliver_chat` logs `chars`/`keys`/`ime` on success and fails when `failed>0`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y (popup pattern). Leader invite log detail only.
+Consent: user (fix uidialog confirm parse + DLL typed honesty).
+Result: not run in game.
+
 ## 2026-10-31 — leader start wait 10 min
 
 Intent: The forming window before hunt (all joined → formed, else late + keep inviting) was 5 min. User asked for 10 min so a multi-member roster has more time to connect, ACK, and arrive.

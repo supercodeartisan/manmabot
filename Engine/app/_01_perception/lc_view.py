@@ -432,21 +432,82 @@ def buffs() -> Optional[dict[str, Any]]:
     return {"buffs": rows, "cache": 0}
 
 
+_CONFIRM_EVENT = re.compile(
+    r"^\[(?P<op>[+~])\] CONFIRM kind=(?P<kind>\S+) ask=(?P<ask>\d+) "
+    r"type=(?P<type>\d+)(?: inst=(?P<inst>0x[0-9A-Fa-f]+))? \"(?P<msg>.*)\"\s*$"
+)
+_CONFIRM_STATUS = re.compile(
+    r"open=\d+\s+\[(?P<open>[^\]]*)\]\s+confirm=(?P<n>\d+)(?:\s+msg=\"(?P<msg>.*)\")?\s*$"
+)
+_OPEN_ONLY = re.compile(r"open=\d+\s+\[([^\]]*)\]")
+
+
+def parse_uidialog_text(text: str) -> Optional[dict[str, Any]]:
+    """Window labels plus Yes/No confirm rows (invite / trade / etc.).
+
+    ``uidialogmon`` writes either a status line
+    ``t=… open=N […] confirm=N msg="…"`` or event lines
+    ``[+] CONFIRM kind=… ask=N … "message"``. Invite accept reads ``confirm``.
+    """
+    if not str(text or "").strip():
+        return None
+    open_labels: list[str] = []
+    confirms: list[dict[str, Any]] = []
+    saw_status = False
+    saw_event = False
+    for line in text.splitlines():
+        raw = line.rstrip("\r")
+        event = _CONFIRM_EVENT.match(raw)
+        if event:
+            saw_event = True
+            confirms.append(
+                {
+                    "src": event.group("kind") or "",
+                    "kind": event.group("kind") or "",
+                    "ask": int(event.group("ask") or 0),
+                    "type": int(event.group("type") or 0),
+                    "inst": event.group("inst") or "",
+                    "msg": event.group("msg") or "",
+                }
+            )
+            continue
+        if raw.startswith("[-] CONFIRM"):
+            saw_event = True
+            continue
+        status = _CONFIRM_STATUS.search(raw)
+        if status:
+            saw_status = True
+            open_labels = [part for part in status.group("open").split() if part]
+            n = int(status.group("n") or 0)
+            msg = status.group("msg") or ""
+            if n <= 0:
+                confirms = []
+            elif msg:
+                confirms = [
+                    {
+                        "src": "status",
+                        "kind": "",
+                        "ask": 0,
+                        "type": 0,
+                        "inst": "",
+                        "msg": msg,
+                    }
+                ]
+            continue
+        opened = _OPEN_ONLY.search(raw)
+        if opened and not saw_status:
+            open_labels = [part for part in opened.group(1).split() if part]
+    if not saw_status and not saw_event and not open_labels and "t=" not in text:
+        return None
+    windows = {label: True for label in open_labels}
+    return {"windows": windows, "open": open_labels, "confirm": confirms}
+
+
 def uidialog() -> Optional[dict[str, Any]]:
     text = session.text("uidialogmon")
     if not text:
         return None
-    open_labels: list[str] = []
-    for line in reversed(text.splitlines()):
-        match = re.search(r"open=\d+\s+\[([^\]]*)\]", line)
-        if not match:
-            continue
-        open_labels = [part for part in match.group(1).split() if part]
-        break
-    if "t=" not in text and not open_labels:
-        return None
-    windows = {label: True for label in open_labels}
-    return {"windows": windows, "open": open_labels}
+    return parse_uidialog_text(text)
 
 
 def party() -> Optional[dict[str, Any]]:

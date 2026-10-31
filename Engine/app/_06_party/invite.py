@@ -189,14 +189,21 @@ def deliver_chat(line: str, *, log: Callable[[str], None], why: str = "") -> boo
     log(f'Party chat "{line}"{f" ({why})" if why else ""}')
     try:
         result = send_chat_line(line)
-        error = "" if result.ok else result.describe()
+        error = "" if result.ok and int(getattr(result, "failed", 0) or 0) == 0 else result.describe()
     except Exception as exc:
         error = str(exc)
+        result = None
     if error:
         log(f'Party chat "{line}" failed: {error}')
         _note_monitor(f'chat "{line}" FAILED: {error}')
         return False
-    _note_monitor(f'chat "{line}" typed')
+    extra = ""
+    if result is not None:
+        extra = f" chars={result.chars} keys={result.keys}"
+        if result.message:
+            extra += f" ime={result.message}"
+    log(f'Party chat "{line}" typed{extra}')
+    _note_monitor(f'chat "{line}" typed{extra}')
     return True
 
 
