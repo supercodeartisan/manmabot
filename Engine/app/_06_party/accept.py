@@ -111,6 +111,16 @@ class InviteAccepter:
         popup open). ``in_party`` None = party memory unreadable. True when Y
         reached the game this tick."""
         pressed = False
+        if in_party is True:
+            if popup is not None and self.phase not in ("accepted", "left"):
+                if self.skipped != "already in party":
+                    self.skipped = "already in party"
+                    self.phase = "skipped"
+                    self._log(
+                        "Party invite popup ignored — already in party (memory)"
+                    )
+            self._track_membership(in_party)
+            return False
         if popup is not None:
             pressed = self._on_open(popup, leader_name)
         elif self._open:

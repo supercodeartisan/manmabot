@@ -20,7 +20,7 @@ def drain_leader_reports(
     server: Any,
     start_rally: Any = None,
     party_snapshot: Any = None,
-    roster_names: Optional[set[str]] = None,
+    roster_names: Optional[Any] = None,
     log: Optional[LogFn] = None,
 ) -> int:
     """Apply member ``report`` frames to the rally, ``member_state`` frames to
@@ -32,6 +32,7 @@ def drain_leader_reports(
     """
     from ..sync import invite_accepts, member_states
     from .orders import (
+        BEEP,
         INVITE_ACCEPT,
         MEMBER_STATE,
         POLICY_ACK,
@@ -59,6 +60,10 @@ def drain_leader_reports(
             continue
         kind = str(body.get("type") or "")
         who = str(body.get("from") or getattr(frame, "sender", "") or "")
+        if kind == BEEP:
+            why = str(body.get("why") or "already_in_party")
+            note(f"Party beep from {who or 'member'} — socket ok ({why})")
+            continue
         if kind == MEMBER_STATE:
             roster = roster_names or names
             booked = member_states.note(who, body, roster, session=leader_session())
@@ -68,7 +73,14 @@ def drain_leader_reports(
             pid = str(row.get("policy_id") or "")
             if pid:
                 first = not policy_acks.acked(booked, pid)
-                policy_acks.note(booked, {"policy_id": pid}, roster)
+                policy_acks.note(
+                    booked,
+                    {
+                        "policy_id": pid,
+                        "client_id": body.get("client_id") or "",
+                    },
+                    roster,
+                )
                 if first:
                     note(f"Party policy confirmed by {booked} (id {pid}, member state)")
             if body.get("changed"):
@@ -93,10 +105,14 @@ def drain_leader_reports(
                 )
             continue
         if kind == POLICY_ACK:
-            first = not policy_acks.acked(who, body.get("policy_id"))
             booked = policy_acks.note(who, body, roster_names or names)
-            if booked and first:
-                note(f"Party policy confirmed by {booked} (id {body.get('policy_id') or '—'})")
+            if booked:
+                count = int(policy_acks.row(booked).get("count") or 0)
+                if count == 1:
+                    note(
+                        f"Party policy confirmed by {booked} "
+                        f"(id {body.get('policy_id') or '—'})"
+                    )
             continue
         if kind != REPORT:
             continue

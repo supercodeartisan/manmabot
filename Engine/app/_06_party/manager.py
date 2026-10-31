@@ -373,31 +373,19 @@ class PartyMemberManager:
                     )
                 except Exception as exc:
                     _log.debug("party loot side failed: %s", exc)
-            if support is not None:
-                from app._02_state.enums import ActionType
-
-                act = getattr(support, "action", None)
-                if act is ActionType.HEAL:
-                    self.runtime.last_kind = MemberKind.HEAL.value
-                elif act is ActionType.BUFF:
-                    self.runtime.last_kind = MemberKind.BUFF.value
-                else:
-                    self.runtime.last_kind = "support"
-                self.runtime.last_reason = str(
-                    getattr(support, "reason", "") or self.runtime.last_kind
-                )
-                self.runtime.approach_goal = None
-                self.runtime.chasing = False
-                self._record_decision(support)
-                return support
             # Potions / F4 loot stay on blackboard.side_intents for the executor.
             need_potion = False
+            need_heal, need_buff = self._support_flags(support)
         else:
+            support = None
+            need_heal = False
+            need_buff = False
             need_potion = self._need_potion(player, cfg)
 
-        gather = self._maybe_hunt_gather(game_state, dead=dead)
-        if gather is not None:
-            return gather
+        if not need_heal and not need_buff:
+            gather = self._maybe_hunt_gather(game_state, dead=dead)
+            if gather is not None:
+                return gather
 
         threat = None
         if cfg.defend_self and game_state is not None:
@@ -644,6 +632,8 @@ class PartyMemberManager:
                 self_threat=threat is not None,
                 assist_ready=assist_obj is not None,
                 config=cfg,
+                need_heal=need_heal,
+                need_buff=need_buff,
                 leader_in_ui=leader_in_ui,
                 leader_other_map=leader_other_map,
                 leader_farming=bool(view.farming),
@@ -660,6 +650,10 @@ class PartyMemberManager:
             )
         )
         self.runtime.chasing = result.chasing
+        if result.kind is MemberKind.HEAL and support is not None:
+            return self._return_support(support, MemberKind.HEAL)
+        if result.kind is MemberKind.BUFF and support is not None:
+            return self._return_support(support, MemberKind.BUFF)
         reason = result.reason
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
@@ -723,6 +717,9 @@ class PartyMemberManager:
                 MemberKind.DEFEND,
                 MemberKind.WAIT,
                 MemberKind.STOP,
+                MemberKind.HEAL,
+                MemberKind.BUFF,
+                MemberKind.POTION,
             )
             and self._nav_blackboard is not None
         ):
@@ -936,8 +933,66 @@ class PartyMemberManager:
             )
         return intent
 
+    def decide_survival(self, game_state: Any) -> Any:
+        """HP only: wait for the leader socket without follow or combat.
+
+        Crisis retreat and in-place heal/buff/potion sides. No gather, assist,
+        or world-nav. ``apply_hp_actions`` is not called except through
+        ``party_critical_escape`` at the retreat gate.
+        """
+        from .intents import idle
+        from .support import party_critical_escape
+
+        self.runtime.tick += 1
+        self.runtime.chasing = False
+        self.runtime.approach_goal = None
+        if game_state is not None and self._nav_blackboard is not None:
+            escape = party_critical_escape(game_state, self._nav_blackboard)
+            if escape is not None:
+                self.runtime.last_kind = "retreat"
+                self.runtime.last_reason = str(
+                    getattr(escape, "reason", "") or "critical retreat"
+                )
+                self._record_decision(escape)
+                return escape
+            support = apply_party_support(
+                game_state,
+                self._nav_blackboard,
+                allow_buffs=True,
+            )
+            if support is not None:
+                _heal, need_buff = self._support_flags(support)
+                return self._return_support(
+                    support,
+                    MemberKind.BUFF if need_buff else MemberKind.HEAL,
+                )
+        intent = idle("waiting_leader_socket")
+        self.runtime.last_kind = "wait"
+        self.runtime.last_reason = "waiting_leader_socket"
+        self._record_decision(intent)
+        return intent
+
+    def _rally_yields_to_combat(self) -> bool:
+        """Start rally must not block assist when the leader is already fighting.
+
+        Same map + known leader tile + farming (or a live target). Far members
+        then follow the fighter; in-leash members assist. Other-map join and
+        idle rally waits still walk to the pin. Arrival is not marked here, so
+        after the fight the member can finish the last tiles to the rally.
+        """
+        if not bool(self.runtime.leader_same_map):
+            return False
+        if self.runtime.leader_dist is None:
+            return False
+        if bool(self.runtime.leader_farming):
+            return True
+        return bool(str(self.runtime.leader_target_name or "").strip())
+
     def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:
-        """Walk to the leader's rally point. Recovery is not handled here."""
+        """Walk to the leader's rally point unless combat is already happening.
+
+        Recovery is not handled here.
+        """
         if dead or self.runtime.paused:
             return None
         try:
@@ -961,6 +1016,18 @@ class PartyMemberManager:
             self.runtime.last_kind = "hold"
             self.runtime.last_reason = f"{rally_reason}_arrived"
             return None
+        if self._rally_yields_to_combat():
+            prev = self.runtime.scratch.get("_rally_yield")
+            note = (
+                f"{rally_reason}_yield_combat "
+                f"dist={self.runtime.leader_dist} "
+                f"target={self.runtime.leader_target_name or '—'}"
+            )
+            if prev != note:
+                self.runtime.scratch["_rally_yield"] = note
+                _log.info("%s", note)
+            return None
+        self.runtime.scratch.pop("_rally_yield", None)
         try:
             map_id = int(order.get("map_id"))
             dest_x = int(order.get("x"))
@@ -999,6 +1066,28 @@ class PartyMemberManager:
         except (TypeError, ValueError):
             pass
         return False
+
+    @staticmethod
+    def _support_flags(support: Any) -> tuple[bool, bool]:
+        """``(need_heal, need_buff)`` from a stashed support intent."""
+        from app._02_state.enums import ActionType
+
+        act = getattr(support, "action", None) if support is not None else None
+        if act is ActionType.BUFF:
+            return False, True
+        if support is not None:
+            return True, False
+        return False, False
+
+    def _return_support(self, support: Any, kind: MemberKind) -> Any:
+        self.runtime.last_kind = kind.value
+        self.runtime.last_reason = str(
+            getattr(support, "reason", "") or kind.value
+        )
+        self.runtime.approach_goal = None
+        self.runtime.chasing = False
+        self._record_decision(support)
+        return support
 
     @staticmethod
     def _need_potion(player: Any, cfg: PartyMemberConfig) -> bool:

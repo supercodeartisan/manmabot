@@ -60,6 +60,9 @@ class PolicyInput:
     assist_sticky: bool = False
     # Turret: no live target and not on the radial seat around the leader.
     off_turret_seat: bool = False
+    # In-place heal / buff already armed this tick (manager stashed the intent).
+    need_heal: bool = False
+    need_buff: bool = False
 
 
 @dataclass(frozen=True)
@@ -70,16 +73,21 @@ class PolicyResult:
 
 
 def decide_policy(inp: PolicyInput) -> PolicyResult:
-    """Member brain: travel leash / stop settle / combat assist+step / hold."""
+    """Member brain: heal/buff/potion, then defend, travel, assist, hold."""
     cfg = inp.config
     if inp.paused:
         return PolicyResult(MemberKind.STOP, False, "paused")
     if inp.dead:
         return PolicyResult(MemberKind.STOP, False, "dead")
-    if not inp.origin_ok:
-        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
+    # In-place HP before origin/travel: matches the old support early-return.
+    if inp.need_heal:
+        return PolicyResult(MemberKind.HEAL, False, "self_heal")
+    if inp.need_buff:
+        return PolicyResult(MemberKind.BUFF, False, "self_buff")
     if inp.need_potion:
         return PolicyResult(MemberKind.POTION, False, "self_potion")
+    if not inp.origin_ok:
+        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
     if cfg.defend_self and inp.self_threat:
         return PolicyResult(MemberKind.DEFEND, False, "defend_self")
 

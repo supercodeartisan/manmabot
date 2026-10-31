@@ -183,6 +183,9 @@ class PartyComms:
     def publish_policy(self, **kwargs: Any) -> int:
         return publish.publish_policy(**kwargs)
 
+    def publish_beep(self, *, why: str = "already_in_party") -> int:
+        return publish.publish_beep(why=why)
+
     def publish_decision(
         self,
         action: Any,
@@ -197,7 +200,7 @@ class PartyComms:
         *,
         start_rally: Any = None,
         party_snapshot: Any = None,
-        roster_names: Optional[set[str]] = None,
+        roster_names: Optional[Any] = None,
         log: Optional[LogFn] = None,
     ) -> int:
         return ingest.drain_leader_reports(
@@ -213,14 +216,21 @@ class PartyComms:
     def ingest_orders(self) -> None:
         ingest.ingest_member_orders(self.client)
 
-    def send_policy_ack(self, *, name: str, policy_id: str) -> bool:
-        return status.send_policy_ack(self.client, name=name, policy_id=policy_id)
+    def send_policy_ack(
+        self, *, name: str, policy_id: str, client_id: str = ""
+    ) -> bool:
+        return status.send_policy_ack(
+            self.client, name=name, policy_id=policy_id, client_id=client_id
+        )
 
     def send_member_state(self, body: dict) -> bool:
         return status.send_member_state(self.client, body)
 
     def send_invite_accept(self, body: dict) -> bool:
         return status.send_invite_accept(self.client, body)
+
+    def send_beep(self, *, name: str, why: str = "already_in_party") -> bool:
+        return status.send_beep(self.client, name=name, why=why)
 
     def send_status(
         self,

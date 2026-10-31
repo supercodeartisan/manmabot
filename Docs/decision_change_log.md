@@ -1,5 +1,45 @@
 # Decision change log
 
+## 2026-10-30 — member heal/buff on the policy ladder; HP while waiting for the leader socket
+
+Intent: Item 7 was two ladders, not a broken heal. Live heal/buff returned from `apply_party_support` before gather/policy, while `decide_policy` never emitted HEAL/BUFF and `intent_for_kind` idled those kinds. Unify: stash support, skip gather when heal/buff is needed (heal still beats the start rally), policy emits HEAL/BUFF first, manager returns the stash. Item 10: leftover `WorldNavHooks` cleared at `_worker` start (party-off Start already cleared them); `merge_leader_policy` imports `comms.orders` not `websocket.party_orders`; member Start enters the bot loop and runs HP-only (`decide_survival`) until the leader socket connects. There is no 60 s connect timeout — 30 s is log cadence. Empty leader IP still fails immediately.
+Shared: `decide_policy` / `PolicyInput.need_heal`/`need_buff`; `PartyMemberManager.decide` / `decide_survival`; `BotController._start_party_client` / `_member_socket_pending`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `apply_party_support` and `party_critical_escape` still own in-place HP and the retreat gate.
+Affects: party members only (policy order, start-rally vs heal, first-connect wait). Leader and solo decide paths are unchanged. After the first connect, a socket drop still farms on the last policy.
+Consent: user (item 7 policy order + item 10 leftover hooks / import boundary / HP before connect).
+Result: not run in game.
+
+## 2026-10-29 — start rally yields to combat on the member
+
+Intent: A live rally order must not keep the member walking to the pin while the leader is already fighting a few tiles off it. Crisis retreat and in-place heal/buff still run first. After the fight the member can finish the rally walk (arrival is not marked on yield).
+Shared: `PartyMemberManager._maybe_hunt_gather` / `_rally_yields_to_combat`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `apply_party_support` still runs before gather.
+Affects: party members during the start rally only. Solo and leader hold-ground are unchanged.
+Consent: user (item 4, rally before assist).
+Result: not run in game.
+
+## 2026-10-29 — unnamed policy ack books each member by client_id
+
+Intent: Two member bots that start together both send `from=member` before they know their character name. The leader used to keep that ack only when exactly one roster name was still unconfirmed, so `/초대` never went out.
+Shared: `PolicyAcks.note` / `MemberStates.note` / `InviteAccepts.note` bind `client_id` to the next free roster name in order. Member Start makes one 8-hex id and puts it on `policy_ack`, `member_state`, and `invite_accept`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader invite gate when two or more members connect before they are in the in-game party.
+Consent: user (policy ACK name matching).
+Result: not run in game.
+
+## 2026-10-29 — already-formed party skips /초대, socket beep
+
+Intent: On party Start, read party memory first. If this character is already in a party, do not type `/초대` (or `파티탈퇴` when identity is unknown). Connect the websocket and send a `beep` test frame instead. Missing roster names are still invited.
+Shared: `invite.already_in_party` / `LeaderInvites.start` seed-from-memory; `accept.InviteAccepter` ignores the popup while `in_party`; wire type `beep`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader setup and member invite-accept at Start. Rally / hunt after that is unchanged.
+Consent: user (after leftover-leader-hooks fix; “go on” for already-organized skip-invite + beep).
+Result: not run in game.
+
+## 2026-10-29 — leftover leader role does not run party hooks
+
+Intent: Enable party off means a solo Start. A saved `party_role=leader` must not install rally hooks, hold-ground, invites, policy, or decision publish.
+Shared: `BotController._party_leader_on` (requires `party_enabled` and role leader). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: Start when the Party checkbox is off. A previous leader role in the schedule no longer waits on `party.hold_ground`.
+Consent: user (fix leftover leader hooks first; party-already-formed skip-invite is next).
+Result: not run in game.
+
 ## 2026-10-28 — hunt input: toolbar choice is not replaced by a schedule
 
 Intent: choosing Interception on the toolbar must be the hunt transport. A schedule apply was able to write `input_backend` back onto the profile.

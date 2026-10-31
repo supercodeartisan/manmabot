@@ -44,7 +44,13 @@ def send_member_status(
     )
 
 
-def send_policy_ack(client: Any, *, name: str, policy_id: str) -> bool:
+def send_policy_ack(
+    client: Any,
+    *,
+    name: str,
+    policy_id: str,
+    client_id: str = "",
+) -> bool:
     """Tell the leader this member applied ``policy_id``. False = link down."""
     from websocket.protocol import PartyMessage
 
@@ -52,7 +58,7 @@ def send_policy_ack(client: Any, *, name: str, policy_id: str) -> bool:
 
     if client is None or not getattr(client, "connected", False):
         return False
-    body = policy_ack_message(name=name, policy_id=policy_id)
+    body = policy_ack_message(name=name, policy_id=policy_id, client_id=client_id)
     client.send(PartyMessage(sender=body["from"], message=body))
     return True
 
@@ -67,6 +73,19 @@ def send_member_state(client: Any, body: dict) -> bool:
     return True
 
 
+def send_beep(client: Any, *, name: str, why: str = "already_in_party") -> bool:
+    """Member → leader: socket test when already in the in-game party."""
+    from websocket.protocol import PartyMessage
+
+    from .orders import beep_message
+
+    if client is None or not getattr(client, "connected", False):
+        return False
+    body = beep_message(who=name, why=why)
+    client.send(PartyMessage(sender=body["from"], message=body))
+    return True
+
+
 def send_invite_accept(client: Any, body: dict) -> bool:
     """One ``invite_accept`` frame (built by ``accept.InviteAccepter``)."""
     from websocket.protocol import PartyMessage
@@ -78,6 +97,7 @@ def send_invite_accept(client: Any, body: dict) -> bool:
 
 
 __all__ = [
+    "send_beep",
     "send_invite_accept",
     "send_member_state",
     "send_member_status",

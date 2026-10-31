@@ -37,6 +37,19 @@ def _key(name: Any) -> str:
     return str(name or "").strip().casefold()
 
 
+def _roster_order(names: Iterable[str] = ()) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in names or []:
+        name = str(raw or "").strip()
+        key = name.casefold()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+    return out
+
+
 def party_view(snapshot: Any) -> dict[str, Any]:
     """This bot's party memory for ``member_state``. ``mem`` ok | blind."""
     if not isinstance(snapshot, dict):
@@ -95,6 +108,7 @@ class MemberStateReporter:
         party: dict[str, Any],
         invite: dict[str, Any],
         live: Optional[dict[str, Any]] = None,
+        client_id: str = "",
     ) -> bool:
         """Send when the view changed or the keep-alive is due. True = sent.
 
@@ -115,7 +129,7 @@ class MemberStateReporter:
         body = member_state_message(
             name=name, session=session, policy_id=policy_id,
             party=party, invite=invite, seq=self.seq + 1, changed=changed,
-            live=live,
+            live=live, client_id=client_id,
         )
         try:
             ok = bool(send(body))
@@ -163,27 +177,26 @@ class MemberStates:
 
         A frame for an older leader session is ignored: that member has not seen
         this run yet and will re-report once it has. A member that does not know
-        its name yet (``member``) is booked to the only roster name without a
-        named, fresh state.
+        its name yet (``member``) is bound by ``client_id`` to the next roster
+        name without a fresh state, in roster order.
         """
         if session and str(body.get("session") or "") != session:
             return ""
         name = str(who or body.get("from") or "").strip()
-        if not name or name == "leader":
+        if not name or name.casefold() == "leader":
             return ""
-        names = [str(n).strip() for n in roster if str(n).strip()]
+        names = _roster_order(roster)
         by_key = {n.casefold(): n for n in names}
+        client_id = str(body.get("client_id") or "").strip()
         if name.casefold() in by_key:
             name = by_key[name.casefold()]
-        elif name == "member" and names:
-            open_names = [
-                n for n in names
-                if not (self.fresh(n) and self.rows[_key(n)].get("named"))
-            ]
-            if len(open_names) != 1:
+        elif name.casefold() == "member" and names:
+            name = self._bind_unnamed(names, client_id)
+            if not name:
                 self.unnamed_at = self._clock()
                 return ""
-            name = open_names[0]
+        else:
+            return ""
         prev = self.rows.get(_key(name)) or {}
         try:
             seq = int(body.get("seq") or 0)
@@ -193,9 +206,20 @@ class MemberStates:
         if prev and seq and 0 < seq < int(prev.get("seq") or 0) and prev.get("fresh_at"):
             if self._clock() - float(prev["fresh_at"]) < STALE_S:
                 return name
+        if client_id:
+            for key, row in list(self.rows.items()):
+                if str(row.get("client_id") or "") != client_id:
+                    continue
+                if key == _key(name):
+                    continue
+                if not row.get("named"):
+                    self.rows.pop(key, None)
+                else:
+                    row["client_id"] = ""
         self.rows[_key(name)] = {
             "name": name,
             "named": str(who or body.get("from") or "") not in ("", "member"),
+            "client_id": client_id or str(prev.get("client_id") or ""),
             "seq": seq,
             "policy_id": str(body.get("policy_id") or ""),
             "party": dict(body.get("party") or {}),
@@ -206,6 +230,19 @@ class MemberStates:
             "frames": int(prev.get("frames", 0)) + 1,
         }
         return name
+
+    def _bind_unnamed(self, names: list[str], client_id: str) -> str:
+        """Map an unnamed member to one roster name. "" if they cannot be told apart."""
+        if client_id:
+            for row in self.rows.values():
+                if str(row.get("client_id") or "") == client_id:
+                    return str(row.get("name") or "")
+        open_names = [n for n in names if not self.fresh(n)]
+        if not open_names:
+            return ""
+        if not client_id and len(open_names) != 1:
+            return ""
+        return open_names[0]
 
     def row(self, name: str) -> dict[str, Any]:
         row = dict(self.rows.get(_key(name)) or {})
@@ -281,29 +318,51 @@ class InviteAccepts:
         """Book one frame: (roster name or "", first time for this ``accept_id``).
 
         A frame for another leader session is ignored. A member that does not
-        know its name (``member``) is booked to the only roster name without an
-        accept yet.
+        know its name (``member``) is bound by ``client_id`` to the next roster
+        name without an accept yet.
         """
         if session and str(body.get("session") or "") != session:
             return "", False
         name = str(who or body.get("from") or "").strip()
-        if not name or name == "leader":
+        if not name or name.casefold() == "leader":
             return "", False
-        names = [str(n).strip() for n in roster if str(n).strip()]
+        names = _roster_order(roster)
         by_key = {n.casefold(): n for n in names}
+        client_id = str(body.get("client_id") or "").strip()
         if name.casefold() in by_key:
             name = by_key[name.casefold()]
-        elif name == "member" and names:
-            open_names = [n for n in names if _key(n) not in self.rows]
-            if len(open_names) != 1:
-                return "", False
-            name = open_names[0]
+        elif name.casefold() == "member" and names:
+            if client_id:
+                for row in self.rows.values():
+                    if str(row.get("client_id") or "") == client_id:
+                        name = str(row.get("name") or "")
+                        break
+                else:
+                    name = ""
+            else:
+                name = ""
+            if not name:
+                open_names = [n for n in names if _key(n) not in self.rows]
+                if not open_names:
+                    return "", False
+                if not client_id and len(open_names) != 1:
+                    return "", False
+                name = open_names[0]
+        else:
+            return "", False
         aid = str(body.get("accept_id") or "")
         prev = self.rows.get(_key(name)) or {}
         first = not prev or str(prev.get("accept_id") or "") != aid
+        if client_id:
+            for key, row in list(self.rows.items()):
+                if str(row.get("client_id") or "") != client_id:
+                    continue
+                if key != _key(name):
+                    self.rows.pop(key, None)
         self.rows[_key(name)] = {
             "name": name,
             "accept_id": aid,
+            "client_id": client_id or str(prev.get("client_id") or ""),
             "inviter": str(body.get("inviter") or ""),
             "presses": int(body.get("presses") or 0),
             "at": float(prev.get("at") or 0.0) if not first else time.time(),

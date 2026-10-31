@@ -6,17 +6,20 @@
   cut-off: a member that starts late, or left the party, is invited whenever
   it is ready. ``START_WAIT_S`` only bounds how long the leader waits before
   the hunt; names still missing then are "late" (still invited).
-- ``LeaderInvites``: one per Start. Sends the party policy first, leaves a
-  party this character does not lead, then drives ``PartyInviter`` each tick:
-  a roster name is invited only after that member confirmed the current
-  policy, not while its ``member_state`` says its invite popup is still open
-  (``sync.InviteHold``), and no line is typed right after an action that
-  opens an NPC dialog or teleports, nor right after a combat action (unless
-  combat has held a due invite for ``COMBAT_HOLD_MAX_S``). No socket notice
-  is sent: the member sees the popup itself. Joined = leader party memory, or
-  the member accepted the popup (``invite_accept``) / its party memory says
-  so (``sync.reported_joined``); left = the member reports it is out and the
-  leader memory does not list it, for ``LEFT_CONFIRM_S``.
+- ``LeaderInvites``: one per Start. Reads party memory first. Already in a
+  party this character leads (or cannot tell) skips ``파티탈퇴`` and ``/초대``
+  for names already listed; a websocket beep tests the link instead. Else
+  sends the party policy, leaves a party this character does not lead, then
+  drives ``PartyInviter`` each tick: a roster name is invited only after that
+  member confirmed the current policy, not while its ``member_state`` says
+  its invite popup is still open (``sync.InviteHold``), and no line is typed
+  right after an action that opens an NPC dialog or teleports, nor right
+  after a combat action (unless combat has held a due invite for
+  ``COMBAT_HOLD_MAX_S``). No socket notice is sent: the member sees the popup
+  itself. Joined = leader party memory, or the member accepted the popup
+  (``invite_accept``) / its party memory says so (``sync.reported_joined``);
+  left = the member reports it is out and the leader memory does not list
+  it, for ``LEFT_CONFIRM_S``.
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
 injects policy publish, socket count and wait.
@@ -120,8 +123,21 @@ def _member_names(snapshot: Any) -> set[str]:
     return names
 
 
+def already_in_party(snapshot: Any) -> bool:
+    """True when party memory shows this character is already in a party.
+
+    Unreadable memory (no snapshot, or ``subs_ok`` false) is not in-party —
+    that is unknown, not an invitation skip.
+    """
+    if not isinstance(snapshot, dict):
+        return False
+    if snapshot.get("subs_ok") is False:
+        return False
+    return bool(snapshot.get("in_party"))
+
+
 def _local_is_leader(snapshot: Any, self_name: str) -> bool:
-    if not isinstance(snapshot, dict) or not snapshot.get("in_party"):
+    if not already_in_party(snapshot):
         return False
     me = str(self_name or "").strip().casefold()
     if not me:
@@ -139,9 +155,18 @@ def _local_is_leader(snapshot: Any, self_name: str) -> bool:
 
 
 def needs_leave(snapshot: Any, self_name: str) -> bool:
-    """In a party this character does not lead: leave before inviting."""
-    in_party = bool(isinstance(snapshot, dict) and snapshot.get("in_party"))
-    return in_party and not _local_is_leader(snapshot, self_name)
+    """In a party this character does not lead: leave before inviting.
+
+    Unknown identity (empty ``self_name``) must not ``파티탈퇴`` an already
+    formed party.
+    """
+    if not already_in_party(snapshot):
+        return False
+    if _local_is_leader(snapshot, self_name):
+        return False
+    if not str(self_name or "").strip():
+        return False
+    return True
 
 
 def _action_kind(action: Any) -> str:
@@ -296,6 +321,16 @@ class PartyInviter:
             row.left += 1
             self._log(f'Party: "{row.name}" left the party — inviting again')
 
+    def seed_from_memory(
+        self,
+        snapshot: Any,
+        reported: Callable[[str], bool] = lambda _n: False,
+        reported_out: Callable[[str], bool] = lambda _n: False,
+    ) -> None:
+        """Mark names already in party memory before the first /초대 tick."""
+        self.observe(snapshot, reported, reported_out)
+        self._update_state(self._clock())
+
     def _update_state(self, now: float) -> None:
         if all(r.joined for r in self.rows):
             if self.state != FORMED:
@@ -414,6 +449,7 @@ class LeaderInvites:
         clock: Callable[[], float] = time.monotonic,
         start_wait_s: Optional[float] = None,
         every_s: Optional[float] = None,
+        on_beep: Optional[Callable[[], Any]] = None,
     ) -> None:
         self._publish_policy = publish_policy
         self._ws_clients = ws_clients
@@ -428,10 +464,12 @@ class LeaderInvites:
         self._clock = clock
         self.start_wait_s = float(START_WAIT_S if start_wait_s is None else start_wait_s)
         self.every_s = float(INVITE_EVERY_S if every_s is None else every_s)
+        self._on_beep = on_beep
         self.inviter: Optional[PartyInviter] = None
         self.info: dict[str, Any] = {}
         self._policy_clients = 0
         self._combat_hold_at: Optional[float] = None
+        self._beep_on = False
 
     @property
     def active(self) -> bool:
@@ -458,10 +496,21 @@ class LeaderInvites:
         except Exception as exc:
             self._log(f"Party policy publish failed: {exc}")
 
+    def _ring(self) -> None:
+        if self._on_beep is None:
+            return
+        try:
+            self._on_beep()
+        except Exception as exc:
+            self._log(f"Party beep failed: {exc}")
+
     def start(self, names: Any, *, snapshot: Any, self_name: str) -> bool:
-        """Publish policy, leave a foreign party, arm the inviter. False = leave failed."""
+        """Read memory, skip invites when already organized, else leave + arm inviter.
+
+        False = leave failed.
+        """
         wanted = roster_invite_names(names, self_name)
-        in_party = bool(isinstance(snapshot, dict) and snapshot.get("in_party"))
+        in_party = already_in_party(snapshot)
         self._log(
             f"Party setup: self={self_name or '—'} in_party={in_party} "
             f"leader={_leader_name(snapshot) or '—'} invite={', '.join(wanted) or '—'}"
@@ -473,6 +522,8 @@ class LeaderInvites:
                 self.info = {"state": LEAVE_FAILED, "names": wanted}
                 return False
             self._wait(1.0)
+            in_party = False
+            snapshot = None
         self.inviter = PartyInviter(
             wanted,
             start_wait_s=self.start_wait_s,
@@ -480,11 +531,31 @@ class LeaderInvites:
             clock=self._clock,
             log=self._log,
         )
+        self.inviter.seed_from_memory(
+            snapshot, self._reported_joined, self._reported_out
+        )
         self.info = self.inviter.status()
+        missing = self.inviter.missing()
+        joined = [r.name for r in self.inviter.rows if r.joined]
+        if in_party:
+            self._beep_on = True
+            self._ring()
+            if not missing:
+                self._log(
+                    "Party already organized (memory) — skipping invitations; "
+                    "websocket beep"
+                )
+                return True
+            self._log(
+                "Party already in-game (memory) — skipping /초대 for "
+                f"{', '.join(joined) or '—'}; still inviting "
+                f"{', '.join(missing)}"
+            )
         self._log(
             f"Party start wait {int(self.start_wait_s // 60)} min, then hunt. "
             f"/초대 every {int(self.every_s)}s to each member that confirmed the "
-            f"policy and is not in the party — no cut-off ({', '.join(wanted) or '—'})"
+            f"policy and is not in the party — no cut-off "
+            f"({', '.join(missing or wanted) or '—'})"
         )
         return True
 
@@ -507,6 +578,8 @@ class LeaderInvites:
         clients = self._clients()
         if clients > self._policy_clients:
             self._publish()
+            if self._beep_on:
+                self._ring()
         self._policy_clients = clients
         can_send = False
         if inviter.inviting:
@@ -567,6 +640,7 @@ __all__ = [
     "PartyInviter",
     "action_allows_chat",
     "action_is_combat",
+    "already_in_party",
     "deliver_chat",
     "invite_command",
     "needs_leave",

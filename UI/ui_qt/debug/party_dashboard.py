@@ -565,7 +565,8 @@ class PartyDashboard(QWidget):
             err = (
                 f"Waiting for the leader socket {wait.get('uri') or '—'} — "
                 f"{_duration(wait.get('waited_s'))} (no timeout; start the leader "
-                "any time, Stop to cancel). Nothing moves or fights until it connects."
+                "any time, Stop to cancel). HP still runs; no follow or combat "
+                "until it connects."
             )
             style = "color:#fbbf24;font-weight:600;"
         else:

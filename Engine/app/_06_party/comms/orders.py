@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from websocket.party_orders import (
     ARRIVE_TILES,
+    BEEP,
     MEMBER_STATE,
     INVITE_ACCEPT,
     POLICY,
     POLICY_ACK,
     PolicyAcks,
+    beep_message,
     invite_accept_message,
     member_state_message,
     new_invite_id,
@@ -30,6 +32,7 @@ from websocket.party_orders import (
     Rally,
     leader_message,
     loot_role_for_name,
+    seat_index_for_name,
     member_orders,
     order_tag,
     party_member_names,
@@ -44,8 +47,10 @@ from websocket.party_orders import (
 
 __all__ = [
     "ARRIVE_TILES",
+    "BEEP",
     "MEMBER_STATE",
     "INVITE_ACCEPT",
+    "beep_message",
     "invite_accept_message",
     "member_state_message",
     "new_invite_id",
@@ -67,6 +72,7 @@ __all__ = [
     "Rally",
     "leader_message",
     "loot_role_for_name",
+    "seat_index_for_name",
     "member_orders",
     "order_tag",
     "party_member_names",

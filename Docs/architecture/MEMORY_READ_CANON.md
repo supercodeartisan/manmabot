@@ -1,5 +1,7 @@
 # 메모리 읽기 정형
 
+현재 봇이 메모리를 읽는 경로는 `ANALYSIS_MODULES.md`다. 이 문서는 그 전에 쓰던 리스너 DLL(`realtime_monitor`, `print_state`, `attacks_me`)과 오프셋 파일 기준이다. 그 바이너리는 `Engine/analysis/old`에 있다.
+
 드라이버는 `signeddrv` IOCTL `0x222060`이다. 한 페이지(4KB)를 넘는 연속 읽기는 페이지마다 호출이 나뉜다. 같은 바이트를 필드마다 다시 읽는 호출을 없앤다. 호출 시각과 주기는 이 프로젝트의 결정 틱과 print_state 로스터 시계를 따른다.
 
 맵 아이디는 `mgr → holder → subs → MapSubsystem(vft) → MapIdOff`만 쓴다. 서브시스템은 인덱스가 아니라 vft로 고른다.

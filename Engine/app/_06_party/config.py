@@ -141,7 +141,7 @@ class PartyMemberConfig:
         """Overlay global knobs from a leader ``party_policy`` body."""
         if not isinstance(policy, dict):
             return self.clamped()
-        from websocket.party_orders import (
+        from .comms.orders import (
             loot_role_for_name,
             seat_index_for_name,
             seat_role_for_name,

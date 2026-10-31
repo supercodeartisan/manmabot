@@ -26,6 +26,7 @@ from .orders import (
     reset_orders,
 )
 from .publish import (
+    publish_beep,
     publish_body,
     publish_leader_decision,
     publish_policy,
@@ -43,6 +44,7 @@ __all__ = [
     "Rally",
     "member_orders",
     "party_member_names",
+    "publish_beep",
     "publish_body",
     "publish_leader_decision",
     "publish_policy",

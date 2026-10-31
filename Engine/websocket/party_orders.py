@@ -42,6 +42,7 @@ POLICY = "party_policy"
 POLICY_ACK = "policy_ack"
 INVITE_ACCEPT = "invite_accept"
 MEMBER_STATE = "member_state"
+BEEP = "beep"
 
 STAGE_START = "start"
 STAGE_PLANNED = "planned"
@@ -185,14 +186,34 @@ def _policy_id(knobs: dict[str, Any]) -> str:
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10]
 
 
-def policy_ack_message(*, name: str, policy_id: str) -> dict[str, Any]:
-    """Member → leader: this policy is applied on top of the member's profile."""
+def beep_message(*, who: str = "leader", why: str = "already_in_party") -> dict[str, Any]:
+    """Link test (beep): already-formed party skips /초대 and pings the socket."""
+    sender = str(who or "leader").strip() or "leader"
     return {
+        "type": BEEP,
+        "from": sender,
+        "why": str(why or "already_in_party"),
+        "at": time.time(),
+    }
+
+
+def policy_ack_message(
+    *,
+    name: str,
+    policy_id: str,
+    client_id: str = "",
+) -> dict[str, Any]:
+    """Member → leader: this policy is applied on top of the member's profile."""
+    body = {
         "type": POLICY_ACK,
         "from": str(name or "member").strip() or "member",
         "policy_id": str(policy_id or ""),
         "ok": True,
     }
+    cid = str(client_id or "").strip()
+    if cid:
+        body["client_id"] = cid
+    return body
 
 
 def new_invite_id() -> str:
@@ -206,9 +227,10 @@ def invite_accept_message(
     accept_id: str,
     inviter: str = "",
     presses: int = 0,
+    client_id: str = "",
 ) -> dict[str, Any]:
-    """Member → leader: Y closed this member's party invite popup (accepted)."""
-    return {
+    """Member → leader: Y closed this member's invite popup (accepted)."""
+    body = {
         "type": INVITE_ACCEPT,
         "from": str(name or "member").strip() or "member",
         "session": str(session or ""),
@@ -217,6 +239,10 @@ def invite_accept_message(
         "presses": int(presses or 0),
         "at": time.time(),
     }
+    cid = str(client_id or "").strip()
+    if cid:
+        body["client_id"] = cid
+    return body
 
 
 def member_state_message(
@@ -229,11 +255,12 @@ def member_state_message(
     seq: int,
     changed: bool,
     live: Optional[dict[str, Any]] = None,
+    client_id: str = "",
 ) -> dict[str, Any]:
     """Member → leader: full member view (see module doc). ``changed`` = differs
     from the previous frame (the rest are keep-alive repeats). ``live`` = monitor
     extras (bot state, map, xy, hp/mp, current step)."""
-    return {
+    body = {
         "type": MEMBER_STATE,
         "from": str(name or "member").strip() or "member",
         "session": str(session or ""),
@@ -244,6 +271,10 @@ def member_state_message(
         "seq": int(seq),
         "changed": bool(changed),
     }
+    cid = str(client_id or "").strip()
+    if cid:
+        body["client_id"] = cid
+    return body
 
 
 def seat_role_for_name(roster: Any, name: str) -> str:
@@ -486,6 +517,7 @@ class MemberOrders:
         self.session = ""
         self.session_resets = 0
         self._session_changed = False
+        self._beep: Optional[dict[str, Any]] = None
 
     @property
     def order_kind(self) -> str:
@@ -505,6 +537,13 @@ class MemberOrders:
         self.session = ""
         self.session_resets = 0
         self._session_changed = False
+        self._beep = None
+
+    def take_beep(self) -> Optional[dict[str, Any]]:
+        """Leader beep once, then None until the next one."""
+        body = self._beep
+        self._beep = None
+        return body
 
     def take_session_change(self) -> Optional[str]:
         """The new leader session id once after it first appears, else None."""
@@ -535,6 +574,9 @@ class MemberOrders:
                 self.session_resets += 1
                 self._session_changed = True
             kind = str(body.get("type") or "")
+            if kind == BEEP:
+                self._beep = dict(body)
+                continue
             if kind == RECOVERY:
                 self.recovery = dict(body)
                 continue
@@ -572,6 +614,20 @@ class MemberOrders:
         return True
 
 
+def _roster_list(names: Optional[Any] = None) -> list[str]:
+    """Stable unique roster names, preserving incoming order."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in names or []:
+        name = str(raw or "").strip()
+        key = name.casefold()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+    return out
+
+
 class PolicyAcks:
     """Leader side: which roster names confirmed which ``policy_id``."""
 
@@ -581,29 +637,59 @@ class PolicyAcks:
     def clear(self) -> None:
         self.rows.clear()
 
-    def note(self, who: str, body: dict[str, Any], names: Optional[set[str]] = None) -> str:
+    def note(self, who: str, body: dict[str, Any], names: Optional[Any] = None) -> str:
         """Record one ack; returns the roster name it was booked to ("" = ignored).
 
-        A member that does not know its own name yet sends ``member``; with
-        exactly one roster name still unconfirmed, the ack goes to that name.
+        A member that does not know its name yet sends ``from=member`` plus a
+        stable ``client_id``. Each id is bound to the next unconfirmed roster
+        name, in roster order, so two unnamed members no longer drop both acks.
         """
-        name = str(who or body.get("from") or "").strip()
-        if not name or name == "leader":
+        name = str(who or (body or {}).get("from") or "").strip()
+        if not name or name.casefold() == "leader":
             return ""
-        pid = str(body.get("policy_id") or "")
-        roster = {str(n).strip() for n in (names or set()) if str(n).strip()}
+        pid = str((body or {}).get("policy_id") or "")
+        client_id = str((body or {}).get("client_id") or "").strip()
+        roster = _roster_list(names)
         by_key = {n.casefold(): n for n in roster}
         if name.casefold() in by_key:
-            name = by_key[name.casefold()]
-        elif name == "member" and roster:
-            open_names = [n for n in roster if not self.acked(n, pid)]
-            if len(open_names) != 1:
-                return ""
-            name = open_names[0]
+            return self._store(by_key[name.casefold()], pid, client_id, named=True)
+        if name.casefold() != "member" or not roster:
+            return ""
+        if client_id:
+            for row in self.rows.values():
+                if str(row.get("client_id") or "") == client_id:
+                    return self._store(
+                        str(row.get("name") or ""), pid, client_id, named=False
+                    )
+        open_names = [n for n in roster if not self.acked(n, pid)]
+        if not open_names:
+            return ""
+        if not client_id and len(open_names) != 1:
+            return ""
+        return self._store(open_names[0], pid, client_id, named=False)
+
+    def _store(
+        self, name: str, pid: str, client_id: str, *, named: bool
+    ) -> str:
+        name = str(name or "").strip()
+        if not name:
+            return ""
+        if client_id:
+            for key, row in list(self.rows.items()):
+                if str(row.get("client_id") or "") != client_id:
+                    continue
+                if key == name.casefold():
+                    continue
+                if not row.get("named"):
+                    self.rows.pop(key, None)
+                else:
+                    row["client_id"] = ""
         prev = self.rows.get(name.casefold()) or {}
         self.rows[name.casefold()] = {
             "name": name,
             "policy_id": pid,
+            "client_id": client_id or str(prev.get("client_id") or ""),
+            "named": bool(named or prev.get("named")),
             "at": time.time(),
             "count": int(prev.get("count", 0)) + 1,
         }
@@ -632,8 +718,10 @@ def reset_orders() -> None:
 
 __all__ = [
     "ARRIVE_TILES",
+    "BEEP",
     "MEMBER_STATE",
     "INVITE_ACCEPT",
+    "beep_message",
     "invite_accept_message",
     "member_state_message",
     "new_invite_id",
