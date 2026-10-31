@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-10-31 — member invite Y without enter_chat.dll
+
+Intent: The member saw the invite popup (uidialog confirm parse works) but Y failed: `enter_chat.dll not found` on `D:\ManmabotV1_final_final_final\...` (that tree has no built DLL). Accept must still press Y via the hunt keyboard.
+Shared: `accept.type_accept_key` tries enter_chat `ec_press_key`, then hunt `key_down("y")` with English IME. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept only.
+Consent: user (client accept failing).
+Result: not run in game.
+
 ## 2026-10-31 — uidialog confirm text reaches invite accept; chat typed logs IME
 
 Intent: Member never saw the in-game invite popup. `uidialogmon` already prints Yes/No confirm text, but `lc_view.uidialog()` kept only window labels, so `invite_popup.party_invite` always got an empty `confirm` list. Leader `typed` also hid IME/char counts, so a Hangul `/초대` that went out as jamo still looked successful.

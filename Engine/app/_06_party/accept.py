@@ -39,17 +39,51 @@ ACK_EVERY_S = 2.0
 LEFT_CONFIRM_S = 10.0
 
 
+def _press_y_hunt() -> str:
+    """Y through the hunt keyboard when ``enter_chat.dll`` is missing."""
+    from app._05_action import input_backend as ib
+    from app._05_action.chat.ime import english_ime
+    from app._05_action.window_bounds import find_game_window
+
+    hwnd = find_game_window("LC.exe")
+    try:
+        ib.ensure_open()
+        if hwnd:
+            with english_ime(int(hwnd)):
+                ib.key_down("y")
+                time.sleep(0.04)
+                ib.key_up("y")
+                time.sleep(0.15)
+        else:
+            ib.key_down("y")
+            time.sleep(0.04)
+            ib.key_up("y")
+        return ""
+    except Exception as exc:
+        return str(exc)
+
+
 def type_accept_key() -> str:
     """Press Y in the game window (IME held in English). "" on success, else the error."""
     from app._05_action.chat import default_game_chat
+    from app._05_action.chat.native import EnterChatUnavailable
 
+    dll_error = ""
     try:
         result = default_game_chat().press_key(
             ACCEPT_SCANCODE, label="Y (party invite)", english=True
         )
+        if result.ok:
+            return ""
+        dll_error = result.describe()
+    except EnterChatUnavailable as exc:
+        dll_error = str(exc)
     except Exception as exc:
-        return str(exc)
-    return "" if result.ok else result.describe()
+        dll_error = str(exc)
+    hunt_error = _press_y_hunt()
+    if not hunt_error:
+        return ""
+    return dll_error or hunt_error
 
 
 def _note_monitor(text: str) -> None:
