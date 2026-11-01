@@ -6,13 +6,40 @@ from typing import Any, Callable, Optional
 LogFn = Callable[[str], None]
 
 
+def _name_in_conflict(who: str, connection_id: str) -> bool:
+    """True when this name is claimed by two live connections."""
+    from ..member_discovery import MembershipStatus, discovery
+
+    key = str(who or "").strip().casefold()
+    cid = str(connection_id or "").strip()
+    for row in discovery.by_connection.values():
+        if row.status != MembershipStatus.CONFLICT:
+            continue
+        if cid and row.connection_id == cid:
+            return True
+        if key and str(row.name or "").strip().casefold() == key:
+            return True
+    return False
+
+
 def ingest_member_orders(client: Any) -> None:
-    """Drain the member client inbox into ``member_orders``."""
+    """Drain the member client inbox into ``member_orders``.
+
+    Frames that are not from the leader, or that fail the field checks,
+    never reach the member brain.
+    """
+    from ..frame_check import reject_leader_frame
     from .orders import member_orders
 
     if client is None:
         return
-    member_orders.ingest(client.drain())
+    kept = []
+    for frame in client.drain():
+        body = getattr(frame, "message", None)
+        if reject_leader_frame(body):
+            continue
+        kept.append(frame)
+    member_orders.ingest(kept)
 
 
 def drain_leader_reports(
@@ -30,6 +57,7 @@ def drain_leader_reports(
 
     Returns the current WebSocket client count (0 when there is no server).
     """
+    from ..frame_check import character_name, reject_member_frame
     from ..member_discovery import MembershipStatus, discovery
     from ..sync import invite_accepts, member_states
     from .orders import (
@@ -60,6 +88,10 @@ def drain_leader_reports(
         body = getattr(frame, "message", None)
         if not isinstance(body, dict):
             continue
+        dropped = reject_member_frame(body)
+        if dropped:
+            note(f"Party frame dropped: {dropped}")
+            continue
         kind = str(body.get("type") or "")
         who = str(body.get("from") or getattr(frame, "sender", "") or "")
         cid = str(body.get("client_id") or "").strip()
@@ -84,7 +116,7 @@ def drain_leader_reports(
             note(f"Party beep from {who or 'member'} — socket ok ({why})")
             continue
         if kind == MEMBER_STATE:
-            state_name = who if who.casefold() not in ("", "member", "leader") else ""
+            state_name = character_name(who)
             found = discovery.observe(
                 connection_id=cid,
                 name=state_name,
@@ -122,6 +154,8 @@ def drain_leader_reports(
                 )
             continue
         if kind == INVITE_ACCEPT:
+            if not character_name(who) or _name_in_conflict(who, cid):
+                continue
             booked, first = invite_accepts.note(
                 who, body, roster, session=leader_session()
             )
@@ -133,6 +167,8 @@ def drain_leader_reports(
                 )
             continue
         if kind == POLICY_ACK:
+            if not character_name(who) or _name_in_conflict(who, cid):
+                continue
             booked = policy_acks.note(who, body, roster)
             if booked:
                 count = int(policy_acks.row(booked).get("count") or 0)
@@ -143,6 +179,8 @@ def drain_leader_reports(
                     )
             continue
         if kind != REPORT:
+            continue
+        if not character_name(who) or _name_in_conflict(who, cid):
             continue
         rally.note_report(who, body, names)
     try:

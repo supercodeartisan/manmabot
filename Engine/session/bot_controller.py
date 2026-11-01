@@ -986,6 +986,7 @@ class BotController:
                     "target_id": target_id,
                 },
                 "self": {
+                    "name": _player_chat_name(world, party),
                     "xy": self_xy,
                     "hp": self_hp,
                     "mp": self_mp,
@@ -3600,7 +3601,12 @@ class BotController:
 
 
 def _player_chat_name(world, snapshot) -> str:
-    """Local character name for invite skip / leader check."""
+    """Local character name for invite skip / leader check / member hello."""
+    from app._06_party.member_identity import my_player_name
+
+    seen = my_player_name(getattr(world, "last_print_state", None) if world is not None else None)
+    if seen:
+        return seen
     player = getattr(world, "player", None) if world is not None else None
     identity = getattr(player, "identity", None)
     name = str(getattr(identity, "name", None) or "").strip()

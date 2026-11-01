@@ -950,8 +950,10 @@ class PartyDashboard(QWidget):
         if gather:
             gtxt = f"{gather} map{_fmt(orders.get('gather_map'))} ({_fmt(gxy[0] if gxy else None)},{_fmt(gxy[1] if len(gxy) > 1 else None)})"
             gtxt += "  ARRIVED" if orders.get("arrived") else "  walking"
+        self_info = snap.get("self") if isinstance(snap.get("self"), dict) else {}
         self.mem_metrics.set(
             [
+                ("Self", _fmt(self_info.get("name") or policy.get("as_name"))),
                 ("Leader", seen or "—"),
                 ("Distance", _fmt(status.get("leader_dist"))),
                 ("Leader HP / MP", f"{_fmt(status.get('leader_hp'))} / {_fmt(status.get('leader_mp'))}"),

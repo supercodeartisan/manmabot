@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-01 — party frame checks before workflow
+
+Intent: Bad party frames must not book an invite, a policy ack, or a member order.
+Shared: `frame_check` drops non-objects, unknown types, control characters, names over 16, a member frame that says it is the leader, a hello whose name does not match `from`, and a leader policy/rally with missing fields. Unnamed `from=member` still stays Unidentified and is not invited. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party socket ingest only.
+Consent: user (put checks in so errors do not get through).
+Result: not run in game.
+
+## 2026-11-01 — member name from MyPlayer entity
+
+Intent: The member hello had no character name because `PlayerState` has no name field. The enttrack snapshot already has a `MyPlayer` row with `name`.
+Shared: `_player_chat_name` reads that row first. Party monitor shows it as Self. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party hello / member_state sender name and the monitor label. Hunt targeting is unchanged (`MyPlayer` stays off the click list).
+Consent: user (read MyPlayer and display it).
+Result: not run in game.
+
 ## 2026-11-01 — P0 member discovery (hello, pending, empty-roster listen)
 
 Intent: Add a discovery layer in front of the existing party workflow. Unknown sockets must not be dropped; empty roster must still listen. Hunt brains stay as they are.

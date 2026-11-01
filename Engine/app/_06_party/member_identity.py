@@ -31,6 +31,30 @@ class CharacterIdentity:
         return str(self.name or "").strip().casefold() not in _RESERVED
 
 
+_BLANK_NAMES = frozenset({"", "?", "-", "member", "leader", "unknown", "server"})
+
+
+def my_player_name(snapshot: Any) -> str:
+    """Local character name from the enttrack ``MyPlayer`` row.
+
+    The world click list drops this row. Party hello reads it here.
+    """
+    if not isinstance(snapshot, dict):
+        return ""
+    rows = snapshot.get("entities") or snapshot.get("ents") or []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        cls = str(row.get("class") or row.get("cls") or "")
+        if not (row.get("self") or cls in ("MyPlayer", "SELF")):
+            continue
+        name = str(row.get("name") or "").strip()
+        if name.casefold() in _BLANK_NAMES:
+            continue
+        return name
+    return ""
+
+
 def class_token(character_type: Any) -> Optional[str]:
     """``CharacterType.ELF`` → ``ELF``. Unknown objects → None."""
     if character_type is None:
@@ -95,5 +119,6 @@ __all__ = [
     "CharacterIdentity",
     "build_member_hello",
     "class_token",
+    "my_player_name",
     "name_on_roster",
 ]

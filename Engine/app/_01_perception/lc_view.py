@@ -212,6 +212,7 @@ def _entity_rows(frame: dict[str, Any]) -> list[dict[str, Any]]:
                 "atk": raw.get("atk"),
                 "owner": raw.get("owner"),
                 "tgt": raw.get("tgt"),
+                "self": bool(raw.get("self")),
             }
         )
     return rows
