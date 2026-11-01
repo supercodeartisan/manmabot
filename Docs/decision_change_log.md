@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-01 — dungeon hop matches the 2026-10-19 click
+
+Intent: a dungeon hop within one tile drops that click and plans the next one on the same tick. Two tiles out, while the body is walking, the click moves farther only when the line stays straight. The route-cell chain is not used.
+Shared: `emit_travel_hop`. The field branch already used this near-tile and straight-extend rule, so its clicks stay the same. `choose_body_click`, loot, combat, and HP are unchanged.
+Affects: dungeon patrol and other dungeon travel hops. A bend waits until the click is within one tile. The dungeon hop cap stays 3.
+Consent: user (dungeon movement and patrol clicks match 2026-10-19 commit 2f76607; do not change the shared click picker or adena loot).
+Result: implemented in `travel.py`. Not run in game.
+
 ## 2026-11-01 — item F4 press matches the 2026-10-19 range
 
 Intent: press F4 when the pile is within one tile, on that tick, with no stand sample and no 0.4s gap before a repeat. This is the press rule in commit `2f76607`.
