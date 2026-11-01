@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-01 — item F4 press matches the 2026-10-19 range
+
+Intent: press F4 when the pile is within one tile, on that tick, with no stand sample and no 0.4s gap before a repeat. This is the press rule in commit `2f76607`.
+Shared: none. Dungeon travel, combat, retreat, the approach hop, and how long a listed pile is held are unchanged. `loot_awaiting_memory_gone` still releases a ghost after three presses and 8 seconds, not after the old 0.8 seconds. A side F4 still does not run while attack, travel, or search owns the tick.
+Affects: the first loot F4 and a retry while the pile is still within one tile. Distance 2 still walks. A pile that leaves that range is approached again. Small named adena outside the range is still not walked back to.
+Consent: user (make only the item-loot F4 press rule identical to the October 19 version; do not touch anything else).
+Result: implemented in `loot_hop.py`. Not run in game.
+
 ## 2026-10-31 — loot F4 on the matching tile, dungeon keeps a live click
 
 Intent: press F4 on the tick the live tile equals the pile, with no ground click on that tick, and stop reissuing a dungeon walk click just because the next route cell changed.

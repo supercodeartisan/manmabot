@@ -183,52 +183,30 @@ def try_finish_pending_pickup(
 
     origin = blackboard.world_origin
     item_tile = object_absolute_tile(obj, origin)
-    feet = _feet_on_pickup(origin, item_tile, obj)
-    # Named small adena is not walked back to. A pile already underfoot still F4s.
-    if small_adena_ignored(obj) and not feet and not _in_pickup_range(
-        origin, obj, item_tile
-    ):
+    in_range = _in_pickup_range(origin, obj, item_tile)
+    # Named small adena is not walked back to. A pile already in range still F4s.
+    if small_adena_ignored(obj) and not in_range:
         clear_loot_await(blackboard)
         return None
-    if not feet:
-        if small_adena_ignored(obj):
-            clear_loot_await(blackboard)
-            return None
-        event("loot", "pickup re-approach id=%s (await still listed)", tid)
-        blackboard.current_item_id = int(tid)
-        blackboard.current_target_id = None
-        clear_engage_state(blackboard)
-        status = tick_loot_item(state, blackboard, obj, fresh=True)
-        if status is Status.SUCCESS:
-            return Status.SUCCESS
-        return emit_await_pickup_gone(blackboard)
-
-    # Still on the pile. Do not wait for stand. The gap only spaces a retry
-    # after the press that already went out, and it emits no ground click.
-    tries = int(blackboard.scratch.get("_loot_f4_tries") or 0)
-    if tries >= int(pm.LOOT_F4_RECHECK_TRIES):
-        blackboard.scratch["_loot_f4_tries"] = 0
-        blackboard.scratch["_loot_force_reapproach"] = 1
-        event("loot", "pickup recheck id=%s (still listed)", tid)
-        blackboard.current_item_id = int(tid)
-        blackboard.current_target_id = None
-        clear_engage_state(blackboard)
-        status = tick_loot_item(state, blackboard, obj, fresh=True)
-        if status is Status.SUCCESS:
-            return Status.SUCCESS
-        return emit_await_pickup_gone(blackboard)
-    last = float(blackboard.scratch.get("_loot_f4_at") or 0.0)
-    if last and (time.time() - last) < float(pm.LOOT_F4_GAP_S):
-        _emit_wait(blackboard, int(tid), "pickup settle")
+    if in_range:
+        event("loot", "pickup retry id=%s (await still listed)", tid)
+        _emit_pickup(
+            blackboard,
+            int(tid),
+            mid_act=False,
+            reason="pickup retry",
+        )
         return Status.SUCCESS
-    event("loot", "pickup retry id=%s (await still listed)", tid)
-    _emit_pickup(
-        blackboard,
-        int(tid),
-        mid_act=False,
-        reason="pickup retry",
-    )
-    return Status.SUCCESS
+
+    # Walked off before the server dropped the pile — approach again.
+    event("loot", "pickup re-approach id=%s (await still listed)", tid)
+    blackboard.current_item_id = int(tid)
+    blackboard.current_target_id = None
+    clear_engage_state(blackboard)
+    status = tick_loot_item(state, blackboard, obj, fresh=True)
+    if status is Status.SUCCESS:
+        return Status.SUCCESS
+    return emit_await_pickup_gone(blackboard)
 
 
 def loot_pickup_settling(blackboard: "Blackboard") -> bool:
@@ -538,11 +516,11 @@ def _bag_rose(
 
 
 def f4_allowed(blackboard, state, item_id) -> bool:
-    """True when this pile is underfoot.
+    """True within one tile of the pile. The press does not wait for stand.
 
-    The loot approach sets ``_loot_f4_match`` for that id, and the key may
-    go out before the body reports stand. Any other caller still needs stand,
-    so a side F4 does not fire while the body is walking past some other pile.
+    Same range as the 2026-10-19 pickup: memory distance or either player
+    tile at Chebyshev ``LOOT_PICKUP_TILES``. The key is not delayed by a
+    settle gap. Attack, travel, and search still own their tick elsewhere.
     """
     if blackboard is None or state is None or item_id is None:
         return False
@@ -556,15 +534,7 @@ def f4_allowed(blackboard, state, item_id) -> bool:
     if origin is None:
         return False
     tile = object_absolute_tile(obj, origin)
-    if not _feet_on_pickup(origin, tile, obj):
-        return False
-    try:
-        matched = int(blackboard.scratch.get("_loot_f4_match") or -1)
-    except (TypeError, ValueError):
-        matched = -1
-    if matched == int(item_id):
-        return True
-    return _body_settled_for_f4(blackboard, origin)
+    return _in_pickup_range(origin, obj, tile)
 
 
 def _emit_wait(blackboard: "Blackboard", item_id: int, reason: str) -> None:
@@ -582,31 +552,6 @@ def _emit_wait(blackboard: "Blackboard", item_id: int, reason: str) -> None:
         priority=0.4,
         reason=reason,
     )
-
-
-def _offer_f4(
-    blackboard: "Blackboard",
-    item_id: int,
-    *,
-    fresh: bool,
-    reason: str,
-) -> "Status":
-    """F4 the moment the caller has the live tile on the pile.
-
-    Stand and the 0.4s retry gap are not required for this press. The gap
-    still spaces a later press in ``try_finish_pending_pickup``.
-    """
-    from app._04_decision.behavior_tree import Status
-    from app.bot_log import event
-
-    event("loot", "pickup match id=%s (f4 now)", item_id)
-    _emit_pickup(
-        blackboard,
-        item_id,
-        mid_act=not fresh,
-        reason=reason,
-    )
-    return Status.SUCCESS
 
 
 def _nudge_content_off_item(content: Position, item: "WorldObject") -> Position:
@@ -712,20 +657,18 @@ def tick_loot_item(
     origin = blackboard.world_origin
     item_tile = object_absolute_tile(item, origin)
     player_tile = _player_nav_tile(origin, item)
-    recheck = bool(blackboard.scratch.pop("_loot_force_reapproach", None))
+    adjacent = _in_pickup_range(origin, item, item_tile)
 
-    # F4 when the live tile is the pile tile. Distance 1 while walking
-    # does not match, so that press stays off. No ground click on this tick.
-    if not recheck and _feet_on_pickup(origin, item_tile, item):
-        blackboard.loot_approach_active = False
-        blackboard.loot_approach_destination = None
-        blackboard.loot_approach_waypoint = None
-        return _offer_f4(
+    # F4 inside one tile, including while the body is still walking.
+    # A ground click is not emitted on this tick.
+    if adjacent:
+        _emit_pickup(
             blackboard,
             item_id,
-            fresh=fresh,
+            mid_act=not fresh,
             reason="engage item" if fresh else "loot target",
         )
+        return Status.SUCCESS
 
     # Hold the current hop until memory reaches it. Re-planning every tick
     # issued a new ground click and canceled the walk onto the pile.
@@ -739,13 +682,14 @@ def tick_loot_item(
             blackboard.loot_approach_active = False
             blackboard.loot_approach_destination = None
             blackboard.loot_approach_waypoint = None
-            if not recheck and _feet_on_pickup(origin, item_tile, item):
-                return _offer_f4(
+            if _in_pickup_range(origin, item, item_tile):
+                _emit_pickup(
                     blackboard,
                     item_id,
-                    fresh=fresh,
+                    mid_act=not fresh,
                     reason="loot target nearby",
                 )
+                return Status.SUCCESS
         elif dest is not None:
             raw, moving = _loot_motion(blackboard, origin)
             if _loot_click_still_open(
