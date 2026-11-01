@@ -42,6 +42,7 @@ POLICY = "party_policy"
 POLICY_ACK = "policy_ack"
 INVITE_ACCEPT = "invite_accept"
 MEMBER_STATE = "member_state"
+MEMBER_HELLO = "member_hello"
 BEEP = "beep"
 
 STAGE_START = "start"
@@ -243,6 +244,11 @@ def invite_accept_message(
     if cid:
         body["client_id"] = cid
     return body
+
+
+def member_hello_message(body: dict[str, Any]) -> dict[str, Any]:
+    """Pass-through for a ``member_hello`` dict built by ``member_identity``."""
+    return dict(body or {})
 
 
 def member_state_message(
@@ -720,6 +726,8 @@ __all__ = [
     "ARRIVE_TILES",
     "BEEP",
     "MEMBER_STATE",
+    "MEMBER_HELLO",
+    "member_hello_message",
     "INVITE_ACCEPT",
     "beep_message",
     "invite_accept_message",

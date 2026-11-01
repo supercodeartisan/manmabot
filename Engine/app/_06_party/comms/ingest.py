@@ -30,10 +30,12 @@ def drain_leader_reports(
 
     Returns the current WebSocket client count (0 when there is no server).
     """
+    from ..member_discovery import MembershipStatus, discovery
     from ..sync import invite_accepts, member_states
     from .orders import (
         BEEP,
         INVITE_ACCEPT,
+        MEMBER_HELLO,
         MEMBER_STATE,
         POLICY_ACK,
         REPORT,
@@ -60,12 +62,38 @@ def drain_leader_reports(
             continue
         kind = str(body.get("type") or "")
         who = str(body.get("from") or getattr(frame, "sender", "") or "")
+        cid = str(body.get("client_id") or "").strip()
+        roster = names if roster_names is None else roster_names
+        if kind == MEMBER_HELLO:
+            character = body.get("character") if isinstance(body.get("character"), dict) else {}
+            hello_name = str(character.get("name") or who or "").strip()
+            row = discovery.observe(
+                connection_id=cid,
+                name=hello_name,
+                character_class=str(character.get("class") or ""),
+                level=character.get("level"),
+                roster=roster,
+            )
+            note(
+                f"Party hello {hello_name or '—'} "
+                f"[{row.status.value}] id={cid or '—'}"
+            )
+            continue
         if kind == BEEP:
             why = str(body.get("why") or "already_in_party")
             note(f"Party beep from {who or 'member'} — socket ok ({why})")
             continue
         if kind == MEMBER_STATE:
-            roster = roster_names or names
+            state_name = who if who.casefold() not in ("", "member", "leader") else ""
+            found = discovery.observe(
+                connection_id=cid,
+                name=state_name,
+                roster=roster,
+            )
+            if found.status != MembershipStatus.MATCHED:
+                if found.status == MembershipStatus.UNIDENTIFIED:
+                    member_states.unnamed_at = member_states._clock()
+                continue
             booked = member_states.note(who, body, roster, session=leader_session())
             if not booked:
                 continue
@@ -95,7 +123,7 @@ def drain_leader_reports(
             continue
         if kind == INVITE_ACCEPT:
             booked, first = invite_accepts.note(
-                who, body, roster_names or names, session=leader_session()
+                who, body, roster, session=leader_session()
             )
             if booked and first:
                 note(
@@ -105,7 +133,7 @@ def drain_leader_reports(
                 )
             continue
         if kind == POLICY_ACK:
-            booked = policy_acks.note(who, body, roster_names or names)
+            booked = policy_acks.note(who, body, roster)
             if booked:
                 count = int(policy_acks.row(booked).get("count") or 0)
                 if count == 1:

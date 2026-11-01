@@ -140,19 +140,33 @@ def _press_y_hunt() -> str:
 
 
 def type_accept_key() -> str:
-    """Press Y in the game window (IME held in English). "" on success, else the error."""
+    """Press Y with the same enter_chat ``ec_run`` path as ``/초대``.
+
+    Chat is not opened. IME is held in English so Y is the letter, not ``ㅛ``.
+    "" on success, else the error.
+    """
     from app._05_action.chat import default_game_chat
+    from app._05_action.chat.ime import english_ime
     from app._05_action.chat.native import EnterChatUnavailable
+    from app._05_action.window_bounds import find_game_window
 
     global _last_y_note
     _last_y_note = ""
     dll_error = ""
     try:
-        result = default_game_chat().press_key(
-            ACCEPT_SCANCODE, label="Y (party invite)", english=True
-        )
-        if result.ok:
-            _last_y_note = f" · enter_chat {result.describe()}"
+        hwnd = find_game_window("LC.exe")
+        chat = default_game_chat()
+        if hwnd:
+            with english_ime(int(hwnd)):
+                result = chat.send("y", open_chat=False, press_enter=False)
+                time.sleep(0.15)
+        else:
+            result = chat.send("y", open_chat=False, press_enter=False)
+        if result.ok and int(getattr(result, "failed", 0) or 0) == 0:
+            _last_y_note = (
+                f" · enter_chat {result.describe()} chars={result.chars} "
+                f"keys={result.keys}"
+            )
             return ""
         dll_error = result.describe()
     except EnterChatUnavailable as exc:

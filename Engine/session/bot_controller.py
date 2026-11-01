@@ -849,6 +849,9 @@ class BotController:
                     out["roster"][-1], phase=phase
                 )
             out["unnamed_member"] = member_states.unnamed_recent()
+            from app._06_party.member_discovery import discovery
+
+            out["discovery"] = discovery.snapshot(roster)
             out["invite"] = invite
             out["policy"] = dict(getattr(self, "_party_policy_info", {}) or {})
             from app._06_party.workflow import leader_workflow
@@ -1593,19 +1596,12 @@ class BotController:
         self._party_heartbeat = comms.heartbeat
 
     def _start_party_socket(self) -> None:
-        """Listen while this worker runs, only when Party is enabled as leader."""
-        if not self._party_enabled():
-            return
-        role = str(
-            getattr(self._profile, "party_role", "member") or "member"
-        ).strip().lower()
-        if role != "leader":
-            return
-        if not self._leader_roster_ready():
-            self.log(
-                "Party roster empty — party not started. "
-                "Add member names on the Party tab."
-            )
+        """Listen while this worker runs, when Party is enabled as leader.
+
+        An empty roster still listens: members can hello and sit in discovery
+        until they match a saved name (invite/rally stay off).
+        """
+        if not self._party_server_on():
             return
         profile = self._profile
         self._ensure_party_log(role="leader")
@@ -1630,11 +1626,16 @@ class BotController:
             )
         ]
         roster = [n for n in roster if n]
-        _log(
-            "Party roster: "
-            + ", ".join(roster)
-            + " — /초대 after the game world is ready (not the WS local test)."
-        )
+        if roster:
+            _log(
+                "Party roster: "
+                + ", ".join(roster)
+                + " — /초대 after the game world is ready (not the WS local test)."
+            )
+        else:
+            _log(
+                "Party roster empty — server listening, waiting for member hello"
+            )
 
     def _stop_party_socket(self) -> None:
         self._party_comms.stop_leader(log=self.log)
@@ -1654,16 +1655,18 @@ class BotController:
         rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
         return any(str(row.get("name") or "").strip() for row in rows)
 
-    def _party_leader_on(self) -> bool:
-        """True only when Party is enabled, this PC is the leader, and a roster exists."""
+    def _party_server_on(self) -> bool:
+        """Listen for member sockets. Roster may still be empty."""
         if not self._party_enabled():
             return False
         role = str(
             getattr(self._profile, "party_role", "member") or "member"
         ).strip().lower()
-        if role != "leader":
-            return False
-        return self._leader_roster_ready()
+        return role == "leader"
+
+    def _party_leader_on(self) -> bool:
+        """Invite / rally / turret: leader server plus at least one approved name."""
+        return self._party_server_on() and self._leader_roster_ready()
 
     def _leader_turret_on(self) -> bool:
         """Party leader with leader mode turret: hunt from one anchor tile."""
@@ -2097,7 +2100,10 @@ class BotController:
         return sent
 
     def _leader_party_tick(self, world, blackboard, map_id) -> None:
-        """Send mother-tree recovery, farm policy, and collect arrival reports."""
+        """Collect hellos / reports always; policy and recovery only with a roster."""
+        if not self._party_server_on():
+            return
+        self._drain_party_reports(world)
         if not self._party_leader_on():
             return
         from app._04_decision.world_nav.session import live_pose_from_state
@@ -2115,7 +2121,6 @@ class BotController:
             self.log(f"Party recovery sent to {sent} member(s)")
         self._party_tree_trip = trip
         self._publish_party_policy()
-        self._drain_party_reports(world)
 
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
@@ -2275,6 +2280,7 @@ class BotController:
         if self._member_state_reporter is not None:
             self._member_state_reporter.reset()
         self._party_beep_sent = False
+        self._member_hello_key = None
         self._member_policy_info = {
             "session": session,
             "session_at": time.time(),
@@ -2379,6 +2385,61 @@ class BotController:
             in_party=memory_in_party(snap),
         )
 
+    def _member_on_leader_roster(self, world, policy: dict) -> bool:
+        """Pending members do not overlay policy or walk a rally."""
+        from app._06_party.member_identity import name_on_roster
+
+        snap = getattr(world, "last_party", None)
+        name = _player_chat_name(world, snap)
+        return name_on_roster(name, (policy or {}).get("roster"))
+
+    def _member_hello_tick(self, world) -> None:
+        """Send ``member_hello`` once the local name is real; never a placeholder."""
+        from app._06_party.comms.orders import member_orders
+        from app._06_party.member_identity import (
+            CharacterIdentity,
+            build_member_hello,
+            class_token,
+        )
+
+        if not self._party_comms.member_connected:
+            return
+        snap = getattr(world, "last_party", None)
+        player = getattr(world, "player", None)
+        level = getattr(player, "level", None) if player is not None else None
+        ident = CharacterIdentity(
+            name=_player_chat_name(world, snap),
+            character_class=class_token(
+                getattr(player, "character_type", None) if player is not None else None
+            ),
+            level=level if isinstance(level, (int, float)) else None,
+        )
+        farm = ""
+        brain = getattr(self, "_party_brain_ref", None)
+        if brain is not None:
+            farm = str(getattr(getattr(brain, "config", None), "farm_mode", "") or "")
+        body = build_member_hello(
+            ident, client_id=self._member_client_id(), farm_mode=farm
+        )
+        if body is None:
+            return
+        key = (
+            ident.character_key.casefold(),
+            ident.character_class,
+            ident.level,
+            str(member_orders.session or ""),
+        )
+        if key == getattr(self, "_member_hello_key", None):
+            return
+        try:
+            ok = bool(self._party_comms.send_member_hello(body))
+        except Exception:
+            ok = False
+        if not ok:
+            return
+        self._member_hello_key = key
+        self.log(f"Party hello sent as {ident.character_key}")
+
     def _member_state_report(self, world) -> None:
         """Send ``member_state`` (party memory, policy, invite phase) on change / every 2 s."""
         from app._06_party.comms.orders import member_orders
@@ -2461,12 +2522,20 @@ class BotController:
                 self.log(msg)
                 self._party_event("socket", msg)
             fresh = member_orders.take_policy()
-            if party_brain is not None and member_orders.policy is not None:
+            policy = member_orders.policy
+            rostered = bool(
+                policy is not None and self._member_on_leader_roster(world, policy)
+            )
+            if not rostered:
+                member_orders.gather = None
+                member_orders.recovery = None
+            if party_brain is not None and policy is not None and rostered:
                 self._apply_member_party_policy(
-                    world, map_id, party_brain, member_orders.policy
+                    world, map_id, party_brain, policy
                 )
                 if fresh is not None:
                     self._send_member_policy_ack(fresh)
+            self._member_hello_tick(world)
             self._member_invite_accept(world)
             self._member_beep_if_already_in(world)
             self._member_state_report(world)
@@ -2633,6 +2702,7 @@ class BotController:
             f"profile.party_member_enabled="
             f"{bool(getattr(profile, 'party_member_enabled', False))} "
             f"→ party_mode={party_mode} "
+            f"server_on={self._party_server_on()} "
             f"leader_on={self._party_leader_on()} "
             f"roster={self._leader_roster_ready()}"
         )
@@ -2840,7 +2910,7 @@ class BotController:
             )
         else:
             self.log("Memory monitor unavailable at worker start")
-        want_party = bool(party_mode or self._party_leader_on())
+        want_party = bool(party_mode or self._party_server_on())
         buf0 = sensors.capture_tick(
             force_inventory=True, hotbar=True, party=want_party
         )
@@ -3342,7 +3412,7 @@ class BotController:
                         )
                 else:
                     action = decision.decide(world)
-                    if self._party_leader_on():
+                    if self._party_server_on():
                         try:
                             self._leader_party_tick(
                                 world, decision.blackboard, last_logged_map_id

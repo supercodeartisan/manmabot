@@ -696,9 +696,24 @@ class PartyDashboard(QWidget):
         )
 
         in_party = sum(1 for r in roster if r.get("in_party"))
+        disc = session.get("discovery") if isinstance(session.get("discovery"), dict) else {}
+        pending = list(disc.get("pending") or [])
+        missing = list(disc.get("missing") or [])
+        unidentified = int(disc.get("unidentified_count") or 0)
+        conflict = int(disc.get("conflict_count") or 0)
+        pending_names = ", ".join(
+            str(r.get("name") or "") for r in pending if r.get("name")
+        ) or "—"
         self.lead_metrics.set(
             [
                 ("Roster", f"{len(roster)} member(s), {in_party} in party"),
+                (
+                    "Discovery",
+                    f"{len(pending)} pending · {len(missing)} missing"
+                    + (f" · {unidentified} unnamed" if unidentified else "")
+                    + (f" · {conflict} conflict" if conflict else "")
+                    + f"  ({pending_names})",
+                ),
                 ("Party size (yard)", _fmt(policy.get("party_size"))),
                 ("Phase", f"{pname} — {left_txt} left" if left is not None else pname),
                 ("Invite every", f"{_fmt(invite.get('every_s'))}s, start wait {_duration(invite.get('start_wait_s')) if invite.get('start_wait_s') else '—'}, no cut-off"),

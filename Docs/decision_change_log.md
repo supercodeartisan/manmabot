@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-01 — P0 member discovery (hello, pending, empty-roster listen)
+
+Intent: Add a discovery layer in front of the existing party workflow. Unknown sockets must not be dropped; empty roster must still listen. Hunt brains stay as they are.
+Shared: `_party_server_on` (listen) vs `_party_leader_on` (invite/rally/turret). `MemberDiscovery` keeps unmatched hellos as PENDING/UNIDENTIFIED/CONFLICT. Matched names still go through `member_states` / invite / rally. Members without a roster seat do not overlay policy or consume rally. No `UNKNOWN` name, no `try_unstick_escape` / `begin_retreat` / `apply_hp_actions` / login changes.
+Affects: leader socket start (empty roster listens, workflow waits). Member hello after a real `identity.name`. Party monitor Discovery metric. Approve/reject UI is P1.
+Consent: user (discovery layer P0 spec).
+Result: not run in game.
+
+## 2026-10-31 — invite accept Y uses the same enter_chat ec_run as /초대
+
+Intent: `ec_press_key` is not in enter_chat.dll 1.0.0, so member Y could not use the invite typing module. User asked to use the same API as inviting.
+Shared: `type_accept_key` calls `GameChat.send("y", open_chat=False, press_enter=False)` under English IME. DLL `ec_run` sends ASCII via Interception when Hangul IME is not active (so Y is a physical key; mixed `/초대` names stay WM_CHAR). Hunt Y remains the fallback. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y. Leader `/초대` Hangul path unchanged.
+Consent: user (use the inviting enter_chat API for Y).
+Result: not run in game.
+
 ## 2026-10-31 — member assist beats follow
 
 Intent: Single member walked to the leader (`follow_off_ui` / turret yard / `follow_combat_near`) and only then assisted. Assist must win over moving.

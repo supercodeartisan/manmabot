@@ -24,18 +24,26 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     leader's own party memory blind, member reports still count.
     """
     n = len(roster)
-    if n == 0:
-        return [
-            _step(
-                "roster",
-                "Roster",
-                "bad",
-                "empty — party not started",
-            )
-        ]
     sock_state = str(sock.get("state") or "off")
     clients = int(sock.get("clients") or 0)
     listening = sock_state == "listening"
+    if n == 0:
+        return [
+            _step(
+                "server",
+                "Server",
+                "done" if listening else (
+                    "wait" if sock_state in ("idle", "starting") else "bad"
+                ),
+                f"{sock.get('advertise') or '—'}:{sock.get('port') or '—'} {sock_state}",
+            ),
+            _step(
+                "roster",
+                "Roster",
+                "wait" if listening else "off",
+                "empty — waiting for member hello",
+            ),
+        ]
     steps = [
         _step(
             "server",

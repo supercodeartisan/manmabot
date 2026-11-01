@@ -48,6 +48,7 @@ static BOOL CALLBACK ec_init_lock(PINIT_ONCE once, PVOID param, PVOID* ctx)
 /* ---------------------------------------------------------------- helpers */
 typedef struct EcTextPlan {
     int has_hangul;
+    int has_scan_keys;
     int needs_wmchar;
     int total_chars;
     int planned_keys;
@@ -89,7 +90,11 @@ static void ec_analyze_text(const wchar_t* text, EcTextPlan* plan)
                 plan->planned_keys++;
             }
         } else {
-            plan->needs_wmchar = 1;
+            int shift = 0;
+            if (units == 1 && ec_ascii_to_scan((WCHAR)cp, &shift) >= 0)
+                plan->has_scan_keys = 1;
+            else
+                plan->needs_wmchar = 1;
             plan->planned_keys += units;
         }
         plan->total_chars++;
@@ -269,7 +274,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
     /* ------------------------------------------------------------ Interception */
-    need_ic = plan.has_hangul || request->press_enter ||
+    need_ic = plan.has_hangul || plan.has_scan_keys || request->press_enter ||
               (request->flags & (EC_FLAG_CLEAR_FIRST | EC_FLAG_OPEN_CHAT)) != 0;
 
     if (plan.has_hangul) {
@@ -381,24 +386,43 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
                 continue;
             }
 
-            /* non-Hangul: WM_CHAR, one unit at a time (surrogate pairs included) */
+            /* non-Hangul: physical Interception key when IME is not in 한글
+             * (invite-accept Y). Mixed Hangul lines keep WM_CHAR for ASCII
+             * so a latin name after /초대 is not typed as jamo. */
             if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
             {
-                BOOL ok = TRUE;
-                int units_sent = 0;
-                for (int u = 0; u < units; ++u) {
-                    if (ec_post_char(&ctx, start[u])) {
-                        units_sent++;
-                    } else {
-                        ok = FALSE;
-                        break;
+                int shift = 0;
+                int sc = (units == 1) ? ec_ascii_to_scan(start[0], &shift) : -1;
+                if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
+                    BOOL ok = TRUE;
+                    if (shift) {
+                        if (!ec_ic_key(&ctx, 0x2A, 0, 0)) ok = FALSE;
+                        Sleep(3);
                     }
-                }
-                if (ok) {
-                    sent_chars++;
-                    sent_keys += units_sent;
+                    if (ec_ic_press(&ctx, sc, 0, EC_KEY_HOLD_MS)) sent_keys++;
+                    else ok = FALSE;
+                    if (shift) {
+                        Sleep(3);
+                        if (!ec_ic_key(&ctx, 0x2A, 0, 1)) ok = FALSE;
+                    }
+                    if (ok) sent_chars++; else failed++;
                 } else {
-                    failed++;
+                    BOOL ok = TRUE;
+                    int units_sent = 0;
+                    for (int u = 0; u < units; ++u) {
+                        if (ec_post_char(&ctx, start[u])) {
+                            units_sent++;
+                        } else {
+                            ok = FALSE;
+                            break;
+                        }
+                    }
+                    if (ok) {
+                        sent_chars++;
+                        sent_keys += units_sent;
+                    } else {
+                        failed++;
+                    }
                 }
             }
             ec_sleep_ms(ctx.char_interval_ms + ec_jitter(&ctx));
