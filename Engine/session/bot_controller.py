@@ -1747,33 +1747,31 @@ class BotController:
         self._party_comms.start_member(host=host, port=port, log=self.log)
         self._sync_party_handles()
         if self._party_comms.client is None:
-            msg = "Party member: no socket client — set the leader LAN IP on the Party tab"
-            self._party_start_error = msg
-            self.log(msg)
-            self._party_event("socket", msg)
-            return False
-        # No timeout: the leader may start before or after this member.
-        # Enter the bot loop now so login and HP can run; follow/combat wait.
+            self.log(
+                "Party member: no leader socket — follow and combat use party memory only"
+            )
+            return True
+        # The socket carries policy and rally. Follow and combat read party memory
+        # whether or not this connect ever succeeds.
         self._party_start_wait = {"since": time.time(), "uri": f"{host}:{port}"}
         self._party_socket_wait_note_at = 0.0
         self.log(
-            f"Party member: waiting for the leader socket {host}:{port} "
-            "(no timeout — HP only until connected, Stop to cancel)"
+            f"Party member: leader socket {host}:{port} connecting in the background. "
+            "Follow and combat use party memory."
         )
         return True
 
     def _stop_party_client(self) -> None:
         self._party_start_wait = {}
         self._party_socket_wait_note_at = 0.0
-        self._party_joined_before_socket = False
         self._party_comms.stop_member(log=self.log)
         self._sync_party_handles()
 
     def _member_socket_pending(self) -> bool:
-        """True until the first leader-socket connect (HP-only ticks).
+        """True until the first leader-socket connect.
 
-        After that, a drop keeps the last policy and full ``decide``. Empty
-        leader IP never reaches here (start already failed).
+        Follow and combat do not wait on this. A drop keeps the last policy.
+        No leader IP leaves this false and the member runs on party memory only.
         """
         wait = getattr(self, "_party_start_wait", None) or {}
         if not wait.get("since"):
@@ -1800,7 +1798,8 @@ class BotController:
             since = float(wait.get("since") or 0.0)
             waited = max(0.0, time.time() - since) if since else 0.0
             self.log(
-                f"Party member: still waiting for leader {uri} ({waited:.0f}s)"
+                f"Party member: leader socket {uri} still down ({waited:.0f}s) — "
+                "follow and combat stay on party memory"
             )
         return True
 
@@ -2504,6 +2503,8 @@ class BotController:
     ) -> None:
         """Read leader orders (incl. farm policy), then send buffs/items."""
         if self._party_comms.client is None:
+            # Invite Y is a local popup. The socket only reports that it happened.
+            self._member_invite_accept(world)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.orders import member_orders
@@ -3382,55 +3383,28 @@ class BotController:
 
                 self._party_world = world
                 if party_brain is not None:
-                    socket_pending = self._member_socket_pending()
-                    joined = False
-                    if socket_pending:
-                        from app._06_party.invite import already_in_party
-
-                        snap = getattr(world, "last_party", None)
-                        joined = already_in_party(snap)
-                        if joined and not getattr(
-                            self, "_party_joined_before_socket", False
-                        ):
-                            self._party_joined_before_socket = True
-                            lead = ""
-                            if isinstance(snap, dict):
-                                lead = str(snap.get("leader_name") or "").strip()
-                            self.log(
-                                "Party member: already in party"
-                                + (f" (leader {lead})" if lead else "")
-                                + " — follow now; leader socket still connecting"
-                            )
-                    if socket_pending and not joined:
-                        action = party_brain.decide_survival(world)
-                        party_joining = party_brain.joining_map()
-                        self._publish_party_monitor(
-                            party_brain=party_brain,
-                            world=world,
-                            action=action,
-                            note="waiting_leader_socket",
-                        )
-                    else:
-                        self._member_party_tick(
-                            world,
-                            last_logged_map_id,
-                            send=False,
-                            party_brain=party_brain,
-                        )
-                        action = party_brain.decide(world)
-                        self._member_party_tick(
-                            world,
-                            last_logged_map_id,
-                            send=True,
-                            party_brain=party_brain,
-                        )
-                        party_joining = party_brain.joining_map()
-                        self._publish_party_monitor(
-                            party_brain=party_brain,
-                            world=world,
-                            action=action,
-                            note="decide",
-                        )
+                    # Socket is policy/rally only. Leader pose comes from party memory.
+                    self._member_socket_pending()
+                    self._member_party_tick(
+                        world,
+                        last_logged_map_id,
+                        send=False,
+                        party_brain=party_brain,
+                    )
+                    action = party_brain.decide(world)
+                    self._member_party_tick(
+                        world,
+                        last_logged_map_id,
+                        send=True,
+                        party_brain=party_brain,
+                    )
+                    party_joining = party_brain.joining_map()
+                    self._publish_party_monitor(
+                        party_brain=party_brain,
+                        world=world,
+                        action=action,
+                        note="decide",
+                    )
                 else:
                     action = decision.decide(world)
                     if self._party_server_on():

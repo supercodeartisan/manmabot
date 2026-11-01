@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-01 — member runs from party memory with no websocket
+
+Intent: Follow and combat must run from party memory when the leader socket is down or was never configured. The socket stays optional and only carries policy and rally.
+Shared: member worker no longer calls `decide_survival` while the socket is pending. Missing leader IP no longer stops the worker. `PartyMemberManager.decide` is unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member Start. Not-in-party still waits inside `decide` (`leader_missing`) until party memory shows a leader. Leader path unchanged.
+Consent: user (client must work from memory reads with no websocket).
+Result: not run in game.
+
 ## 2026-11-01 — member already in party does not wait on the socket
 
 Intent: Party memory already showed `in_party` with leader 매력여기사, but the member stayed on `decide_survival` (`waiting_leader_socket`) until `192.168.9.27:8765` connected. Follow should start from the in-game party; the socket is only for policy and rally.
