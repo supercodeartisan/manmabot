@@ -561,6 +561,13 @@ class PartyDashboard(QWidget):
         wait = snap.get("start_wait") if isinstance(snap.get("start_wait"), dict) else {}
         if start_err:
             err, style = start_err, "color:#f87171;font-weight:600;"
+        elif wait.get("since") and in_party:
+            err = (
+                f"Already in party — following the in-game leader. "
+                f"Leader socket {wait.get('uri') or '—'} still connecting "
+                f"({_duration(wait.get('waited_s'))}); policy and rally wait for it."
+            )
+            style = "color:#86efac;font-weight:600;"
         elif wait.get("since"):
             err = (
                 f"Waiting for the leader socket {wait.get('uri') or '—'} — "

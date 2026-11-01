@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-01 — member already in party does not wait on the socket
+
+Intent: Party memory already showed `in_party` with leader 매력여기사, but the member stayed on `decide_survival` (`waiting_leader_socket`) until `192.168.9.27:8765` connected. Follow should start from the in-game party; the socket is only for policy and rally.
+Shared: worker gate around `_member_socket_pending`. Still HP-only when party memory does not say in-party. `PartyMemberManager.decide` itself is unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member Start when already in an in-game party and the leader socket is still connecting. Not-yet-joined members still wait. Leader path unchanged.
+Consent: user (if the client is already in the party, enter it; do not keep waiting).
+Result: not run in game.
+
 ## 2026-11-01 — party frame checks before workflow
 
 Intent: Bad party frames must not book an invite, a policy ack, or a member order.

@@ -1765,6 +1765,7 @@ class BotController:
     def _stop_party_client(self) -> None:
         self._party_start_wait = {}
         self._party_socket_wait_note_at = 0.0
+        self._party_joined_before_socket = False
         self._party_comms.stop_member(log=self.log)
         self._sync_party_handles()
 
@@ -3381,7 +3382,26 @@ class BotController:
 
                 self._party_world = world
                 if party_brain is not None:
-                    if self._member_socket_pending():
+                    socket_pending = self._member_socket_pending()
+                    joined = False
+                    if socket_pending:
+                        from app._06_party.invite import already_in_party
+
+                        snap = getattr(world, "last_party", None)
+                        joined = already_in_party(snap)
+                        if joined and not getattr(
+                            self, "_party_joined_before_socket", False
+                        ):
+                            self._party_joined_before_socket = True
+                            lead = ""
+                            if isinstance(snap, dict):
+                                lead = str(snap.get("leader_name") or "").strip()
+                            self.log(
+                                "Party member: already in party"
+                                + (f" (leader {lead})" if lead else "")
+                                + " — follow now; leader socket still connecting"
+                            )
+                    if socket_pending and not joined:
                         action = party_brain.decide_survival(world)
                         party_joining = party_brain.joining_map()
                         self._publish_party_monitor(
