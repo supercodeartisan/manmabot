@@ -514,6 +514,15 @@ _ROSTER_ROLES = ("member", "mage", "shopkeeper")
 _ROSTER_LOOT = ("none", "responsible")
 
 
+def _roster_on(item: dict, key: str, default: bool = True) -> bool:
+    if key not in item:
+        return default
+    raw = item.get(key)
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() not in ("0", "false", "no", "off")
+
+
 def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
     """Leader seat list: name, seat (default mage), optional loot seat."""
     rows: list[dict[str, str]] = []
@@ -535,7 +544,13 @@ def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
         loot = str(item.get("loot") or item.get("loot_role") or "none").strip().lower()
         if loot not in _ROSTER_LOOT:
             loot = "none"
-        rows.append({"name": name, "role": role, "loot": loot})
+        rows.append({
+            "name": name,
+            "role": role,
+            "loot": loot,
+            "enabled": "1" if _roster_on(item, "enabled", True) else "0",
+            "required": "1" if _roster_on(item, "required", True) else "0",
+        })
     return rows
 
 

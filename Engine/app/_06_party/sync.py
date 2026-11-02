@@ -7,13 +7,14 @@ step may depend on one edge message arriving. Instead:
   the member's whole view (leader session, applied policy id, its own party
   memory, last invite popup + accept phase). ``MemberStateReporter``.
 - Member → leader ``invite_accept`` once Y closed its invite popup
-  (``InviteAccepts`` on the leader).
+  (``InviteAccepts`` on the leader). That frame is the accept attempt, not
+  proof the character is in the party.
 - Leader keeps the latest frame per roster name (``MemberStates``) and
   reconciles each tick: policy confirmed = state echoes the current policy id;
-  joined = leader party memory lists the name OR the member accepted the
-  invite popup (``invite_accept`` / phase ``accepted``) OR the member's own
-  party memory says it is in this leader's party; a fresh ``/초대`` waits while
-  the member reports its invite popup is still open.
+  joined = leader party memory lists the name, or a fresh member report whose
+  own party memory says it is in this leader's party. ``invite_accept`` alone
+  does not join. A fresh ``/초대`` waits only for that member while its popup
+  is open.
 - Frames carry ids (``policy_id``, ``accept_id``, ``session``) so repeats are
   harmless; a state older than ``STALE_S`` is ignored (member gone / restarted).
 """
@@ -50,9 +51,25 @@ def _roster_order(names: Iterable[str] = ()) -> list[str]:
     return out
 
 
+def memory_in_party(snapshot: Any) -> Optional[bool]:
+    """True in a party, False confirmed out, None when this read is unknown.
+
+    A missing snapshot or ``subs_ok`` false is unknown. It is not "not in a
+    party", so callers must not invite or leave on None.
+    """
+    if not isinstance(snapshot, dict):
+        return None
+    if snapshot.get("subs_ok") is False:
+        return None
+    if "in_party" not in snapshot and "members" not in snapshot:
+        return None
+    return bool(snapshot.get("in_party"))
+
+
 def party_view(snapshot: Any) -> dict[str, Any]:
     """This bot's party memory for ``member_state``. ``mem`` ok | blind."""
-    if not isinstance(snapshot, dict):
+    known = memory_in_party(snapshot)
+    if known is None:
         return {"mem": "blind", "in_party": None, "leader": "", "names": []}
     names = [
         str(m.get("name") or "").strip()
@@ -63,17 +80,10 @@ def party_view(snapshot: Any) -> dict[str, Any]:
     lead = str(leader.get("name") or "").strip() if isinstance(leader, dict) else ""
     return {
         "mem": "ok",
-        "in_party": bool(snapshot.get("in_party")),
+        "in_party": known,
         "leader": lead or str(snapshot.get("leader_name") or "").strip(),
         "names": names,
     }
-
-
-def memory_in_party(snapshot: Any) -> Optional[bool]:
-    """True / False from party memory, None when it is unreadable."""
-    if not isinstance(snapshot, dict):
-        return None
-    return bool(snapshot.get("in_party"))
 
 
 class MemberStateReporter:
@@ -262,13 +272,15 @@ class MemberStates:
         return policy_id is None or str(row.get("policy_id") or "") == str(policy_id)
 
     def joined(self, name: str, leader_name: str = "") -> bool:
-        """The member accepted the invite popup, or its own party memory says
-        it is in this leader's party."""
+        """Fresh member party memory says this character is in this leader's party.
+
+        Popup phase and ``invite_accept`` are not a join. A blind report is not
+        "out" either; callers see False here and ``out_of_party`` stays False
+        while ``mem`` is not ok.
+        """
         row = self.rows.get(_key(name))
         if not row or not self.fresh(name):
             return False
-        if str((row.get("invite") or {}).get("phase") or "") == ACCEPTED_PHASE:
-            return True
         party = row.get("party") or {}
         if party.get("mem") != "ok" or not party.get("in_party"):
             return False
@@ -280,8 +292,11 @@ class MemberStates:
         return not me or not names or me in names
 
     def out_of_party(self, name: str, leader_name: str = "") -> bool:
-        """The member's own party memory (fresh, readable) says it is not in
-        this party, and it does not report an accepted invite."""
+        """Fresh readable party memory says the member is not in this party.
+
+        A blind or stale report is not an exit. Popup accept is not a join, so
+        it also does not block this "out" once memory is readable and empty.
+        """
         row = self.rows.get(_key(name))
         if not row or not self.fresh(name):
             return False
@@ -384,27 +399,23 @@ def reported_joined(
     states: Optional["MemberStates"] = None,
     accepts: Optional[InviteAccepts] = None,
 ) -> bool:
-    """Joined as the member tells it: accepted invite popup or own party memory.
+    """True only from a fresh member party-memory report for this leader.
 
-    With a fresh ``member_state`` the ``invite_accept`` counts only while the
-    state still carries that ``accept_id`` and not ``left`` (a restarted member
-    or one that left must not stay joined on an old accept)."""
+    ``accepts`` is ignored. ``invite_accept`` records that Y was sent and the
+    popup closed; it does not put the character in the party.
+    """
+    del accepts
     states = states if states is not None else member_states
-    accepts = accepts if accepts is not None else invite_accepts
-    if states.joined(name, leader_name):
-        return True
-    if not accepts.accepted(name):
-        return False
-    if not states.fresh(name):
-        return True
-    iid, phase = states.invite_phase(name)
-    aid = str(accepts.row(name).get("accept_id") or "")
-    return bool(aid) and iid == aid and phase != LEFT_PHASE
+    return states.joined(name, leader_name)
 
 
 class InviteHold:
-    """Leader: no new ``/초대`` while the member reports its invite popup open
-    (``popup`` / ``pressed``), at most ``ACCEPT_HOLD_S`` per popup."""
+    """Per member: no new ``/초대`` for that name while its popup is open.
+
+    Other names keep their own clocks. At most ``ACCEPT_HOLD_S`` per popup.
+    Chat itself is still one line at a time; this hold does not freeze the
+    rest of the roster or the socket.
+    """
 
     def __init__(
         self,

@@ -308,6 +308,16 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     if (!request->hwnd)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
+    /* Opening chat sleeps long enough for the bot UI to take focus back.
+     * Keys only compose in the foreground window, so put the game there
+     * again before the layout switch and before each character. */
+    if (plan.has_hangul || plan.has_scan_keys)
+        ec_force_foreground(ctx.hwnd, focus_timeout);
+
+    /* Lone ASCII (invite Y) must be English. A Hangul line keeps 한 mode. */
+    if (!plan.has_hangul && plan.has_scan_keys)
+        ec_english_prepare(&ctx, ctx.hwnd);
+
     /* Prepare the Korean layout/IME on the final focus target. */
     if (plan.has_hangul) {
         if (!ec_hangul_prepare(&ctx, ctx.hwnd)) {
@@ -329,6 +339,9 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             int units = ec_next_codepoint(p, &cp);
             const wchar_t* start = p;
             p += units;
+
+            if (!ec_is_foreground(ctx.hwnd))
+                ec_force_foreground(ctx.hwnd, focus_timeout);
 
             if (cp == L'\t') {
                 if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
@@ -433,7 +446,10 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
     /* ------------------------------------------------------------ final Enter */
     if (request->press_enter) {
-        BOOL ok = ec_send_vk(&ctx, VK_RETURN);
+        BOOL ok;
+        if (!ec_is_foreground(ctx.hwnd))
+            ec_force_foreground(ctx.hwnd, focus_timeout);
+        ok = ec_send_vk(&ctx, VK_RETURN);
         Sleep(30);
         if (ok) {
             res->enter_pressed = TRUE;
@@ -451,6 +467,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
 cleanup:
     if (ctx.hangul_started) ec_hangul_done(&ctx);
+    else if (ctx.ime_mode_forced) ec_english_done(&ctx);
     if (ctx.ic) ec_ic_close(&ctx);
     if (timer_started) timeEndPeriod(1);
     res->elapsed_ms = GetTickCount() - t0;

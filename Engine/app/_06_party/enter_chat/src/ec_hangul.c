@@ -130,32 +130,70 @@ int ec_hangul_keys(wchar_t c, char* out, int max)
 
 #ifndef EC_TEST
 /* ---------------------------------------------------------------- layout/IME */
+static BOOL ec_thread_is_korean(DWORD tid)
+{
+    return (((ULONG_PTR)GetKeyboardLayout(tid)) & 0xFFFF) == 0x0412;
+}
+
+/* The game thread applies a layout change only while it is foreground.
+ * SendMessageTimeout waits for that thread; PostMessage covers clients that
+ * handle only the queued form. */
+static BOOL ec_switch_game_layout(HWND hwnd, HKL ko, DWORD tid)
+{
+    DWORD me;
+    BOOL attached = FALSE;
+    DWORD_PTR ignored = 0;
+    DWORD waited = 0;
+
+    if (!hwnd || !ko || !tid) return FALSE;
+    if (ec_thread_is_korean(tid)) return TRUE;
+
+    me = GetCurrentThreadId();
+    if (tid != me)
+        attached = AttachThreadInput(me, tid, TRUE);
+
+    SendMessageTimeoutW(hwnd, WM_INPUTLANGCHANGEREQUEST,
+        0, (LPARAM)ko, SMTO_ABORTIFHUNG | SMTO_BLOCK, 500, &ignored);
+    PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)ko);
+
+    while (waited < 500) {
+        if (ec_thread_is_korean(tid)) break;
+        Sleep(20);
+        waited += 20;
+    }
+    if (attached)
+        AttachThreadInput(me, tid, FALSE);
+    return ec_thread_is_korean(tid);
+}
+
 BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd)
 {
     DWORD tid;
     HKL old;
     HIMC himc;
     DWORD conv = 0, sent = 0;
+    DWORD focus_ms;
 
     if (!ctx || !hwnd) return FALSE;
     if (ctx->hangul_started) return TRUE;
 
+    focus_ms = ctx->req.focus_timeout_ms
+             ? ctx->req.focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT;
+    if (ctx->hwnd)
+        ec_force_foreground(ctx->hwnd, focus_ms);
+
     tid = GetWindowThreadProcessId(hwnd, NULL);
     old = GetKeyboardLayout(tid);
     ctx->old_hkl = old;
-    ctx->ko_hkl = LoadKeyboardLayoutW(L"00000412", KLF_ACTIVATE);
+    ctx->ko_hkl = LoadKeyboardLayoutW(L"00000412", KLF_NOTELLSHELL);
     if (!ctx->ko_hkl) {
         ec_result_message(ctx->res, L"Korean keyboard layout 0412 is not installed.");
         return FALSE;
     }
 
-    if ((((ULONG_PTR)old) & 0xFFFF) != 0x0412) {
-        if (PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)ctx->ko_hkl)) {
-            ctx->layout_switched = TRUE;
-            Sleep(120);
-        }
-        /* verify: the target thread must actually be on the Korean layout */
-        if ((((ULONG_PTR)GetKeyboardLayout(tid)) & 0xFFFF) != 0x0412) {
+    if (!ec_thread_is_korean(tid)) {
+        ctx->layout_switched = TRUE;
+        if (!ec_switch_game_layout(hwnd, ctx->ko_hkl, tid)) {
             ec_result_message(ctx->res, L"Could not switch the target thread to Korean layout 0412.");
             /* allow cleanup to restore the layout if the request was posted */
             ctx->hangul_started = TRUE;
@@ -205,6 +243,20 @@ BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd)
                             LRESULT vgot = SendMessageTimeoutW(def, WM_IME_CONTROL,
                                 IMC_GETCONVERSIONMODE, 0,
                                 SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &verify);
+                            if (!vgot || !(verify & IME_CMODE_NATIVE)) {
+                                /* The bot window may have been in front for the
+                                 * first try. Focus the game and ask once more. */
+                                if (ctx->hwnd)
+                                    ec_force_foreground(ctx->hwnd, focus_ms);
+                                SendMessageTimeoutW(def, WM_IME_CONTROL,
+                                    IMC_SETCONVERSIONMODE, mode | IME_CMODE_NATIVE,
+                                    SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
+                                Sleep(50);
+                                verify = 0;
+                                vgot = SendMessageTimeoutW(def, WM_IME_CONTROL,
+                                    IMC_GETCONVERSIONMODE, 0,
+                                    SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &verify);
+                            }
                             if (!vgot || !(verify & IME_CMODE_NATIVE))
                                 ec_result_message(ctx->res,
                                     L"could not switch the Korean IME to Hangul (한) mode");
@@ -225,6 +277,80 @@ BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd)
 
     ctx->hangul_started = TRUE;
     return TRUE;
+}
+
+/* Invite-accept Y is one ASCII key. In 한글 mode that key is the jamo ㅛ,
+ * so the popup never sees Y. Switch the game thread to English only after
+ * the game is in front — the same window the physical key will hit. */
+BOOL ec_english_prepare(EcContext* ctx, HWND hwnd)
+{
+    HWND ime_wnd;
+    HWND def;
+    DWORD focus_ms;
+    DWORD_PTR mode = 0;
+    DWORD_PTR setres = 0;
+    DWORD_PTR verify = 0;
+    LRESULT got;
+    LRESULT vgot;
+
+    if (!ctx || !hwnd) return FALSE;
+    focus_ms = ctx->req.focus_timeout_ms
+             ? ctx->req.focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT;
+    if (ctx->hwnd)
+        ec_force_foreground(ctx->hwnd, focus_ms);
+
+    ime_wnd = ctx->focus ? ctx->focus : hwnd;
+    def = ImmGetDefaultIMEWnd(ime_wnd);
+    if (!def) {
+        ec_result_message(ctx->res,
+            L"IME context unavailable; keep the Korean IME in English (영) mode.");
+        return TRUE;
+    }
+    got = SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0,
+        SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &mode);
+    if (!got) {
+        ec_result_message(ctx->res,
+            L"IME context unavailable; keep the Korean IME in English (영) mode.");
+        return TRUE;
+    }
+    if (!(mode & IME_CMODE_NATIVE))
+        return TRUE;
+
+    ctx->ime_wnd = def;
+    ctx->ime_old_mode = (DWORD)mode;
+    ctx->ime_mode_forced = TRUE;
+    SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_SETCONVERSIONMODE,
+        mode & ~IME_CMODE_NATIVE, SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
+    Sleep(50);
+    vgot = SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0,
+        SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &verify);
+    if (!vgot || (verify & IME_CMODE_NATIVE)) {
+        if (ctx->hwnd)
+            ec_force_foreground(ctx->hwnd, focus_ms);
+        SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_SETCONVERSIONMODE,
+            mode & ~IME_CMODE_NATIVE, SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
+        Sleep(50);
+        verify = 0;
+        vgot = SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0,
+            SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &verify);
+    }
+    if (!vgot || (verify & IME_CMODE_NATIVE))
+        ec_result_message(ctx->res,
+            L"could not switch the Korean IME to English (영) mode");
+    return TRUE;
+}
+
+void ec_english_done(EcContext* ctx)
+{
+    DWORD_PTR setres = 0;
+
+    if (!ctx || !ctx->ime_mode_forced || !ctx->ime_wnd) return;
+    /* The game reads the key after the stroke. Hold English until then. */
+    Sleep(150);
+    SendMessageTimeoutW(ctx->ime_wnd, WM_IME_CONTROL,
+        IMC_SETCONVERSIONMODE, ctx->ime_old_mode,
+        SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
+    ctx->ime_mode_forced = FALSE;
 }
 
 void ec_hangul_done(EcContext* ctx)

@@ -186,8 +186,11 @@ class ScheduleShell(QMainWindow):
         self.bridge.logLine.connect(
             self._append_log, Qt.ConnectionType.QueuedConnection
         )
+        # Direct: disarm inside Stop, before the event loop can poll the
+        # schedule. A queued slot ran after this click, and that poll saw
+        # STOPPED + still armed and called Start again (game + party monitor).
         self.bridge.userStopped.connect(
-            self._on_user_stop, Qt.ConnectionType.QueuedConnection
+            self._on_user_stop, Qt.ConnectionType.DirectConnection
         )
         self.bridge.rebind_hotkeys()
 

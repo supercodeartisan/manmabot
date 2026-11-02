@@ -135,8 +135,17 @@ BOOL ec_is_foreground(HWND top)
     return GetAncestor(fg, GA_ROOT) == GetAncestor(top, GA_ROOT);
 }
 
+#ifndef ASFW_ANY
+#define ASFW_ANY ((DWORD)-1)
+#endif
+#ifndef LSFW_UNLOCK
+#define LSFW_UNLOCK 2
+#endif
+
 /* Interception scancodes go to the foreground window.  Attach to the current
- * foreground thread so the shell does not refuse SetForegroundWindow. */
+ * foreground thread so the shell does not refuse SetForegroundWindow.
+ * A freshly started admin exe is granted foreground rights by the shell.
+ * The long-running bot is not, so unlock that restriction before the call. */
 BOOL ec_force_foreground(HWND top, DWORD timeout_ms)
 {
     HWND fg;
@@ -146,6 +155,9 @@ BOOL ec_force_foreground(HWND top, DWORD timeout_ms)
 
     if (!top || !IsWindow(top)) return FALSE;
     if (ec_is_foreground(top)) return TRUE;
+
+    AllowSetForegroundWindow(ASFW_ANY);
+    LockSetForegroundWindow(LSFW_UNLOCK);
 
     fg = GetForegroundWindow();
     fg_tid = fg ? GetWindowThreadProcessId(fg, NULL) : 0;

@@ -1,5 +1,53 @@
 # Decision change log
 
+## 2026-11-02 — Stop disarms the schedule before the next poll
+
+Intent: Stop was restarting the game and opening the party monitor. The Qt shell disarmed the schedule on a queued signal, so the schedule poll still saw an armed session in the STOPPED state and called Start.
+Shared: `userStopped` now runs `_disarm_schedule` directly inside `coordinator.stop`, before `_halt` returns. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: Stop button and the stop hotkey. Party forming still does not switch the bot to solo.
+Consent: user (Stop starts the game again and the party monitor opens).
+Result: not run in the UI.
+
+## 2026-11-02 — party memory unknown, join is memory, one chat queue
+
+Intent: A failed party read must not invite or leave. Popup close after Y is not a join. Monitor Invite / Y+Enter must not type beside the automatic invite.
+Shared: `memory_in_party` is True / False / None. `needs_leave` requires this name, the leader name, and a confirmed in-party read. `reported_joined` uses fresh member party memory only. `InviteAccepter` goes `waiting_memory` then `joined`. `PartyChatQueue` is drained once per worker tick; that tick skips the matching automatic line. Forming deadline is not moved on reconnect. Hunt waits only for roster rows with Wait checked (default on). On unchecks a name. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader invite and leave, member accept, party monitor buttons, Party tab roster, when forming holds the hunt.
+Consent: user (implement the party invite/maintain corrections).
+Result: not run in game. Discovery approval and a second rally for late members are not in this change. Restart the bot to load it.
+
+## 2026-11-01 — invite accept is Y then Enter
+
+Intent: The invite popup accepts only when Y is followed by Enter. Y alone does not confirm.
+Shared: `type_accept_key` now calls `GameChat.send("y", open_chat=False, press_enter=True)`. One `ec_run` types physical Y, then physical Enter, while English is still held. Chat is not opened. The monitor button is the same call. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept, and the party monitor Y+Enter button.
+Consent: user (Y and Enter are both required).
+Result: not run in game.
+
+## 2026-11-01 — party monitor can type /초대 and Y
+
+Intent: From the party monitor, send one invite line and press Y through the same bot path as Start (`send_chat_line` / `type_accept_key` → `ec_run`).
+Shared: `PartyMonitorWindow` name field, Invite button (`invite_command` → `deliver_chat`), Y button (`type_accept_key`). Both run off the UI thread. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: the party monitor window only. Leader invite timing and member popup accept are unchanged.
+Consent: user (run these from the invite monitor, including Y).
+Result: not run in the UI yet.
+
+## 2026-11-01 — invite Y uses the same ec_run as the admin exe
+
+Intent: Member Y still switched the IME from Python while the bot window was in front, then fell back to the hunt keyboard. The popup needs one physical Y with the game in front and the IME in English.
+Shared: ASCII-only `ec_run` (`y`, no chat open, no Enter) focuses the game, clears 한글 mode, sends the key, holds English 150 ms, then restores the previous mode. `type_accept_key` is only that call. The hunt Y fallback is gone. `/초대` still uses 한 mode. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept. A lone ASCII chat line takes the same English path.
+Consent: user (Y must match the admin exe).
+Result: DLL rebuilt (`BUILD_OK`). Not run in game. Restart the bot so it loads the new DLL.
+
+## 2026-11-01 — bot invite keeps the game in front and switches 한
+
+Intent: The bot is already elevated, but `/초대` still followed the Windows input language. The admin exe does not, because it is a fresh process that is allowed to take the foreground and the game thread applies the Korean layout. The bot window takes focus back during the typing sleep.
+Shared: `ec_force_foreground` unlocks foreground (`AllowSetForegroundWindow` / `LockSetForegroundWindow`) before `SetForegroundWindow`. `ec_hangul_prepare` loads layout 0412 without activating it on the caller thread, then `SendMessageTimeout` of `WM_INPUTLANGCHANGEREQUEST` on the game thread, and retries 한 mode once after focusing the game. `ec_run` puts the game in front again before the layout switch, before each character, and before the final Enter. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: every `ec_run` caller (bot party invite / leave, member Y via `GameChat.send`, and both CLIs). Hunt keyboard and Pico are unchanged.
+Consent: user (bot must have the same effect as the admin exe; bot is already admin).
+Result: DLL rebuilt (`BUILD_OK`). Not run in game. The running bot keeps the old DLL until it is restarted.
+
 ## 2026-11-01 — member runs from party memory with no websocket
 
 Intent: Follow and combat must run from party memory when the leader socket is down or was never configured. The socket stays optional and only carries policy and rally.

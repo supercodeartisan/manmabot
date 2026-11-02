@@ -1,22 +1,24 @@
-"""Member side of the in-game invite: invite popup → Y → ``invite_accept``.
+"""Member side of the in-game invite: popup → Y, Enter → wait for party memory.
 
 The member reads the Yes/No invite popup itself (``invite_popup.party_invite``
-on the uidialog snapshot) — no leader notice, no delay. Y goes out as a
-physical key through Interception (``app._05_action.chat`` → enter_chat; a
-typed ``y`` as ``WM_CHAR`` is ignored by the popup), with the game IME held in
-English for the key (in 한글 mode Y is the jamo ``ㅛ``).
+on the uidialog snapshot) — no leader notice, no delay. Y then Enter go out
+through the same ``ec_run`` as the admin exe: the game is brought to the
+front, the game IME is held in English, and both keys are physical (in 한글
+mode Y is the jamo ``ㅛ``, and a ``WM_CHAR`` is ignored by the popup). Chat
+is not opened, so the only Enter is the one after Y.
 
-Accepted = the popup closed after Y. The member then sends ``invite_accept``
-to the leader (repeated ``ACK_SENDS`` times, same ``accept_id``) and reports
-phase ``accepted`` in ``member_state``. Y is pressed again if the popup is
-still open ``REPRESS_S`` after a press, at most ``MAX_PRESSES`` per popup.
+Phases: ``popup`` → ``pressed`` → ``waiting_memory`` (Y+Enter sent, popup
+closed) → ``joined`` (this character's party memory shows the party).
+``invite_accept`` tells the leader the popup was answered. It is not a join.
+Y is pressed again if the popup is still open ``REPRESS_S`` after a press,
+at most ``MAX_PRESSES`` per popup.
 
 A popup from someone other than the leader (``leader_name`` from the policy,
 when known) is left alone. Once party memory showed the join, losing it for
 ``LEFT_CONFIRM_S`` turns ``accepted`` into ``left`` so the leader invites again.
 
 ``phase`` (sent to the leader in ``member_state``):
-idle · popup (open, Y due) · pressed · accepted · left · missed (closed before
+idle · popup · pressed · waiting_memory · joined · left · missed (closed before
 Y) · skipped (not from the leader) · failed (Y did not reach the game / popup
 stayed open after every press).
 """
@@ -38,147 +40,38 @@ ACK_EVERY_S = 2.0
 # Party memory lost this long after it showed the join = left the party.
 LEFT_CONFIRM_S = 10.0
 
-# Last successful Y: how it was sent (hunt vs enter_chat, IME, focus).
+# Last successful Y: enter_chat status from the same ec_run as the admin exe.
 _last_y_note = ""
 
 
-def _hwnd_is_foreground(hwnd: int) -> bool:
-    """True if the foreground window is ``hwnd`` or a child of the same root."""
-    import ctypes
-
-    from win32_prototypes import bind_user32
-
-    top = int(hwnd or 0)
-    if not top:
-        return False
-    user32 = ctypes.windll.user32
-    bind_user32(user32)
-    fg = int(user32.GetForegroundWindow() or 0)
-    if not fg:
-        return False
-    if fg == top:
-        return True
-    return int(user32.GetAncestor(fg, 2) or 0) == int(
-        user32.GetAncestor(top, 2) or 0
-    )
-
-
-def _force_game_foreground(hwnd: int, timeout_ms: int = 1500) -> bool:
-    """Bring LC to the foreground so Interception/pico Y hits the popup.
-
-    ``SetForegroundWindow`` from a background process is refused unless we
-    attach to the current foreground thread first (same as enter_chat).
-    """
-    import ctypes
-    from ctypes import wintypes
-
-    from win32_prototypes import bind_kernel32, bind_user32
-
-    top = int(hwnd or 0)
-    if not top:
-        return False
-    if _hwnd_is_foreground(top):
-        return True
-    user32 = ctypes.windll.user32
-    kernel32 = ctypes.windll.kernel32
-    bind_user32(user32)
-    bind_kernel32(kernel32)
-    fg = int(user32.GetForegroundWindow() or 0)
-    pid = wintypes.DWORD(0)
-    fg_tid = (
-        int(user32.GetWindowThreadProcessId(fg, ctypes.byref(pid)) or 0) if fg else 0
-    )
-    my_tid = int(kernel32.GetCurrentThreadId())
-    attached = False
-    if fg_tid and fg_tid != my_tid:
-        attached = bool(user32.AttachThreadInput(my_tid, fg_tid, True))
-    try:
-        if user32.IsIconic(top):
-            user32.ShowWindow(top, 9)
-        user32.BringWindowToTop(top)
-        user32.SetForegroundWindow(top)
-    finally:
-        if attached:
-            user32.AttachThreadInput(my_tid, fg_tid, False)
-    deadline = time.monotonic() + max(0.05, timeout_ms / 1000.0)
-    while time.monotonic() < deadline:
-        if _hwnd_is_foreground(top):
-            return True
-        time.sleep(0.02)
-    return _hwnd_is_foreground(top)
-
-
-def _press_y_hunt() -> str:
-    """Y through the hunt keyboard when ``enter_chat.dll`` cannot press it.
-
-    Interception/pico keys go to the foreground window. Do not send Y unless
-    LC is in front — otherwise the key lands in the bot UI and the popup
-    stays open while we log ``Y key pressed``.
-    """
-    from app._05_action import input_backend as ib
-    from app._05_action.chat.ime import english_ime
-    from app._05_action.window_bounds import find_game_window
-
-    global _last_y_note
-    hwnd = find_game_window("LC.exe")
-    if not hwnd:
-        return "LC.exe window not found"
-    try:
-        if not _force_game_foreground(int(hwnd)):
-            return "game not in focus"
-        ib.ensure_open()
-        ime = "unknown"
-        with english_ime(int(hwnd)) as ime:
-            ib.key_down("y")
-            time.sleep(0.04)
-            ib.key_up("y")
-            time.sleep(0.15)
-        _last_y_note = f" · hunt {ib.backend_name()} ime={ime} focused"
-        return ""
-    except Exception as exc:
-        return str(exc)
-
-
 def type_accept_key() -> str:
-    """Press Y with the same enter_chat ``ec_run`` path as ``/초대``.
+    """Press Y, then Enter, through one enter_chat ``ec_run``.
 
-    Chat is not opened. IME is held in English so Y is the letter, not ``ㅛ``.
+    Chat is not opened. The DLL focuses the game, holds English so Y is the
+    letter, types Y, then sends Enter before it restores the previous IME.
     "" on success, else the error.
     """
     from app._05_action.chat import default_game_chat
-    from app._05_action.chat.ime import english_ime
     from app._05_action.chat.native import EnterChatUnavailable
-    from app._05_action.window_bounds import find_game_window
 
     global _last_y_note
     _last_y_note = ""
-    dll_error = ""
     try:
-        hwnd = find_game_window("LC.exe")
-        chat = default_game_chat()
-        if hwnd:
-            with english_ime(int(hwnd)):
-                result = chat.send("y", open_chat=False, press_enter=False)
-                time.sleep(0.15)
-        else:
-            result = chat.send("y", open_chat=False, press_enter=False)
-        if result.ok and int(getattr(result, "failed", 0) or 0) == 0:
-            _last_y_note = (
-                f" · enter_chat {result.describe()} chars={result.chars} "
-                f"keys={result.keys}"
-            )
-            return ""
-        dll_error = result.describe()
+        result = default_game_chat().send("y", open_chat=False, press_enter=True)
     except EnterChatUnavailable as exc:
-        dll_error = str(exc)
+        return str(exc)
     except Exception as exc:
-        dll_error = str(exc)
-    hunt_error = _press_y_hunt()
-    if not hunt_error:
+        return str(exc)
+    if result.ok and int(getattr(result, "failed", 0) or 0) == 0:
+        note = (
+            f" · enter_chat {result.describe()} chars={result.chars} "
+            f"keys={result.keys} enter={int(bool(result.enter_pressed))}"
+        )
+        if result.message:
+            note += f" {result.message}"
+        _last_y_note = note
         return ""
-    if dll_error:
-        return f"{hunt_error} (enter_chat: {dll_error})"
-    return hunt_error
+    return result.describe()
 
 
 def _note_monitor(text: str) -> None:
@@ -240,8 +133,17 @@ class InviteAccepter:
         popup open). ``in_party`` None = party memory unreadable. True when Y
         reached the game this tick."""
         pressed = False
-        if in_party is True:
-            if popup is not None and self.phase not in ("accepted", "left"):
+        if in_party is True and self.phase in ("popup", "pressed", "waiting_memory"):
+            self.phase = "joined"
+            self._open = False
+            self.accepted_at = time.time()
+            self._log("Party memory confirms the join")
+            _note_monitor("joined (party memory)")
+            self._track_membership(in_party)
+            self._maybe_ack(name, session)
+            return False
+        if in_party is True and self.phase not in ("popup", "pressed", "waiting_memory"):
+            if popup is not None and self.phase not in ("joined", "left"):
                 if self.skipped != "already in party":
                     self.skipped = "already in party"
                     self.phase = "skipped"
@@ -249,6 +151,7 @@ class InviteAccepter:
                         "Party invite popup ignored — already in party (memory)"
                     )
             self._track_membership(in_party)
+            self._maybe_ack(name, session)
             return False
         if popup is not None:
             pressed = self._on_open(popup, leader_name)
@@ -322,19 +225,20 @@ class InviteAccepter:
     def _on_closed(self) -> None:
         self._open = False
         if self.phase == "pressed":
-            self.phase = "accepted"
+            self.phase = "waiting_memory"
             self.accepted_at = time.time()
             self._log(
-                f"Party invite accepted: popup closed after Y "
-                f"(from {self.inviter or '—'}, {self.presses} press(es))"
+                f"Party invite Y+Enter sent: popup closed "
+                f"(from {self.inviter or '—'}, {self.presses} press(es)) "
+                "— waiting for party memory"
             )
-            _note_monitor("invite accepted (popup closed after Y)")
+            _note_monitor("Y+Enter sent — waiting for party memory")
         elif self.phase == "popup":
             self.phase = "missed"
             self._log("Party invite popup closed before Y was pressed")
 
     def _track_membership(self, in_party: Optional[bool]) -> None:
-        if self.phase != "accepted" or in_party is None:
+        if self.phase != "joined" or in_party is None:
             self._mem_out_since = None
             return
         if in_party:
@@ -355,7 +259,7 @@ class InviteAccepter:
             )
 
     def _maybe_ack(self, name: str, session: str) -> None:
-        if self.phase != "accepted" or self.acks_sent >= ACK_SENDS:
+        if self.phase not in ("waiting_memory", "joined") or self.acks_sent >= ACK_SENDS:
             return
         now = self._clock()
         if self._ack_at is not None and now - self._ack_at < ACK_EVERY_S:

@@ -196,7 +196,8 @@ def roster_member_steps(row: dict, *, phase: str) -> list:
     steps.append(_step("invite", "Invite", ist, idetail))
     mphase = str(row.get("state_invite") or "").partition(":")[2] or "idle"
     amap = {
-        "popup": "active", "pressed": "active", "accepted": "done",
+        "popup": "active", "pressed": "active",
+        "waiting_memory": "active", "joined": "done", "accepted": "done",
         "failed": "bad", "missed": "bad", "left": "wait",
     }
     steps.append(
@@ -323,10 +324,16 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
         acc, adetail = "bad", f"Y failed: {accept.get('error')}"
     elif phase == "pressed":
         acc, adetail = "active", f"Y pressed {presses}× · {_ago(pressed_at, now)} · popup still open"
-    elif phase == "accepted":
-        acc = "done"
+    elif phase == "waiting_memory":
+        acc = "active"
         adetail = (
-            f"accepted (popup closed after Y) · from {inviter} · "
+            f"Y+Enter sent · from {inviter} · waiting for party memory · "
+            f"told leader {int(accept.get('acks_sent') or 0)}×"
+        )
+    elif phase in ("joined", "accepted"):
+        acc = "done" if in_party or phase == "joined" else "active"
+        adetail = (
+            f"party memory confirmed · from {inviter} · "
             f"{_ago(accept.get('accepted_at'), now)} · told leader {int(accept.get('acks_sent') or 0)}×"
         )
     elif phase == "left":

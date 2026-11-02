@@ -272,6 +272,9 @@ class BotController:
         self._party_leader_name = ""
         self._member_policy_sig = ""
         self._invite_accepter = None
+        from app._06_party.chat_queue import PartyChatQueue
+
+        self._party_chat = PartyChatQueue()
         self._member_state_reporter = None
         # Monitor-only records (read by ``party_monitor_snapshot``).
         self._party_invites = None
@@ -651,6 +654,10 @@ class BotController:
             snap["socket"] = self._party_socket_snapshot()
         except Exception as exc:
             snap["socket"] = {"role": "none", "state": "error", "error": str(exc)}
+        try:
+            snap["chat_action"] = self._party_chat.snapshot()
+        except Exception:
+            snap["chat_action"] = {}
         snap.setdefault("bot_state", self.state.value)
         snap.setdefault("bot_reason", self.reason)
         snap["start_error"] = str(getattr(self, "_party_start_error", "") or "")
@@ -795,11 +802,10 @@ class BotController:
                 irow = invite_rows.get(key) or {}
                 mstate = member_states.row(row["name"])
                 iacc = invite_accepts.row(row["name"])
-                if key in in_party_names:
+                if key in in_party_names and party.get("subs_ok") is not False:
                     joined, joined_src = True, "leader memory"
                 elif reported_joined(row["name"], self._party_leader_name):
-                    accepted = bool(iacc) or (mstate.get("invite") or {}).get("phase") == "accepted"
-                    joined, joined_src = True, "member accept" if accepted else "member report"
+                    joined, joined_src = True, "member memory"
                 elif irow.get("joined") and mstate.get("fresh"):
                     joined, joined_src = True, "member report"
                 elif irow.get("joined"):
@@ -1881,11 +1887,15 @@ class BotController:
         try:
             from session.party_probe import probe_party_live
 
-            snap = probe_party_live().get("party")
+            probed = probe_party_live().get("party")
+            if isinstance(probed, dict) and probed.get("subs_ok") is not False:
+                snap = probed
         except Exception:
-            snap = getattr(world, "last_party", None)
-        if not isinstance(snap, dict):
-            snap = getattr(world, "last_party", None)
+            snap = None
+        if snap is None:
+            from app._06_party.invite import action_party_snapshot
+
+            snap = action_party_snapshot(world)
         self_name = _player_chat_name(world, snap)
 
         def _setup_log(msg: str) -> None:
@@ -1927,13 +1937,79 @@ class BotController:
             self._party_event("socket", msg)
         return sent
 
-    def _leader_invite_tick(self, world, last_action) -> None:
+    def submit_party_chat(self, kind: str, name: str = "") -> str:
+        """Queue one monitor Invite or Y+Enter for the game worker.
+
+        The worker runs it on the same path as automatic party chat. A paused
+        or minimized worker keeps the job until it is acting again.
+        """
+        kind_s = str(kind or "").strip().lower()
+        if kind_s not in ("invite", "accept"):
+            return "rejected: unknown party action"
+        if kind_s == "invite" and not str(name or "").strip():
+            return "Enter a character name"
+        if self.state != RunState.RUNNING or not (
+            self._thread is not None and self._thread.is_alive()
+        ):
+            return "rejected: bot is not running"
+        self._party_chat.submit(kind_s, name)
+        if not self._pause_gate.is_set():
+            text = "queued: bot is paused — runs when the worker resumes"
+            self._party_chat.note(text, state="queued")
+            return text
+        return "queued"
+
+    def _drain_party_chat(self) -> str:
+        """Run at most one queued manual party action. Returns its kind, or ""."""
+        job = self._party_chat.pop()
+        if job is None:
+            return ""
+        try:
+            if job.kind == "invite":
+                from app._06_party.invite import deliver_chat, invite_command
+
+                line = invite_command(job.name)
+                ok = deliver_chat(line, log=self.log)
+                invites = getattr(self, "_party_invites", None)
+                if invites is not None:
+                    invites.note_manual_invite(job.name, ok=ok)
+                text = f"manual {line}" if ok else f"manual {line} failed"
+            elif job.kind == "accept":
+                from app._06_party.accept import type_accept_key
+
+                err = type_accept_key()
+                ok = not err
+                text = "manual Y+Enter" if ok else f"manual Y+Enter failed: {err}"
+                if ok:
+                    from app._06_party import accept as accept_mod
+
+                    note = str(getattr(accept_mod, "_last_y_note", "") or "")
+                    if note:
+                        text += note
+            else:
+                ok = False
+                text = f"rejected: unknown party action {job.kind}"
+        except Exception as exc:
+            ok = False
+            text = f"manual party action failed: {exc}"
+        self._party_chat.finish(job, text, ok=ok)
+        self.log(text)
+        self._party_event("chat", text)
+        return job.kind if ok or job.kind in ("invite", "accept") else ""
+
+    def _leader_invite_tick(self, world, last_action, *, hold_chat: bool = False) -> None:
         """One invite step per tick while the party window is open."""
         if not self._party_leader_on():
             return
         invites = getattr(self, "_party_invites", None)
         if invites is not None:
-            invites.tick(getattr(world, "last_party", None), last_action)
+            from app._06_party.invite import action_party_snapshot
+
+            invites.tick(
+                action_party_snapshot(world),
+                last_action,
+                hold_chat=hold_chat,
+            )
 
     def _log_party_until_farm(
         self,
@@ -2162,12 +2238,12 @@ class BotController:
         start = getattr(self, "_start_rally", None)
         if start is None or str(getattr(start, "state", "off") or "off") != "off":
             return False
-        from app._06_party.invite import roster_invite_names
+        from app._06_party.invite import roster_required_names
         from settings.profile import normalize_party_roster
 
         snap = getattr(world, "last_party", None)
         rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
-        expected = set(roster_invite_names(rows, _player_chat_name(world, snap)))
+        expected = set(roster_required_names(rows, _player_chat_name(world, snap)))
         if not expected:
             return False
         server = getattr(getattr(self, "_party_comms", None), "server", None)
@@ -2192,12 +2268,12 @@ class BotController:
         from app._04_decision.dungeon_floor_route import inside_target_dungeon
         from app._04_decision.talking_scroll import player_on_selected_map
         from app._04_decision.world_nav.session import live_pose_from_state
-        from app._06_party.invite import roster_invite_names
+        from app._06_party.invite import roster_required_names
         from settings.profile import normalize_party_roster
 
         snap = getattr(world, "last_party", None)
         rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
-        expected = set(roster_invite_names(rows, _player_chat_name(world, snap)))
+        expected = set(roster_required_names(rows, _player_chat_name(world, snap)))
         travel = not (player_on_selected_map(blackboard) or inside_target_dungeon(blackboard))
         invites = getattr(self, "_party_invites", None)
         start.begin(
@@ -2338,7 +2414,9 @@ class BotController:
 
         if getattr(self, "_party_beep_sent", False):
             return
-        if not already_in_party(getattr(world, "last_party", None)):
+        from app._06_party.invite import action_party_snapshot
+
+        if not already_in_party(action_party_snapshot(world)):
             return
         if not self._party_comms.member_connected:
             return
@@ -2376,7 +2454,9 @@ class BotController:
                 return self._party_comms.send_invite_accept(body)
 
             self._invite_accepter = InviteAccepter(send_ack=_send_accept, log=_log)
-        snap = getattr(world, "last_party", None)
+        from app._06_party.invite import action_party_snapshot
+
+        snap = action_party_snapshot(world)
         info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
         self._invite_accepter.tick(
             party_invite(getattr(world, "last_uidialog", None)),
@@ -2457,7 +2537,9 @@ class BotController:
             if acc is not None
             else {"id": "", "phase": "idle", "presses": 0, "inviter": ""}
         )
-        snap = getattr(world, "last_party", None)
+        from app._06_party.invite import action_party_snapshot
+
+        snap = action_party_snapshot(world)
         name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
         self._member_state_reporter.tick(
             self._party_comms.send_member_state,
@@ -2499,12 +2581,14 @@ class BotController:
         return out
 
     def _member_party_tick(
-        self, world, map_id, *, send: bool, party_brain=None
+        self, world, map_id, *, send: bool, party_brain=None, skip_accept: bool = False
     ) -> None:
         """Read leader orders (incl. farm policy), then send buffs/items."""
         if self._party_comms.client is None:
             # Invite Y is a local popup. The socket only reports that it happened.
-            self._member_invite_accept(world)
+            # Once per loop (the send=False pass). A manual Y this tick wins.
+            if not send and not skip_accept:
+                self._member_invite_accept(world)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.orders import member_orders
@@ -2539,7 +2623,8 @@ class BotController:
                 if fresh is not None:
                     self._send_member_policy_ack(fresh)
             self._member_hello_tick(world)
-            self._member_invite_accept(world)
+            if not skip_accept:
+                self._member_invite_accept(world)
             self._member_beep_if_already_in(world)
             self._member_state_report(world)
             return
@@ -3325,9 +3410,16 @@ class BotController:
                         self._run_leader_party_setup(world)
                     except Exception as setup_exc:
                         self.log(f"Party invite setup failed: {setup_exc}")
+                chat_kind = ""
+                try:
+                    chat_kind = self._drain_party_chat()
+                except Exception as chat_exc:
+                    self.log(f"Party chat queue failed: {chat_exc}")
                 if self._party_leader_on():
                     try:
-                        self._leader_invite_tick(world, last_action)
+                        self._leader_invite_tick(
+                            world, last_action, hold_chat=chat_kind == "invite"
+                        )
                     except Exception as invite_exc:
                         self.log(f"Party invite tick failed: {invite_exc}")
 
@@ -3390,6 +3482,7 @@ class BotController:
                         last_logged_map_id,
                         send=False,
                         party_brain=party_brain,
+                        skip_accept=chat_kind == "accept",
                     )
                     action = party_brain.decide(world)
                     self._member_party_tick(

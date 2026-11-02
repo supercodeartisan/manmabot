@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QFrame,
@@ -375,7 +375,13 @@ def split_messages(lines: list[Any], role: str) -> tuple[list[str], list[str]]:
 
 
 class PartyDashboard(QWidget):
-    """Header flags + communication + role card + in-game party table."""
+    """Header flags + communication + role card + in-game party table.
+
+    ``member_picked`` fires when the user selects a roster name. The
+    dashboard still does not call the engine.
+    """
+
+    member_picked = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -790,6 +796,7 @@ class PartyDashboard(QWidget):
             return
         self._picked = name
         self._show_member(self._last_session, self._last_messages)
+        self.member_picked.emit(name)
 
     def _apply_member_picker(self, session: dict[str, Any], messages: list[Any]) -> None:
         self._last_session = session
