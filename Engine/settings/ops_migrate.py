@@ -63,9 +63,13 @@ def _write_schedule_files(
 
     root = schedule_dir(schedule_id)
     root.mkdir(parents=True, exist_ok=True)
+    from settings.party_routine import take_party_routine
+
     settings = normalize_settings(settings)
     routine = normalize_routine(routine)
+    settings, party_routine = take_party_routine(settings)
     atomic_write_json(assert_userdata_write(root / "meta.json"), meta)
+    atomic_write_json(assert_userdata_write(root / "party_routine.json"), party_routine)
     atomic_write_json(assert_userdata_write(root / "settings.json"), settings)
     atomic_write_json(assert_userdata_write(root / "routine.json"), routine)
 

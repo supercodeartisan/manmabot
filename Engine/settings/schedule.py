@@ -1,8 +1,10 @@
 """Schedule persistence and profile snapshots.
 
-Disk layout (ops v1): ``UserData/schedules/{id}/{meta,settings,routine}.json``
+Disk layout (ops v1): ``UserData/schedules/{id}/{meta,settings,routine,party_routine}.json``
 plus ``timeline.json``. ``ScheduleTask`` remains the UI/clock compat shape
 (settings may embed ``move.routine``; timing fields mirror timeline entries).
+``party_routine.json`` is the party hunt routine and is not merged into
+``routine.json``.
 """
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from settings.farm_schedule import normalize_routine
+from settings.party_routine import normalize_party_routine, take_party_routine
 from settings.hp_actions import normalize_hp_actions
 from settings.spell_defaults import spell_slot_bindings
 from session.paths import (
@@ -372,6 +375,13 @@ def _load_schedule_task_from_dir(root: Path, timeline_entry: Any | None) -> Sche
         # Named presets are not timeline schedules; skip list unless needed later.
         return None
     embedded = merge_settings_routine(settings_n, routine)
+    party_file = read_json_list(root / "party_routine.json")
+    if party_file is None:
+        party_block = settings.get("party") if isinstance(settings.get("party"), dict) else {}
+        party_file = party_block.get("routine") if isinstance(party_block, dict) else []
+    party_out = embedded.setdefault("party", {})
+    if isinstance(party_out, dict):
+        party_out["routine"] = normalize_party_routine(party_file)
     raw: dict[str, Any] = {
         "id": sid,
         "name": meta.get("name") or sid,
@@ -404,6 +414,7 @@ def _write_schedule_dir(task: ScheduleTask) -> None:
     root = schedule_dir(sid)
     root.mkdir(parents=True, exist_ok=True)
     settings, routine = split_settings_routine(task.settings)
+    settings, party_routine = take_party_routine(settings)
     meta = {
         "id": sid,
         "name": str(task.name or "New task")[:80],
@@ -415,6 +426,7 @@ def _write_schedule_dir(task: ScheduleTask) -> None:
         "role": str(task.role or ""),
     }
     atomic_write_json(assert_userdata_write(root / "meta.json"), meta)
+    atomic_write_json(assert_userdata_write(root / "party_routine.json"), party_routine)
     atomic_write_json(assert_userdata_write(root / "settings.json"), settings)
     atomic_write_json(assert_userdata_write(root / "routine.json"), routine)
 

@@ -229,6 +229,14 @@ class RoutineViewModel:
     def patrol_count(self, map_id: str) -> int:
         return len(list_patrol_entries(map_id))
 
+    def farm_summary_label(self, entry: dict[str, Any], name: str) -> str:
+        """Label for one selected farm in the routine summary."""
+        return str(name)
+
+    def summary_patrol_count(self, entry: dict[str, Any], map_id: str) -> int:
+        """Patrol count shown in the routine summary. Solo uses the shared map file."""
+        return self.patrol_count(map_id)
+
     def is_break_only(self) -> bool:
         return routine_is_break_only(self.rows)
 
@@ -255,13 +263,18 @@ class RoutineViewModel:
                 lines.append(
                     "    "
                     + t.get("routine_patrol_line", "patrol: {n}").format(
-                        n=self.patrol_count(map_id)
+                        n=self.summary_patrol_count(entry, map_id)
                     )
                 )
             else:
                 farms = list(entry.get("selected_farms") or [])
                 if farms:
-                    lines.append("    " + ", ".join(farms))
+                    lines.append(
+                        "    "
+                        + ", ".join(
+                            self.farm_summary_label(entry, str(name)) for name in farms
+                        )
+                    )
                 else:
                     lines.append("    " + t.get("routine_area_needed", "area needed"))
         return lines
