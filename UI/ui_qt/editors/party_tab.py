@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from settings.profile import normalize_party_roster
 from ui_qt.editors.form_helpers import add_check, add_spin_row, card, configure_table_fill
+from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
@@ -46,6 +47,8 @@ class PartyTab(QWidget):
         strings: dict[str, str],
         language: str = "en",
         on_log: Callable[[str], None] | None = None,
+        profile=None,
+        can_edit_map: Callable[[], bool] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -53,6 +56,9 @@ class PartyTab(QWidget):
         self.t = strings
         self.language = language
         self.on_log = on_log or (lambda _m: None)
+        self._profile = profile
+        self._can_edit_map = can_edit_map
+        self.routine_panel: PartyRoutinePanel | None = None
         self._lan_ip = ""
         self._ws_testing = False
         self._ws_status_target: QLabel | None = None
@@ -253,7 +259,18 @@ class PartyTab(QWidget):
         lay.addWidget(self.leader_panel)
 
         self.role_farm.currentIndexChanged.connect(self._on_role_combo_changed)
-        body.addStretch(1)
+        if self._profile is not None:
+            self.routine_panel = PartyRoutinePanel(
+                bag=self.bag,
+                profile=self._profile,
+                strings=self.t,
+                language=self.language,
+                on_log=self.on_log,
+                can_edit_map=self._can_edit_map,
+            )
+            body.addWidget(self.routine_panel, stretch=1)
+        else:
+            body.addStretch(1)
         self._apply_role(self._role())
 
     def _migrate_enabled_flag(self) -> None:
@@ -953,3 +970,9 @@ class PartyTab(QWidget):
         self._lan_ip = ""
         self._fill_roster_table()
         self._apply_role(self._role())
+        if self.routine_panel is not None:
+            self.routine_panel.load_from_bag()
+
+    def flush_routine(self) -> None:
+        if self.routine_panel is not None:
+            self.routine_panel._persist_routine()

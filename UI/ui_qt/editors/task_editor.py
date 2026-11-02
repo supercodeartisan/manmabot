@@ -99,6 +99,14 @@ class TaskEditor(QWidget):
         self.other_tab: OtherTab | None = None
         self._build()
 
+    def _maps_editable(self) -> bool:
+        try:
+            from session.bot_controller import RunState
+
+            return self.bridge.controller.state == RunState.STOPPED
+        except Exception:
+            return True
+
     def _project_running(self) -> bool:
         try:
             from session.bot_controller import RunState
@@ -202,6 +210,8 @@ class TaskEditor(QWidget):
             strings=self.t,
             language=self.language,
             on_log=self.on_log,
+            profile=self.profile,
+            can_edit_map=self._maps_editable,
         )
         tabs.addTab(self.party_tab, self.t.get("party", "Party"))
 
@@ -222,6 +232,8 @@ class TaskEditor(QWidget):
         tabs.addTab(self.other_tab, self.t.get("other", "other"))
         layout.addWidget(tabs, stretch=1)
         self.move_tab.on_content_changed = self.schedule_content_touched
+        if self.party_tab.routine_panel is not None:
+            self.party_tab.routine_panel.on_content_changed = self.schedule_content_touched
         self.bag.on_changed = self.schedule_content_touched
 
         commit_bar = QHBoxLayout()
@@ -523,6 +535,8 @@ class TaskEditor(QWidget):
             self.equipment_tab._persist_sell()
         if self.recovery_tab is not None:
             self.recovery_tab.flush_options_to_bag()
+        if self.party_tab is not None:
+            self.party_tab.flush_routine()
         data = copy.deepcopy(self.bag.data)
         if self.move_tab is not None:
             routine = normalize_routine(self.move_tab.routine_payload())

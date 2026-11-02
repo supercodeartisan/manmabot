@@ -80,21 +80,66 @@ class MoveTab(QWidget):
         on_log: Callable[[str], None] | None = None,
         on_open_map_editor: Callable[..., None] | None = None,
         on_routine_changed: Callable[[], None] | None = None,
+        load_profile: bool = True,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.profile = profile
         self.t = strings
+        self.language = language
         self.on_log = on_log or (lambda _m: None)
         self.on_open_map_editor = on_open_map_editor
         self.on_routine_changed = on_routine_changed
         self.on_content_changed = None
-        self.vm = RoutineViewModel(language)
-        self.vm.load_from_profile(profile)
+        self.vm = self._make_vm()
+        if load_profile:
+            self.vm.load_from_profile(profile)
         self._farm_clock_provider: Callable[[], dict | None] | None = None
         self._farm_timer_table: QTableWidget | None = None
         self._build()
         self.refresh()
+
+    def _make_vm(self) -> RoutineViewModel:
+        return RoutineViewModel(self.language)
+
+    def _persist_routine(self) -> None:
+        """Solo rows are read from this widget at save time."""
+        return
+
+    def _snapshot_setting(self, entry_id: str) -> None:
+        """Solo keeps coordinates in the shared map files."""
+        return
+
+    def _patrol_entries_for(self, map_id: str, entry: dict) -> list:
+        return list_patrol_entries(map_id)
+
+    def _farm_choice_label(self, name: str, note: str, index: int) -> str:
+        return route_point_display_name(name, self.language)
+
+    def _area_details_for(self, map_id: str, *, rest: bool, entry: dict):
+        list_details = list_safe_details if rest else list_farm_details
+        return list_details(map_id)
+
+    def _launch_map_editor(
+        self,
+        map_id: str,
+        *,
+        dungeon: bool,
+        area_kind: str,
+        on_closed,
+        entry_id: str,
+        host: QWidget,
+    ) -> None:
+        if self.on_open_map_editor is None:
+            QMessageBox.information(
+                host,
+                self.t.get("routine_setting", "Setting"),
+                self.t.get("map_editor", "Map editor"),
+            )
+            return
+        self.on_open_map_editor(
+            map_id, dungeon=dungeon, area_kind=area_kind, on_closed=on_closed
+        )
 
     def set_farm_clock_provider(self, provider: Callable[[], dict | None] | None) -> None:
         self._farm_clock_provider = provider
@@ -295,6 +340,7 @@ class MoveTab(QWidget):
     def _duration_changed(self, entry_id: str, value: int) -> None:
         self.vm.set_duration(entry_id, value)
         self.summary.setPlainText("\n".join(self.vm.summary_lines(self.t)))
+        self._persist_routine()
         if callable(self.on_content_changed):
             try:
                 self.on_content_changed()
@@ -429,7 +475,7 @@ class MoveTab(QWidget):
 
             def _fill_patrol() -> None:
                 assert patrol_table is not None
-                entries = list_patrol_entries(map_id)
+                entries = self._patrol_entries_for(map_id, entry)
                 patrol_table.setRowCount(0)
                 for index, (_x, _y, name) in enumerate(entries, start=1):
                     row = patrol_table.rowCount()
@@ -455,8 +501,7 @@ class MoveTab(QWidget):
             refill_list = _fill_patrol
             layout.addWidget(patrol_table, stretch=1)
         else:
-            list_details = list_safe_details if rest else list_farm_details
-            details, _err = list_details(map_id)
+            details, _err = self._area_details_for(map_id, rest=rest, entry=entry)
             if rest:
                 hint = self.t.get(
                     "map_setup_hint_rest",
@@ -480,7 +525,6 @@ class MoveTab(QWidget):
                 str(k): float(v)
                 for k, v in dict(entry.get("farm_stays_s") or {}).items()
             }
-            yaml_names = [name for name, _memo in details]
             farm_table = QTableWidget(0, 4)
             farm_table.setHorizontalHeaderLabels(
                 [
@@ -496,7 +540,7 @@ class MoveTab(QWidget):
             farm_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
             farm_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
             farm_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-            farm_table.setColumnWidth(0, 180)
+            farm_table.setColumnWidth(0, 300)
             farm_table.setColumnWidth(1, 48)
             farm_table.setColumnWidth(2, 72)
             farm_table.setColumnWidth(3, 88)
@@ -540,13 +584,13 @@ class MoveTab(QWidget):
                         f"{minutes}{self.t.get('minutes', 'min')}" if name in rank else ""
                     )
 
-            def _fill_rows(names: list[str], checked: set[str]) -> None:
+            def _fill_rows(rows: list[tuple[str, str]], checked: set[str]) -> None:
                 assert farm_table is not None
                 farm_table.setRowCount(0)
-                for name in names:
+                for name, note in rows:
                     row = farm_table.rowCount()
                     farm_table.insertRow(row)
-                    box = QCheckBox(route_point_display_name(name, self.vm.language))
+                    box = QCheckBox(self._farm_choice_label(name, note, row + 1))
                     box.setProperty("farm_name", name)
                     box.setChecked(name in checked)
                     box.toggled.connect(lambda _=False: _refresh_order_column())
@@ -604,15 +648,17 @@ class MoveTab(QWidget):
 
             def _reload_from_yaml() -> None:
                 assert farm_table is not None
-                details_now, _err = list_details(map_id)
+                details_now, _err = self._area_details_for(
+                    map_id, rest=rest, entry=entry
+                )
                 names = [name for name, _memo in details_now]
                 checked = {name for name in _checked_names() if name in names}
-                _fill_rows(names, checked)
+                _fill_rows(details_now, checked)
 
             refill_list = _reload_from_yaml
             select_all_farms = _select_all
             clear_all_farms = _clear_all
-            _fill_rows(yaml_names, selected)
+            _fill_rows(details, selected)
             layout.addWidget(farm_table, stretch=1)
             farm_table.cellDoubleClicked.connect(_edit_stay)
 
@@ -626,14 +672,6 @@ class MoveTab(QWidget):
         )
 
         def _open_editor() -> None:
-            if self.on_open_map_editor is None:
-                QMessageBox.information(
-                    dialog,
-                    self.t.get("routine_setting", "Setting"),
-                    self.t.get("map_editor", "Map editor"),
-                )
-                return
-
             def _back() -> None:
                 if refill_list is not None:
                     try:
@@ -648,8 +686,13 @@ class MoveTab(QWidget):
                     pass
 
             # Parent to shell (not this dialog) — classic non-modal stack.
-            self.on_open_map_editor(
-                map_id, dungeon=dungeon, area_kind=area_kind, on_closed=_back
+            self._launch_map_editor(
+                map_id,
+                dungeon=dungeon,
+                area_kind=area_kind,
+                on_closed=_back,
+                entry_id=entry_id,
+                host=dialog,
             )
 
         edit_map.clicked.connect(_open_editor)
@@ -685,6 +728,7 @@ class MoveTab(QWidget):
                         if name:
                             chosen.append(name)
                 self.vm.set_farms(entry_id, chosen, stay_by_name)
+            self._snapshot_setting(entry_id)
 
         def _commit_and_close() -> None:
             _commit()
