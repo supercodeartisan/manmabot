@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-02 — invite Y falls back to SendInput when no keyboard slot accepts
+
+Intent: The member log showed the popup, then `slots rejected` and no Y. PostMessage is not a press the popup reads, so a missing Interception slot must use a real SendInput scancode for Y and for the Enter after it.
+Shared: `ec_sendinput_press`. Enter is still skipped when that press fails. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y on a PC whose Interception slots reject the probe. The member bot must load this DLL.
+Consent: user (Y is never pressing).
+Result: DLL rebuilt. Not run on the member PC.
+
 ## 2026-11-02 — Y uses a live keyboard slot; a missed key does not press Enter
 
 Intent: The invite popup closed because Y never reached the game and Enter still dismissed it. A `/초대` line was logged as typed when the strokes went to whichever window was in front.

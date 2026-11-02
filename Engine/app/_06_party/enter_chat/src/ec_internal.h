@@ -70,6 +70,7 @@ void ec_ic_close(EcContext* ctx);
 BOOL ec_ic_key(EcContext* ctx, int scancode, int e0, int up);
 BOOL ec_ic_press(EcContext* ctx, int scancode, int e0, int hold_ms);
 BOOL ec_send_vk(EcContext* ctx, WORD vk);
+BOOL ec_sendinput_press(int scancode, int shift, int hold_ms);
 int  ec_ascii_to_scan(WCHAR c, int* shift);
 
 /* ----------------------------------------------------------------- hangul */

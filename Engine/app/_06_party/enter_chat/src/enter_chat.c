@@ -420,11 +420,19 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             {
                 int shift = 0;
                 int sc = (units == 1) ? ec_ascii_to_scan(start[0], &shift) : -1;
-                /* Invite Y is a physical key. WM_CHAR does not press the
-                 * popup, and a following Enter would dismiss it. */
+                /* Invite Y is a physical key. WM_CHAR and PostMessage do not
+                 * press the popup. With no Interception slot, SendInput does. */
                 if (!ctx.ic && !plan.has_hangul && plan.has_scan_keys) {
-                    failed++;
-                    ec_result_message(res, L"no keyboard slot accepted a stroke");
+                    BOOL ok = sc >= 0 && ec_is_foreground(ctx.hwnd) &&
+                              ec_sendinput_press(sc, shift, EC_KEY_HOLD_MS);
+                    if (ok) {
+                        sent_chars++;
+                        sent_keys++;
+                        ec_result_message(res, L"physical key via SendInput");
+                    } else {
+                        failed++;
+                        ec_result_message(res, L"SendInput did not press the key");
+                    }
                 } else if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
                     BOOL ok = TRUE;
                     if (shift) {
@@ -478,7 +486,10 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             if (!lost_front)
                 ec_result_message(res, L"game is not the foreground window");
         } else {
-            ok = ec_send_vk(&ctx, VK_RETURN);
+            if (!ctx.ic && plan.has_scan_keys && !plan.has_hangul)
+                ok = ec_sendinput_press(0x1C, 0, 10);
+            else
+                ok = ec_send_vk(&ctx, VK_RETURN);
             Sleep(30);
             if (ok) {
                 res->enter_pressed = TRUE;
