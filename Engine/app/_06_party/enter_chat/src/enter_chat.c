@@ -157,6 +157,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     int sent_keys = 0;
     int failed = 0;
     int skipped = 0;
+    int lost_front = 0;
 
     InitOnceExecuteOnce(&g_lock_once, ec_init_lock, NULL, NULL);
     EnterCriticalSection(&g_lock);
@@ -309,10 +310,16 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
     /* Opening chat sleeps long enough for the bot UI to take focus back.
-     * Keys only compose in the foreground window, so put the game there
-     * again before the layout switch and before each character. */
-    if (plan.has_hangul || plan.has_scan_keys)
-        ec_force_foreground(ctx.hwnd, focus_timeout);
+     * Interception strokes go to whichever window is actually in front, so a
+     * failed focus is a failed line — the driver accepting the stroke is not
+     * enough. */
+    if ((plan.has_hangul || plan.has_scan_keys) &&
+        !ec_is_foreground(ctx.hwnd) &&
+        !ec_force_foreground(ctx.hwnd, focus_timeout)) {
+        failed++;
+        lost_front = 1;
+        ec_result_message(res, L"game is not the foreground window");
+    }
 
     /* Lone ASCII (invite Y) must be English. A Hangul line keeps 한 mode. */
     if (!plan.has_hangul && plan.has_scan_keys)
@@ -340,8 +347,15 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             const wchar_t* start = p;
             p += units;
 
-            if (!ec_is_foreground(ctx.hwnd))
-                ec_force_foreground(ctx.hwnd, focus_timeout);
+            if (!ec_is_foreground(ctx.hwnd) &&
+                !ec_force_foreground(ctx.hwnd, focus_timeout)) {
+                failed++;
+                if (!lost_front) {
+                    lost_front = 1;
+                    ec_result_message(res, L"game is not the foreground window");
+                }
+                continue;
+            }
 
             if (cp == L'\t') {
                 if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
@@ -406,7 +420,12 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             {
                 int shift = 0;
                 int sc = (units == 1) ? ec_ascii_to_scan(start[0], &shift) : -1;
-                if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
+                /* Invite Y is a physical key. WM_CHAR does not press the
+                 * popup, and a following Enter would dismiss it. */
+                if (!ctx.ic && !plan.has_hangul && plan.has_scan_keys) {
+                    failed++;
+                    ec_result_message(res, L"no keyboard slot accepted a stroke");
+                } else if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
                     BOOL ok = TRUE;
                     if (shift) {
                         if (!ec_ic_key(&ctx, 0x2A, 0, 0)) ok = FALSE;
@@ -444,19 +463,32 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
     if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
 
+    /* A missed Y or a line typed into the wrong window must not submit.
+     * Escape closes a chat box this call already opened. The invite popup
+     * is not a chat box, so Y (no OPEN_CHAT) only skips Enter. */
+    if (failed > 0 && (request->flags & EC_FLAG_OPEN_CHAT))
+        ec_send_vk(&ctx, VK_ESCAPE);
+
     /* ------------------------------------------------------------ final Enter */
-    if (request->press_enter) {
+    if (request->press_enter && failed == 0) {
         BOOL ok;
-        if (!ec_is_foreground(ctx.hwnd))
-            ec_force_foreground(ctx.hwnd, focus_timeout);
-        ok = ec_send_vk(&ctx, VK_RETURN);
-        Sleep(30);
-        if (ok) {
-            res->enter_pressed = TRUE;
-        } else {
+        if (!ec_is_foreground(ctx.hwnd) &&
+            !ec_force_foreground(ctx.hwnd, focus_timeout)) {
             failed++;
-            ec_result_message(res, L"final Enter could not be sent");
+            if (!lost_front)
+                ec_result_message(res, L"game is not the foreground window");
+        } else {
+            ok = ec_send_vk(&ctx, VK_RETURN);
+            Sleep(30);
+            if (ok) {
+                res->enter_pressed = TRUE;
+            } else {
+                failed++;
+                ec_result_message(res, L"final Enter could not be sent");
+            }
         }
+    } else if (request->press_enter && failed > 0) {
+        ec_result_message(res, L"Enter skipped because a key did not reach the game");
     }
 
     res->chars = sent_chars;

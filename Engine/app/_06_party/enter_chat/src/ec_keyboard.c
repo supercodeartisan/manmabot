@@ -75,13 +75,29 @@ BOOL ec_ic_open(EcContext* ctx)
     ctx->ic = g_ic_create();
     if (!ctx->ic) return FALSE;
 
-    ctx->ic_keyboard = 1;   /* INTERCEPTION_KEYBOARD(0) */
-    if (g_ic_is_kb) {
-        for (int d = 1; d <= 10; ++d) {
-            if (g_ic_is_kb(d)) { ctx->ic_keyboard = d; break; }
+    /* interception_is_keyboard is only a range check, so slot 1 is always
+     * "a keyboard" even when this PC's strokes are accepted on a later slot.
+     * A key-UP for scancode 0x04 is a no-op. Keep the first slot that accepts. */
+    ctx->ic_keyboard = 0;
+    for (int d = 1; d <= 10; ++d) {
+        unsigned char buf[64];
+        memset(buf, 0, sizeof(buf));
+        *(unsigned short*)(buf + 0) = 0x04;
+        *(unsigned short*)(buf + 2) = 0x01; /* key up */
+        if (g_ic_send(ctx->ic, d, buf, 1) == 1) {
+            ctx->ic_keyboard = d;
+            break;
         }
     }
+    if (!ctx->ic_keyboard) {
+        if (g_ic_destroy) g_ic_destroy(ctx->ic);
+        ctx->ic = NULL;
+        ctx->interception_ok = FALSE;
+        return FALSE;
+    }
     ctx->interception_ok = TRUE;
+    if (ctx->res)
+        ec_result_message(ctx->res, L"keyboard slot %d", ctx->ic_keyboard);
     return TRUE;
 }
 

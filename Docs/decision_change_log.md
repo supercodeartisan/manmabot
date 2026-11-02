@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-02 — Y uses a live keyboard slot; a missed key does not press Enter
+
+Intent: The invite popup closed because Y never reached the game and Enter still dismissed it. A `/초대` line was logged as typed when the strokes went to whichever window was in front.
+Shared: `ec_ic_open` keeps the first keyboard slot whose key-up send returns 1. `ec_run` skips Enter when any key failed, and Escape-closes a chat line it had opened. A line is a failure when the game is not the foreground window. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. The 20s invite clock is unchanged.
+Affects: party `/초대` and invite Y. The running bot keeps the old DLL until it is restarted.
+Consent: user (update).
+Result: DLL rebuilt. Not run as a party join.
+
 ## 2026-11-02 — reconnect resumes from game memory, not a new invite
 
 Intent: A member socket drop is not a failed party join. On reconnect the leader waits for a new `member_state` before another `/초대`. A name already in party memory stays joined. `InviteAccepter` keeps watching the popup across the drop and does not press Y until the policy names the inviter.
