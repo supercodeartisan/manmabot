@@ -822,12 +822,15 @@ static int lc_doorState(const LC_E *X)
     if (!lc_doorFrame(X, &f)) return 2;
     return lc_doorStateOfFrame(f);
 }
-/* 1 = 열 수 없는(고정) 문 — 종류 그래픽이 DOOR_GFX_LOCKED (사용자 확인 근거) */
+/* 1 = 열 수 없는(고정) 문 — 종류 그래픽이 DOOR_GFX_LOCKED (사용자 확인 근거)
+ * 2026-10-29: 열린 문(1C)은 "열 수 없는 문"일 수 없다 → 상태를 먼저 본다. */
 static int lc_doorLocked(const LC_E *X)
 {
     if (!X) return 0;
     if (X->doorSeen) return X->doorLocked;
     if (!lc_isDoor(X)) return 0;
+    uint32_t f = 0;
+    if (lc_doorFrame(X, &f) && f == LC_DOOR_STATE_OPEN) return 0;   /* 열려 있으면 잠금 아님 */
     uint32_t g = 0;
     if (!lc_doorGfx(X, &g)) return 0;
     return g == LC_DOOR_GFX_LOCKED;
@@ -859,7 +862,8 @@ static void lc_fillDoor(void)
         int hg = lc_doorGfx(X, &g), hf = lc_doorFrame(X, &f);
         X->doorGfx   = hg ? g : 0;
         X->doorFrame = hf ? f : 0;
-        X->doorLocked= (hg && g == LC_DOOR_GFX_LOCKED) ? 1 : 0;
+        X->doorLocked= (hg && g == LC_DOOR_GFX_LOCKED &&
+                        !(hf && f == LC_DOOR_STATE_OPEN)) ? 1 : 0;   /* 열린 문은 잠금 아님 */
         X->doorState = hf ? lc_doorStateOfFrame(f) : 2;
         X->doorSeen  = 1;
     }

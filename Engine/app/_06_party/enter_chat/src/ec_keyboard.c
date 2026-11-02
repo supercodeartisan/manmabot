@@ -27,22 +27,33 @@ static pfn_ic_send         g_ic_send;
 static pfn_ic_is_kb        g_ic_is_kb;
 static INIT_ONCE           g_ic_once = INIT_ONCE_STATIC_INIT;
 
-static BOOL CALLBACK ec_ic_load_once(PINIT_ONCE once, PVOID param, PVOID* ctx)
+static HMODULE ec_load_named_beside(HMODULE owner)
 {
     wchar_t path[MAX_PATH];
+    wchar_t* slash;
+
+    if (!owner || !GetModuleFileNameW(owner, path, MAX_PATH))
+        return NULL;
+    slash = wcsrchr(path, L'\\');
+    if (!slash)
+        return NULL;
+    if ((size_t)(slash - path) + 1 + 18 >= MAX_PATH)
+        return NULL;
+    wcscpy_s(slash + 1, MAX_PATH - (size_t)(slash - path) - 1, L"interception.dll");
+    return LoadLibraryW(path);
+}
+
+static BOOL CALLBACK ec_ic_load_once(PINIT_ONCE once, PVOID param, PVOID* ctx)
+{
     (void)once; (void)param; (void)ctx;
 
-    /* Prefer interception.dll next to the host executable. */
-    if (GetModuleFileNameW(NULL, path, MAX_PATH)) {
-        wchar_t* slash = wcsrchr(path, L'\\');
-        if (slash) {
-            size_t prefix = (size_t)(slash - path) + 1;
-            if (prefix + 18 < MAX_PATH) {
-                wcscpy_s(slash + 1, MAX_PATH - prefix, L"interception.dll");
-                g_ic_dll = LoadLibraryW(path);
-            }
-        }
-    }
+    /* Python preloads the DLL by full path. Then the copy beside this
+     * module, then the copy beside the host exe. */
+    g_ic_dll = GetModuleHandleW(L"interception.dll");
+    if (!g_ic_dll)
+        g_ic_dll = ec_load_named_beside(GetModuleHandleW(L"enter_chat.dll"));
+    if (!g_ic_dll)
+        g_ic_dll = ec_load_named_beside(GetModuleHandleW(NULL));
     if (!g_ic_dll)
         g_ic_dll = LoadLibraryW(L"interception.dll");
     if (!g_ic_dll)
@@ -70,18 +81,41 @@ BOOL ec_ic_open(EcContext* ctx)
 {
     if (!ctx) return FALSE;
     if (ctx->ic) return TRUE;
-    if (!ec_ic_load()) return FALSE;
+    if (!ec_ic_load()) {
+        if (ctx->res)
+            ec_result_message(ctx->res, L"interception.dll not loaded");
+        return FALSE;
+    }
 
     ctx->ic = g_ic_create();
     if (!ctx->ic) return FALSE;
 
-    ctx->ic_keyboard = 1;   /* INTERCEPTION_KEYBOARD(0) */
-    if (g_ic_is_kb) {
-        for (int d = 1; d <= 10; ++d) {
-            if (g_ic_is_kb(d)) { ctx->ic_keyboard = d; break; }
+    /* interception_is_keyboard is only a range check, so slot 1 is always
+     * "a keyboard" even when this PC's strokes are accepted on a later slot.
+     * A key-UP for scancode 0x04 is a no-op. Keep the first slot that accepts. */
+    ctx->ic_keyboard = 0;
+    for (int d = 1; d <= 10; ++d) {
+        unsigned char buf[64];
+        memset(buf, 0, sizeof(buf));
+        *(unsigned short*)(buf + 0) = 0x04;
+        *(unsigned short*)(buf + 2) = 0x01; /* key up */
+        if (g_ic_send(ctx->ic, d, buf, 1) == 1) {
+            ctx->ic_keyboard = d;
+            break;
         }
     }
+    if (!ctx->ic_keyboard) {
+        if (g_ic_destroy) g_ic_destroy(ctx->ic);
+        ctx->ic = NULL;
+        ctx->interception_ok = FALSE;
+        if (ctx->res)
+            ec_result_message(ctx->res,
+                L"interception.dll loaded; slots 1-10 rejected the probe");
+        return FALSE;
+    }
     ctx->interception_ok = TRUE;
+    if (ctx->res)
+        ec_result_message(ctx->res, L"keyboard slot %d", ctx->ic_keyboard);
     return TRUE;
 }
 
@@ -172,6 +206,37 @@ BOOL ec_send_vk(EcContext* ctx, WORD vk)
         in[1].ki.dwFlags |= KEYEVENTF_KEYUP;
         return SendInput(2, in, sizeof(INPUT)) == 2;
     }
+}
+
+/* One physical key to the foreground window. PostMessage is not used:
+ * the invite popup ignores posted Y and still reports the post as sent. */
+BOOL ec_sendinput_press(int scancode, int shift, int hold_ms)
+{
+    INPUT stroke;
+    int hold;
+
+    if (scancode < 0) return FALSE;
+    hold = hold_ms > 0 ? hold_ms : EC_KEY_HOLD_MS;
+    memset(&stroke, 0, sizeof(stroke));
+    stroke.type = INPUT_KEYBOARD;
+    stroke.ki.wScan = (WORD)(scancode & 0xFF);
+    stroke.ki.dwFlags = KEYEVENTF_SCANCODE;
+    if (shift) {
+        stroke.ki.wScan = 0x2A;
+        if (SendInput(1, &stroke, sizeof(INPUT)) != 1) return FALSE;
+        stroke.ki.wScan = (WORD)(scancode & 0xFF);
+        Sleep(3);
+    }
+    if (SendInput(1, &stroke, sizeof(INPUT)) != 1) return FALSE;
+    Sleep((DWORD)hold);
+    stroke.ki.dwFlags |= KEYEVENTF_KEYUP;
+    if (SendInput(1, &stroke, sizeof(INPUT)) != 1) return FALSE;
+    if (shift) {
+        stroke.ki.wScan = 0x2A;
+        stroke.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+        if (SendInput(1, &stroke, sizeof(INPUT)) != 1) return FALSE;
+    }
+    return TRUE;
 }
 
 /* US layout scancode for one ASCII key used by the 2-beolsik mapping.

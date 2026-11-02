@@ -5,7 +5,7 @@
 
 | | |
 |--|--|
-| **문서 갱신** | 2026-10-21 |
+| **문서 갱신** | 2026-10-30 |
 | **런타임 상태** | live (멤버=`PartyMemberManager` farm=`party`\|`solo`, 리더=솔로 decide + setup/rally + `party_policy` + 터렛 앵커 `party_turret`) |
 | **comms/** | **적용됨** — 세션·rally·manager는 `comms` 경유 (와이어 불변) |
 | **미적용 계획** | manager 분해, brains 실배선, `websocket/party_orders` 본문 이전 |
@@ -128,25 +128,28 @@ _06_party     websocket/        _05_action/chat
 시작 순서 자유: 리더·멤버 어느 쪽을 먼저 켜도 된다.
 
 ```text
-(Start) _start_party_client — 리더 소켓 연결까지 타임아웃 없이 대기 (30s마다 로그, Stop으로 취소)
-  → 대기 중엔 봇 루프에 들어가지 않음 (이동·전투·HP 없음), 모니터에 노란 "리더 대기 중"
+(Start) _start_party_client — 호스트가 있으면 클라이언트를 켜고 바로 봇 루프 진입
+  → 타임아웃 없음 (30s마다 로그, Stop으로 취소). 예전 문서의 60s 컷은 없음
+  → 연결 전: decide_survival (후퇴 게이트 + 제자리 힐/버프/물약 side). 팔로우·전투·집결 없음
+  → 연결 후: 일반 decide. 이후 소켓이 끊겨도 마지막 정책으로 사냥 유지
   → 리더 IP가 비어 있을 때만 party_ws_unreachable로 중지
-_member_party_tick(send=False)
+(연결됨) _member_party_tick(send=False)
   → member_orders.ingest(client.drain())
 PartyMemberManager.decide(world)
-  → policy → join_map | follow | assist | loot | support | gather(walk)
+  → policy: heal → buff → potion → defend → travel/assist/hold
+  → 힐/버프가 있으면 gather(집결 걷기)를 건너뛰고 stashed support intent를 반환
 _member_party_tick(send=True)
   → heartbeat / report
   → member_state (2s/변경 시) + live(봇 상태·맵·XY·HP/MP·두뇌·집결) — live 변화는 "변경"으로 치지 않음
 ```
 
-`manager`가 gather할 때 `websocket.party_orders.member_orders`를 **lazy import**.
+`manager`가 gather할 때 `comms.orders.member_orders`를 **lazy import**.
 
 ### 3.2 리더 Start
 
 ```text
 (once) _run_leader_party_setup → invite.LeaderInvites.start
-  → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (시작 대기 5분, 초대 마감 없음)
+  → party_policy 전송 → (남의 파티면) 파티탈퇴 → PartyInviter 생성 (시작 대기 10분, 초대 마감 없음)
 (매 틱) _leader_invite_tick → LeaderInvites.tick  — 블로킹 없음, 틱당 최대 1줄
   → 파티에 없는 로스터 이름마다 20s 간격 /초대 (가입 확인되면 중단) — 멤버별, 사냥 중에도 계속
   → 새 소켓이 붙을 때마다 정책 재전송 (끊겼다 다시 붙어도)
@@ -157,10 +160,10 @@ _member_party_tick(send=True)
   → 직전 행동이 상점·게이트·텔레포트·스크롤·리스폰이면 그 틱은 건너뜀
   → 직전 행동이 전투(공격·물약·힐·버프·HP→MP)여도 건너뜀. 단 초대가 전투 때문에 60s 밀리면 보냄
   → 이탈 = 멤버 member_state가 "파티 아님"(읽기 가능, 신선) AND 리더 메모리에 없음, 10s 지속 → 다시 초대
-  → 5분 끝(시작 대기): 미가입 = late(늦음) 표시, 초대는 계속. 늦게 가입하면 late 해제
+  → 10분 끝(시작 대기): 미가입 = late(늦음) 표시, 초대는 계속. 늦게 가입하면 late 해제
 LeaderStartRally.begin(deadline=시작 대기 끝) → (travel 시) on_plan / should_hold
   → Rally.arm: rally stages start | planned | landed
-  → 초대와 병행 (이동하면서 초대). 5분에 어떤 상태든 종료 → 미도착 기록 후 사냥
+  → 초대와 병행 (이동하면서 초대). 10분에 어떤 상태든 종료 → 미도착 기록 후 사냥
   → 집결이 끝난 뒤 새 소켓에는 집결 지점을 다시 보내지 않음 — 늦은 멤버는 리더 따라가기/맵 합류
 대기 중: set_party_hold + drain reports
 모니터: PHASE (START WAIT / rally / hunting + 남은 시간), 멤버 목록(상태 색) + 선택 멤버 상세
@@ -173,13 +176,13 @@ LeaderStartRally.begin(deadline=시작 대기 끝) → (travel 시) on_plan / sh
 
 | 모듈 | 기능 |
 |------|------|
-| `policy` | `MemberKind` 우선순위 (순수, I/O 없음) |
+| `policy` | `MemberKind` 우선순위 (힐/버프/물약 → 방어 → 이동/어시스트/홀드, 순수) |
 | `manager` | kind 분기, gather 걷기, `MemberRuntime` |
 | `leader` | 리더 이름·타일·거리 |
 | `follow*` / `intents` | 추종·정착 Intent |
 | `assist` / `loot` / `support` | 전투·루팅·물약 |
 | `join_map` | 리더 맵 합류 내비 |
-| `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(멤버별·시작 대기 5분·20s 간격·마감 없음·이탈 재초대·late), `LeaderInvites`(정책 먼저·새 소켓 재전송·위험/전투 행동 회피·틱 진행), `deliver_chat` |
+| `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(멤버별·시작 대기 10분·20s 간격·마감 없음·이탈 재초대·late), `LeaderInvites`(정책 먼저·새 소켓 재전송·위험/전투 행동 회피·틱 진행), `deliver_chat` |
 | `leader_rally` | 첫 사냥 집결 FSM, WorldNav `hold_at_step` |
 | `party_log` | `Engine/logs/party-*.log` 채널 |
 | `brains/*` | `make_brain(role)` 스텁 — **세션 미사용** |
@@ -229,7 +232,7 @@ comms/
 
 **의존 방향 (목표 달성)**
 
-- `leader_rally` / `manager` → `comms.orders` (더 이상 `websocket.party_orders` 직import 없음)
+- `leader_rally` / `manager` / `config.merge_leader_policy` → `comms.orders` (더 이상 `websocket.party_orders` 직import 없음)
 - `BotController` → `PartyComms` (소켓 수명·tick·publish)
 - `comms.*` → `websocket.*` (구현만)
 
@@ -254,7 +257,7 @@ comms/
 | ID | 문제 | 영향 |
 |----|------|------|
 | C1 | `BotController`가 소켓·초대·rally·decide·publish를 한곳에 보유 | 파티 변경 시 세션 파일 충돌·회귀 범위 큼 |
-| C2 | ~~도메인이 `websocket.party_orders` 직의존~~ → `comms.orders`로 완화 | 본문(Rally 클래스)은 아직 `websocket/`에 있음 |
+| C2 | ~~도메인이 `websocket.party_orders` 직의존~~ → `comms.orders`로 완화 (`config` 포함) | 본문(Rally 클래스)은 아직 `websocket/`에 있음 |
 | C3 | ~~세션이 websocket을 직접 호출~~ → `PartyComms` | 모니터 UI는 여전히 `_party_ws` 미러 |
 | C4 | `manager`가 전역 `member_orders` 싱글톤 읽기 | 숨은 공유 상태 (미해결) |
 

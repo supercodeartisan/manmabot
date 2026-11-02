@@ -38,7 +38,14 @@ def publish_policy(**kwargs: Any) -> int:
     return publish_body(policy_message(**kwargs))
 
 
+def publish_beep(*, why: str = "already_in_party") -> int:
+    from .orders import beep_message
+
+    return publish_body(beep_message(who="leader", why=why))
+
+
 __all__ = [
+    "publish_beep",
     "publish_body",
     "publish_leader_decision",
     "publish_policy",

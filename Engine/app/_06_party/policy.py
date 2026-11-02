@@ -43,9 +43,8 @@ class PolicyInput:
     leader_farming: bool = False
     # Leader pose unchanged long enough (not farming) → settle to stop_tiles.
     leader_stopped: bool = False
-    # Stopped leader: on the locked cardinal stand? None = no stand available.
+    # Kept for callers; follow_kind ignores slot/stand (close on the leader).
     at_settle_stand: Optional[bool] = None
-    # Walking leader: within Arrive tolerance of formation slot? None = no slot.
     at_travel_spot: Optional[bool] = None
     # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
     leader_walk_dist: Optional[int] = None
@@ -60,6 +59,9 @@ class PolicyInput:
     assist_sticky: bool = False
     # Turret: no live target and not on the radial seat around the leader.
     off_turret_seat: bool = False
+    # In-place heal / buff already armed this tick (manager stashed the intent).
+    need_heal: bool = False
+    need_buff: bool = False
 
 
 @dataclass(frozen=True)
@@ -70,16 +72,21 @@ class PolicyResult:
 
 
 def decide_policy(inp: PolicyInput) -> PolicyResult:
-    """Member brain: travel leash / stop settle / combat assist+step / hold."""
+    """Member brain: heal/buff/potion, defend, assist, then follow/hold."""
     cfg = inp.config
     if inp.paused:
         return PolicyResult(MemberKind.STOP, False, "paused")
     if inp.dead:
         return PolicyResult(MemberKind.STOP, False, "dead")
-    if not inp.origin_ok:
-        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
+    # In-place HP before origin/travel: matches the old support early-return.
+    if inp.need_heal:
+        return PolicyResult(MemberKind.HEAL, False, "self_heal")
+    if inp.need_buff:
+        return PolicyResult(MemberKind.BUFF, False, "self_buff")
     if inp.need_potion:
         return PolicyResult(MemberKind.POTION, False, "self_potion")
+    if not inp.origin_ok:
+        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
     if cfg.defend_self and inp.self_threat:
         return PolicyResult(MemberKind.DEFEND, False, "defend_self")
 
@@ -91,31 +98,9 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
 
     dist = int(inp.leader_dist)
 
-    # Lost from entity sweep: always walk to PartySubsystem pose (never idle HOLD).
-    if not inp.leader_in_ui:
-        return PolicyResult(
-            MemberKind.FOLLOW,
-            True,
-            f"follow_off_ui dist={dist}",
-        )
-
-    in_leash = dist <= int(cfg.assist_leash_tiles)
-
-    # --- Leader turret mode: back into the yard unless a fight holds us out ---
-    # A fight already in progress may finish outside the yard; a new target
-    # outside the yard does not pull a member that is already out.
-    fighting_out = inp.assist_ready and (inp.assist_sticky or inp.target_in_yard)
-    if cfg.turret_farm and in_leash and not inp.in_farm_yard and not fighting_out:
-        return PolicyResult(
-            MemberKind.FOLLOW,
-            True,
-            f"turret_rejoin_yard dist={dist}",
-        )
-
-    # --- Combat: party = the leader's target, solo = own target ---
-    # assist_ready alone is enough (contested / print_state atk/tgt). Do not
-    # require leader_farming — that flag can lag one tick behind the resolve.
-    if inp.assist_ready and in_leash:
+    # Assist beats every follow: do not walk to the leader first.
+    # Range is CLOSE_IN toward the mob, not FOLLOW toward the leader.
+    if inp.assist_ready:
         yard = "turret_" if cfg.turret_farm else ""
         out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
         if not inp.need_combat_step:
@@ -128,13 +113,26 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             MemberKind.CLOSE_IN, False, f"{yard}{what}{out} dist={dist}"
         )
 
-    # --- Turret: idle members take their radial seat around the leader ---
-    if cfg.turret_farm and in_leash and inp.off_turret_seat:
+    # Lost from entity sweep: always walk to PartySubsystem pose (never idle HOLD).
+    if not inp.leader_in_ui:
         return PolicyResult(
             MemberKind.FOLLOW,
             True,
-            f"turret_seat dist={dist}",
+            f"follow_off_ui dist={dist}",
         )
+
+    in_leash = dist <= int(cfg.assist_leash_tiles)
+
+    # --- Leader turret mode: back into the yard ---
+    if cfg.turret_farm and in_leash and not inp.in_farm_yard:
+        return PolicyResult(
+            MemberKind.FOLLOW,
+            True,
+            f"turret_rejoin_yard dist={dist}",
+        )
+
+    # Turret ring seat is not a walk goal: it pulled the member around the
+    # leader. Idle hold is ``stop_tiles``. Yard rejoin stays above.
 
     # --- Combat leash: leader fighting but no live assist target yet ---
     if inp.leader_farming:

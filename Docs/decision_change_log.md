@@ -1,5 +1,237 @@
 # Decision change log
 
+## 2026-11-02 — invite Y falls back to SendInput when no keyboard slot accepts
+
+Intent: The member log showed the popup, then `slots rejected` and no Y. PostMessage is not a press the popup reads, so a missing Interception slot must use a real SendInput scancode for Y and for the Enter after it.
+Shared: `ec_sendinput_press`. Enter is still skipped when that press fails. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y on a PC whose Interception slots reject the probe. The member bot must load this DLL.
+Consent: user (Y is never pressing).
+Result: DLL rebuilt. Not run on the member PC.
+
+## 2026-11-02 — Y uses a live keyboard slot; a missed key does not press Enter
+
+Intent: The invite popup closed because Y never reached the game and Enter still dismissed it. A `/초대` line was logged as typed when the strokes went to whichever window was in front.
+Shared: `ec_ic_open` keeps the first keyboard slot whose key-up send returns 1. `ec_run` skips Enter when any key failed, and Escape-closes a chat line it had opened. A line is a failure when the game is not the foreground window. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. The 20s invite clock is unchanged.
+Affects: party `/초대` and invite Y. The running bot keeps the old DLL until it is restarted.
+Consent: user (update).
+Result: DLL rebuilt. Not run as a party join.
+
+## 2026-11-02 — reconnect resumes from game memory, not a new invite
+
+Intent: A member socket drop is not a failed party join. On reconnect the leader waits for a new `member_state` before another `/초대`. A name already in party memory stays joined. `InviteAccepter` keeps watching the popup across the drop and does not press Y until the policy names the inviter.
+Shared: `MemberStates.hold_until_fresh` on the dropped socket id. `LeaderInvites` 20s clock and `InviteHold` stay. Reconnect wait is 2s plus jitter, capped at 15s. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `PartyMemberManager.decide` is unchanged.
+Affects: one member's invite gate and the monitor words (RECONNECTING / ACCEPTING / IN PARTY). Other members and the leader hunt are not reset.
+Consent: user (recover the interrupted step from game state after reconnect).
+Result: not run in game.
+
+## 2026-11-02 — party monitor Invite / Y focuses the game
+
+Intent: Invite from the monitor typed only after the user clicked the game. The monitor is the foreground window, so the worker's later `SetForegroundWindow` is refused.
+Shared: the Invite and Y+Enter clicks call `bring_game_to_front` on the UI thread before the queued `deliver_chat` / `type_accept_key`. Always-on-top is dropped until that action finishes. The worker focuses again at the start of the same drain. Automatic invites still use `deliver_chat` → `ec_run`; automatic Y still uses `type_accept_key`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party monitor buttons only.
+Consent: user (focus the game automatically; confirm the buttons share the bot path).
+Result: not run in the UI.
+
+## 2026-11-02 — Stop disarms the schedule before the next poll
+
+Intent: Stop was restarting the game and opening the party monitor. The Qt shell disarmed the schedule on a queued signal, so the schedule poll still saw an armed session in the STOPPED state and called Start.
+Shared: `userStopped` now runs `_disarm_schedule` directly inside `coordinator.stop`, before `_halt` returns. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: Stop button and the stop hotkey. Party forming still does not switch the bot to solo.
+Consent: user (Stop starts the game again and the party monitor opens).
+Result: not run in the UI.
+
+## 2026-11-02 — party memory unknown, join is memory, one chat queue
+
+Intent: A failed party read must not invite or leave. Popup close after Y is not a join. Monitor Invite / Y+Enter must not type beside the automatic invite.
+Shared: `memory_in_party` is True / False / None. `needs_leave` requires this name, the leader name, and a confirmed in-party read. `reported_joined` uses fresh member party memory only. `InviteAccepter` goes `waiting_memory` then `joined`. `PartyChatQueue` is drained once per worker tick; that tick skips the matching automatic line. Forming deadline is not moved on reconnect. Hunt waits only for roster rows with Wait checked (default on). On unchecks a name. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader invite and leave, member accept, party monitor buttons, Party tab roster, when forming holds the hunt.
+Consent: user (implement the party invite/maintain corrections).
+Result: not run in game. Discovery approval and a second rally for late members are not in this change. Restart the bot to load it.
+
+## 2026-11-01 — invite accept is Y then Enter
+
+Intent: The invite popup accepts only when Y is followed by Enter. Y alone does not confirm.
+Shared: `type_accept_key` now calls `GameChat.send("y", open_chat=False, press_enter=True)`. One `ec_run` types physical Y, then physical Enter, while English is still held. Chat is not opened. The monitor button is the same call. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept, and the party monitor Y+Enter button.
+Consent: user (Y and Enter are both required).
+Result: not run in game.
+
+## 2026-11-01 — party monitor can type /초대 and Y
+
+Intent: From the party monitor, send one invite line and press Y through the same bot path as Start (`send_chat_line` / `type_accept_key` → `ec_run`).
+Shared: `PartyMonitorWindow` name field, Invite button (`invite_command` → `deliver_chat`), Y button (`type_accept_key`). Both run off the UI thread. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: the party monitor window only. Leader invite timing and member popup accept are unchanged.
+Consent: user (run these from the invite monitor, including Y).
+Result: not run in the UI yet.
+
+## 2026-11-01 — invite Y uses the same ec_run as the admin exe
+
+Intent: Member Y still switched the IME from Python while the bot window was in front, then fell back to the hunt keyboard. The popup needs one physical Y with the game in front and the IME in English.
+Shared: ASCII-only `ec_run` (`y`, no chat open, no Enter) focuses the game, clears 한글 mode, sends the key, holds English 150 ms, then restores the previous mode. `type_accept_key` is only that call. The hunt Y fallback is gone. `/초대` still uses 한 mode. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept. A lone ASCII chat line takes the same English path.
+Consent: user (Y must match the admin exe).
+Result: DLL rebuilt (`BUILD_OK`). Not run in game. Restart the bot so it loads the new DLL.
+
+## 2026-11-01 — bot invite keeps the game in front and switches 한
+
+Intent: The bot is already elevated, but `/초대` still followed the Windows input language. The admin exe does not, because it is a fresh process that is allowed to take the foreground and the game thread applies the Korean layout. The bot window takes focus back during the typing sleep.
+Shared: `ec_force_foreground` unlocks foreground (`AllowSetForegroundWindow` / `LockSetForegroundWindow`) before `SetForegroundWindow`. `ec_hangul_prepare` loads layout 0412 without activating it on the caller thread, then `SendMessageTimeout` of `WM_INPUTLANGCHANGEREQUEST` on the game thread, and retries 한 mode once after focusing the game. `ec_run` puts the game in front again before the layout switch, before each character, and before the final Enter. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: every `ec_run` caller (bot party invite / leave, member Y via `GameChat.send`, and both CLIs). Hunt keyboard and Pico are unchanged.
+Consent: user (bot must have the same effect as the admin exe; bot is already admin).
+Result: DLL rebuilt (`BUILD_OK`). Not run in game. The running bot keeps the old DLL until it is restarted.
+
+## 2026-11-01 — member runs from party memory with no websocket
+
+Intent: Follow and combat must run from party memory when the leader socket is down or was never configured. The socket stays optional and only carries policy and rally.
+Shared: member worker no longer calls `decide_survival` while the socket is pending. Missing leader IP no longer stops the worker. `PartyMemberManager.decide` is unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member Start. Not-in-party still waits inside `decide` (`leader_missing`) until party memory shows a leader. Leader path unchanged.
+Consent: user (client must work from memory reads with no websocket).
+Result: not run in game.
+
+## 2026-11-01 — member already in party does not wait on the socket
+
+Intent: Party memory already showed `in_party` with leader 매력여기사, but the member stayed on `decide_survival` (`waiting_leader_socket`) until `192.168.9.27:8765` connected. Follow should start from the in-game party; the socket is only for policy and rally.
+Shared: worker gate around `_member_socket_pending`. Still HP-only when party memory does not say in-party. `PartyMemberManager.decide` itself is unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member Start when already in an in-game party and the leader socket is still connecting. Not-yet-joined members still wait. Leader path unchanged.
+Consent: user (if the client is already in the party, enter it; do not keep waiting).
+Result: not run in game.
+
+## 2026-11-01 — party frame checks before workflow
+
+Intent: Bad party frames must not book an invite, a policy ack, or a member order.
+Shared: `frame_check` drops non-objects, unknown types, control characters, names over 16, a member frame that says it is the leader, a hello whose name does not match `from`, and a leader policy/rally with missing fields. Unnamed `from=member` still stays Unidentified and is not invited. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party socket ingest only.
+Consent: user (put checks in so errors do not get through).
+Result: not run in game.
+
+## 2026-11-01 — member name from MyPlayer entity
+
+Intent: The member hello had no character name because `PlayerState` has no name field. The enttrack snapshot already has a `MyPlayer` row with `name`.
+Shared: `_player_chat_name` reads that row first. Party monitor shows it as Self. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party hello / member_state sender name and the monitor label. Hunt targeting is unchanged (`MyPlayer` stays off the click list).
+Consent: user (read MyPlayer and display it).
+Result: not run in game.
+
+## 2026-11-01 — P0 member discovery (hello, pending, empty-roster listen)
+
+Intent: Add a discovery layer in front of the existing party workflow. Unknown sockets must not be dropped; empty roster must still listen. Hunt brains stay as they are.
+Shared: `_party_server_on` (listen) vs `_party_leader_on` (invite/rally/turret). `MemberDiscovery` keeps unmatched hellos as PENDING/UNIDENTIFIED/CONFLICT. Matched names still go through `member_states` / invite / rally. Members without a roster seat do not overlay policy or consume rally. No `UNKNOWN` name, no `try_unstick_escape` / `begin_retreat` / `apply_hp_actions` / login changes.
+Affects: leader socket start (empty roster listens, workflow waits). Member hello after a real `identity.name`. Party monitor Discovery metric. Approve/reject UI is P1.
+Consent: user (discovery layer P0 spec).
+Result: not run in game.
+
+## 2026-10-31 — invite accept Y uses the same enter_chat ec_run as /초대
+
+Intent: `ec_press_key` is not in enter_chat.dll 1.0.0, so member Y could not use the invite typing module. User asked to use the same API as inviting.
+Shared: `type_accept_key` calls `GameChat.send("y", open_chat=False, press_enter=False)` under English IME. DLL `ec_run` sends ASCII via Interception when Hangul IME is not active (so Y is a physical key; mixed `/초대` names stay WM_CHAR). Hunt Y remains the fallback. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y. Leader `/초대` Hangul path unchanged.
+Consent: user (use the inviting enter_chat API for Y).
+Result: not run in game.
+
+## 2026-10-31 — member assist beats follow
+
+Intent: Single member walked to the leader (`follow_off_ui` / turret yard / `follow_combat_near`) and only then assisted. Assist must win over moving.
+Shared: `decide_policy` takes ASSIST/CLOSE_IN as soon as `assist_ready`, before any FOLLOW, and without the assist-leash gate. Out of range is CLOSE_IN to the mob, not FOLLOW to the leader. HP / defend / join-map stay above. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member combat vs follow. Follow still runs when there is no assist target. Assist leash still gates turret yard rejoin and `follow_combat_leash`.
+Consent: user (just make assist higher than moving).
+Result: not run in game.
+
+## 2026-10-31 — member follow closes on the leader, no reverse to a behind-slot
+
+Intent: Single member did not stop within `stop_tiles` when the leader stopped, and sometimes walked the opposite way. Follow was walking to a Reynolds behind-slot, a random cardinal stand, or the turret ring seat — never "arrive near the leader and hold".
+Shared: `follow_kind` is a rubber-band on distance to the leader (close until `stop_tiles`, no slot/stand). Manager FOLLOW uses field descent toward the leader; behind-slot / trail / turret seat are not click goals. Turret ring `FOLLOW turret_seat` removed (yard rejoin stays). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member follow / idle hold only. Multi-member turret spread no longer walks to a ring seat; they hold inside `stop_tiles`.
+Consent: user (stop reversing; leader stops → member reaches stop_tiles).
+Result: not run in game.
+
+## 2026-10-31 — member Y reached the bot UI, not the invite popup
+
+Intent: Member log showed `Y key pressed #1/#2/#3` then `Y FAILED: popup still open`. `_press()` returning "" only meant hunt `key_down("y")` did not throw. Interception/pico keys go to the foreground window; the bot UI was in front, so Y never hit LC. `enter_chat.dll` in this tree is 1.0.0 with no `ec_press_key`, so the DLL path never runs. First policy contact also `reset()` the accepter mid-press, starting a second 3-press cycle.
+Shared: hunt Y now AttachThreadInput-focuses LC and does not send Y unless the game is in front; the traffic line records `hunt|enter_chat`, backend, IME. First-contact session no longer resets `InviteAccepter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept only.
+Consent: user (check Y pressed 3× popup still open).
+Result: not run in game.
+
+## 2026-10-31 — member invite Y without enter_chat.dll
+
+Intent: The member saw the invite popup (uidialog confirm parse works) but Y failed: `enter_chat.dll not found` on `D:\ManmabotV1_final_final_final\...` (that tree has no built DLL). Accept must still press Y via the hunt keyboard.
+Shared: `accept.type_accept_key` tries enter_chat `ec_press_key`, then hunt `key_down("y")` with English IME. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite accept only.
+Consent: user (client accept failing).
+Result: not run in game.
+
+## 2026-10-31 — uidialog confirm text reaches invite accept; chat typed logs IME
+
+Intent: Member never saw the in-game invite popup. `uidialogmon` already prints Yes/No confirm text, but `lc_view.uidialog()` kept only window labels, so `invite_popup.party_invite` always got an empty `confirm` list. Leader `typed` also hid IME/char counts, so a Hangul `/초대` that went out as jamo still looked successful.
+Shared: `lc_view.parse_uidialog_text` fills `confirm` from status `msg=` and `[+] CONFIRM` lines; sensors accept a snapshot that has `confirm`. `deliver_chat` logs `chars`/`keys`/`ime` on success and fails when `failed>0`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: member invite Y (popup pattern). Leader invite log detail only.
+Consent: user (fix uidialog confirm parse + DLL typed honesty).
+Result: not run in game.
+
+## 2026-10-31 — leader start wait 10 min
+
+Intent: The forming window before hunt (all joined → formed, else late + keep inviting) was 5 min. User asked for 10 min so a multi-member roster has more time to connect, ACK, and arrive.
+Shared: `invite.START_WAIT_S` and `leader_rally.WAIT_TIMEOUT_S` (fallback when no invite deadline). Rally still uses the same start-wait deadline. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader hold/rally/hunt start time with a named roster. Invites still have no cut-off after the window.
+Consent: user (set start wait to 10 mins).
+Result: not run in game.
+
+## 2026-10-31 — empty roster does not start leader party
+
+Intent: With no member names, the leader still armed the party (websocket listen, session, rally hooks, monitor pipeline). Party must not start at all until the roster has at least one name; the bot hunts solo.
+Shared: `_party_leader_on` now requires `_leader_roster_ready`. `_start_party_socket` / `_ensure_party_log` / nav hooks / invite setup all follow that gate. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, hunt loop stay as they are.
+Affects: leader Start with an empty Party-tab roster. Named roster unchanged.
+Consent: user (empty roster must not start party).
+Result: not run in game.
+
+## 2026-10-31 — leader workflow: rally/hunt not done while connect is waiting
+
+Intent: The party monitor listed Server → Connect → Policy → Invite → Rally → Hunt as a sequence, but an empty roster skipped rally to ``done`` and the phase became hunting, so Rally/Hunt went green while Connect/Policy/Invite were still waiting. With a roster, start rally also began on the first tick.
+Shared: `leader_workflow` later steps stay off/wait until connect has members; `LeaderStartRally.begin` with no names stays ``off`` (does not `skip()` to ``done``); `_leader_may_begin_start_rally` waits for a member socket and for the invite start-wait to finish (or the party to form). Forming still uses the existing hold-ground window so the leader does not full-hunt while inviting. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader party monitor badges; when start rally begins. Empty roster: leader still farms; Rally/Hunt stay off. Named roster: Rally starts after connect + invite window, still bounded by the same start-wait deadline.
+Consent: user (rally/hunt active while connect/policy/invite waiting).
+Result: not run in game.
+
+## 2026-10-30 — member heal/buff on the policy ladder; HP while waiting for the leader socket
+
+Intent: Item 7 was two ladders, not a broken heal. Live heal/buff returned from `apply_party_support` before gather/policy, while `decide_policy` never emitted HEAL/BUFF and `intent_for_kind` idled those kinds. Unify: stash support, skip gather when heal/buff is needed (heal still beats the start rally), policy emits HEAL/BUFF first, manager returns the stash. Item 10: leftover `WorldNavHooks` cleared at `_worker` start (party-off Start already cleared them); `merge_leader_policy` imports `comms.orders` not `websocket.party_orders`; member Start enters the bot loop and runs HP-only (`decide_survival`) until the leader socket connects. There is no 60 s connect timeout — 30 s is log cadence. Empty leader IP still fails immediately.
+Shared: `decide_policy` / `PolicyInput.need_heal`/`need_buff`; `PartyMemberManager.decide` / `decide_survival`; `BotController._start_party_client` / `_member_socket_pending`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `apply_party_support` and `party_critical_escape` still own in-place HP and the retreat gate.
+Affects: party members only (policy order, start-rally vs heal, first-connect wait). Leader and solo decide paths are unchanged. After the first connect, a socket drop still farms on the last policy.
+Consent: user (item 7 policy order + item 10 leftover hooks / import boundary / HP before connect).
+Result: not run in game.
+
+## 2026-10-29 — start rally yields to combat on the member
+
+Intent: A live rally order must not keep the member walking to the pin while the leader is already fighting a few tiles off it. Crisis retreat and in-place heal/buff still run first. After the fight the member can finish the rally walk (arrival is not marked on yield).
+Shared: `PartyMemberManager._maybe_hunt_gather` / `_rally_yields_to_combat`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `apply_party_support` still runs before gather.
+Affects: party members during the start rally only. Solo and leader hold-ground are unchanged.
+Consent: user (item 4, rally before assist).
+Result: not run in game.
+
+## 2026-10-29 — unnamed policy ack books each member by client_id
+
+Intent: Two member bots that start together both send `from=member` before they know their character name. The leader used to keep that ack only when exactly one roster name was still unconfirmed, so `/초대` never went out.
+Shared: `PolicyAcks.note` / `MemberStates.note` / `InviteAccepts.note` bind `client_id` to the next free roster name in order. Member Start makes one 8-hex id and puts it on `policy_ack`, `member_state`, and `invite_accept`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader invite gate when two or more members connect before they are in the in-game party.
+Consent: user (policy ACK name matching).
+Result: not run in game.
+
+## 2026-10-29 — already-formed party skips /초대, socket beep
+
+Intent: On party Start, read party memory first. If this character is already in a party, do not type `/초대` (or `파티탈퇴` when identity is unknown). Connect the websocket and send a `beep` test frame instead. Missing roster names are still invited.
+Shared: `invite.already_in_party` / `LeaderInvites.start` seed-from-memory; `accept.InviteAccepter` ignores the popup while `in_party`; wire type `beep`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: leader setup and member invite-accept at Start. Rally / hunt after that is unchanged.
+Consent: user (after leftover-leader-hooks fix; “go on” for already-organized skip-invite + beep).
+Result: not run in game.
+
+## 2026-10-29 — leftover leader role does not run party hooks
+
+Intent: Enable party off means a solo Start. A saved `party_role=leader` must not install rally hooks, hold-ground, invites, policy, or decision publish.
+Shared: `BotController._party_leader_on` (requires `party_enabled` and role leader). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: Start when the Party checkbox is off. A previous leader role in the schedule no longer waits on `party.hold_ground`.
+Consent: user (fix leftover leader hooks first; party-already-formed skip-invite is next).
+Result: not run in game.
+
 ## 2026-10-28 — hunt input: toolbar choice is not replaced by a schedule
 
 Intent: choosing Interception on the toolbar must be the hunt transport. A schedule apply was able to write `input_backend` back onto the profile.

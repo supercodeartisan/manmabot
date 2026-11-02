@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QFrame,
@@ -250,7 +250,7 @@ class WorkflowSteps(QWidget):
             tone = STEP_TONE.get(state, "off")
             text = str(step.get("detail") or "")
             pill.set(f"{i + 1}  {str(step.get('label') or '').upper()}", tone, text)
-            word.setText(STEP_WORD.get(state, state.upper()))
+            word.setText(str(step.get("word") or STEP_WORD.get(state, state.upper())))
             word.setStyleSheet(f"color:{TONES[tone]};")
             if detail.text() != text:
                 detail.setText(text)
@@ -375,7 +375,13 @@ def split_messages(lines: list[Any], role: str) -> tuple[list[str], list[str]]:
 
 
 class PartyDashboard(QWidget):
-    """Header flags + communication + role card + in-game party table."""
+    """Header flags + communication + role card + in-game party table.
+
+    ``member_picked`` fires when the user selects a roster name. The
+    dashboard still does not call the engine.
+    """
+
+    member_picked = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -563,11 +569,11 @@ class PartyDashboard(QWidget):
             err, style = start_err, "color:#f87171;font-weight:600;"
         elif wait.get("since"):
             err = (
-                f"Waiting for the leader socket {wait.get('uri') or '—'} — "
-                f"{_duration(wait.get('waited_s'))} (no timeout; start the leader "
-                "any time, Stop to cancel). Nothing moves or fights until it connects."
+                f"Leader socket {wait.get('uri') or '—'} still connecting "
+                f"({_duration(wait.get('waited_s'))}). "
+                "Follow and combat use party memory. Policy and rally wait for the socket."
             )
-            style = "color:#fbbf24;font-weight:600;"
+            style = "color:#86efac;font-weight:600;"
         else:
             err, style = str(snap.get("probe_error") or "").strip(), "color:#9ca3af;"
         self.note.setText(err)
@@ -695,9 +701,24 @@ class PartyDashboard(QWidget):
         )
 
         in_party = sum(1 for r in roster if r.get("in_party"))
+        disc = session.get("discovery") if isinstance(session.get("discovery"), dict) else {}
+        pending = list(disc.get("pending") or [])
+        missing = list(disc.get("missing") or [])
+        unidentified = int(disc.get("unidentified_count") or 0)
+        conflict = int(disc.get("conflict_count") or 0)
+        pending_names = ", ".join(
+            str(r.get("name") or "") for r in pending if r.get("name")
+        ) or "—"
         self.lead_metrics.set(
             [
                 ("Roster", f"{len(roster)} member(s), {in_party} in party"),
+                (
+                    "Discovery",
+                    f"{len(pending)} pending · {len(missing)} missing"
+                    + (f" · {unidentified} unnamed" if unidentified else "")
+                    + (f" · {conflict} conflict" if conflict else "")
+                    + f"  ({pending_names})",
+                ),
                 ("Party size (yard)", _fmt(policy.get("party_size"))),
                 ("Phase", f"{pname} — {left_txt} left" if left is not None else pname),
                 ("Invite every", f"{_fmt(invite.get('every_s'))}s, start wait {_duration(invite.get('start_wait_s')) if invite.get('start_wait_s') else '—'}, no cut-off"),
@@ -775,6 +796,7 @@ class PartyDashboard(QWidget):
             return
         self._picked = name
         self._show_member(self._last_session, self._last_messages)
+        self.member_picked.emit(name)
 
     def _apply_member_picker(self, session: dict[str, Any], messages: list[Any]) -> None:
         self._last_session = session
@@ -934,8 +956,10 @@ class PartyDashboard(QWidget):
         if gather:
             gtxt = f"{gather} map{_fmt(orders.get('gather_map'))} ({_fmt(gxy[0] if gxy else None)},{_fmt(gxy[1] if len(gxy) > 1 else None)})"
             gtxt += "  ARRIVED" if orders.get("arrived") else "  walking"
+        self_info = snap.get("self") if isinstance(snap.get("self"), dict) else {}
         self.mem_metrics.set(
             [
+                ("Self", _fmt(self_info.get("name") or policy.get("as_name"))),
                 ("Leader", seen or "—"),
                 ("Distance", _fmt(status.get("leader_dist"))),
                 ("Leader HP / MP", f"{_fmt(status.get('leader_hp'))} / {_fmt(status.get('leader_mp'))}"),

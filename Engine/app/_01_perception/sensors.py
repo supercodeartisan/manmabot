@@ -513,7 +513,10 @@ class PerceptionSensors:
         except Exception as exc:
             buf.errors.append(f"uidialog: {exc}")
             return
-        if isinstance(snap, dict) and isinstance(snap.get("windows"), dict):
+        if isinstance(snap, dict) and (
+            isinstance(snap.get("windows"), dict)
+            or isinstance(snap.get("confirm"), list)
+        ):
             buf.uidialog = snap
             buf.uidialog_ok = True
 
@@ -571,7 +574,10 @@ class PerceptionSensors:
         if isinstance(buff_snap, dict) and isinstance(buff_snap.get("buffs"), list):
             buf.buff = buff_snap
             buf.buff_ok = True
-        if isinstance(ui_snap, dict) and isinstance(ui_snap.get("windows"), dict):
+        if isinstance(ui_snap, dict) and (
+            isinstance(ui_snap.get("windows"), dict)
+            or isinstance(ui_snap.get("confirm"), list)
+        ):
             buf.uidialog = ui_snap
             buf.uidialog_ok = True
 

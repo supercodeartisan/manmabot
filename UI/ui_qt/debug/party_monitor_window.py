@@ -11,8 +11,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPlainTextEdit,
+    QPushButton,
     QScrollArea,
     QSplitter,
     QTableWidget,
@@ -303,7 +305,8 @@ def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
         f"dist={_fmt(status.get('leader_dist'))}  "
         f"maps={_fmt(local_mid)}→{_fmt(leader_mid)}  "
         f"assist={_fmt(status.get('assist_src'))}:{_fmt(status.get('assist_name') or status.get('assist_track_id'))}\n"
-        f"SELF  xy={_fmt_xy(self_info.get('xy'))}  "
+        f"SELF  {str(self_info.get('name') or '—')}  "
+        f"xy={_fmt_xy(self_info.get('xy'))}  "
         f"hp={_fmt(self_info.get('hp'))}  mp={_fmt(self_info.get('mp'))}  "
         f"kind={kind}  action={_fmt(action.get('name'))}  "
         f"why={reason}  "
@@ -413,10 +416,40 @@ class PartyMonitorWindow(QMainWindow):
         top.addWidget(self.topmost)
         layout.addLayout(top)
 
+        manual = QHBoxLayout()
+        manual.setSpacing(6)
+        name_lbl = QLabel("Name")
+        manual.addWidget(name_lbl)
+        self.manual_name = QLineEdit()
+        self.manual_name.setPlaceholderText("character name")
+        self.manual_name.setClearButtonEnabled(True)
+        self.manual_name.setFixedWidth(180)
+        self.manual_name.setToolTip("Invite line is /초대 <name>, one space before the name")
+        manual.addWidget(self.manual_name)
+        self.invite_btn = QPushButton("Invite")
+        self.invite_btn.setToolTip(
+            "Queue /초대 <name> on the bot worker (same path as automatic invite)"
+        )
+        self.invite_btn.clicked.connect(self._on_invite_clicked)
+        manual.addWidget(self.invite_btn)
+        self.y_btn = QPushButton("Y+Enter")
+        self.y_btn.setToolTip(
+            "Queue Y then Enter on the bot worker (same path as automatic accept)"
+        )
+        self.y_btn.clicked.connect(self._on_y_clicked)
+        manual.addWidget(self.y_btn)
+        self.manual_status = QLabel("")
+        self.manual_status.setWordWrap(True)
+        manual.addWidget(self.manual_status, stretch=1)
+        layout.addLayout(manual)
+        self._chat_shown = ""
+        self._topmost_dropped = False
+
         main = QSplitter(Qt.Orientation.Horizontal)
 
         # ---- left: role-aware dashboard ----
         self.dashboard = PartyDashboard()
+        self.dashboard.member_picked.connect(self.manual_name.setText)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
@@ -476,6 +509,65 @@ class PartyMonitorWindow(QMainWindow):
         self._poll.start(100)
         self._on_poll()
 
+    def _on_invite_clicked(self) -> None:
+        name = self.manual_name.text().strip()
+        if not name:
+            self.manual_status.setText("Enter a character name")
+            return
+        self._queue_party_chat("invite", name)
+
+    def _on_y_clicked(self) -> None:
+        self._queue_party_chat("accept", "")
+
+    def _queue_party_chat(self, kind: str, name: str) -> None:
+        submit = getattr(self.controller, "submit_party_chat", None)
+        if not callable(submit):
+            self.manual_status.setText("rejected: bot has no party chat queue")
+            return
+        try:
+            text = str(submit(kind, name) or "")
+        except Exception as exc:
+            text = f"rejected: {exc}"
+        self._chat_shown = text
+        self.manual_status.setText(text)
+        if text.startswith("rejected") or text.startswith("Enter a character"):
+            return
+        self._yield_focus_to_game()
+
+    def _yield_focus_to_game(self) -> None:
+        """The click is on this window. Move LC to the foreground before keys.
+
+        Always-on-top would stay the focused window, so Interception would type
+        here. Drop that flag for this action, then focus the game on this
+        thread — it just received the click, so Windows allows the switch.
+        """
+        if self.topmost.isChecked():
+            self._topmost_dropped = True
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+            self.show()
+        self._focus_game()
+        QTimer.singleShot(0, self._focus_game)
+
+    def _focus_game(self) -> None:
+        try:
+            from session.probes import bring_game_to_front, probe_game
+
+            hwnd = int(getattr(probe_game(), "hwnd", 0) or 0)
+        except Exception:
+            return
+        if hwnd:
+            bring_game_to_front(hwnd)
+
+    def _restore_topmost(self, chat: dict) -> None:
+        if not self._topmost_dropped:
+            return
+        if str(chat.get("state") or "") not in ("done", "failed"):
+            return
+        self._topmost_dropped = False
+        if self.topmost.isChecked():
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+            self.show()
+
     def _on_topmost(self, checked: bool) -> None:
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, bool(checked))
         self.show()
@@ -511,6 +603,12 @@ class PartyMonitorWindow(QMainWindow):
             snap["probe_error"] = str(exc)
 
         self.dashboard.apply(snap)
+        chat = snap.get("chat_action") if isinstance(snap.get("chat_action"), dict) else {}
+        self._restore_topmost(chat)
+        chat_text = str(chat.get("text") or "")
+        if chat_text and chat_text != self._chat_shown:
+            self._chat_shown = chat_text
+            self.manual_status.setText(chat_text)
         session = snap.get("session") if isinstance(snap.get("session"), dict) else {}
         role = str(session.get("role") or "leader")
         top_title, bottom_title = _log_titles(role)

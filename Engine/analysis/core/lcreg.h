@@ -124,15 +124,8 @@ static char LCREG_BASE[MAX_PATH] = {0};
 static char LCREG_UP[MAX_PATH]   = {0};   /* registry 를 찾은 루트(보통 ROOT 또는 상위) */
 static inline const char* lcreg_base(void){
     if(!LCREG_BASE[0]){
-        /* Host (the bot) sets LCAPI_ROOT to the analysis folder so registry/
-         * and data/ resolve without moving the process cwd off python.exe. */
-        const char* root = getenv("LCAPI_ROOT");
-        if(root && root[0]){
-            snprintf(LCREG_BASE, sizeof(LCREG_BASE), "%s", root);
-        } else {
-            GetModuleFileNameA(NULL, LCREG_BASE, MAX_PATH);
-            char* s = strrchr(LCREG_BASE, '\\'); if(s) *s = 0;
-        }
+        GetModuleFileNameA(NULL, LCREG_BASE, MAX_PATH);
+        char* s = strrchr(LCREG_BASE, '\\'); if(s) *s = 0;
     }
     return LCREG_BASE;
 }

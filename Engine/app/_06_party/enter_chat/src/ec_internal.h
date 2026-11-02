@@ -70,6 +70,7 @@ void ec_ic_close(EcContext* ctx);
 BOOL ec_ic_key(EcContext* ctx, int scancode, int e0, int up);
 BOOL ec_ic_press(EcContext* ctx, int scancode, int e0, int hold_ms);
 BOOL ec_send_vk(EcContext* ctx, WORD vk);
+BOOL ec_sendinput_press(int scancode, int shift, int hold_ms);
 int  ec_ascii_to_scan(WCHAR c, int* shift);
 
 /* ----------------------------------------------------------------- hangul */
@@ -80,6 +81,9 @@ int  ec_hangul_keys(wchar_t c, char* out, int max);
 BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd);
 void ec_hangul_done(EcContext* ctx);
 BOOL ec_hangul_commit(EcContext* ctx);
+/* ASCII-only line (invite accept Y): foreground + English IME, then restore. */
+BOOL ec_english_prepare(EcContext* ctx, HWND hwnd);
+void ec_english_done(EcContext* ctx);
 #endif
 
 /* ------------------------------------------------------------- text/time */

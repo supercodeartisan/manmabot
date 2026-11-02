@@ -448,15 +448,18 @@ class PartyTab(QWidget):
         form.addWidget(remove_btn)
         box_lay.addLayout(form)
 
-        self.roster_table = QTableWidget(0, 4)
+        self.roster_table = QTableWidget(0, 6)
         self.roster_table.setHorizontalHeaderLabels(
             [
                 self.t.get("number", "No"),
                 self.t.get("party_roster_name", "Name"),
                 self.t.get("party_roster_role", "Role"),
                 self.t.get("party_roster_loot", "Loot"),
+                self.t.get("party_roster_enabled", "On"),
+                self.t.get("party_roster_required", "Wait"),
             ]
         )
+        self.roster_table.itemChanged.connect(self._on_roster_flag)
         self.roster_table.verticalHeader().setVisible(False)
         self.roster_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
@@ -468,7 +471,9 @@ class PartyTab(QWidget):
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
         self.roster_table.setMinimumHeight(160)
-        configure_table_fill(self.roster_table, 1, fixed={0: 48, 2: 100, 3: 110})
+        configure_table_fill(
+            self.roster_table, 1, fixed={0: 48, 2: 100, 3: 110, 4: 48, 5: 56}
+        )
         box_lay.addWidget(self.roster_table)
         self._fill_roster_table()
 
@@ -497,8 +502,10 @@ class PartyTab(QWidget):
         if not isinstance(table, QTableWidget):
             return
         rows = self._roster_rows()
+        table.blockSignals(True)
         table.setRowCount(len(rows))
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        check_flags = flags | Qt.ItemFlag.ItemIsUserCheckable
         for index, row in enumerate(rows):
             number = QTableWidgetItem(str(index + 1))
             number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -509,12 +516,43 @@ class PartyTab(QWidget):
             loot = str(row.get("loot") or "none")
             loot_item = QTableWidgetItem(self._roster_loot_label(loot))
             loot_item.setData(Qt.ItemDataRole.UserRole, loot)
+            enabled = QTableWidgetItem("")
+            enabled.setFlags(check_flags)
+            enabled.setCheckState(
+                Qt.CheckState.Checked
+                if str(row.get("enabled", "1")) != "0"
+                else Qt.CheckState.Unchecked
+            )
+            required = QTableWidgetItem("")
+            required.setFlags(check_flags)
+            required.setCheckState(
+                Qt.CheckState.Checked
+                if str(row.get("required", "1")) != "0"
+                else Qt.CheckState.Unchecked
+            )
             for item in (number, name, role_item, loot_item):
                 item.setFlags(flags)
             table.setItem(index, 0, number)
             table.setItem(index, 1, name)
             table.setItem(index, 2, role_item)
             table.setItem(index, 3, loot_item)
+            table.setItem(index, 4, enabled)
+            table.setItem(index, 5, required)
+        table.blockSignals(False)
+
+    def _on_roster_flag(self, item: QTableWidgetItem) -> None:
+        column = item.column()
+        if column not in (4, 5):
+            return
+        rows = self._roster_rows()
+        index = item.row()
+        if index < 0 or index >= len(rows):
+            return
+        key = "enabled" if column == 4 else "required"
+        rows[index][key] = (
+            "1" if item.checkState() == Qt.CheckState.Checked else "0"
+        )
+        self._store_roster(rows)
 
     def _add_roster_row(self) -> None:
         name = str(self.roster_name.text() or "").strip()
@@ -538,7 +576,13 @@ class PartyTab(QWidget):
         loot = str(self.roster_loot.currentData() or "none")
         if loot not in _LOOT_ROLES:
             loot = "none"
-        rows.append({"name": name, "role": role, "loot": loot})
+        rows.append({
+            "name": name,
+            "role": role,
+            "loot": loot,
+            "enabled": "1",
+            "required": "1",
+        })
         self._store_roster(rows)
         self.roster_name.clear()
         self._fill_roster_table()

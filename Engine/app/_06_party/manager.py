@@ -15,10 +15,9 @@ from .assist import (
 )
 from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
-from .follow import travel_band
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
-from .intents import intent_for_kind, pick_settle_stand, plan_field_follow
+from .intents import intent_for_kind, plan_field_follow
 from .join_map import PartyJoinNav
 from .leader import (
     LeaderView,
@@ -373,31 +372,19 @@ class PartyMemberManager:
                     )
                 except Exception as exc:
                     _log.debug("party loot side failed: %s", exc)
-            if support is not None:
-                from app._02_state.enums import ActionType
-
-                act = getattr(support, "action", None)
-                if act is ActionType.HEAL:
-                    self.runtime.last_kind = MemberKind.HEAL.value
-                elif act is ActionType.BUFF:
-                    self.runtime.last_kind = MemberKind.BUFF.value
-                else:
-                    self.runtime.last_kind = "support"
-                self.runtime.last_reason = str(
-                    getattr(support, "reason", "") or self.runtime.last_kind
-                )
-                self.runtime.approach_goal = None
-                self.runtime.chasing = False
-                self._record_decision(support)
-                return support
             # Potions / F4 loot stay on blackboard.side_intents for the executor.
             need_potion = False
+            need_heal, need_buff = self._support_flags(support)
         else:
+            support = None
+            need_heal = False
+            need_buff = False
             need_potion = self._need_potion(player, cfg)
 
-        gather = self._maybe_hunt_gather(game_state, dead=dead)
-        if gather is not None:
-            return gather
+        if not need_heal and not need_buff:
+            gather = self._maybe_hunt_gather(game_state, dead=dead)
+            if gather is not None:
+                return gather
 
         threat = None
         if cfg.defend_self and game_state is not None:
@@ -533,104 +520,29 @@ class PartyMemberManager:
             leader_tile=leader_tile if leader_present else None,
             farming=bool(view.farming),
         )
-        settle_stand = self._update_settle_stand(
+        # Close on the leader. Behind-slot / cardinal stand / turret seat are
+        # not click goals — they walked the member around or past the leader.
+        self._update_settle_stand(
             game_state,
             origin,
-            leader_tile=leader_tile if leader_present else None,
-            active=origin_ok and leader_stopped and not bool(view.farming),
+            leader_tile=None,
+            active=False,
             cfg=cfg,
-            field=follow_field,
+            field=None,
         )
-        from .follow import (
-            ARRIVAL_TOLERANCE,
-            STICKY_GOAL_SLACK,
-            sticky_goal_tile,
-            tile_chebyshev,
-        )
+        from .follow import tile_chebyshev
 
-        at_settle_stand: Optional[bool] = None
-        if settle_stand is not None and origin_ok:
-            # Arrive tolerance — same as travel slot (exact tile blocked loot).
+        if origin_ok and leader_tile is not None and self.runtime.approach_goal is not None:
             me = (int(origin.x), int(origin.y))
-            at_settle_stand = (
-                tile_chebyshev(me, settle_stand) <= ARRIVAL_TOLERANCE
-            )
-        # Leader just stopped: drop the walking formation sticky goal so we
-        # settle inward instead of holding the follow-distance travel slot.
-        if leader_stopped and self.runtime.approach_goal is not None:
-            if settle_stand is not None:
-                if (
-                    tile_chebyshev(self.runtime.approach_goal, settle_stand)
-                    > STICKY_GOAL_SLACK
-                ):
-                    self.runtime.approach_goal = None
-            elif leader_dist is not None and int(leader_dist) > int(cfg.stop_tiles):
-                # Far sticky travel goal with no stand yet — clear so approach
-                # hops toward the leader for loot range.
-                goal = self.runtime.approach_goal
-                if (
-                    leader_tile is not None
-                    and tile_chebyshev(goal, leader_tile) > int(cfg.stop_tiles)
-                ):
-                    self.runtime.approach_goal = None
-
-        trail_tile = self._formation_trail_tile(
+            goal = self.runtime.approach_goal
+            if tile_chebyshev(goal, leader_tile) > tile_chebyshev(me, leader_tile):
+                self.runtime.approach_goal = None
+        self._formation_trail_tile(
             cfg, leader_tile=leader_tile if leader_present else None
         )
-        travel_spot: Optional[tuple[int, int]] = None
-        walking = (
-            origin_ok
-            and leader_present
-            and leader_tile is not None
-            and not leader_stopped
-            and not bool(view.farming)
-        )
-        if walking and trail_tile is not None:
-            # Narrow passage: single file on the leader's own path.
-            self.runtime.travel_offset = None
-            travel_spot = sticky_goal_tile(
-                trail_tile,
-                self.runtime.approach_goal,
-                slack=STICKY_GOAL_SLACK,
-            )
-        elif walking and follow_field is not None:
-
-            move_dir = self._leader_move_dir()
-            band = travel_band(cfg.follow_tiles)
-            # Formation depth: between stop and travel band (Reynolds behind-slot).
-            slot_dist = max(1, min(band, max(1, int(cfg.stop_tiles))))
-            lateral = self._travel_lateral(move_dir)
-            offset = follow_field.pick_travel_offset(
-                band,
-                self._rng,
-                self.runtime.travel_offset,
-                move_dir=move_dir,
-                slot_distance=slot_dist,
-                lateral=lateral,
-            )
-            self.runtime.travel_offset = offset
-            if offset is not None:
-                ideal = (
-                    int(leader_tile[0]) + int(offset[0]),
-                    int(leader_tile[1]) + int(offset[1]),
-                )
-                # Sticky absolute goal — do not repath every leader step.
-                travel_spot = sticky_goal_tile(
-                    ideal,
-                    self.runtime.approach_goal,
-                    slack=STICKY_GOAL_SLACK,
-                )
-        else:
-            self.runtime.travel_offset = None
-            self.runtime.scratch.pop("travel_lateral", None)
-        at_travel_spot: Optional[bool] = None
-        if travel_spot is not None and origin_ok:
-            # Arrive tolerance: near the slot is enough (no exact-tile jitter).
-            me = (int(origin.x), int(origin.y))
-            at_travel_spot = tile_chebyshev(me, travel_spot) <= ARRIVAL_TOLERANCE
-        stand = settle_stand if settle_stand is not None else travel_spot
-        if seat is not None:
-            stand = seat
+        self.runtime.travel_offset = None
+        self.runtime.scratch.pop("travel_lateral", None)
+        stand = None
 
         result = decide_policy(
             PolicyInput(
@@ -644,12 +556,14 @@ class PartyMemberManager:
                 self_threat=threat is not None,
                 assist_ready=assist_obj is not None,
                 config=cfg,
+                need_heal=need_heal,
+                need_buff=need_buff,
                 leader_in_ui=leader_in_ui,
                 leader_other_map=leader_other_map,
                 leader_farming=bool(view.farming),
                 leader_stopped=leader_stopped,
-                at_settle_stand=at_settle_stand,
-                at_travel_spot=at_travel_spot,
+                at_settle_stand=None,
+                at_travel_spot=None,
                 leader_walk_dist=leader_walk_dist if leader_present else None,
                 need_combat_step=need_combat_step,
                 solo_farm=cfg.solo_farm,
@@ -660,6 +574,10 @@ class PartyMemberManager:
             )
         )
         self.runtime.chasing = result.chasing
+        if result.kind is MemberKind.HEAL and support is not None:
+            return self._return_support(support, MemberKind.HEAL)
+        if result.kind is MemberKind.BUFF and support is not None:
+            return self._return_support(support, MemberKind.BUFF)
         reason = result.reason
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
@@ -723,6 +641,9 @@ class PartyMemberManager:
                 MemberKind.DEFEND,
                 MemberKind.WAIT,
                 MemberKind.STOP,
+                MemberKind.HEAL,
+                MemberKind.BUFF,
+                MemberKind.POTION,
             )
             and self._nav_blackboard is not None
         ):
@@ -867,17 +788,7 @@ class PartyMemberManager:
                     close_in_tile=close_in_tile,
                     settle_stand=stand,
                     stand_reason=(
-                        "turret_seat"
-                        if seat is not None
-                        else (
-                            "follow_settle"
-                            if settle_stand is not None
-                            else (
-                                "follow_trail"
-                                if trail_tile is not None and travel_spot is not None
-                                else "follow_slot"
-                            )
-                        )
+                        "follow_settle" if leader_stopped else "follow_close"
                     ),
                     mid_act=(
                         result.kind
@@ -887,24 +798,11 @@ class PartyMemberManager:
                     ),
                 )
             if result.kind is MemberKind.FOLLOW and detail == "no_path":
-                if seat is not None:
-                    self.runtime.turret_seat_bad = seat
-                elif settle_stand is not None:
-                    self.runtime.settle_blocked.add(settle_stand)
-                    self.runtime.settle_stand = None
-                elif travel_spot is not None:
-                    self.runtime.travel_offset = None
-                    self.runtime.scratch.pop("travel_lateral", None)
+                self.runtime.approach_goal = None
             if route_detail and result.kind is MemberKind.FOLLOW:
                 detail = f"{detail} | {route_detail}"
             if result.kind in (MemberKind.FOLLOW, MemberKind.CLOSE_IN):
                 self.runtime.approach_goal = goal
-            elif result.kind is MemberKind.HOLD and travel_spot is not None:
-                # Arrive: keep sticky formation goal so the next chase reuses it.
-                if goal is not None:
-                    self.runtime.approach_goal = goal
-                elif self.runtime.approach_goal is None:
-                    self.runtime.approach_goal = travel_spot
             elif result.kind in (
                 MemberKind.HOLD,
                 MemberKind.ASSIST,
@@ -936,8 +834,66 @@ class PartyMemberManager:
             )
         return intent
 
+    def decide_survival(self, game_state: Any) -> Any:
+        """HP only: wait for the leader socket without follow or combat.
+
+        Crisis retreat and in-place heal/buff/potion sides. No gather, assist,
+        or world-nav. ``apply_hp_actions`` is not called except through
+        ``party_critical_escape`` at the retreat gate.
+        """
+        from .intents import idle
+        from .support import party_critical_escape
+
+        self.runtime.tick += 1
+        self.runtime.chasing = False
+        self.runtime.approach_goal = None
+        if game_state is not None and self._nav_blackboard is not None:
+            escape = party_critical_escape(game_state, self._nav_blackboard)
+            if escape is not None:
+                self.runtime.last_kind = "retreat"
+                self.runtime.last_reason = str(
+                    getattr(escape, "reason", "") or "critical retreat"
+                )
+                self._record_decision(escape)
+                return escape
+            support = apply_party_support(
+                game_state,
+                self._nav_blackboard,
+                allow_buffs=True,
+            )
+            if support is not None:
+                _heal, need_buff = self._support_flags(support)
+                return self._return_support(
+                    support,
+                    MemberKind.BUFF if need_buff else MemberKind.HEAL,
+                )
+        intent = idle("waiting_leader_socket")
+        self.runtime.last_kind = "wait"
+        self.runtime.last_reason = "waiting_leader_socket"
+        self._record_decision(intent)
+        return intent
+
+    def _rally_yields_to_combat(self) -> bool:
+        """Start rally must not block assist when the leader is already fighting.
+
+        Same map + known leader tile + farming (or a live target). Far members
+        then follow the fighter; in-leash members assist. Other-map join and
+        idle rally waits still walk to the pin. Arrival is not marked here, so
+        after the fight the member can finish the last tiles to the rally.
+        """
+        if not bool(self.runtime.leader_same_map):
+            return False
+        if self.runtime.leader_dist is None:
+            return False
+        if bool(self.runtime.leader_farming):
+            return True
+        return bool(str(self.runtime.leader_target_name or "").strip())
+
     def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:
-        """Walk to the leader's rally point. Recovery is not handled here."""
+        """Walk to the leader's rally point unless combat is already happening.
+
+        Recovery is not handled here.
+        """
         if dead or self.runtime.paused:
             return None
         try:
@@ -961,6 +917,18 @@ class PartyMemberManager:
             self.runtime.last_kind = "hold"
             self.runtime.last_reason = f"{rally_reason}_arrived"
             return None
+        if self._rally_yields_to_combat():
+            prev = self.runtime.scratch.get("_rally_yield")
+            note = (
+                f"{rally_reason}_yield_combat "
+                f"dist={self.runtime.leader_dist} "
+                f"target={self.runtime.leader_target_name or '—'}"
+            )
+            if prev != note:
+                self.runtime.scratch["_rally_yield"] = note
+                _log.info("%s", note)
+            return None
+        self.runtime.scratch.pop("_rally_yield", None)
         try:
             map_id = int(order.get("map_id"))
             dest_x = int(order.get("x"))
@@ -999,6 +967,28 @@ class PartyMemberManager:
         except (TypeError, ValueError):
             pass
         return False
+
+    @staticmethod
+    def _support_flags(support: Any) -> tuple[bool, bool]:
+        """``(need_heal, need_buff)`` from a stashed support intent."""
+        from app._02_state.enums import ActionType
+
+        act = getattr(support, "action", None) if support is not None else None
+        if act is ActionType.BUFF:
+            return False, True
+        if support is not None:
+            return True, False
+        return False, False
+
+    def _return_support(self, support: Any, kind: MemberKind) -> Any:
+        self.runtime.last_kind = kind.value
+        self.runtime.last_reason = str(
+            getattr(support, "reason", "") or kind.value
+        )
+        self.runtime.approach_goal = None
+        self.runtime.chasing = False
+        self._record_decision(support)
+        return support
 
     @staticmethod
     def _need_potion(player: Any, cfg: PartyMemberConfig) -> bool:
@@ -1117,6 +1107,8 @@ class PartyMemberManager:
             rt.settle_blocked.clear()
             rt.settle_leader_tile = tile
         try:
+            from .intents import pick_settle_stand
+
             rt.settle_stand = pick_settle_stand(
                 game_state,
                 origin,

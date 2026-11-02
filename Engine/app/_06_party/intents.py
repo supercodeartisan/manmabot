@@ -348,7 +348,8 @@ def intent_for_kind(
     if kind is MemberKind.HOLD:
         return idle(reason), None, reason
     if kind is MemberKind.HEAL:
-        # Manager returns blackboard HEAL intent directly; idle is a safe fallback.
+        # Manager returns the stashed ``apply_party_support`` intent when policy
+        # picks HEAL. Idle only if that stash is missing.
         return idle(reason or "heal"), previous_goal, reason or "heal"
     if kind is MemberKind.BUFF:
         return idle(reason or "buff"), previous_goal, reason or "buff"

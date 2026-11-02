@@ -1,6 +1,6 @@
 """Game chat output: type one line into the LC client.
 
-- ``native``  ctypes binding for ``analysis/enter_chat`` (``enter_chat.dll``)
+- ``native``  ctypes binding for ``enter_chat.dll`` (``app/_06_party/enter_chat/bin``)
 - ``handoff`` lends the bot's Interception devices to the DLL for one call
 - ``sender``  :class:`GameChat` / :func:`send_chat_line`
 

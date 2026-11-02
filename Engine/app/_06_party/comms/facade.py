@@ -8,6 +8,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Optional
 
+from ..member_discovery import discovery
 from ..sync import invite_accepts, member_states
 from . import ingest, link, publish, status
 from .orders import member_orders, reset_orders, self_name_from_party
@@ -60,6 +61,7 @@ class PartyComms:
         self.stop_leader(log=log)
         member_states.clear()
         invite_accepts.clear()
+        discovery.clear()
         self._leader = link.start_leader_link(port=port, log=log)
         return self._leader is not None
 
@@ -108,23 +110,28 @@ class PartyComms:
                 return False
             time.sleep(0.25)
 
-    def watch_member(self, *, log: Optional[LogFn] = None) -> None:
-        """Log drops / reconnects and restart a client whose IO thread died."""
+    def watch_member(self, *, log: Optional[LogFn] = None) -> bool:
+        """Log drops / reconnects and restart a client whose IO thread died.
+
+        True once when the socket comes back. The caller resends hello and
+        ``member_state``. This does not reset ``InviteAccepter``.
+        """
         client = self.client
         if client is None:
-            return
+            return False
         note = log or (lambda _m: None)
         now = time.monotonic()
         connected = self.member_connected
         if connected:
-            if not self._was_connected and self._lost_at > 0.0:
+            restored = not self._was_connected and self._lost_at > 0.0
+            if restored:
                 note(
                     f"Party member: leader socket reconnected after "
                     f"{now - self._lost_at:.0f}s (drop #{self.member_drops})"
                 )
             self._was_connected = True
             self._lost_at = 0.0
-            return
+            return restored
         if self._was_connected:
             self._was_connected = False
             self._lost_at = now
@@ -136,9 +143,9 @@ class PartyComms:
         elif self._lost_at <= 0.0:
             self._lost_at = now
         if getattr(client, "running", True):
-            return
+            return False
         if now - self._last_restart_at < 5.0:
-            return
+            return False
         self._last_restart_at = now
         self.member_restarts += 1
         try:
@@ -149,6 +156,7 @@ class PartyComms:
             )
         except Exception as exc:
             note(f"Party member: socket client restart failed: {exc}")
+        return False
 
     def member_link_info(self) -> dict[str, Any]:
         lost = (
@@ -168,6 +176,7 @@ class PartyComms:
         reset_orders()
         member_states.clear()
         invite_accepts.clear()
+        discovery.clear()
 
     # --- leader ticks ---
 
@@ -183,6 +192,9 @@ class PartyComms:
     def publish_policy(self, **kwargs: Any) -> int:
         return publish.publish_policy(**kwargs)
 
+    def publish_beep(self, *, why: str = "already_in_party") -> int:
+        return publish.publish_beep(why=why)
+
     def publish_decision(
         self,
         action: Any,
@@ -197,7 +209,7 @@ class PartyComms:
         *,
         start_rally: Any = None,
         party_snapshot: Any = None,
-        roster_names: Optional[set[str]] = None,
+        roster_names: Optional[Any] = None,
         log: Optional[LogFn] = None,
     ) -> int:
         return ingest.drain_leader_reports(
@@ -213,14 +225,24 @@ class PartyComms:
     def ingest_orders(self) -> None:
         ingest.ingest_member_orders(self.client)
 
-    def send_policy_ack(self, *, name: str, policy_id: str) -> bool:
-        return status.send_policy_ack(self.client, name=name, policy_id=policy_id)
+    def send_policy_ack(
+        self, *, name: str, policy_id: str, client_id: str = ""
+    ) -> bool:
+        return status.send_policy_ack(
+            self.client, name=name, policy_id=policy_id, client_id=client_id
+        )
+
+    def send_member_hello(self, body: dict) -> bool:
+        return status.send_member_hello(self.client, body)
 
     def send_member_state(self, body: dict) -> bool:
         return status.send_member_state(self.client, body)
 
     def send_invite_accept(self, body: dict) -> bool:
         return status.send_invite_accept(self.client, body)
+
+    def send_beep(self, *, name: str, why: str = "already_in_party") -> bool:
+        return status.send_beep(self.client, name=name, why=why)
 
     def send_status(
         self,

@@ -48,6 +48,7 @@ static BOOL CALLBACK ec_init_lock(PINIT_ONCE once, PVOID param, PVOID* ctx)
 /* ---------------------------------------------------------------- helpers */
 typedef struct EcTextPlan {
     int has_hangul;
+    int has_scan_keys;
     int needs_wmchar;
     int total_chars;
     int planned_keys;
@@ -89,7 +90,11 @@ static void ec_analyze_text(const wchar_t* text, EcTextPlan* plan)
                 plan->planned_keys++;
             }
         } else {
-            plan->needs_wmchar = 1;
+            int shift = 0;
+            if (units == 1 && ec_ascii_to_scan((WCHAR)cp, &shift) >= 0)
+                plan->has_scan_keys = 1;
+            else
+                plan->needs_wmchar = 1;
             plan->planned_keys += units;
         }
         plan->total_chars++;
@@ -152,6 +157,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     int sent_keys = 0;
     int failed = 0;
     int skipped = 0;
+    int lost_front = 0;
 
     InitOnceExecuteOnce(&g_lock_once, ec_init_lock, NULL, NULL);
     EnterCriticalSection(&g_lock);
@@ -269,7 +275,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
     /* ------------------------------------------------------------ Interception */
-    need_ic = plan.has_hangul || request->press_enter ||
+    need_ic = plan.has_hangul || plan.has_scan_keys || request->press_enter ||
               (request->flags & (EC_FLAG_CLEAR_FIRST | EC_FLAG_OPEN_CHAT)) != 0;
 
     if (plan.has_hangul) {
@@ -303,6 +309,22 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     if (!request->hwnd)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
+    /* Opening chat sleeps long enough for the bot UI to take focus back.
+     * Interception strokes go to whichever window is actually in front, so a
+     * failed focus is a failed line — the driver accepting the stroke is not
+     * enough. */
+    if ((plan.has_hangul || plan.has_scan_keys) &&
+        !ec_is_foreground(ctx.hwnd) &&
+        !ec_force_foreground(ctx.hwnd, focus_timeout)) {
+        failed++;
+        lost_front = 1;
+        ec_result_message(res, L"game is not the foreground window");
+    }
+
+    /* Lone ASCII (invite Y) must be English. A Hangul line keeps 한 mode. */
+    if (!plan.has_hangul && plan.has_scan_keys)
+        ec_english_prepare(&ctx, ctx.hwnd);
+
     /* Prepare the Korean layout/IME on the final focus target. */
     if (plan.has_hangul) {
         if (!ec_hangul_prepare(&ctx, ctx.hwnd)) {
@@ -324,6 +346,16 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
             int units = ec_next_codepoint(p, &cp);
             const wchar_t* start = p;
             p += units;
+
+            if (!ec_is_foreground(ctx.hwnd) &&
+                !ec_force_foreground(ctx.hwnd, focus_timeout)) {
+                failed++;
+                if (!lost_front) {
+                    lost_front = 1;
+                    ec_result_message(res, L"game is not the foreground window");
+                }
+                continue;
+            }
 
             if (cp == L'\t') {
                 if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
@@ -381,24 +413,56 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
                 continue;
             }
 
-            /* non-Hangul: WM_CHAR, one unit at a time (surrogate pairs included) */
+            /* non-Hangul: physical Interception key when IME is not in 한글
+             * (invite-accept Y). Mixed Hangul lines keep WM_CHAR for ASCII
+             * so a latin name after /초대 is not typed as jamo. */
             if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
             {
-                BOOL ok = TRUE;
-                int units_sent = 0;
-                for (int u = 0; u < units; ++u) {
-                    if (ec_post_char(&ctx, start[u])) {
-                        units_sent++;
+                int shift = 0;
+                int sc = (units == 1) ? ec_ascii_to_scan(start[0], &shift) : -1;
+                /* Invite Y is a physical key. WM_CHAR and PostMessage do not
+                 * press the popup. With no Interception slot, SendInput does. */
+                if (!ctx.ic && !plan.has_hangul && plan.has_scan_keys) {
+                    BOOL ok = sc >= 0 && ec_is_foreground(ctx.hwnd) &&
+                              ec_sendinput_press(sc, shift, EC_KEY_HOLD_MS);
+                    if (ok) {
+                        sent_chars++;
+                        sent_keys++;
+                        ec_result_message(res, L"physical key via SendInput");
                     } else {
-                        ok = FALSE;
-                        break;
+                        failed++;
+                        ec_result_message(res, L"SendInput did not press the key");
                     }
-                }
-                if (ok) {
-                    sent_chars++;
-                    sent_keys += units_sent;
+                } else if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
+                    BOOL ok = TRUE;
+                    if (shift) {
+                        if (!ec_ic_key(&ctx, 0x2A, 0, 0)) ok = FALSE;
+                        Sleep(3);
+                    }
+                    if (ec_ic_press(&ctx, sc, 0, EC_KEY_HOLD_MS)) sent_keys++;
+                    else ok = FALSE;
+                    if (shift) {
+                        Sleep(3);
+                        if (!ec_ic_key(&ctx, 0x2A, 0, 1)) ok = FALSE;
+                    }
+                    if (ok) sent_chars++; else failed++;
                 } else {
-                    failed++;
+                    BOOL ok = TRUE;
+                    int units_sent = 0;
+                    for (int u = 0; u < units; ++u) {
+                        if (ec_post_char(&ctx, start[u])) {
+                            units_sent++;
+                        } else {
+                            ok = FALSE;
+                            break;
+                        }
+                    }
+                    if (ok) {
+                        sent_chars++;
+                        sent_keys += units_sent;
+                    } else {
+                        failed++;
+                    }
                 }
             }
             ec_sleep_ms(ctx.char_interval_ms + ec_jitter(&ctx));
@@ -407,16 +471,35 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
     if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
 
+    /* A missed Y or a line typed into the wrong window must not submit.
+     * Escape closes a chat box this call already opened. The invite popup
+     * is not a chat box, so Y (no OPEN_CHAT) only skips Enter. */
+    if (failed > 0 && (request->flags & EC_FLAG_OPEN_CHAT))
+        ec_send_vk(&ctx, VK_ESCAPE);
+
     /* ------------------------------------------------------------ final Enter */
-    if (request->press_enter) {
-        BOOL ok = ec_send_vk(&ctx, VK_RETURN);
-        Sleep(30);
-        if (ok) {
-            res->enter_pressed = TRUE;
-        } else {
+    if (request->press_enter && failed == 0) {
+        BOOL ok;
+        if (!ec_is_foreground(ctx.hwnd) &&
+            !ec_force_foreground(ctx.hwnd, focus_timeout)) {
             failed++;
-            ec_result_message(res, L"final Enter could not be sent");
+            if (!lost_front)
+                ec_result_message(res, L"game is not the foreground window");
+        } else {
+            if (!ctx.ic && plan.has_scan_keys && !plan.has_hangul)
+                ok = ec_sendinput_press(0x1C, 0, 10);
+            else
+                ok = ec_send_vk(&ctx, VK_RETURN);
+            Sleep(30);
+            if (ok) {
+                res->enter_pressed = TRUE;
+            } else {
+                failed++;
+                ec_result_message(res, L"final Enter could not be sent");
+            }
         }
+    } else if (request->press_enter && failed > 0) {
+        ec_result_message(res, L"Enter skipped because a key did not reach the game");
     }
 
     res->chars = sent_chars;
@@ -427,6 +510,7 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
 cleanup:
     if (ctx.hangul_started) ec_hangul_done(&ctx);
+    else if (ctx.ime_mode_forced) ec_english_done(&ctx);
     if (ctx.ic) ec_ic_close(&ctx);
     if (timer_started) timeEndPeriod(1);
     res->elapsed_ms = GetTickCount() - t0;
