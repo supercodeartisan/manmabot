@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-02 — reconnect resumes from game memory, not a new invite
+
+Intent: A member socket drop is not a failed party join. On reconnect the leader waits for a new `member_state` before another `/초대`. A name already in party memory stays joined. `InviteAccepter` keeps watching the popup across the drop and does not press Y until the policy names the inviter.
+Shared: `MemberStates.hold_until_fresh` on the dropped socket id. `LeaderInvites` 20s clock and `InviteHold` stay. Reconnect wait is 2s plus jitter, capped at 15s. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `PartyMemberManager.decide` is unchanged.
+Affects: one member's invite gate and the monitor words (RECONNECTING / ACCEPTING / IN PARTY). Other members and the leader hunt are not reset.
+Consent: user (recover the interrupted step from game state after reconnect).
+Result: not run in game.
+
 ## 2026-11-02 — party monitor Invite / Y focuses the game
 
 Intent: Invite from the monitor typed only after the user clicked the game. The monitor is the foreground window, so the worker's later `SetForegroundWindow` is refused.

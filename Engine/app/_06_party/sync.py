@@ -108,6 +108,10 @@ class MemberStateReporter:
         self._last_key = ""
         self._last_at = None
 
+    def nudge(self) -> None:
+        """Send on the next tick. Does not clear the invite accepter or the seq."""
+        self._last_at = None
+
     def tick(
         self,
         send: Callable[[dict[str, Any]], bool],
@@ -167,10 +171,41 @@ class MemberStates:
         self.rows: dict[str, dict[str, Any]] = {}
         # Last frame from a member that does not know its name and could not be booked.
         self.unnamed_at: Optional[float] = None
+        # Names whose socket dropped. ``fresh`` stays false until the next state.
+        self._awaiting: set[str] = set()
+        self._peers: dict[str, str] = {}
 
     def clear(self) -> None:
         self.rows.clear()
         self.unnamed_at = None
+        self._awaiting.clear()
+        self._peers.clear()
+
+    def bind_peer(self, peer: str, name: str) -> None:
+        """Remember which socket id last spoke as ``name``."""
+        pid = str(peer or "").strip()
+        who = str(name or "").strip()
+        if pid and who:
+            self._peers[pid] = who
+
+    def name_for_peer(self, peer: str) -> str:
+        return str(self._peers.get(str(peer or "").strip()) or "")
+
+    def forget_peer(self, peer: str) -> None:
+        self._peers.pop(str(peer or "").strip(), None)
+
+    def hold_until_fresh(self, name: str) -> None:
+        """A dropped socket. The last report is not current until a new one arrives.
+
+        Invite rows and ``InviteAccepter`` are not touched. A 3 s-old frame is
+        still inside the 7 s window, so staleness alone would keep it.
+        """
+        key = _key(name)
+        if key:
+            self._awaiting.add(key)
+
+    def awaiting_fresh(self, name: str) -> bool:
+        return _key(name) in self._awaiting
 
     def unnamed_recent(self) -> bool:
         return self.unnamed_at is not None and self._clock() - self.unnamed_at < STALE_S
@@ -239,6 +274,7 @@ class MemberStates:
             "at": time.time(),
             "frames": int(prev.get("frames", 0)) + 1,
         }
+        self._awaiting.discard(_key(name))
         return name
 
     def _bind_unnamed(self, names: list[str], client_id: str) -> str:
@@ -258,10 +294,13 @@ class MemberStates:
         row = dict(self.rows.get(_key(name)) or {})
         if row:
             row["age_s"] = round(self._clock() - float(row.get("fresh_at") or 0.0), 1)
-            row["fresh"] = row["age_s"] < STALE_S
+            row["fresh"] = row["age_s"] < STALE_S and _key(name) not in self._awaiting
+            row["awaiting_fresh"] = _key(name) in self._awaiting
         return row
 
     def fresh(self, name: str) -> bool:
+        if _key(name) in self._awaiting:
+            return False
         row = self.rows.get(_key(name))
         return bool(row) and self._clock() - float(row.get("fresh_at") or 0.0) < STALE_S
 
@@ -305,9 +344,15 @@ class MemberStates:
         return not self.joined(name, leader_name)
 
     def invite_phase(self, name: str) -> tuple[str, str]:
-        """(invite_id, phase) the member last reported, ("", "") when unknown."""
+        """(invite_id, phase) the member last reported, ("", "") when unknown.
+
+        A socket drop keeps the last popup phase so ``/초대`` stays held. The
+        join itself still waits for a fresh report.
+        """
         row = self.rows.get(_key(name))
-        if not row or not self.fresh(name):
+        if not row:
+            return "", ""
+        if not self.fresh(name) and not self.awaiting_fresh(name):
             return "", ""
         inv = row.get("invite") or {}
         return str(inv.get("id") or ""), str(inv.get("phase") or "")

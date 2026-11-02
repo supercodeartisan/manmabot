@@ -13,8 +13,11 @@ def _ago(ts, now) -> str:
         return "—"
 
 
-def _step(key: str, label: str, state: str, detail: str) -> dict:
-    return {"key": key, "label": label, "state": state, "detail": detail}
+def _step(key: str, label: str, state: str, detail: str, word: str = "") -> dict:
+    step = {"key": key, "label": label, "state": state, "detail": detail}
+    if word:
+        step["word"] = word
+    return step
 
 
 def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_mem="ok") -> list:
@@ -153,19 +156,31 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
 def roster_member_steps(row: dict, *, phase: str) -> list:
     """Leader view of one roster member: connect → policy → invite → accept → party → rally/follow."""
     fresh = bool(row.get("state_fresh"))
+    awaiting = bool(row.get("awaiting_fresh"))
     age = row.get("state_age_s")
     seen = age is not None
-    steps = [
-        _step(
-            "connect",
-            "Connect",
-            "done" if fresh else ("bad" if seen else "wait"),
-            (
-                f"reporting · last {age}s ago · {int(row.get('state_frames') or 0)} frame(s)"
-                if fresh
-                else (f"silent {age}s — member bot stopped or socket down" if seen else "never connected")
-            ),
+    if fresh:
+        cst, cword, cdetail = (
+            "done",
+            "CONNECTED",
+            f"reporting · last {age}s ago · {int(row.get('state_frames') or 0)} frame(s)",
         )
+    elif awaiting:
+        cst, cword, cdetail = (
+            "wait",
+            "RECONNECTING",
+            "socket dropped — waiting for a fresh member_state",
+        )
+    elif seen:
+        cst, cword, cdetail = (
+            "wait",
+            "OFFLINE",
+            f"silent {age}s — member socket down",
+        )
+    else:
+        cst, cword, cdetail = "wait", "CONNECTING", "never connected"
+    steps = [
+        _step("connect", "Connect", cst, cdetail, cword)
     ]
     acked = bool(row.get("policy_acked"))
     steps.append(
@@ -198,7 +213,12 @@ def roster_member_steps(row: dict, *, phase: str) -> list:
     amap = {
         "popup": "active", "pressed": "active",
         "waiting_memory": "active", "joined": "done", "accepted": "done",
-        "failed": "bad", "missed": "bad", "left": "wait",
+        "failed": "bad", "missed": "wait", "left": "wait",
+    }
+    aword = {
+        "popup": "ACCEPTING", "pressed": "ACCEPTING",
+        "waiting_memory": "SYNCING", "joined": "IN PARTY", "accepted": "IN PARTY",
+        "failed": "ERROR", "missed": "WAITING INVITE", "left": "WAITING INVITE",
     }
     steps.append(
         _step(
@@ -206,6 +226,7 @@ def roster_member_steps(row: dict, *, phase: str) -> list:
             "Accept",
             "done" if joined else amap.get(mphase, "off"),
             f"member reports {mphase}",
+            "IN PARTY" if joined else aword.get(mphase, ""),
         )
     )
     left = int(row.get("left") or 0)
@@ -241,11 +262,19 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
     sync = sync or {}
     sock_state = str(sock.get("state") or "off")
     connected = sock_state == "connected"
+    if connected:
+        cst, cword = "done", "CONNECTED"
+    elif sock_state == "reconnecting":
+        cst, cword = "wait", "RECONNECTING"
+    elif sock_state in ("connecting", "idle"):
+        cst, cword = "wait", "CONNECTING"
+    else:
+        cst, cword = "bad", "ERROR"
     steps = [
         _step(
             "connect",
             "Connect",
-            "done" if connected else ("wait" if sock_state in ("connecting", "reconnecting", "idle") else "bad"),
+            cst,
             f"{sock.get('uri') or '—'} {sock_state} · leader session "
             f"{policy.get('session') or '—'}"
             + (
@@ -253,6 +282,7 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
                 if int(policy.get("session_resets") or 0) > 1
                 else ""
             ),
+            cword,
         )
     ]
     received = bool(policy.get("received"))
@@ -318,33 +348,43 @@ def member_workflow(*, sock, policy, party, orders, accept, now, sync=None) -> l
     presses = int(accept.get("presses") or 0)
     tag = f" · id {accept.get('accept_id')}" if accept.get("accept_id") else ""
     inviter = str(accept.get("inviter") or "—")
+    acc_word = ""
     if phase == "popup":
         acc, adetail = "active", f"invite popup from {inviter} · pressing Y"
+        acc_word = "ACCEPTING"
     elif phase == "failed":
         acc, adetail = "bad", f"Y failed: {accept.get('error')}"
+        acc_word = "ERROR"
     elif phase == "pressed":
         acc, adetail = "active", f"Y pressed {presses}× · {_ago(pressed_at, now)} · popup still open"
+        acc_word = "ACCEPTING"
     elif phase == "waiting_memory":
         acc = "active"
         adetail = (
             f"Y+Enter sent · from {inviter} · waiting for party memory · "
             f"told leader {int(accept.get('acks_sent') or 0)}×"
         )
+        acc_word = "SYNCING"
     elif phase in ("joined", "accepted"):
         acc = "done" if in_party or phase == "joined" else "active"
         adetail = (
             f"party memory confirmed · from {inviter} · "
             f"{_ago(accept.get('accepted_at'), now)} · told leader {int(accept.get('acks_sent') or 0)}×"
         )
+        acc_word = "IN PARTY"
     elif phase == "left":
         acc, adetail = "wait", "left the party after the accept — waiting for the next invite"
+        acc_word = "WAITING INVITE"
     elif phase == "missed":
-        acc, adetail = "bad", "popup closed before Y — waiting for the next /초대"
+        acc, adetail = "wait", "popup closed before Y — waiting for the next /초대"
+        acc_word = "WAITING INVITE"
     elif phase == "skipped":
         acc, adetail = "wait", str(accept.get("skipped"))
     else:
         acc, adetail = ("done" if in_party else ("wait" if acked_at else "off")), "no invite popup yet"
-    steps.append(_step("accept", "Accept", acc, adetail + tag))
+        if in_party:
+            acc_word = "IN PARTY"
+    steps.append(_step("accept", "Accept", acc, adetail + tag, acc_word))
 
     if not mem_ok:
         pst = "active" if pressed_at else ("wait" if acked_at else "off")

@@ -189,11 +189,19 @@ class InviteAccepter:
                 return False
             self.phase = "popup"
             self._log(
-                f"Party invite popup from {self.inviter or '—'} (ask {self.ask}) — pressing Y"
+                f"Party invite popup from {self.inviter or '—'} (ask {self.ask})"
             )
             _note_monitor(f"invite popup from {self.inviter or '—'}")
         if self.phase not in ("popup", "pressed"):
             return False
+        if not str(leader_name or "").strip():
+            if not self.skipped:
+                self.skipped = "waiting for leader policy"
+                self._log(
+                    "Party invite popup open — Y waits until the leader policy names the inviter"
+                )
+            return False
+        self.skipped = ""
         now = self._clock()
         if self._last_press is not None and now - self._last_press < REPRESS_S:
             return False

@@ -77,6 +77,21 @@ def drain_leader_reports(
     if server is None:
         return 0
     try:
+        dropped_peers = list(server.take_dropped())
+    except Exception:
+        dropped_peers = []
+    dropped_set = {str(peer) for peer in dropped_peers if str(peer)}
+    for peer in dropped_peers:
+        held = member_states.name_for_peer(peer)
+        member_states.forget_peer(peer)
+        if not held:
+            continue
+        member_states.hold_until_fresh(held)
+        note(
+            f"Party socket dropped for {held} — "
+            "keeping invite progress, waiting for a fresh member_state"
+        )
+    try:
         frames = server.drain()
     except Exception:
         frames = []
@@ -96,9 +111,14 @@ def drain_leader_reports(
         who = str(body.get("from") or getattr(frame, "sender", "") or "")
         cid = str(body.get("client_id") or "").strip()
         roster = names if roster_names is None else roster_names
+        peer = str(getattr(frame, "peer", "") or "")
+        if peer and peer in dropped_set:
+            continue
         if kind == MEMBER_HELLO:
             character = body.get("character") if isinstance(body.get("character"), dict) else {}
             hello_name = str(character.get("name") or who or "").strip()
+            if peer and hello_name:
+                member_states.bind_peer(peer, hello_name)
             row = discovery.observe(
                 connection_id=cid,
                 name=hello_name,
@@ -129,6 +149,8 @@ def drain_leader_reports(
             booked = member_states.note(who, body, roster, session=leader_session())
             if not booked:
                 continue
+            if peer:
+                member_states.bind_peer(peer, booked)
             row = member_states.row(booked)
             pid = str(row.get("policy_id") or "")
             if pid:

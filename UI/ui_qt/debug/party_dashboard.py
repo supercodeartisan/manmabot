@@ -250,7 +250,7 @@ class WorkflowSteps(QWidget):
             tone = STEP_TONE.get(state, "off")
             text = str(step.get("detail") or "")
             pill.set(f"{i + 1}  {str(step.get('label') or '').upper()}", tone, text)
-            word.setText(STEP_WORD.get(state, state.upper()))
+            word.setText(str(step.get("word") or STEP_WORD.get(state, state.upper())))
             word.setStyleSheet(f"color:{TONES[tone]};")
             if detail.text() != text:
                 detail.setText(text)

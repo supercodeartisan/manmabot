@@ -110,23 +110,28 @@ class PartyComms:
                 return False
             time.sleep(0.25)
 
-    def watch_member(self, *, log: Optional[LogFn] = None) -> None:
-        """Log drops / reconnects and restart a client whose IO thread died."""
+    def watch_member(self, *, log: Optional[LogFn] = None) -> bool:
+        """Log drops / reconnects and restart a client whose IO thread died.
+
+        True once when the socket comes back. The caller resends hello and
+        ``member_state``. This does not reset ``InviteAccepter``.
+        """
         client = self.client
         if client is None:
-            return
+            return False
         note = log or (lambda _m: None)
         now = time.monotonic()
         connected = self.member_connected
         if connected:
-            if not self._was_connected and self._lost_at > 0.0:
+            restored = not self._was_connected and self._lost_at > 0.0
+            if restored:
                 note(
                     f"Party member: leader socket reconnected after "
                     f"{now - self._lost_at:.0f}s (drop #{self.member_drops})"
                 )
             self._was_connected = True
             self._lost_at = 0.0
-            return
+            return restored
         if self._was_connected:
             self._was_connected = False
             self._lost_at = now
@@ -138,9 +143,9 @@ class PartyComms:
         elif self._lost_at <= 0.0:
             self._lost_at = now
         if getattr(client, "running", True):
-            return
+            return False
         if now - self._last_restart_at < 5.0:
-            return
+            return False
         self._last_restart_at = now
         self.member_restarts += 1
         try:
@@ -151,6 +156,7 @@ class PartyComms:
             )
         except Exception as exc:
             note(f"Party member: socket client restart failed: {exc}")
+        return False
 
     def member_link_info(self) -> dict[str, Any]:
         lost = (

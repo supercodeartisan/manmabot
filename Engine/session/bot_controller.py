@@ -826,6 +826,7 @@ class BotController:
                         "in_party": joined,
                         "in_party_src": joined_src,
                         "state_fresh": fresh,
+                        "awaiting_fresh": bool(mstate.get("awaiting_fresh")),
                         "state_age_s": mstate.get("age_s"),
                         "state_frames": int(mstate.get("frames") or 0),
                         "live": dict(mstate.get("live") or {}),
@@ -2226,9 +2227,16 @@ class BotController:
         )
 
     def _leader_policy_acked(self, name: str) -> bool:
-        """Invite gate: ``name`` confirmed the policy currently being sent."""
-        from app._06_party.comms.orders import policy_acks
+        """Invite gate: ``name`` confirmed the policy currently being sent.
 
+        A dropped socket must send a new ``member_state`` before another
+        ``/초대``. A name already in party memory is not in the due list.
+        """
+        from app._06_party.comms.orders import policy_acks
+        from app._06_party.sync import member_states
+
+        if member_states.awaiting_fresh(name):
+            return False
         return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
 
     def _leader_may_begin_start_rally(self, world) -> bool:
@@ -2342,11 +2350,10 @@ class BotController:
         )
 
     def _reset_member_for_leader_session(self, session: str, party_brain) -> None:
-        """New leader run seen: start the member's party state from scratch.
+        """New leader run id: drop the overlay and start policy confirm again.
 
-        Orders from the old run are already dropped in ``member_orders``; here the
-        policy overlay and its apply/ack records go, so the new leader policy is
-        applied and confirmed as if this member had just started.
+        A member socket reconnect does not call this. ``InviteAccepter`` is
+        reset only when the leader bot starts a new run, not when the socket drops.
         """
         from app._06_party.comms.orders import member_orders
 
@@ -2599,7 +2606,16 @@ class BotController:
         from app._06_party.comms.orders import member_orders
 
         if not send:
-            self._party_comms.watch_member(log=self._party_socket_note)
+            restored = self._party_comms.watch_member(log=self._party_socket_note)
+            if restored:
+                self._member_hello_key = None
+                reporter = getattr(self, "_member_state_reporter", None)
+                if reporter is not None:
+                    reporter.nudge()
+                self.log(
+                    "Party socket restored — resend hello and member_state; "
+                    "invite accept is kept"
+                )
             try:
                 self._party_comms.ingest_orders()
             except Exception as exc:
