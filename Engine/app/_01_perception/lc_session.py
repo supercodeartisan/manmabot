@@ -49,11 +49,16 @@ class _Slot:
 
 
 class LcSession:
-    """One process-wide set of module threads."""
+    """One process-wide set of module threads.
+
+    ``stop`` retires every running module. ``ensure`` does not cancel that.
+    A new ``lcapi_run`` starts only after the previous thread for that DLL has
+    left the native call. Two runs on one DLL share ``g_sink`` and crash.
+    """
 
     def __init__(self) -> None:
         self._guard = threading.Lock()
-        self._stop = threading.Event()
+        self._run_id = 0
         self._slots: dict[str, _Slot] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._held: dict[str, object] = {}
@@ -69,15 +74,15 @@ class LcSession:
             raise FileNotFoundError(f"registry is missing: {_REGISTRY}")
         os.environ["LCAPI_ROOT"] = str(_ANALYSIS)
         with self._guard:
-            self._stop.clear()
             thread = self._threads.get(name)
             if thread is not None and thread.is_alive():
                 return
+            run_id = self._run_id
             slot = self._slots.setdefault(name, _Slot())
             thread = threading.Thread(
                 target=self._run,
                 name=f"lc-{name}",
-                args=(name, dll, spec, slot),
+                args=(name, dll, spec, slot, run_id),
                 daemon=True,
             )
             self._threads[name] = thread
@@ -108,10 +113,22 @@ class LcSession:
             return slot.text
 
     def stop(self) -> None:
-        """Ask running modules to end after the current sample."""
-        self._stop.set()
+        """Ask running modules to end after the current sample.
 
-    def _run(self, name: str, dll: Path, spec: tuple[int, str], slot: _Slot) -> None:
+        Does not start a replacement. The next ``ensure`` waits until that
+        thread has left ``lcapi_run``.
+        """
+        with self._guard:
+            self._run_id += 1
+
+    def _run(
+        self,
+        name: str,
+        dll: Path,
+        spec: tuple[int, str],
+        slot: _Slot,
+        run_id: int,
+    ) -> None:
         os.environ["LCAPI_ROOT"] = str(_ANALYSIS)
         interval, params = spec
         lib = ctypes.CDLL(str(dll))
@@ -145,22 +162,31 @@ class LcSession:
                 slot.text = decoded
                 slot.error = ""
             slot.ready.set()
-            return 1 if self._stop.is_set() else 0
+            return 0 if self._run_id == run_id else 1
 
-        self._held[name] = (lib, sink)
+        # Keep the callback alive until this thread leaves ``lcapi_run``.
+        held = (lib, sink)
+        self._held[name] = held
         err = ctypes.create_string_buffer(512)
-        while not self._stop.is_set():
-            configure(registry, int(interval), 0, 100000, None)
-            if set_params is not None and param_bytes:
-                set_params(param_bytes)
-            err[0] = 0
-            rc = int(run(sink, None, err, len(err)))
-            if self._stop.is_set():
-                break
-            message = err.value.decode("utf-8", "replace") or f"module rc={rc}"
-            with slot.lock:
-                slot.error = message
-            time.sleep(1.0)
+        try:
+            while self._run_id == run_id:
+                configure(registry, int(interval), 0, 100000, None)
+                if self._run_id != run_id:
+                    break
+                if set_params is not None and param_bytes:
+                    set_params(param_bytes)
+                err[0] = 0
+                rc = int(run(sink, None, err, len(err)))
+                if self._run_id != run_id:
+                    break
+                message = err.value.decode("utf-8", "replace") or f"module rc={rc}"
+                with slot.lock:
+                    slot.error = message
+                time.sleep(1.0)
+        finally:
+            with self._guard:
+                if self._held.get(name) is held:
+                    self._held.pop(name, None)
 
 
 class ModuleReader:

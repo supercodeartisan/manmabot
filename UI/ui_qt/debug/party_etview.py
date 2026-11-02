@@ -18,13 +18,47 @@ from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 
+_user32 = ctypes.WinDLL("user32", use_last_error=True)
+_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+try:
+    from win32_prototypes import bind_gdi32, bind_user32
+
+    bind_user32(_user32)
+    bind_gdi32(_gdi32)
+except Exception:
+    _user32.GetDC.restype = wintypes.HDC
+    _user32.GetDC.argtypes = [wintypes.HWND]
+    _user32.ReleaseDC.restype = ctypes.c_int
+    _user32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+    _gdi32.CreateCompatibleDC.restype = wintypes.HDC
+    _gdi32.CreateCompatibleDC.argtypes = [wintypes.HDC]
+    _gdi32.CreateCompatibleBitmap.restype = wintypes.HBITMAP
+    _gdi32.CreateCompatibleBitmap.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
+    _gdi32.SelectObject.restype = wintypes.HGDIOBJ
+    _gdi32.SelectObject.argtypes = [wintypes.HDC, wintypes.HGDIOBJ]
+    _gdi32.DeleteObject.restype = wintypes.BOOL
+    _gdi32.DeleteObject.argtypes = [wintypes.HGDIOBJ]
+    _gdi32.DeleteDC.restype = wintypes.BOOL
+    _gdi32.DeleteDC.argtypes = [wintypes.HDC]
+    _gdi32.BitBlt.restype = wintypes.BOOL
+    _gdi32.BitBlt.argtypes = [
+        wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD,
+    ]
+    _gdi32.GetDIBits.restype = ctypes.c_int
+    _gdi32.GetDIBits.argtypes = [
+        wintypes.HDC, wintypes.HBITMAP, wintypes.UINT, wintypes.UINT,
+        ctypes.c_void_p, ctypes.c_void_p, wintypes.UINT,
+    ]
+
+
 def capture_lc_client() -> Optional[QImage]:
     """BitBlt LC.exe client → QImage (etview capture()). None if unavailable."""
     try:
         from app._05_action.window_bounds import find_game_window, get_client_bounds
     except Exception:
         return None
-    hwnd = find_game_window("LC.exe") or 0
+    hwnd = int(find_game_window("LC.exe") or 0)
     if not hwnd:
         return None
     bounds = get_client_bounds(hwnd)
@@ -34,56 +68,60 @@ def capture_lc_client() -> Optional[QImage]:
     h = int(bounds.height)
     if w < 2 or h < 2:
         return None
-    user32 = ctypes.windll.user32
-    gdi32 = ctypes.windll.gdi32
-    hdc = user32.GetDC(hwnd)
+    hdc = _user32.GetDC(hwnd)
     if not hdc:
         return None
-    mem = gdi32.CreateCompatibleDC(hdc)
-    bmp = gdi32.CreateCompatibleBitmap(hdc, w, h)
-    old = gdi32.SelectObject(mem, bmp)
-    ok = gdi32.BitBlt(mem, 0, 0, w, h, hdc, 0, 0, 0x00CC0020)  # SRCCOPY
-    if not ok:
-        gdi32.SelectObject(mem, old)
-        gdi32.DeleteObject(bmp)
-        gdi32.DeleteDC(mem)
-        user32.ReleaseDC(hwnd, hdc)
-        return None
+    mem = None
+    bmp = None
+    old = None
+    try:
+        mem = _gdi32.CreateCompatibleDC(hdc)
+        bmp = _gdi32.CreateCompatibleBitmap(hdc, w, h) if mem else None
+        if not mem or not bmp:
+            return None
+        old = _gdi32.SelectObject(mem, bmp)
+        if not _gdi32.BitBlt(mem, 0, 0, w, h, hdc, 0, 0, 0x00CC0020):
+            return None
 
-    class BITMAPINFOHEADER(ctypes.Structure):
-        _fields_ = [
-            ("biSize", wintypes.DWORD),
-            ("biWidth", wintypes.LONG),
-            ("biHeight", wintypes.LONG),
-            ("biPlanes", wintypes.WORD),
-            ("biBitCount", wintypes.WORD),
-            ("biCompression", wintypes.DWORD),
-            ("biSizeImage", wintypes.DWORD),
-            ("biXPelsPerMeter", wintypes.LONG),
-            ("biYPelsPerMeter", wintypes.LONG),
-            ("biClrUsed", wintypes.DWORD),
-            ("biClrImportant", wintypes.DWORD),
-        ]
+        class BITMAPINFOHEADER(ctypes.Structure):
+            _fields_ = [
+                ("biSize", wintypes.DWORD),
+                ("biWidth", wintypes.LONG),
+                ("biHeight", wintypes.LONG),
+                ("biPlanes", wintypes.WORD),
+                ("biBitCount", wintypes.WORD),
+                ("biCompression", wintypes.DWORD),
+                ("biSizeImage", wintypes.DWORD),
+                ("biXPelsPerMeter", wintypes.LONG),
+                ("biYPelsPerMeter", wintypes.LONG),
+                ("biClrUsed", wintypes.DWORD),
+                ("biClrImportant", wintypes.DWORD),
+            ]
 
-    class BITMAPINFO(ctypes.Structure):
-        _fields_ = [("bmiHeader", BITMAPINFOHEADER)]
+        class BITMAPINFO(ctypes.Structure):
+            _fields_ = [("bmiHeader", BITMAPINFOHEADER)]
 
-    bmi = BITMAPINFO()
-    bmi.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
-    bmi.bmiHeader.biWidth = w
-    bmi.bmiHeader.biHeight = -h  # top-down
-    bmi.bmiHeader.biPlanes = 1
-    bmi.bmiHeader.biBitCount = 32
-    bmi.bmiHeader.biCompression = 0
-    buf = ctypes.create_string_buffer(w * h * 4)
-    gdi32.GetDIBits(mem, bmp, 0, h, buf, ctypes.byref(bmi), 0)
-    gdi32.SelectObject(mem, old)
-    gdi32.DeleteObject(bmp)
-    gdi32.DeleteDC(mem)
-    user32.ReleaseDC(hwnd, hdc)
-    # Windows BGRA → QImage Format_RGB32 expects BGRA on little-endian.
-    image = QImage(buf, w, h, w * 4, QImage.Format.Format_RGB32).copy()
-    return image
+        bmi = BITMAPINFO()
+        bmi.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
+        bmi.bmiHeader.biWidth = w
+        bmi.bmiHeader.biHeight = -h  # top-down
+        bmi.bmiHeader.biPlanes = 1
+        bmi.bmiHeader.biBitCount = 32
+        bmi.bmiHeader.biCompression = 0
+        buf = ctypes.create_string_buffer(w * h * 4)
+        if _gdi32.GetDIBits(mem, bmp, 0, h, buf, ctypes.byref(bmi), 0) == 0:
+            return None
+        # Windows BGRA → QImage Format_RGB32 expects BGRA on little-endian.
+        # copy() detaches from the temporary buffer before the DC is released.
+        return QImage(buf, w, h, w * 4, QImage.Format.Format_RGB32).copy()
+    finally:
+        if mem and old:
+            _gdi32.SelectObject(mem, old)
+        if bmp:
+            _gdi32.DeleteObject(bmp)
+        if mem:
+            _gdi32.DeleteDC(mem)
+        _user32.ReleaseDC(hwnd, hdc)
 
 # etview colOf()
 _SELF = QColor(255, 255, 255)

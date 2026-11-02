@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-02 — party monitor stop/start no longer re-enters a memory DLL
+
+Intent: Stop with the party monitor open, then Start, killed the process. The monitor's next poll cleared the module stop and called `lcapi_run` again while that DLL was still leaving the previous run.
+Shared: `LcSession.stop` / `ensure`. A new run starts only after that module's thread has returned. The monitor BitBlt keeps full 64-bit GDI handles. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party monitor left open across Stop and Start.
+Consent: user (fix perfectly).
+Result: session overlap test passed. Not run as a live stop/start.
+
 ## 2026-11-02 — invite Y falls back to SendInput when no keyboard slot accepts
 
 Intent: The member log showed the popup, then `slots rejected` and no Y. PostMessage is not a press the popup reads, so a missing Interception slot must use a real SendInput scancode for Y and for the Enter after it.
