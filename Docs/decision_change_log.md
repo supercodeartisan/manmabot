@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-02 — party monitor Invite / Y focuses the game
+
+Intent: Invite from the monitor typed only after the user clicked the game. The monitor is the foreground window, so the worker's later `SetForegroundWindow` is refused.
+Shared: the Invite and Y+Enter clicks call `bring_game_to_front` on the UI thread before the queued `deliver_chat` / `type_accept_key`. Always-on-top is dropped until that action finishes. The worker focuses again at the start of the same drain. Automatic invites still use `deliver_chat` → `ec_run`; automatic Y still uses `type_accept_key`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are.
+Affects: party monitor buttons only.
+Consent: user (focus the game automatically; confirm the buttons share the bot path).
+Result: not run in the UI.
+
 ## 2026-11-02 — Stop disarms the schedule before the next poll
 
 Intent: Stop was restarting the game and opening the party monitor. The Qt shell disarmed the schedule on a queued signal, so the schedule poll still saw an armed session in the STOPPED state and called Start.

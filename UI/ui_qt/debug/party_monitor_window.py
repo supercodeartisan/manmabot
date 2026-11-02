@@ -443,6 +443,7 @@ class PartyMonitorWindow(QMainWindow):
         manual.addWidget(self.manual_status, stretch=1)
         layout.addLayout(manual)
         self._chat_shown = ""
+        self._topmost_dropped = False
 
         main = QSplitter(Qt.Orientation.Horizontal)
 
@@ -529,6 +530,43 @@ class PartyMonitorWindow(QMainWindow):
             text = f"rejected: {exc}"
         self._chat_shown = text
         self.manual_status.setText(text)
+        if text.startswith("rejected") or text.startswith("Enter a character"):
+            return
+        self._yield_focus_to_game()
+
+    def _yield_focus_to_game(self) -> None:
+        """The click is on this window. Move LC to the foreground before keys.
+
+        Always-on-top would stay the focused window, so Interception would type
+        here. Drop that flag for this action, then focus the game on this
+        thread — it just received the click, so Windows allows the switch.
+        """
+        if self.topmost.isChecked():
+            self._topmost_dropped = True
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+            self.show()
+        self._focus_game()
+        QTimer.singleShot(0, self._focus_game)
+
+    def _focus_game(self) -> None:
+        try:
+            from session.probes import bring_game_to_front, probe_game
+
+            hwnd = int(getattr(probe_game(), "hwnd", 0) or 0)
+        except Exception:
+            return
+        if hwnd:
+            bring_game_to_front(hwnd)
+
+    def _restore_topmost(self, chat: dict) -> None:
+        if not self._topmost_dropped:
+            return
+        if str(chat.get("state") or "") not in ("done", "failed"):
+            return
+        self._topmost_dropped = False
+        if self.topmost.isChecked():
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+            self.show()
 
     def _on_topmost(self, checked: bool) -> None:
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, bool(checked))
@@ -566,6 +604,7 @@ class PartyMonitorWindow(QMainWindow):
 
         self.dashboard.apply(snap)
         chat = snap.get("chat_action") if isinstance(snap.get("chat_action"), dict) else {}
+        self._restore_topmost(chat)
         chat_text = str(chat.get("text") or "")
         if chat_text and chat_text != self._chat_shown:
             self._chat_shown = chat_text

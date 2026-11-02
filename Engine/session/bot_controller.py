@@ -1965,6 +1965,11 @@ class BotController:
         if job is None:
             return ""
         try:
+            from session.probes import bring_game_to_front, probe_game
+
+            hwnd = int(getattr(probe_game(), "hwnd", 0) or 0)
+            if hwnd:
+                bring_game_to_front(hwnd)
             if job.kind == "invite":
                 from app._06_party.invite import deliver_chat, invite_command
 
