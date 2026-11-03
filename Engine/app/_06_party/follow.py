@@ -4,9 +4,12 @@ from __future__ import annotations
 import random
 from typing import Callable, Iterable, Optional
 
-# Start chasing this many tiles before ``follow_tiles`` while the leader walks:
-# recognition + click + walk start lag ~1–2 s, the leader covers ~2 tiles.
+# Old walking start was ``follow_tiles - TRAVEL_LEAD_TILES`` (default 6).
+# Close follow restarts one tile outside the stop band instead.
 TRAVEL_LEAD_TILES = 2
+CLOSE_RESTART_GAP = 1
+# A follow click stays inside this many tiles so the hop cannot walk past the leader.
+FOLLOW_CLICK_TILES = 2
 # Reynolds Arrive: close enough to the formation slot to stop (no exact tile).
 ARRIVAL_TOLERANCE = 1
 # Keep the absolute click goal while the ideal slot drifts within this Chebyshev.
@@ -29,10 +32,9 @@ def follow_kind(
 
     Rubber-band on distance to the leader only. A behind-slot, cardinal stand,
     or turret seat is not a walk goal (those sent the member past / around the
-    leader). Stopped: close until ``stop_tiles`` then hold. Walking: start at
-    ``follow_tiles`` (minus lag), keep closing until ``stop_tiles``.
-    Combat (``leader_farming``): caller handles assist/close-in; here ``near``
-    means within the travel leash so policy can assist.
+    leader). At or inside ``stop_tiles``: hold. One tile farther: follow.
+    ``follow_tiles`` does not delay the start. Combat (``leader_farming``):
+    caller handles assist/close-in; here ``near`` means within the travel leash.
     """
     del _legacy, at_settle_stand, at_travel_spot
     dist = int(distance)
@@ -46,7 +48,7 @@ def follow_kind(
         return "near", False
     if leader_stopped:
         return "follow", True
-    start = max(stop + 1, follow - TRAVEL_LEAD_TILES)
+    start = stop + CLOSE_RESTART_GAP
     if dist >= start:
         return "follow", True
     if chasing:
@@ -259,6 +261,8 @@ def guid_key(value: object) -> Optional[int]:
 __all__ = [
     "ARRIVAL_TOLERANCE",
     "STICKY_GOAL_SLACK",
+    "CLOSE_RESTART_GAP",
+    "FOLLOW_CLICK_TILES",
     "TRAVEL_LEAD_TILES",
     "cardinal_tiles",
     "choose_approach_tile",

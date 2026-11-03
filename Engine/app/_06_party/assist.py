@@ -589,6 +589,27 @@ def pick_assist_target(
     return None, "none"
 
 
+def turret_member_focus(
+    *,
+    leader_farming: bool,
+    own_id: Optional[int],
+    own_still_ok: bool,
+    yard_id: Optional[int],
+) -> tuple[str, Optional[int]]:
+    """Turret member while the leader rests, then while the leader strikes.
+
+    ``own_finish`` keeps the mob the member already started. ``yard`` is a new
+    self-hunt inside the yard. ``leader`` means assist the leader now.
+    """
+    if leader_farming:
+        if own_id is not None and own_still_ok:
+            return "own_finish", own_id
+        return "leader", None
+    if yard_id is not None:
+        return "yard", yard_id
+    return "none", None
+
+
 def pick_solo_farm_target(
     game_state: Any,
     *,
@@ -597,6 +618,7 @@ def pick_solo_farm_target(
     leash_tiles: int,
     previous_id: Optional[int] = None,
     blackboard: Any = None,
+    contains: Optional[Any] = None,
 ) -> Optional[Any]:
     """Own target for solo-farm members: nearest attackable near the leader.
 
@@ -619,6 +641,11 @@ def pick_solo_farm_target(
     leash = max(1, int(leash_tiles))
 
     def near_leader(obj: Any) -> bool:
+        if contains is not None:
+            try:
+                return bool(contains(obj))
+            except Exception:
+                return False
         try:
             tx, ty = object_absolute_tile(obj, origin)
             return tile_chebyshev(int(tx), int(ty), lx, ly) <= leash
@@ -737,6 +764,7 @@ __all__ = [
     "leader_attack_rows",
     "pick_assist_target",
     "pick_solo_farm_target",
+    "turret_member_focus",
     "resolve_external_target",
     "resolve_leader_attack_target",
     "resolve_leader_strike_target",

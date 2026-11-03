@@ -12,6 +12,7 @@ from .assist import (
     pick_assist_target,
     pick_solo_farm_target,
     resolve_self_defender,
+    turret_member_focus,
 )
 from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
@@ -91,6 +92,7 @@ class PartyMemberManager:
         """
         self.clear_leader_policy()
         self._formation.reset()
+        self.runtime.own_hunt_id = None
 
     def pause(self) -> None:
         self.runtime.paused = True
@@ -495,6 +497,98 @@ class PartyMemberManager:
                     close_in_tile, leader_tile, half_w=half_w, half_h=half_h
                 )
 
+        # Turret, leader idle: hunt inside the yard. A mob already started is
+        # finished after the leader begins an attack, then assist takes over.
+        # Loot, when the leader is idle and this member has not swung yet,
+        # is chosen later and does not set ``own_hunt_id``.
+        self._turret_own_pending = None
+        if (
+            cfg.turret_farm
+            and not cfg.solo_farm
+            and leader_tile is not None
+            and game_state is not None
+            and origin_ok
+        ):
+            own_obj = None
+            own_ok = False
+            own_id = self.runtime.own_hunt_id
+            if own_id is not None:
+                own_obj = game_state.get_object(int(own_id))
+                own_tile = tile_from_obj(own_obj, origin)
+                from app._06_party.assist import _assist_target_live
+
+                own_ok = bool(
+                    _assist_target_live(game_state, own_obj)
+                    and own_tile is not None
+                    and in_yard(own_tile, leader_tile, half_w=half_w, half_h=half_h)
+                )
+            yard_id = None
+            yard_obj = None
+            if not view.farming:
+                def _in_this_yard(obj: Any) -> bool:
+                    tile = tile_from_obj(obj, origin)
+                    return tile is not None and in_yard(
+                        tile, leader_tile, half_w=half_w, half_h=half_h
+                    )
+
+                try:
+                    yard_obj = pick_solo_farm_target(
+                        game_state,
+                        origin=origin,
+                        leader_tile=leader_tile,
+                        leash_tiles=int(cfg.assist_leash_tiles),
+                        previous_id=own_id,
+                        blackboard=self._nav_blackboard,
+                        contains=_in_this_yard,
+                    )
+                except Exception as exc:
+                    _log.debug("turret own hunt failed: %s", exc)
+                    yard_obj = None
+                if yard_obj is not None:
+                    yard_id = int(getattr(yard_obj, "track_id", 0) or 0) or None
+            focus, keep = turret_member_focus(
+                leader_farming=bool(view.farming),
+                own_id=own_id,
+                own_still_ok=own_ok,
+                yard_id=yard_id,
+            )
+            if focus == "own_finish" and own_obj is not None:
+                assist_obj = own_obj
+                assist_src = "own_finish"
+                self.runtime.own_hunt_id = keep
+            elif focus == "yard" and yard_obj is not None:
+                assist_obj = yard_obj
+                assist_src = "turret_own"
+                self._turret_own_pending = keep
+                if self.runtime.own_hunt_id is not None:
+                    self.runtime.own_hunt_id = keep
+            else:
+                self.runtime.own_hunt_id = None
+            if assist_obj is not None and focus in ("own_finish", "yard"):
+                self.runtime.assist_track_id = int(
+                    getattr(assist_obj, "track_id", 0) or 0
+                ) or None
+                self.runtime.assist_src = assist_src
+                tgt_tile = tile_from_obj(assist_obj, origin)
+                target_in_yard = tgt_tile is not None and in_yard(
+                    tgt_tile, leader_tile, half_w=half_w, half_h=half_h
+                )
+                if not assist_in_attack_range(game_state, assist_obj):
+                    need_combat_step = True
+                    close_in_tile = assist_monster_tile(assist_obj, origin)
+                    if close_in_tile is not None and target_in_yard:
+                        close_in_tile = clamp_to_yard(
+                            close_in_tile,
+                            leader_tile,
+                            half_w=half_w,
+                            half_h=half_h,
+                        )
+                else:
+                    need_combat_step = False
+                    close_in_tile = None
+        elif not cfg.turret_farm or cfg.solo_farm:
+            self.runtime.own_hunt_id = None
+
         seat = self._turret_seat_tile(
             cfg,
             leader_tile=leader_tile if leader_present else None,
@@ -571,6 +665,7 @@ class PartyMemberManager:
                 target_in_yard=target_in_yard,
                 assist_sticky=assist_sticky,
                 off_turret_seat=off_turret_seat,
+                leader_pose_stale="sticky" in str(view.source or ""),
             )
         )
         self.runtime.chasing = result.chasing
@@ -629,6 +724,18 @@ class PartyMemberManager:
             )
             loot_max_tiles = max(4, int(cfg.stop_tiles) + 2)
 
+        # Turret idle, before the first swing: pick up, otherwise self-hunt.
+        if (
+            cfg.turret_farm
+            and not cfg.solo_farm
+            and not bool(view.farming)
+            and self.runtime.own_hunt_id is None
+            and getattr(self, "_turret_own_pending", None)
+            and loot_own is not None
+        ):
+            can_loot_now = True
+            loot_max_tiles = max(4, int(cfg.follow_tiles))
+
         # Abort sticky loot when movement / combat / defend must win.
         if (
             not can_loot_now
@@ -678,6 +785,10 @@ class PartyMemberManager:
                 self.runtime.approach_goal = None
                 self._record_decision(loot_intent)
                 return loot_intent
+
+        pending_own = getattr(self, "_turret_own_pending", None)
+        if pending_own is not None and self.runtime.own_hunt_id is None:
+            self.runtime.own_hunt_id = pending_own
 
         party_xy = (
             _party_game_xy(party_block) if isinstance(party_block, dict) else None

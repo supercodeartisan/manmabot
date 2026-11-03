@@ -163,7 +163,6 @@ class ScheduleShell(QMainWindow):
         self._shown_start_reason = ""
         self._debug_win = None
         self._party_win = None
-        self._party_monitor_auto_opened = False
         self._op_sig: tuple | None = None
         self._probe_sig: tuple | None = None
         self._probe_at = 0.0
@@ -590,12 +589,22 @@ class ScheduleShell(QMainWindow):
         if win is not None:
             win.close()
 
-    def open_party_monitor(self) -> None:
+    def open_party_monitor(self, *_args, focus: bool = True) -> None:
         win = self._party_win
-        if win is not None and win.isVisible():
-            win.raise_()
-            win.activateWindow()
-            return
+        if win is not None:
+            try:
+                visible = bool(win.isVisible())
+            except RuntimeError:
+                self._party_win = None
+                win = None
+                visible = False
+            if win is not None:
+                if not visible:
+                    win.show()
+                if focus:
+                    win.raise_()
+                    win.activateWindow()
+                return
         from ui_qt.debug.party_monitor_window import PartyMonitorWindow
 
         self._party_win = PartyMonitorWindow(
@@ -605,24 +614,6 @@ class ScheduleShell(QMainWindow):
             on_close=lambda: setattr(self, "_party_win", None),
         )
         self._party_win.show()
-
-    def _party_session_wanted(self) -> bool:
-        return bool(getattr(self.profile, "party_enabled", False))
-
-    def _maybe_open_party_monitor(self) -> None:
-        """Open the monitor once when a party session starts (Start / arming)."""
-        if self._party_monitor_auto_opened or self._closing:
-            return
-        if not self._party_session_wanted():
-            return
-        state = self.bridge.controller.state
-        if not (
-            self.bridge.arming
-            or state in (RunState.RUNNING, RunState.PAUSED)
-        ):
-            return
-        self._party_monitor_auto_opened = True
-        self.open_party_monitor()
 
     def _close_party_monitor(self) -> None:
         win = self._party_win
@@ -1678,10 +1669,6 @@ class ScheduleShell(QMainWindow):
                 if self._session.armed or self._session.switching:
                     self._disarm_schedule()
             scheduled = bool(self._session.armed or self._session.switching)
-            if state == RunState.STOPPED and not arming:
-                self._party_monitor_auto_opened = False
-            else:
-                self._maybe_open_party_monitor()
             if state == RunState.RUNNING:
                 label, glyph, enabled = self.t.get("pause", "Pause"), "pause", True
             elif state == RunState.PAUSED:

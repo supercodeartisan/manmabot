@@ -288,6 +288,7 @@ class BotController:
         self._party_policy_info: dict = {}
         self._member_policy_info: dict = {}
         self._party_brain_ref = None
+        self._party_leader_ref = None
         self._party_client_id = ""
 
     def _ui(self):
@@ -2681,6 +2682,7 @@ class BotController:
         finally:
             self._clear_party_nav_hooks()
             self._party_brain_ref = None
+            self._party_leader_ref = None
             self._stop_party_socket()
             self._stop_party_client()
             with self._lock:
@@ -2907,6 +2909,7 @@ class BotController:
         self._party_farm_started = False
         self._party_wait_log_at = 0.0
         party_brain: PartyMemberManager | None = None
+        leader_brain = None
         self._member_policy_sig = ""
         self._member_policy_info = {}
         self._invite_accepter = None
@@ -2918,6 +2921,7 @@ class BotController:
         self._party_brain_ref = None
         self._party_beep_sent = False
         self._party_client_id = ""
+        self._party_leader_ref = None
         from app._06_party.comms.orders import (
             member_orders,
             new_leader_session,
@@ -2952,6 +2956,27 @@ class BotController:
                 "WebSocket is reports/orders only — it does not set the leader. "
                 "/초대 is typed by the leader bot after Start, not by this member."
             )
+        elif self._party_server_on():
+            from app._06_party.leader_manager import PartyLeaderManager
+
+            leader_brain = PartyLeaderManager(decision)
+            self._party_leader_ref = leader_brain
+            try:
+                count = leader_brain.arm(
+                    getattr(profile, "party_routine", None) or []
+                )
+                if count:
+                    self.log(
+                        "Party leader armed on party routine "
+                        f"({count} entries) — solo schedule left unused"
+                    )
+                else:
+                    self.log(
+                        "Party leader has no party routine — "
+                        "solo schedule was not armed"
+                    )
+            except Exception as exc:
+                self.log(f"Party leader routine init skipped: {exc}")
         else:
             with self._debug_lock:
                 self._party_monitor = {
@@ -3519,15 +3544,14 @@ class BotController:
                         action=action,
                         note="decide",
                     )
-                else:
-                    action = decision.decide(world)
-                    if self._party_server_on():
-                        try:
-                            self._leader_party_tick(
-                                world, decision.blackboard, last_logged_map_id
-                            )
-                        except Exception as party_tick_exc:
-                            self.log(f"Party leader tick failed: {party_tick_exc}")
+                elif leader_brain is not None:
+                    action = leader_brain.decide(world)
+                    try:
+                        self._leader_party_tick(
+                            world, decision.blackboard, last_logged_map_id
+                        )
+                    except Exception as party_tick_exc:
+                        self.log(f"Party leader tick failed: {party_tick_exc}")
                     if self._party_leader_on():
                         try:
                             sent = self._party_comms.publish_decision(
@@ -3539,6 +3563,8 @@ class BotController:
                                 self.log(f"Party leader decision sent: {sent}")
                         except Exception as party_exc:
                             self.log(f"Party leader decision send failed: {party_exc}")
+                else:
+                    action = decision.decide(world)
                 if self._party_enabled() and party_role in ("member", "leader"):
                     try:
                         self._log_party_until_farm(

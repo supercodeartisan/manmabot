@@ -1,5 +1,37 @@
 # Decision change log
 
+## 2026-11-03 — member follow stays within one tile of the stop band
+
+Intent: While the leader is walking, the member starts at 3 tiles and holds at 2. `follow_tiles - 2` no longer delays the start. A follow click is at most 2 tiles. A fresh party pose uses that same band on screen or off. The 15s/45s sticky tile is not a follow goal.
+Shared: `follow_kind`, `decide_policy`, `plan_field_follow`, `plan_follow_intent`. Assist still runs before follow. Heal, buff, leader line hold, and movement cancel stay as they are. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks stay as they are.
+Affects: party members following a leader. A follow click can no longer hop 5 tiles. Solo travel hop length is unchanged.
+Consent: user (go).
+Result: close-follow test passed. Not run in game.
+
+## 2026-11-03 — party rally is a static point before the farm
+
+Intent: The party meets at one fixed tile, then goes to the farm. A walk-only route uses the leader's current tile. A route with an NPC teleporter or a talking scroll uses the departure tile of the first of those steps. The point is not moved to the teleport landing.
+Shared: `LeaderStartRally.on_plan`, `LeaderStartRally.should_hold`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, and `PartyMemberManager.decide` stay as they are. A member still pathfinds to the announced tile.
+Affects: the leader's start rally. After the wait, the existing route continues to the farm. The 10 minute wait is unchanged.
+Consent: user (update with the rally rule above).
+Result: rally point test passed. Not run in game.
+
+## 2026-11-03 — turret members hunt while the leader is idle
+
+Intent: While turret is on and the leader is not attacking, members hunt inside the yard or loot. When the leader attacks, a member finishes the mob already started, then assists.
+Shared: `PartyMemberManager.decide`, `turret_member_focus`, `pick_solo_farm_target`. The elf leader zone stays leash plus attack range. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, and solo `DecisionManager` stay as they are.
+Affects: turret party members. Moving hunt is unchanged.
+Consent: user (go).
+Result: focus rule test passed. Not run in game.
+
+## 2026-11-02 — party leader decide is its own module
+
+Intent: The party leader was the solo bot plus the solo schedule. The leader tick now goes through `PartyLeaderManager`, and that module installs `party_routine` only. Solo `DecisionManager` and `profile.routine` are unchanged.
+Shared: session Start branches on role. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks stay as they are. `PartyMemberManager.decide` stays as it is.
+Affects: a party leader Start. A solo Start and a member Start keep their current routine.
+Consent: user (update).
+Result: party routine arm test passed. Not run as a live leader Start.
+
 ## 2026-11-02 — party monitor stop/start no longer re-enters a memory DLL
 
 Intent: Stop with the party monitor open, then Start, killed the process. The monitor's next poll cleared the module stop and called `lcapi_run` again while that DLL was still leaving the previous run.

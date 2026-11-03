@@ -148,6 +148,7 @@ class UiStrings:
     saved_patrol: str
     farms_unsupported_dungeon: str
     patrol_not_walkable: str
+    hunt_point_refused: str
     map_missing_short: str
     select_tool: str
     duplicate: str
@@ -499,6 +500,7 @@ _EN = UiStrings(
         "Farming areas are not used in dungeons. Click Edit patrol to place points."
     ),
     patrol_not_walkable="That tile is not walkable.",
+    hunt_point_refused="Can't choose this point.",
     map_missing_short="Map image is missing.",
     select_tool="Select",
     duplicate="Duplicate",
@@ -1014,6 +1016,7 @@ _KO = UiStrings(
         "던전에서는 사냥터 영역을 사용하지 않습니다. 패트롤 편집에서 지점을 배치하세요."
     ),
     patrol_not_walkable="이동할 수 없는 타일입니다.",
+    hunt_point_refused="이 점은 선택할 수 없습니다.",
     map_missing_short="맵 이미지가 없습니다.",
     select_tool="선택",
     duplicate="복제",
@@ -1525,6 +1528,7 @@ _ZH = UiStrings(
     saved_patrol="已保存此地下城的巡逻点。",
     farms_unsupported_dungeon="地下城不使用猎场区域。请打开“编辑巡逻”放置点。",
     patrol_not_walkable="该格子不可行走。",
+    hunt_point_refused="无法选择该点。",
     map_missing_short="缺少地图图像。",
     select_tool="选择",
     duplicate="复制",

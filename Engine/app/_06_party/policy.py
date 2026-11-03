@@ -62,6 +62,8 @@ class PolicyInput:
     # In-place heal / buff already armed this tick (manager stashed the intent).
     need_heal: bool = False
     need_buff: bool = False
+    # Tile is the 15s/45s cache, not a live party or entity pose.
+    leader_pose_stale: bool = False
 
 
 @dataclass(frozen=True)
@@ -113,14 +115,15 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             MemberKind.CLOSE_IN, False, f"{yard}{what}{out} dist={dist}"
         )
 
-    # Lost from entity sweep: always walk to PartySubsystem pose (never idle HOLD).
-    if not inp.leader_in_ui:
+    # A cached tile is a clue, not a live follow goal.
+    if inp.leader_pose_stale:
         return PolicyResult(
-            MemberKind.FOLLOW,
-            True,
-            f"follow_off_ui dist={dist}",
+            MemberKind.WAIT,
+            False,
+            f"leader_pose_stale dist={dist}",
         )
 
+    # On-screen and off-screen fresh poses share the stop/start band below.
     in_leash = dist <= int(cfg.assist_leash_tiles)
 
     # --- Leader turret mode: back into the yard ---

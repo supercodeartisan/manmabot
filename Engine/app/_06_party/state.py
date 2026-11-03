@@ -30,6 +30,9 @@ class MemberRuntime:
     leader_target_guid: str = ""
     leader_target_ent: str = ""
     assist_track_id: Optional[int] = None
+    # Mob this member started while the turret leader was idle. Kept until it
+    # dies even if the leader begins an attack.
+    own_hunt_id: Optional[int] = None
     assist_src: str = ""
     assist_name: str = ""
     tick: int = 0

@@ -200,8 +200,11 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     party_master = bool(party_master)
     set_value("party_enabled", party_master)
     # Member follow only when the master switch is on and this PC is a member.
-    # Leaders host the socket and farm solo — they never run the member brain.
+    # A leader runs PartyLeaderManager on party_routine, not this member brain.
     party_on = bool(party_master and party_role != "leader")
+    from settings.party_routine import normalize_party_routine
+
+    set_value("party_routine", normalize_party_routine(party.get("routine")))
     set_value("party_member_enabled", party_on)
     set_value("party_leader_name", "")
     follow_raw = party.get("follow_tiles")

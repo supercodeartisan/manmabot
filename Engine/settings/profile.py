@@ -168,6 +168,8 @@ class Profile:
     selected_account_id: str | None = None
     # Schedule UI move.routine[] (battle/break). Empty → single active_map fallback.
     routine: list = field(default_factory=list)
+    # Party map editor rows. The leader brain reads this. Solo ``routine`` does not.
+    party_routine: list = field(default_factory=list)
     # Party member (``app._06_party``): mirror a leader instead of solo farm.
     # Master switch for the Party tab (member follow or leader socket).
     party_enabled: bool = False

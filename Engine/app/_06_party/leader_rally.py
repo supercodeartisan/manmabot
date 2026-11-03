@@ -1,10 +1,13 @@
-"""Leader start rally: where the party gathers on the first trip to the hunt.
+"""Leader start rally: one static point before the party goes to the farm.
 
-- No teleport on the way (already on the hunt map, or a walk-only plan):
-  send the leader's tile and wait there.
-- Teleport on the way (NPC teleporter or talking scroll): send the planned
-  landing of the last teleport, travel, then send the real landing tile and
-  wait there.
+The point is chosen once from the hunt route and is not moved after that.
+
+- Walk is the route (already on the hunt map, or a walk-only plan): the
+  leader's current tile. The party waits there, then walks to the farm.
+- The route uses an NPC teleporter or a talking scroll: the departure tile
+  of the first such step (the NPC, or the tile the scroll is used on). The
+  leader walks any steps before that, everyone meets there, then the route
+  continues to the farm.
 
 Waits for every roster member, then continues. With ``deadline`` (the leader
 start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
@@ -17,8 +20,6 @@ import time
 from typing import Any, Callable, Optional
 
 from app._06_party.comms.orders import (
-    STAGE_LANDED,
-    STAGE_PLANNED,
     STAGE_START,
     Rally,
     rally_message,
@@ -29,13 +30,35 @@ WAIT_LOG_EVERY_S = 5.0
 WAIT_TIMEOUT_S = 10 * 60
 
 
-def last_teleport_index(plan: Any) -> Optional[int]:
-    """Index of the last NPC-teleporter / talking-scroll step, or None."""
-    steps = list(getattr(plan, "steps", None) or [])
-    for i in range(len(steps) - 1, -1, -1):
-        if str(getattr(steps[i], "op", "") or "") in TELEPORT_OPS:
+def _steps(plan: Any) -> list:
+    return list(getattr(plan, "steps", None) or [])
+
+
+def _is_teleport(step: Any) -> bool:
+    return str(getattr(step, "op", "") or "") in TELEPORT_OPS
+
+
+def first_teleport_index(plan: Any) -> Optional[int]:
+    """Index of the first NPC-teleporter / talking-scroll step, or None."""
+    for i, step in enumerate(_steps(plan)):
+        if _is_teleport(step):
             return i
     return None
+
+
+def last_teleport_index(plan: Any) -> Optional[int]:
+    """Index of the last NPC-teleporter / talking-scroll step, or None."""
+    steps = _steps(plan)
+    for i in range(len(steps) - 1, -1, -1):
+        if _is_teleport(steps[i]):
+            return i
+    return None
+
+
+def departure_point(step: Any) -> Optional[tuple[int, int, int]]:
+    """Tile the party stands on before this teleport step runs."""
+    detail = getattr(step, "detail", None) or {}
+    return _point(detail.get("from"))
 
 
 def _point(raw: Any) -> Optional[tuple[int, int, int]]:
@@ -141,26 +164,22 @@ class LeaderStartRally:
         """World-nav hook: a route to the hunt exists."""
         if self.state not in ("await_plan", "hold_at"):
             return
-        idx = last_teleport_index(plan)
+        idx = first_teleport_index(plan)
         if idx is None:
             point = plan_start(plan)
             self.hold_step = 0
-            stage = STAGE_START
         else:
-            point = planned_landing(plan.steps[idx])
-            self.hold_step = idx + 1
-            stage = STAGE_PLANNED
+            point = departure_point(plan.steps[idx]) or plan_start(plan)
+            self.hold_step = idx
         if point is None:
             self.skip("route has no rally tile")
             return
-        self._arm(stage, point)
+        self._arm(STAGE_START, point)
         self.state = "hold_at"
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
         """World-nav hook before each step. True keeps the leader on the spot."""
         if self.state == "hold_at" and self.hold_step is not None and step_i >= self.hold_step:
-            if self._rally.stage == STAGE_PLANNED and pose is not None:
-                self._arm(STAGE_LANDED, (int(pose.map_id), int(pose.x), int(pose.y)))
             self._enter_waiting()
         return self.state == "waiting"
 
@@ -217,6 +236,8 @@ __all__ = [
     "LeaderStartRally",
     "TELEPORT_OPS",
     "WAIT_TIMEOUT_S",
+    "departure_point",
+    "first_teleport_index",
     "last_teleport_index",
     "plan_start",
     "planned_landing",

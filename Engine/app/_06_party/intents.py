@@ -5,7 +5,7 @@ import random
 from typing import Any, Iterable, Optional
 
 from .config import PartyMemberConfig
-from .follow import choose_approach_tile, choose_settle_stand
+from .follow import FOLLOW_CLICK_TILES, choose_approach_tile, choose_settle_stand
 from .policy import MemberKind
 
 
@@ -64,6 +64,7 @@ def _plan_approach_hop(
     previous_goal: Optional[tuple[int, int]],
     rng: random.Random,
     reason_prefix: str,
+    max_hop: Optional[int] = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str]:
     """Shared TRAVELING hop toward a stand tile near ``target_tile``."""
     from app._04_decision.nav_config import get_terrain_map
@@ -93,6 +94,7 @@ def _plan_approach_hop(
         goal,
         previous_goal=previous_goal,
         reason_prefix=reason_prefix,
+        max_hop=max_hop,
         retry=lambda bad: choose_approach_tile(
             terrain.is_walkable,
             target_tile,
@@ -114,6 +116,7 @@ def _plan_hop_to_goal(
     previous_goal: Optional[tuple[int, int]],
     reason_prefix: str,
     retry: Optional[Any] = None,
+    max_hop: Optional[int] = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str]:
     """TRAVELING click toward ``goal``; ``retry(bad_goal)`` picks another on no path."""
     from app._04_decision.pathfinding import plan_travel_click
@@ -131,7 +134,9 @@ def _plan_hop_to_goal(
                 return idle("follow_in_transit"), goal, "follow_in_transit"
         except Exception:
             pass
-    dest, _path, waypoint = plan_travel_click(terrain, origin, goal)
+    dest, _path, waypoint = plan_travel_click(
+        terrain, origin, goal, max_hop=max_hop
+    )
     if dest is None:
         if retry is None:
             return idle("no_path"), None, "no_path"
@@ -140,7 +145,9 @@ def _plan_hop_to_goal(
             return idle("no_path"), None, "no_path"
         if goal == (ox, oy):
             return idle("at_approach"), goal, "at_approach"
-        dest, _path, waypoint = plan_travel_click(terrain, origin, goal)
+        dest, _path, waypoint = plan_travel_click(
+            terrain, origin, goal, max_hop=max_hop
+        )
         if dest is None:
             return idle("no_path"), None, "no_path"
     hop = waypoint if waypoint is not None else goal
@@ -178,6 +185,7 @@ def plan_follow_intent(
             (int(settle_stand[0]), int(settle_stand[1])),
             previous_goal=previous_goal,
             reason_prefix=stand_reason,
+            max_hop=FOLLOW_CLICK_TILES,
         )
     return _plan_approach_hop(
         game_state,
@@ -187,6 +195,7 @@ def plan_follow_intent(
         previous_goal=previous_goal,
         rng=rng,
         reason_prefix="follow",
+        max_hop=FOLLOW_CLICK_TILES,
     )
 
 
@@ -242,7 +251,10 @@ def plan_field_follow(
         except Exception:
             pass
     hop = select_click_waypoint(
-        path, origin, terrain=field.terrain, max_hop=_travel_max_hop()
+        path,
+        origin,
+        terrain=field.terrain,
+        max_hop=min(_travel_max_hop(), FOLLOW_CLICK_TILES),
     )
     if hop is None:
         return None

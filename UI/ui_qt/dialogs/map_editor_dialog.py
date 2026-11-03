@@ -456,13 +456,20 @@ class MapEditorWidget(QWidget):
                     clearance_tiles=pack.clearance_tiles,
                     wall_penalty=pack.wall_penalty,
                 )
+                from app._04_decision.nav_config import _seal_silver_knight_inn
+
+                _seal_silver_knight_inn(terrain, str(getattr(pack, "id", "") or ""))
                 return terrain
             except Exception:
                 pass
-        return TerrainMap.from_png(
+        terrain = TerrainMap.from_png(
             pack.terrain_path,
             pixel_scale=max(1, int(pack.pixel_scale)),
         )
+        from app._04_decision.nav_config import _seal_silver_knight_inn
+
+        _seal_silver_knight_inn(terrain, str(getattr(pack, "id", "") or ""))
+        return terrain
 
     def load_map(self, map_id: str, *, dungeon: bool | None = None) -> None:
         self.map_id = str(map_id or "")
@@ -1295,6 +1302,9 @@ class MapEditorWidget(QWidget):
             return
         kind, idx = self.selected
         if kind == "point" and self._drag == "move" and 0 <= idx < len(self.farms):
+            if self._refuse_hunt_point(tx, ty):
+                self.canvas.update()
+                return
             self.farms[idx]["x"] = tx
             self.farms[idx]["y"] = ty
             self._mark_dirty()
@@ -1495,12 +1505,23 @@ class MapEditorWidget(QWidget):
                 best_i = i
         return best_i
 
+    def _refuse_hunt_point(self, tx: int, ty: int) -> bool:
+        """Party hunt dot: the nav grid must be able to step onto this tile."""
+        from app._03_world.space.hunt_point import hunt_point_refused
+
+        if not hunt_point_refused(self._terrain, tx, ty):
+            return False
+        self.status.setText(self.s.hunt_point_refused)
+        return True
+
     def _place_point(self, tx: int, ty: int) -> None:
         hit = self._hit_point(tx, ty)
         if hit is not None:
             self._select("point", hit)
             self._drag = "move"
             self._drag_origin = dict(self.farms[hit])
+            return
+        if self._refuse_hunt_point(tx, ty):
             return
         taken = {
             str(item.get("name"))
