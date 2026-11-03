@@ -3,11 +3,12 @@
 The point is chosen once from the hunt route and is not moved after that.
 
 - Walk is the route (already on the hunt map, or a walk-only plan): the
-  leader's current tile. The party waits there, then walks to the farm.
+  leader's current tile. The leader waits there, then walks to the farm.
 - The route uses an NPC teleporter or a talking scroll: the departure tile
   of the first such step (the NPC, or the tile the scroll is used on). The
-  leader walks any steps before that, everyone meets there, then the route
-  continues to the farm.
+  leader walks any steps before that and waits there. Members are not sent
+  the tile. Once party memory says they are in the party, they follow the
+  leader's live tile. Then the route continues to the farm.
 
 Waits for every roster member, then continues. With ``deadline`` (the leader
 start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
@@ -216,10 +217,9 @@ class LeaderStartRally:
         if now - self._log_at >= WAIT_LOG_EVERY_S:
             self._log_at = now
             missing = ", ".join(self._rally.missing(self.expected)) or "—"
-            armed = "" if self._rally.armed else " (not sent: party server down)"
             self._log(
                 f"Party start rally wait {self._rally.stage} missing={missing} "
-                f"ws_clients={int(connected)}{armed}"
+                f"ws_clients={int(connected)}"
             )
 
     def _arm(self, stage: str, point: tuple[int, int, int]) -> None:

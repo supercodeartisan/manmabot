@@ -984,81 +984,14 @@ class PartyMemberManager:
         self._record_decision(intent)
         return intent
 
-    def _rally_yields_to_combat(self) -> bool:
-        """Start rally must not block assist when the leader is already fighting.
-
-        Same map + known leader tile + farming (or a live target). Far members
-        then follow the fighter; in-leash members assist. Other-map join and
-        idle rally waits still walk to the pin. Arrival is not marked here, so
-        after the fight the member can finish the last tiles to the rally.
-        """
-        if not bool(self.runtime.leader_same_map):
-            return False
-        if self.runtime.leader_dist is None:
-            return False
-        if bool(self.runtime.leader_farming):
-            return True
-        return bool(str(self.runtime.leader_target_name or "").strip())
-
     def _maybe_hunt_gather(self, game_state: Any, *, dead: bool) -> Any:
-        """Walk to the leader's rally point unless combat is already happening.
+        """Rally pins are not member goals.
 
-        Recovery is not handled here.
+        Once party memory says this character is in the party, follow uses the
+        leader row's live tile. A rally message does not change that.
         """
-        if dead or self.runtime.paused:
-            return None
-        try:
-            from app._06_party.comms.orders import member_orders
-        except Exception:
-            return None
-        order = member_orders.gather
-        if order is None:
-            return None
-        rally_reason = f"party_rally_{order.get('stage') or 'point'}"
-        if member_orders.arrived:
-            return None
-        try:
-            from app._04_decision.world_nav.session import live_pose_from_state
-        except Exception:
-            return None
-        pose = live_pose_from_state(game_state)
-        if pose is not None and member_orders.near(pose.map_id, pose.x, pose.y):
-            member_orders.mark_arrived()
-            self._join_nav.clear()
-            self.runtime.last_kind = "hold"
-            self.runtime.last_reason = f"{rally_reason}_arrived"
-            return None
-        if self._rally_yields_to_combat():
-            prev = self.runtime.scratch.get("_rally_yield")
-            note = (
-                f"{rally_reason}_yield_combat "
-                f"dist={self.runtime.leader_dist} "
-                f"target={self.runtime.leader_target_name or '—'}"
-            )
-            if prev != note:
-                self.runtime.scratch["_rally_yield"] = note
-                _log.info("%s", note)
-            return None
-        self.runtime.scratch.pop("_rally_yield", None)
-        try:
-            map_id = int(order.get("map_id"))
-            dest_x = int(order.get("x"))
-            dest_y = int(order.get("y"))
-        except (TypeError, ValueError):
-            return None
-        intent = self._join_nav.tick(
-            game_state,
-            self._nav_blackboard,
-            dest_map=map_id,
-            dest_x=dest_x,
-            dest_y=dest_y,
-            reason=rally_reason,
-        )
-        self.runtime.last_kind = "join_map"
-        self.runtime.last_reason = str(getattr(intent, "reason", "") or rally_reason)
-        self.runtime.chasing = False
-        self._record_decision(intent)
-        return intent
+        del game_state, dead
+        return None
 
     @staticmethod
     def _is_dead(player: Any) -> bool:

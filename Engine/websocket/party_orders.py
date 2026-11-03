@@ -1,12 +1,9 @@
 """Party orders the leader sends the moment it decides, and the rally that follows.
 
-Rally (``rally``): one gather point with a ``stage``:
-
-- ``start``   no teleport on the way — the leader's tile at party start
-- ``planned`` the planned landing of the last teleport, sent before leaving
-- ``landed``  the real landing tile, sent once the leader is there
-
-The leader waits on the point until every roster member has arrived.
+Rally (``rally``): the leader's own wait point. It is not sent to members.
+Members follow the leader's live party-memory tile once ``in_party`` is true.
+The leader waits on the point until party memory shows every roster member
+has arrived.
 
 Recovery (``recovery``): mother-tree decision. Sent immediately. Members do not
 act on it yet.
@@ -374,12 +371,6 @@ def self_name_from_party(snapshot: Any, map_id: Optional[int], x: Any, y: Any) -
     return best if best_d <= ARRIVE_TILES else ""
 
 
-def _publish(body: dict[str, Any]) -> int:
-    from .leader_decisions import publish_body
-
-    return int(publish_body(body) or 0)
-
-
 def _order_key(body: Optional[dict[str, Any]]) -> Optional[tuple]:
     if body is None:
         return None
@@ -416,32 +407,20 @@ class Rally:
         return str(self.body.get("stage") or "") if self.body is not None else ""
 
     def arm(self, body: dict[str, Any]) -> bool:
-        """Remember and send. False when this point is already announced or no server."""
+        """Remember the wait point on this leader. Members are not told the tile."""
         key = _order_key(body)
         if key == self.key:
-            return False
-        from .leader_decisions import _server_listening
-
-        if not _server_listening():
             return False
         self.key = key
         self.body = dict(body)
         self.arrived.clear()
         self._told_clients = -1
-        sent = _publish(self.body)
-        self._told_clients = sent
         return True
 
     def repeat_if_members_joined(self, connected: int) -> bool:
-        """Send the same order again when a new client connects after the first send."""
-        if not self.armed or self.body is None:
-            return False
-        n = max(0, int(connected))
-        if n <= self._told_clients:
-            return False
-        sent = _publish(self.body)
-        self._told_clients = max(self._told_clients, sent, n)
-        return True
+        """Members follow the live leader tile, so the wait point is not resent."""
+        del connected
+        return False
 
     def note_report(
         self,
@@ -590,13 +569,13 @@ class MemberOrders:
                 self.policy = dict(body)
                 self._policy_dirty = True
                 continue
-            if kind != RALLY:
-                continue
-            if _order_key(body) != _order_key(self.gather):
-                self.gather = dict(body)
-                self.arrived = False
-                self._reported = False
-                self._report_pending = False
+            if kind == RALLY:
+                # A rally pin is not a walk goal. Follow uses party memory.
+                if self.gather is not None:
+                    self.gather = None
+                    self.arrived = False
+                    self._reported = False
+                    self._report_pending = False
 
     def near(self, map_id: Optional[int], x: Any, y: Any) -> bool:
         order = self.gather

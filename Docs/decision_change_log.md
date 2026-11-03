@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-03 — members follow the leader tile, not a rally pin
+
+Intent: The leader still walks to the static meet point and waits. The rally tile is no longer sent to members. A member follows the leader's live party-memory tile once `in_party` is true, whether or not a rally frame arrives.
+Shared: `Rally.arm`, `MemberOrders.ingest`, `PartyMemberManager._maybe_hunt_gather`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, assist order, and the 2/3 follow band stay as they are.
+Affects: party start. The leader still finishes the wait from party-memory positions within 7 tiles, or after the existing timeout.
+Consent: user (remove the rally destination message; members follow from memory).
+Result: rally no-send test passed. Not run in game.
+
 ## 2026-11-03 — member follow stays within one tile of the stop band
 
 Intent: While the leader is walking, the member starts at 3 tiles and holds at 2. `follow_tiles - 2` no longer delays the start. A follow click is at most 2 tiles. A fresh party pose uses that same band on screen or off. The 15s/45s sticky tile is not a follow goal.
