@@ -9,6 +9,7 @@
 #include "../entities/signeddrv_client.h"
 #include "../pgcache.h"
 #include "nametable.h"
+#include "../item_name_kr.h"
 
 static NtCtx g_def = {
     0,0,0,
@@ -121,6 +122,15 @@ int ntResolve(const NtCtx* c, uint32_t mid, char* out, int outSz, char* twOut, i
     if(!mid||!c->pid||!c->base) return 0;
     hit = ntCacheGet(c->base, mid, out, outSz, twOut, twSz);
     if (hit >= 0) return hit;
+    {
+        const char* pref = itemNameKr(mid);
+        if (pref && pref[0] && out && outSz > 0) {
+            strncpy(out, pref, (size_t)outSz - 1);
+            out[outSz - 1] = 0;
+            ntCachePut(mid, out, 0);
+            return 1;
+        }
+    }
     uint64_t anchor=q64_(c->pid,c->base+c->anchorRva);
     if(!isHeap_(anchor)) return 0;
     uint64_t rec=q64_(c->pid,anchor+(fnv1aKey(mid,c->fnvOffset,c->fnvPrime)&c->bucketMask)*c->bucketStride);

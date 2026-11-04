@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "../item_name_kr.h"
 #include <time.h>
 #include "signeddrv_client.h"
 #include "../pgcache.h"
@@ -88,7 +89,7 @@ static uint64_t g_heapLo = 0, g_heapHi = 0;
 static uint64_t g_validPtrLo = VALID_PTR_LO, g_validPtrHi = VALID_PTR_HI;
 
 /* InventorySubsystem chain (T7). TXT overlay wins after a service patch. */
-static uint32_t invMgr = 0x16F8A00u, invHolder = 0xD0u;
+static uint32_t invMgr = 0x16EB6F0u, invHolder = 0xD0u;
 static uint32_t invSubBeg = 0x180u, invSubEnd = 0x188u;
 static uint32_t invSubIdx = 26, invSubVft = 0x11C6878u;
 static uint32_t invVecBeg = 0x3D8u, invVecEnd = 0x3E0u;
@@ -1095,6 +1096,16 @@ static int msgNameStatic(uint32_t mid, char* out, int outSz, char* twOut, int tw
     if (!msgAnchorRva || !g_base || mid == 0) return 0;
     hit = nameCacheGet(mid, out, outSz, twOut, twSz);
     if (hit >= 0) return hit;
+    {
+        const char* pref = itemNameKr(mid);
+        if (pref && pref[0] && out && outSz > 0) {
+            strncpy(out, pref, (size_t)outSz - 1);
+            out[outSz - 1] = 0;
+            if (twOut && twSz > 0) twOut[0] = 0;
+            nameCachePut(mid, out, twOut);
+            return 1;
+        }
+    }
     anchor = q64(g_base + msgAnchorRva);
     if (!isStructHeap(anchor)) return 0;
     rec = q64(anchor + (fnv1aKey(mid) & msgBucketMask) * (uint64_t)msgBucketStride);
@@ -1455,6 +1466,7 @@ static int invEnsure(const char* offsetsPath) {
     }
     if (!g_offsetsLoaded) {
         loadOffsets(g_offsetsPathBuf);
+        itemNameKrLoadNear(g_offsetsPathBuf);
         g_offsetsLoaded = 1;
     }
     DWORD pid = findPid(L"LC.exe");

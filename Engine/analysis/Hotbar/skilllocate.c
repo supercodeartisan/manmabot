@@ -86,7 +86,7 @@ static int main_mgr(uint32_t* outOff, uint64_t* outMgr, uint64_t* outHolder){
 int main(void){
     SetConsoleOutputCP(CP_UTF8);
     loadReg();
-    uint32_t MGR=getKV("MGR",0x16F8A00),HOLDER=getKV("HOLDER_OFF",0xD0),SB=getKV("SUBLIST_BEG",0x180),SE=getKV("SUBLIST_END",0x188);
+    uint32_t MGR=getKV("MGR",0x16EB6F0),HOLDER=getKV("HOLDER_OFF",0xD0),SB=getKV("SUBLIST_BEG",0x180),SE=getKV("SUBLIST_END",0x188);
     HANDLE snap=CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0); PROCESSENTRY32W pe; pe.dwSize=sizeof(pe); DWORD pid=0;
     if(Process32FirstW(snap,&pe)) do{ if(_wcsicmp(pe.szExeFile,L"LC.exe")==0){pid=pe.th32ProcessID;break;} }while(Process32NextW(snap,&pe));
     CloseHandle(snap); if(!pid){ printf("no LC.exe\n"); return 1; }

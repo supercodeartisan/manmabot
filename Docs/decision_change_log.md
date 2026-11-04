@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-04 — item $id names prefer the Korean table
+
+Intent: hotbar and bag item names use the Korean column of `item_name_kr.csv` for a `$mid`, the same order as 11_04 `hotbar_930`. `desc*` / `string*` / empty cells fall through to the memory string. Spell text on the slot is unchanged.
+Shared: `itemNameKr` in the hotbar nametable and `inventory_listen` `msgNameStatic`. HP potion matching, hotbar roles, and bag name checks read those names. Movement, combat selection, retreat, and login are unchanged.
+Affects: hotbar item labels and inventory `name`. A Chinese account still receives the Korean item column. Shop and storage readers still use the memory string.
+Consent: user (apply the 11_04 Korean item-name lookup to this project).
+Result: table copied to `Engine/analysis/data/item_name_kr.csv`. `hotbar_listen.dll` and `inventory_listen.dll` rebuilt. Lookup checked for 아데나, 체력 회복제, 가죽 재킷, 해독제, 말하는 두루마리. Not run in game.
+
+## 2026-11-04 — memory offsets synced to 11_04 registry v36
+
+Intent: point the existing memory readers at the 2026-11-04 client anchors. Read order, struct offsets, and decision code stay as they are.
+Shared: `LC930_REGISTRY.txt` (129 keys), `char_offsets.txt`, `entity_offsets.txt`, `offsets.json` (`MapSubsystemVftRva`, `PosXAbs`/`PosYAbs`), inventory and hotbar tables, `body_pose.py` action vfts, `shop_listen.c` anchors. `STAT_*` fields are +0x20. `K_MUL`/`K_XOR`, `MAP_ID_OFF` 0x718, `AC_ACTION_OFF` 0xC8, and `ST_BLOCK` are unchanged. `STRINGS_CSV` path and `UI_BFS_*` stay. `EntCtrl*` in `offsets.json` was not remapped.
+Affects: position, map id, HP/stats, entities, inventory, hotbar, buff, shop, body pose. Movement, combat, retreat, loot, and login logic are unchanged. Chat line layout and the EXP mirror global are unchanged. Party registry copies were not on the live path and were left as v35.
+Consent: user (apply the constant-only update; do not change read logic).
+Result: constants written. `shop_listen.dll` must be rebuilt before shop reads the new anchors. Other readers load the tables at startup. Not run in game.
+
 ## 2026-11-01 — dungeon hop matches the 2026-10-19 click
 
 Intent: a dungeon hop within one tile drops that click and plans the next one on the same tick. Two tiles out, while the body is walking, the click moves farther only when the line stays straight. The route-cell chain is not used.

@@ -47,14 +47,14 @@ static char g_outPath[MAX_PATH] = "";
 static int g_rotateMs = 60000; /* clear output_file history this often */
 static int g_range = 0; /* 0 = unlimited cellmap window (modify1) */
 /* Defaults match entity_offsets.txt (current service). */
-static uint32_t g_offPlayerX = 0x16F88B0u;
-static uint32_t g_offPlayerY = 0x16F88B4u;
+static uint32_t g_offPlayerX = 0x16EB5A0u;
+static uint32_t g_offPlayerY = 0x16EB5A4u;
 static uint32_t g_offPlayerHp = 0x16EA0FCu;
 static uint32_t g_offPlayerMaxHp = 0x16EA100u;
 static uint32_t g_offPlayerMp = 0x16EA104u;
 static uint32_t g_offPlayerMaxMp = 0x16EA108u;
 static uint32_t g_offPlayerLv = 0x16EA10Cu;
-static uint32_t g_offEntMgr = 0x16F8A00u;
+static uint32_t g_offEntMgr = 0x16EB6F0u;
 static uint32_t g_gridVft = 0x117EAD8u;
 static uint32_t g_vftPresA = 0x117DD28u;
 static uint32_t g_vftPresB = 0x1181738u;
@@ -88,7 +88,7 @@ static uint32_t g_deadByte = 0x49u, g_deadVal = 1u;
 static uint32_t g_baitOff = 0x40u, g_baitVal = 0x78u;
 static uint32_t g_deathVft = 0x1180AE8u, g_deadBodyVft = 0x11808A8u;
 /* AttackAction inside the AC block. owner/tgt sit past the 0x140 fingerprint. */
-static uint32_t g_attackActVft = 0x11F4410u;
+static uint32_t g_attackActVft = 0x11E0508u;
 static uint32_t g_offAtkOwner = 0x80u, g_offAtkTgt = 0x88u;
 static uint64_t g_camGlob = 0x180A150ull;
 static uint32_t g_entVft[24];

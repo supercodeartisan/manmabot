@@ -35,7 +35,7 @@ static int g_attached;
 
 /* Defaults aligned with print_state / entity_offsets 9.30 */
 static char g_procName[64] = "LC.exe";
-static uint32_t g_offEntMgr = 0x16F8A00u;
+static uint32_t g_offEntMgr = 0x16EB6F0u;
 static uint32_t g_gridVft = 0x117EAD8u;
 static uint32_t g_offHolder = 0xD0u;
 static uint32_t g_offSubBeg = 0x180u, g_offSubEnd = 0x188u;

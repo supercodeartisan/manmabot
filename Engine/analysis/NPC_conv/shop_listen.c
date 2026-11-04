@@ -77,7 +77,7 @@ static void readSSO(uint64_t a, char* out, int cap) {
 }
 static int resolve(uint32_t mid, char* out, int cap) {
     out[0] = 0;
-    uint64_t anchor = q64(g_base + 0x16F8A28);
+    uint64_t anchor = q64(g_base + 0x16EB718);
     if (!anchor) return 0;
     char key[32];
     snprintf(key, sizeof(key), "1_%u", mid);
@@ -123,7 +123,7 @@ static uint64_t findSubByVft(uint32_t want) {
         if (inMod(v) && (uint32_t)(v - g_base) == want) return g_shopSub[i];
         g_shopSub[i] = 0;
     }
-    mgr = q64(g_base + 0x16F8A00);
+    mgr = q64(g_base + 0x16EB6F0);
     if (!isHeap(mgr)) return 0;
     holder = q64(mgr + 0xD0);
     if (!isHeap(holder)) return 0;
@@ -232,8 +232,8 @@ static void shopDetach(void) {
 static int writeShopJson(FILE* f) {
     uint64_t shop;
     pg_reset();
-    shop = findSubByVft(0x123E848u); /* VFT_SHOP */
-    uint64_t inv = findSubByVft(0x123B1E0u);  /* VFT_INVENTORY */
+    shop = findSubByVft(0x122A7B0u); /* VFT_SHOP */
+    uint64_t inv = findSubByVft(0x1227468u);  /* VFT_INVENTORY */
     if (!isHeap(shop)) {
         fprintf(f, "{\"cmd\":\"shop\",\"error\":\"no_shop\",\"pid\":%lu,\"base\":\"0x%llX\"}",
                 (unsigned long)g_pid, (unsigned long long)g_base);
@@ -265,7 +265,7 @@ static int writeShopJson(FILE* f) {
         uint32_t order, itemId, tmpl, price, mid;
         uint64_t keyPtr;
         char nm[256] = "", esc[512];
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1253008u) break;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x123FD78u) break;
         order = d32(b + 0x38);
         itemId = d32(b + 0x3C);
         tmpl = d32(b + 0x40);
@@ -285,13 +285,13 @@ static int writeShopJson(FILE* f) {
     int sold = 0;
     for (uint64_t k = 0; k < sn; k++) {
         uint64_t b = sb + k * 0x20;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1253070u) break;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x123FDE0u) break;
         uint32_t id = d32(b + 0x18), unit = d32(b + 0x1C);
         char fmt[64] = "", nm[256] = "", esc[512];
         uint32_t tmpl = 0, cnt = 0, mid = 0;
         for (int j = 0; j < incnt; j++) {
             uint64_t it = q64(ib + j * 8);
-            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x123AD68u &&
+            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x1226E20u &&
                 d32(it + 0x18) == id) {
                 readSSO(it + 0x68, fmt, sizeof(fmt));
                 tmpl = d32(it + 0x20);
@@ -353,7 +353,7 @@ static void dumpBuy(uint64_t shop) {
     printf("[BUY] n=%llu\n", (unsigned long long)n);
     for (uint64_t k = 0; k < n; k++) {
         uint64_t b = vb + k * 0x90;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1253008u) break;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x123FD78u) break;
         uint32_t order = d32(b + 0x38), itemId = d32(b + 0x3C), tmpl = d32(b + 0x40),
                  price = d32(b + 0x44);
         uint32_t mid = midFromKey(q64(b + 0x30));
@@ -376,13 +376,13 @@ static void dumpSell(uint64_t shop, uint64_t ib, int incnt) {
     order_line[0] = 0;
     for (uint64_t k = 0; k < n; k++) {
         uint64_t b = sb + k * 0x20;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1253070u) break;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x123FDE0u) break;
         uint32_t id = d32(b + 0x18), unit = d32(b + 0x1C);
         char fmt[64] = "", nm[256] = "";
         uint32_t tmpl = 0, cnt = 0, mid = 0;
         for (int j = 0; j < incnt; j++) {
             uint64_t it = q64(ib + j * 8);
-            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x123AD68u &&
+            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x1226E20u &&
                 d32(it + 0x18) == id) {
                 readSSO(it + 0x68, fmt, sizeof(fmt));
                 tmpl = d32(it + 0x20);
@@ -416,7 +416,7 @@ int main(int argc, char** argv) {
            (unsigned long long)g_base);
     DWORD t0 = GetTickCount();
     for (;;) {
-        uint64_t shop = findSubByVft(0x123E848u), inv = findSubByVft(0x123B1E0u);
+        uint64_t shop = findSubByVft(0x122A7B0u), inv = findSubByVft(0x1227468u);
         if (!isHeap(shop)) { Sleep(200); continue; }
         int state = (int)d32(shop + 0x28);
         uint64_t vb = q64(shop + 0x40), ve = q64(shop + 0x48), sb = q64(shop + 0x58),

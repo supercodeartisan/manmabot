@@ -1,6 +1,6 @@
 """Live body action at ActionComponent+0xC8, and the command at +0x58.
 
-Standing is BreathAction (0x11F4650, bodyact VFT_BREATHACT). A failed read is None, not standing.
+Standing is BreathAction (0x11E0550, bodyact VFT_BREATHACT). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
 CharacterData status used when that decode succeeds. Level uses that same
 status (LEVEL), then the HUD ST_LEVEL. Exp percent is the HudCharacterInfo
@@ -16,26 +16,26 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-BREATH_VFT = 0x11F4650
-MOVE_VFTS = frozenset({0x11F4780, 0x11F4738})  # MovingAction, MovingBackAction
+BREATH_VFT = 0x11E0550
+MOVE_VFTS = frozenset({0x11E0680, 0x11E0638})  # MovingAction, MovingBackAction
 BODY = {
-    0x11F4650: "stand",
-    0x11F4780: "walk",
-    0x11F4738: "walkback",
-    0x11F4410: "attack",
-    0x11F46E0: "actionbase",
-    0x11F4530: "turn",
-    0x11F4338: "spell",
-    0x11F4380: "death",
-    0x11F44E8: "death",
-    0x11F43C8: "damaged",
-    0x11F4698: "damaged",
-    0x11F44A0: "effect",
+    0x11E0550: "stand",
+    0x11E0680: "walk",
+    0x11E0638: "walkback",
+    0x11E0508: "attack",
+    0x11E05E0: "actionbase",
+    0x11E04C0: "turn",
+    0x11E02C8: "spell",
+    0x11E0310: "death",
+    0x11E03E8: "death",
+    0x11E0358: "damaged",
+    0x11E0598: "damaged",
+    0x11E03A0: "effect",
 }
 CMD = {
-    0x11F4A18: "move",
-    0x11F4B98: "attack",
-    0x11F4A50: "interact",
+    0x11E0910: "move",
+    0x11E0A90: "attack",
+    0x11E0948: "interact",
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -176,9 +176,9 @@ def _module_base(pid: int) -> tuple[int, int]:
 # The walk/stand class numbers above are not enough: this chain is how the
 # body slot is found. A stale manager or MyPlayer id makes every read fail.
 _FIND = {
-    "MGR": 0x16F8A00,
-    "ACTOR_VFT": 0x11F24A8,
-    "MY_PLAYER": 0x11F5488,
+    "MGR": 0x16EB6F0,
+    "ACTOR_VFT": 0x11DE3E8,
+    "MY_PLAYER": 0x11E1388,
 }
 _find_ready = False
 
@@ -458,36 +458,36 @@ _HUD = {
     "ST_MAXHP": 0x20,
     "ST_MP": 0x24,
     "ST_MAXMP": 0x28,
-    "MGR": 0x16F8A00,
-    "CD_VFT": 0x11F90D8,
+    "MGR": 0x16EB6F0,
+    "CD_VFT": 0x11E5088,
     "CD_OFF": 0x498,
-    "VFT_STATUS": 0x11F90B8,
+    "VFT_STATUS": 0x11E50F8,
     "K_XOR": 0x2F8B1064,
     "K_MUL": 0x7F4A7C15,
     "HOLDER_OFF": 0xD0,
     "SUBLIST_BEG": 0x180,
     "SUBLIST_END": 0x188,
     "ST_LEVEL": 0x2C,
-    "LEVEL": 0x248,
-    "HP": 0x2B8,
-    "MP": 0x2D0,
-    "MAXMP": 0x2DC,
+    "LEVEL": 0x268,
+    "HP": 0x2D8,
+    "MP": 0x2F0,
+    "MAXMP": 0x2FC,
 }
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
 _EXP_RVA = 0x1644BF0
 _exp_ready = False
-# HudCharacterInfo LoadingBar. Registry overrides; these match LC930 v35.
+# HudCharacterInfo LoadingBar. Registry overrides; these match LC930 v36.
 _EXP = {
     "EXP_CD_0": 0x1B0,
     "EXP_CD_1": 0x28,
     "EXP_CD_2": 0x110,
     "EXP_HUD_BAR": 0xE8,
     "EXP_BAR_PCT": 0x704,
-    "VFT_LOADINGBAR": 0x12BE970,
-    "VFT_HUDCHARINFO": 0x1291D80,
-    "VFT_UISUBSYSTEM": 0x11F6A38,
+    "VFT_LOADINGBAR": 0x12AB908,
+    "VFT_HUDCHARINFO": 0x127E3A8,
+    "VFT_UISUBSYSTEM": 0x11E2718,
     "UIDLG_CONT_VAL": 0x38,
     "RTTI_COL_TD_OFF": 0xC,
     "RTTI_TD_NAME_OFF": 0x10,

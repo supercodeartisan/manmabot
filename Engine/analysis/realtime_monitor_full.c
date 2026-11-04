@@ -49,8 +49,8 @@
 // ---------------------------------------------------------------------------
 static uint64_t offPlayerBase   = 0x166864CULL;  // PlayerBase (direct=1 => module+off, 9.30)
 static int      offPlayerDirect = 1;             // PlayerBaseDirect
-static uint64_t offPosX         = 0x16F88B0ULL;  // PosXAbs (module-relative, 9.30)
-static uint64_t offPosY         = 0x16F88B4ULL;  // PosYAbs (9.30)
+static uint64_t offPosX         = 0x16EB5A0ULL;  // PosXAbs (module-relative, 2026-11-04)
+static uint64_t offPosY         = 0x16EB5A4ULL;  // PosYAbs (2026-11-04)
 static uint64_t offPosZ         = 0x1668648ULL;  // PosZAbs (9.30)
 static uint64_t offTick         = 0x1668638ULL;  // ServerTick (u64 ms, 9.30)
 static uint64_t offExpPct       = 0x1644BF0ULL;  // ExperiencePct64 mirror only; display is the LoadingBar f32
@@ -104,21 +104,21 @@ static int32_t  g_offLawful = -1, g_offWeight = -1, g_offFood = -1, g_offMaxWeig
 static int32_t  g_offStats[6] = { -1,-1,-1,-1,-1,-1 }; // STR,DEX,CON,INT,WIS,CHA
 
 /* CharacterDataSubsystem registry (char_offsets.txt). 26.09.30 defaults. */
-static uint32_t g_chMgr = 0x16F8A00u, g_chCdVft = 0x11F90D8u, g_chCdOff = 0x498u;
-static uint32_t g_chVftStatus = 0x11F90B8u;
+static uint32_t g_chMgr = 0x16EB6F0u, g_chCdVft = 0x11E5088u, g_chCdOff = 0x498u;
+static uint32_t g_chVftStatus = 0x11E50F8u;
 static uint32_t g_chKXor = 0x2f8b1064u, g_chKMul = 0x7f4a7c15u;
 static uint32_t g_chHolder = 0xD0u, g_chSubBeg = 0x180u, g_chSubEnd = 0x188u;
-static uint32_t g_chStr = 0x128u, g_chInt = 0x134u, g_chCon = 0x140u;
-static uint32_t g_chDex = 0x14Cu, g_chWis = 0x158u, g_chCha = 0x164u;
-static uint32_t g_chLevel = 0x248u, g_chHp = 0x2B8u, g_chMaxHp = 0x2C4u, g_chMp = 0x2D0u, g_chMaxMp = 0x2DCu;
-static uint32_t g_chFood = 0x2F4u, g_chWeight = 0x300u, g_chWeightCur = 0x3ACu, g_chWeightMax = 0x3B0u;
-static uint32_t g_chLawful = 0x30Cu, g_chAc = 0x348u;
+static uint32_t g_chStr = 0x148u, g_chInt = 0x154u, g_chCon = 0x160u;
+static uint32_t g_chDex = 0x16Cu, g_chWis = 0x178u, g_chCha = 0x184u;
+static uint32_t g_chLevel = 0x268u, g_chHp = 0x2D8u, g_chMaxHp = 0x2E4u, g_chMp = 0x2F0u, g_chMaxMp = 0x2FCu;
+static uint32_t g_chFood = 0x314u, g_chWeight = 0x320u, g_chWeightCur = 0x3CCu, g_chWeightMax = 0x3D0u;
+static uint32_t g_chLawful = 0x32Cu, g_chAc = 0x368u;
 static uint32_t g_stBlock = 0x1668630u, g_stX = 0x10u, g_stY = 0x14u;
 static uint32_t g_stHp = 0x1Cu, g_stMaxHp = 0x20u, g_stMp = 0x24u, g_stMaxMp = 0x28u, g_stLevel = 0x2Cu;
 static int g_charOk = 0;
 /* Live mapId: MapSubsystem (vft MapSubsystemVftRva) + MapIdOff / MapIdPairOff.
  * Source of truth: Extra_data/10_2/2_map_region/offsets.json */
-static uint32_t g_mapSubVft = 0x123C958u;
+static uint32_t g_mapSubVft = 0x1228960u;
 static uint32_t g_mapIdOff = 0x718u;
 static uint32_t g_mapIdPairOff = 0x71Cu;
 

@@ -120,11 +120,11 @@ int main(int argc,char**argv){
     DWORD t0=GetTickCount();
     for(;;){
         char js[8192]; int p=0;
-        uint32_t px=0,py=0; rm(g_base+0x16F88B0,&px,4); rm(g_base+0x16F88B4,&py,4);
+        uint32_t px=0,py=0; rm(g_base+0x16EB5A0,&px,4); rm(g_base+0x16EB5A4,&py,4);
         p+=snprintf(js+p,sizeof(js)-p,"{\"t\":%u,\"player\":[%u,%u],\"open\":[",(unsigned)(GetTickCount()-t0),px,py);
         int first=1;
         for(int i=0;i<w_n;i++){ uint64_t o=w_obj[i]; if(!o) continue; if(!inMod(q64(o))||(uint32_t)(q64(o)-g_base)!=w_vft[i]){ w_obj[i]=0; continue;} if((d32(o+0x70)&0xFF)==1){ p+=snprintf(js+p,sizeof(js)-p,"%s\"%s\"",first?"":",",w_cls[i]); first=0; } }
-        uint64_t mgr=q64(g_base+0x16F8A00), holder=q64(mgr+0xD0), subs=q64(holder+0x180), shop=q64(subs+16*36);
+        uint64_t mgr=q64(g_base+0x16EB6F0), holder=q64(mgr+0xD0), subs=q64(holder+0x180), shop=q64(subs+16*36);
         uint64_t vb=q64(shop+0x40),ve=q64(shop+0x48),sb=q64(shop+0x58),se=q64(shop+0x60);
         long long bn=(vb&&ve&&ve>=vb)?(long long)((ve-vb)/0x90):0;
         long long sn=(sb&&se&&se>=sb)?(long long)((se-sb)/0x20):0;
