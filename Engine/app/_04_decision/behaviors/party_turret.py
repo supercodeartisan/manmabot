@@ -1,9 +1,8 @@
 """Party leader turret: hunt from one anchor tile, moving at most ~2 tiles.
 
-The session arms this only for a party leader whose leader mode is ``turret``.
-The anchor is the first tile the leader stands on inside the active farm (or
-on the hunt map when it has no farm rect), kept per mapId so a shop / retreat
-trip comes back to the same spot.
+The session arms this while the party leader stands on a party-map point.
+The anchor is that point. A saved turret/moving choice is not read. An area
+mark does not arm this.
 
 - ``party.turret_leash`` (before ``farm.engage``): marks monsters and loot
   outside the anchor zone as excluded, drops a sticky target that left the
@@ -47,12 +46,17 @@ def set_party_turret(
     *,
     map_id: Optional[int] = None,
     leash: int = LEASH_TILES,
+    anchor: Optional[tuple[int, int]] = None,
 ) -> None:
-    """Session hook: arm / disarm turret for this tick (keeps anchors)."""
+    """Session hook: arm / disarm turret for this tick.
+
+    ``anchor`` pins the party-map point. The next point replaces it.
+    """
     st = blackboard.scratch.get(SCRATCH_TURRET)
     if not on:
         if isinstance(st, dict):
             st["on"] = False
+            st["pinned"] = False
         blackboard.scratch.pop(SCRATCH_TURRET_EXCLUDE, None)
         return
     if not isinstance(st, dict):
@@ -61,6 +65,12 @@ def set_party_turret(
     st["on"] = True
     st["map_id"] = None if map_id is None else int(map_id)
     st["leash"] = max(1, min(4, int(leash)))
+    if anchor is not None and map_id is not None:
+        anchors = st.setdefault("anchors", {})
+        anchors[int(map_id)] = (int(anchor[0]), int(anchor[1]))
+        st["pinned"] = True
+    else:
+        st["pinned"] = False
 
 
 def clear_party_turret(blackboard: "Blackboard") -> None:
@@ -108,10 +118,15 @@ def _me(blackboard: "Blackboard") -> Tile:
 
 
 def _ensure_anchor(blackboard: "Blackboard") -> Optional[Tile]:
-    """Current map anchor; picks one when standing inside the farm."""
+    """Pinned party-map point, or the first tile stood inside the farm."""
     st = blackboard.scratch.get(SCRATCH_TURRET)
     if not isinstance(st, dict):
         return None
+    if st.get("pinned"):
+        tile = (st.get("anchors") or {}).get(st.get("map_id"))
+        if tile is None:
+            return None
+        return (int(tile[0]), int(tile[1]))
     me = _me(blackboard)
     anchors = st.setdefault("anchors", {})
     key = st.get("map_id")

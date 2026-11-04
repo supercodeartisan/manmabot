@@ -320,30 +320,26 @@ class PartyMemberManager:
         # Retreat HP gate uses the solo survival line. Heal / buff stay in place.
         from .loot import (
             party_closest_looter_filter,
-            party_loot_first,
             party_loot_ownership_filter,
         )
 
-        loot_first = party_loot_first(cfg)
         loot_item_ok = None
         if dead or bool(self.runtime.paused):
             loot_own = None
-        elif loot_first:
-            # Party drops count as own for the closest non-leader, non-wizard.
-            loot_item_ok = party_closest_looter_filter(
-                game_state, origin, self.runtime.local_map_id
-            )
-            loot_own = False if loot_item_ok is not None else None
         else:
             loot_own = party_loot_ownership_filter(cfg)
+            if loot_own is False:
+                loot_item_ok = party_closest_looter_filter(
+                    game_state, origin, self.runtime.local_map_id
+                )
+                if loot_item_ok is None:
+                    loot_own = None
         if (
             not dead
             and not bool(self.runtime.paused)
             and game_state is not None
             and self._nav_blackboard is not None
         ):
-            from .loot import arm_party_loot_side
-
             from .support import party_critical_escape
 
             escape = party_critical_escape(game_state, self._nav_blackboard)
@@ -362,19 +358,8 @@ class PartyMemberManager:
                 self._nav_blackboard,
                 allow_buffs=True,
             )
-            # Side F4 only when leader is not fighting (same gate as primary
-            # loot). Solo farm picks up its own drops during fights too.
-            if loot_own is not None and (cfg.solo_farm or not bool(view.farming)):
-                try:
-                    arm_party_loot_side(
-                        game_state,
-                        self._nav_blackboard,
-                        ownership_filter=bool(loot_own),
-                        item_ok=loot_item_ok,
-                    )
-                except Exception as exc:
-                    _log.debug("party loot side failed: %s", exc)
-            # Potions / F4 loot stay on blackboard.side_intents for the executor.
+            # Side pickup waits until we know the leader is standing.
+            # Potions stay on blackboard.side_intents for the executor.
             need_potion = False
             need_heal, need_buff = self._support_flags(support)
         else:
@@ -597,6 +582,9 @@ class PartyMemberManager:
             leader_tile=leader_tile if leader_present else None,
             farming=bool(view.farming),
         )
+        leader_moving = self._leader_is_moving(
+            leader_tile if leader_present else None
+        ) or ("sticky" in str(view.source or ""))
         # Close on the leader. Behind-slot / cardinal stand / turret seat are
         # not click goals — they walked the member around or past the leader.
         self._update_settle_stand(
@@ -662,60 +650,50 @@ class PartyMemberManager:
         if view.source and result.kind is MemberKind.FOLLOW:
             reason = f"{reason} via={view.source}"
 
-        walk_now = leader_walk_dist if leader_walk_dist is not None else leader_dist
-        if cfg.solo_farm:
-            # Own drops within the follow leash; a pickup walk in progress
-            # outranks the stand/spot re-follow until the leash breaks.
-            loot_busy = (
-                self._nav_blackboard is not None
-                and getattr(self._nav_blackboard, "current_item_id", None) is not None
-            )
-            can_loot_now = (
-                walk_now is not None
-                and int(walk_now) <= int(cfg.follow_tiles)
-                and (
-                    result.kind is MemberKind.HOLD
-                    or (result.kind is MemberKind.FOLLOW and loot_busy)
-                )
-            )
-            loot_max_tiles = max(4, int(cfg.follow_tiles))
-        elif loot_first:
-            # Loot before follow: assist / defend / join still win.
-            can_loot_now = walk_now is not None and result.kind in (
+        if leader_moving or loot_own is None:
+            can_loot_now = False
+            loot_max_tiles = 0
+        else:
+            # Leader is standing. Assist, defend, and join still come first.
+            can_loot_now = result.kind in (
                 MemberKind.HOLD,
                 MemberKind.FOLLOW,
             )
             loot_max_tiles = max(4, int(cfg.follow_tiles))
-        else:
-            # Party farm: loot when the leader is idle (stopped / not farming)
-            # and the member is holding inside the stop band.
-            near_stop = False
-            if leader_dist is not None and int(leader_dist) <= int(cfg.stop_tiles):
-                near_stop = True
             if (
-                leader_walk_dist is not None
-                and int(leader_walk_dist) <= int(cfg.stop_tiles)
+                can_loot_now
+                and game_state is not None
+                and self._nav_blackboard is not None
             ):
-                near_stop = True
-            can_loot_now = (
-                result.kind is MemberKind.HOLD
-                and not bool(view.farming)
-                and bool(leader_stopped)
-                and near_stop
-            )
-            loot_max_tiles = max(4, int(cfg.stop_tiles) + 2)
+                from .loot import arm_party_loot_side
+
+                try:
+                    arm_party_loot_side(
+                        game_state,
+                        self._nav_blackboard,
+                        ownership_filter=bool(loot_own),
+                        item_ok=loot_item_ok,
+                    )
+                except Exception as exc:
+                    _log.debug("party loot side failed: %s", exc)
 
         # Turret idle, before the first swing: pick up, otherwise self-hunt.
         if (
-            cfg.turret_farm
+            not leader_moving
+            and loot_own is not None
+            and cfg.turret_farm
             and not cfg.solo_farm
             and not bool(view.farming)
             and self.runtime.own_hunt_id is None
             and getattr(self, "_turret_own_pending", None)
-            and loot_own is not None
         ):
             can_loot_now = True
             loot_max_tiles = max(4, int(cfg.follow_tiles))
+
+        if leader_moving and self._nav_blackboard is not None:
+            from .loot import clear_party_loot_sticky
+
+            clear_party_loot_sticky(self._nav_blackboard)
 
         # Abort sticky loot when movement / combat / defend must win.
         if (
@@ -1178,6 +1156,26 @@ class PartyMemberManager:
             return False
         seen_at = float(scratch.get("leader_tile_seen_at") or now)
         return (now - seen_at) >= float(settle_sec)
+
+    def _leader_is_moving(
+        self,
+        leader_tile: Optional[tuple[int, int]],
+        *,
+        settle_sec: float = 0.7,
+    ) -> bool:
+        """True while the leader tile is changing. A standing fight is not moving."""
+        scratch = self.runtime.scratch
+        if leader_tile is None:
+            return True
+        now = time.time()
+        tile = (int(leader_tile[0]), int(leader_tile[1]))
+        prev = scratch.get("leader_walk_tile")
+        if prev != tile:
+            scratch["leader_walk_tile"] = tile
+            scratch["leader_walk_at"] = now
+            return True
+        seen_at = float(scratch.get("leader_walk_at") or now)
+        return (now - seen_at) < float(settle_sec)
 
     def _leader_move_dir(self) -> Optional[tuple[int, int]]:
         """Last leader tile delta (facing while walking); None until first step."""

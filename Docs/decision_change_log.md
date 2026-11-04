@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-04 — turret hunting is the party-map point
+
+Intent: The turret/moving combo is not a setting. The leader turrets only while standing on a point marked on the party map. The anchor is that point. An area is a moving hunt. Travel and a map-only row are not turret. Members hear the same mode through party policy. Lag wait runs only inside an area. Rally wait still holds the hunt; when it ends on a point, turret turns on.
+Shared: `set_party_turret`, `step_party_turret_leash`, `step_party_turret_idle`, `PartyLeaderManager.prepare`, `party_policy` `leader_mode`, `_leader_line_hold`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. A member's solo farm setting stays its own.
+Affects: party leader hunt at a mark, member yard while the leader is on a point, and the party tab.
+Consent: user (remove the turret switch; a map point is always turret).
+Result: party schedule unit test passed. Not run in game.
+
+## 2026-11-04 — party leader does not loot; members follow the loot policy
+
+Intent: The party leader never picks up. Members loot only from the leader policy. Random loot: the closest member except the leader and the wizard takes the party drop, and a name tie goes to the earlier name. Random off: a roster row marked responsible takes its own drops; none still takes nothing. Members do not loot while the leader is moving. Follow-versus-loot priority is gone. A member's solo farm setting does not change who loots.
+Shared: `continue_or_start_loot` and `arm_loot_side_intent` skip loot when `party_leader_no_loot` is set. Solo start does not set that flag. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader farming and member pickup. Solo loot is unchanged.
+Consent: user (leader must not loot; members follow leader policy; drop the priority setting).
+Result: party loot policy test passed. Not run in game.
+
 ## 2026-11-03 — party leader schedule is separate from the solo routine
 
 Intent: When a party leader starts, the hunt map, mark, and row minutes come from `party_routine` only. The solo routine cursor is not installed and `profile.routine` is not read. The existing travel session still walks one party destination. On arrival the party marks are mounted as this session's farm. Rally wait starts at that mark.

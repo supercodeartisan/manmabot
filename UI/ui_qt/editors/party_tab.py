@@ -26,9 +26,7 @@ from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
-_LOOT_PRIORITIES = ("follow", "loot")
 _FARM_MODES = ("party", "solo")
-_LEADER_MODES = ("turret", "moving")
 _PARTY_ROLES = ("member", "leader")
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
 
@@ -194,9 +192,9 @@ class PartyTab(QWidget):
         member_hint = QLabel(
             self.t.get(
                 "party_member_policy_hint",
-                "Turret / moving and loot rules come from the party leader "
-                "over WebSocket. Farming method and follow / stop / assist "
-                "are this bot's own.",
+                "Turret follows the leader's party-map point. Loot rules come "
+                "from the party leader over WebSocket. Farming method and "
+                "follow / stop / assist are this bot's own.",
             )
         )
         member_hint.setWordWrap(True)
@@ -313,29 +311,12 @@ class PartyTab(QWidget):
         hint = QLabel(
             self.t.get(
                 "party_leader_mode_hint",
-                "Turret: the party holds a yard around the leader and members "
-                "stay inside it. Moving: the leader roams and members follow.",
+                "A point on the party map is turret hunting at that tile. "
+                "An area is a moving hunt. There is no separate turret switch.",
             )
         )
         hint.setWordWrap(True)
         lay.addWidget(hint)
-
-        mode_row = QHBoxLayout()
-        mode_row.addWidget(QLabel(self.t.get("party_farm_mode", "Farming method")))
-        self.party_leader_mode = QComboBox()
-        self.party_leader_mode.addItem(
-            self.t.get("party_farm_turret", "Turret"), "turret"
-        )
-        self.party_leader_mode.addItem(
-            self.t.get("party_farm_moving", "Moving"), "moving"
-        )
-        self._select_leader_mode()
-        self.party_leader_mode.currentIndexChanged.connect(
-            self._on_leader_mode_changed
-        )
-        mode_row.addWidget(self.party_leader_mode)
-        mode_row.addStretch(1)
-        lay.addLayout(mode_row)
         self.party_lag_tiles = add_spin_row(
             lay,
             self.bag,
@@ -349,17 +330,17 @@ class PartyTab(QWidget):
         self.party_lag_tiles.setToolTip(
             self.t.get(
                 "party_lag_tiles_hint",
-                "Moving: the leader waits briefly when half or more members "
-                "are farther behind than this.",
+                "On an area, the leader waits briefly when half or more members "
+                "are farther behind than this. A point does not wait.",
             )
         )
-        self._sync_lag_enabled()
 
         loot_hint = QLabel(
             self.t.get(
                 "party_loot_hint",
-                "Solo loot: every member may loot. Responsible: only roster "
-                "rows marked Responsible pick up.",
+                "Random loot: the closest member, except the leader and the wizard, "
+                "picks up party drops. Off: only roster rows marked Responsible "
+                "pick up their own drops. Members do not loot while the leader is moving.",
             )
         )
         loot_hint.setWordWrap(True)
@@ -373,24 +354,6 @@ class PartyTab(QWidget):
             False,
             on_change=self._on_loot_mode_changed,
         )
-        priority_row = QHBoxLayout()
-        priority_row.addWidget(
-            QLabel(self.t.get("party_loot_priority", "Priority"))
-        )
-        self.party_loot_priority = QComboBox()
-        self.party_loot_priority.addItem(
-            self.t.get("party_loot_priority_follow", "Follow first"), "follow"
-        )
-        self.party_loot_priority.addItem(
-            self.t.get("party_loot_priority_loot", "Loot first"), "loot"
-        )
-        self._select_loot_priority()
-        self.party_loot_priority.currentIndexChanged.connect(
-            self._on_loot_priority_changed
-        )
-        priority_row.addWidget(self.party_loot_priority)
-        priority_row.addStretch(1)
-        lay.addLayout(priority_row)
         # Kept for bag compatibility; responsible seats are per roster row.
         self.party_loot_role = QComboBox()
         self.party_loot_role.addItem(
@@ -767,27 +730,6 @@ class PartyTab(QWidget):
         mode = str(self.bag.get_str("party", "farm_mode", "party") or "party")
         return mode if mode in _FARM_MODES else "party"
 
-    def _leader_mode(self) -> str:
-        mode = str(self.bag.get_str("party", "leader_mode", "turret") or "turret")
-        return mode if mode in _LEADER_MODES else "turret"
-
-    def _select_leader_mode(self) -> None:
-        self.party_leader_mode.blockSignals(True)
-        idx = self.party_leader_mode.findData(self._leader_mode())
-        self.party_leader_mode.setCurrentIndex(max(0, idx))
-        self.party_leader_mode.blockSignals(False)
-
-    def _on_leader_mode_changed(self) -> None:
-        mode = str(self.party_leader_mode.currentData() or "turret")
-        if mode not in _LEADER_MODES:
-            mode = "turret"
-        self.bag.set("party", "leader_mode", mode)
-        self._sync_lag_enabled()
-
-    def _sync_lag_enabled(self) -> None:
-        if hasattr(self, "party_lag_tiles"):
-            self.party_lag_tiles.setEnabled(self._leader_mode() == "moving")
-
     def _role(self) -> str:
         role = str(self.bag.get_str("party", "role", "member") or "member")
         return role if role in _PARTY_ROLES else "member"
@@ -811,23 +753,6 @@ class PartyTab(QWidget):
         if role not in _LOOT_ROLES:
             role = "none"
         self.bag.set("party", "loot_role", role)
-
-    def _loot_priority(self) -> str:
-        value = str(self.bag.get_str("party", "loot_priority", "follow") or "follow")
-        return value if value in _LOOT_PRIORITIES else "follow"
-
-    def _select_loot_priority(self) -> None:
-        self.party_loot_priority.blockSignals(True)
-        idx = self.party_loot_priority.findData(self._loot_priority())
-        self.party_loot_priority.setCurrentIndex(max(0, idx))
-        self.party_loot_priority.blockSignals(False)
-
-    def _on_loot_priority_changed(self) -> None:
-        value = str(self.party_loot_priority.currentData() or "follow")
-        if value not in _LOOT_PRIORITIES:
-            value = "follow"
-        self.bag.set("party", "loot_priority", value)
-        self._on_loot_mode_changed()
 
     def _on_role_combo_changed(self) -> None:
         combo = self.sender()
@@ -864,13 +789,10 @@ class PartyTab(QWidget):
     def _on_loot_mode_changed(self) -> None:
         on = self._party_on() and self._role() == "leader"
         random_on = self.bag.get_bool("party", "random_loot", False)
-        follow_first = self._loot_priority() == "follow"
-        if hasattr(self, "party_loot_priority"):
-            self.party_loot_priority.setEnabled(on)
         if hasattr(self, "party_random_loot"):
-            self.party_random_loot.setEnabled(on and follow_first)
+            self.party_random_loot.setEnabled(on)
         if hasattr(self, "roster_loot"):
-            self.roster_loot.setEnabled(on and follow_first and not random_on)
+            self.roster_loot.setEnabled(on and not random_on)
 
     def _on_party_enabled_changed(self) -> None:
         self._sync_member_enabled_flag()
@@ -945,7 +867,6 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
-        self._select_loot_priority()
         if hasattr(self, "party_ws_port"):
             self.party_ws_port.blockSignals(True)
             self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
@@ -961,12 +882,10 @@ class PartyTab(QWidget):
             )
             self.leader_host.blockSignals(False)
         self._select_farm_mode()
-        self._select_leader_mode()
         if hasattr(self, "party_lag_tiles"):
             self.party_lag_tiles.blockSignals(True)
             self.party_lag_tiles.setValue(self.bag.get_int("party", "lag_tiles", 30))
             self.party_lag_tiles.blockSignals(False)
-            self._sync_lag_enabled()
         self._lan_ip = ""
         self._fill_roster_table()
         self._apply_role(self._role())

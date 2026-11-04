@@ -876,15 +876,14 @@ class BotController:
             )
             out["turret"] = dict(getattr(self, "_party_turret_info", {}) or {})
             out["line_wait"] = dict(getattr(self, "_party_line_info", {}) or {})
+            brain = getattr(self, "_party_leader_ref", None)
+            live_mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
+            if live_mode not in ("turret", "moving"):
+                live_mode = "moving"
             out["settings"] = {
-                "leader_mode": str(
-                    getattr(profile, "party_leader_mode", "turret") or "turret"
-                ),
+                "leader_mode": live_mode,
                 "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
                 "random_loot": bool(getattr(profile, "party_random_loot", False)),
-                "loot_priority": str(
-                    getattr(profile, "party_loot_priority", "follow") or "follow"
-                ),
             }
         elif role == "member":
             from app._06_party.comms.orders import member_orders
@@ -905,7 +904,6 @@ class BotController:
                     "seat_role": cfg.seat_role,
                     "loot_role": cfg.loot_role,
                     "random_loot": cfg.random_loot,
-                    "loot_priority": cfg.loot_priority,
                     "follow_tiles": cfg.follow_tiles,
                     "stop_tiles": cfg.stop_tiles,
                     "assist_leash_tiles": cfg.assist_leash_tiles,
@@ -1678,17 +1676,17 @@ class BotController:
         return self._party_server_on() and self._leader_roster_ready()
 
     def _leader_turret_on(self) -> bool:
-        """Party leader with leader mode turret: hunt from one anchor tile."""
+        """True while this leader stands on a party-map point."""
         if not self._party_leader_on():
             return False
-        mode = str(getattr(self._profile, "party_leader_mode", "turret") or "turret")
-        return mode.strip().lower() == "turret"
+        brain = getattr(self, "_party_leader_ref", None)
+        return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
 
     def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
-        """Moving leader: brief wait when half or more members lag ``party_lag_tiles``."""
+        """Area hunt: brief wait when half or more members lag ``party_lag_tiles``."""
         profile = self._profile
-        mode = str(getattr(profile, "party_leader_mode", "turret") or "turret").strip().lower()
-        if not (self._party_leader_on() and mode == "moving"):
+        brain = getattr(self, "_party_leader_ref", None)
+        if not (self._party_leader_on() and bool(getattr(brain, "on_area", False))):
             self._party_line_watch = None
             self._party_line_info = {}
             return False
@@ -2124,18 +2122,14 @@ class BotController:
 
         profile = self._profile
         roster = normalize_party_roster(getattr(profile, "party_roster", None))
-        mode = str(
-            getattr(profile, "party_leader_mode", "turret") or "turret"
-        ).strip().lower()
+        brain = getattr(self, "_party_leader_ref", None)
+        mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
         if mode not in ("turret", "moving"):
-            mode = "turret"
+            mode = "moving"
         return {
             "leader_mode": mode,
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
-            "loot_priority": str(
-                getattr(profile, "party_loot_priority", "follow") or "follow"
-            ),
             "yard_scale_with_roster": True,
             "party_size": max(1, len(roster) + 1),
             "roster": roster,
@@ -2788,9 +2782,6 @@ class BotController:
                 "loot_role": str(
                     getattr(profile, "party_loot_role", "none") or "none"
                 ),
-                "loot_priority": str(
-                    getattr(profile, "party_loot_priority", "follow") or "follow"
-                ),
                 "farm_mode": str(
                     getattr(profile, "party_farm_mode", "party") or "party"
                 ),
@@ -2960,6 +2951,7 @@ class BotController:
 
             leader_brain = PartyLeaderManager(decision)
             self._party_leader_ref = leader_brain
+            decision.blackboard.scratch["party_leader_no_loot"] = True
             try:
                 count = leader_brain.arm(
                     getattr(profile, "party_routine", None) or []
@@ -3506,10 +3498,14 @@ class BotController:
                 set_party_hold(decision.blackboard, organize_hold or line_hold)
                 if organize_hold:
                     _freeze_stay_clocks(decision.blackboard)
+                turret_anchor = getattr(
+                    getattr(self, "_party_leader_ref", None), "turret_anchor", None
+                )
                 set_party_turret(
                     decision.blackboard,
                     self._leader_turret_on() and not organize_hold,
                     map_id=last_logged_map_id,
+                    anchor=turret_anchor,
                 )
                 if self._party_leader_on():
                     self._party_turret_info = turret_status(decision.blackboard)

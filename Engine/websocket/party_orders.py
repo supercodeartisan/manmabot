@@ -137,10 +137,9 @@ def recovery_message(
 
 def policy_message(
     *,
-    leader_mode: str = "turret",
+    leader_mode: str = "moving",
     random_loot: bool = False,
     loot_role: str = "none",
-    loot_priority: str = "follow",
     yard_half_w: Optional[int] = None,
     yard_half_h: Optional[int] = None,
     yard_scale_with_roster: bool = True,
@@ -150,7 +149,9 @@ def policy_message(
 ) -> dict[str, Any]:
     """Global party farm knobs from the leader. Members merge into their config.
 
-    ``leader_mode`` is turret | moving. Party / solo farm and follow / stop /
+    ``leader_mode`` is turret while the leader stands on a party-map point,
+    and moving on an area or while traveling. It is not a saved setting.
+    Party / solo farm and follow / stop /
     assist distances are per-member and never sent. ``leader_name`` = the
     leader character; a member accepts invite popups only from it (when set).
     """
@@ -162,10 +163,9 @@ def policy_message(
         y=None,
     )
     knobs = {
-        "leader_mode": str(leader_mode or "turret"),
+        "leader_mode": "turret" if str(leader_mode or "") == "turret" else "moving",
         "random_loot": bool(random_loot),
         "loot_role": str(loot_role or "none"),
-        "loot_priority": str(loot_priority or "follow"),
         "yard_half_w": yard_half_w,
         "yard_half_h": yard_half_h,
         "yard_scale_with_roster": bool(yard_scale_with_roster),

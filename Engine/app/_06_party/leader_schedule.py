@@ -21,7 +21,7 @@ def _mark_from_area(area: dict[str, Any]) -> Optional[dict[str, int | str]]:
             y = int(area["y"])
         except (KeyError, TypeError, ValueError):
             return None
-        return {"name": name, "x0": x, "y0": y, "x1": x, "y1": y}
+        return {"name": name, "shape": "point", "x0": x, "y0": y, "x1": x, "y1": y}
     try:
         x0 = int(area["x0"])
         y0 = int(area["y0"])
@@ -33,7 +33,7 @@ def _mark_from_area(area: dict[str, Any]) -> Optional[dict[str, int | str]]:
         x0, x1 = x1, x0
     if y1 < y0:
         y0, y1 = y1, y0
-    return {"name": name, "x0": x0, "y0": y0, "x1": x1, "y1": y1}
+    return {"name": name, "shape": "area", "x0": x0, "y0": y0, "x1": x1, "y1": y1}
 
 
 def _mark_from_patrol(point: dict[str, Any]) -> Optional[dict[str, int | str]]:
@@ -43,7 +43,7 @@ def _mark_from_patrol(point: dict[str, Any]) -> Optional[dict[str, int | str]]:
     except (KeyError, TypeError, ValueError):
         return None
     name = str(point.get("name") or "").strip() or "patrol"
-    return {"name": name, "x0": x, "y0": y, "x1": x, "y1": y}
+    return {"name": name, "shape": "point", "x0": x, "y0": y, "x1": x, "y1": y}
 
 
 def hunt_marks(row: dict[str, Any]) -> list[dict[str, int | str]]:
@@ -79,6 +79,21 @@ def hunt_marks(row: dict[str, Any]) -> list[dict[str, int | str]]:
 
 def mark_contains(mark: dict[str, int | str], x: int, y: int) -> bool:
     return int(mark["x0"]) <= int(x) <= int(mark["x1"]) and int(mark["y0"]) <= int(y) <= int(mark["y1"])
+
+
+def place_at(marks: list[dict[str, int | str]], x: int, y: int) -> str:
+    """``point`` on a map dot, ``area`` inside a rect, ``none`` elsewhere.
+
+    A dot wins when a rect also covers that tile. A one-tile rect is still
+    an area: only ``shape == point`` is a turret spot.
+    """
+    for mark in marks:
+        if str(mark.get("shape") or "") == "point" and mark_contains(mark, x, y):
+            return "point"
+    for mark in marks:
+        if str(mark.get("shape") or "") != "point" and mark_contains(mark, x, y):
+            return "area"
+    return "none"
 
 
 def mark_center(mark: dict[str, int | str]) -> tuple[int, int]:
@@ -118,6 +133,10 @@ class PartyLeaderSchedule:
             return None
         x, y = mark_center(marks[0])
         return str(row.get("map_id") or ""), x, y
+
+    def place_nav(self, x: int, y: int) -> str:
+        """Nav tile: point (turret), area (moving hunt), or none."""
+        return place_at(self.marks(), x, y)
 
     def inside_nav(self, x: int, y: int) -> bool:
         marks = self.marks()
@@ -164,4 +183,5 @@ __all__ = [
     "hunt_marks",
     "mark_center",
     "mark_contains",
+    "place_at",
 ]

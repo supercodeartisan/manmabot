@@ -1890,6 +1890,10 @@ def continue_or_start_loot(
     screen_only: bool = True,
 ) -> Status | None:
     """Sticky loot as walk-to-item then pickup; None if no loot this tick."""
+    if blackboard.scratch.get("party_leader_no_loot"):
+        clear_loot_hop(blackboard)
+        blackboard.current_item_id = None
+        return None
     # Clicked pile still in memory: re-click / walk back — do not roam away.
     pending = try_finish_pending_pickup(state, blackboard)
     if pending is not None:

@@ -177,14 +177,8 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             ),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
-            "loot_priority": str(
-                getattr(profile, "party_loot_priority", "follow") or "follow"
-            ),
             "farm_mode": str(
                 getattr(profile, "party_farm_mode", "party") or "party"
-            ),
-            "leader_mode": str(
-                getattr(profile, "party_leader_mode", "turret") or "turret"
             ),
             "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
             "role": str(getattr(profile, "party_role", "member") or "member"),

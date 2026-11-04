@@ -5,7 +5,6 @@ from dataclasses import dataclass, replace
 from typing import Any, Optional
 
 _LOOT_ROLES = frozenset({"none", "responsible"})
-_LOOT_PRIORITIES = frozenset({"follow", "loot"})
 # Member's own farm: party = attack the leader's target; solo = own mobs near leader.
 FARM_MODES = ("party", "solo")
 # Leader's global mode: turret = party holds a yard around the leader;
@@ -38,14 +37,14 @@ class PartyMemberConfig:
     assist_leader_strikes: bool = True
     external_target_id: Optional[int] = None
     external_target_ent: str = ""
-    # Loot: random_loot ON → every member may loot (no ownership gate).
-    # random_loot OFF → loot_role none | responsible (ownership gate on).
+    # Loot comes from the leader policy. Random ON: closest eligible member
+    # takes party drops. Random OFF: roster ``responsible`` takes own drops,
+    # ``none`` takes nothing. Members do not loot while the leader is moving.
     random_loot: bool = False
     loot_role: str = "none"
-    loot_priority: str = "follow"
     farm_mode: str = "party"
-    # Set by the leader policy; turret until the leader says otherwise.
-    leader_mode: str = "turret"
+    # From the leader policy. Turret only while the leader stands on a point.
+    leader_mode: str = "moving"
     # Turret yard half-extents (None = derive from party_size).
     yard_half_w: Optional[int] = None
     yard_half_h: Optional[int] = None
@@ -81,12 +80,9 @@ class PartyMemberConfig:
         mode = str(self.farm_mode or "party").strip().lower()
         if mode not in FARM_MODES:
             mode = "party"
-        lead_mode = str(self.leader_mode or "turret").strip().lower()
+        lead_mode = str(self.leader_mode or "moving").strip().lower()
         if lead_mode not in LEADER_MODES:
-            lead_mode = "turret"
-        priority = str(self.loot_priority or "follow").strip().lower()
-        if priority not in _LOOT_PRIORITIES:
-            priority = "follow"
+            lead_mode = "moving"
         seat = str(self.seat_role or "member").strip().lower()
         if seat not in ("member", "mage", "shopkeeper"):
             seat = "member"
@@ -117,7 +113,6 @@ class PartyMemberConfig:
             external_target_ent=str(self.external_target_ent or "").strip(),
             random_loot=bool(self.random_loot),
             loot_role=role,
-            loot_priority=priority,
             farm_mode=mode,
             leader_mode=lead_mode,
             yard_half_w=hw,
@@ -175,8 +170,7 @@ class PartyMemberConfig:
             "external_target_ent": self.external_target_ent,
             "random_loot": policy.get("random_loot", self.random_loot),
             "loot_role": loot,
-            "loot_priority": policy.get("loot_priority", self.loot_priority),
-            # Party / solo is the member's own choice; the leader sends turret / moving.
+            # Party / solo farm stays this member's own setting.
             "farm_mode": self.farm_mode,
             "leader_mode": policy.get("leader_mode", self.leader_mode),
             "yard_half_w": policy.get("yard_half_w", self.yard_half_w),
@@ -266,9 +260,8 @@ class PartyMemberConfig:
             external_target_ent=str(raw.get("external_target_ent") or ""),
             random_loot=bool(raw.get("random_loot", False)),
             loot_role=str(raw.get("loot_role") or "none"),
-            loot_priority=str(raw.get("loot_priority") or "follow"),
             farm_mode=str(raw.get("farm_mode") or "party"),
-            leader_mode=str(raw.get("leader_mode") or "turret"),
+            leader_mode=str(raw.get("leader_mode") or "moving"),
             yard_half_w=hw_i,
             yard_half_h=hh_i,
             yard_scale_with_roster=bool(raw.get("yard_scale_with_roster", True)),

@@ -185,13 +185,10 @@ class Profile:
     party_potion_hp_ratio: float = 0.45
     party_random_loot: bool = False
     party_loot_role: str = "none"
-    # follow = loot only while holding. loot = party drops before follow.
-    party_loot_priority: str = "follow"
     # Member farm: party = attack the leader's target; solo = own mobs near leader.
     party_farm_mode: str = "party"
-    # Leader mode (sent to members): turret = hold a yard; moving = roam.
-    party_leader_mode: str = "turret"
-    # Moving leader waits briefly when half or more members are this far behind.
+    # Area hunt: the leader waits briefly when half or more members are this far behind.
+    # A party-map point is turret and does not use this.
     party_lag_tiles: int = 30
     # member = existing follow/assist. leader = this PC hosts the party socket.
     party_role: str = "member"
@@ -474,16 +471,12 @@ class Profile:
                 kwargs.get("return_weight_above"), DEFAULT_RETURN_WEIGHT_ABOVE
             )
         if "party_loot_priority" in kwargs:
-            priority = str(kwargs.get("party_loot_priority") or "follow").strip().lower()
-            kwargs["party_loot_priority"] = priority if priority in ("follow", "loot") else "follow"
+            kwargs.pop("party_loot_priority", None)
         if "party_farm_mode" in kwargs:
             mode = str(kwargs.get("party_farm_mode") or "party").strip().lower()
             kwargs["party_farm_mode"] = mode if mode in ("party", "solo") else "party"
         if "party_leader_mode" in kwargs:
-            lead = str(kwargs.get("party_leader_mode") or "turret").strip().lower()
-            kwargs["party_leader_mode"] = (
-                lead if lead in ("turret", "moving") else "turret"
-            )
+            kwargs.pop("party_leader_mode", None)
         if "party_lag_tiles" in kwargs:
             try:
                 lag = int(kwargs.get("party_lag_tiles"))

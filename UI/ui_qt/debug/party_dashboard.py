@@ -624,7 +624,7 @@ class PartyDashboard(QWidget):
         line = session.get("line_wait") or {}
         f = self.lead_flags
 
-        mode = str(settings.get("leader_mode") or "turret").upper()
+        mode = str(settings.get("leader_mode") or "moving").upper()
         anchor = turret.get("anchor")
         if mode == "TURRET" and turret.get("on"):
             f["MODE"].set(
@@ -727,7 +727,6 @@ class PartyDashboard(QWidget):
                 ("Rally stage", _fmt(rally.get("stage"))),
                 ("Rally wait", _duration(rally.get("wait_s")) if rally.get("wait_s") is not None else "—"),
                 ("Missing", ", ".join(rally.get("missing") or []) or "—"),
-                ("Loot priority", _fmt(settings.get("loot_priority"))),
                 (
                     "Turret anchor",
                     f"map{_fmt(turret.get('map_id'))} ({anchor[0]},{anchor[1]}) "
@@ -968,7 +967,6 @@ class PartyDashboard(QWidget):
                 ("Farm (own)", _fmt(eff.get("farm_mode"))),
                 ("Follow / stop", f"{pair('follow_tiles')} / {pair('stop_tiles')}"),
                 ("Assist leash", _fmt(eff.get("assist_leash_tiles"))),
-                ("Loot priority", _fmt(eff.get("loot_priority"))),
                 ("Policy applied", _age(policy.get("applied_at"), now) if policy.get("applied_at") else "—"),
                 ("Applied as", _fmt(policy.get("as_name"))),
                 ("Gather order", gtxt),

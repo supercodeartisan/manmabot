@@ -23,6 +23,10 @@ class PartyLeaderManager:
         self.schedule = PartyLeaderSchedule([])
         self._mounted: Optional[tuple] = None
         self._retry_at = 0.0
+        # turret only while the live tile is a party-map point.
+        self.hunt_mode = "moving"
+        self.on_area = False
+        self.turret_anchor: Optional[tuple[int, int]] = None
 
     def decide(self, world: Any) -> Any:
         return self.decision.decide(world)
@@ -32,6 +36,7 @@ class PartyLeaderManager:
         self.schedule = PartyLeaderSchedule.from_routine(routine)
         self._mounted = None
         self._retry_at = 0.0
+        self._set_place("moving")
         blackboard = self.decision.blackboard
         scratch = getattr(blackboard, "scratch", None)
         if isinstance(scratch, dict):
@@ -41,6 +46,7 @@ class PartyLeaderManager:
 
     def prepare(self, world: Any, rally: Any = None) -> None:
         """Walk to the current party mark, then count the row's minutes there."""
+        self._set_place("moving")
         schedule = self.schedule
         row = schedule.current()
         if row is None:
@@ -57,6 +63,7 @@ class PartyLeaderManager:
             return
         now = time.monotonic()
         if self._inside(row, pose):
+            self._apply_place(row, pose)
             self._mount(blackboard, row)
             if rally is not None and getattr(rally, "state", "") == "await_mark":
                 rally.note_arrived(self._arrival_point(row, pose))
@@ -64,6 +71,7 @@ class PartyLeaderManager:
             schedule.note_inside(now, True, holding=holding)
             if not holding and schedule.due(now) and schedule.advance():
                 self._mounted = None
+                self._set_place("moving")
                 self._clear_travel(scratch)
                 self._arm_travel(blackboard, world, pose)
                 return
@@ -72,6 +80,42 @@ class PartyLeaderManager:
             return
         schedule.note_inside(now, False)
         self._arm_travel(blackboard, world, pose)
+
+    def _set_place(
+        self,
+        mode: str,
+        *,
+        on_area: bool = False,
+        anchor: Optional[tuple[int, int]] = None,
+    ) -> None:
+        self.hunt_mode = "turret" if mode == "turret" else "moving"
+        self.on_area = bool(on_area) and self.hunt_mode != "turret"
+        self.turret_anchor = anchor if self.hunt_mode == "turret" else None
+
+    def _apply_place(self, row: dict[str, Any], pose: Any) -> None:
+        """Turret on a point tile. An area is moving hunt. Travel stays moving."""
+        nav = self._nav_xy(str(row.get("map_id") or ""), pose)
+        if nav is None:
+            self._set_place("moving")
+            return
+        place = self.schedule.place_nav(nav[0], nav[1])
+        if place == "point":
+            self._set_place("turret", anchor=self._point_anchor(row, nav, pose))
+            return
+        self._set_place("moving", on_area=place == "area")
+
+    def _point_anchor(
+        self,
+        row: dict[str, Any],
+        nav: tuple[int, int],
+        pose: Any,
+    ) -> tuple[int, int]:
+        from app._04_decision.world_nav import pack_ids
+
+        abs_xy = pack_ids.nav_to_abs(str(row.get("map_id") or ""), int(nav[0]), int(nav[1]))
+        if abs_xy is not None:
+            return int(abs_xy[0]), int(abs_xy[1])
+        return int(pose.x), int(pose.y)
 
     def _inside(self, row: dict[str, Any], pose: Any) -> bool:
         if not self._on_row_map(row, pose):

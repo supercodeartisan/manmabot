@@ -104,6 +104,51 @@ def test_row_minutes_advance_to_the_next_party_row() -> None:
     assert schedule.advance() is False
 
 
+def test_a_point_is_turret_and_a_rect_is_moving() -> None:
+    schedule = PartyLeaderSchedule.from_routine(
+        [
+            {
+                "map_id": "talking_island",
+                "areas": [
+                    {
+                        "name": "yard",
+                        "shape": "area",
+                        "x0": 0,
+                        "y0": 0,
+                        "x1": 10,
+                        "y1": 10,
+                    },
+                    {"name": "stake", "shape": "point", "x": 7, "y": 8},
+                    {"name": "dotbox", "shape": "area", "x0": 3, "y0": 3, "x1": 3, "y1": 3},
+                ],
+            }
+        ]
+    )
+    assert schedule.place_nav(7, 8) == "point"
+    assert schedule.place_nav(1, 1) == "area"
+    assert schedule.place_nav(3, 3) == "area"
+    assert schedule.place_nav(50, 50) == "none"
+
+
+def test_pinned_turret_anchor_is_the_point() -> None:
+    from app._04_decision.behaviors.party_turret import (
+        _ensure_anchor,
+        set_party_turret,
+    )
+
+    class _Board:
+        def __init__(self) -> None:
+            self.scratch: dict = {}
+
+    board = _Board()
+    set_party_turret(board, True, map_id=4, anchor=(9, 8))
+    set_party_turret(board, True, map_id=4, anchor=(2, 2))
+    assert _ensure_anchor(board) == (2, 2)
+    set_party_turret(board, False, map_id=4)
+    assert board.scratch["party_turret"]["on"] is False
+    assert board.scratch["party_turret"]["pinned"] is False
+
+
 def test_hold_does_not_spend_the_row() -> None:
     schedule = PartyLeaderSchedule.from_routine(
         [
@@ -124,6 +169,8 @@ if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
     test_matching_check_keeps_that_mark_only()
+    test_a_point_is_turret_and_a_rect_is_moving()
+    test_pinned_turret_anchor_is_the_point()
     test_row_minutes_advance_to_the_next_party_row()
     test_hold_does_not_spend_the_row()
     print("OK")

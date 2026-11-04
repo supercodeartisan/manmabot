@@ -37,6 +37,8 @@ def _log_side_loot_decide(blackboard: "Blackboard", item: "WorldObject") -> None
 
 def arm_loot_side_intent(state: "GameState", blackboard: "Blackboard") -> None:
     """Append in-range ``PICKUP`` to ``side_intents`` (does not clear)."""
+    if blackboard.scratch.get("party_leader_no_loot"):
+        return
     primary = blackboard.intent
     if primary is not None and primary.action is ActionType.PICKUP:
         return
