@@ -33,6 +33,31 @@
 static uint32_t RG_ARVA, RG_MASK, RG_STRIDE, RG_NEXT, RG_RECNAME, RG_NAMEKR, RG_NODETEXT, RG_RECHDR;
 static uint32_t RG_STRLEN, RG_STRCAP;
 static uint64_t RG_FNVOFF, RG_FNVPRIME;
+static int  RG_PREFKR = 1;
+static char RG_STRCSV[256];
+static int  s_id[40000]; static char s_kr[40000][160]; static int s_n = 0;
+static const char* strName(int id){
+    for(int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char* v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
+static void loadStrings(const char *p){
+    FILE *g = fopen(p, "rb"); if (!g) return;
+    char *raw = (char*)malloc(2<<20); if (!raw){ fclose(g); return; }
+    int n = (int)fread(raw, 1, 2<<20, g); fclose(g); raw[n] = 0; char *s = raw;
+    if ((unsigned char)s[0]==0xEF&&(unsigned char)s[1]==0xBB&&(unsigned char)s[2]==0xBF) s += 3;
+    while (*s){ char *e = strchr(s, '\n'); if (e) *e = 0; char *cm = strchr(s, ',');
+        if (cm){ int id = atoi(s);
+            if (id > 0){ char *p1 = strchr(cm+1, ','), *p2 = p1 ? strchr(p1+1, ',') : 0;
+                if (p2){ char *kr = p2+1, *buf = s_kr[s_n]; int bi = 0, inq = 0; if (*kr=='"'){ inq=1; kr++; }
+                    while (*kr && bi < 159){ if (inq){ if (*kr=='"') break; } else { if (*kr==',') break; } buf[bi++] = *kr++; }
+                    buf[bi] = 0; s_id[s_n] = id; s_n++; if (s_n >= 40000) break; } } }
+        if (!e) break; s = e + 1; }
+    free(raw);
+}
 
 static uint64_t fnv1aKey(uint32_t mid){
     char s[24]; int n = snprintf(s, sizeof s, "1_%u", mid);
@@ -188,7 +213,9 @@ static int readList(SLIST *L, uint64_t sub, uint32_t off){
             if (mid){
                 const char *c = nmFind(mid);
                 if (c) snprintf(R->nm, sizeof R->nm, "%s", c);
-                else if (msgName(mid, R->nm, sizeof R->nm)) nmAdd(mid, R->nm);
+                else { const char *d = RG_PREFKR ? strName(mid) : 0;   /* 한글 사전 우선 */
+                       if (d){ snprintf(R->nm, sizeof R->nm, "%s", d); nmAdd(mid, R->nm); }
+                       else if (msgName(mid, R->nm, sizeof R->nm)) nmAdd(mid, R->nm); }
             }
             L->n++; done++;
         }
@@ -276,7 +303,9 @@ static int readRet(SLIST *L, uint64_t sub){
         if (mid){
             const char *c = nmFind(mid);
             if (c) snprintf(R->nm, sizeof R->nm, "%s", c);
-            else if (msgName(mid, R->nm, sizeof R->nm)) nmAdd(mid, R->nm);
+            else { const char *d = RG_PREFKR ? strName(mid) : 0;   /* 한글 사전 우선 */
+                   if (d){ snprintf(R->nm, sizeof R->nm, "%s", d); nmAdd(mid, R->nm); }
+                   else if (msgName(mid, R->nm, sizeof R->nm)) nmAdd(mid, R->nm); }
         }
         L->n++;
         node = treeNext(node);
@@ -379,6 +408,11 @@ int main(int argc, char **argv)
     RG_TREE_L   = lcreg_u32("RET_TREE_LEFT", 0x00);
     RG_TREE_P   = lcreg_u32("RET_TREE_PARENT", 0x08);
     RG_TREE_R   = lcreg_u32("RET_TREE_RIGHT", 0x10);
+    RG_PREFKR   = (int)lcreg_u32("NAME_PREFER_KR", 1);
+    snprintf(RG_STRCSV, sizeof RG_STRCSV, "%s",
+        lcreg_resolve(lcreg_str("ITEM_NAME_CSV", "data/item_name_kr.csv"),
+                      lcreg_str("ITEM_NAME_DIST", "data/item_name_kr.csv")));
+    loadStrings(RG_STRCSV);
 
     if (lc_attach()) return 1;
     if (!lc_anchor()) return 2;

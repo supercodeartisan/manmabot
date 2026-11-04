@@ -1,0 +1,26 @@
+# registry=D:\11_04\dist\data/item_name_kr.csv strings=18047 INV_VFT=1227468 ITEM_VFT=1226E20
+t=0ms inv=0x1B2A2607CF0 vec=[0x1B341550280..0x1B3415503F0 cap 0x1B341550490]
+  [ 1] id=2637881 cnt=1      ench=0   kind=1   fmt="$16673" name=말하는 두루마리
+  [ 3] id=2637863 cnt=1      ench=0   kind=10  fmt="$70" name=단검
+  [ 5] id=2637865 cnt=1      ench=0   kind=30  fmt="$167" name=가죽 재킷
+  [ 7] id=2637859 cnt=16915  ench=0   kind=0   fmt="$4 (16,915)" name=아데나
+  [ 9] id=2637880 cnt=1      ench=0   kind=8   fmt="$18071" name=청명한 귀환 주문서
+  [11] id=2637877 cnt=1      ench=0   kind=15  fmt="$2080 ($9)" name=수정 지팡이
+  [13] id=2637876 cnt=1      ench=0   kind=60  fmt="$1207 ($117)" name=마법사 옷
+  [15] id=2637875 cnt=1      ench=0   kind=20  fmt="+4 $1206 ($117)" name=마법사 모자
+  [17] id=2637872 cnt=1      ench=0   kind=7   fmt="$535" name=마법서 (뱀파이어릭 터치)
+  [19] id=2637869 cnt=1      ench=0   kind=10  fmt="$330 ($117)" name=장갑
+  [21] id=2637873 cnt=1      ench=0   kind=50  fmt="$767" name=미스릴
+  [23] id=2637870 cnt=2      ench=0   kind=256 fmt="$508 (2)" name=마력의 돌
+  [25] id=2637866 cnt=1      ench=0   kind=5   fmt="$168 ($117)" name=티셔츠
+  [27] id=2637874 cnt=1      ench=0   kind=50  fmt="+0 $1211 ($117)" name=강철 부츠
+  [29] id=2637864 cnt=115    ench=0   kind=12  fmt="+0 $93 (115)" name=은 화살
+  [31] id=2637879 cnt=11     ench=0   kind=1   fmt="$18068 (11)" name=청명한 빨간 물약
+  [33] id=2637867 cnt=1      ench=0   kind=10  fmt="+0 $182 ($117)" name=마법 망토
+  [35] id=2637860 cnt=7      ench=0   kind=10  fmt="$15654 (7)" name=괴물 눈 고기
+  [37] id=2637861 cnt=47     ench=0   kind=750 fmt="$26 (47)" name=체력 회복제
+  [39] id=2637868 cnt=9      ench=0   kind=1000 fmt="$316 (9)" name=해독제
+  [41] id=2637871 cnt=1      ench=0   kind=7   fmt="$533" name=마법서 (인챈트 덱스터리티)
+  [43] id=2637862 cnt=1      ench=0   kind=30  fmt="$69" name=몽둥이
+  [45] id=2781986 cnt=1      ench=0   kind=0   fmt="$16538: $16601" name=질리언
+# n=23 ioctl=21 time=0.1832ms

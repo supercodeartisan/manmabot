@@ -1,0 +1,3 @@
+# bodyact_930  body=AC+0xC8  cmd=ActorCtl+0x58  (fast leaf)
+# t_ms body cmd body_rva cmd_rva ioctl ms
+0	stand	none	0x11E0550	0x0	13	0.071

@@ -747,7 +747,7 @@ class BotController:
             rstate = str(getattr(start, "state", "off") or "off")
             if inviter is not None and inviter.active:
                 phase = "forming"
-            elif rstate in ("await_plan", "hold_at", "waiting"):
+            elif rstate in ("await_mark", "await_plan", "hold_at", "waiting"):
                 phase = "rally"
             elif inviter is not None or rstate == "done":
                 phase = "hunting"
@@ -2053,7 +2053,6 @@ class BotController:
                 "follow",
                 "assist",
                 "hold",
-                "close_in",
                 "defend",
             ) and (leader_name or dist is not None)
         elif party_role == "leader":
@@ -2820,7 +2819,7 @@ class BotController:
         if self._party_leader_on():
             self._install_party_nav_hooks()
             self.log(
-                "Party leader farms with the solo routine. "
+                "Party leader uses the party schedule. "
                 "NPC teleporter and mother-tree decisions are sent to members."
             )
         else:
@@ -3480,6 +3479,11 @@ class BotController:
                             self._begin_leader_start_rally(world, decision.blackboard)
                     except Exception as rally_exc:
                         start_rally.skip(f"failed: {rally_exc}")
+                if leader_brain is not None:
+                    try:
+                        leader_brain.prepare(world, rally=start_rally)
+                    except Exception as schedule_exc:
+                        self.log(f"Party schedule prepare failed: {schedule_exc}")
                 rally_hold = start_rally is not None and start_rally.waiting
                 invites_now = getattr(self, "_party_invites", None)
                 inviter_now = (

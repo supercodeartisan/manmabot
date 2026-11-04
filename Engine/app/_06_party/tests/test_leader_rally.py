@@ -37,20 +37,24 @@ def _rally():
     return start, rally
 
 
-def test_walk_only_waits_at_the_start_tile():
+def test_plan_does_not_start_the_wait():
     start, rally = _rally()
     plan = _Plan(
         [_Step("walk", {"from": {"mapId": 0, "x": 1, "y": 2}, "to": {"mapId": 0, "x": 9, "y": 9}})],
         {"mapId": 0, "x": 1, "y": 2},
     )
+    start.state = "await_mark"
     start.on_plan(plan)
-    assert start.hold_step == 0
-    assert rally.body["stage"] == "start"
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 1, 2)
+    assert start.state == "await_mark"
+    assert rally.body is None
+    assert start.should_hold(0, None) is False
+    start.note_arrived((0, 9, 9))
+    assert start.state == "waiting"
+    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 9, 9)
     assert start.should_hold(0, None) is True
 
 
-def test_first_teleport_departure_is_the_meet_point():
+def test_teleport_plan_does_not_move_the_wait():
     start, rally = _rally()
     plan = _Plan(
         [
@@ -62,24 +66,16 @@ def test_first_teleport_departure_is_the_meet_point():
                     "to": {"mapId": 4, "x": 80, "y": 80},
                 },
             ),
-            _Step(
-                "talking_scroll",
-                {
-                    "from": {"mapId": 4, "x": 80, "y": 80},
-                    "to": {"mapId": 0, "x": 300, "y": 300},
-                },
-            ),
         ],
         {"mapId": 4, "x": 10, "y": 10},
     )
+    start.state = "await_mark"
     start.on_plan(plan)
-    assert start.hold_step == 1
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (4, 20, 20)
-    assert start.should_hold(0, None) is False
-    assert start.state == "hold_at"
-    assert start.should_hold(1, None) is True
+    assert start.hold_step is None
+    assert start.state == "await_mark"
+    start.note_arrived((0, 3, 4))
+    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 3, 4)
     assert start.state == "waiting"
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (4, 20, 20)
 
 
 def test_rally_point_is_not_sent_to_members():
@@ -100,7 +96,7 @@ def test_rally_point_is_not_sent_to_members():
 
 
 if __name__ == "__main__":
-    test_walk_only_waits_at_the_start_tile()
-    test_first_teleport_departure_is_the_meet_point()
+    test_plan_does_not_start_the_wait()
+    test_teleport_plan_does_not_move_the_wait()
     test_rally_point_is_not_sent_to_members()
     print("OK")

@@ -1,0 +1,45 @@
+# registry=D:\11_04\dist\data/item_name_kr.csv SHOP_VFT=122A7B0
+t=0ms shop=0x1B2A278AED0 state=0x1
+  BUY [ 0] order=0    id=243     tmpl=464    price=38      편지지
+  BUY [ 1] order=1    id=357     tmpl=464    price=1452    혈맹 편지지
+  BUY [ 2] order=2    id=29      tmpl=7      price=1       화살
+  BUY [ 3] order=3    id=41      tmpl=35     price=8       단검
+  BUY [ 4] order=4    id=5       tmpl=3      price=12      등잔
+  BUY [ 5] order=5    id=4       tmpl=1      price=24      도끼
+  BUY [ 6] order=6    id=11      tmpl=20     price=60      활
+  BUY [ 7] order=7    id=1       tmpl=8      price=18      아탐
+  BUY [ 8] order=8    id=31      tmpl=11     price=42      바르디쉐
+  BUY [ 9] order=9    id=35      tmpl=21     price=36      넓은 검
+  BUY [10] order=10   id=12      tmpl=101    price=96      창
+  BUY [11] order=11   id=8       tmpl=67     price=108     철퇴
+  BUY [12] order=12   id=75      tmpl=106    price=121     짧은 검
+  BUY [13] order=13   id=67      tmpl=90     price=1452    언월도
+  BUY [14] order=14   id=3       tmpl=2      price=3630    장검
+  BUY [15] order=15   id=103     tmpl=62     price=24      가죽 재킷
+  BUY [16] order=16   id=113     tmpl=97     price=72      작은 방패
+  BUY [17] order=17   id=102     tmpl=51     price=121     가죽 갑옷
+  BUY [18] order=18   id=99      tmpl=109    price=363     징박힌 가죽 갑옷
+  BUY [19] order=19   id=100     tmpl=86     price=605     고리 갑옷
+  BUY [20] order=20   id=234     tmpl=287    price=1210    무명 로브
+  BUY [21] order=21   id=98      tmpl=89     price=2420    비늘 갑옷
+  BUY [22] order=22   id=117     tmpl=61     price=1452    큰 방패
+  BUY [23] order=23   id=96      tmpl=26     price=7260    사슬 갑옷
+  BUY [24] order=24   id=10      tmpl=124    price=1       고기
+  BUY [25] order=25   id=362     tmpl=488    price=6       사탕
+  BUY [26] order=26   id=348     tmpl=478    price=165     숫돌
+  BUY [27] order=27   id=14      tmpl=80     price=44      체력 회복제
+  BUY [28] order=28   id=15      tmpl=78     price=242     고급 체력 회복제
+  BUY [29] order=29   id=126     tmpl=76     price=84      해독제
+  BUY [30] order=30   id=17      tmpl=77     price=242     속도향상 물약
+  BUY [31] order=31   id=296     tmpl=79     price=880     용기의 물약
+  BUY [32] order=32   id=1408    tmpl=20029  price=880     악마의 피
+  BUY [33] order=33   id=86      tmpl=130    price=1980    엘븐 와퍼
+  BUY [34] order=34   id=297     tmpl=1529   price=660     지혜의 물약
+  BUY [35] order=35   id=343     tmpl=477    price=550     펫 호루라기
+  BUY [36] order=36   id=22      tmpl=475    price=55      확인 주문서
+  BUY [37] order=37   id=23      tmpl=473    price=77      순간이동 주문서
+  BUY [38] order=38   id=162     tmpl=474    price=132     귀환 주문서
+  BUY [39] order=39   id=806     tmpl=474    price=132     혈맹 귀환 주문서
+  BUY [40] order=40   id=299     tmpl=472    price=1430    변신 주문서
+  BUY [41] order=41   id=24      tmpl=470    price=121     저주 풀기 주문서
+# buy=42 sell=0 ioctl=131 time=0.6531ms

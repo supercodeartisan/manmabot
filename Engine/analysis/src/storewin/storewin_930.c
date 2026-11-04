@@ -168,6 +168,31 @@ static int msgName(uint32_t mid, char *out, int outSz){
     }
     return 0;
 }
+/* ── 한글 이름 사전 (ID,EP,TYPE,KR,TW,JP,EN) ───────────────────────────── */
+static int  RG_PREFKR = 1;
+static int  s_id[40000]; static char s_kr[40000][160]; static int s_n = 0;
+static const char* strName(int id){
+    for(int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char* v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
+static void loadStrings(const char *p){
+    FILE *g = fopen(p, "rb"); if (!g) return;
+    char *raw = (char*)malloc(2<<20); if (!raw){ fclose(g); return; }
+    int n = (int)fread(raw, 1, 2<<20, g); fclose(g); raw[n] = 0; char *s = raw;
+    if ((unsigned char)s[0]==0xEF&&(unsigned char)s[1]==0xBB&&(unsigned char)s[2]==0xBF) s += 3;
+    while (*s){ char *e = strchr(s, '\n'); if (e) *e = 0; char *cm = strchr(s, ',');
+        if (cm){ int id = atoi(s);
+            if (id > 0){ char *p1 = strchr(cm+1, ','), *p2 = p1 ? strchr(p1+1, ',') : 0;
+                if (p2){ char *kr = p2+1, *buf = s_kr[s_n]; int bi = 0, inq = 0; if (*kr=='"'){ inq=1; kr++; }
+                    while (*kr && bi < 159){ if (inq){ if (*kr=='"') break; } else { if (*kr==',') break; } buf[bi++] = *kr++; }
+                    buf[bi] = 0; s_id[s_n] = id; s_n++; if (s_n >= 40000) break; } } }
+        if (!e) break; s = e + 1; }
+    free(raw);
+}
 static uint32_t fmtMid(const char *fmt){
     for (const char *p = fmt; *p; p++){
         if (*p != '$') continue;
@@ -196,6 +221,7 @@ static void normName(const char *in, char *out, int cap){
 #define BAG_MAX 256
 static char g_bag[BAG_MAX][96]; static int g_bagN = 0;
 static uint32_t RG_INVVFT, RG_VBEG, RG_VEND, RG_ITEMVFT, RG_IFMT;
+static char RG_STRCSV[256];
 static void readBag(void){
     g_bagN = 0;
     uint64_t sub = lc_subsGet(RG_INVVFT);
@@ -222,7 +248,9 @@ static void readBag(void){
         uint32_t mid = fmtMid(fmt);
         if (!mid) continue;
         char nm[160];
-        if (msgName(mid, nm, sizeof nm)){ snprintf(g_bag[g_bagN], sizeof g_bag[0], "%s", nm); g_bagN++; }
+        const char *dn = RG_PREFKR ? strName(mid) : 0;   /* 한글 사전 우선 */
+        if (dn){ snprintf(nm, sizeof nm, "%s", dn); snprintf(g_bag[g_bagN], sizeof g_bag[0], "%s", nm); g_bagN++; }
+        else if (msgName(mid, nm, sizeof nm)){ snprintf(g_bag[g_bagN], sizeof g_bag[0], "%s", nm); g_bagN++; }
     }
 }
 static int bagHas(const char *name){
@@ -354,6 +382,11 @@ int main(int argc, char **argv)
     RG_RECHDR   = lcreg_u32("OFF_REC_HDR", 0x10);
     RG_FNVOFF   = lcreg_u64("MSG_FNV_OFFSET", 0xcbf29ce484222325ULL);
     RG_FNVPRIME = lcreg_u64("MSG_FNV_PRIME", 0x100000001b3ULL);
+    RG_PREFKR   = (int)lcreg_u32("NAME_PREFER_KR", 1);
+    snprintf(RG_STRCSV, sizeof RG_STRCSV, "%s",
+        lcreg_resolve(lcreg_str("ITEM_NAME_CSV", "data/item_name_kr.csv"),
+                      lcreg_str("ITEM_NAME_DIST", "data/item_name_kr.csv")));
+    loadStrings(RG_STRCSV);
 
     /* 컨테이너 head/next 쌍 파싱: "0x38:0x18,0x28:0x28" */
     { const char *v = lcreg_str("UIDLG_CONT", "0x38:0x18,0x28:0x28");

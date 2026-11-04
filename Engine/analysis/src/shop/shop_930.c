@@ -27,7 +27,15 @@ static uint32_t RG_ARVA,RG_MASK,RG_STRIDE,RG_NEXT,RG_RECNAME,RG_NAMEKR,RG_NODETE
 static uint64_t RG_FNVOFF,RG_FNVPRIME;
 static char RG_STRCSV[256];
 static int  s_id[40000]; static char s_kr[40000][160]; static int s_n=0;
-static const char* strName(int id){ for(int i=0;i<s_n;i++) if(s_id[i]==id) return s_kr[i]; return 0; }
+static int  RG_PREFKR=1;   /* 1=한글 사전(STRINGS) 우선, 0=메모리 이름 우선 */
+static const char* strName(int id){
+    for(int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char* v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
 static void loadStrings(const char*p){ FILE*g=fopen(p,"rb"); if(!g)return; char*raw=(char*)malloc(2<<20); if(!raw){fclose(g);return;}
     int n=(int)fread(raw,1,2<<20,g); fclose(g); raw[n]=0; char*s=raw;
     if((unsigned char)s[0]==0xEF&&(unsigned char)s[1]==0xBB&&(unsigned char)s[2]==0xBF)s+=3;
@@ -50,7 +58,13 @@ static int msgName(uint32_t mid,char*out,int cap){ out[0]=0; if(!mid||!RG_ARVA)r
     for(int st=0;isHeap(rec)&&st<64;st++){ if(recMid(rec)==mid){ uint64_t nn=q64(rec+RG_RECNAME); if(!isHeap(nn))return 0;
         uint64_t kr=q64(nn+RG_NAMEKR); if(!isHeap(kr))return 0; return readSso(kr+RG_NODETEXT,out,cap)>0; }
         uint64_t nx=q64(rec+RG_NEXT); if(nx==rec)break; rec=nx; } return 0; }
-static int resolve(uint32_t mid,char*out,int cap){ if(msgName(mid,out,cap))return 1; snprintf(out,cap,"(?)"); return 0; }
+static int resolve(uint32_t mid,char*out,int cap){
+    const char* s = RG_PREFKR ? strName(mid) : 0;       /* 한글 사전 우선 */
+    if(s){ snprintf(out,cap,"%s",s); return 1; }
+    if(msgName(mid,out,cap)) return 1;
+    s = strName(mid); if(s){ snprintf(out,cap,"%s",s); return 1; }
+    snprintf(out,cap,"(?)"); return 0;
+}
 /* 10_8: mid→이름 캐시(같은 mid 반복 제거) */
 static uint32_t rc_mid[512]; static char rc_nm[512][128]; static int rc_n=0;
 static void resolveC(uint32_t mid,char*out,int cap){
@@ -92,9 +106,10 @@ int main(int argc,char**argv){
     RG_RECHDR=lcreg_u32("OFF_REC_HDR",0x10);
     RG_STRLEN=lcreg_u32("OFF_STR_LEN",0x10); RG_STRCAP=lcreg_u32("OFF_STR_CAP",0x18);
     RG_SSOMAX=lcreg_u32("STR_SSO_MAX",0x10); RG_MIDFB=lcreg_u32("SHOP_MID_FALLBACK",1);
+    RG_PREFKR=(int)lcreg_u32("NAME_PREFER_KR",1);
     RG_FNVOFF=lcreg_u64("MSG_FNV_OFFSET",0xcbf29ce484222325ULL); RG_FNVPRIME=lcreg_u64("MSG_FNV_PRIME",0x100000001b3ULL);
-    snprintf(RG_STRCSV,sizeof(RG_STRCSV),"%s",lcreg_resolve(lcreg_str("STRINGS_CSV","T3_maps/dec/data_string.csv.lcf.out.plain"),
-        lcreg_str("STRINGS_DIST","data/data_string.csv.lcf.out.plain")));
+    snprintf(RG_STRCSV,sizeof(RG_STRCSV),"%s",lcreg_resolve(lcreg_str("ITEM_NAME_CSV","data/item_name_kr.csv"),
+        lcreg_str("ITEM_NAME_DIST","data/item_name_kr.csv")));
     lcreg_poll P=lcreg_poll_load("SHOP");
 
     if(lc_attach())return 1; loadStrings(RG_STRCSV); if(!lc_anchor())return 2;

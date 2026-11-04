@@ -1,0 +1,7 @@
+registry=D:\11_04\dist\registry/LC930_REGISTRY.txt  CHAR: interval=200ms jitter=20ms
+t=0ms cd=0x1B2A2615C80 status=0x1B2A2616118 vft=011E50F8(vok=1) decode=15/15
+  Lv=12 HP=60/60 MP=120/120  STR=12 INT=18 CON=12 DEX=13 WIS=12 CHA=8
+  FOOD=17 WEIGHT%=35  W=685/1950  LAWFUL=10312 AC=5
+  POS: X=33431 Y=32828
+  EXP=84.1527%  (src=chain bar=0x0)  mirror=0.0000%
+  -> ioctl=149 time=18.0055ms ok=1

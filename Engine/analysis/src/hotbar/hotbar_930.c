@@ -29,6 +29,30 @@ static int      T_SPELL,T_ITEM;
 static uint32_t RG_ARVA,RG_MASK,RG_STRIDE,RG_NEXT,RG_RECNAME,RG_NAMEKR,RG_NODETEXT;
 static uint64_t RG_FNVOFF,RG_FNVPRIME;
 
+/* ── 한글 이름 사전 (ID,EP,TYPE,KR,TW,JP,EN) ───────────────────────────── */
+static int  RG_PREFKR = 1;
+static char RG_STRCSV[256];
+static int  s_id[40000]; static char s_kr[40000][160]; static int s_n = 0;
+static const char* strName(int id){
+    for(int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char* v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
+static void loadStrings(const char*p){
+    FILE*g=fopen(p,"rb"); if(!g)return; char*raw=(char*)malloc(2<<20); if(!raw){fclose(g);return;}
+    int n=(int)fread(raw,1,2<<20,g); fclose(g); raw[n]=0; char*s=raw;
+    if((unsigned char)s[0]==0xEF&&(unsigned char)s[1]==0xBB&&(unsigned char)s[2]==0xBF)s+=3;
+    while(*s){ char*e=strchr(s,'\n'); if(e)*e=0; char*cm=strchr(s,','); if(cm){ int id=atoi(s);
+        if(id>0){ char*p1=strchr(cm+1,','),*p2=p1?strchr(p1+1,','):0;
+            if(p2){ char*kr=p2+1,*buf=s_kr[s_n]; int bi=0,inq=0; if(*kr=='"'){inq=1;kr++;}
+                while(*kr&&bi<159){ if(inq){if(*kr=='"')break;} else {if(*kr==',')break;} buf[bi++]=*kr++; }
+                buf[bi]=0; s_id[s_n]=id; s_n++; if(s_n>=40000)break; } } }
+        if(!e)break; s=e+1; } free(raw);
+}
+
 /* ── 묶음호출(페이지 배치) helper — lcore 의 lc_pgRead 경유 ───────────────
  * 같은 4KB 페이지 안의 read 를 1콜로 묶고 재방문은 캐시(0콜) 처리.
  * 패치 내성: 주소/오프셋을 새로 하드코딩하지 않으므로 이동 상수 증가 없음. */
@@ -87,8 +111,12 @@ int main(int argc,char**argv){
     RG_RECNAME=lcreg_u32("MSG_REC_NAME",0x38); RG_NAMEKR=lcreg_u32("MSG_NAME_KR",0x00);
     RG_NODETEXT=lcreg_u32("MSG_NODE_TEXT",0x30);
     RG_FNVOFF=lcreg_u64("MSG_FNV_OFFSET",0xcbf29ce484222325ULL); RG_FNVPRIME=lcreg_u64("MSG_FNV_PRIME",0x100000001b3ULL);
+    RG_PREFKR=(int)lcreg_u32("NAME_PREFER_KR",1);
+    snprintf(RG_STRCSV,sizeof(RG_STRCSV),"%s",lcreg_resolve(lcreg_str("ITEM_NAME_CSV","data/item_name_kr.csv"),
+        lcreg_str("ITEM_NAME_DIST","data/item_name_kr.csv")));
     lcreg_poll P=lcreg_poll_load("HOTBAR");
 
+    loadStrings(RG_STRCSV);
     if(lc_attach())return 1; if(!lc_anchor())return 2;
     lcreg_mkdir_for(outp);
     FILE*f=fopen(outp,"w"); if(!f){ fprintf(stderr,"cannot open %s\n",outp); return 4; }
@@ -124,14 +152,18 @@ int main(int argc,char**argv){
                             if(pgrm(val,sb,sizeof sb)){                    /* 슬롯헤더+V_ID 1콜 묶음 */
                                 memcpy(&type,sb+V_TYPE,4); memcpy(&cfg,sb+V_CFG,4); memcpy(&id,sb+V_ID,4); }
                             readSso(val+V_STR,sname,sizeof(sname)); }      /* 페이지 캐시로 보통 0콜 */
-                        char nm[128]=""; if(type==T_ITEM){ int mid=0; const char* d=strchr(sname,'$'); if(d) mid=atoi(d+1);
+                        char nm[128]=""; int mid=0;
+                        if(type==T_ITEM){ const char* d=strchr(sname,'$'); if(d) mid=atoi(d+1);
                             const char* cch=ncFind(mid);
                             if(cch) snprintf(nm,sizeof(nm),"%s",cch);                        /* 캐시 hit → 0콜 */
-                            else { if(!msgName(mid,nm,sizeof(nm))) snprintf(nm,sizeof(nm),"%s",sname[0]?sname:"(?)");
+                            else { const char* dn = RG_PREFKR ? strName(mid) : 0;            /* 한글 사전 우선 */
+                                   if(dn) snprintf(nm,sizeof(nm),"%s",dn);
+                                   else if(!msgName(mid,nm,sizeof(nm))){ dn=strName(mid);
+                                          snprintf(nm,sizeof(nm),"%s",dn?dn:(sname[0]?sname:"(?)")); }
                                    if(nm[0]&&nm[0]!='(') ncAdd(mid,nm); } }
                         else if(type==T_SPELL) snprintf(nm,sizeof(nm),"%s",sname[0]?sname:"(?)");
                         else snprintf(nm,sizeof(nm),"(empty)");
-                        fprintf(f,"  key=%-3d type=%-2d cfg=%-6u id=%-6u name=%s\n",key,type,cfg,id,nm); n++;
+                        fprintf(f,"  key=%-3d type=%-2d cfg=%-6u id=%-6u mid=%-6d name=%s\n",key,type,cfg,id,mid,nm); n++;
                     }
                     uint64_t L=0,R=0,P=0; memcpy(&L,nb+N_L,8); memcpy(&R,nb+N_R,8); memcpy(&P,nb+N_P,8);
                     if(isHeap(L)&&qt<4096)q[qt++]=L; if(isHeap(R)&&qt<4096)q[qt++]=R; if(isHeap(P)&&qt<4096)q[qt++]=P;

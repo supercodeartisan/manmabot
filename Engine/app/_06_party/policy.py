@@ -18,7 +18,6 @@ class MemberKind(str, Enum):
     DEFEND = "defend"
     JOIN_MAP = "join_map"
     FOLLOW = "follow"
-    CLOSE_IN = "close_in"  # short step toward assist target (out of range)
     ASSIST = "assist"
     HOLD = "hold"
 
@@ -48,7 +47,7 @@ class PolicyInput:
     at_travel_spot: Optional[bool] = None
     # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
     leader_walk_dist: Optional[int] = None
-    # Assist target exists but outside attack/spell range → step closer.
+    # Assist target exists but is outside the solo hunt range, so follow.
     need_combat_step: bool = False
     # Solo farm: own target fights inside the assist leash, leader fight or not.
     solo_farm: bool = False
@@ -100,19 +99,13 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
 
     dist = int(inp.leader_dist)
 
-    # Assist beats every follow: do not walk to the leader first.
-    # Range is CLOSE_IN toward the mob, not FOLLOW toward the leader.
-    if inp.assist_ready:
+    # In the solo hunt range: attack from here. Out of range: follow the leader.
+    if inp.assist_ready and not inp.need_combat_step:
         yard = "turret_" if cfg.turret_farm else ""
         out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
-        if not inp.need_combat_step:
-            what = "solo_farm" if inp.solo_farm else "assist"
-            return PolicyResult(
-                MemberKind.ASSIST, False, f"{yard}{what}{out} dist={dist}"
-            )
-        what = "solo_close_in" if inp.solo_farm else "close_in"
+        what = "solo_farm" if inp.solo_farm else "assist"
         return PolicyResult(
-            MemberKind.CLOSE_IN, False, f"{yard}{what}{out} dist={dist}"
+            MemberKind.ASSIST, False, f"{yard}{what}{out} dist={dist}"
         )
 
     # A cached tile is a clue, not a live follow goal.

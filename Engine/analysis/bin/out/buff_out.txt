@@ -1,0 +1,4 @@
+# registry=D:\11_04\dist\data/data_string.csv.lcf.out.plain strings=12741 (BuffSubsystem+0x260 unordered_map walk, no BFS)
+  t=0ms name=보안서비스            남은=-1.0s dur=PERM skill=1179  strID=11975 [상시]
+  t=0ms name=경험치 복구           남은=77848.0s dur= skill=1065  strID=12605
+# cache=2 n=2 ioctl=47 time=0.2399ms

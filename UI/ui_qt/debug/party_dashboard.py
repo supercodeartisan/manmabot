@@ -697,7 +697,7 @@ class PartyDashboard(QWidget):
         arrived = list(rally.get("arrived") or [])
         f["RALLY"].set(
             rstate.upper() if rstate != "waiting" else f"WAIT {len(arrived)}/{len(expected)}",
-            {"done": "ok", "waiting": "warn", "hold_at": "info", "await_plan": "info"}.get(rstate, "off"),
+            {"done": "ok", "waiting": "warn", "hold_at": "info", "await_plan": "info", "await_mark": "info"}.get(rstate, "off"),
         )
 
         in_party = sum(1 for r in roster if r.get("in_party"))
@@ -939,7 +939,7 @@ class PartyDashboard(QWidget):
         kind = str(status.get("last_kind") or "—")
         f["BRAIN"].set(
             kind.upper(),
-            {"assist": "ok", "close_in": "ok", "follow": "info", "hold": "info",
+            {"assist": "ok", "follow": "info", "hold": "info",
              "join_map": "warn", "wait": "warn", "stop": "off"}.get(kind.lower(), "off"),
             str(status.get("last_reason") or ""),
         )

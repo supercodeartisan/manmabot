@@ -25,6 +25,13 @@
 static uint32_t RG_UVFT, RG_CVAL, RG_TDNAME, RG_COLTD;
 static uint32_t RG_LINESOFF, RG_LINESTRIDE, RG_LINEMAX, RG_STRSZ, RG_STRCP, RG_SSOMAX, RG_STRMAX;
 static uint32_t RG_ENC, RG_ENCFB, RG_DEDUPN, RG_STREAM;
+/* 정본 채팅 풀 경로 (2026-11-04): chat+RES → resource+POOLOFF → 슬롯 배열 */
+static uint32_t RG_CHATRES, RG_POOLOFF, RG_PENTRY, RG_PSTRIDE, RG_PSLOTS;
+static uint32_t RG_O_MSG, RG_O_FULL, RG_O_SEND, RG_PSCAN;
+static uint32_t RG_VFT_CHAT, RG_HISTMAP, RG_CDVFT, RG_CD_MSG, RG_CD_FULL, RG_CD_SEND, RG_CD_LANG;
+static uint32_t RG_H_ARR, RG_H_MASK, RG_H_HEAD, RG_H_CNT, RG_H_TAIL;
+static uint32_t g_poolOffUsed = 0;
+static int decString(uint64_t p, char*out, int cap);   /* defined below */
 static char     RG_CLASS[96];
 static uint32_t g_chead[8], g_cnext[8]; static int g_ncont=0;
 
@@ -63,6 +70,89 @@ static int classOf(uint64_t vft, char*out, int cap){
 }
 static void shortName(const char*nm, char*out, int cap){
     int t=0; while(nm[t] && nm[t]!=':' && t<cap-1){ out[t]=nm[t]; t++; } out[t]=0;
+}
+/* ── 정본 채팅 풀 (2026-11-04) ───────────────────────────────────────────
+ *   resource = *(chat + CHAT_RES_OFF)
+ *   pool     = *(resource + CHAT_POOL_RES_OFF)
+ *   slot i   = pool + CHAT_POOL_ENTRY + i*CHAT_POOL_STRIDE
+ *                + CHAT_LINE_MSG / CHAT_LINE_FULL / CHAT_LINE_SENDER (std::string)
+ *   등록 오프셋이 무효면 resource 필드를 훑어 풀을 1회 탐색한다(chatmon 과 동일 규칙).
+ */
+static int poolOk(uint64_t p){
+    if(!isHeap(p) || (p&7)) return 0;
+    uint8_t h[0x20];
+    return pgrm(p,h,sizeof h)!=0;
+}
+static int entryHasText(uint64_t pool, uint32_t s){
+    char t[0x400];
+    uint64_t e = pool + RG_PENTRY + (uint64_t)s*RG_PSTRIDE;
+    if(decString(e+RG_O_MSG,t,sizeof t)>0) return 1;
+    if(decString(e+RG_O_FULL,t,sizeof t)>0) return 1;
+    if(decString(e+RG_O_SEND,t,sizeof t)>0) return 1;
+    return 0;
+}
+static uint64_t poolScan(uint64_t res, uint32_t *foundOff){
+    if(!isHeap(res)) return 0;
+    for(uint32_t off=0; off+8<=RG_PSCAN; off+=8){
+        uint64_t p=pgq64(res+off);
+        if(!poolOk(p)) continue;
+        int hits=0;
+        for(uint32_t s=0;s<3;s++) if(entryHasText(p,s)) hits++;
+        if(hits>=2){ if(foundOff) *foundOff=off; return p; }
+    }
+    return 0;
+}
+
+/* ── 정본 2: HIST 맵 (sub+CHAT_HIST_MAP_OFF) ─────────────────────────────
+ *   node{L@0,R@0x10,nil@0x18,chan@0x20, HIST@0x28}
+ *   HIST{arr@+0x08, mask@+0x10, head@+0x18, cnt@+0x20}
+ *   arr[idx] -> shared_ptr{rep@+8} = ChatData ; ChatData vft == CHATDATA_VFT
+ *   ChatData: msg@+0x18 full@+0x38 sender@+0x58 lang@+0x78, a@+0x08 b@+0x0C
+ */
+static int  g_hn = 0, g_hnew = 0;
+
+static void walkHist(uint64_t node, uint64_t head, int depth, FILE *f){
+    if(!isHeap(node) || node==head || depth>64) return;
+    uint8_t nb[0x30];
+    if(!pgrm(node,nb,sizeof nb)) return;
+    uint64_t L,R,nil;
+    memcpy(&L,nb+0x00,8); memcpy(&R,nb+0x10,8); memcpy(&nil,nb+0x18,8);
+    if(!nil || L!=head) walkHist(L,head,depth+1,f);
+
+    int chan = *(int *)(nb+0x20);
+    uint8_t hb[0x30];
+    if(pgrm(node+0x28,hb,sizeof hb)){
+        uint64_t arr=0,mask=0,headi=0,cnt=0;
+        memcpy(&arr,hb+RG_H_ARR,8); memcpy(&mask,hb+RG_H_MASK,8);
+        memcpy(&headi,hb+RG_H_HEAD,8); memcpy(&cnt,hb+RG_H_CNT,8);
+        if(isHeap(arr) && cnt>0 && mask>1){
+            uint64_t lim=cnt>300?300:cnt;
+            uint64_t start=(lim>RG_H_TAIL)?(lim-RG_H_TAIL):0;
+            for(uint64_t i=start;i<lim;i++){
+                uint64_t idx=(headi+i)&(mask-1);
+                uint64_t sp=0;
+                if(!pgrm(arr+idx*8,&sp,8)) break;
+                if(!isHeap(sp)||(sp&7)) continue;
+                uint64_t cd=pgq64(sp+8);
+                if(!isHeap(cd)||(cd&7)) continue;
+                uint64_t v=pgq64(cd);
+                if(!isMod(v)||(uint32_t)(v-g_base)!=RG_CDVFT) continue;
+                static char msg[0x400], send[0x200];
+                if(decString(cd+RG_CD_MSG,msg,sizeof msg)<=0) continue;
+                if(isInputLine(1,msg)) continue;
+                send[0]=0;
+                decString(cd+RG_CD_SEND,send,sizeof send);
+                int a=(int)d32(cd+0x08), b=(int)d32(cd+0x0C);
+                g_hn++;
+                int isnew=hringFresh(lineHash(msg));
+                if(isnew) g_hnew++;
+                if(!RG_STREAM || isnew)
+                    fprintf(f,"  [ch=%d a=%d b=%d] %s : %s\n", chan,a,b,
+                            send[0]?send:"(?)", msg);
+            }
+        }
+    }
+    if(!nil || R!=head) walkHist(R,head,depth+1,f);
 }
 /* UISubsystem 컨테이너 walk → 클래스명 일치 창 반환 (BFS 없음). */
 static uint64_t findChatWindow(uint64_t ui){
@@ -174,6 +264,27 @@ int main(int argc, char **argv)
     RG_DEDUPN = lcreg_u32("CHAT_DEDUP_N", 256);
     RG_STREAM = lcreg_u32("CHAT_STREAM", 0);
     RG_INPOFF = lcreg_u32("CHAT_INPUT_FIELD", 0xC0);
+    RG_CHATRES = lcreg_u32("CHAT_RES_OFF", 0x10);
+    RG_POOLOFF = lcreg_u32("CHAT_POOL_RES_OFF", 0x4E8);
+    RG_PENTRY  = lcreg_u32("CHAT_POOL_ENTRY", 0x18);
+    RG_PSTRIDE = lcreg_u32("CHAT_POOL_STRIDE", 0xC0);
+    RG_PSLOTS  = lcreg_u32("CHAT_POOL_SLOTS", 64);
+    RG_O_MSG   = lcreg_u32("CHAT_LINE_MSG", 0x00);
+    RG_O_FULL  = lcreg_u32("CHAT_LINE_FULL", 0x20);
+    RG_O_SEND  = lcreg_u32("CHAT_LINE_SENDER", 0x40);
+    RG_PSCAN   = lcreg_u32("CHAT_POOL_SCAN_LEN", 0x800);
+    RG_VFT_CHAT= lcreg_u32("VFT_CHAT", 0x121C470);
+    RG_HISTMAP = lcreg_u32("CHAT_HIST_MAP_OFF", 0x3F8);
+    RG_CDVFT   = lcreg_u32("CHATDATA_VFT", 0x121C5F8);
+    RG_CD_MSG  = lcreg_u32("CHATDATA_MSG_OFF", 0x18);
+    RG_CD_FULL = lcreg_u32("CHATDATA_FULL_OFF", 0x38);
+    RG_CD_SEND = lcreg_u32("CHATDATA_SENDER_OFF", 0x58);
+    RG_CD_LANG = lcreg_u32("CHATDATA_LANG_OFF", 0x78);
+    RG_H_ARR   = lcreg_u32("CHAT_HIST_ARR_OFF", 0x08);
+    RG_H_MASK  = lcreg_u32("CHAT_HIST_MASK_OFF", 0x10);
+    RG_H_HEAD  = lcreg_u32("CHAT_HIST_HEAD_OFF", 0x18);
+    RG_H_CNT   = lcreg_u32("CHAT_HIST_COUNT_OFF", 0x20);
+    RG_H_TAIL  = lcreg_u32("CHAT_HIST_TAIL", 4);
     snprintf(RG_CURCHAR, sizeof RG_CURCHAR, "%s", lcreg_str("CHAT_INPUT_CURSOR", "\\"));
     if(forceStream) RG_STREAM = 1;
     if(RG_DEDUPN > CHAT_DEDUP_CAP) RG_DEDUPN = CHAT_DEDUP_CAP;
@@ -200,35 +311,40 @@ int main(int argc, char **argv)
         lc_pgc_reset();                       /* 묶음호출: 페이지 캐시 사이클 초기화 */
         uint64_t ui = lc_subsGet(RG_UVFT);
         uint64_t chat = isHeap(ui) ? findChatWindow(ui) : 0;
-        uint64_t lines = isHeap(chat) ? pgq64(chat+RG_LINESOFF) : 0;
+        uint64_t res = isHeap(chat) ? pgq64(chat+RG_CHATRES) : 0;
+        uint64_t pool = 0;
+        if(isHeap(res)){
+            pool = pgq64(res+RG_POOLOFF);
+            if(!poolOk(pool)) pool = poolScan(res,&g_poolOffUsed);
+        }
         int n=0, fresh=0, ninp=0;
-        fprintf(f,"t=%ums ui=0x%llX chat=0x%llX lines=0x%llX\n",
-            (unsigned)(GetTickCount()-t0),(unsigned long long)ui,(unsigned long long)chat,(unsigned long long)lines);
-        if(isHeap(lines)){
-            /* 1차: 디코드하고 마지막 유효 인덱스를 구한다(커서 마커는 최신 항목에만 적용) */
-            static char buf[RG_LINEMAX_MAX][0x400];
-            static uint32_t idxof[RG_LINEMAX_MAX];
-            uint32_t m=0;
-            for(uint32_t i=0;i<RG_LINEMAX;i++){
-                uint64_t p=pgq64(lines+(uint64_t)i*RG_LINESTRIDE);
-                if(!isHeap(p)) break;                       /* 마지막 다음 슬롯=NULL → 중단 */
-                if(decString(p,buf[m],sizeof buf[0])<=0) continue;
-                idxof[m]=i; m++;
-                if(m>=RG_LINEMAX_MAX) break;
-            }
-            for(uint32_t k=0;k<m;k++){
-                const char *u8=buf[k]; uint32_t i=idxof[k];
-                n++;
-                if(isInputLine(k==m-1,u8)){                   /* 최신+커서 = 입력 중 → 제외 */
-                    ninp++;
-                    if(!RG_STREAM) fprintf(f,"  [%2u] IN  \"%s\"\n",i,u8);
-                    continue;
+        /* 정본: HIST 맵(sub+CHAT_HIST_MAP_OFF) — ChatData 체인 */
+        uint64_t csub = lc_subsGet(RG_VFT_CHAT);
+        uint64_t hhead = isHeap(csub) ? pgq64(csub+RG_HISTMAP) : 0;
+        fprintf(f,"t=%ums ui=0x%llX chat=0x%llX res=0x%llX pool=0x%llX csub=0x%llX hist=0x%llX\n",
+            (unsigned)(GetTickCount()-t0),(unsigned long long)ui,(unsigned long long)chat,
+            (unsigned long long)res,(unsigned long long)pool,
+            (unsigned long long)csub,(unsigned long long)hhead);
+        if(isHeap(hhead)){
+            g_hn = 0; g_hnew = 0;
+            walkHist(pgq64(hhead+0x08), hhead, 0, f);
+            n = g_hn; fresh = g_hnew;
+        }
+        /* 폴백: UI 풀 슬롯(현 빌드에서는 비어 있는 경우가 많다) */
+        if(n==0 && isHeap(pool)){
+            for(uint32_t i=0;i<RG_PSLOTS;i++){
+                uint64_t e = pool + RG_PENTRY + (uint64_t)i*RG_PSTRIDE;
+                static char buf[0x400];
+                if(decString(e+RG_O_MSG,buf,sizeof buf)<=0){
+                    if(decString(e+RG_O_FULL,buf,sizeof buf)<=0) continue;
                 }
-                int isnew = hringFresh(lineHash(u8));
+                if(!buf[0]) continue;
+                if(isInputLine(1,buf)){ ninp++; continue; }   /* 입력 중인 줄 제외 */
+                n++;
+                int isnew = hringFresh(lineHash(buf));
                 if(isnew) fresh++;
-                /* 스트리밍 모드: 새 수신메시지만 출력 / 스냅샷 모드: 전부 */
                 if(!RG_STREAM || isnew)
-                    fprintf(f,"  [%2u]%s \"%s\"\n",i,isnew?" NEW":"",u8);
+                    fprintf(f,"  [%2u]%s \"%s\"\n",i,isnew?" NEW":"",buf);
             }
         }
         QueryPerformanceCounter(&q1);

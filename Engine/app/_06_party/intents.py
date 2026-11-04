@@ -312,27 +312,6 @@ def pick_settle_stand(
     )
 
 
-def plan_close_in_intent(
-    game_state: Any,
-    origin: Any,
-    monster_tile: tuple[int, int],
-    *,
-    previous_goal: Optional[tuple[int, int]],
-    rng: random.Random,
-    radius: int = 1,
-) -> tuple[Any, Optional[tuple[int, int]], str]:
-    """Short hop toward the assist monster when out of attack range."""
-    return _plan_approach_hop(
-        game_state,
-        origin,
-        monster_tile,
-        radius=max(1, int(radius)),
-        previous_goal=previous_goal,
-        rng=rng,
-        reason_prefix="close_in",
-    )
-
-
 def intent_for_kind(
     kind: MemberKind,
     *,
@@ -345,7 +324,6 @@ def intent_for_kind(
     rng: Optional[random.Random] = None,
     defend_id: Optional[int] = None,
     assist_id: Optional[int] = None,
-    close_in_tile: Optional[tuple[int, int]] = None,
     settle_stand: Optional[tuple[int, int]] = None,
     stand_reason: str = "follow_settle",
     mid_act: bool = False,
@@ -371,16 +349,6 @@ def intent_for_kind(
         return attack(defend_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.ASSIST and assist_id is not None:
         return attack(assist_id, reason, mid_act=mid_act), previous_goal, reason
-    if kind is MemberKind.CLOSE_IN:
-        if game_state is None or origin is None or close_in_tile is None:
-            return idle("close_in_incomplete"), previous_goal, "close_in_incomplete"
-        return plan_close_in_intent(
-            game_state,
-            origin,
-            close_in_tile,
-            previous_goal=previous_goal,
-            rng=rng or random.Random(),
-        )
     if kind is MemberKind.FOLLOW:
         if (
             game_state is None
@@ -407,7 +375,6 @@ __all__ = [
     "idle",
     "intent_for_kind",
     "pick_settle_stand",
-    "plan_close_in_intent",
     "plan_field_follow",
     "plan_follow_intent",
     "potion",

@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-03 — party leader schedule is separate from the solo routine
+
+Intent: When a party leader starts, the hunt map, mark, and row minutes come from `party_routine` only. The solo routine cursor is not installed and `profile.routine` is not read. The existing travel session still walks one party destination. On arrival the party marks are mounted as this session's farm. Rally wait starts at that mark.
+Shared tools left in place: `DecisionManager.decide`, `goal_for_entry`, `apply_routine_entry_runtime`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks. Solo start still installs `profile.routine`.
+Affects: party leader travel, hunt zone, row timer, and where the start rally waits.
+Consent: user (independent party schedule, separated from solo).
+Result: party schedule and rally unit tests passed. Not run in game.
+
+## 2026-11-03 — party assist uses the solo hunt range
+
+Intent: A member attacks from the current tile when the solo hunt range already reaches the monster. Bow and melee use the on-screen click range. Spells use the mage cast range. Out of that range, the member follows the leader and does not walk up to the monster.
+Shared: `assist_in_attack_range`, `decide_policy`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, and the 2/3 follow band stay as they are.
+Affects: party member assist, including turret and solo-farm targets. Solo `DecisionManager` combat is unchanged.
+Consent: user (help in place when in hunt range; follow when not).
+Result: out-of-range policy test passed. The unused walk-to-monster path (`CLOSE_IN`, `plan_close_in_intent`) was removed on review. Not run in game.
+
 ## 2026-11-03 — members follow the leader tile, not a rally pin
 
 Intent: The leader still walks to the static meet point and waits. The rally tile is no longer sent to members. A member follows the leader's live party-memory tile once `in_party` is true, whether or not a rally frame arrives.

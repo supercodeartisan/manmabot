@@ -49,6 +49,13 @@ def test_offscreen_fresh_pose_uses_the_same_band():
     assert "follow_travel" in follow.reason
 
 
+def test_out_of_hunt_range_follows_instead_of_closing_in():
+    result = decide_policy(
+        _policy(assist_ready=True, need_combat_step=True, leader_dist=6, leader_walk_dist=6)
+    )
+    assert result.kind is MemberKind.FOLLOW
+
+
 def test_stale_pose_does_not_follow():
     stale = decide_policy(
         _policy(leader_pose_stale=True, leader_in_ui=False, leader_dist=4)
@@ -65,5 +72,6 @@ if __name__ == "__main__":
     test_walk_starts_one_tile_outside_the_stop_band()
     test_follow_click_stays_short()
     test_offscreen_fresh_pose_uses_the_same_band()
+    test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()
     print("OK")

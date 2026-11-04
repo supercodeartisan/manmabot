@@ -127,7 +127,13 @@ def leader_workflow(*, sock, roster, policy, invite, rally, phase, now, party_me
     rstate = str(rally.get("state") or "off")
     expected = list(rally.get("expected") or [])
     arrived = list(rally.get("arrived") or [])
-    rmap = {"done": "done", "waiting": "active", "hold_at": "active", "await_plan": "active"}
+    rmap = {
+        "done": "done",
+        "waiting": "active",
+        "hold_at": "active",
+        "await_plan": "active",
+        "await_mark": "active",
+    }
     # Rally / hunt are later steps. They must not show done while earlier
     # ones (connect / policy / invite) are still waiting.
     earlier_open = conn in ("wait", "active") or (

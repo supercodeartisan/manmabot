@@ -68,8 +68,16 @@ static uint32_t SLOT_CTXOFF[ST_SLOTS];
 static const char* ST_TAG[ST_SLOTS] = { "NPC.dep", "NPC.ret", "BM.dep", "BM.ret" };
 
 /* ── 이름표 (string.csv: ID,EP,TYPE,KR,...) ───────────────────────────── */
+static int  RG_PREFKR = 1;   /* 1=한글 사전(STRINGS) 우선, 0=메모리 이름 우선 */
 static int  s_id[40000]; static char s_kr[40000][160]; static int s_n = 0;
-static const char *strName(int id){ for (int i=0;i<s_n;i++) if(s_id[i]==id) return s_kr[i]; return 0; }
+static const char *strName(int id){
+    for (int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char *v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
 static void loadStrings(const char *p){
     FILE *g=fopen(p,"rb"); if(!g){ fprintf(stderr,"[storage] strings not found: %s\n",p); return; }
     char *raw=(char*)malloc(2<<20); if(!raw){ fclose(g); return; }
@@ -208,7 +216,9 @@ static int readRetMap(int s, uint64_t ctx){
         if (mid){
             const char* c = ncFind(mid);
             if (c) snprintf(R->name, sizeof(R->name), "%s", c);
-            else { if (!msgName(mid, R->name, sizeof(R->name))){ const char* q = strName(mid); if (q) snprintf(R->name, sizeof(R->name), "%s", q); }
+            else { const char* q = RG_PREFKR ? strName(mid) : 0;   /* 한글 사전 우선 */
+                   if (q) snprintf(R->name, sizeof(R->name), "%s", q);
+                   else if (!msgName(mid, R->name, sizeof(R->name))){ q = strName(mid); if (q) snprintf(R->name, sizeof(R->name), "%s", q); }
                    if (R->name[0]) ncAdd(mid, R->name); }
         }
         o->n++;
@@ -264,7 +274,9 @@ static int readSlot(int s, uint64_t sub)
             if(nmid){
                 const char* cch=ncFind(nmid);
                 if(cch) snprintf(R->name,sizeof(R->name),"%s",cch);
-                else { if(!msgName(nmid,R->name,sizeof(R->name))){ const char* q=strName(nmid); if(q) snprintf(R->name,sizeof(R->name),"%s",q); }
+                else { const char* q = RG_PREFKR ? strName(nmid) : 0;   /* 한글 사전 우선 */
+                       if(q) snprintf(R->name,sizeof(R->name),"%s",q);
+                       else if(!msgName(nmid,R->name,sizeof(R->name))){ q=strName(nmid); if(q) snprintf(R->name,sizeof(R->name),"%s",q); }
                        if(R->name[0]) ncAdd(nmid,R->name); }
             }
             o->n++;
@@ -355,9 +367,10 @@ int main(int argc, char **argv)
     RG_STRLEN = lcreg_u32("OFF_STR_LEN", 0x10);
     RG_STRCAP = lcreg_u32("OFF_STR_CAP", 0x18);
     RG_SSOMAX = lcreg_u32("STR_SSO_MAX", 0x10);
+    RG_PREFKR = (int)lcreg_u32("NAME_PREFER_KR", 1);
     snprintf(RG_STRCSV, sizeof(RG_STRCSV), "%s",
-        lcreg_resolve(lcreg_str("STRINGS_CSV","T3_maps/dec/data_string.csv.lcf.out.plain"),
-                      lcreg_str("STRINGS_DIST","data/data_string.csv.lcf.out.plain")));
+        lcreg_resolve(lcreg_str("ITEM_NAME_CSV","data/item_name_kr.csv"),
+                      lcreg_str("ITEM_NAME_DIST","data/item_name_kr.csv")));
     RG_ARVA   = lcreg_u32("MSG_ANCHOR_RVA", 0x16687B8);
     RG_MASK   = lcreg_u32("MSG_BUCKET_MASK", 0xFFFF);
     RG_STRIDE2= lcreg_u32("MSG_BUCKET_STRIDE", 0x10);

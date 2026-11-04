@@ -25,12 +25,20 @@
 
 /* ── registry ─────────────────────────────────────────────────────────── */
 static uint32_t RG_INVVFT, RG_BEG, RG_END, RG_CAP, RG_ITEMVFT;
+static int      RG_PREFKR = 1;   /* 1=한글 사전(STRINGS) 우선, 0=메모리 이름 우선 */
 static uint32_t RG_ID, RG_TMPL, RG_CFG, RG_COUNT, RG_ENCH, RG_KIND, RG_FMT, RG_RECHDR, RG_STRLEN, RG_STRCAP, RG_SSOMAX;
 static char     RG_STRCSV[256];
 
 /* ── 이름표 (string.csv: ID,EP,TYPE,KR,...) ───────────────────────────── */
 static int  s_id[40000]; static char s_kr[40000][160]; static int s_n = 0;
-static const char *strName(int id){ for (int i=0;i<s_n;i++) if(s_id[i]==id) return s_kr[i]; return 0; }
+static const char *strName(int id){
+    for (int i=0;i<s_n;i++) if(s_id[i]==id){
+        const char *v=s_kr[i];
+        if(!v[0] || !strncmp(v,"desc",4) || !strncmp(v,"string",6)) return 0;
+        return v;
+    }
+    return 0;
+}
 static void loadStrings(const char *p){
     FILE *g=fopen(p,"rb"); if(!g){ fprintf(stderr,"[inv] strings not found: %s\n",p); return; }
     char *raw=(char*)malloc(2<<20); if(!raw){ fclose(g); return; }
@@ -146,9 +154,10 @@ int main(int argc, char **argv)
     RG_STRLEN = lcreg_u32("OFF_STR_LEN", 0x10);
     RG_STRCAP = lcreg_u32("OFF_STR_CAP", 0x18);
     RG_SSOMAX = lcreg_u32("STR_SSO_MAX", 0x10);
+    RG_PREFKR = (int)lcreg_u32("NAME_PREFER_KR", 1);
     snprintf(RG_STRCSV, sizeof(RG_STRCSV), "%s",
-        lcreg_resolve(lcreg_str("STRINGS_CSV","T3_maps/dec/data_string.csv.lcf.out.plain"),
-                      lcreg_str("STRINGS_DIST","data/data_string.csv.lcf.out.plain")));
+        lcreg_resolve(lcreg_str("ITEM_NAME_CSV","data/item_name_kr.csv"),
+                      lcreg_str("ITEM_NAME_DIST","data/item_name_kr.csv")));
     /* 메시지 테이블(FNV 앵커) */
     RG_ARVA   = lcreg_u32("MSG_ANCHOR_RVA", 0x16687B8);
     RG_MASK   = lcreg_u32("MSG_BUCKET_MASK", 0xFFFF);
@@ -214,7 +223,9 @@ int main(int argc, char **argv)
                         if(nmid){
                             const char* cch=ncFind(nmid);
                             if(cch) snprintf(nm,sizeof(nm),"%s",cch);      /* 캐시 hit → 0콜 */
-                            else { if(!msgName(nmid,nm,sizeof(nm))){ const char* s=strName(nmid); if(s) snprintf(nm,sizeof(nm),"%s",s); }
+                            else { const char* s = RG_PREFKR ? strName(nmid) : 0;  /* 한글 사전 우선 */
+                                   if(s) snprintf(nm,sizeof(nm),"%s",s);
+                                   else if(!msgName(nmid,nm,sizeof(nm))){ s=strName(nmid); if(s) snprintf(nm,sizeof(nm),"%s",s); }
                                    if(nm[0]) ncAdd(nmid,nm); }
                         }
                         fprintf(f,"  [%2d] id=%-6u cnt=%-6u ench=%-3u kind=%-3u fmt=\"%s\" name=%s\n",

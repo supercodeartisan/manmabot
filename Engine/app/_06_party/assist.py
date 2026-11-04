@@ -693,10 +693,11 @@ def pick_solo_farm_target(
 
 
 def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
-    """True when the member can cast/click the monster from here.
+    """True when the solo hunt range already reaches this monster.
 
-    Spell mages use mage spell range. Bow/melee (attack_mode ranged/melee, or
-    non-mage) use a short engage distance; the click strategies own fine aim.
+    Spell aim uses the mage cast range. Bow and melee use the solo click
+    range: on screen, or an off-screen memory cell inside that click range.
+    Out of range is not a reason to walk up to the monster.
     """
     if obj is None or not _assist_target_live(game_state, obj):
         return False
@@ -704,40 +705,29 @@ def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
     try:
         from app._04_decision import player_mode as pm
 
-        spell_aim = bool(getattr(pm, "uses_spell_aim", lambda: True)())
+        spell_aim = bool(pm.uses_spell_aim())
     except Exception:
         spell_aim = True
     if spell_aim:
+        pos = getattr(obj, "position", None)
+        if pos is None:
+            return False
         try:
-            pos = getattr(obj, "position", None)
-            if pos is not None:
-                from app._03_world.space.world_coords import in_mage_spell_range
+            from app._03_world.space.world_coords import in_mage_spell_range
 
-                if in_mage_spell_range(float(pos.x), float(pos.y)):
-                    return True
+            return bool(in_mage_spell_range(float(pos.x), float(pos.y)))
         except Exception:
-            pass
+            return False
     try:
-        from app._04_decision.combat_query import tile_distance_from_player
+        from app._04_decision.combat_query import in_attack_click_range
 
-        d = tile_distance_from_player(obj)
-        # Bow/melee: within attack click tiles (default ~6–8); mage fallback 2.
-        limit = 6 if not spell_aim else 2
-        try:
-            from app._04_decision import player_mode as pm
-
-            limit = int(getattr(pm, "ATTACK_CLICK_TILES", limit) or limit)
-        except Exception:
-            pass
-        if d is not None and int(d) <= max(2, limit):
-            return True
+        return bool(in_attack_click_range(obj))
     except Exception:
-        pass
-    return False
+        return False
 
 
 def assist_monster_tile(obj: Any, origin: Any) -> Optional[tuple[int, int]]:
-    """Nav tile of an assist monster for close-in hops."""
+    """Nav tile of an assist monster, used only to test the turret yard."""
     if obj is None:
         return None
     try:

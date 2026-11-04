@@ -455,15 +455,12 @@ class PartyMemberManager:
             and self.runtime.local_map_id is not None
         )
 
-        need_combat_step = False
-        close_in_tile = None
-        if assist_obj is not None:
-            if not assist_in_attack_range(game_state, assist_obj):
-                need_combat_step = True
-                close_in_tile = assist_monster_tile(assist_obj, origin)
+        need_combat_step = (
+            assist_obj is not None
+            and not assist_in_attack_range(game_state, assist_obj)
+        )
 
         from .farm_yard import (
-            clamp_to_yard,
             in_yard,
             tile_from_obj,
             yard_half_extents,
@@ -485,17 +482,13 @@ class PartyMemberManager:
                 me_tile, leader_tile, half_w=half_w, half_h=half_h
             )
             tgt_tile = tile_from_obj(assist_obj, origin)
-            if tgt_tile is None and close_in_tile is not None:
-                tgt_tile = close_in_tile
+            if tgt_tile is None:
+                tgt_tile = assist_monster_tile(assist_obj, origin)
             target_in_yard = (
                 True
                 if tgt_tile is None
                 else in_yard(tgt_tile, leader_tile, half_w=half_w, half_h=half_h)
             )
-            if close_in_tile is not None and target_in_yard:
-                close_in_tile = clamp_to_yard(
-                    close_in_tile, leader_tile, half_w=half_w, half_h=half_h
-                )
 
         # Turret, leader idle: hunt inside the yard. A mob already started is
         # finished after the leader begins an attack, then assist takes over.
@@ -573,19 +566,9 @@ class PartyMemberManager:
                 target_in_yard = tgt_tile is not None and in_yard(
                     tgt_tile, leader_tile, half_w=half_w, half_h=half_h
                 )
-                if not assist_in_attack_range(game_state, assist_obj):
-                    need_combat_step = True
-                    close_in_tile = assist_monster_tile(assist_obj, origin)
-                    if close_in_tile is not None and target_in_yard:
-                        close_in_tile = clamp_to_yard(
-                            close_in_tile,
-                            leader_tile,
-                            half_w=half_w,
-                            half_h=half_h,
-                        )
-                else:
-                    need_combat_step = False
-                    close_in_tile = None
+                need_combat_step = not assist_in_attack_range(
+                    game_state, assist_obj
+                )
         elif not cfg.turret_farm or cfg.solo_farm:
             self.runtime.own_hunt_id = None
 
@@ -676,8 +659,6 @@ class PartyMemberManager:
         reason = result.reason
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
-        if result.kind is MemberKind.CLOSE_IN:
-            reason = f"{reason} src={assist_src}"
         if view.source and result.kind is MemberKind.FOLLOW:
             reason = f"{reason} via={view.source}"
 
@@ -699,7 +680,7 @@ class PartyMemberManager:
             )
             loot_max_tiles = max(4, int(cfg.follow_tiles))
         elif loot_first:
-            # Loot before follow: assist / close-in / defend / join still win.
+            # Loot before follow: assist / defend / join still win.
             can_loot_now = walk_now is not None and result.kind in (
                 MemberKind.HOLD,
                 MemberKind.FOLLOW,
@@ -742,7 +723,6 @@ class PartyMemberManager:
             and result.kind
             in (
                 MemberKind.FOLLOW,
-                MemberKind.CLOSE_IN,
                 MemberKind.ASSIST,
                 MemberKind.JOIN_MAP,
                 MemberKind.DEFEND,
@@ -896,14 +876,13 @@ class PartyMemberManager:
                         else None
                     ),
                     assist_id=self.runtime.assist_track_id,
-                    close_in_tile=close_in_tile,
                     settle_stand=stand,
                     stand_reason=(
                         "follow_settle" if leader_stopped else "follow_close"
                     ),
                     mid_act=(
                         result.kind
-                        in (MemberKind.ASSIST, MemberKind.DEFEND, MemberKind.CLOSE_IN)
+                        in (MemberKind.ASSIST, MemberKind.DEFEND)
                         and prev_assist_id is not None
                         and self.runtime.assist_track_id == prev_assist_id
                     ),
@@ -912,7 +891,7 @@ class PartyMemberManager:
                 self.runtime.approach_goal = None
             if route_detail and result.kind is MemberKind.FOLLOW:
                 detail = f"{detail} | {route_detail}"
-            if result.kind in (MemberKind.FOLLOW, MemberKind.CLOSE_IN):
+            if result.kind is MemberKind.FOLLOW:
                 self.runtime.approach_goal = goal
             elif result.kind in (
                 MemberKind.HOLD,

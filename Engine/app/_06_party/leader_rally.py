@@ -1,14 +1,10 @@
-"""Leader start rally: one static point before the party goes to the farm.
+"""Leader start rally: wait at the party schedule mark, then hunt.
 
-The point is chosen once from the hunt route and is not moved after that.
-
-- Walk is the route (already on the hunt map, or a walk-only plan): the
-  leader's current tile. The leader waits there, then walks to the farm.
-- The route uses an NPC teleporter or a talking scroll: the departure tile
-  of the first such step (the NPC, or the tile the scroll is used on). The
-  leader walks any steps before that and waits there. Members are not sent
-  the tile. Once party memory says they are in the party, they follow the
-  leader's live tile. Then the route continues to the farm.
+The party schedule walks to its own mark. This wait does not stop that walk
+at the current tile or at the first teleporter. When the leader is inside
+the mark, ``note_arrived`` starts the wait. Members are not sent the tile.
+Once party memory says they are in the party, they follow the leader's live
+tile. After the wait, the schedule stays on that mark and hunts.
 
 Waits for every roster member, then continues. With ``deadline`` (the leader
 start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
@@ -81,7 +77,7 @@ def plan_start(plan: Any) -> Optional[tuple[int, int, int]]:
 
 
 class LeaderStartRally:
-    """off → await_plan → hold_at → waiting → done (or off → waiting → done)."""
+    """off → await_mark → waiting → done."""
 
     def __init__(
         self,
@@ -151,32 +147,20 @@ class LeaderStartRally:
             # painted Rally/Hunt complete while Connect was still waiting.
             self._log("Party start rally skipped — roster empty")
             return
-        if travel:
-            self.state = "await_plan"
-            self._log("Party start rally: waiting for the hunt route")
+        del travel, pose
+        self.state = "await_mark"
+        self._log("Party start rally waits at the party mark")
+
+    def note_arrived(self, point: tuple[int, int, int]) -> None:
+        """The party schedule is inside its mark. Wait here."""
+        if self.state != "await_mark":
             return
-        if pose is None:
-            self.expected = set()
-            return
-        self._arm(STAGE_START, (int(pose.map_id), int(pose.x), int(pose.y)))
+        self._arm(STAGE_START, (int(point[0]), int(point[1]), int(point[2])))
         self._enter_waiting()
 
     def on_plan(self, plan: Any) -> None:
-        """World-nav hook: a route to the hunt exists."""
-        if self.state not in ("await_plan", "hold_at"):
-            return
-        idx = first_teleport_index(plan)
-        if idx is None:
-            point = plan_start(plan)
-            self.hold_step = 0
-        else:
-            point = departure_point(plan.steps[idx]) or plan_start(plan)
-            self.hold_step = idx
-        if point is None:
-            self.skip("route has no rally tile")
-            return
-        self._arm(STAGE_START, point)
-        self.state = "hold_at"
+        """Travel owns the route. A plan does not start this wait."""
+        del plan
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
         """World-nav hook before each step. True keeps the leader on the spot."""

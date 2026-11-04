@@ -1,0 +1,20 @@
+# registry=D:\11_04\dist\data/item_name_kr.csv strings=18047 VFT_STORAGE=122BFB8 VFT_BMSTORAGE=122BC88 ITEM_VFT=1226E20 events=1 list=0
+# slots: 0=NPC.dep(+0x28) 1=NPC.ret(+0x38) 2=BM.dep(+0x28) 3=BM.ret(+0x38)
+t=0ms NPC=0x1B2A265BE50 dep(ctx=0x1B2FE88E8B0 n=15/0) list(ctx=0x0 n=0/0) | BM=0x1B2A2624730 dep(ctx=0x1B2D9C37820 n=0/0) list(ctx=0x1B2D9C37820 n=0/0)
+  [IN ] NPC.dep  id=2637881    tmpl=12366  cfg=20256  cnt=1      ench=0   kind=1    fmt="$16673" name=말하는 두루마리
+  [IN ] NPC.dep  id=2637863    tmpl=41     cfg=35     cnt=1      ench=0   kind=10   fmt="$70" name=단검
+  [IN ] NPC.dep  id=2637865    tmpl=103    cfg=62     cnt=1      ench=0   kind=30   fmt="$167" name=가죽 재킷
+  [IN ] NPC.dep  id=2637859    tmpl=7      cfg=5      cnt=16915  ench=0   kind=0    fmt="$4 (16,915)" name=아데나
+  [IN ] NPC.dep  id=2637880    tmpl=12303  cfg=20739  cnt=1      ench=0   kind=8    fmt="$18071" name=청명한 귀환 주문서
+  [IN ] NPC.dep  id=2637872    tmpl=197    cfg=254    cnt=1      ench=0   kind=7    fmt="$535" name=마법서 (뱀파이어릭 터치)
+  [IN ] NPC.dep  id=2637873    tmpl=252    cfg=318    cnt=1      ench=0   kind=50   fmt="$767" name=미스릴
+  [IN ] NPC.dep  id=2637870    tmpl=166    cfg=235    cnt=2      ench=0   kind=256  fmt="$508 (2)" name=마력의 돌
+  [IN ] NPC.dep  id=2637864    tmpl=68     cfg=96     cnt=115    ench=0   kind=12   fmt="+0 $93 (115)" name=은 화살
+  [IN ] NPC.dep  id=2637879    tmpl=12300  cfg=20731  cnt=11     ench=0   kind=1    fmt="$18068 (11)" name=청명한 빨간 물약
+  [IN ] NPC.dep  id=2637860    tmpl=9      cfg=124    cnt=7      ench=0   kind=10   fmt="$15654 (7)" name=괴물 눈 고기
+  [IN ] NPC.dep  id=2637861    tmpl=14     cfg=80     cnt=47     ench=0   kind=750  fmt="$26 (47)" name=체력 회복제
+  [IN ] NPC.dep  id=2637868    tmpl=126    cfg=76     cnt=9      ench=0   kind=1000 fmt="$316 (9)" name=해독제
+  [IN ] NPC.dep  id=2637871    tmpl=195    cfg=249    cnt=1      ench=0   kind=7    fmt="$533" name=마법서 (인챈트 덱스터리티)
+  [IN ] NPC.dep  id=2637862    tmpl=38     cfg=31     cnt=1      ench=0   kind=30   fmt="$69" name=몽둥이
+  -- 15 event(s)
+# ioctl=62 time=0.5212ms
