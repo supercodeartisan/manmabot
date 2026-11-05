@@ -124,7 +124,19 @@ static char LCREG_BASE[MAX_PATH] = {0};
 static char LCREG_UP[MAX_PATH]   = {0};   /* registry 를 찾은 루트(보통 ROOT 또는 상위) */
 static inline const char* lcreg_base(void){
     if(!LCREG_BASE[0]){
+#ifdef LCAPI_INPROC
+        /* DLL: host EXE가 아니라 이 DLL 자신의 디렉터리를 기준으로 잡는다. */
+        static const char lc_anchor = 0;
+        HMODULE hm = NULL;
+        if(GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                              GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                              (LPCSTR)&lc_anchor, &hm) && hm)
+            GetModuleFileNameA(hm, LCREG_BASE, MAX_PATH);
+        else
+            GetModuleFileNameA(NULL, LCREG_BASE, MAX_PATH);
+#else
         GetModuleFileNameA(NULL, LCREG_BASE, MAX_PATH);
+#endif
         char* s = strrchr(LCREG_BASE, '\\'); if(s) *s = 0;
     }
     return LCREG_BASE;
@@ -185,6 +197,11 @@ static inline const char* lcreg_resolve(const char* devRel, const char* distRel)
     return distRel ? distRel : devRel;
 }
 /* 출력경로: 항상 EXE 옆 out/ 아래 파일명. 인자로 준 경우 호출부에서 대체. */
+/* 절대/존재 경로는 그대로 로드하고, 아니면 기존 resolve 규칙을 쓴다. */
+static inline void lcreg_load_first(const char* p, const char* distRel){
+    if(p && p[0] && lcreg_exists_p(p)){ lcreg_load(p); return; }
+    lcreg_load(lcreg_resolve(p, distRel));
+}
 static inline const char* lcreg_outpath(const char* name){
     static char buf[MAX_PATH*2];
 #ifdef LCAPI_INPROC

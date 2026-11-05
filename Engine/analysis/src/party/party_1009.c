@@ -26,7 +26,7 @@ int main(int argc,char**argv){
         else if(atoi(argv[i])>0 && !strstr(argv[i],".")) secs=atoi(argv[i]);
       } }
     char regdisp[512]; snprintf(regdisp,sizeof regdisp,"%s",reg);
-    lcreg_load(lcreg_resolve(reg,"registry/LC930_REGISTRY.txt")); lc_reg_apply();
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt"); lc_reg_apply();
     load_cfg();
     lp_regions_load();
     int showmap=(int)lcreg_u32("PARTY_SHOW_MAP",1);

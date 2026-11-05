@@ -39,7 +39,7 @@ int main(int argc, char **argv)
             }
         }
     }
-    lcreg_load(lcreg_resolve(reg, "registry/LC930_REGISTRY.txt"));
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt");
     lc_reg_apply();
     lcreg_poll P = lcreg_poll_load("BODYACT");
 

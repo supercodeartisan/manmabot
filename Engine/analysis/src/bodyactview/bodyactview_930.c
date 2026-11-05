@@ -296,7 +296,7 @@ int main(int argc, char **argv)
         if (strstr(argv[i], "REGISTRY") || strstr(argv[i], ".txt"))
             reg = argv[i];
     }
-    lcreg_load(lcreg_resolve(reg, "registry/LC930_REGISTRY.txt"));
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt");
     lc_reg_apply();
 
     if (lc_attach()) {

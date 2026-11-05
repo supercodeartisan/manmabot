@@ -161,7 +161,7 @@ int main(int argc,char**argv){
         if(atoi(argv[i])>0 && !strstr(argv[i],".")){ secs=atoi(argv[i]); continue; }
         if(strstr(argv[i],".txt")||strstr(argv[i],".out")){ if(seenTxt==0){ reg=argv[i]; seenTxt=1; } else outp=argv[i]; }
     }
-    lcreg_load(lcreg_resolve(reg,"registry/LC930_REGISTRY.txt")); lc_reg_apply();
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt"); lc_reg_apply();
     OFF_OWN = lcreg_u32("OFF_ITEM_OWN", 0x44); OFF_40 = lcreg_u32("OFF_ITEM_40", 0x40);
     lcreg_poll P=lcreg_poll_load("ENTVIEW");
     if(lc_attach()) return 1;

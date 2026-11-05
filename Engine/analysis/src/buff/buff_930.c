@@ -26,7 +26,7 @@ int main(int argc, char **argv)
           if(!seenReg && strstr(argv[i],"REGISTRY")){ reg=argv[i]; seenReg=1; } else outp=argv[i];
         } else if(atoi(argv[i])>0 && !strstr(argv[i],".")) secs=atoi(argv[i]);
       } }
-    lcreg_load(lcreg_resolve(reg, "registry/LC930_REGISTRY.txt")); lc_reg_apply();
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt"); lc_reg_apply();
     lbuff_load(reg);
     if(lc_attach()) return 1;
     if(!lc_anchor()){ fprintf(stderr,"anchor fail\n"); return 2; }

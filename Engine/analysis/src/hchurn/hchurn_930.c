@@ -66,7 +66,7 @@ int main(int argc, char **argv)
         if (strstr(argv[i], "REGISTRY")) reg = argv[i];
         else if (atoi(argv[i]) > 0) secs = atoi(argv[i]);
     }
-    lcreg_load(lcreg_resolve(reg, "registry/LC930_REGISTRY.txt"));
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt");
     lc_reg_apply();
     if (lc_attach()) return 1;
     if (!lc_anchor()) {

@@ -36,7 +36,7 @@ int main(int argc, char **argv)
           nnum++;
         }
       } }
-    lcreg_load(lcreg_resolve(reg, "registry/LC930_REGISTRY.txt")); lc_reg_apply();
+    lcreg_load_first(reg, "registry/LC930_REGISTRY.txt"); lc_reg_apply();
     if(period<0) period = (int)lcreg_u32("REALTIME_BUFF_PERIOD_MS", 1000);
     if(period<1) period = 1;
     lbuff_load(reg);

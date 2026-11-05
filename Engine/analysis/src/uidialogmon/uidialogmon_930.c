@@ -323,6 +323,7 @@ int main(int argc,char**argv){
 
     DWORD t0=GetTickCount(), lastScan=GetTickCount(), lastRep=GetTickCount(), lastState=GetTickCount();
     unsigned long long rRep=g_ioctl; double msAcc=0;
+    int firstState=1;                 /* 첫 샘플은 즉시 현재 open 상태를 평가 */
     int plen=0;                       /* 콘솔 직전 줄 길이(잔상 제거용) */
     for(;;){
         DWORD now=GetTickCount();
@@ -331,8 +332,8 @@ int main(int argc,char**argv){
         if(now-lastScan>=(DWORD)RG_SCAN){ containerScan(ui); lastScan=now; }  /* 저비용 재스캔 */
         /* 창 열림 상태: 전체 창 스캔은 UIDLG_STATE_MS(기본 1000ms) 주기로만(호출 절감). */
         static int nopen=0; static char opn[1024]="";
-        if(now-lastState>=(DWORD)RG_STATE){
-            lastState=now; nopen=0; opn[0]=0; size_t op=0;
+        if(firstState || now-lastState>=(DWORD)RG_STATE){
+            firstState=0; lastState=now; nopen=0; opn[0]=0; size_t op=0;
             for(int i=0;i<g_nwin;i++){
                 uint64_t o=g_win[i].inst; static uint8_t hb[0x78];
                 int alive = o && rmf(o,hb,sizeof(hb)) && *(uint64_t*)hb==g_base+g_win[i].vft;

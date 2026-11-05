@@ -19,9 +19,9 @@ static uint32_t P_SSO, P_MAXMEM, P_BFSMAX, P_RESCAN, P_ENTLVL;
 static uint32_t M_MAPID, M_F54, M_F60;
 
 static void load_cfg(void){
-    P_VFT_SUBS=lcreg_u32("PARTY_VFT_SUBS",0x12099D8u);
-    P_VFT_RC  =lcreg_u32("PARTY_VFT_RC",0x1209A28u);
-    P_VFT_RCP =lcreg_u32("PARTY_VFT_RC_PLAYER",0x1209950u);
+    P_VFT_SUBS=lcreg_u32("PARTY_VFT_SUBS",0x12293B8u);
+    P_VFT_RC  =lcreg_u32("PARTY_VFT_RC",0x1229350u);
+    P_VFT_RCP =lcreg_u32("PARTY_VFT_RC_PLAYER",0x1229328u);
     P_REF     =lcreg_u32("PARTY_REF_OFF",0x4A0);
     P_HOP1    =lcreg_u32("PARTY_HOP1_OFF",0x00);
     P_HOP2    =lcreg_u32("PARTY_HOP2_OFF",0x28);
@@ -184,7 +184,7 @@ static int lp_verify_subs(uint64_t psub){ uint64_t v=0; return isHeap(psub)&&rm(
 static int lp_verify(uint64_t party){      uint64_t v=0; return isHeap(party)&&rm(party-P_HOPCTRL,&v,8)&&(uint32_t)(v-g_base)==P_VFT_RC; }
 /* 앵커 발견(캐시 miss 1회): mgr→holder→sub[] 배치 → vft 로 psub 식별. */
 static uint64_t lp_discover_subs(void){
-    uint64_t mgr=q64(g_base+lcreg_u32("MGR",0x16BBAE0));
+    uint64_t mgr=q64(g_base+lcreg_u32("MGR",0x16EB6F0));
     if(!isHeap(mgr)) return 0;
     uint64_t holder=q64(mgr+lcreg_u32("HOLDER_OFF",0xD0));
     if(!isHeap(holder)) return 0;

@@ -1,0 +1,13 @@
+# realtime_party registry=D:\WorkSpace\ManmabotV1_final_final_final\Engine\analysis\registry/LC930_REGISTRY.txt period=1000ms how=discover sub=0000026E3D830CC0 party=0000026E1AD50740 join=0
+
+=== t=0ms leader=매력여기사 cnt=2 members=2 driver_calls=6 time=0.078ms ===
+  [0] [LEADER] name=매력여기사  guid=018F121D type=기사 cls=1 map=0 region=말하는 섬        subregion=말하는 섬        hp%=100 mp%=100 pos=32510,32993 lead=1 f54=FEED5780
+  [1]          name=poorboy          guid=00284022 type=마법사 cls=3 map=4 region=아덴 대륙        subregion=글루딘 마을     hp%=100 mp%=100 pos=32626,32724 lead=0 f54=FEED5780
+
+=== t=1109ms leader=매력여기사 cnt=2 members=2 driver_calls=6 time=0.086ms ===
+  [0] [LEADER] name=매력여기사  guid=018F121D type=기사 cls=1 map=0 region=말하는 섬        subregion=말하는 섬        hp%=100 mp%=100 pos=32510,32993 lead=1 f54=FEED5780
+  [1]          name=poorboy          guid=00284022 type=마법사 cls=3 map=4 region=아덴 대륙        subregion=글루딘 마을     hp%=100 mp%=100 pos=32626,32724 lead=0 f54=FEED5780
+
+=== t=2219ms leader=매력여기사 cnt=2 members=2 driver_calls=6 time=0.087ms ===
+  [0] [LEADER] name=매력여기사  guid=018F121D type=기사 cls=1 map=0 region=말하는 섬        subregion=말하는 섬        hp%=100 mp%=100 pos=32510,32993 lead=1 f54=FEED5780
+  [1]          name=poorboy          guid=00284022 type=마법사 cls=3 map=4 region=아덴 대륙        subregion=글루딘 마을     hp%=100 mp%=100 pos=32626,32724 lead=0 f54=FEED5780
