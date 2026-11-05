@@ -44,3 +44,6 @@ dxcam==0.3.0                # optional faster capture; mss is the window-mode ba
 keyboard==0.13.5
 # Mouse/keyboard via Interception driver (replaces pynput)
 interception-python==1.13.6
+
+# Party leader socket (Engine/websocket). The bot starts it when the party role is leader.
+websockets==15.0.1

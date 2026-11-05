@@ -449,7 +449,7 @@ A X
 ## 2026-10-10 — 마더트리 켠 동안 스킬 MP 비용으로 마나 15 확보
 
 의도: 후퇴 1순위인 마더트리(카탈로그 10 MP)를 위해, 마더트리가 켜진 엘프는 다른 마법이 `현재 MP − 스킬비용 < 15`이면 시전하지 않는다. 마더트리·바디투마인드는 예외.
-공유: `mother_tree_mana_blocks`, `spell_mp_cost_for_role`, `can_cast_spell`, `heal_blocked_by_mana`, `_press_assigned_skill`, `_mana_blocks_teleport`. 비용은 `analysis/list/*/spell.json`의 `consumables.mp`(핫바 이름 → 역할 폴백).
+공유: `mother_tree_mana_blocks`, `spell_mp_cost_for_role`, `can_cast_spell`, `heal_blocked_by_mana`, `_press_assigned_skill`, `_mana_blocks_teleport`. 비용은 `data/catalog/list/*/spell.json`의 `consumables.mp`(핫바 이름 → 역할 폴백).
 영향: 사냥 버프/힐/마법공격/텔레포트(마더트리 켜진 경우). 마더트리 후퇴·로그인·`RETREAT_METHOD_ORDER`·기존 20% 예비는 그대로. 마더트리 설비가 꺼지거나 논엘프면 비활성.
 동의: 사용자 (카탈로그 비용 + 마더트리 on일 때만, 바닥 15).
 결과: 구현.

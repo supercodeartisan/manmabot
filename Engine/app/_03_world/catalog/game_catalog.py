@@ -1,4 +1,4 @@
-"""Official Korean / Chinese monster and item lists from analysis/list."""
+"""Official Korean / Chinese monster and item lists from data/catalog/list."""
 from __future__ import annotations
 
 import json
@@ -10,8 +10,9 @@ from typing import Any, Iterable
 
 from app._03_world.catalog.zh_convert import chinese_aliases, to_simplified
 
-_LIST_ROOT = Path(__file__).resolve().parents[3] / "analysis" / "list"
-_ANALYSIS_ROOT = Path(__file__).resolve().parents[3] / "analysis"
+# Engine/data/catalog/list (moved from Engine/analysis/list).
+_DATA_CATALOG = Path(__file__).resolve().parents[3] / "data" / "catalog"
+_LIST_ROOT = _DATA_CATALOG / "list"
 _IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 _STEM_ID = re.compile(r"^(.*)_(\d+)$")
 _MONSTER_IMAGE_FOLDERS = ("monsters", "monster", "몬스터")
@@ -78,8 +79,8 @@ def _compact_name(name: str) -> str:
 def _image_roots(kind: str) -> tuple[Path, ...]:
     folders = _MONSTER_IMAGE_FOLDERS if kind == "monster" else _ITEM_IMAGE_FOLDERS
     bases = (
-        _ANALYSIS_ROOT / "list" / "image",
-        _ANALYSIS_ROOT / "image",
+        _LIST_ROOT / "image",
+        _DATA_CATALOG / "image",
     )
     return tuple(base / folder for base in bases for folder in folders)
 

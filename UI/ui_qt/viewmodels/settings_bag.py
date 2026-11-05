@@ -37,6 +37,24 @@ _MAGIC_UI_DEFAULTS: dict[str, Any] = {
     "town_general_only": True,
 }
 
+_PARTY_UI_DEFAULTS: dict[str, Any] = {
+    "member_enabled": False,
+    "leader_name": "",
+    "follow_tiles": 8,
+    "stop_tiles": 2,
+    "assist_leash_tiles": 10,
+    "approach_tiles": 2,
+    "potion_hp_ratio": 0.45,
+    "random_loot": False,
+    "loot_role": "none",
+    "loot_priority": "follow",
+    "farm_mode": "party",
+    "role": "member",
+    "ws_port": 8765,
+    "leader_host": "",
+    "roster": [],
+}
+
 
 class SettingsBag:
     def __init__(self, profile: Profile) -> None:
@@ -49,6 +67,9 @@ class SettingsBag:
         for key, value in _MAGIC_UI_DEFAULTS.items():
             magic.setdefault(key, value)
         magic.setdefault("skills", {})
+        party = self.data.setdefault("party", {})
+        for key, value in _PARTY_UI_DEFAULTS.items():
+            party.setdefault(key, copy.deepcopy(value))
         self.on_changed: Callable[[], None] | None = None
 
     def _notify(self) -> None:
@@ -124,7 +145,16 @@ class SettingsBag:
 
     def load_task(self, task: ScheduleTask) -> None:
         self.data = copy.deepcopy(getattr(task, "settings", {}) or {})
-        for section in ("move", "hunt", "recovery", "magic", "equipment", "other"):
+        for section in (
+            "move",
+            "hunt",
+            "party",
+            "recovery",
+            "magic",
+            "equipment",
+            "other",
+        ):
+            # Keep party even when disk/trial omit it (older TOP_SECTIONS).
             self.data.setdefault(section, {})
         hunt = self.data.setdefault("hunt", {})
         for key, value in _HUNT_UI_DEFAULTS.items():
@@ -133,6 +163,9 @@ class SettingsBag:
         for key, value in _MAGIC_UI_DEFAULTS.items():
             magic.setdefault(key, value)
         magic.setdefault("skills", {})
+        party = self.data.setdefault("party", {})
+        for key, value in _PARTY_UI_DEFAULTS.items():
+            party.setdefault(key, copy.deepcopy(value))
 
     def apply_to_profile(self) -> list[str]:
         task = ScheduleTask(settings=copy.deepcopy(self.data))

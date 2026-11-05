@@ -68,7 +68,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "transit_route": "",
         },
         "hunt": {
-            "attack_mode": "ranged",
+            "attack_mode": str(getattr(profile, "attack_mode", "magic") or "magic"),
             "attack_range": 16,
             "keep_distance": True,
             "keep_distance_tiles": 3,
@@ -138,6 +138,55 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "area_players": bool(getattr(profile, "area_players", False)),
             "area_player_count": int(getattr(profile, "area_player_count", 3)),
             "approach_no_engage": bool(getattr(profile, "approach_no_engage", False)),
+        },
+        "party": {
+            # Master Party-tab switch. Falls back to legacy member_enabled.
+            "enabled": bool(
+                getattr(
+                    profile,
+                    "party_enabled",
+                    getattr(profile, "party_member_enabled", False),
+                )
+            ),
+            "member_enabled": bool(
+                getattr(profile, "party_member_enabled", False)
+            ),
+            "leader_name": "",
+            "follow_tiles": int(
+                getattr(
+                    profile,
+                    "party_follow_tiles",
+                    getattr(profile, "party_follow_start_tiles", 8),
+                )
+            ),
+            "stop_tiles": int(
+                getattr(
+                    profile,
+                    "party_stop_tiles",
+                    getattr(profile, "party_follow_stop_tiles", 2),
+                )
+            ),
+            "assist_leash_tiles": int(
+                getattr(profile, "party_assist_leash_tiles", 10)
+            ),
+            "approach_tiles": int(getattr(profile, "party_approach_tiles", 2)),
+            "potion_hp_ratio": float(
+                getattr(profile, "party_potion_hp_ratio", 0.45)
+            ),
+            "random_loot": bool(getattr(profile, "party_random_loot", False)),
+            "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
+            "loot_priority": str(
+                getattr(profile, "party_loot_priority", "follow") or "follow"
+            ),
+            "farm_mode": str(getattr(profile, "party_farm_mode", "party") or "party"),
+            "role": str(getattr(profile, "party_role", "member") or "member"),
+            "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
+            "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
+            "roster": [
+                {"name": str(row.get("name") or ""), "role": str(row.get("role") or "member")}
+                for row in (getattr(profile, "party_roster", None) or [])
+                if isinstance(row, dict)
+            ],
         },
         "recovery": {
             "use_hp_potion": True,

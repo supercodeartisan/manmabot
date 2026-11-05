@@ -367,6 +367,37 @@ Shared: `emit_travel_hop`, `retry_travel_hop_from_fresh` (removed), `attack_clic
 Affects: world nav, farm entry, retreat, dungeon walks, attack clicks, and cursor probes. Those paths match the uploaded build again. `사슬 갑옷` is back on the keep list.
 Consent: user (restore every post-upload change except the runtime next to gained adena).
 Result: working tree restored to `2f76607` except `UI/ui_qt/shell/live_income_bar.py`. Not run in game.
+## 2026-10-20 — standalone party tactics package (not wired)
+
+Intent: add formation, movement, and focus-fire logic as independent modules under `Engine/app/_06_party/tactics/`: open-field vs narrow-dungeon classification, open-field fan slots with sight-line slot repair and pace, dungeon single-file trail with corner/lag hold for the leader, leader-jump regroup with staggered delays, focus-fire allocation with overkill prevention, and per-member volley delays. A random teleport scroll lands on a random tile, so regroup defaults to `rejoin`; repeated random teleport is opt-in for small maps.
+Shared: none. Nothing imports `tactics`; follow, assist, loot, HP, retreat, login, and decide are unchanged.
+Affects: nothing at runtime until wired.
+Consent: user ("impl" these logics as independent modules).
+Result: implemented. `Others/tests/test_party_tactics.py`, 37 tests pass. Not run in game.
+
+## 2026-10-19 — dedicated party session log
+
+Intent: open `Engine/logs/party-YYYYMMDD-HHMMSS.log` when party is enabled, separate from `bot-*.log`. Channels: setup (invite), session (wait/farm), member (kind changes), join (cross-map), socket (WS + local chat).
+Shared: logging only. Follow, assist, HP, login, and decide paths unchanged. Member kind lines log at INFO only when kind/reason changes.
+Affects: diagnosis files for party Start.
+Consent: user ("go" after confirming party log system was missing).
+Result: implemented. Unit tests in `Others/tests/test_party_log.py`. First live Start created no `party-*.log` because open ran before `install_profile_runtime` (party_enabled still False). Open moved to after profile apply + leader setup/socket entry.
+
+## 2026-10-19 — party log open after profile apply
+
+Intent: party log file was missing while Party invite still ran.
+Shared: `_ensure_party_log` only. Decide/move/combat unchanged.
+Affects: when `party-*.log` is created.
+Consent: user (cannot see party log while doing party).
+Result: implemented.
+
+## 2026-10-19 — same-map world nav walks instead of a talking scroll
+
+Intent: on Talking Island the character was already on map 0, and world nav still opened a talking scroll toward the pet manager. The list never opened (`opened=False`), then every tick idled on `world nav scroll land` and never walked or hunted.
+Shared: `WorldNavPlanner.plan` `allow_scroll`. Cross-map scrolls, NPC teleporters, combat, and HP are unchanged.
+Affects: a goal on the map the character is already on (farm routine, same-map shop). That trip walks. A goal on another map still uses the talking scroll.
+Consent: user (check the log and fix; the bot is in the world and never decides).
+Result: implemented. Replay of map0 (32323,32965) → (32384,33068) is one walk of 103 tiles. Not run in game.
 
 ## 2026-10-19 — revive retreat keeps the dungeon routine clock
 
@@ -680,6 +711,63 @@ Affects: island and travel confined escape. A character who moves 4 or more tile
 Consent: user (keep 13 seconds, change 5 to 3).
 Result: implemented. Not run in game.
 
+## 2026-10-19 — party wait logs until farm start
+
+Intent: keep the party websocket monitor log (do not clear it on connect). Until follow/farm actually starts, write a wait line every 2.5s: in_party, party-memory leader, xy, map, seen name, dist, kind, reason, socket state. Leader Start also logs the roster and that `/초대` is in-game chat after the world is ready, not the WS local test. Member Start says follow uses party_listen, not the socket.
+Shared: none. Follow, invite commands, and combat are unchanged.
+Affects: party leader and member session logs until the first farm/follow action.
+Consent: user (member never found the leader; invites not seen; leave the log until farm start).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — leader roster invite at bot start
+
+Intent: when the leader bot starts, open the party socket first, then type the in-game party commands for the roster table. Leave with `파티탈퇴` if this character is already in a party and is not the in-game leader. Invite each table name with `/초대 <name>` + Enter. Names already in the party, and this character, are skipped. Empty table does nothing.
+Shared: none. Solo farm, member follow, `begin_retreat`, and HP lines are unchanged. Chat uses the existing Interception paste path (`InputRouter`).
+Affects: party leader only, once per Start, after live origin/mapId and before the first farm decide.
+Consent: user (socket first, then invites from the party table).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party loot priority (loot first / follow first)
+
+Intent: a party-farm member can choose loot first or follow first on the party tab. Loot first: when assist, close-in, defend, join-map, wait, and stop are not needed (policy is HOLD or FOLLOW), the member walks to party drops and picks them up within the follow distance, then follows. Party adena and items are treated as its own (no ownership gate), but only the closest eligible member takes each pile. Eligible = party list members except the leader and the wizard; the local wizard never takes them. Ties go to the lower name so every client picks the same looter. Follow first keeps the earlier loot timing and the Random / Role rules.
+Shared: `try_party_hold_loot`, `find_party_pickup_range_loot`, `arm_party_loot_side` gained an optional item filter (default unchanged). Side F4 on loot first still only while the leader is not fighting. Solo farm, `begin_retreat`, and the retreat HP line are unchanged.
+Affects: party-farm member loot vs follow order when `party.loot_priority` = `loot`. Default `follow` = unchanged behavior.
+Caveat: the wizard class id from the party list is assumed to be 3 (Lineage order). Not confirmed against live memory.
+Consent: user (closest member except leader and mage loots; UI loot/follow priority; implement).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party member uses the solo retreat line at the HP gate
+
+Intent: when a party member's HP is at or under the solo retreat threshold, call that same survival line so an elf goes to the mother tree and any other class takes the talking-scroll landing (teleport only if the scroll cannot). Follow, hunt-NPC walk, and buffs wait until that trip ends. After HP recovers, the solo hunt-map world nav is not run; the member follows the leader again.
+Shared: called, not edited — `apply_hp_actions`, `tick_retreating`, `tick_shopping`, `begin_retreat`.
+Affects: party member only, and only at the retreat HP gate or while that retreat or its pre-retreat sell is in progress.
+Consent: user (in that situation, call that line and escape).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party hunt NPC and mother-tree orders
+
+Intent: the moment the leader's route picks an NPC teleporter, tell members (`type` `hunt_move`, `from` `leader`, the NPC map and xy). The leader stands on that NPC until those members report they are there, then the existing teleporter click runs. A mother-tree recovery decision sends `type` `recovery` immediately. Members do not act on `recovery`. Members who receive `hunt_move` walk to that NPC, then send buffs and the item list (`type` `report`).
+Shared: `WorldNavSession.begin` calls an optional plan hook; `_start_npc_teleporter` waits only when that hook is installed (leader process). Solo leaves the hooks empty, so the click is unchanged. `begin_retreat` is not edited.
+Affects: party leader world-nav NPC click, party member follow while a hunt order is active, party socket payloads.
+Consent: user (send the NPC and mother-tree decision at once; members gather, report, then the group goes on; leave mother-tree behavior for later).
+Result: implemented. Not run in game.
+
+## 2026-10-19 — party brain seats only (no live decide change)
+
+Intent: add four decision-adoption seats under `_06_party/brains` — leader, member (single party bot foundation), mage, shopkeeper.
+Shared: none. `PartyMemberManager.decide`, follow, assist, HP, and login stay on the current path. MemberBrain can wrap the existing manager when constructed; session does not call it yet. Leader, mage, and shopkeeper return `ready=False` and no intent.
+Affects: new package only.
+Consent: user (compose these modules first).
+Result: implemented. Not wired into the session.
+
+## 2026-10-17 — settle/loot when leader stops; clearer party WS probe
+
+Intent: with the leader idle, the member kept follow distance and skipped loot because settle required an exact cardinal tile. Hold as soon as distance ≤ stop; settle uses Arrive tolerance; clear a far travel sticky goal on stop; party-farm loot only while `leader_stopped` and near stop. Member WS test TCP-probes first and tells the user to Start the leader bot.
+Shared: `follow_kind` (stopped), manager settle/loot, `_start_party_client`, party tab WS test.
+Affects: party-member idle settle + loot; WS diagnose UX.
+Consent: user ("leader stopped then loot… keeping distance… connection is failing").
+Result: implemented.
+
 ## 2026-10-18 — shortest walk after a talking-scroll landing
 
 Intent: after the scroll lands on the nearest hub, the walk to the hunt area was following the 32-tile cluster corridor. From the Silver Knight inn that corridor leaves by the south door, while the tile path through the north door is shorter.
@@ -776,6 +864,94 @@ Affects: process start only. The driver and memory reader still start before the
 Consent: user (stop the crash and keep the current startup, workflow, and features).
 Result: portable `elevate` module rebuilt. `ZF.exe` stayed up with a window and no access violation.
 
+## 2026-10-17 — member sends player status every 10s
+
+Intent: the member bot connects to the leader address and sends the live player (hp, mp, position, map id, alive, level) every 10 seconds. Follow and combat stay as they are. The leader still farms solo and still sends only critical decisions.
+Shared: none. New client start/stop sits next to the leader socket in the worker. The send runs after the world snapshot, before the member decision, and only while member logic is on.
+Affects: member websocket traffic and a host field on the party member panel.
+Consent: user (client sends current player status with a 10s heartbeat).
+Result: implemented.
+
+## 2026-10-17 — leader sends critical solo decisions
+
+Intent: the leader bot keeps the solo farm. It does not run party follow. After a solo decision, teleport, return, talking scroll, gate, shop, and respawn are copied onto the party socket once per change. Attack, loot, heal, and walk ticks are not sent. Member follow is unchanged.
+Shared: none. The hook is after `decision.decide` in the bot loop, and only when the role is leader.
+Affects: leader websocket traffic. Solo actions stay the ones decide already chose.
+Consent: user (verify sending the leader's critical decisions; leader farms solo; only the member uses party logic).
+Result: implemented.
+
+## 2026-10-17 — party role selector and leader socket
+
+Intent: the Party tab has two roles, party member and party leader, on both sections. Leader shows this PC's LAN address and the socket port. When the bot runs as leader, the existing party WebSocket server listens on that port until the bot stops. A temporary client window monitors messages and both sides' status. Member follow, assist, loot, combat, retreat, HP, and login are unchanged. Selecting leader turns member follow off so this PC does not also chase a leader.
+Shared: none of `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `apply_inplace_hp_support`. New path is `BotController._start_party_socket` / `_stop_party_socket` around the existing worker. The member gate reads `party_role` and skips member mode when it is leader.
+Affects: party tab settings, and a listening socket while a leader bot is running.
+Consent: user (party member / party leader select, show IP and port, start the websocket with the leader bot, temporary client UI).
+Result: implemented.
+
+## 2026-10-17 — smooth party follow via Reynolds leader-following + Arrive
+
+Intent: travel follow was not smooth — random/exact travel tiles repathing every leader step caused jitter and reverse walks. Replace with Craig Reynolds leader following (GDC'99): formation slot behind the leader with a light lateral flank, Arrive tolerance (hold within 1 tile of the slot), and a sticky absolute goal (keep click target while the ideal drifts ≤2 tiles). HOLD keeps the sticky goal so the next chase reuses it.
+Shared: `formation_slot_offset`, `sticky_goal_tile`, `ARRIVAL_TOLERANCE` / `STICKY_GOAL_SLACK`, `FollowField.pick_travel_offset` (formation), manager travel wiring + HOLD sticky keep (all `_06_party`). Assist, settle cardinals, WORLD_NAV, solo, HP, login unchanged.
+Affects: party-member travel follow only.
+Consent: user ("still not smoothly following, give me the best algorithm. web search… and use").
+Result: implemented. Sources: Reynolds steering (leader following / Arrive), formation sticky goal / zLookAhead practice.
+
+## 2026-10-17 — restore contested_mobs capture for party assist (89bd676)
+
+Intent: etview showed the leader's AttackAction target, but the member never assisted. Live `capture_tick` had stopped loading/capturing `contested_mobs.dll` (and `attacks_me`), so `last_contested_mobs` stayed empty. Assist had been rewired to print_state `atk`/`tgt`, which often misses the same row etview sees. Restore the 89bd676 path: init combat readers, capture contested+attacks every tick, prefer contested rows for `leader_attack_rows`, keep print_state as fallback.
+Shared: `PerceptionSensors._init_combat_readers` / `capture_tick`, `leader_attack_rows` (contested first). Policy assist gate and resolve-live-only stay as they are.
+Affects: party-member assist target discovery (and `last_attacks_me` for strike assist). Solo contested filter still uses print_state. Movement, HP, login unchanged.
+Consent: user ("etview shows target… never assist… check 89bd676… at that time it worked").
+Result: implemented.
+
+## 2026-10-17 — mage casts only after an attack (knife) cursor like elf
+
+Intent: mage targeting pressed the spell key first and hunted for a `spell` cursor on a cross, so it often clicked empty ground. Elf finds `arrow`/`fist`/`sword` on the monster body ring and clicks. Mage now uses that same ring: hover until an attack cursor is on the body, press the spell key, then click that pixel only when the cursor is `spell`. Miss → reject / Esc, no grind on empty pixels. Elf `attack_click_search` is unchanged.
+Shared: `find_attack_aim_point`, `mage_cast_at_point`, `MageCombatStrategy.attack` (mage only). `object_attack_screen_points` is reused read-only.
+Affects: mage spell casts. Hunt attack mode ranged/melee for mage still uses elf/knight strategies from the prior change.
+Consent: user (knife-first mage aim; do not change elf).
+Result: implemented.
+
+## 2026-10-17 — party assist from print_state; mage retarget; mage ranged = bow
+
+Intent: (1) Party farm assist was not attacking the leader's monster. Assist read `last_contested_mobs`, but the live tick never fills that DLL snapshot — contested claims for solo already come from print_state `atk`/`tgt`. Assist now builds the leader's target from the same print_state Player AttackAction, with the DLL as a fallback only. Policy assists when that target is resolved inside the assist leash, even if the old `leader_farming` flag is late. Assist also runs with a party-guid proxy when the leader entity is off-screen. Soft give-up / blacklist ids are skipped so a failed cast can retarget. (2) Mage casts that miss the cursor used to Esc and re-aim the same sticky target without `mid_act`, so every tick re-pressed the skill and clicked the same area. Party ASSIST/DEFEND now set `mid_act` while the assist track_id is unchanged; after `CURSOR_VERIFY_FAIL_GIVE_UP` cursor rejects the blackboard give-up is honored and assist picks another monster. (3) Hunt Attack mode was stored in the UI but ignored by combat. Mage + `magic` keeps spell cast; mage + `ranged` uses the elf bow strategy; mage + `melee` uses knight clicks. Spell-range filters and mage MP-cast probes apply only when `uses_spell_aim()` is true.
+Shared: `leader_attack_rows` / strike resolve (print_state), `pick_assist_target` (blackboard exclude), party policy assist gate, `attack(..., mid_act)`, `player_mode.ATTACK_MODE` / `uses_spell_aim`, `combat_strategy_for(attack_mode)`, combat_query/target_selector spell-range gates, profile `attack_mode`, task_runtime + ActionExecutor wiring. Solo farm, retreat, HP, and login stay as they are aside from the spell-range gate when attack mode is not magic.
+Affects: party-member assist and farming; mage (and only mage) combat strategy and target range when Attack is Ranged/Melee/Magic.
+Consent: user ("must retarget… farm as range with bow… check deeply assist… contradiction… check and fix").
+Result: implemented. Print_state leader atk→monster resolves to `leader_attack`; policy returns ASSIST without `leader_farming`. Files compile. Full combat_strategy import was not run here (this Python has no numpy).
+
+## 2026-10-17 — party member farming method: solo farm / party farm
+
+Intent: the Party tab has a "Farming method" choice. Party farm (default) is the existing logic: the member only attacks what the leader attacks or strikes. Solo farm keeps the same follow and stop logic, but the member picks its own nearest target. It uses the solo `list_attackable` gates: species allow/deny, monsters claimed by another player, line of attack, mage range, and the give-up/blacklist set. The target must be within `assist_leash_tiles` of the leader and on screen. The member keeps its target while it is alive and in range, and fights it whether the leader is fighting or not. When the leader walks past the leash, follow wins. Solo farm loots its own drops (ownership gate on) within `follow_tiles` of the leader, including during fights. A pickup walk in progress is not cut by the stand/spot re-follow until the leash breaks.
+Shared: `PartyMemberConfig.farm_mode`, `pick_solo_farm_target`, `PolicyInput.solo_farm`, `party_loot_ownership_filter` (solo → own drops), and the manager loot gate (all in `_06_party`). Profile `party_farm_mode`, settings bag, `task_runtime`, schedule export, and the `bot_controller` config build. Solo `_04_decision` is read only (`list_attackable`, `excluded_target_ids`, `is_avoided_for_state`). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login stay as they are.
+Affects: party members in solo farm mode only. Party farm decisions and loot gates are unchanged. In solo farm, the Party loot random/role controls are disabled because they do not apply.
+Consent: user ("implement solo farm / party farm selection … party mode is current logic").
+Result: implemented. Checks pass. Config normalizes to party/solo. In solo, with the leader idle and a target in the leash, the result is ASSIST (or CLOSE_IN when out of range). Past the leash it is FOLLOW. Party mode with the same input still follows. The profile round trip works. The Qt tab compiles; it was not run here because PySide6 is missing from this Python.
+
+## 2026-10-17 — party member travels on a random side of the leader
+
+Intent: the member no longer trails behind a walking leader. While the leader walks, the member keeps one random tile around the leader as an offset that moves with it. The tile can be on any side and within `follow_tiles − 2` walk steps (2 at F=4). The member walks to that tile and holds on it. Each leader step moves the tile, so the member moves with the leader at once. A new random offset is picked each time the leader starts walking again, or when the tile is blocked, occupied, or has no path. The stopped stand is unchanged: random up, down, left, or right at S walk steps.
+Shared: `FollowField.pick_travel_offset`, `travel_band`, `follow_kind(at_travel_spot)`, `PolicyInput.at_travel_spot`, `plan_follow_intent(stand_reason)` (all in `_06_party`). Solo code, combat, the HP path, login, and UI stay as they are.
+Affects: party member travel follow. The walk-path click (`plan_field_follow`) is now only used when no spot is free around the leader. Combat assist, the combat leash, and world-nav stay as they are.
+Consent: user ("member bot don't need to be behind of leader, move and stop around randomly").
+Result: implemented. Checks pass. With F=4, offsets cover all 8 sides within 2 steps. A valid offset is kept, and a blocked one is re-rolled. The policy follows until the member is on the spot, then holds.
+
+## 2026-10-17 — party member follow and stop use walk steps
+
+Intent: the member's follow (`follow_tiles`) and stop (`stop_tiles`) bands count real walk steps to the leader, not Chebyshev distance. A wall or body between them no longer reads as "close". One bounded reverse BFS from the leader tile (`follow_field.py`) gives the member's steps and the path down to the leader. Travel clicks pick a hop on that path with `select_click_waypoint`, with no A*. The field is cached by leader tile, window, terrain, and nearby bodies. Window radius is `2×F+2` (min 8, max 24). Measured cost is about 1 ms at F=4 and about 5.6 ms at the cap. A cache hit costs under 1 µs.
+Shared: `build_follow_field`, `FollowFieldCache`, `plan_field_follow`, `pick_settle_stand` (field filter), `PolicyInput.leader_walk_dist` (all in `_06_party`). The pathfinding code is read only (`select_click_waypoint`, `waypoint_to_content`, `TerrainMap.can_step`). Solo `_04_decision`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login, and UI stay as they are.
+Affects: party member travel and settle only. The combat leash, assist, close-in, world-nav route choice, and the loot gate keep Chebyshev. A member that is unreachable inside the window counts as past the window, and its click falls back to the old A* follow. A settle stand must be within S walk steps. While a click is still more than 1 tile away, the member does not click again until the goal moves.
+Consent: user ("implement walkable distance following only for this member bot").
+Result: implemented. Checks pass. Through a wall the Chebyshev distance is 4 but the walk is 12 steps, and the member follows around the wall end. Tiles behind a body in a 1-wide corridor are unreachable. On open ground, walk steps equal Chebyshev distance.
+
+## 2026-10-17 — party member keeps the follow distance and settles beside the leader
+
+Intent: while the leader walks, the member stays within `follow_tiles` (UI F). It starts chasing 2 tiles before F (`TRAVEL_LEAD_TILES`) and keeps walking while it is farther than `stop_tiles`. Before this change it waited until it was already past F, so the 1–2 s reaction lag let the gap grow past F. When the leader stops (0.7 s settle, unchanged), the member picks one random tile up, down, left, or right of the leader at distance `stop_tiles` (UI S). It keeps that tile until the leader moves again. The old behavior stood on whichever tile was nearest the member, which meant behind the leader.
+Shared: `follow_kind`, `choose_settle_stand`, `pick_settle_stand`, `plan_follow_intent`, `PartyMemberManager._update_settle_stand` (all inside `_06_party`). Solo `_04_decision`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login, UI, and party sensors stay as they are.
+Affects: party member follow only. Combat assist, the combat leash, join-map, world-nav follow, and loot gates are unchanged. If a stand is occupied, the member picks another one. If a stand has no path, it is blocked until the leader moves. If no cardinal tile is walkable, the member falls back to the `stop_tiles` radius.
+Consent: user ("implement", after the scope was limited to `_06_party`).
+Result: implemented. Pure checks pass: with F=4 and S=1, travel chases at a distance of 2 or more. The settle stand is always one of the four cardinal tiles, and it stays locked unless occupied.
+
 ## 2026-10-17 — avoidance uses the memory monster class
 
 Intent: movement avoidance treats a print_state `Monster` or `SummonedMonster` as a body even when the species filter typed it OTHER. Attack, loot, and target selection keep the species filter.
@@ -798,6 +974,14 @@ Shared readers: `pgcache.h` under `rm`/`readMem` in `print_state.c`, `realtime_m
 Affects: how many IOCTLs a tick spends. Decision fields, tick order, and poll clocks are unchanged. A PRES that existed only behind a child pointer no longer gets coordinates.
 Consent: user (minimize IOCTL without changing decision performance; the per-call leftovers in the monitor, bag, and buffs are in scope).
 Result: implemented in the readers above.
+
+## 2026-10-16 — mage cast clicks the center of the spell range
+
+Intent: after the mage spell key, probe a screen cross through the monster and click the midpoint of the pixels whose cursor is `spell`. A locked fight reuses that center while it still reads `spell`. `spell_disable` and `spell_out_range` stay rejected.
+Shared: `mage_spell_cross_points`, `spell_range_center`, `mage_cast_click_search`, `MageCombatStrategy.attack`. The cross is centered on the same 0.2-screen-up body point as melee, with arms at 0.40 and 1.10 screen tiles. `object_attack_screen_points`, knight/elf/royal clicks, loot, travel, retreat, and HP stay as they are.
+Affects: mage attack casts. One cast hovers the cross (about 0.2 s) before the click, inside the 0.50 s cast gap. A `spell` pixel past a non-spell gap is left out, so a neighbor on an outer arm does not pull the center. A cast with no `spell` pixel still cancels with Esc. A monster that walks off the locked center is measured again.
+Consent: user (go, after the mage spell-center proposal).
+Result: implemented.
 
 ## 2026-10-16 — paused schedule update reaches the running logic
 

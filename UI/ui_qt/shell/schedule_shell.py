@@ -162,6 +162,7 @@ class ScheduleShell(QMainWindow):
         self._log_lines: list[str] = []
         self._shown_start_reason = ""
         self._debug_win = None
+        self._party_win = None
         self._op_sig: tuple | None = None
         self._probe_sig: tuple | None = None
         self._probe_at = 0.0
@@ -461,6 +462,17 @@ class ScheduleShell(QMainWindow):
             debug_btn.clicked.connect(self.open_debug)
             row.addWidget(debug_btn)
 
+        # Party etview — BitBlt + markers/ATK like etview.exe + party status.
+        party_btn = QPushButton(self.t.get("party_monitor", "Party"))
+        party_btn.setToolTip(
+            self.t.get(
+                "party_monitor_tip",
+                "Party etview: game capture + entity markers, leader ATK target, socket messages.",
+            )
+        )
+        party_btn.clicked.connect(self.open_party_monitor)
+        row.addWidget(party_btn)
+
         self.power_btn = QPushButton(self.t.get("start", "Start"))
         self.power_btn.setIcon(run_glyph("start"))
         self.power_btn.clicked.connect(self._toggle_run)
@@ -539,6 +551,28 @@ class ScheduleShell(QMainWindow):
     def _close_debug(self) -> None:
         win = self._debug_win
         self._debug_win = None
+        if win is not None:
+            win.close()
+
+    def open_party_monitor(self) -> None:
+        win = self._party_win
+        if win is not None and win.isVisible():
+            win.raise_()
+            win.activateWindow()
+            return
+        from ui_qt.debug.party_monitor_window import PartyMonitorWindow
+
+        self._party_win = PartyMonitorWindow(
+            self,
+            controller=self.bridge.controller,
+            t=self.t,
+            on_close=lambda: setattr(self, "_party_win", None),
+        )
+        self._party_win.show()
+
+    def _close_party_monitor(self) -> None:
+        win = self._party_win
+        self._party_win = None
         if win is not None:
             win.close()
 
@@ -669,6 +703,12 @@ class ScheduleShell(QMainWindow):
             except Exception:
                 pass
             self._debug_win = None
+        if self._party_win is not None:
+            try:
+                self._party_win.close()
+            except Exception:
+                pass
+            self._party_win = None
         self._poll_timer.stop()
         editor = getattr(self, "editor", None)
         bar = getattr(editor, "income_bar", None) if editor is not None else None
@@ -980,6 +1020,31 @@ class ScheduleShell(QMainWindow):
         self._refresh_operator(force=True)
         return True
 
+    def _overlay_party_from_editor(self) -> None:
+        """Push live Party-tab settings onto profile (schedule Start can wipe it)."""
+        try:
+            from settings.schedule import ScheduleTask
+            from settings.task_runtime import apply_runtime_settings
+
+            party = dict(self.editor.bag.section("party") or {})
+            apply_runtime_settings(
+                ScheduleTask(settings={"party": party}),
+                self.profile,
+            )
+            save_profile(self.profile)
+            self.bridge.profile = self.profile
+            self.bridge.coordinator.profile = self.profile
+            role = str(getattr(self.profile, "party_role", "member") or "member")
+            port = int(getattr(self.profile, "party_ws_port", 8765) or 8765)
+            member = bool(getattr(self.profile, "party_member_enabled", False))
+            host = str(getattr(self.profile, "party_leader_host", "") or "")
+            self._append_log(
+                f"Party role={role} member={'ON' if member else 'OFF'} "
+                f"port={port} leader={host}"
+            )
+        except Exception as exc:
+            self._append_log(f"Party settings overlay failed: {exc}")
+
     def _game_is_up(self) -> bool:
         try:
             return probe_game().lamp != Lamp.RED
@@ -1242,6 +1307,8 @@ class ScheduleShell(QMainWindow):
                 else:
                     self._sync_routine_from_editor()
                     save_profile(self.profile)
+                # Schedule task may omit/clear party; keep the live Hunt checkbox.
+                self._overlay_party_from_editor()
                 if routine_is_break_only(getattr(self.profile, "routine", None)):
                     QMessageBox.warning(
                         self,
@@ -1333,6 +1400,8 @@ class ScheduleShell(QMainWindow):
         self._login_not_before = now + 15.0
         if not self.apply_task(task, interactive=False):
             return "done"
+        # Schedule disk settings used to drop ``party``; keep Hunt checkbox live.
+        self._overlay_party_from_editor()
         error = self.bridge.start(unattended=True)
         if error:
             self._report_start_error(error)
@@ -1615,5 +1684,6 @@ class ScheduleShell(QMainWindow):
         self._poll_timer.stop()
         self.schedule_list._clock.stop()
         self._close_debug()
+        self._close_party_monitor()
         self.bridge.close()
         super().closeEvent(event)

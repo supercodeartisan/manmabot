@@ -35,6 +35,17 @@ def _is_mage(game_state: GameState) -> bool:
     return player.character_type is CharacterType.MAGE
 
 
+def _uses_spell_range(game_state: GameState) -> bool:
+    if not _is_mage(game_state):
+        return False
+    try:
+        from app._04_decision import player_mode as pm
+
+        return bool(pm.uses_spell_aim())
+    except Exception:
+        return True
+
+
 def _mage_tile_distance(obj: WorldObject) -> int:
     """Chebyshev distance from player tile (0,0) to the object's WCS tile."""
     from app._03_world.space.world_coords import distance_tiles_from_memory
@@ -81,7 +92,7 @@ def select_target(
 
     candidates = _candidates(game_state, exclude)
 
-    if _is_mage(game_state):
+    if _uses_spell_range(game_state):
         candidates = [
             obj for obj in candidates
             if in_mage_spell_range(obj.position.x, obj.position.y)
@@ -134,7 +145,7 @@ def is_target_valid(
         return False
     if expected_type is ObjectType.MONSTER and is_avoided_for_state(game_state, obj):
         return False
-    if _is_mage(game_state) and not in_mage_spell_range(
+    if _uses_spell_range(game_state) and not in_mage_spell_range(
         obj.position.x, obj.position.y
     ):
         return False
