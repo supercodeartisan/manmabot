@@ -4,8 +4,12 @@
 # click_offset_uv: optional [du, dv] added to computed NPC content UV when opening.
 #   When set → single click at (A + offset). When unset → cursor-search open.
 # adena_cost: teleporter fare in adena (affordability gate vs walk path); 0 = free/unset.
-# destination_dungeon: teleporter target LC mapId (ground_enter.to). Same NPC can have
-#   one behavior per dungeon (e.g. Giran → 30 vs 53). 0 = unset (not used in world-nav).
+# teleport_kind: dungeon_gate (default) | field_land.
+#   dungeon_gate: destination_dungeon = LC mapId (ground_enter.to). Same NPC can have
+#     one behavior per dungeon (e.g. Giran → 30 vs 53). After SHOP_RUN, world-nav
+#     rewrites the next gate to the nearest matching entrance.
+#   field_land: land_map_id + land_world = same-map (or other) field xy after the
+#     dialog (e.g. Giran TP → Dragon Valley field). No dungeon gate rewrite.
 # world_nav: true → world-nav planner may use this teleporter (Shopping Practice checkbox).
 # ui.*: content-normalized UVs [u, v] on the perception capture (0..1).
 # item_index: 0-based index in the full merchant list (7 rows visible) — buy only.
@@ -14,7 +18,7 @@
 # garbage_list / keep_list: shared item-name filters for ALL sell behaviors (file-level).
 # Live sell/store: shop_listen memory list + list scroll (item_index rule: scroll = max(0,n-6)).
 # store: warehouse keeper (e.g. give_goods); same dialog UVs as sell for now.
-# teleporter: option + confirm only (no slot/qty); dungeon-entry shortcut via NPC.
+# teleporter: option + confirm only (no slot/qty); dungeon or field shortcut via NPC.
 # Engine data: Engine/data/npc_behaviors.yaml (not inside maps/, not UserData).
 # Edited by Shopping Practice / bot_data_editors tools.
 #
@@ -1072,6 +1076,7 @@ behaviors:
   - 32584
   - 32925
   scroll_spot: ti_teleporter
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.13422509225092252
@@ -1090,6 +1095,7 @@ behaviors:
   - 33437
   - 32795
   scroll_spot: giran_teleporter
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.10378228782287824
@@ -1108,6 +1114,7 @@ behaviors:
   - 32611
   - 32732
   scroll_spot: hub_22
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.06795959547169811
@@ -1126,6 +1133,7 @@ behaviors:
   - 34063
   - 32278
   scroll_spot: hub_27
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.13720688596594802
@@ -1147,6 +1155,7 @@ behaviors:
   - 33080
   - 33385
   scroll_spot: hub_33
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.14309433962264154
@@ -1168,6 +1177,7 @@ behaviors:
   - 33050
   - 32783
   scroll_spot: hub_39
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.14309433962264154
@@ -1189,6 +1199,7 @@ behaviors:
   - 33050
   - 32783
   scroll_spot: hub_39
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.14309433962264154
@@ -1207,6 +1218,7 @@ behaviors:
   - 32584
   - 32925
   scroll_spot: ti_teleporter
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.07887453874538745
@@ -1225,6 +1237,7 @@ behaviors:
   - 33437
   - 32795
   scroll_spot: giran_teleporter
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.07344978113207548
@@ -1243,6 +1256,7 @@ behaviors:
   - 34063
   - 32278
   scroll_spot: hub_27
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.09129056603773586
@@ -1264,6 +1278,7 @@ behaviors:
   - 33080
   - 33385
   scroll_spot: hub_33
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.06028075471698114
@@ -1285,6 +1300,7 @@ behaviors:
   - 33050
   - 32783
   scroll_spot: hub_39
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.06120815094339623
@@ -1306,6 +1322,7 @@ behaviors:
   - 33050
   - 32783
   scroll_spot: hub_39
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.07419169811320755
@@ -1324,6 +1341,7 @@ behaviors:
   - 32611
   - 32732
   scroll_spot: hub_22
+  teleport_kind: dungeon_gate
   ui:
     buy_button:
     - 0.09931034482758619
@@ -1331,6 +1349,156 @@ behaviors:
     confirm_button:
     - 0.10075218390804598
     - 0.2862491954022989
+  world_nav: true
+- action: teleporter
+  adena_cost: 187
+  destination_dungeon: 0
+  id: teleport_giran_dragonvalley
+  land_map_id: 4
+  land_world:
+  - 33433
+  - 32515
+  map: mainland
+  name: Teleport Giran To Dragon Valley
+  npc_world:
+  - 33437
+  - 32795
+  scroll_spot: giran_teleporter
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.11966324607329842
+    - 0.36199204188481676
+    confirm_button:
+    - 0.1642860565445026
+    - 0.28767215916230365
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_silver_desertoasis
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Silver To dest oasis
+  npc_world:
+  - 33081
+  - 33385
+  scroll_spot: hub_33
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.14309433962264154
+    - 0.3320754716981132
+    confirm_button:
+    - 0.17885151832460733
+    - 0.2590559162303665
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_woodbeck_desertoasis
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Woodbeck To dest oasis
+  npc_world:
+  - 32640
+  - 33204
+  scroll_spot: hub_45
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.14309433962264154
+    - 0.3320754716981132
+    confirm_button:
+    - 0.17828536963350783
+    - 0.2426547602094241
+  world_nav: true
+- action: teleporter
+  adena_cost: 187
+  destination_dungeon: 0
+  id: teleport_giran_dragonvalley_ch
+  land_map_id: 4
+  land_world:
+  - 33433
+  - 32515
+  map: mainland
+  name: Teleport Giran To Dragon Valley Chinese
+  npc_world:
+  - 33437
+  - 32795
+  scroll_spot: giran_teleporter
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.06690848167539266
+    - 0.26351648167539266
+    confirm_button:
+    - 0.1206411392670157
+    - 0.26351648167539266
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_silver_desertoasis_ch
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Silver To dest oasis Chinese
+  npc_world:
+  - 33081
+  - 33385
+  scroll_spot: hub_33
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.07308464921465968
+    - 0.26351648167539266
+    confirm_button:
+    - 0.15119258136125655
+    - 0.23936080418848169
+  world_nav: true
+- action: teleporter
+  adena_cost: 195
+  click_offset_uv:
+  - 0.002872692913385766
+  - -0.06053278370323564
+  destination_dungeon: 0
+  id: teleport_woodbeck_desertoasis_ch
+  land_map_id: 4
+  land_world:
+  - 32874
+  - 33240
+  map: mainland
+  name: Teleport Woodbeck To dest oasis Chinese
+  npc_world:
+  - 32640
+  - 33204
+  scroll_spot: hub_45
+  teleport_kind: field_land
+  ui:
+    buy_button:
+    - 0.06587912041884816
+    - 0.2648889633507853
+    confirm_button:
+    - 0.14282387434554975
+    - 0.21788146596858637
   world_nav: true
 garbage_list: []
 keep_list:
@@ -1387,5 +1555,6 @@ keep_list:
 - '페어리: 나랑 놀아줘야 해!'
 - 펫 목걸이
 - 해독제
+- 호박씨
 - 화살
 - 활 골무

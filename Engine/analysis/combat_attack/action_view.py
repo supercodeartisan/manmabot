@@ -1,6 +1,6 @@
 """300x300 window. Draws the live body action every 0.1s.
 
-The picture is the memory read of ActionComponent+0xC0.
+The picture is the memory read of ActionComponent+0xC8.
 A small mark under the figure is ActorController+0x58.
 """
 import math

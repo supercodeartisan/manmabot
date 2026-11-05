@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "../item_name_kr.h"
 #include <time.h>
 #include "signeddrv_client.h"
 #include "../pgcache.h"
@@ -52,6 +53,7 @@
 #define MAX_PROBE_STEPS    8192
 #define VALID_PTR_LO       0x10000000000ULL
 #define VALID_PTR_HI       0x40000000000ULL
+#define MAX_ITEM_COUNT     50000000u       /* stacks through 50,000,000 stay in the bag JSON */
 
 // ItemEntity field offsets (JSON then inventory_offsets.txt).
 // id = ITEM_CFG +0x30 — Python shop matching uses this, not instance/tmpl.
@@ -87,7 +89,7 @@ static uint64_t g_heapLo = 0, g_heapHi = 0;
 static uint64_t g_validPtrLo = VALID_PTR_LO, g_validPtrHi = VALID_PTR_HI;
 
 /* InventorySubsystem chain (T7). TXT overlay wins after a service patch. */
-static uint32_t invMgr = 0x1668790u, invHolder = 0xD0u;
+static uint32_t invMgr = 0x16EB6F0u, invHolder = 0xD0u;
 static uint32_t invSubBeg = 0x180u, invSubEnd = 0x188u;
 static uint32_t invSubIdx = 26, invSubVft = 0x11C6878u;
 static uint32_t invVecBeg = 0x3D8u, invVecEnd = 0x3E0u;
@@ -461,7 +463,7 @@ static void scanWindowItems(const uint8_t* win, uint32_t br, uint64_t winAddr,
             LOG("  [filter] id out of range: %u\n", id);
             continue;
         }
-        if (cnt == 0 || cnt > 1000000) continue;
+        if (cnt == 0 || cnt > MAX_ITEM_COUNT) continue;
         int dup = 0;
         for (int d = 0; d < *nItems; d++)
             if (items[d].addr == obj) { dup = 1; break; }
@@ -523,7 +525,7 @@ static void scanWindowTokens(const uint8_t* win, uint32_t br, uint64_t winAddr,
                         uint32_t cnt = *(uint32_t*)(base + oItemCount);
                         uint32_t kind = *(uint32_t*)(base + oItemKind);
                         if (node == obj + oItemGuid && id > 0 && id <= 500000 &&
-                            cnt > 0 && cnt <= 1000000) {
+                            cnt > 0 && cnt <= MAX_ITEM_COUNT) {
                             int dup = 0;
                             for (int d = 0; d < *nItems; d++)
                                 if (items[d].addr == obj) { dup = 1; break; }
@@ -1094,6 +1096,16 @@ static int msgNameStatic(uint32_t mid, char* out, int outSz, char* twOut, int tw
     if (!msgAnchorRva || !g_base || mid == 0) return 0;
     hit = nameCacheGet(mid, out, outSz, twOut, twSz);
     if (hit >= 0) return hit;
+    {
+        const char* pref = itemNameKr(mid);
+        if (pref && pref[0] && out && outSz > 0) {
+            strncpy(out, pref, (size_t)outSz - 1);
+            out[outSz - 1] = 0;
+            if (twOut && twSz > 0) twOut[0] = 0;
+            nameCachePut(mid, out, twOut);
+            return 1;
+        }
+    }
     anchor = q64(g_base + msgAnchorRva);
     if (!isStructHeap(anchor)) return 0;
     rec = q64(anchor + (fnv1aKey(mid) & msgBucketMask) * (uint64_t)msgBucketStride);
@@ -1244,7 +1256,7 @@ static int inventoryScan(InvItem* items, int max, uint64_t* vecBase, uint64_t* v
             cnt = d32(e + oItemCount);
             kind = d32(e + oItemKind);
             if (id == 0 || id > 500000) continue;
-            if (cnt == 0 || cnt > 1000000) continue;
+            if (cnt == 0 || cnt > MAX_ITEM_COUNT) continue;
             it = &items[nItems++];
             memset(it, 0, sizeof(*it));
             it->addr = e;
@@ -1454,6 +1466,7 @@ static int invEnsure(const char* offsetsPath) {
     }
     if (!g_offsetsLoaded) {
         loadOffsets(g_offsetsPathBuf);
+        itemNameKrLoadNear(g_offsetsPathBuf);
         g_offsetsLoaded = 1;
     }
     DWORD pid = findPid(L"LC.exe");

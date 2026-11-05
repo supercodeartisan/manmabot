@@ -432,30 +432,43 @@ def choose_body_click(
     bodies: set[tuple[int, int]],
     max_hop: int,
 ) -> tuple[tuple[int, int] | None, str]:
-    """Avoidance click toward ``waypoint``, still capped by the hop."""
-    click = plan_avoidance_click(
-        terrain,
-        origin,
-        guide,
-        waypoint,
-        bodies,
-        max_hop=int(max_hop),
+    """Avoidance click toward ``waypoint``, still capped by the hop.
+
+    The farthest guide tile inside the hop is the click when that client
+    line is clear. A living body off the line leaves the click there.
+    A body or wall on that hop steps aside. A shorter tile in front of
+    the body is not used.
+    """
+    # Farthest legal hop on the guide, ignoring bodies. Walls still close it.
+    # A body on that same hop must sidestep, not stop on the tile before it.
+    open_hop = _farthest_guide_click(
+        terrain, origin, start, guide, waypoint, set(), max_hop
     )
-    if click is not None and not _click_allowed(
-        terrain, origin, start, click, bodies, max_hop
+    if open_hop is not None and _click_allowed(
+        terrain, origin, start, open_hop, bodies, max_hop
     ):
+        click = open_hop
+    else:
         click = None
-    if click is None:
-        # Farthest legal hop on the guide — not the first Chebyshev neighbor.
-        click = _farthest_guide_click(
-            terrain, origin, start, guide, waypoint, bodies, max_hop
-        )
-    if click is None:
-        # The longer hop is closed. One guide tile beside the character
-        # is still a step, when that single line is open.
+    if click is None and open_hop is None:
+        # No guide hop even without bodies. One guide tile beside the
+        # character is still a step, when that single line is open.
         click = _adjacent_guide_step(
             terrain, origin, start, guide, waypoint, bodies, max_hop
         )
+    if click is None:
+        click = plan_avoidance_click(
+            terrain,
+            origin,
+            guide,
+            waypoint,
+            bodies,
+            max_hop=int(max_hop),
+        )
+        if click is not None and not _click_allowed(
+            terrain, origin, start, click, bodies, max_hop
+        ):
+            click = None
     if click is None:
         return None, "window has no safe click"
     click = (int(click[0]), int(click[1]))

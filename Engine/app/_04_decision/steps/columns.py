@@ -21,6 +21,8 @@ WORLD_NAV: tuple[str, ...] = (
     "shop.trip",  # handoff → SHOPPING (may clear+re-request world nav)
     "spell.support",
     "spell.buffs",
+    # Walk / gate approach only. Scroll, NPC teleporter, and gate click stay put.
+    "unstick.confined",
     "world_nav.drive",
 )
 
@@ -91,6 +93,7 @@ TRAVELING: tuple[str, ...] = (
     "shop.trip",  # handoff → SHOPPING (sell before break when next row needs bag clear)
     "travel.training_done",
     "nav.hunt_map",  # enter/patrol only — handler no-ops otherwise
+    "travel.entered_farm",  # inside the rect: stop, do not walk on to center
     "farm.engage",  # enter/patrol only
     "travel.push_deeper_farm",
     "travel.arrive",

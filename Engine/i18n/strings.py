@@ -149,6 +149,7 @@ class UiStrings:
     farms_unsupported_dungeon: str
     patrol_not_walkable: str
     map_missing_short: str
+    map_loading_short: str
     select_tool: str
     duplicate: str
     move_up: str
@@ -493,6 +494,7 @@ _EN = UiStrings(
     ),
     patrol_not_walkable="That tile is not walkable.",
     map_missing_short="Map image is missing.",
+    map_loading_short="Loading image…",
     select_tool="Select",
     duplicate="Duplicate",
     move_up="Up",
@@ -997,6 +999,7 @@ _KO = UiStrings(
     ),
     patrol_not_walkable="이동할 수 없는 타일입니다.",
     map_missing_short="맵 이미지가 없습니다.",
+    map_loading_short="이미지 불러오는 중",
     select_tool="선택",
     duplicate="복제",
     move_up="위로",
@@ -1497,6 +1500,7 @@ _ZH = UiStrings(
     farms_unsupported_dungeon="地下城不使用猎场区域。请打开“编辑巡逻”放置点。",
     patrol_not_walkable="该格子不可行走。",
     map_missing_short="缺少地图图像。",
+    map_loading_short="正在加载图像…",
     select_tool="选择",
     duplicate="复制",
     move_up="上移",

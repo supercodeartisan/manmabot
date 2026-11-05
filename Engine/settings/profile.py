@@ -145,6 +145,8 @@ class Profile:
     area_low_yield_seconds: int = 180
     area_players: bool = False
     area_player_count: int = 3
+    # Hunt approach outside the area: no first strike or stray loot.
+    approach_no_engage: bool = False
     return_weight_enabled: bool = True
     return_weight_above: int = DEFAULT_RETURN_WEIGHT_ABOVE
     sell_mode: str = "sell_except_keep"
@@ -364,6 +366,7 @@ class Profile:
             "area_empty",
             "area_low_yield",
             "area_players",
+            "approach_no_engage",
             "random_teleport_enabled",
             "teleport_on_player",
             "teleport_when_surrounded",

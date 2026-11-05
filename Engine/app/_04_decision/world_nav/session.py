@@ -37,9 +37,11 @@ SCROLL_LAND_TIMEOUT_S = 25.0
 SCROLL_LAND_SETTLE_S = 2.0
 TRANSITION_APPROACH = 5
 # After teleporter SHOP_RUN clicks finish: min wait, then poll until live xy
-# leaves the NPC cell (same mapId — dungeon shutter TPs do not change mapId).
+# leaves the NPC cell (dungeon_gate: same mapId — shutter TPs do not change mapId)
+# or until near the planned field land (field_land).
 NPC_TP_SETTLE_S = 1.0
 NPC_TP_LAND_MOVE_TILES = 15
+NPC_TP_FIELD_LAND_SLACK = 40
 NPC_TP_LAND_TIMEOUT_S = 12.0
 NPC_TP_TIMEOUT_S = 60.0
 NPC_TP_APPROACH = 7  # SHOP_ARRIVE_TILES — walk step should already be at NPC
@@ -840,21 +842,24 @@ class WorldNavSession:
         )
 
     def _start_npc_teleporter(self, step: Any, pose: Any, blackboard: Any) -> Status:
-        """Emit SHOP_RUN teleporter; land xy read after settle (same map as NPC)."""
+        """Emit SHOP_RUN teleporter; land checked after settle (gate or field xy)."""
         from shop.behaviors import ACTION_TELEPORTER, behavior_by_id
         from shop.runtime import npc_content_uv
 
         det = step.detail
         bid = str(det.get("behavior_id") or "").strip()
         frm = det.get("from") or {}
-        expect_map = int(det.get("land_map_id") or frm.get("mapId") or pose.map_id)
+        npc_map = int(frm.get("mapId") or pose.map_id)
+        # After the dialog: dungeon_gate stays on npc_map; field_land uses land_map_id.
+        kind = str(det.get("teleport_kind") or "dungeon_gate")
+        expect_land = int(det.get("land_map_id") or npc_map)
         nx, ny = int(frm.get("x", -1)), int(frm.get("y", -1))
         tokens = api.state_tokens()
         if not bid or nx < 0 or ny < 0:
             self.fail("npc_teleporter detail missing")
             return Status.FAILURE
-        if pose.map_id != expect_map:
-            self.fail(f"npc teleporter wrong map{pose.map_id} want map{expect_map}")
+        if pose.map_id != npc_map:
+            self.fail(f"npc teleporter wrong map{pose.map_id} want map{npc_map}")
             return Status.FAILURE
         if _chev(pose.x, pose.y, nx, ny) > NPC_TP_APPROACH:
             self.fail(
@@ -874,20 +879,22 @@ class WorldNavSession:
         if behavior is None or str(behavior.action) != ACTION_TELEPORTER:
             self.fail(f"unknown teleporter behavior {bid}")
             return Status.FAILURE
-        pack_id = pack_ids.map_id_to_pack_id(expect_map)
+        pack_id = pack_ids.map_id_to_pack_id(npc_map)
         if pack_id is None:
-            self.fail(f"no pack for map{expect_map}")
+            self.fail(f"no pack for map{npc_map}")
             return Status.FAILURE
         if not self._ensure_map_pack(blackboard, pack_id):
             return self._idle(blackboard, "world nav wait pack")
         api.emit_state(
             tokens.NPC_TP_START,
             behavior=bid,
-            map=expect_map,
+            map=npc_map,
             x=nx,
             y=ny,
             adena=det.get("adena_cost"),
             gate=det.get("gate_edge_id"),
+            kind=kind,
+            land_map=expect_land,
         )
         blackboard.current_goal = "world_nav_teleporter"
         blackboard.emit(
@@ -900,7 +907,7 @@ class WorldNavSession:
             shop_kind="teleporter",
         )
         self.tp_behavior_id = bid
-        self.tp_expect_map_id = expect_map
+        self.tp_expect_map_id = expect_land
         self.tp_started_at = time.time()
         self.tp_settle_until = 0.0
         self.tp_settle_started_at = 0.0
@@ -947,35 +954,78 @@ class WorldNavSession:
         pose = live_pose_from_state(state, fresh=True)
         if pose is None:
             return self._idle(blackboard, "world nav teleporter wait pose")
+        step = self.plan.steps[self.step_i] if self.plan is not None else None
+        det = step.detail if step is not None else {}
+        if not isinstance(det, dict):
+            det = {}
+        kind = str(det.get("teleport_kind") or "dungeon_gate")
         expect = self.tp_expect_map_id
         if expect is not None and pose.map_id != int(expect):
-            err = (
-                f"npc teleporter land map{pose.map_id} want map{expect} "
-                f"behavior={self.tp_behavior_id}"
-            )
-            api.emit_state(tokens.NPC_TP_FAIL, error=err)
-            self.fail(err)
-            return Status.FAILURE
-        baseline = self.tp_baseline_xy
-        if baseline is not None:
-            moved = _chev(pose.x, pose.y, baseline[0], baseline[1])
-            if moved <= NPC_TP_LAND_MOVE_TILES:
+            # Field TP may take a moment to flip mapId; wait until timeout.
+            if time.time() - self.tp_settle_started_at > NPC_TP_LAND_TIMEOUT_S:
+                err = (
+                    f"npc teleporter land map{pose.map_id} want map{expect} "
+                    f"behavior={self.tp_behavior_id}"
+                )
+                api.emit_state(tokens.NPC_TP_FAIL, error=err)
+                self.fail(err)
+                return Status.FAILURE
+            return self._idle(blackboard, "world nav teleporter wait land map")
+
+        if kind == "field_land":
+            land_xy = det.get("land_xy")
+            tx = ty = None
+            if isinstance(land_xy, (list, tuple)) and len(land_xy) >= 2:
+                try:
+                    tx, ty = int(land_xy[0]), int(land_xy[1])
+                except (TypeError, ValueError):
+                    tx = ty = None
+            if tx is None:
+                to = det.get("to") or {}
+                try:
+                    tx, ty = int(to.get("x")), int(to.get("y"))
+                except (TypeError, ValueError):
+                    tx = ty = None
+            if tx is None or ty is None:
+                err = f"field_land missing land_xy behavior={self.tp_behavior_id}"
+                api.emit_state(tokens.NPC_TP_FAIL, error=err)
+                self.fail(err)
+                return Status.FAILURE
+            dist = _chev(pose.x, pose.y, tx, ty)
+            if dist > NPC_TP_FIELD_LAND_SLACK:
                 if time.time() - self.tp_settle_started_at > NPC_TP_LAND_TIMEOUT_S:
                     err = (
-                        f"npc teleporter land xy stuck near "
-                        f"({baseline[0]},{baseline[1]}) "
-                        f"live=({pose.x},{pose.y}) r={moved} "
-                        f"need>{NPC_TP_LAND_MOVE_TILES} "
+                        f"npc teleporter field land far "
+                        f"live=({pose.x},{pose.y}) want=({tx},{ty}) "
+                        f"r={dist}>{NPC_TP_FIELD_LAND_SLACK} "
                         f"behavior={self.tp_behavior_id}"
                     )
                     api.emit_state(tokens.NPC_TP_FAIL, error=err)
                     self.fail(err)
                     return Status.FAILURE
-                return self._idle(blackboard, "world nav teleporter wait land")
+                return self._idle(blackboard, "world nav teleporter wait field land")
+        else:
+            baseline = self.tp_baseline_xy
+            if baseline is not None:
+                moved = _chev(pose.x, pose.y, baseline[0], baseline[1])
+                if moved <= NPC_TP_LAND_MOVE_TILES:
+                    if time.time() - self.tp_settle_started_at > NPC_TP_LAND_TIMEOUT_S:
+                        err = (
+                            f"npc teleporter land xy stuck near "
+                            f"({baseline[0]},{baseline[1]}) "
+                            f"live=({pose.x},{pose.y}) r={moved} "
+                            f"need>{NPC_TP_LAND_MOVE_TILES} "
+                            f"behavior={self.tp_behavior_id}"
+                        )
+                        api.emit_state(tokens.NPC_TP_FAIL, error=err)
+                        self.fail(err)
+                        return Status.FAILURE
+                    return self._idle(blackboard, "world nav teleporter wait land")
+
         pack_id = pack_ids.map_id_to_pack_id(pose.map_id)
         if pack_id and not self._ensure_map_pack(blackboard, pack_id):
             return self._idle(blackboard, "world nav wait pack")
-        # Stamp nav origin from the landed abs cell so gate approach starts here.
+        # Stamp nav origin from the landed abs cell so next walk starts here.
         try:
             from app._03_world.merge.memory_sync import game_to_nav
             from app._03_world.space.world_coords import WorldOrigin
@@ -984,10 +1034,9 @@ class WorldNavSession:
             blackboard.world_origin = WorldOrigin(x=int(nx), y=int(ny))
         except Exception:
             pass
-        step = self.plan.steps[self.step_i]
-        det = step.detail if step is not None else {}
+
         dest = int(det.get("destination_dungeon") or 0)
-        if dest > 0:
+        if kind != "field_land" and dest > 0:
             rewritten = self._rewrite_next_gate_from_live_pose(
                 pose, destination_dungeon=dest
             )
@@ -999,6 +1048,9 @@ class WorldNavSession:
                 api.emit_state(tokens.NPC_TP_FAIL, error=err)
                 self.fail(err)
                 return Status.FAILURE
+        elif kind == "field_land":
+            self._retarget_next_walk_from_live_pose(pose)
+
         api.emit_state(
             tokens.NPC_TP_LAND,
             behavior=self.tp_behavior_id,
@@ -1006,11 +1058,12 @@ class WorldNavSession:
             x=pose.x,
             y=pose.y,
             dest=dest or None,
+            kind=kind,
         )
         api.emit_state(
             tokens.STEP_OK,
             i=self.step_i + 1,
-            n=len(self.plan.steps),
+            n=len(self.plan.steps) if self.plan is not None else 0,
             op="npc_teleporter",
         )
         self.step_i += 1
@@ -1021,6 +1074,30 @@ class WorldNavSession:
         self.tp_settle_started_at = 0.0
         self.tp_baseline_xy = None
         return Status.SUCCESS
+
+    def _retarget_next_walk_from_live_pose(self, pose: Any) -> bool:
+        """After field TP: point the following walk's ``from`` at live land xy."""
+        if self.plan is None or self.step_i + 1 >= len(self.plan.steps):
+            return False
+        nxt = self.plan.steps[self.step_i + 1]
+        if getattr(nxt, "op", "") != "walk":
+            return False
+        detail = getattr(nxt, "detail", None)
+        if not isinstance(detail, dict):
+            return False
+        frm = detail.get("from")
+        if not isinstance(frm, dict):
+            return False
+        try:
+            frm["mapId"] = int(pose.map_id)
+            frm["x"] = int(pose.x)
+            frm["y"] = int(pose.y)
+        except (TypeError, ValueError):
+            return False
+        detail["from"] = frm
+        detail["retargeted_after_field_teleporter"] = True
+        nxt.detail = detail
+        return True
 
     def _rewrite_next_gate_from_live_pose(
         self, pose: Any, *, destination_dungeon: int
@@ -1079,6 +1156,46 @@ class WorldNavSession:
     def note_gate_result(self, ok: bool, pose: Any | None, error: str = "") -> None:
         tokens = api.state_tokens()
         if ok and pose is not None and self.gate is not None:
+            g = self.gate
+            if self.plan is not None:
+                try:
+                    planned_to = {
+                        "mapId": int(g["to_map"]),
+                        "x": int(g["tx"]),
+                        "y": int(g["ty"]),
+                    }
+                    same_cell = (
+                        int(pose.map_id) == planned_to["mapId"]
+                        and int(pose.x) == planned_to["x"]
+                        and int(pose.y) == planned_to["y"]
+                    )
+                except (KeyError, TypeError, ValueError):
+                    planned_to = None
+                    same_cell = True
+                if (
+                    planned_to is not None
+                    and not same_cell
+                    and int(pose.map_id) == planned_to["mapId"]
+                    and retarget_walk_from_after_gate(
+                        self.plan.steps,
+                        self.step_i,
+                        planned_to,
+                        int(pose.map_id),
+                        int(pose.x),
+                        int(pose.y),
+                    )
+                ):
+                    from app.bot_log import get_logger
+
+                    get_logger("nav").info(
+                        "walk from retargeted after gate land "
+                        "(%s,%s) -> (%s,%s) map=%s",
+                        planned_to["x"],
+                        planned_to["y"],
+                        int(pose.x),
+                        int(pose.y),
+                        int(pose.map_id),
+                    )
             api.emit_state(
                 tokens.TRANSITION_LANDED,
                 map=pose.map_id,

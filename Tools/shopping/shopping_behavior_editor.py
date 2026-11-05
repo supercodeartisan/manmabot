@@ -16,6 +16,9 @@ from shop.behaviors import (
     ITEM_ROW_COUNT,
     SELL_MODE_ONLY_GARBAGE,
     SELL_MODES,
+    TELEPORT_KIND_DUNGEON_GATE,
+    TELEPORT_KIND_FIELD_LAND,
+    TELEPORT_KINDS,
     ShoppingBehavior,
     ShoppingSellFilters,
     ShoppingUiClicks,
@@ -162,7 +165,11 @@ class ShoppingBehaviorEditor(ttk.Frame):
         self.qty_var = tk.StringVar(self, value="200")
         self.item_index_var = tk.StringVar(self, value="0")
         self.adena_cost_var = tk.StringVar(self, value="0")
+        self.teleport_kind_var = tk.StringVar(self, value=TELEPORT_KIND_DUNGEON_GATE)
         self.dest_dungeon_var = tk.StringVar(self, value="")
+        self.land_map_var = tk.StringVar(self, value="")
+        self.land_x_var = tk.StringVar(self, value="0")
+        self.land_y_var = tk.StringVar(self, value="0")
         self.world_nav_var = tk.BooleanVar(self, value=False)
         self.sell_mode_var = tk.StringVar(self, value=SELL_MODE_ONLY_GARBAGE)
         self.status_var = tk.StringVar(self, value="")
@@ -178,10 +185,19 @@ class ShoppingBehaviorEditor(ttk.Frame):
         self._item_index_entry: ttk.Entry | None = None
         self._qty_entry: ttk.Entry | None = None
         self._adena_entry: ttk.Entry | None = None
+        self._kind_combo: ttk.Combobox | None = None
         self._dest_combo: ttk.Combobox | None = None
+        self._land_map_combo: ttk.Combobox | None = None
+        self._land_x_entry: ttk.Entry | None = None
+        self._land_y_entry: ttk.Entry | None = None
+        self._land_fill_btn: ttk.Button | None = None
+        self._dest_row: ttk.Frame | None = None
+        self._land_row: ttk.Frame | None = None
         self._world_nav_check: ttk.Checkbutton | None = None
         self._dest_id_to_label: dict[int, str] = {}
         self._dest_label_to_id: dict[str, int] = {}
+        self._land_id_to_label: dict[int, str] = {}
+        self._land_label_to_id: dict[str, int] = {}
         self._scroll_label_to_id: dict[str, str] = {}
         self._scroll_id_to_label: dict[str, str] = {}
         self._active_marker_keys: tuple[str, ...] = _SHOP_MARKER_KEYS
@@ -196,6 +212,7 @@ class ShoppingBehaviorEditor(ttk.Frame):
     def _build(self) -> None:
         from app._04_decision.shops import (
             list_destination_dungeon_choices,
+            list_land_map_choices,
             list_map_ids,
             list_scroll_spot_choices,
         )
@@ -309,33 +326,72 @@ class ShoppingBehaviorEditor(ttk.Frame):
         cell(4, 0, "Item index", self._item_index_entry)
         self._qty_entry = ttk.Entry(form, textvariable=self.qty_var, width=8)
         cell(4, 2, "Default qty", self._qty_entry)
+        self._kind_combo = ttk.Combobox(
+            form,
+            textvariable=self.teleport_kind_var,
+            values=list(TELEPORT_KINDS),
+            state="readonly",
+            width=18,
+        )
+        self._kind_combo.bind("<<ComboboxSelected>>", lambda _e: self._sync_action_panel())
+        cell(5, 0, "Teleport kind", self._kind_combo)
         dest_choices = list_destination_dungeon_choices()
         self._dest_id_to_label = {mid: label for mid, label in dest_choices}
         self._dest_label_to_id = {label: mid for mid, label in dest_choices}
+        self._dest_row = ttk.Frame(form, style="Chrome.TFrame")
         self._dest_combo = ttk.Combobox(
-            form,
+            self._dest_row,
             textvariable=self.dest_dungeon_var,
             values=[label for _mid, label in dest_choices],
             width=42,
         )
-        cell(5, 0, "Dest dungeon", self._dest_combo, colspan=3)
+        self._dest_combo.pack(side="left", fill="x", expand=True)
+        cell(6, 0, "Dest dungeon", self._dest_row, colspan=3)
+        land_choices = list_land_map_choices()
+        self._land_id_to_label = {mid: label for mid, label in land_choices}
+        self._land_label_to_id = {label: mid for mid, label in land_choices}
+        self._land_row = ttk.Frame(form, style="Chrome.TFrame")
+        self._land_map_combo = ttk.Combobox(
+            self._land_row,
+            textvariable=self.land_map_var,
+            values=[label for _mid, label in land_choices],
+            width=28,
+        )
+        self._land_map_combo.pack(side="left", padx=(0, 4))
+        self._land_x_entry = ttk.Entry(
+            self._land_row, textvariable=self.land_x_var, width=8
+        )
+        self._land_x_entry.pack(side="left", padx=2)
+        self._land_y_entry = ttk.Entry(
+            self._land_row, textvariable=self.land_y_var, width=8
+        )
+        self._land_y_entry.pack(side="left", padx=2)
+        self._land_fill_btn = ttk.Button(
+            self._land_row,
+            text="Fill land from memory",
+            command=self.fill_land_from_memory,
+        )
+        self._land_fill_btn.pack(side="left", padx=6)
+        cell(7, 0, "Land map / xy", self._land_row, colspan=3)
         self._world_nav_check = ttk.Checkbutton(
             form,
             text="Use in world-nav (NPC teleporter shortcut)",
             variable=self.world_nav_var,
         )
-        self._world_nav_check.grid(row=6, column=0, columnspan=4, sticky="w", pady=(4, 0))
+        self._world_nav_check.grid(row=8, column=0, columnspan=4, sticky="w", pady=(4, 0))
         ttk.Label(
             form,
             text="Edits stay in memory until Save (Engine/data/npc_behaviors.yaml). "
-            "Scroll spot = talking-scroll hubs. Adena = fare. Dest dungeon = LC mapId. "
-            "World-nav checkbox writes world_nav on this teleporter (Korean id; zh uses _ch).",
+            "Scroll spot = talking-scroll hubs. Adena = fare. "
+            "dungeon_gate → Dest dungeon (LC mapId). "
+            "field_land → Land map/xy after Run Practice. "
+            "World-nav checkbox writes world_nav (Korean id; zh uses _ch).",
             style="Chrome.TLabel",
             foreground=TEXT_MUTED,
-        ).grid(row=7, column=0, columnspan=4, sticky="w", pady=(6, 2))
+        ).grid(row=9, column=0, columnspan=4, sticky="w", pady=(6, 2))
         ttk.Button(
             form, text="Save fields to engine data", command=self.save_to_disk
-        ).grid(row=8, column=0, columnspan=4, sticky="w", pady=(2, 2))
+        ).grid(row=10, column=0, columnspan=4, sticky="w", pady=(2, 2))
 
         sell = ttk.LabelFrame(right, text="Sell mode (this behavior)", padding=(8, 4))
         self._sell_frame = sell
@@ -592,6 +648,9 @@ class ShoppingBehaviorEditor(ttk.Frame):
     def _sync_action_panel(self) -> None:
         """Show sell mode for sell/store; adena/dest for teleporter; refresh markers."""
         action = self._combo_text(self._action_combo, self.action_var).lower()
+        kind = self._combo_text(self._kind_combo, self.teleport_kind_var).lower()
+        if kind not in TELEPORT_KINDS:
+            kind = TELEPORT_KIND_DUNGEON_GATE
         slot_state = (
             "disabled"
             if action in (ACTION_SELL, ACTION_STORE, ACTION_TELEPORTER)
@@ -599,8 +658,12 @@ class ShoppingBehaviorEditor(ttk.Frame):
         )
         qty_state = "disabled" if action == ACTION_TELEPORTER else "normal"
         adena_state = "normal" if action == ACTION_TELEPORTER else "disabled"
-        dest_state = "normal" if action == ACTION_TELEPORTER else "disabled"
+        kind_state = "readonly" if action == ACTION_TELEPORTER else "disabled"
         world_nav_state = "normal" if action == ACTION_TELEPORTER else "disabled"
+        is_dungeon = action == ACTION_TELEPORTER and kind == TELEPORT_KIND_DUNGEON_GATE
+        is_field = action == ACTION_TELEPORTER and kind == TELEPORT_KIND_FIELD_LAND
+        dest_state = "normal" if is_dungeon else "disabled"
+        land_state = "normal" if is_field else "disabled"
         entry = self._item_index_entry
         if entry is not None:
             try:
@@ -619,12 +682,29 @@ class ShoppingBehaviorEditor(ttk.Frame):
                 adena.configure(state=adena_state)
             except tk.TclError:
                 pass
+        kind_combo = getattr(self, "_kind_combo", None)
+        if kind_combo is not None:
+            try:
+                kind_combo.configure(state=kind_state)
+            except tk.TclError:
+                pass
         dest = getattr(self, "_dest_combo", None)
         if dest is not None:
             try:
                 dest.configure(state=dest_state)
             except tk.TclError:
                 pass
+        for w in (
+            getattr(self, "_land_map_combo", None),
+            getattr(self, "_land_x_entry", None),
+            getattr(self, "_land_y_entry", None),
+            getattr(self, "_land_fill_btn", None),
+        ):
+            if w is not None:
+                try:
+                    w.configure(state=land_state)
+                except tk.TclError:
+                    pass
         wn = getattr(self, "_world_nav_check", None)
         if wn is not None:
             try:
@@ -635,13 +715,27 @@ class ShoppingBehaviorEditor(ttk.Frame):
             self.item_index_var.set("0")
             self.adena_cost_var.set("0")
             self.dest_dungeon_var.set("")
+            self.land_map_var.set("")
+            self.land_x_var.set("0")
+            self.land_y_var.set("0")
+            self.teleport_kind_var.set(TELEPORT_KIND_DUNGEON_GATE)
             self.world_nav_var.set(False)
         elif action == ACTION_TELEPORTER:
             self.item_index_var.set("0")
             self.qty_var.set("1")
+            if is_dungeon:
+                self.land_map_var.set("")
+                self.land_x_var.set("0")
+                self.land_y_var.set("0")
+            else:
+                self.dest_dungeon_var.set("")
         else:
             self.adena_cost_var.set("0")
             self.dest_dungeon_var.set("")
+            self.land_map_var.set("")
+            self.land_x_var.set("0")
+            self.land_y_var.set("0")
+            self.teleport_kind_var.set(TELEPORT_KIND_DUNGEON_GATE)
             self.world_nav_var.set(False)
         frame = self._sell_frame
         if frame is not None:
@@ -700,6 +794,26 @@ class ShoppingBehaviorEditor(ttk.Frame):
         except ValueError:
             return 0
 
+    def _land_label_for_id(self, map_id: int) -> str:
+        mid = int(map_id or 0)
+        if mid < 0:
+            return ""
+        if mid == 0 and mid not in self._land_id_to_label:
+            return ""
+        return self._land_id_to_label.get(mid, str(mid) if mid > 0 else "")
+
+    def _land_id_from_form(self) -> int:
+        raw = self._combo_text(self._land_map_combo, self.land_map_var)
+        if not raw:
+            return 0
+        if raw in self._land_label_to_id:
+            return int(self._land_label_to_id[raw])
+        head = raw.split(" · ", 1)[0].strip()
+        try:
+            return max(0, int(float(head)))
+        except ValueError:
+            return 0
+
     def _clear_form(self) -> None:
         self.id_var.set("")
         self.name_var.set("")
@@ -711,7 +825,11 @@ class ShoppingBehaviorEditor(ttk.Frame):
         self.qty_var.set("200")
         self.item_index_var.set("0")
         self.adena_cost_var.set("0")
+        self.teleport_kind_var.set(TELEPORT_KIND_DUNGEON_GATE)
         self.dest_dungeon_var.set("")
+        self.land_map_var.set("")
+        self.land_x_var.set("0")
+        self.land_y_var.set("0")
         self.world_nav_var.set(False)
         self.sell_mode_var.set(SELL_MODE_ONLY_GARBAGE)
         self._sync_action_panel()
@@ -727,9 +845,22 @@ class ShoppingBehaviorEditor(ttk.Frame):
         self.qty_var.set(str(int(b.default_qty)))
         self.item_index_var.set(str(int(b.item_index)))
         self.adena_cost_var.set(str(int(b.adena_cost)))
+        kind = str(getattr(b, "teleport_kind", "") or TELEPORT_KIND_DUNGEON_GATE)
+        if kind not in TELEPORT_KINDS:
+            kind = (
+                TELEPORT_KIND_FIELD_LAND
+                if int(getattr(b, "land_map_id", 0) or 0) > 0
+                else TELEPORT_KIND_DUNGEON_GATE
+            )
+        self.teleport_kind_var.set(kind)
         self.dest_dungeon_var.set(
             self._dest_label_for_id(int(getattr(b, "destination_dungeon", 0) or 0))
         )
+        self.land_map_var.set(
+            self._land_label_for_id(int(getattr(b, "land_map_id", 0) or 0))
+        )
+        self.land_x_var.set(str(int(getattr(b, "land_world_x", 0) or 0)))
+        self.land_y_var.set(str(int(getattr(b, "land_world_y", 0) or 0)))
         self.world_nav_var.set(bool(getattr(b, "world_nav", False)))
         mode = b.sell_mode if b.sell_mode in SELL_MODES else SELL_MODE_ONLY_GARBAGE
         self.sell_mode_var.set(mode)
@@ -774,7 +905,18 @@ class ShoppingBehaviorEditor(ttk.Frame):
             adena_cost = max(0, int(float(self.adena_cost_var.get().strip() or "0")))
         except ValueError as exc:
             raise ValueError("Adena cost must be an integer >= 0") from exc
+        teleport_kind = self._combo_text(
+            self._kind_combo, self.teleport_kind_var
+        ).lower()
+        if teleport_kind not in TELEPORT_KINDS:
+            teleport_kind = TELEPORT_KIND_DUNGEON_GATE
         destination_dungeon = self._dest_id_from_form()
+        land_map_id = self._land_id_from_form()
+        try:
+            land_world_x = int(float(self.land_x_var.get().strip() or "0"))
+            land_world_y = int(float(self.land_y_var.get().strip() or "0"))
+        except ValueError as exc:
+            raise ValueError("Land world must be integers") from exc
         sell_mode = self._combo_text(self._sell_mode_combo, self.sell_mode_var)
         if sell_mode not in SELL_MODES:
             sell_mode = SELL_MODE_ONLY_GARBAGE
@@ -784,15 +926,33 @@ class ShoppingBehaviorEditor(ttk.Frame):
             item_index = 0
             adena_cost = 0
             destination_dungeon = 0
+            land_map_id = 0
+            land_world_x = 0
+            land_world_y = 0
+            teleport_kind = TELEPORT_KIND_DUNGEON_GATE
         world_nav = bool(self.world_nav_var.get())
         if action == ACTION_TELEPORTER:
             item_index = 0
             qty = 1
-            if destination_dungeon <= 0:
-                raise ValueError("Dest dungeon mapId is required for teleporter")
+            if teleport_kind == TELEPORT_KIND_FIELD_LAND:
+                destination_dungeon = 0
+                if land_map_id <= 0:
+                    raise ValueError("Land map is required for field_land teleporter")
+            else:
+                land_map_id = 0
+                land_world_x = 0
+                land_world_y = 0
+                if destination_dungeon <= 0:
+                    raise ValueError(
+                        "Dest dungeon mapId is required for dungeon_gate teleporter"
+                    )
         else:
             adena_cost = 0
             destination_dungeon = 0
+            land_map_id = 0
+            land_world_x = 0
+            land_world_y = 0
+            teleport_kind = TELEPORT_KIND_DUNGEON_GATE
             world_nav = False
         prev_ui = ShoppingUiClicks()
         prev_offset = None
@@ -816,7 +976,11 @@ class ShoppingBehaviorEditor(ttk.Frame):
             default_qty=qty,
             item_index=item_index,
             adena_cost=adena_cost,
+            teleport_kind=teleport_kind,
             destination_dungeon=destination_dungeon,
+            land_map_id=land_map_id,
+            land_world_x=land_world_x,
+            land_world_y=land_world_y,
             world_nav=world_nav,
             sell_mode=sell_mode,
             click_offset_uv=prev_offset,
@@ -934,6 +1098,30 @@ class ShoppingBehaviorEditor(ttk.Frame):
                 "Behaviors", str(exc), parent=self.winfo_toplevel()
             )
             self._log(f"Fill memory failed: {exc}")
+
+    def fill_land_from_memory(self) -> None:
+        """After Run Practice field TP: stamp land mapId + xy from live pose."""
+        try:
+            from shopping.memory_fill import read_player_game_xy, read_player_map_id
+
+            mid = read_player_map_id()
+            gx, gy = read_player_game_xy()
+            self.teleport_kind_var.set(TELEPORT_KIND_FIELD_LAND)
+            self.land_map_var.set(self._land_label_for_id(int(mid)))
+            if not self.land_map_var.get().strip():
+                self.land_map_var.set(str(int(mid)))
+            self.land_x_var.set(str(gx))
+            self.land_y_var.set(str(gy))
+            self._sync_action_panel()
+            self._log(f"Land from memory: map{mid} [{gx}, {gy}]")
+            if self._selected_index is not None:
+                self.apply_form_to_selected(silent=True, refresh=False)
+                self._dirty = True
+        except Exception as exc:
+            messagebox.showwarning(
+                "Behaviors", str(exc), parent=self.winfo_toplevel()
+            )
+            self._log(f"Fill land failed: {exc}")
 
     # ------------------------------------------------------------------ calibrate
 

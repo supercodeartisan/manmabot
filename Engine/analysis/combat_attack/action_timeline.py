@@ -1,6 +1,6 @@
 """Read-only timeline of the live body action and command.
 
-Logs a line only when ActionComponent+0xC0 or ActorController+0x58
+Logs a line only when ActionComponent+0xC8 or ActorController+0x58
 changes class. Does not send input.
 """
 import ctypes
@@ -14,23 +14,23 @@ SECONDS = 300
 POLL_S = 0.02
 
 BODY = {
-    0x11EB4D8: "stand",
-    0x11EB7B8: "walk",
-    0x11EB770: "walkback",
-    0x11EB490: "attack",
-    0x11EB718: "actionbase",
-    0x11EB5B0: "turn",
-    0x11EB3B8: "spell",
-    0x11EB400: "death",
-    0x11EB568: "death",
-    0x11EB448: "damaged",
-    0x11EB520: "damaged",
-    0x11EB370: "effect",
+    0x11F4650: "stand",
+    0x11F4780: "walk",
+    0x11F4738: "walkback",
+    0x11F4410: "attack",
+    0x11F46E0: "actionbase",
+    0x11F4530: "turn",
+    0x11F4338: "spell",
+    0x11F4380: "death",
+    0x11F44E8: "death",
+    0x11F43C8: "damaged",
+    0x11F4698: "damaged",
+    0x11F44A0: "effect",
 }
 CMD = {
-    0x11EBA50: "move",
-    0x11EBBD0: "attack",
-    0x11EBA88: "interact",
+    0x11F4A18: "move",
+    0x11F4B98: "attack",
+    0x11F4A50: "interact",
 }
 
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -184,7 +184,7 @@ def sample(h, pid, base, size, me):
     ac = q(h, pid, table + 16)
     tr = q(h, pid, table)
     cmd = q(h, pid, ctl + 0x58) if heap(ctl) else 0
-    act = q(h, pid, ac + 0xC0) if heap(ac) else 0
+    act = q(h, pid, ac + 0xC8) if heap(ac) else 0
     return {
         "cell": (
             d(h, pid, tr + 0x40) if heap(tr) else 0,
@@ -216,7 +216,7 @@ def main():
         log.flush()
 
     emit("pid=%d base=%X seconds=%d" % (pid, base, SECONDS))
-    emit("body slot ActionComponent+0xC0   command slot ActorController+0x58")
+    emit("body slot ActionComponent+0xC8   command slot ActorController+0x58")
     me = find_my_player(h, pid, base, size)
     emit("me=%X" % me)
     if not me:

@@ -97,7 +97,7 @@ static int lc_attach(void)
 #define VFT_DEATH     0x1180AE8u
 #define VFT_DEADBODY  0x11808A8u
 #define VFT_BREATHACT 0x1180A10u
-#define VFT_MAPSUBSYS 0x11C7DF0u   /* MapSubsystem   (live-verified)        */
+#define VFT_MAPSUBSYS 0x123C958u   /* MapSubsystem   (live-verified)        */
 #define VFT_ACTORSUBS 0x117EAD8u   /* ActorSubsystem (live-verified)        */
 #define VFT_BEHAVIORS 0x1183140u   /* BehaviorSubsystem                    */
 #define VFT_CTLCOMP   0x1181010u   /* ActorControllerComponent             */
@@ -108,7 +108,7 @@ static int lc_attach(void)
  * RTTI-indexed in the 9.30 build (62 subsystems total), so the deltas below
  * are exact and were NOT guessed.  Regenerate on the next build with
  * T3_maps/delta_930.py -- game access is not required.                */
-#define VFT_CHARDATA  0x1185340u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
+#define VFT_CHARDATA  0x11F90D8u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
 #define VFT_INVENTORY 0x11C6878u   /* InventorySubsystem   sub[26]  (-0x370) */
 #define VFT_HUDSLOT   0x1182FC0u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
 #define VFT_ITEMENT   0x11C66E8u   /* ItemEntity    (live-verified, no RTTI)  */
@@ -130,11 +130,11 @@ static int lc_attach(void)
 #define VFT_PORTALACT 0x1189140u   /* PortalInteraction (portal track)           */
 
 /* enttrack / etview geometry */
-#define LC_MGR    0x1668790u
+#define LC_MGR    0x16F8A00u
 #define LC_HOLDER 0xD0u
 #define LC_SUBB   0x180u
-#define LC_PLAYER_X 0x1668640u    /* was 0x1668710 (moved this build) */
-#define LC_PLAYER_Y 0x1668644u
+#define LC_PLAYER_X 0x16F88B0u    /* was 0x1668710 (moved this build) */
+#define LC_PLAYER_Y 0x16F88B4u
 #define LC_STEP_MS   516.0f        /* measured A->B commit period */
 #define LC_REF_H     600.0f
 static float LC_PPS   = 0.53f;

@@ -20,6 +20,7 @@
 #include "../entities/signeddrv_client.h"
 #include "../pgcache.h"
 #include "nametable.h"
+#include "../item_name_kr.h"
 
 static DWORD g_pid = 0;
 static uint64_t g_base = 0;
@@ -29,7 +30,7 @@ static char g_offsetsPathBuf[MAX_PATH] = "skill_offsets.txt";
 
 #define LOG(fmt, ...) do { if (!g_dllMode) fprintf(stderr, fmt, ##__VA_ARGS__); } while (0)
 
-static uint32_t MGR = 0x1668790, HOLDER = 0xD0, SUB_BEG = 0x180, SUB_END = 0x188;
+static uint32_t MGR = 0x16EB6F0, HOLDER = 0xD0, SUB_BEG = 0x180, SUB_END = 0x188;
 /* HSD_VFT = map container at sub+0x18; HSD_VFT2 = outer HudSlotDataSubsystem. */
 static uint32_t HSD_IDX = 30, HSD_ADJ = 0x18, HSD_VFT = 0x1183010, HSD_VFT2 = 0x1182FC0;
 static uint32_t MAP_HEAD = 0x08, MAP_SIZE = 0x10;
@@ -37,7 +38,7 @@ static uint32_t N_L = 0x00, N_PARENT = 0x08, N_R = 0x10, N_NIL = 0x19, N_KEY = 0
 static uint32_t V_TYPE = 0x08, V_RAW = 0x00, V_ID = 0xC0, V_CFG = 0x0C, V_T10 = 0x10;
 static uint32_t V_STRLEN = 0x40, V_STR = 0x30, V_CAP = 0x48;
 
-static uint32_t INV_MGR = 0x1668790, INV_VFT = 0x11C6878;
+static uint32_t INV_MGR = 0x16EB6F0, INV_VFT = 0x11C6878;
 static uint32_t INV_VEC_BEG = 0x3D8, INV_VEC_END = 0x3E0;
 static uint32_t IT_ID = 0x18, IT_COUNT = 0x38, IT_FMT = 0x68, IT_TMPL = 0x20;
 static uint32_t IT_ENCH = 0x3C, IT_VFT = 0x11C66E8;
@@ -460,6 +461,7 @@ static int scanHotbar(FILE* out) {
     siblingPath(g_offsetsPathBuf, "..\\inventories\\inventory_offsets.txt", invPath, sizeof(invPath));
     if (!fileExists(invPath))
         siblingPath(g_offsetsPathBuf, "inventory_offsets.txt", invPath, sizeof(invPath));
+    itemNameKrLoadNear(g_offsetsPathBuf);
     ntLoadRegistry(&nt, invPath);
     nt.pid = g_pid;
     nt.base = g_base;

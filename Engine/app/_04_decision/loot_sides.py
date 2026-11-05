@@ -29,21 +29,36 @@ def _log_side_loot_decide(blackboard: "Blackboard", item: "WorldObject") -> None
     blackboard.scratch["_loot_side_decide"] = key
     event(
         "loot",
-        "loot decide via=side gate=skip id=%s %s",
+        "loot decide via=side gate=arm id=%s %s",
         int(item.track_id),
         claim,
     )
 
 
 def arm_loot_side_intent(state: "GameState", blackboard: "Blackboard") -> None:
-    """Append in-range ``PICKUP`` to ``side_intents`` (does not clear)."""
+    """Append a standing F4 when no attack, walk, or sticky loot owns the tick.
+
+    Combat and travel keep their primary click. A pile already being walked
+    or confirmed stays on the normal loot path so a side F4 cannot clear it.
+    """
+    if blackboard.loot_await_gone_id is not None or blackboard.current_item_id is not None:
+        return
     primary = blackboard.intent
-    if primary is not None and primary.action is ActionType.PICKUP:
+    if primary is not None and primary.action in (
+        ActionType.PICKUP,
+        ActionType.ATTACK,
+        ActionType.SEARCHING,
+        ActionType.TRAVELING,
+    ):
         return
     if any(s.action is ActionType.PICKUP for s in blackboard.side_intents):
         return
     item = find_pickup_range_loot(state, blackboard)
     if item is None:
+        return
+    from app._04_decision.behaviors.loot_hop import f4_allowed
+
+    if not f4_allowed(blackboard, state, int(item.track_id)):
         return
     _log_side_loot_decide(blackboard, item)
     blackboard.side_intents.append(
@@ -74,6 +89,17 @@ def find_pickup_range_loot(
     if is_hp_zero(state):
         return None
 
+    from app._04_decision.behaviors.mode_actions import (
+        SCRATCH_APPROACH_CORPSE_IDS,
+        SCRATCH_APPROACH_HOLD_FIRE,
+    )
+
+    hold_fire = bool(blackboard.scratch.get(SCRATCH_APPROACH_HOLD_FIRE))
+    corpse_ids = {
+        int(item_id)
+        for item_id in (blackboard.scratch.get(SCRATCH_APPROACH_CORPSE_IDS) or [])
+    }
+
     loot_mode = _effective_loot_mode(state)
     origin = blackboard.world_origin
     skip = set(excluded_target_ids(blackboard))
@@ -86,9 +112,10 @@ def find_pickup_range_loot(
     # Prefer sticky item if still in pickup range.
     sticky_id = blackboard.current_item_id
     if sticky_id is not None and int(sticky_id) not in skip:
-        sticky = state.get_object(int(sticky_id))
-        if sticky is not None and _item_in_pickup_range(state, sticky, origin):
-            return sticky
+        if not hold_fire or int(sticky_id) in corpse_ids:
+            sticky = state.get_object(int(sticky_id))
+            if sticky is not None and _item_in_pickup_range(state, sticky, origin):
+                return sticky
 
     candidates = list_lootable(
         state,
@@ -102,6 +129,8 @@ def find_pickup_range_loot(
     )
     in_range: list = []
     for item in candidates:
+        if hold_fire and int(item.track_id) not in corpse_ids:
+            continue
         if _item_in_pickup_range(state, item, origin):
             in_range.append(item)
     if not in_range:

@@ -11,6 +11,6 @@ if not exist "..\entities\signeddrv_client.obj" (
   echo signeddrv_client.obj missing — build print_state / realtime_monitor first.
   exit /b 1
 )
-cl /LD /DINVENTORY_LISTEN_DLL inventory_listen.c ..\entities\signeddrv_client.obj /O2 /Fe:inventory_listen.dll /I. /I..\entities /nologo /link user32.lib
+cl /LD /DINVENTORY_LISTEN_DLL inventory_listen.c ..\item_name_kr.c ..\entities\signeddrv_client.obj /O2 /Fe:inventory_listen.dll /I. /I..\entities /nologo /link user32.lib
 if errorlevel 1 exit /b 1
 echo BUILD OK

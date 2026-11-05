@@ -286,6 +286,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
         pm.AREA_PLAYERS_ENABLED = bool(farm["area_players"])
     if "area_player_count" in farm:
         pm.AREA_PLAYER_COUNT = max(1, int(farm["area_player_count"]))
+    if "approach_no_engage" in farm:
+        pm.APPROACH_NO_ENGAGE = bool(farm["approach_no_engage"])
 
     if shop:
         from app._04_decision import shops as shops_mod
@@ -364,7 +366,11 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
 
     from app._04_decision.game_language import set_game_language
 
-    set_game_language(root.get("game_language"))
+    # Dialog clicks follow the account server language. shop_locale is copied
+    # from that account at start. The profile game_language field is only the
+    # fallback when no account locale was supplied.
+    click_lang = shop.get("shop_locale", root.get("game_language"))
+    set_game_language(click_lang)
 
     if "stuck_ticks" in travel:
         pm.TRAVEL_STUCK_TICKS = int(travel["stuck_ticks"])

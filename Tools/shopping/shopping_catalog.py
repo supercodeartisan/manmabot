@@ -66,8 +66,17 @@ def shopping_catalog() -> list[PracticeEntry]:
             filter_bits = f"mode={b.sell_mode}"
             run_note = "dialog store (sell-tab path)"
         elif b.action == "teleporter":
+            kind = str(getattr(b, "teleport_kind", "") or "dungeon_gate")
+            if kind == "field_land":
+                dest_bit = (
+                    f"field map{int(getattr(b, 'land_map_id', 0) or 0)} "
+                    f"[{int(getattr(b, 'land_world_x', 0) or 0)},"
+                    f"{int(getattr(b, 'land_world_y', 0) or 0)}]"
+                )
+            else:
+                dest_bit = f"dest_dungeon={b.destination_dungeon}"
             filter_bits = (
-                f"adena={b.adena_cost} · dest_map={b.destination_dungeon} · option+confirm"
+                f"kind={kind} · adena={b.adena_cost} · {dest_bit} · option+confirm"
             )
             run_note = "dialog teleporter option → confirm"
         else:

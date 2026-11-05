@@ -52,7 +52,6 @@ Desktop.ini
 # Binaries, build output, generated nav / model blobs
 # ---------------------------------------------------------------------------
 *.exe
-*.dll
 *.pyd
 *.sys
 *.lib

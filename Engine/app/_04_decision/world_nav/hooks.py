@@ -8,7 +8,7 @@ from app._04_decision.behavior_tree import Status
 from app.bot_log import get_logger
 
 from . import planner_api as api
-from .routine import RoutineCursor, goal_for_entry
+from .routine import RoutineCursor, goal_for_entry, pose_hunt_arrival
 from .session import (
     SCRATCH_WORLD_NAV_EXIT_LAND,
     WorldNavSession,
@@ -723,6 +723,18 @@ def arm_world_nav(blackboard: Any, reason: str) -> bool:
             )
         return True
 
+    if pose_hunt_arrival(pose, entry, blackboard, reason=reason):
+        get_logger("nav").info(
+            "world nav already inside hunt map=%s xy=(%s,%s) reason=%s",
+            int(pose.map_id),
+            int(pose.x),
+            int(pose.y),
+            reason,
+        )
+        _on_world_nav_arrived(blackboard, reason=reason)
+        leave_world_nav_mode_if_idle(blackboard)
+        return True
+
     try:
         from app._04_decision.talking_scroll import talking_scroll_available
 
@@ -965,6 +977,52 @@ def _fail_skip(blackboard: Any, *, reason: str, error: str) -> bool:
     blackboard.scratch.pop(SCRATCH_WORLD_NAV_PAUSE, None)
     return False
 
+_HUNT_EDGE_PHASES = frozenset(
+    {"ready", "walk", "scroll_settle", "npc_teleporter_settle"}
+)
+
+
+def finish_hunt_edge_arrival(state: Any, blackboard: Any) -> bool:
+    """End world nav when the field rect or dungeon entrance is reached.
+
+    The plan may still point at the rect center or the first patrol tile.
+    Those leftover hops are dropped. Break rows keep walking to their center.
+    """
+    session: WorldNavSession | None = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+    if session is None or session.phase not in _HUNT_EDGE_PHASES:
+        return False
+    cursor: RoutineCursor | None = blackboard.scratch.get(SCRATCH_ROUTINE)
+    entry = cursor.active() if cursor is not None else None
+    if entry is None:
+        return False
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return False
+    if not pose_hunt_arrival(
+        pose, entry, blackboard, reason=str(session.reason or "")
+    ):
+        return False
+    get_logger("nav").info(
+        "world nav hunt edge map=%s xy=(%s,%s) phase=%s reason=%s",
+        int(pose.map_id),
+        int(pose.x),
+        int(pose.y),
+        session.phase,
+        session.reason or "-",
+    )
+    try:
+        from app._04_decision.behaviors.travel import clear_travel
+
+        clear_travel(blackboard)
+    except Exception:
+        pass
+    session.complete()
+    _on_world_nav_arrived(blackboard, reason=session.reason or "")
+    _take_next_routine_if_due(blackboard)
+    leave_world_nav_mode_if_idle(blackboard)
+    return True
+
+
 def tick_world_nav(state: Any, blackboard: Any) -> Status | None:
     """Run active session, or arm if requested. Blocks farming while active."""
     blackboard.scratch["_world_nav_pose_state"] = state
@@ -1018,7 +1076,14 @@ def tick_world_nav(state: Any, blackboard: Any) -> Status | None:
         leave_world_nav_mode_if_idle(blackboard)
         return None
 
+    if finish_hunt_edge_arrival(state, blackboard):
+        return None
+
     ensure_world_nav_mode(blackboard)
+    session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+    if session is None:
+        leave_world_nav_mode_if_idle(blackboard)
+        return None
     status = session.tick(state, blackboard)
     if session.phase == "fail":
         err = session.error or "nav fail"

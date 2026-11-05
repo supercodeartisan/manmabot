@@ -11,7 +11,7 @@ if not exist "..\entities\signeddrv_client.obj" (
   echo signeddrv_client.obj missing — build print_state first.
   exit /b 1
 )
-cl /LD /DHOTBAR_LISTEN_DLL hotbar_listen.c nametable.c ..\entities\signeddrv_client.obj /O2 /Fe:hotbar_listen_build.dll /I. /I..\entities /nologo /link user32.lib
+cl /LD /DHOTBAR_LISTEN_DLL hotbar_listen.c nametable.c ..\item_name_kr.c ..\entities\signeddrv_client.obj /O2 /Fe:hotbar_listen_build.dll /I. /I..\entities /nologo /link user32.lib
 if errorlevel 1 exit /b 1
 copy /Y hotbar_listen_build.dll hotbar_listen.dll >nul
 echo BUILD OK

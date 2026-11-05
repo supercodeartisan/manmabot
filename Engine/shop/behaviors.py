@@ -37,6 +37,14 @@ ACTIONS: tuple[str, ...] = (
     ACTION_TELEPORTER,
 )
 
+# Teleporter arrival model (world-nav).
+TELEPORT_KIND_DUNGEON_GATE = "dungeon_gate"
+TELEPORT_KIND_FIELD_LAND = "field_land"
+TELEPORT_KINDS: tuple[str, ...] = (
+    TELEPORT_KIND_DUNGEON_GATE,
+    TELEPORT_KIND_FIELD_LAND,
+)
+
 SELL_MODE_ONLY_GARBAGE = "sell_only_garbage"
 SELL_MODE_EXCEPT_KEEP = "sell_except_keep"
 SELL_MODES: tuple[str, ...] = (SELL_MODE_ONLY_GARBAGE, SELL_MODE_EXCEPT_KEEP)
@@ -57,8 +65,12 @@ _HEADER = """# NPC behaviors — buy/sell/store/teleporter (travel + dialog UVs)
 # click_offset_uv: optional [du, dv] added to computed NPC content UV when opening.
 #   When set → single click at (A + offset). When unset → cursor-search open.
 # adena_cost: teleporter fare in adena (affordability gate vs walk path); 0 = free/unset.
-# destination_dungeon: teleporter target LC mapId (ground_enter.to). Same NPC can have
-#   one behavior per dungeon (e.g. Giran → 30 vs 53). 0 = unset (not used in world-nav).
+# teleport_kind: dungeon_gate (default) | field_land.
+#   dungeon_gate: destination_dungeon = LC mapId (ground_enter.to). Same NPC can have
+#     one behavior per dungeon (e.g. Giran → 30 vs 53). After SHOP_RUN, world-nav
+#     rewrites the next gate to the nearest matching entrance.
+#   field_land: land_map_id + land_world = same-map (or other) field xy after the
+#     dialog (e.g. Giran TP → Dragon Valley field). No dungeon gate rewrite.
 # world_nav: true → world-nav planner may use this teleporter (Shopping Practice checkbox).
 # ui.*: content-normalized UVs [u, v] on the perception capture (0..1).
 # item_index: 0-based index in the full merchant list (7 rows visible) — buy only.
@@ -67,7 +79,7 @@ _HEADER = """# NPC behaviors — buy/sell/store/teleporter (travel + dialog UVs)
 # garbage_list / keep_list: shared item-name filters for ALL sell behaviors (file-level).
 # Live sell/store: shop_listen memory list + list scroll (item_index rule: scroll = max(0,n-6)).
 # store: warehouse keeper (e.g. give_goods); same dialog UVs as sell for now.
-# teleporter: option + confirm only (no slot/qty); dungeon-entry shortcut via NPC.
+# teleporter: option + confirm only (no slot/qty); dungeon or field shortcut via NPC.
 # Engine data: Engine/data/npc_behaviors.yaml (not inside maps/, not UserData).
 # Edited by Shopping Practice / bot_data_editors tools.
 #
@@ -175,8 +187,14 @@ class ShoppingBehavior:
     item_index: int = 0
     # Teleporter fare (adena). Ignored for buy/sell/store (forced 0 on save).
     adena_cost: int = 0
-    # Teleporter: LC mapId of the dungeon this option enters (ground_enter.to).
+    # Teleporter: dungeon_gate (ground_enter dest) or field_land (absolute land xy).
+    teleport_kind: str = TELEPORT_KIND_DUNGEON_GATE
+    # Teleporter dungeon_gate: LC mapId of the dungeon this option enters.
     destination_dungeon: int = 0
+    # Teleporter field_land: LC mapId + absolute game xy after the dialog.
+    land_map_id: int = 0
+    land_world_x: int = 0
+    land_world_y: int = 0
     # Teleporter: include in world-nav NPC teleporter graph (Shopping Practice toggle).
     world_nav: bool = False
     # Per sell/store behavior; name lists live in ShoppingSellFilters (file-level).
@@ -188,6 +206,12 @@ class ShoppingBehavior:
 
     def has_click_offset(self) -> bool:
         return self.click_offset_uv is not None
+
+    def is_field_land(self) -> bool:
+        return (
+            self.action == ACTION_TELEPORTER
+            and str(self.teleport_kind or "") == TELEPORT_KIND_FIELD_LAND
+        )
 
     def to_mapping(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -211,9 +235,23 @@ class ShoppingBehavior:
             data["item_index"] = int(self.item_index)
             data["sell_mode"] = str(self.sell_mode or SELL_MODE_ONLY_GARBAGE)
         elif self.action == ACTION_TELEPORTER:
+            kind = _normalize_teleport_kind(
+                self.teleport_kind,
+                destination_dungeon=self.destination_dungeon,
+                land_map_id=self.land_map_id,
+            )
             data["adena_cost"] = max(0, int(self.adena_cost))
-            data["destination_dungeon"] = max(0, int(self.destination_dungeon))
+            data["teleport_kind"] = kind
             data["world_nav"] = bool(self.world_nav)
+            if kind == TELEPORT_KIND_FIELD_LAND:
+                data["destination_dungeon"] = 0
+                data["land_map_id"] = max(0, int(self.land_map_id))
+                data["land_world"] = [
+                    int(self.land_world_x),
+                    int(self.land_world_y),
+                ]
+            else:
+                data["destination_dungeon"] = max(0, int(self.destination_dungeon))
         ui = self.ui.to_mapping()
         if self.action == ACTION_TELEPORTER:
             # Keep only option (buy_button) + confirm; drop shop list markers.
@@ -324,6 +362,21 @@ def _legacy_world_nav_default(behavior_id: str) -> bool:
     if sid.endswith("_ch"):
         sid = sid[:-3]
     return sid in _LEGACY_WORLD_NAV_BASE_IDS
+
+
+def _normalize_teleport_kind(
+    raw: Any,
+    *,
+    destination_dungeon: int = 0,
+    land_map_id: int = 0,
+) -> str:
+    """Resolve teleport_kind; legacy rows without the key keep dungeon_gate."""
+    text = str(raw or "").strip().lower()
+    if text in TELEPORT_KINDS:
+        return text
+    if int(land_map_id or 0) > 0 and int(destination_dungeon or 0) <= 0:
+        return TELEPORT_KIND_FIELD_LAND
+    return TELEPORT_KIND_DUNGEON_GATE
 
 
 def _parse_world_nav_flag(raw: Any, *, behavior_id: str) -> bool:
@@ -460,14 +513,43 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
         )
     except (TypeError, ValueError) as exc:
         raise ValueError(f"behavior {sid!r}: bad destination_dungeon") from exc
+    try:
+        land_map_id = max(0, int(item.get("land_map_id", 0) or 0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"behavior {sid!r}: bad land_map_id") from exc
+    land = item.get("land_world")
+    land_world_x = 0
+    land_world_y = 0
+    if isinstance(land, (list, tuple)) and len(land) >= 2:
+        try:
+            land_world_x = int(land[0])
+            land_world_y = int(land[1])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"behavior {sid!r}: bad land_world") from exc
+    teleport_kind = TELEPORT_KIND_DUNGEON_GATE
     if action == ACTION_TELEPORTER:
         qty = 1
         item_index = 0
         world_nav = _parse_world_nav_flag(item.get("world_nav"), behavior_id=sid)
+        teleport_kind = _normalize_teleport_kind(
+            item.get("teleport_kind"),
+            destination_dungeon=destination_dungeon,
+            land_map_id=land_map_id,
+        )
+        if teleport_kind == TELEPORT_KIND_FIELD_LAND:
+            destination_dungeon = 0
+        else:
+            land_map_id = 0
+            land_world_x = 0
+            land_world_y = 0
     else:
         adena_cost = 0
         destination_dungeon = 0
+        land_map_id = 0
+        land_world_x = 0
+        land_world_y = 0
         world_nav = False
+        teleport_kind = TELEPORT_KIND_DUNGEON_GATE
     sell_mode = _parse_sell_mode(item.get("sell_mode"), action=action)
     ui = _parse_ui(item.get("ui"))
     if action == ACTION_TELEPORTER:
@@ -487,7 +569,11 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
         default_qty=qty,
         item_index=item_index,
         adena_cost=adena_cost,
+        teleport_kind=teleport_kind,
         destination_dungeon=destination_dungeon,
+        land_map_id=land_map_id,
+        land_world_x=land_world_x,
+        land_world_y=land_world_y,
         world_nav=world_nav,
         sell_mode=sell_mode,
         click_offset_uv=click_offset_uv,
@@ -659,10 +745,29 @@ def save_behaviors(
         item_index = max(0, int(b.item_index))
         adena_cost = max(0, int(b.adena_cost))
         destination_dungeon = max(0, int(b.destination_dungeon))
+        land_map_id = max(0, int(getattr(b, "land_map_id", 0) or 0))
+        land_world_x = int(getattr(b, "land_world_x", 0) or 0)
+        land_world_y = int(getattr(b, "land_world_y", 0) or 0)
+        teleport_kind = TELEPORT_KIND_DUNGEON_GATE
         if action == ACTION_TELEPORTER:
             qty = 1
             item_index = 0
             world_nav = bool(getattr(b, "world_nav", False))
+            teleport_kind = _normalize_teleport_kind(
+                getattr(b, "teleport_kind", None),
+                destination_dungeon=destination_dungeon,
+                land_map_id=land_map_id,
+            )
+            if teleport_kind == TELEPORT_KIND_FIELD_LAND:
+                destination_dungeon = 0
+                if land_map_id <= 0:
+                    raise ValueError(f"{sid}: field_land needs land_map_id")
+            else:
+                land_map_id = 0
+                land_world_x = 0
+                land_world_y = 0
+                if destination_dungeon <= 0:
+                    raise ValueError(f"{sid}: dungeon_gate needs destination_dungeon")
             ui = ShoppingUiClicks(
                 buy_button=b.ui.buy_button,
                 confirm_button=b.ui.confirm_button,
@@ -670,7 +775,11 @@ def save_behaviors(
         else:
             adena_cost = 0
             destination_dungeon = 0
+            land_map_id = 0
+            land_world_x = 0
+            land_world_y = 0
             world_nav = False
+            teleport_kind = TELEPORT_KIND_DUNGEON_GATE
             rows = list(b.ui.item_rows)
             while len(rows) < ITEM_ROW_COUNT:
                 rows.append(None)
@@ -695,7 +804,11 @@ def save_behaviors(
                 default_qty=qty,
                 item_index=item_index,
                 adena_cost=adena_cost,
+                teleport_kind=teleport_kind,
                 destination_dungeon=destination_dungeon,
+                land_map_id=land_map_id,
+                land_world_x=land_world_x,
+                land_world_y=land_world_y,
                 world_nav=world_nav,
                 sell_mode=sell_mode,
                 click_offset_uv=_parse_offset_uv(b.click_offset_uv),

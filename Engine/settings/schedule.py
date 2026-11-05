@@ -137,6 +137,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "area_low_yield_seconds": int(getattr(profile, "area_low_yield_seconds", 180)),
             "area_players": bool(getattr(profile, "area_players", False)),
             "area_player_count": int(getattr(profile, "area_player_count", 3)),
+            "approach_no_engage": bool(getattr(profile, "approach_no_engage", False)),
         },
         "party": {
             # Master Party-tab switch. Falls back to legacy member_enabled.

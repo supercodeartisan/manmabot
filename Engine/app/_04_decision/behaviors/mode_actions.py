@@ -433,6 +433,9 @@ _SCRATCH_HP_RETREAT = "hp_retreat_kind"
 _SCRATCH_HP_TP_ONCE = "hp_teleport_once_fired"
 # After HP TP / talking-scroll land: try mother tree once before passive wait.
 _SCRATCH_POST_LAND_TREE = "hp_post_land_tree_tried"
+# Dungeon escape teleport only. The retreat row (default 30%) stays the
+# sell / world-tree return on every map. This band is above that row.
+DUNGEON_TELEPORT_HP_RATIO = 0.50
 
 
 _HEAL_HOTBAR_ALIASES = frozenset(
@@ -1036,14 +1039,14 @@ def _apply_teleport_once_gate(
     actions: list,
     can: dict[str, bool],
 ) -> None:
-    """Teleport once after potions are gone, until HP rises above retreat."""
-    from app._04_decision.hp_actions import action_threshold
+    """One escape teleport stays spent until HP rises above the dungeon line.
 
+    The retreat row is lower (default 30%). Clearing the flag there made a
+    dungeon teleport at 50% fire again as soon as HP was back above 30%.
+    """
+    del actions
     ratio = _known_hp_ratio(state)
-    retreat_th = action_threshold(actions, "retreat")
-    threshold = action_threshold(actions, "teleport")
-    clear_above = retreat_th if retreat_th is not None else threshold
-    if ratio is not None and clear_above is not None and ratio > clear_above:
+    if ratio is not None and ratio > DUNGEON_TELEPORT_HP_RATIO:
         blackboard.scratch.pop(_SCRATCH_HP_TP_ONCE, None)
     if blackboard.scratch.get(_SCRATCH_HP_TP_ONCE):
         can["teleport"] = False
@@ -1176,9 +1179,10 @@ def _retreat_hp_under_fire(
     blackboard: "Blackboard",
     can: dict[str, bool],
 ) -> Status | object | None:
-    """Retreat HP: teleport once while hit, otherwise heal without leaving.
+    """Dungeon band above the retreat line: teleport once while hit, else heal.
 
-    None lets the existing world-tree, talking-scroll, teleport ladder run.
+    None means this tick does not leave. The sell / world-tree ladder is the
+    retreat-line path and is not started here.
     """
     from app._04_decision.combat_query import monster_hitting_me
     from app._04_decision.talking_scroll import SCRATCH_HP_SAFE_SCROLLED
@@ -1209,11 +1213,45 @@ def _retreat_hp_under_fire(
     return Status.SUCCESS
 
 
+def maybe_hp_return_while_retreating(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> Status | object | None:
+    """Open teleport retreat that falls to the retreat line: sell, then world tree.
+
+    A mother-tree trip already owns the character. Other retreat kinds keep
+    their own exit. This is the dungeon 50% teleport that keeps being hit.
+    """
+    from app._04_decision.mode_control import RETREAT_FOR_HP, hp_ratio
+    from app._04_decision.player_mode import PlayerMode
+    from app.bot_log import get_logger
+
+    if blackboard.player_mode is not PlayerMode.RETREATING:
+        return None
+    if blackboard.scratch.get("mother_tree_trip"):
+        return None
+    if blackboard.scratch.get("retreat_for") != RETREAT_FOR_HP:
+        return None
+    if blackboard.scratch.get(_SCRATCH_HP_RETREAT) != "teleport":
+        return None
+    ratio = hp_ratio(state)
+    limit = _retreat_limit_ratio()
+    if ratio is None or limit is None or ratio > limit:
+        return None
+    can = _hp_action_availability(state, blackboard, retreat_starters=True)
+    get_logger("hp").info(
+        "hp return while retreating ratio=%.2f limit=%.2f",
+        float(ratio),
+        float(limit),
+    )
+    return _maybe_sell_then_hp_retreat(state, blackboard, can)
+
+
 def apply_hp_actions(
     state: "GameState",
     blackboard: "Blackboard",
 ) -> Status | object | None:
-    """HP layers: potion L_3 (side), heal L_1 keep-mode, retreat L_0 fixed methods."""
+    """HP layers: potion side, heal keep-mode, retreat-line return, dungeon teleport."""
     from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
     from app._04_decision.mode_control import hp_ratio, is_hp_zero
     from app._04_decision.player_mode import PlayerMode
@@ -1241,6 +1279,9 @@ def apply_hp_actions(
         return None
 
     if blackboard.player_mode is PlayerMode.RETREATING:
+        started = maybe_hp_return_while_retreating(state, blackboard)
+        if started is not None:
+            return started
         return apply_inplace_hp_support(state, blackboard)
 
     ratio = hp_ratio(state)
@@ -1264,12 +1305,15 @@ def apply_hp_actions(
         and _hp_action_enabled(actions, "retreat")
         and ratio <= retreat_th
     ):
-        branched = _retreat_hp_under_fire(state, blackboard, can)
-        if branched is not None:
-            return branched
+        # Both maps: sell when weight is at least 50%, then world tree.
+        # Under-fire teleport does not run on this line.
         started = _maybe_sell_then_hp_retreat(state, blackboard, can)
         if started is not None:
             return started
+    elif _dungeon_teleport_ratio_due(state, blackboard):
+        branched = _retreat_hp_under_fire(state, blackboard, can)
+        if branched is not None:
+            return branched
 
     heal_th = action_threshold(actions, "heal")
     if (
@@ -1348,6 +1392,29 @@ def _retreat_limit_ratio() -> float | None:
     if limit is None:
         return None
     return float(limit)
+
+
+def _outside_field_pack(blackboard: "Blackboard") -> bool:
+    """True on a live pack that is not Talking Island or the mainland."""
+    from app._04_decision.world_nav.hooks import FIELD_WORLD_NAV_PACKS
+
+    pack = _live_nav_pack(blackboard)
+    return bool(pack) and pack not in FIELD_WORLD_NAV_PACKS
+
+
+def _dungeon_teleport_ratio_due(
+    state: "GameState", blackboard: "Blackboard"
+) -> bool:
+    """Dungeon escape band: above the retreat row and at or under 50%."""
+    from app._04_decision.mode_control import hp_ratio
+
+    if not _outside_field_pack(blackboard):
+        return False
+    ratio = hp_ratio(state)
+    limit = _retreat_limit_ratio()
+    if ratio is None or limit is None or ratio <= limit:
+        return False
+    return ratio <= DUNGEON_TELEPORT_HP_RATIO
 
 
 def _dungeon_teleport_mother_tree_due(
@@ -2006,6 +2073,333 @@ def continue_or_start_loot(
     return None
 
 
+SCRATCH_APPROACH_HOLD_FIRE = "approach_hold_fire"
+SCRATCH_APPROACH_CORPSE_IDS = "approach_corpse_ids"
+SCRATCH_APPROACH_CORPSES = "approach_corpses"
+SCRATCH_APPROACH_KILL_ID = "approach_kill_id"
+SCRATCH_APPROACH_KILL_CELL = "approach_kill_cell"
+SCRATCH_APPROACH_SEEN_ITEMS = "approach_seen_items"
+_CORPSE_LOOT_S = 4.0
+_CORPSE_CHEB = 3
+
+
+def clear_approach_hold_tick(blackboard: "Blackboard") -> None:
+    """Drop the per-tick hold so a later mode in this tick can loot normally."""
+    blackboard.scratch.pop(SCRATCH_APPROACH_HOLD_FIRE, None)
+    blackboard.scratch[SCRATCH_APPROACH_CORPSE_IDS] = []
+
+
+def hold_fire_outside_hunt(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> bool:
+    """True when the hunt-tab switch is on and the pose is still outside.
+
+    Break rows keep today's combat. A missing pose falls back to the active
+    farm rect. No rect and no routine row leaves combat unchanged.
+    """
+    if not pm.APPROACH_NO_ENGAGE:
+        return False
+    from app._04_decision.world_nav.hooks import SCRATCH_ROUTINE, SCRATCH_WORLD_NAV
+    from app._04_decision.world_nav.routine import pose_hunt_arrival
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    cursor = blackboard.scratch.get(SCRATCH_ROUTINE)
+    entry = cursor.active() if cursor is not None and hasattr(cursor, "active") else None
+    if isinstance(entry, dict) and str(entry.get("kind") or "").strip().lower() == "break":
+        return False
+    session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+    reason = str(getattr(session, "reason", "") or "") if session is not None else ""
+    pose = live_pose_from_state(state) if state is not None else None
+    if pose is not None and isinstance(entry, dict):
+        return not pose_hunt_arrival(pose, entry, blackboard, reason=reason)
+    farm = get_active_farm(blackboard.farm_area_index)
+    if farm is None:
+        return False
+    try:
+        ox = int(blackboard.world_origin.x)
+        oy = int(blackboard.world_origin.y)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return not farm.contains(ox, oy)
+
+
+def _counter_sticky(state: "GameState", blackboard: "Blackboard") -> bool:
+    tid = blackboard.current_target_id
+    if tid is None:
+        return False
+    try:
+        tid_i = int(tid)
+    except (TypeError, ValueError):
+        return False
+    if tid_i in blackboard.finish_kill_ids:
+        return True
+    if blackboard.sticky_attacked_me:
+        return True
+    obj = state.get_object(tid_i)
+    if obj is None:
+        return False
+    return bool(
+        getattr(obj, "attacked_me", False) or getattr(obj, "force_attacks_me", False)
+    )
+
+
+def _seen_item_ids(state: "GameState") -> list[int]:
+    ids: list[int] = []
+    for obj in state.items():
+        try:
+            ids.append(int(obj.track_id))
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return ids
+
+
+def _remember_counter_cell(state: "GameState", blackboard: "Blackboard") -> None:
+    tid = blackboard.current_target_id
+    if tid is None:
+        return
+    from app._04_decision.behaviors.combat import object_world_cell
+
+    obj = state.get_object(int(tid))
+    cell = object_world_cell(obj) if obj is not None else None
+    if cell is None:
+        return
+    blackboard.scratch[SCRATCH_APPROACH_KILL_ID] = int(tid)
+    blackboard.scratch[SCRATCH_APPROACH_KILL_CELL] = [int(cell[0]), int(cell[1])]
+
+
+def _open_corpse_if_dead(state: "GameState", blackboard: "Blackboard") -> None:
+    raw = blackboard.scratch.get(SCRATCH_APPROACH_KILL_ID)
+    if raw is None:
+        return
+    try:
+        tid = int(raw)
+    except (TypeError, ValueError):
+        return
+    if sticky_target_alive(state, tid):
+        return
+    rows = [
+        row
+        for row in (blackboard.scratch.get(SCRATCH_APPROACH_CORPSES) or [])
+        if isinstance(row, dict)
+    ]
+    rows.append(
+        {
+            "id": tid,
+            "cell": blackboard.scratch.get(SCRATCH_APPROACH_KILL_CELL),
+            "seen": list(blackboard.scratch.get(SCRATCH_APPROACH_SEEN_ITEMS) or []),
+            "until": time.time() + _CORPSE_LOOT_S,
+        }
+    )
+    blackboard.scratch[SCRATCH_APPROACH_CORPSES] = rows[-4:]
+    blackboard.scratch.pop(SCRATCH_APPROACH_KILL_ID, None)
+    blackboard.scratch.pop(SCRATCH_APPROACH_KILL_CELL, None)
+    blackboard.scratch.pop(SCRATCH_APPROACH_SEEN_ITEMS, None)
+
+
+def _live_corpses(blackboard: "Blackboard") -> list[dict]:
+    now = time.time()
+    rows = []
+    for row in blackboard.scratch.get(SCRATCH_APPROACH_CORPSES) or []:
+        if not isinstance(row, dict):
+            continue
+        try:
+            until = float(row.get("until") or 0)
+        except (TypeError, ValueError):
+            continue
+        if until >= now:
+            rows.append(row)
+    blackboard.scratch[SCRATCH_APPROACH_CORPSES] = rows
+    return rows
+
+
+def _matches_corpse(item: object, corpse: dict, now: float) -> bool:
+    """True when this pile showed up from that counterattack kill."""
+    from app._03_world.merge.item_sight import item_sight_row
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision.behaviors.combat import object_world_cell
+
+    try:
+        until = float(corpse.get("until") or 0)
+    except (TypeError, ValueError):
+        return False
+    if until < now:
+        return False
+    try:
+        tid = int(getattr(item, "track_id"))
+    except (TypeError, ValueError):
+        return False
+    seen = {int(x) for x in (corpse.get("seen") or [])}
+    if tid in seen:
+        return False
+    row = item_sight_row(tid)
+    drop_id = None if row is None else row.get("drop_id")
+    cid = corpse.get("id")
+    if drop_id is not None and cid is not None:
+        try:
+            return int(drop_id) == int(cid)
+        except (TypeError, ValueError):
+            return False
+    cell = corpse.get("cell")
+    abs_xy = None if row is None else row.get("abs")
+    if abs_xy is None:
+        abs_xy = object_world_cell(item)
+    if not cell or abs_xy is None or len(cell) < 2:
+        return False
+    try:
+        return (
+            tile_chebyshev(
+                int(abs_xy[0]), int(abs_xy[1]), int(cell[0]), int(cell[1])
+            )
+            <= _CORPSE_CHEB
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def _publish_corpse_ids(blackboard: "Blackboard", ids: list[int]) -> None:
+    blackboard.scratch[SCRATCH_APPROACH_CORPSE_IDS] = [int(i) for i in ids]
+
+
+def _loot_counter_drops(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> Status | None:
+    """Pick up piles from counterattack kills, using the hunt loot mode."""
+    from app._04_decision.combat_query import list_lootable
+
+    corpses = _live_corpses(blackboard)
+    if not corpses and blackboard.current_item_id is None:
+        _publish_corpse_ids(blackboard, [])
+        return None
+    now = time.time()
+    loot_mode = _effective_loot_mode(state)
+    origin = blackboard.world_origin
+    skip = set(excluded_target_ids(blackboard))
+    skip.update(
+        tid
+        for tid in blackboard.loot_clicked_ids
+        if recently_clicked_loot(blackboard, tid)
+    )
+    piles = list_lootable(
+        state,
+        loot_mode=loot_mode,
+        farm=None,
+        origin=origin,
+        exclude=skip,
+        screen_only=False,
+    )
+    matched = [
+        item
+        for item in piles
+        if any(_matches_corpse(item, corpse, now) for corpse in corpses)
+    ]
+    allowed = [int(item.track_id) for item in matched]
+    if blackboard.current_item_id is not None:
+        allowed.append(int(blackboard.current_item_id))
+    _publish_corpse_ids(blackboard, allowed)
+    if blackboard.current_item_id is not None:
+        sticky = state.get_object(int(blackboard.current_item_id))
+        if sticky is not None and any(
+            _matches_corpse(sticky, corpse, now) for corpse in corpses
+        ):
+            status = tick_loot_item(state, blackboard, sticky, fresh=False)
+            if status is Status.SUCCESS:
+                return Status.SUCCESS
+        else:
+            clear_loot_hop(blackboard)
+            blackboard.current_item_id = None
+    if not matched:
+        return None
+    matched.sort(
+        key=lambda item: (
+            0 if is_adena(item) else 1,
+            tile_distance_from_player(item),
+            int(item.track_id),
+        )
+    )
+    item = matched[0]
+    begin_loot_item(blackboard, item.track_id, item)
+    status = tick_loot_item(state, blackboard, item, fresh=True)
+    if status is Status.SUCCESS:
+        return Status.SUCCESS
+    return None
+
+
+def _abandon_proactive_target(state: "GameState", blackboard: "Blackboard") -> None:
+    tid = blackboard.current_target_id
+    if tid is None or _counter_sticky(state, blackboard):
+        return
+    try:
+        blackboard.finish_kill_ids.discard(int(tid))
+    except (TypeError, ValueError):
+        pass
+    blackboard.current_target_id = None
+    clear_engage_state(blackboard)
+
+
+def approach_counterattack(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> Status | None:
+    """Counterattack only, then loot that kill. Other mobs and piles wait.
+
+    Attack clicks go through ``continue_or_start_combat``. Loot uses the
+    hunt mode (adena only, every item, small-adena skip, weight adena).
+    """
+    from app._04_decision.behaviors.combat import object_world_cell
+    from app._04_decision.mode_control import is_hp_zero
+
+    blackboard.scratch[SCRATCH_APPROACH_HOLD_FIRE] = True
+    if is_hp_zero(state):
+        return None
+    try:
+        sync_attacks_me_force_targets(state)
+    except Exception:
+        pass
+    _open_corpse_if_dead(state, blackboard)
+    _abandon_proactive_target(state, blackboard)
+    if _counter_sticky(state, blackboard):
+        if blackboard.scratch.get(SCRATCH_APPROACH_SEEN_ITEMS) is None:
+            blackboard.scratch[SCRATCH_APPROACH_SEEN_ITEMS] = _seen_item_ids(state)
+        _remember_counter_cell(state, blackboard)
+        result = continue_or_start_combat(state, blackboard, allow_new=False)
+        if result is not None:
+            return result
+        if blackboard.current_target_id is not None and sticky_target_alive(
+            state, int(blackboard.current_target_id)
+        ):
+            blackboard.current_goal = "combat"
+            blackboard.emit(
+                ActionType.IDLE,
+                priority=0.6,
+                reason="approach counter hold",
+            )
+            return Status.SUCCESS
+    attacker = nearest_attacks_me_force(
+        state,
+        exclude=excluded_target_ids(blackboard),
+        origin=blackboard.world_origin,
+    )
+    if attacker is not None:
+        blackboard.scratch[SCRATCH_APPROACH_SEEN_ITEMS] = _seen_item_ids(state)
+        blackboard.scratch[SCRATCH_APPROACH_KILL_ID] = int(attacker.track_id)
+        cell = object_world_cell(attacker)
+        if cell is not None:
+            blackboard.scratch[SCRATCH_APPROACH_KILL_CELL] = [
+                int(cell[0]),
+                int(cell[1]),
+            ]
+        return continue_or_start_combat(
+            state,
+            blackboard,
+            allow_new=True,
+            chosen=attacker,
+            reason="attacks_me engage",
+        )
+    return _loot_counter_drops(state, blackboard)
+
+
 def farm_loot_or_combat(
     state: "GameState",
     blackboard: "Blackboard",
@@ -2031,8 +2425,10 @@ def farm_loot_or_combat(
        preferred over other piles; sticky non-adena yields to adena.
     4. A missed loot cursor last tick yields to an attackable monster when
        there is nothing left to loot.
-    5. After a pickup click, while that pile remains in memory re-click or
-       walk back (do not roam). Short timeout (~0.8s) then continue.
+    5. After F4, stay on that pile until it leaves the world or the bag
+       count rises. Do not hand the tick to patrol on a short timer.
+       A failed press waits until the body is stopped, then retries or
+       walks onto the tile again.
     6. Else engage the nearest on-screen monster.
     """
     from app.bot_log import event

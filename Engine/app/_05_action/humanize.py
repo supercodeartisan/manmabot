@@ -101,7 +101,6 @@ STUCK_TICKS = (16, 26)
 # Click press->release (also used by MouseController.click).
 CLICK_DELAY = (0.01, 0.03)
 
-
 def _rng(rng: Optional[random.Random] = None) -> random.Random:
     return rng if rng is not None else random
 

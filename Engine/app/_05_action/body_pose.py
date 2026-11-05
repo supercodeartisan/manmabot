@@ -1,10 +1,11 @@
-"""Live body action at ActionComponent+0xC0, and the command at +0x58.
+"""Live body action at ActionComponent+0xC8, and the command at +0x58.
 
-Standing is BreathAction (0x11EB4D8, bodyact VFT_BREATHACT). A failed read is None, not standing.
+Standing is BreathAction (0x11E0550, bodyact VFT_BREATHACT). A failed read is None, not standing.
 HP/MP come from the status HUD (char_offsets ST_*), with the encoded
 CharacterData status used when that decode succeeds. Level uses that same
-status (LEVEL), then the HUD ST_LEVEL. Exp percent is the module f64
-ExperiencePct64.
+status (LEVEL), then the HUD ST_LEVEL. Exp percent is the HudCharacterInfo
+LoadingBar float (the charread chain, then the UI window). ExperiencePct64
+is used only when that bar is missing and the double is a real 0–100 percent.
 """
 from __future__ import annotations
 
@@ -15,34 +16,63 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-BREATH_VFT = 0x11EB4D8
-MOVE_VFTS = frozenset({0x11EB7B8, 0x11EB770})  # MovingAction, MovingBackAction
+BREATH_VFT = 0x11E0550
+MOVE_VFTS = frozenset({0x11E0680, 0x11E0638})  # MovingAction, MovingBackAction
 BODY = {
-    0x11EB4D8: "stand",
-    0x11EB7B8: "walk",
-    0x11EB770: "walkback",
-    0x11EB490: "attack",
-    0x11EB718: "actionbase",
-    0x11EB5B0: "turn",
-    0x11EB3B8: "spell",
-    0x11EB400: "death",
-    0x11EB568: "death",
-    0x11EB448: "damaged",
-    0x11EB520: "damaged",
-    0x11EB370: "effect",
+    0x11E0550: "stand",
+    0x11E0680: "walk",
+    0x11E0638: "walkback",
+    0x11E0508: "attack",
+    0x11E05E0: "actionbase",
+    0x11E04C0: "turn",
+    0x11E02C8: "spell",
+    0x11E0310: "death",
+    0x11E03E8: "death",
+    0x11E0358: "damaged",
+    0x11E0598: "damaged",
+    0x11E03A0: "effect",
 }
 CMD = {
-    0x11EBA50: "move",
-    0x11EBBD0: "attack",
-    0x11EBA88: "interact",
+    0x11E0910: "move",
+    0x11E0A90: "attack",
+    0x11E0948: "interact",
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+_k32.CreateFileW.restype = wintypes.HANDLE
+_k32.CreateFileW.argtypes = [
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.HANDLE,
+]
+_k32.CloseHandle.restype = wintypes.BOOL
+_k32.CloseHandle.argtypes = [wintypes.HANDLE]
+_k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+_k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+_k32.DeviceIoControl.restype = wintypes.BOOL
+_k32.DeviceIoControl.argtypes = [
+    wintypes.HANDLE,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+    ctypes.c_void_p,
+]
+# Shared with the in-process monitor. An exclusive open loses to whichever
+# side attached first and then every later read stays empty.
+_FILE_SHARE_READ_WRITE = 0x1 | 0x2
 _handle = None
 _pid = 0
 _base = 0
 _size = 0
 _me = 0
+_pose_fail_key: str | None = None
 
 
 class _PROCESSENTRY32W(ctypes.Structure):
@@ -146,9 +176,9 @@ def _module_base(pid: int) -> tuple[int, int]:
 # The walk/stand class numbers above are not enough: this chain is how the
 # body slot is found. A stale manager or MyPlayer id makes every read fail.
 _FIND = {
-    "MGR": 0x16ED640,
-    "ACTOR_VFT": 0x11E9430,
-    "MY_PLAYER": 0x11EC4C8,
+    "MGR": 0x16EB6F0,
+    "ACTOR_VFT": 0x11DE3E8,
+    "MY_PLAYER": 0x11E1388,
 }
 _find_ready = False
 
@@ -243,28 +273,98 @@ def _find_my_player() -> int:
     return 0
 
 
+def _handle_live(handle) -> bool:
+    return handle not in (None, 0, -1, ctypes.c_void_p(-1).value)
+
+
+def _log_pose_fail(key: str, text: str) -> None:
+    """One line per distinct failure until a later read succeeds."""
+    global _pose_fail_key
+    if _pose_fail_key == key:
+        return
+    _pose_fail_key = key
+    try:
+        from app.bot_log import event
+
+        event("pose", "%s", text)
+    except Exception:
+        return
+
+
+def _log_pose_ok() -> None:
+    global _pose_fail_key
+    _pose_fail_key = None
+
+
+def _close_handle() -> None:
+    global _handle
+    if _handle_live(_handle):
+        _k32.CloseHandle(_handle)
+    _handle = None
+
+
+def _drop_locate() -> None:
+    global _base, _size, _me
+    _base = 0
+    _size = 0
+    _me = 0
+
+
 def _ensure() -> bool:
+    """Open WinNotify and resolve LC.exe. False leaves the action slot unread.
+
+    The handle is not treated as ready until the module base is known. A
+    failed base walk is retried on the next call instead of sticking for
+    the life of the process.
+    """
     global _handle, _pid, _base, _size, _me
-    if _handle not in (None, 0, -1, ctypes.c_void_p(-1).value):
+    if _handle_live(_handle) and _pid and _base and _size:
         return True
     pid = _find_pid()
-    handle = _k32.CreateFileW(
-        "\\\\.\\WinNotify", 0x80000000 | 0x40000000, 0, None, 3, 0, None
-    )
-    if not pid or handle in (None, 0, -1, ctypes.c_void_p(-1).value):
+    if not pid:
+        _log_pose_fail("nopid", "body pose: lc.exe not found")
         return False
-    _handle = handle
+    if _pid and pid != _pid:
+        _close_handle()
+        _drop_locate()
+        _pid = 0
+    if not _handle_live(_handle):
+        handle = _k32.CreateFileW(
+            "\\\\.\\WinNotify",
+            0x80000000 | 0x40000000,
+            _FILE_SHARE_READ_WRITE,
+            None,
+            3,
+            0,
+            None,
+        )
+        if not _handle_live(handle):
+            err = int(ctypes.get_last_error())
+            _log_pose_fail(
+                f"open:{err}",
+                f"body pose: WinNotify open failed winerr={err}",
+            )
+            return False
+        _handle = handle
+        _pid = pid
+        _drop_locate()
+    if not _base or not _size:
+        _base, _size = _module_base(pid)
+        _me = 0
+    if not _base or not _size:
+        err = int(ctypes.get_last_error())
+        _log_pose_fail(
+            f"base:{err}",
+            f"body pose: module base unread winerr={err}",
+        )
+        return False
     _pid = pid
-    _base, _size = _module_base(pid)
-    _me = 0
-    return bool(_base and _size)
+    return True
 
 
-def read_action() -> tuple[int | None, int | None]:
-    """(body vft, command vft). None means that slot could not be read."""
+def _read_slots() -> tuple[int | None, int | None]:
+    """(body vft, command vft) from the cached player. None if that walk fails."""
     global _me
-    if not _ensure():
-        return None, None
     _load_find()
     if not _me or _vrva(_me) != _FIND["MY_PLAYER"]:
         _me = _find_my_player()
@@ -277,7 +377,7 @@ def read_action() -> tuple[int | None, int | None]:
     ctl = _q(_pid, table + 0x90)
     if not _heap(ac):
         return None, None
-    act = _q(_pid, ac + 0xC0)
+    act = _q(_pid, ac + 0xC8)
     body = _vrva(act) if _heap(act) else None
     if body is None:
         return None, None
@@ -285,6 +385,50 @@ def read_action() -> tuple[int | None, int | None]:
     if _heap(ctl):
         command = _q(_pid, ctl + 0x58)
         cmd = _vrva(command) if _heap(command) else 0
+    return body, cmd
+
+
+def _relocate() -> bool:
+    """Walk the module and player again after an empty slot. The handle stays."""
+    global _pid, _base, _size, _me
+    pid = _find_pid()
+    if not pid:
+        _log_pose_fail("nopid", "body pose: lc.exe not found")
+        return False
+    if pid != _pid:
+        _close_handle()
+        _pid = 0
+        _drop_locate()
+        return _ensure()
+    _me = 0
+    _base, _size = _module_base(pid)
+    if not _base or not _size:
+        err = int(ctypes.get_last_error())
+        _log_pose_fail(
+            f"base:{err}",
+            f"body pose: module base unread winerr={err}",
+        )
+        return False
+    return True
+
+
+def read_action() -> tuple[int | None, int | None]:
+    """(body vft, command vft). None means that slot could not be read."""
+    if not _ensure():
+        return None, None
+    body, cmd = _read_slots()
+    if body is not None:
+        _log_pose_ok()
+        return body, cmd
+    # A base or player cached while the game was still coming up used to
+    # stick until the process exited. Drop it and walk once more.
+    if not _relocate():
+        return None, None
+    body, cmd = _read_slots()
+    if body is None:
+        _log_pose_fail("slot", "body pose: action slot unread")
+        return None, None
+    _log_pose_ok()
     return body, cmd
 
 
@@ -309,31 +453,48 @@ def body_is_standing() -> bool | None:
 
 # HUD block + encoded status. char_offsets.txt overrides these defaults.
 _HUD = {
-    "ST_BLOCK": 0x16DED20,
+    "ST_BLOCK": 0,
     "ST_HP": 0x1C,
     "ST_MAXHP": 0x20,
     "ST_MP": 0x24,
     "ST_MAXMP": 0x28,
-    "MGR": 0x16DEE80,
-    "CD_VFT": 0x11E4F38,
+    "MGR": 0x16EB6F0,
+    "CD_VFT": 0x11E5088,
     "CD_OFF": 0x498,
-    "VFT_STATUS": 0x11E4F08,
+    "VFT_STATUS": 0x11E50F8,
     "K_XOR": 0x2F8B1064,
     "K_MUL": 0x7F4A7C15,
     "HOLDER_OFF": 0xD0,
     "SUBLIST_BEG": 0x180,
     "SUBLIST_END": 0x188,
     "ST_LEVEL": 0x2C,
-    "LEVEL": 0x248,
-    "HP": 0x2B8,
-    "MP": 0x2D0,
-    "MAXMP": 0x2DC,
+    "LEVEL": 0x268,
+    "HP": 0x2D8,
+    "MP": 0x2F0,
+    "MAXMP": 0x2FC,
 }
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
-_EXP_RVA = 0x1636BD0
+_EXP_RVA = 0x1644BF0
 _exp_ready = False
+# HudCharacterInfo LoadingBar. Registry overrides; these match LC930 v36.
+_EXP = {
+    "EXP_CD_0": 0x1B0,
+    "EXP_CD_1": 0x28,
+    "EXP_CD_2": 0x110,
+    "EXP_HUD_BAR": 0xE8,
+    "EXP_BAR_PCT": 0x704,
+    "VFT_LOADINGBAR": 0x12AB908,
+    "VFT_HUDCHARINFO": 0x127E3A8,
+    "VFT_UISUBSYSTEM": 0x11E2718,
+    "UIDLG_CONT_VAL": 0x38,
+    "RTTI_COL_TD_OFF": 0xC,
+    "RTTI_TD_NAME_OFF": 0x10,
+}
+_HCI_CLASS = "HudCharacterInfoLayoutPCImpl"
+_exp_chain_ready = False
+_exp_bar = 0
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
 
@@ -471,6 +632,138 @@ def _load_exp_rva() -> None:
     _exp_ready = True
 
 
+def _load_exp_chain() -> None:
+    """LoadingBar offsets from the LC930 registry. Missing keys keep the defaults."""
+    global _exp_chain_ready, _HCI_CLASS
+    if _exp_chain_ready:
+        return
+    path = _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            text = line.strip()
+            if not text or text.startswith("#") or "=" not in text:
+                continue
+            key, raw = text.split("=", 1)
+            key = key.strip()
+            raw = raw.strip()
+            if key == "HCI_CLASS" and raw:
+                _HCI_CLASS = raw
+                continue
+            if key not in _EXP:
+                continue
+            try:
+                _EXP[key] = int(raw, 0)
+            except ValueError:
+                continue
+    _exp_chain_ready = True
+
+
+def _in_module(addr: int) -> bool:
+    return bool(_base) and _base <= addr < _base + _size
+
+
+def _find_subsystem(want: int) -> int:
+    mgr = _q(_pid, _base + _HUD["MGR"])
+    if not _heap(mgr):
+        return 0
+    holder = _q(_pid, mgr + _HUD["HOLDER_OFF"])
+    if not _heap(holder):
+        return 0
+    begin = _q(_pid, holder + _HUD["SUBLIST_BEG"])
+    end = _q(_pid, holder + _HUD["SUBLIST_END"])
+    if not _heap(begin) or end <= begin:
+        return 0
+    count = min(64, (end - begin) // 16)
+    for index in range(count):
+        sub = _q(_pid, begin + index * 16)
+        if _heap(sub) and _vrva(sub) == want:
+            return sub
+    return 0
+
+
+def _rtti_name(vft: int) -> str:
+    if not _in_module(vft):
+        return ""
+    col = _q(_pid, vft - 8)
+    if not _in_module(col):
+        return ""
+    slot = _base + _d(_pid, col + _EXP["RTTI_COL_TD_OFF"])
+    if not _in_module(slot):
+        return ""
+    raw = _read(_pid, slot + _EXP["RTTI_TD_NAME_OFF"], 160)
+    if not raw:
+        return ""
+    text = raw.split(b"\x00", 1)[0].decode("ascii", "replace")
+    if text.startswith(".?AV"):
+        text = text[4:]
+    return text.split("@", 1)[0]
+
+
+def _bar_percent(bar: int) -> float | None:
+    if not _heap(bar) or _vrva(bar) != _EXP["VFT_LOADINGBAR"]:
+        return None
+    blob = _read(_pid, bar + _EXP["EXP_BAR_PCT"], 4)
+    if not blob:
+        return None
+    value = struct.unpack("<f", blob)[0]
+    if value != value or value < 0.0 or value > 100.0:
+        return None
+    return float(value)
+
+
+def _exp_from_chain() -> int:
+    """CharacterData → HudCharacterInfo → LoadingBar. 0 when the slot is empty."""
+    status = _find_status()
+    if not status:
+        return 0
+    cd = status - _HUD["CD_OFF"]
+    p0 = _q(_pid, cd + _EXP["EXP_CD_0"])
+    if not _heap(p0):
+        return 0
+    p1 = _q(_pid, p0 + _EXP["EXP_CD_1"])
+    if not _heap(p1):
+        return 0
+    p2 = _q(_pid, p1 + _EXP["EXP_CD_2"])
+    if not _heap(p2) or _vrva(p2) != _EXP["VFT_HUDCHARINFO"]:
+        return 0
+    bar = _q(_pid, p2 + _EXP["EXP_HUD_BAR"])
+    if _bar_percent(bar) is None:
+        return 0
+    return bar
+
+
+def _find_hud_char(ui: int) -> int:
+    if not _heap(ui):
+        return 0
+    want = _HCI_CLASS
+    val = _EXP["UIDLG_CONT_VAL"]
+    for head, nxt in ((0x38, 0x18), (0x28, 0x28)):
+        node = _q(_pid, ui + head)
+        for _ in range(4096):
+            if not _heap(node):
+                break
+            obj = _q(_pid, node + val)
+            if _heap(obj) and _rtti_name(_q(_pid, obj)) == want:
+                return obj
+            nxt_node = _q(_pid, node + nxt)
+            if nxt_node == node:
+                break
+            node = nxt_node
+    return 0
+
+
+def _mirror_percent() -> float | None:
+    blob = _read(_pid, _base + _EXP_RVA, 8)
+    if not blob:
+        return None
+    value = struct.unpack("<d", blob)[0]
+    # A stale address can be a subnormal that still falls inside 0..100
+    # and then prints as 0.00%. Exact 0 is a real empty bar.
+    if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
+        return float(value)
+    return None
+
+
 def _level_ok(value: int | None) -> int | None:
     if value is None or not (1 <= int(value) <= 255):
         return None
@@ -481,12 +774,15 @@ def read_progress() -> dict | None:
     """Live level and exp percent (0–100). None when the game driver is not open.
 
     Level prefers the encoded CharacterData field, then the HUD block.
-    Exp percent is the live ExperiencePct64 double.
+    Exp percent is the LoadingBar float. The BSS mirror is the fallback
+    only when that float is missing and the double is a real percent.
     """
+    global _exp_bar
     if not _ensure():
         return None
     _load_hud()
     _load_exp_rva()
+    _load_exp_chain()
     level = None
     block = _read(_pid, _base + _HUD["ST_BLOCK"], 0x40)
     if block:
@@ -496,12 +792,19 @@ def read_progress() -> dict | None:
         decoded = _level_ok(_decode(status, _HUD["LEVEL"]))
         if decoded is not None:
             level = decoded
-    exp = None
-    blob = _read(_pid, _base + _EXP_RVA, 8)
-    if blob:
-        value = struct.unpack("<d", blob)[0]
-        # A stale address can be a subnormal that still falls inside 0..100
-        # and then prints as 0.00%. Exact 0 is a real empty bar.
-        if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
-            exp = float(value)
+    bar = _exp_from_chain()
+    if not bar:
+        bar = _exp_bar if _bar_percent(_exp_bar) is not None else 0
+    if not bar:
+        _exp_bar = 0
+        ui = _find_subsystem(_EXP["VFT_UISUBSYSTEM"])
+        hci = _find_hud_char(ui)
+        if _heap(hci):
+            bar = _q(_pid, hci + _EXP["EXP_HUD_BAR"])
+    exp = _bar_percent(bar) if bar else None
+    if exp is None:
+        _exp_bar = 0
+        exp = _mirror_percent()
+    else:
+        _exp_bar = bar
     return {"level": level, "exp_percent": exp}

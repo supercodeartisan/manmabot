@@ -187,6 +187,126 @@ class RoutineCursor:
         self.cycle_start_index = self.index
 
 
+def battle_destination_nav_rect(
+    entry: dict[str, Any],
+    blackboard: Any = None,
+    *,
+    reason: str = "",
+) -> tuple[str, int, Any] | None:
+    """Nav-tile hunt rect the field walk is heading to.
+
+    Break rows are not included: those still walk to the rest-area center.
+    ``None`` when this battle row has no checked farm rect. The planner
+    still aims at the rect center; arrival is the border, not that point.
+    """
+    from app._04_decision.farm_area import farm_rect_from_mapping
+
+    pack_id = str(entry.get("map_id") or "").strip()
+    map_id = pack_ids.pack_id_to_map_id(pack_id)
+    if map_id is None or blackboard is None:
+        return None
+    kind = str(entry.get("kind") or "battle").strip().lower()
+    if kind == "break":
+        return None
+    farms = [str(n) for n in (entry.get("selected_farms") or []) if str(n).strip()]
+    if not farms:
+        return None
+    rects = farm_rects_selected(blackboard, pack_id, farms)
+    if not rects:
+        return None
+    index = 0
+    from app._04_decision.farm_tour import RETURN_FARM_REASONS, return_farm_index
+
+    if str(reason or "") in RETURN_FARM_REASONS:
+        index = return_farm_index(blackboard, len(rects))
+    elif str(reason or "") == "farm_area":
+        try:
+            index = int(getattr(blackboard, "farm_area_index", 0) or 0)
+        except (TypeError, ValueError):
+            index = 0
+        if index < 0 or index >= len(rects):
+            index = 0
+    try:
+        rect = farm_rect_from_mapping(rects[index], index=index)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return pack_id, int(map_id), rect
+
+
+def pose_inside_battle_rect(
+    pose: Any,
+    entry: dict[str, Any],
+    blackboard: Any = None,
+    *,
+    reason: str = "",
+) -> bool:
+    """True when ``pose`` is on this row's map and inside its hunt rect."""
+    chosen = battle_destination_nav_rect(entry, blackboard, reason=reason)
+    if chosen is None or pose is None:
+        return False
+    pack_id, map_id, rect = chosen
+    try:
+        if int(pose.map_id) != int(map_id):
+            return False
+        px, py = int(pose.x), int(pose.y)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    nav = pack_ids.abs_to_nav(pack_id, px, py)
+    if nav is None:
+        return False
+    return bool(rect.contains(int(nav[0]), int(nav[1])))
+
+
+def pose_at_dungeon_entrance(
+    pose: Any,
+    entry: dict[str, Any],
+    blackboard: Any = None,
+) -> bool:
+    """True once the live map is the dungeon world-nav destination.
+
+    A deeper floor's world nav ends on the complex entrance map. An
+    entrance-floor row ends when the live map is that floor. Field rows
+    are not dungeons.
+    """
+    from app._04_decision.dungeon_floor_route import (
+        needs_floor_route,
+        world_nav_entrance_map_id,
+    )
+    from .overlays import is_dungeon_pack
+
+    if pose is None or blackboard is None:
+        return False
+    pack_id = str(entry.get("map_id") or "").strip()
+    if not pack_id or not is_dungeon_pack(blackboard, pack_id):
+        return False
+    try:
+        live_map = int(pose.map_id)
+    except (TypeError, ValueError, AttributeError):
+        return False
+    if needs_floor_route(pack_id):
+        entrance = world_nav_entrance_map_id(pack_id)
+        return entrance is not None and live_map == int(entrance)
+    home = pack_ids.pack_id_to_map_id(pack_id)
+    return home is not None and live_map == int(home)
+
+
+def pose_hunt_arrival(
+    pose: Any,
+    entry: dict[str, Any],
+    blackboard: Any = None,
+    *,
+    reason: str = "",
+) -> bool:
+    """Field border or dungeon entrance. Break rows never arrive this way."""
+    if str(entry.get("kind") or "battle").strip().lower() == "break":
+        return False
+    if battle_destination_nav_rect(entry, blackboard, reason=reason) is not None:
+        return pose_inside_battle_rect(
+            pose, entry, blackboard, reason=reason
+        )
+    return pose_at_dungeon_entrance(pose, entry, blackboard)
+
+
 def goal_for_entry(
     entry: dict[str, Any],
     blackboard: Any = None,
