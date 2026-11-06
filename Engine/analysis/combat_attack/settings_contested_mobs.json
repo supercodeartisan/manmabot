@@ -1,0 +1,15 @@
+{
+  "_comment": "contested_mobs.dll — other Player/Summon AttackAction tgt==Monster. Defaults match print_state 26.10.07.",
+  "process_name": "LC.exe",
+  "ent_mgr_offset": "0x16EB6F0",
+  "grid_vft": "0x11DE3E8",
+  "act_vft": "0x11E07C8",
+  "attack_act_vft": "0x11E0508",
+  "off_atk_owner": "0x80",
+  "off_atk_tgt": "0x88",
+  "off_ent_guid": "0x18",
+  "vft_self": "0x11E1388",
+  "vft_player": "0x11E1350",
+  "vft_monster": "0x11E1240",
+  "vft_summon": "0x11E17E8"
+}

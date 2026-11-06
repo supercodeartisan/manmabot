@@ -102,68 +102,68 @@ static int lc_attach(void)
     return 0;
 }
 
-/* ── 2. constants (vft RVAs refreshed 2026-10-07 via RTTI; live-verified) ── */
-#define VFT_SELF       0x11EC4C8u
-#define VFT_PLAYER     0x11EC490u
-#define VFT_MONSTER    0x11EC380u
-#define VFT_SUMMON     0x11EC930u
-#define VFT_ITEM       0x11EC2D8u
-#define VFT_NPC        0x11EC2A0u
-#define VFT_SEGPROP    0x11EC830u
-#define VFT_ACTOR      0x11E88C8u
-#define VFT_PRES_B     0x11EC1D8u   /* TransformComponent (PRES_B)          */
-#define VFT_AC         0x11EB908u   /* ActionComponent                      */
+/* ── 2. constants (fallback = registry/LC930_REGISTRY.txt for this client) ── */
+#define VFT_SELF       0x11E1388u
+#define VFT_PLAYER     0x11E1350u
+#define VFT_MONSTER    0x11E1240u
+#define VFT_SUMMON     0x11E17E8u
+#define VFT_ITEM       0x11E1198u
+#define VFT_NPC        0x11E1160u
+#define VFT_SEGPROP    0x11E16F0u
+#define VFT_ACTOR      0x11DD798u
+#define VFT_PRES_B     0x11E1098u   /* TransformComponent (PRES_B)          */
+#define VFT_AC         0x11E07C8u   /* ActionComponent                      */
 /* ActionComponent state fields (RESULTS_T2 sec14 / 9.30 entity.c isDead) */
 #define AC_DEAD_OFF   0x49u        /* byte  : 1 = dead/corpse              */
 #define AC_DEAD_VAL   1
 #define AC_BAIT_OFF   0x40u        /* dword : 0x78 = bait(dormant, not shown) */
 #define AC_BAIT_VAL   0x78u
-#define VFT_ATTACKACT  0x11EB490u   /* AttackAction  +0x80 owner +0x88 target */
-#define VFT_DEATH      0x11EB400u
-#define VFT_DEADBODY   0x11EB568u
-#define VFT_MOVINGACT  0x11EB7B8u
-#define VFT_MOVINGBACK 0x11EB770u
-#define VFT_ACTIONBASE 0x11EB718u
-#define VFT_SPELLACT   0x11EB3B8u
-#define VFT_CHANGEDIR  0x11EB5B0u
-#define VFT_CMDMOVE    0x11EBA50u
-#define VFT_CMDATTACK  0x11EBBD0u
-#define VFT_CMDINTERACT 0x11EBA88u
-#define VFT_BREATHACT  0x11EB4D8u
-#define VFT_MAPSUBSYS  0x1233630u   /* MapSubsystem   (live-verified)        */
-#define VFT_ACTORSUBS  0x11E9430u   /* ActorSubsystem (live-verified)        */
-#define VFT_BEHAVIORS 0x11C3620u   /* BehaviorSubsystem                    */
-#define VFT_CTLCOMP   0x11C1828u   /* ActorControllerComponent             */
-#define VFT_SHIP      0x11C2420u   /* Ship   (RTTI-indexed, +0x30)          */
+#define VFT_ATTACKACT  0x11E0508u   /* AttackAction  +0x80 owner +0x88 target */
+#define VFT_DEATH      0x11E0310u
+#define VFT_DEADBODY   0x11E03E8u
+#define VFT_MOVINGACT  0x11E0680u
+#define VFT_MOVINGBACK 0x11E0638u
+#define VFT_ACTIONBASE 0x11E05E0u
+#define VFT_SPELLACT   0x11E02C8u
+#define VFT_CHANGEDIR  0x11E04C0u
+#define VFT_CMDMOVE    0x11E0910u
+#define VFT_CMDATTACK  0x11E0A90u
+#define VFT_CMDINTERACT 0x11E0948u
+#define VFT_BREATHACT  0x11E0550u
+#define VFT_MAPSUBSYS  0x1233630u   /* MapSubsystem; live map id uses offsets.json */
+#define VFT_ACTORSUBS  0x11DE3E8u   /* ActorSubsystem (live-verified)        */
+#define VFT_BEHAVIORS 0x11E2868u   /* BehaviorSubsystem                    */
+#define VFT_CTLCOMP   0x11E0A60u   /* ActorControllerComponent             */
+#define VFT_SHIP      0x11E1660u   /* Ship   (RTTI-indexed, +0x30)          */
 
 /* ---- subsystems resolved OFFLINE by class-name lookup (delta_930.py) ----
  * These sit in the sub[64] array and are found by lc_subsGet(vft).  They are
  * RTTI-indexed in the 9.30 build (62 subsystems total), so the deltas below
  * are exact and were NOT guessed.  Regenerate on the next build with
  * T3_maps/delta_930.py -- game access is not required.                */
-#define VFT_CHARDATA  0x11C5CC0u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
-#define VFT_INVENTORY 0x12079A0u   /* InventorySubsystem   sub[26]  (-0x370) */
-#define VFT_HUDSLOT   0x11C3900u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
-#define VFT_ITEMENT   0x1207430u   /* ItemEntity    (live-verified, no RTTI)  */
-#define VFT_SHOP      0x120AE68u   /* ShopSubsystem             sub[36] (+0x88)  */
-#define VFT_PLAYERSHOP 0x120A9B0u  /* PlayerShopSubsystem               (+0x? ) */
+#define VFT_CHARDATA  0x11E5088u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
+#define VFT_INVENTORY 0x1227468u   /* InventorySubsystem   sub[26]  (-0x370) */
+#define VFT_HUDSLOT   0x11E2C58u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
+#define VFT_ITEMENT   0x1226E20u   /* ItemEntity (registry ITEM_VFT)           */
+#define VFT_SHOP      0x122A7B0u   /* ShopSubsystem             sub[36] (+0x88)  */
+#define VFT_PLAYERSHOP 0x122A528u  /* PlayerShopSubsystem               (+0x? ) */
 #define VFT_BUYITEM   0x121F740u   /* BuyListItem record           (+0x558)  */
 #define VFT_SELLITEM  0x121F7A8u   /* SellListItem record          (+0x558)  */
-#define VFT_EQUIPINFO 0x1207390u   /* EquipmentInfoSubsystem  (UI foothold)   */
-#define VFT_DUNGEON   0x1206948u   /* DungeonSubsystem   (portal/dungeon)     */
-#define VFT_SPELL     0x120BED8u   /* SpellSubsystem                            */
-#define VFT_STORAGE   0x120C330u   /* StorageSubsystem                           */
-#define VFT_BUFF      0x11FC5E8u   /* BuffSubsystem                              */
-#define VFT_MAIL      0x11C3890u   /* MailSubsystem                              */
-#define VFT_CAMERA    0x11CBD80u   /* CameraSubsystem                            */
-#define VFT_INPUT     0x11C3380u   /* InputSubsystem                             */
-#define VFT_GAMESTATE 0x11C34E0u   /* GameStateSubsystem                         */
-#define VFT_NETWORK   0x11DAA28u   /* NetworkSubsystem                           */
-#define VFT_CHAT      0x11FCC98u   /* ChatSubsystem                              */
-#define VFT_PORTALACT 0x11C9AA0u   /* PortalInteraction (portal track)           */
+#define VFT_EQUIPINFO 0x1226DD0u   /* EquipmentInfoSubsystem  (UI foothold)   */
+#define VFT_DUNGEON   0x1226290u   /* DungeonSubsystem   (portal/dungeon)     */
+#define VFT_SPELL     0x122B9F0u   /* SpellSubsystem                            */
+#define VFT_STORAGE   0x122BFB8u   /* StorageSubsystem                           */
+#define VFT_BUFF      0x121BF48u   /* BuffSubsystem                              */
+#define VFT_MAIL      0x11E2918u   /* MailSubsystem                              */
+#define VFT_CAMERA    0x11EB290u   /* CameraSubsystem                            */
+#define VFT_INPUT     0x11E2BA8u   /* InputSubsystem                             */
+#define VFT_GAMESTATE 0x11E25F8u   /* GameStateSubsystem                         */
+#define VFT_NETWORK   0x11F9DF0u   /* NetworkSubsystem                           */
+#define VFT_CHAT      0x121C470u   /* ChatSubsystem                              */
+#define VFT_PORTALACT 0x11E8D58u   /* PortalInteraction (portal track)           */
 
 /* enttrack / etview geometry */
-#define LC_MGR    0x16BBAE0u
+#define LC_MGR    0x16EB6F0u
 #define LC_HOLDER 0xD0u
 #define LC_SUBB   0x180u
 #define LC_PLAYER_X 0x16BB990u    /* was 0x1668710 (moved this build) */
@@ -223,8 +223,8 @@ static uint32_t LC_AC_BAIT_OFF=AC_BAIT_OFF, LC_AC_BAIT_VAL=AC_BAIT_VAL;
 /* 향후 모듈용 서브시스템/컴포넌트 vft (SEC-2/SEC-3, registry 적용) */
 static uint32_t LC_VFT_BREATHACT=VFT_BREATHACT, LC_VFT_CTLCOMP=VFT_CTLCOMP;
 static uint32_t LC_VFT_MOVINGACT=VFT_MOVINGACT, LC_VFT_MOVINGBACK=VFT_MOVINGBACK;
-static uint32_t LC_VFT_DAMAGEDACTION=0x11E0418u, LC_VFT_DAMAGEDREACTION=0x11E0460u;
-static uint32_t LC_VFT_EFFECTACTION=0x11E02B0u;
+static uint32_t LC_VFT_DAMAGEDACTION=0x11E0358u, LC_VFT_DAMAGEDREACTION=0x11E0598u;
+static uint32_t LC_VFT_EFFECTACTION=0x11E03A0u;
 static uint32_t LC_VFT_ACTIONBASE=VFT_ACTIONBASE, LC_VFT_SPELLACT=VFT_SPELLACT;
 static uint32_t LC_VFT_CHANGEDIR=VFT_CHANGEDIR;
 static uint32_t LC_VFT_CMDMOVE=VFT_CMDMOVE, LC_VFT_CMDATTACK=VFT_CMDATTACK, LC_VFT_CMDINTERACT=VFT_CMDINTERACT;
@@ -246,7 +246,7 @@ static uint32_t LC_PRESB_BASE_V=0x40u, LC_PRESB_A_OFF_V=0x50u,
                 LC_PRESB_CELL_OFF_V=0x00u, LC_PRESB_CELL_DY_V=0x04u,
                 LC_STR_SSO_MAX_V=0x10u;
 static uint32_t LC_ACT_ATK_OWNER_V=0x80u, LC_ACT_ATK_TARGET_V=0x88u,
-                LC_AC_SCAN_V=0x140u, LC_AC_ACTION_OFF=0xC0u, LC_AC_ACTION_WIN=0x20u;
+                LC_AC_SCAN_V=0x140u, LC_AC_ACTION_OFF=0xC8u, LC_AC_ACTION_WIN=0x20u;
 static int LC_SELF_REVAL_TICKS = 32; /* bodyact FAST: sticky AC/CTL re-resolve ticks */
 /* ── Door(문) 개폐 상태 (2026-10-19 확정 · 동적 전이 관측) ───────────────
  *  Door = InteractiveNPC 중 종(SPECIES)=DOOR_SP(8) 이거나 이름="Door".
@@ -920,7 +920,7 @@ static uint64_t lc_selfBodyE = 0;
 static uint64_t lc_selfAc = 0, lc_selfCtl = 0;
 static int lc_selfFastAge = 0;
 
-/* cmd updates before AC+0xC0 body (action_timeline). Map intent onto display body. */
+/* cmd updates before AC+AC_ACTION_OFF body (action_timeline). Map intent onto display body. */
 static uint32_t lc_fuseBodyCmd(uint32_t body, uint32_t cmd)
 {
     if (!cmd) return body;

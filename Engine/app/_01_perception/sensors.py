@@ -10,7 +10,6 @@ import time
 from typing import Any, Optional
 
 from app._01_perception.buffer import PerceptionBuffer
-from app._01_perception.memory_client import open_monitor_from_config
 
 _LOCK = threading.Lock()
 _SHARED: Optional["PerceptionSensors"] = None
@@ -78,7 +77,7 @@ class PerceptionSensors:
     def __init__(self, config: Optional[dict[str, Any]] = None) -> None:
         self._config = config if isinstance(config, dict) else {}
         self.buffer = PerceptionBuffer()
-        self._monitor = open_monitor_from_config(self._config, quiet=True)
+        self._monitor = self._open_fix_monitor()
         self._print_reader = None
         self._attacks_reader = None
         self._contested_reader = None
@@ -100,13 +99,90 @@ class PerceptionSensors:
         )
         self._last_reconnect_at = 0.0
         self._init_print()
-        self._init_combat_readers()
-        self._init_inventory()
-        self._init_hotbar()
-        self._init_shop()
-        self._init_buff()
-        self._init_uidialog()
-        # Party DLL loads only when capture_tick(party=True) / capture_party().
+        from app._01_perception.lc_session import session
+
+        # Drop charread, map, enttrack, and the other module loops. The party
+        # roster module starts later, only from capture_tick(party=True).
+        session.stop()
+        self._init_fix_readers()
+
+    def _open_fix_monitor(self) -> Any:
+        """Player and map from ``realtime_monitor.dll`` and offsets.json."""
+        section = (self._config.get("memory") or {})
+        if not bool(section.get("enabled", False)):
+            return None
+        try:
+            from app._01_perception.fix_realtime_monitor_reader import (
+                RealtimeMonitorReader,
+            )
+            from app._01_perception.memory_client import InProcessMonitor
+
+            return InProcessMonitor(RealtimeMonitorReader())
+        except Exception as exc:
+            self.buffer.errors.append(f"player: {exc}")
+            return None
+
+    def _init_fix_readers(self) -> None:
+        """Solo feeds from the same in-process DLLs as fix/single-version."""
+        try:
+            from app._01_perception.fix_attacks_me_reader import AttacksMeReader
+
+            self._attacks_reader = AttacksMeReader()
+        except Exception as exc:
+            self._attacks_reader = None
+            self.buffer.errors.append(f"attacks_me: {exc}")
+        try:
+            from app._01_perception.fix_contested_mobs_reader import (
+                ContestedMobsReader,
+            )
+
+            self._contested_reader = ContestedMobsReader()
+        except Exception as exc:
+            self._contested_reader = None
+            self.buffer.errors.append(f"contested_mobs: {exc}")
+        try:
+            from app._01_perception.fix_inventory_listen_reader import (
+                LiveInventorySweep,
+            )
+
+            self._inventory = LiveInventorySweep()
+        except Exception as exc:
+            self._inventory = None
+            self.buffer.errors.append(f"inventory: {exc}")
+        try:
+            from app._01_perception.fix_hotbar_listen_reader import HotbarListenReader
+
+            self._hotbar = HotbarListenReader()
+        except Exception as exc:
+            self._hotbar = None
+            self.buffer.errors.append(f"hotbar: {exc}")
+        try:
+            from app._01_perception.fix_shop_listen_reader import ShopListenReader
+
+            self._shop = ShopListenReader()
+        except Exception as exc:
+            self._shop = None
+            self.buffer.errors.append(f"shop: {exc}")
+        try:
+            from app._01_perception.fix_buff_listen_reader import BuffListenReader
+
+            self._buff = BuffListenReader()
+            if not getattr(self._buff, "dll_loaded", False):
+                self.buffer.errors.append("buff: registry or DLL missing")
+        except Exception as exc:
+            self._buff = None
+            self.buffer.errors.append(f"buff: {exc}")
+        try:
+            from app._01_perception.fix_uidialog_listen_reader import (
+                UiDialogListenReader,
+            )
+
+            self._uidialog = UiDialogListenReader()
+            if not getattr(self._uidialog, "dll_loaded", False):
+                self.buffer.errors.append("uidialog: registry or DLL missing")
+        except Exception as exc:
+            self._uidialog = None
+            self.buffer.errors.append(f"uidialog: {exc}")
 
     def _init_print(self) -> None:
         try:
@@ -117,70 +193,8 @@ class PerceptionSensors:
             self._print_reader = None
             self.buffer.errors.append(f"print_state: {exc}")
 
-    def _init_combat_readers(self) -> None:
-        """Load attacks_me.dll and contested_mobs.dll for the live tick + etview."""
-        try:
-            from app._01_perception.attacks_me_reader import AttacksMeReader
-
-            self._attacks_reader = AttacksMeReader()
-        except Exception as exc:
-            self._attacks_reader = None
-            self.buffer.errors.append(f"attacks_me: {exc}")
-        try:
-            from app._01_perception.contested_mobs_reader import ContestedMobsReader
-
-            self._contested_reader = ContestedMobsReader()
-        except Exception as exc:
-            self._contested_reader = None
-            self.buffer.errors.append(f"contested_mobs: {exc}")
-
-    def _init_inventory(self) -> None:
-        try:
-            from app._01_perception.inventory_listen_reader import LiveInventorySweep
-
-            self._inventory = LiveInventorySweep()
-        except Exception as exc:
-            self._inventory = None
-            self.buffer.errors.append(f"inventory: {exc}")
-
-    def _init_hotbar(self) -> None:
-        try:
-            from app._01_perception.hotbar_listen_reader import HotbarListenReader
-
-            self._hotbar = HotbarListenReader()
-        except Exception as exc:
-            self._hotbar = None
-            self.buffer.errors.append(f"hotbar: {exc}")
-
-    def _init_shop(self) -> None:
-        try:
-            from app._01_perception.shop_listen_reader import ShopListenReader
-
-            self._shop = ShopListenReader()
-        except Exception as exc:
-            self._shop = None
-            self.buffer.errors.append(f"shop: {exc}")
-
-    def _init_buff(self) -> None:
-        try:
-            from app._01_perception.buff_listen_reader import BuffListenReader
-
-            self._buff = BuffListenReader()
-        except Exception as exc:
-            self._buff = None
-            self.buffer.errors.append(f"buff: {exc}")
-
-    def _init_uidialog(self) -> None:
-        try:
-            from app._01_perception.uidialog_listen_reader import UiDialogListenReader
-
-            self._uidialog = UiDialogListenReader()
-        except Exception as exc:
-            self._uidialog = None
-            self.buffer.errors.append(f"uidialog: {exc}")
-
     def _init_party(self) -> None:
-        """Lazy: only party-member sessions need this reader."""
+        """Lazy. The roster module starts only when a tick asks for it."""
         if self._party_init_tried:
             return
         self._party_init_tried = True
@@ -244,10 +258,16 @@ class PerceptionSensors:
         except Exception:
             pass
         if self._monitor is not None:
+            reader = getattr(self._monitor, "_reader", None)
             try:
                 self._monitor.close()
             except Exception:
                 pass
+            if reader is not None:
+                try:
+                    reader.close()
+                except Exception:
+                    pass
             self._monitor = None
         if self._print_reader is not None:
             try:
@@ -262,6 +282,7 @@ class PerceptionSensors:
             "_buff",
             "_uidialog",
             "_party",
+            "_hotbar",
         ):
             reader = getattr(self, attr)
             if reader is not None:
@@ -276,7 +297,6 @@ class PerceptionSensors:
             except Exception:
                 pass
             self._inventory = None
-        self._hotbar = None
         self.release_entity_sweep()
 
     def capture_tick(
@@ -286,14 +306,12 @@ class PerceptionSensors:
         hotbar: bool = False,
         party: bool = False,
     ) -> PerceptionBuffer:
-        """Per-tick set: player, print_state, attacks, contested, buffs; inventory/hotbar by schedule.
+        """Per-tick set: player, print_state, buffs; inventory/hotbar by schedule.
 
-        Contested_mobs is the same ActionComponent sweep etview uses for the
-        leader's AttackAction target; party assist reads ``last_contested_mobs``.
-
-        Buff/uidialog are synchronous DLL reads each tick (uidialog poll; discover ~2s), run on
-        two short-lived threads so they overlap each tick.
-        Party memory is read only when ``party=True`` (party-member sessions).
+        Solo and party both use the in-process readers, including attacks and
+        contested. Buff and uidialog are synchronous DLL reads each tick,
+        overlapped on two short-lived threads.
+        Party roster memory is read only when ``party=True``.
         """
         buf = self.buffer
         buf.clear()
@@ -414,9 +432,7 @@ class PerceptionSensors:
             now = time.time()
             if now - self._last_reconnect_at >= self._reconnect_interval_s:
                 self._last_reconnect_at = now
-                self._monitor = open_monitor_from_config(
-                    self._config, quiet=True, connect_retries=1
-                )
+                self._monitor = self._open_fix_monitor()
         if self._monitor is None:
             return
         try:
@@ -428,7 +444,7 @@ class PerceptionSensors:
             except Exception:
                 pass
             self._monitor = None
-            self._last_reconnect_at = 0.0
+            self._last_reconnect_at = time.time()
             return
         if snap is None:
             return

@@ -3030,18 +3030,20 @@ class BotController:
         )
         from app._03_world.merge.apply_perception import apply_perception_buffer
 
+        want_party = bool(party_mode or self._party_server_on())
         sensors = PerceptionSensors(config)
         set_shared_sensors(sensors)
         for err in list(sensors.buffer.errors):
             self.log(f"Perception sensor: {err}")
         if sensors.monitor is not None:
             self.log(
-                "Player memory is read in this process "
-                "(charread and map modules, registry). No separate console."
+                "Memory uses the single-version in-process readers "
+                "(print_state, realtime_monitor, inventory, hotbar, buff, dialog)."
             )
+            if want_party:
+                self.log("Party roster still comes from the party module.")
         else:
             self.log("Memory monitor unavailable at worker start")
-        want_party = bool(party_mode or self._party_server_on())
         buf0 = sensors.capture_tick(
             force_inventory=True, hotbar=True, party=want_party
         )

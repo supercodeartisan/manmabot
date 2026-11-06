@@ -1,5 +1,77 @@
 # Decision change log
 
+## 2026-11-06 — dialog reader uses the live registry
+
+Intent: The talking-scroll open check always timed out. The dialog DLL looked for `analysis/lc930/registry/LC930_REGISTRY.txt`, which this branch does not have, and the constructor returned without an error.
+Shared: `fix_uidialog_listen_reader` and `fix_buff_listen_reader` now pass `analysis/registry/LC930_REGISTRY.txt`. That file already has `UIDLG_WIN_TalkingScroll`. A missing DLL or registry is written on the perception error list. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: talking-scroll, shop, storage, and buff open checks.
+Consent: user (point the dialog reader at the registry that exists).
+Result: not run in game.
+
+## 2026-11-06 — party ticks use the solo memory readers
+
+Intent: A party session should read player, map, entities, bag, hotbar, buffs, dialog, attacks, and contested the same way a solo session does. The party roster stays on the current party module.
+Shared: `PerceptionSensors` always loads `realtime_monitor.dll`, `print_state.dll` with HP/MP/level left on the snapshot, and the fix inventory, hotbar, shop, buff, dialog, attacks, and contested DLLs. It calls `session.stop()` so charread, map, enttrack, bodyact, and the other module loops are not started. `capture_tick(party=True)` still starts `party.dll` through `PartyListenReader`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. Raspberry input is unchanged.
+Affects: party leader and member HP, map id, bag, hotbar, buffs, dialog, and attacker samples. Party roster, follow tile, and leader stats stay on the party module.
+Consent: user (party memory reading matches solo; keep the current party roster read).
+Result: not run in game.
+
+## 2026-11-06 — solo memory uses the single-version readers
+
+Intent: The module pause made every hunt tick wait about half a second, so the character stood between clicks. Solo memory should be the same in-process reads as `fix/single-version`, and that pause comes out.
+Shared: `PerceptionSensors(party_modules=False)` loads `realtime_monitor.dll` (MapSubsystem `0x1228960`, `MapIdOff` `0x718`), `print_state.dll` with HP/MP/level left on the snapshot, and the fix inventory, hotbar, shop, buff, dialog, attacks, and contested DLLs. It calls `session.stop()` so charread, map, enttrack, bodyact, and the other module loops are not started. `body_pose.read_action` stays the direct slot read. Party sessions still construct the module readers and still drop print_state vitals so charread remains their HP source. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Raspberry input is unchanged.
+Affects: solo HP, map id, bag, hotbar, buffs, dialog, and attacker samples. Party hunt keeps the module path.
+Consent: user (solo memory matches the single branch; remove the pause; leave party modules).
+Result: not run in game. The pause no longer wraps `print_state_snapshot`.
+
+## 2026-11-06 — print_state snapshot parks the module loops
+
+Intent: The solo click should be taken while `print_state.dll` is the only driver read, which is how `fix/single-version` builds `iscr`. On this branch the charread, map, inventory, hotbar, buff, dialog, shop, and party loops stay inside `lcapi_run` across that call.
+Shared: `LcSession.exclusive_read` parks each live module at its next sample boundary (0.6s cap) around `PrintStateReader.snapshot`. HP, MP, and level still come from charread on the other ticks. Map, inventory, hotbar, buffs, shop, dialog, and party stay on their modules. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Raspberry input is unchanged.
+Affects: entity click points, and tick length when a module is mid-sample (up to 0.6s). A module that misses the cap keeps its current read.
+Consent: user (pause the module loops only for the print_state snapshot so the click frame matches the single branch).
+Result: not run in game.
+
+## 2026-11-06 — body slot is read directly, enttrack stays off solo ticks
+
+Intent: Solo hunt should follow the same body pose and entity snapshot as `fix/single-version`. The bodyact module kept the last action across empty samples, so a ground click waited until stop (428 clicks). enttrack was also polling beside `print_state` on every solo tick.
+Shared: `body_pose.read_action` now walks ActionComponent+0xC8 the same way as fix. `read_vitals` and `read_progress` still use charread. `capture_tick` starts the enttrack attacks/contested readers only when `party=True`. Solo attackers still come from the print_state `atk` / `tgt` fields. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Inventory, hotbar, map, buffs, shop, dialog, party, and the raspberry input stay on their current paths.
+Affects: ground-click waits (search, loot hop, wall detour) and the solo perception tick. Party assist still receives `last_contested_mobs`.
+Consent: user (match the single-branch body read and keep enttrack off the solo snapshot; leave the other modules).
+Result: not run in game.
+
+## 2026-11-06 — entity clicks use the print_state DLL
+
+Intent: Farm clicks should use the same screen point as `fix/single-version`. Rewriting `enttrack` `iiso` with the print_state formula still left the cursor on `fist` at 0.737 and `arrow` on the ground. The entity frame now comes from `print_state.dll`, `settings_print_state.json`, and `entity_offsets.txt` (`ANCHOR_DV=0`).
+Shared: `PrintStateReader.snapshot` is the only new call. `entities_to_handoff` still reads `iscr`. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. HP, MP, and level are stripped from the print_state player object so charread stays the vital source. Map id still comes from the map module. Inventory, hotbar, buffs, shop, dialog, and party stay on their modules.
+Affects: monster and item click points, and the on-screen test that uses those points.
+Consent: user (click coordinates from the single-branch print_state snapshot; keep the other memory modules).
+Result: the DLL loads and exports `print_state_snapshot`. Not run in game.
+
+## 2026-11-06 — attack click uses print_state's anchor 0
+
+Intent: The working `print_state` click is not the registry's `ANCHOR_DV=24`. `settings_print_state.json` and `entity_offsets.txt` on `fix/single-version` both set `ANCHOR_DV=0`, and the offsets file is loaded last. The 24-pixel shift put the cursor above the sprite, so the probe saw `fist` at 0.737 and then an `arrow` on the ground.
+Shared: `lc_view._click_iscr` still rewrites `iscr` from `iiso`, with the same `PPS` and `VP_DX` / `VP_DY`. Anchor stays 0. The client width and height come from the live LC window, which is the rectangle `print_state` projects into. A row with no iso uses the cell fallback `du=48*(dx+dy)`, `dv=24*(dx-dy)`. Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Map id is unchanged.
+Affects: farm attack and loot clicks that use memory `iscr`.
+Consent: user (fix the click pixel so it matches the single-branch point).
+Result: 800×600, one tile east, the click is y=224. Not run in game.
+
+## 2026-11-06 — attack click uses the print_state screen anchor
+
+Intent: A monster click should land on the body, where the attack cursor matches, the same way `print_state` places `iscr` on `fix/single-version`. enttrack was centering the iso delta on the viewport and leaving out `ANCHOR_DV`.
+Shared: `lc_view._entity_rows` rewrites `iscr` from each row's `iiso` and the registry anchor (`REF_W`, `REF_H`, `PPS`, `VP_DX`, `VP_DY`, `FEET_*`, `ANCHOR_*`). Cursor labels, the 0.98 score, `loot_hop`, and `combat` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Map id is unchanged.
+Affects: farm attack and loot clicks that use memory `iscr`. A row with no interpolated iso keeps the module point.
+Consent: user (align the click point with the single-branch screen anchor; leave the cursor rule).
+Result: 800×600, one tile east, the click is y=212 instead of the viewport y=224. Not run in game.
+
+## 2026-11-06 — body pose stays, and address fallbacks match the registry
+
+Intent: Solo loot and monster clicks on this branch should see the same body pose and entity classes as `fix/single-version`, while the `analysis/dll` modules, `lc_session`, and `LC930_REGISTRY.txt` stay the reader. The registry already has Breath `0x11E0550`, monster `0x11E1240`, item `0x11E1198`, and `AC_ACTION_OFF` `0xC8`. A bodyact sample is empty on ticks where the pose did not change, and that empty text was replacing the last real row, so stand/walk read as missing.
+Shared: `body_pose.read_action` still returns the bodyact pair, and `loot_hop._body_settled_for_f4` and the ground-click repeat still consume it. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not edited. `party_leader_no_loot`, turret, and rally wait were not edited. Map id still comes from the map module and `offsets.json`, not from these fallbacks.
+Affects: loot F4 and ground clicks once a body row has been seen. Entity and action fallbacks in `lcore.h` and `body_pose.py` match the registry when a key is missing. The loaded DLLs already apply the registry at startup, so those header defaults take effect on the next DLL build.
+Consent: user (keep the memory-module structure; align fallbacks and the pose feed; do not change loot, combat, movement, retreat, or HP decisions).
+Result: empty bodyact samples keep the last row. Baked labels use the registry RVAs. Not run in game.
+
 ## 2026-11-05 — merge main, keep party analysis and raspberry
 
 Intent: Bring main onto this branch again. Party, the cleaned analysis module, and the Raspberry Pi input stay on this branch. Solo bot changes take main.

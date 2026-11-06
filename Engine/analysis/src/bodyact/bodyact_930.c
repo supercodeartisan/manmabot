@@ -1,7 +1,7 @@
 /* bodyact_930.c — MyPlayer body action + command monitor (10_15)
  * ===========================================================================
  *  Manmabot action_view / action_timeline 대응:
- *    body = ActionComponent + AC_ACTION_OFF (0xC0) 객체 vft
+ *    body = ActionComponent + AC_ACTION_OFF (0xC8) 객체 vft
  *    cmd  = ActorController + CTL_CMD_OFF (0x58) 객체 vft
  *  읽기: lc_pollSelfBodyFast (sticky AC/CTL, 잎만 ~4 IOCTL). 퓨전 없음.
  *

@@ -40,6 +40,101 @@ def _xy(value: Any) -> Optional[dict[str, int]]:
     return None
 
 
+def _pair(value: Any) -> Optional[tuple[float, float]]:
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        try:
+            return float(value[0]), float(value[1])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+_PROJ: Optional[dict[str, float]] = None
+
+
+def _projection() -> dict[str, float]:
+    """print_state click scale. Registry supplies PPS and the viewport. Anchor stays 0."""
+    global _PROJ
+    if _PROJ is not None:
+        return _PROJ
+    found = {
+        "ref_w": 800.0,
+        "ref_h": 600.0,
+        "pps": 0.53,
+        "vp_dx": 1.8,
+        "vp_dy": 63.0,
+        "feet_dx": 0.0,
+        "feet_dy": 0.0,
+        "anchor_du": 0.0,
+        "anchor_dv": 0.0,
+    }
+    # print_state loads settings, then entity_offsets.txt. That file sets
+    # ANCHOR_DU/DV to 0 and wins over the registry's ANCHOR_DV=24. The 24
+    # shift puts the cursor above the sprite the working branch clicks.
+    keys = {
+        "REF_W": "ref_w",
+        "REF_H": "ref_h",
+        "PPS": "pps",
+        "VP_DX": "vp_dx",
+        "VP_DY": "vp_dy",
+        "FEET_DX": "feet_dx",
+        "FEET_DY": "feet_dy",
+    }
+    try:
+        from app._01_perception.registry_apply import parse_registry, source_registry
+
+        path = source_registry()
+        reg = parse_registry(path) if path is not None else {}
+    except Exception:
+        reg = {}
+    for key, name in keys.items():
+        raw = reg.get(key)
+        if not raw:
+            continue
+        try:
+            found[name] = float(raw)
+        except ValueError:
+            continue
+    _PROJ = found
+    return found
+
+
+def _click_iscr(
+    width: int,
+    height: int,
+    du: float,
+    dv: float,
+) -> dict[str, int]:
+    """Screen pixel print_state writes for the attack click.
+
+    Same origin as ``entity_offsets.txt``: separate width and height scales,
+    viewport ``VP_DX`` / ``VP_DY``, and anchor 0. The registry's
+    ``ANCHOR_DV=24`` is not applied.
+    """
+    proj = _projection()
+    ref_w = proj["ref_w"] if proj["ref_w"] else 800.0
+    ref_h = proj["ref_h"] if proj["ref_h"] else 600.0
+    sx = float(width) / ref_w
+    sy = float(height) / ref_h
+    pps = proj["pps"]
+    origin_x = (
+        float(width) * 0.5
+        + proj["vp_dx"] * sx
+        + proj["feet_dx"] * sx
+        + proj["anchor_du"] * pps * sx
+    )
+    origin_y = (
+        float(height) * 0.5
+        - proj["vp_dy"] * sy
+        + proj["feet_dy"] * sy
+        - proj["anchor_dv"] * pps * sy
+    )
+    return {
+        "x": int(round(origin_x + du * pps * sx)),
+        "y": int(round(origin_y - dv * pps * sy)),
+    }
+
+
 def char_vitals() -> Optional[dict[str, Any]]:
     """Decoded character block from the latest charread sample."""
     text = session.text("charread")
@@ -166,14 +261,17 @@ def player_snapshot() -> Optional[dict[str, Any]]:
     return {"player": player}
 
 
-def body_rvas() -> Optional[tuple[int, int]]:
-    """Latest bodyact ``(body_rva, cmd_rva)``."""
-    text = session.text("bodyact")
-    if not text:
-        return None
+_last_body: Optional[tuple[int, int]] = None
+
+
+def _body_pair_from_text(text: str) -> Optional[tuple[int, int]]:
+    """Last ``t_ms body cmd body_rva cmd_rva`` row in one bodyact sample."""
     for line in reversed(text.splitlines()):
-        parts = line.split("\t")
-        if len(parts) < 5 or parts[0].startswith("#"):
+        raw = line.strip()
+        if not raw or raw.startswith("#"):
+            continue
+        parts = raw.split("\t")
+        if len(parts) < 5:
             continue
         try:
             return int(parts[3], 0), int(parts[4], 0)
@@ -182,8 +280,86 @@ def body_rvas() -> Optional[tuple[int, int]]:
     return None
 
 
-def _entity_rows(frame: dict[str, Any]) -> list[dict[str, Any]]:
+def body_rvas() -> Optional[tuple[int, int]]:
+    """Latest bodyact ``(body_rva, cmd_rva)``.
+
+    The module writes a row only when the body or command changes, then
+    pushes an empty sample on the ticks in between. An empty sample keeps
+    the last row. A failed read stays None until the first row arrives.
+    """
+    global _last_body
+    text = session.text("bodyact")
+    if text:
+        pair = _body_pair_from_text(text)
+        if pair is not None:
+            _last_body = pair
+            return pair
+    return _last_body
+
+
+_client_hwnd = 0
+
+
+def _live_client_size() -> Optional[tuple[int, int]]:
+    """LC client width and height, the rectangle print_state projects into."""
+    global _client_hwnd
+    try:
+        from app._05_action.window_bounds import find_game_window, get_client_bounds
+    except Exception:
+        return None
+    bounds = get_client_bounds(_client_hwnd) if _client_hwnd else None
+    if bounds is None:
+        _client_hwnd = int(find_game_window("LC.exe") or 0)
+        if not _client_hwnd:
+            return None
+        bounds = get_client_bounds(_client_hwnd)
+    if bounds is None or bounds.width < 100 or bounds.height < 100:
+        _client_hwnd = 0
+        return None
+    return int(bounds.width), int(bounds.height)
+
+
+def _self_index(
+    rows: list[dict[str, Any]],
+    isos: list[Optional[tuple[float, float]]],
+) -> Optional[int]:
+    """MyPlayer row. A row with iso wins inside each group."""
+    groups = (
+        [i for i, row in enumerate(rows) if row.get("self")],
+        [
+            i
+            for i, row in enumerate(rows)
+            if str(row.get("class") or "") == "MyPlayer"
+        ],
+    )
+    for group in groups:
+        for i in group:
+            if isos[i] is not None:
+                return i
+        if group:
+            return group[0]
+    return None
+
+
+def _cell_delta(
+    row: dict[str, Any],
+    self_world: Optional[dict[str, Any]],
+) -> Optional[tuple[float, float]]:
+    """print_state's cell fallback: du=48*(dx+dy), dv=24*(dx-dy)."""
+    world = row.get("world")
+    if not isinstance(world, dict) or not isinstance(self_world, dict):
+        return None
+    try:
+        dx = int(world["cx"]) - int(self_world["cx"])
+        dy = int(world["cy"]) - int(self_world["cy"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return 48.0 * (dx + dy), 24.0 * (dx - dy)
+
+
+def _entity_rows(frame: dict[str, Any], width: int = 0, height: int = 0) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    isos: list[Optional[tuple[float, float]]] = []
     for raw in frame.get("ents") or []:
         if not isinstance(raw, dict):
             continue
@@ -196,6 +372,7 @@ def _entity_rows(frame: dict[str, Any]) -> list[dict[str, Any]]:
             except (TypeError, ValueError):
                 world_block = None
         guid = str(raw.get("guid") or "")
+        isos.append(_pair(raw.get("iiso")))
         rows.append(
             {
                 "class": cls,
@@ -215,6 +392,25 @@ def _entity_rows(frame: dict[str, Any]) -> list[dict[str, Any]]:
                 "self": bool(raw.get("self")),
             }
         )
+    if width < 1 or height < 1:
+        return rows
+    me = _self_index(rows, isos)
+    if me is None:
+        return rows
+    self_iso = isos[me]
+    self_world = rows[me].get("world") if isinstance(rows[me].get("world"), dict) else None
+    if self_iso is None and self_world is None:
+        return rows
+    for row, iso in zip(rows, isos):
+        if self_iso is not None and iso is not None:
+            du = iso[0] - self_iso[0]
+            dv = iso[1] - self_iso[1]
+        else:
+            delta = _cell_delta(row, self_world)
+            if delta is None:
+                continue
+            du, dv = delta
+        row["iscr"] = _click_iscr(width, height, du, dv)
     return rows
 
 
@@ -224,13 +420,17 @@ def print_state() -> Optional[dict[str, Any]]:
     frame = _json_object(text)
     if frame is None:
         return None
-    res = frame.get("res") if isinstance(frame.get("res"), list) else [0, 0]
-    try:
-        width = int(res[0]) if len(res) > 0 else 0
-        height = int(res[1]) if len(res) > 1 else 0
-    except (TypeError, ValueError):
-        width, height = 0, 0
-    rows = _entity_rows(frame)
+    live = _live_client_size()
+    if live is not None:
+        width, height = live
+    else:
+        res = frame.get("res") if isinstance(frame.get("res"), list) else [0, 0]
+        try:
+            width = int(res[0]) if len(res) > 0 else 0
+            height = int(res[1]) if len(res) > 1 else 0
+        except (TypeError, ValueError):
+            width, height = 0, 0
+    rows = _entity_rows(frame, width, height)
     player_wrap = player_snapshot() or {}
     player = dict(player_wrap.get("player") or {})
     cell = frame.get("self") if isinstance(frame.get("self"), dict) else {}
