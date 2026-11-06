@@ -63,36 +63,115 @@ def _comports() -> list[Any]:
         return []
 
 
-def find_pico_data_port() -> str:
-    """Windows COM for the Pico CDC data interface.
+def _pico_interface_rank(hwid: str) -> int:
+    """0 is the data CDC (interface 2). Higher ranks are tried after that."""
+    text = str(hwid or "")
+    folded = text.lower()
+    if folded.endswith(":x.2") or "mi_02" in folded:
+        return 0
+    if "x.2" in folded:
+        return 1
+    return 2
 
-    Same match the Pico lab scripts use: vendor id plus ``x.2`` in the
-    hardware id (interface 2, not the REPL). Any Pico serial port is the
-    fallback when that interface string is absent.
+
+def pico_candidate_ports() -> list[str]:
+    """Pico COM names, data interface first, then the other Pico interfaces."""
+    ranked: list[tuple[int, str]] = []
+    for port in _comports():
+        if getattr(port, "vid", None) not in _PICO_VIDS:
+            continue
+        device = str(getattr(port, "device", "") or "").strip()
+        if not device:
+            continue
+        ranked.append((_pico_interface_rank(str(getattr(port, "hwid", "") or "")), device))
+    ranked.sort(key=lambda item: item[0])
+    ordered: list[str] = []
+    for _rank, device in ranked:
+        if device not in ordered:
+            ordered.append(device)
+    return ordered
+
+
+def find_pico_data_port() -> str:
+    """First Pico data-interface name, without opening the port."""
+    ports = pico_candidate_ports()
+    return ports[0] if ports else ""
+
+
+_pico_scan_cache: tuple[float, int, str] | None = None
+_last_pico_scan_error = ""
+_PICO_SCAN_TTL_S = 8.0
+
+
+def scan_pico_abs_port(baud: int = 115200) -> str:
+    """Open each Pico COM and keep the one whose firmware reports ABS.
+
+    A saved name such as COM4 can be the REPL or a hub interface. That port
+    opens and then ``GET_MODE`` times out. The data interface is whichever
+    Pico COM answers ``ABS``.
     """
-    ports = _comports()
-    for port in ports:
-        vid = getattr(port, "vid", None)
-        hwid = str(getattr(port, "hwid", "") or "")
-        if vid in _PICO_VIDS and "x.2" in hwid:
-            return str(port.device)
-    for port in ports:
-        if getattr(port, "vid", None) in _PICO_VIDS:
-            return str(port.device)
+    global _last_pico_scan_error
+    candidates = pico_candidate_ports()
+    if not candidates:
+        _last_pico_scan_error = ""
+        return ""
+    _ensure_control_path()
+    from control.client import ControlClient
+    from control.transport import SerialTransport
+
+    tried: list[str] = []
+    for device in candidates:
+        client = None
+        try:
+            client = ControlClient(SerialTransport(device, int(baud)))
+            mode = str(client.ensure_mode(timeout=0.6) or "").split(";", 1)[0].strip()
+        except Exception:
+            mode = ""
+        finally:
+            if client is not None:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+        tried.append(f"{device}={mode or 'unknown'}")
+        if mode == "ABS":
+            _last_pico_scan_error = ""
+            return device
+    _last_pico_scan_error = (
+        "Pico HID mode is not ABS ("
+        + ", ".join(tried)
+        + "). Absolute mouse firmware is required."
+    )
     return ""
 
 
-def resolve_pico_port(preferred: str = "") -> str:
-    """Live Pico data COM. A saved name is ignored.
+def resolve_pico_port(preferred: str = "", baud: int = 115200) -> str:
+    """Live Pico data COM that answers ABS. A saved name is ignored.
 
     The saved name can still be plugged in and still be the REPL (``x.0``).
     ``MANMABOT_PICO_COM`` is the only name that skips the scan.
     """
     del preferred
+    global _pico_scan_cache
     forced = os.environ.get("MANMABOT_PICO_COM", "").strip()
     if forced:
         return forced
-    return find_pico_data_port()
+    try:
+        rate = int(baud)
+    except (TypeError, ValueError):
+        rate = 115200
+    now = time.time()
+    cached = _pico_scan_cache
+    if cached is not None and cached[2] and (now - cached[0]) < _PICO_SCAN_TTL_S and cached[1] == rate:
+        return cached[2]
+    found = scan_pico_abs_port(rate)
+    if found:
+        _pico_scan_cache = (now, rate, found)
+    return found
+
+
+def pico_scan_error() -> str:
+    return _last_pico_scan_error
 
 
 def pico_port_choices(preferred: str = "") -> tuple[list[str], str]:
@@ -118,20 +197,20 @@ def resolve_hunt_input(profile: Any | None = None) -> tuple[str, str, int]:
     name = normalize_backend_name(
         env_name or getattr(profile, "input_backend", "interception")
     )
-    port = env_port
-    if name == "pico" and not env_port:
-        port = find_pico_data_port()
-        if profile is not None:
-            try:
-                profile.pico_com = port
-            except Exception:
-                pass
     try:
         baud = int(env_baud or getattr(profile, "pico_baud", 115200) or 115200)
     except (TypeError, ValueError):
         baud = 115200
     if baud < 1200 or baud > 1_000_000:
         baud = 115200
+    port = env_port
+    if name == "pico" and not env_port:
+        port = resolve_pico_port("", baud)
+        if profile is not None:
+            try:
+                profile.pico_com = port
+            except Exception:
+                pass
     return name, port, baud
 
 
@@ -508,10 +587,11 @@ class PicoHuntInput(HuntInput):
         self.open()
 
     def open(self) -> None:
-        self.port = resolve_pico_port(self.port)
+        self.port = resolve_pico_port(self.port, self.baud)
         if not self.port:
             raise RuntimeError(
-                "Pico data COM was not found. Plug in the board and try again."
+                pico_scan_error()
+                or "Pico data COM was not found. Plug in the board and try again."
             )
         _ensure_control_path()
         from control.client import ControlClient
