@@ -826,9 +826,9 @@ class ScheduleShell(QMainWindow):
         self.hunt_input.setCurrentIndex(index)
 
     def _show_live_pico_port(self) -> str:
-        from app._05_action.input_backend import find_pico_data_port
+        from app._05_action.input_backend import resolve_pico_port
 
-        found = find_pico_data_port()
+        found = resolve_pico_port("", getattr(self.profile, "pico_baud", 115200))
         self.profile.pico_com = found
         self.pico_port.setText(found or "—")
         return found

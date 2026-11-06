@@ -130,32 +130,311 @@ int ec_hangul_keys(wchar_t c, char* out, int max)
 
 #ifndef EC_TEST
 /* ---------------------------------------------------------------- layout/IME */
+#define COBJMACROS
+#include <objbase.h>
+#include <msctf.h>
+
+/* This SDK has msctf.h and no msctf.lib. The ids are the registered coclass
+ * TF_InputProcessorProfiles and the ITfInputProcessorProfileMgr interface. */
+static const CLSID EC_CLSID_TF_PROFILES = {
+    0x33C53A50, 0xF456, 0x4884, {0xB0, 0x49, 0x85, 0xFD, 0x64, 0x3E, 0xCF, 0xED}
+};
+static const IID EC_IID_PROFILE_MGR = {
+    0x71C6E74C, 0x0F28, 0x11D8, {0xA8, 0x2A, 0x00, 0x06, 0x5B, 0x84, 0x43, 0x5C}
+};
+
+static BOOL ec_thread_is_korean(DWORD tid)
+{
+    return (((ULONG_PTR)GetKeyboardLayout(tid)) & 0xFFFF) == 0x0412;
+}
+
+static LANGID ec_thread_lang(DWORD tid)
+{
+    return (LANGID)((ULONG_PTR)GetKeyboardLayout(tid) & 0xFFFF);
+}
+
+/* Chinese IMEs use IME_CMODE_NATIVE for 中, not for 한. */
+static BOOL ec_lang_is_chinese(LANGID lang)
+{
+    return PRIMARYLANGID(lang) == LANG_CHINESE;
+}
+
+static const wchar_t* ec_ime_name(LANGID lang)
+{
+    if (PRIMARYLANGID(lang) == LANG_KOREAN) return L"ko";
+    if (PRIMARYLANGID(lang) == LANG_ENGLISH) return L"en";
+    if (!ec_lang_is_chinese(lang)) return L"other";
+    if (SUBLANGID(lang) == SUBLANG_CHINESE_SIMPLIFIED) return L"zh-CN";
+    if (SUBLANGID(lang) == SUBLANG_CHINESE_TRADITIONAL) return L"zh-TW";
+    if (SUBLANGID(lang) == SUBLANG_CHINESE_HONGKONG) return L"zh-HK";
+    return L"zh";
+}
+
+/* The game thread applies a layout change only while it is foreground.
+ * SendMessageTimeout waits for that thread; PostMessage covers clients that
+ * handle only the queued form. */
+static BOOL ec_switch_game_layout(HWND hwnd, HKL ko, DWORD tid)
+{
+    DWORD me;
+    BOOL attached = FALSE;
+    DWORD_PTR ignored = 0;
+    DWORD waited = 0;
+
+    if (!hwnd || !ko || !tid) return FALSE;
+    if (ec_thread_is_korean(tid)) return TRUE;
+
+    me = GetCurrentThreadId();
+    if (tid != me)
+        attached = AttachThreadInput(me, tid, TRUE);
+
+    SendMessageTimeoutW(hwnd, WM_INPUTLANGCHANGEREQUEST,
+        0, (LPARAM)ko, SMTO_ABORTIFHUNG | SMTO_BLOCK, 500, &ignored);
+    PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)ko);
+
+    while (waited < 500) {
+        if (ec_thread_is_korean(tid)) break;
+        Sleep(20);
+        waited += 20;
+    }
+    if (attached)
+        AttachThreadInput(me, tid, FALSE);
+    return ec_thread_is_korean(tid);
+}
+
+/* Ask the game window for the Korean layout even when the thread HKL is
+ * already 0412. 0412 is both 한 and 영, and it can stay set while the
+ * language bar on that window is still English (United States). */
+static void ec_select_korean_on_window(HWND hwnd, HKL ko)
+{
+    DWORD_PTR ignored = 0;
+
+    if (!hwnd || !ko) return;
+    SendMessageTimeoutW(hwnd, WM_INPUTLANGCHANGEREQUEST,
+        INPUTLANGCHANGE_SYSCHARSET, (LPARAM)ko,
+        SMTO_ABORTIFHUNG | SMTO_BLOCK, 300, &ignored);
+    PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST,
+        INPUTLANGCHANGE_SYSCHARSET, (LPARAM)ko);
+}
+
+/* Turn on the installed ko-KR keyboard profile. An input processor
+ * (the language-bar IME) wins over a bare keyboard layout. */
+static void ec_activate_korean_profile(HKL ko)
+{
+    ITfInputProcessorProfileMgr* mgr = NULL;
+    IEnumTfInputProcessorProfiles* en = NULL;
+    TF_INPUTPROCESSORPROFILE best;
+    HRESULT co;
+    HRESULT hr;
+    BOOL com_owned = FALSE;
+    BOOL have = FALSE;
+    int rank_best = 99;
+
+    co = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (FAILED(co) && co != RPC_E_CHANGED_MODE) return;
+    com_owned = (co == S_OK);
+
+    hr = CoCreateInstance(&EC_CLSID_TF_PROFILES, NULL,
+                          CLSCTX_INPROC_SERVER, &EC_IID_PROFILE_MGR,
+                          (void**)&mgr);
+    if (FAILED(hr) || !mgr) goto done;
+    hr = ITfInputProcessorProfileMgr_EnumProfiles(mgr, 0x0412, &en);
+    if (SUCCEEDED(hr) && en) {
+        for (;;) {
+            TF_INPUTPROCESSORPROFILE p;
+            ULONG got = 0;
+            int rank;
+            hr = IEnumTfInputProcessorProfiles_Next(en, 1, &p, &got);
+            if (hr != S_OK || got != 1) break;
+            if (p.langid != 0x0412) continue;
+            if (!(p.dwFlags & TF_IPP_FLAG_ENABLED)) continue;
+            if (p.dwProfileType == TF_PROFILETYPE_INPUTPROCESSOR) rank = 0;
+            else if (p.dwProfileType == TF_PROFILETYPE_KEYBOARDLAYOUT) rank = 1;
+            else continue;
+            if (rank < rank_best) {
+                best = p;
+                rank_best = rank;
+                have = TRUE;
+            }
+        }
+    }
+    if (have) {
+        HKL hkl = best.hkl ? best.hkl : (best.hklSubstitute ? best.hklSubstitute : ko);
+        ITfInputProcessorProfileMgr_ActivateProfile(
+            mgr, best.dwProfileType, best.langid, &best.clsid, &best.guidProfile,
+            hkl, TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE | TF_IPPMF_ENABLEPROFILE);
+    }
+done:
+    if (en) IEnumTfInputProcessorProfiles_Release(en);
+    if (mgr) ITfInputProcessorProfileMgr_Release(mgr);
+    if (com_owned) CoUninitialize();
+}
+
+/* TRUE when a conversion mode was actually read into *mode. */
+static BOOL ec_read_conv(HWND ime_wnd, DWORD* mode)
+{
+    HIMC himc;
+    DWORD conv = 0;
+    DWORD sent = 0;
+    HWND def;
+    DWORD_PTR got_mode = 0;
+
+    if (!ime_wnd || !mode) return FALSE;
+    himc = ImmGetContext(ime_wnd);
+    if (himc) {
+        BOOL ok = ImmGetConversionStatus(himc, &conv, &sent);
+        ImmReleaseContext(ime_wnd, himc);
+        if (ok) {
+            *mode = conv;
+            return TRUE;
+        }
+    }
+    def = ImmGetDefaultIMEWnd(ime_wnd);
+    if (!def) return FALSE;
+    if (!SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0,
+            SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &got_mode))
+        return FALSE;
+    *mode = (DWORD)got_mode;
+    return TRUE;
+}
+
+static void ec_write_conv(EcContext* ctx, HWND ime_wnd)
+{
+    HIMC himc;
+    DWORD conv = 0;
+    DWORD sent = 0;
+    HWND def;
+    DWORD_PTR cur = 0;
+    DWORD_PTR setres = 0;
+
+    if (!ctx || !ime_wnd) return;
+    himc = ImmGetContext(ime_wnd);
+    if (himc) {
+        if (ImmGetConversionStatus(himc, &conv, &sent) && !(conv & IME_CMODE_NATIVE)) {
+            ctx->old_conv = conv;
+            ctx->old_sent = sent;
+            if (ImmSetConversionStatus(himc, conv | IME_CMODE_NATIVE, sent))
+                ctx->changed_conv = TRUE;
+        }
+        ImmReleaseContext(ime_wnd, himc);
+    }
+    def = ImmGetDefaultIMEWnd(ime_wnd);
+    if (!def) return;
+    if (!SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0,
+            SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &cur))
+        return;
+    if (cur & IME_CMODE_NATIVE) return;
+    ctx->ime_wnd = def;
+    ctx->ime_old_mode = (DWORD)cur;
+    ctx->ime_mode_forced = TRUE;
+    SendMessageTimeoutW(def, WM_IME_CONTROL, IMC_SETCONVERSIONMODE,
+        cur | IME_CMODE_NATIVE, SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
+}
+
+/* VK_HANGUL is 0x15. MapVirtualKey on a US layout can hand back scancode
+ * 0x15, which is the Y key. The Korean toggle key is scancode 0x72. */
+static BOOL ec_press_hangul_toggle(EcContext* ctx)
+{
+    UINT scan;
+
+    if (!ctx) return FALSE;
+    scan = MapVirtualKeyW(VK_HANGUL, MAPVK_VK_TO_VSC);
+    if (scan == 0 || scan == 0x15) scan = 0x72;
+    if (ctx->ic) return ec_ic_press(ctx, (int)scan, 0, 30);
+    return ec_sendinput_press((int)scan, 0, 30);
+}
+
+/* Leave the game IME in 한. A mode we can read as 한 is left alone.
+ * A mode we can read as 영 is switched, then the 한/영 key is pressed
+ * once if it is still 영. A mode we cannot read is not toggled. */
+static BOOL ec_ensure_hangul_mode(EcContext* ctx, HWND hwnd, DWORD tid)
+{
+    HWND ime_wnd;
+    DWORD mode = 0;
+    DWORD focus_ms;
+    LANGID lang = 0;
+    BOOL known = FALSE;
+
+    if (!ctx) return FALSE;
+    ime_wnd = ctx->focus ? ctx->focus : hwnd;
+    focus_ms = ctx->req.focus_timeout_ms
+             ? ctx->req.focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT;
+
+    ec_activate_korean_profile(ctx->ko_hkl);
+    ec_select_korean_on_window(hwnd, ctx->ko_hkl);
+    Sleep(80);
+    if (ctx->hwnd) ec_force_foreground(ctx->hwnd, focus_ms);
+
+    /* A Chinese IME also reports IME_CMODE_NATIVE. That bit is 중, so it
+     * must not count as 한. Ask for Korean once more, then stop if the
+     * game thread is still on a Chinese layout. */
+    if (ec_lang_is_chinese(ec_thread_lang(tid))) {
+        ec_activate_korean_profile(ctx->ko_hkl);
+        ec_select_korean_on_window(hwnd, ctx->ko_hkl);
+        Sleep(80);
+        if (ctx->hwnd) ec_force_foreground(ctx->hwnd, focus_ms);
+    }
+
+    lang = ec_thread_lang(tid);
+    if (PRIMARYLANGID(lang) == LANG_KOREAN) {
+        known = ec_read_conv(ime_wnd, &mode);
+        if (!known || !(mode & IME_CMODE_NATIVE)) {
+            ec_write_conv(ctx, ime_wnd);
+            Sleep(50);
+            known = ec_read_conv(ime_wnd, &mode);
+        }
+        if (known && !(mode & IME_CMODE_NATIVE)) {
+            if (ctx->hwnd && !ec_is_foreground(ctx->hwnd))
+                ec_force_foreground(ctx->hwnd, focus_ms);
+            ec_press_hangul_toggle(ctx);
+            Sleep(60);
+            known = ec_read_conv(ime_wnd, &mode);
+        }
+        lang = ec_thread_lang(tid);
+    }
+
+    ec_result_message(ctx->res, L"hkl=%04X ime=%ls hangul=%ls",
+        (unsigned)lang, ec_ime_name(lang),
+        (PRIMARYLANGID(lang) == LANG_KOREAN && known && (mode & IME_CMODE_NATIVE))
+            ? L"on" : (known ? L"off" : L"?"));
+    if (ec_lang_is_chinese(lang)) {
+        ec_result_message(ctx->res,
+            L"Chinese IME is the game input; Hangul was not sent");
+        return FALSE;
+    }
+    if (PRIMARYLANGID(lang) == LANG_KOREAN && known && !(mode & IME_CMODE_NATIVE)) {
+        ec_result_message(ctx->res,
+            L"could not switch the Korean IME to Hangul (한) mode");
+        return FALSE;
+    }
+    return TRUE;
+}
+
 BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd)
 {
     DWORD tid;
     HKL old;
-    HIMC himc;
-    DWORD conv = 0, sent = 0;
+    DWORD focus_ms;
 
     if (!ctx || !hwnd) return FALSE;
     if (ctx->hangul_started) return TRUE;
 
+    focus_ms = ctx->req.focus_timeout_ms
+             ? ctx->req.focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT;
+    if (ctx->hwnd)
+        ec_force_foreground(ctx->hwnd, focus_ms);
+
     tid = GetWindowThreadProcessId(hwnd, NULL);
     old = GetKeyboardLayout(tid);
     ctx->old_hkl = old;
-    ctx->ko_hkl = LoadKeyboardLayoutW(L"00000412", KLF_ACTIVATE);
+    ctx->ko_hkl = LoadKeyboardLayoutW(L"00000412", KLF_NOTELLSHELL);
     if (!ctx->ko_hkl) {
         ec_result_message(ctx->res, L"Korean keyboard layout 0412 is not installed.");
         return FALSE;
     }
 
-    if ((((ULONG_PTR)old) & 0xFFFF) != 0x0412) {
-        if (PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)ctx->ko_hkl)) {
-            ctx->layout_switched = TRUE;
-            Sleep(120);
-        }
-        /* verify: the target thread must actually be on the Korean layout */
-        if ((((ULONG_PTR)GetKeyboardLayout(tid)) & 0xFFFF) != 0x0412) {
+    if (!ec_thread_is_korean(tid)) {
+        ctx->layout_switched = TRUE;
+        if (!ec_switch_game_layout(hwnd, ctx->ko_hkl, tid)) {
             ec_result_message(ctx->res, L"Could not switch the target thread to Korean layout 0412.");
             /* allow cleanup to restore the layout if the request was posted */
             ctx->hangul_started = TRUE;
@@ -163,64 +442,9 @@ BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd)
         }
     }
 
-    {
-        HWND ime_wnd = ctx->focus ? ctx->focus : hwnd;
-        BOOL ime_ok = FALSE;
-
-        himc = ImmGetContext(ime_wnd);
-        if (himc) {
-            if (ImmGetConversionStatus(himc, &conv, &sent)) {
-                ctx->old_conv = conv;
-                ctx->old_sent = sent;
-                if (!(conv & IME_CMODE_NATIVE)) {
-                    if (ImmSetConversionStatus(himc, conv | IME_CMODE_NATIVE, sent))
-                        ctx->changed_conv = TRUE;
-                }
-                ime_ok = TRUE;
-            }
-            ImmReleaseContext(ime_wnd, himc);
-        }
-
-        if (!ime_ok) {
-            /* Cross-process ImmGetContext often returns NULL.  The default IME
-             * window still accepts WM_IME_CONTROL / IMC_* in many cases. */
-            HWND def = ImmGetDefaultIMEWnd(ime_wnd);
-            if (def) {
-                DWORD_PTR mode = 0;
-                LRESULT got = SendMessageTimeoutW(def, WM_IME_CONTROL,
-                    IMC_GETCONVERSIONMODE, 0,
-                    SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &mode);
-                if (got) {
-                    if (!(mode & IME_CMODE_NATIVE)) {
-                        DWORD_PTR setres = 0;
-                        ctx->ime_wnd = def;
-                        ctx->ime_old_mode = (DWORD)mode;
-                        ctx->ime_mode_forced = TRUE;
-                        SendMessageTimeoutW(def, WM_IME_CONTROL,
-                            IMC_SETCONVERSIONMODE, mode | IME_CMODE_NATIVE,
-                            SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &setres);
-                        Sleep(50);
-                        {
-                            DWORD_PTR verify = 0;
-                            LRESULT vgot = SendMessageTimeoutW(def, WM_IME_CONTROL,
-                                IMC_GETCONVERSIONMODE, 0,
-                                SMTO_ABORTIFHUNG | SMTO_BLOCK, 400, &verify);
-                            if (!vgot || !(verify & IME_CMODE_NATIVE))
-                                ec_result_message(ctx->res,
-                                    L"could not switch the Korean IME to Hangul (한) mode");
-                        }
-                    }
-                    ime_ok = TRUE;
-                }
-            }
-        }
-
-        if (!ime_ok) {
-            /* Normal for some elevated cross-process targets.  The user must
-             * keep the IME in Hangul ("한") mode before running us. */
-            ec_result_message(ctx->res,
-                L"IME context unavailable; keep the Korean IME in Hangul (한) mode.");
-        }
+    if (!ec_ensure_hangul_mode(ctx, hwnd, tid)) {
+        ctx->hangul_started = TRUE;
+        return FALSE;
     }
 
     ctx->hangul_started = TRUE;

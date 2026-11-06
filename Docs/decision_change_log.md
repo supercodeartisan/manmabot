@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-11-06 — Hangul invite treats a Chinese IME as not Hangul
+
+Intent: `IME_CMODE_NATIVE` is also the Chinese IME's 中 mode. A game thread on `0804`, `0404`, or `zh-HK` must not be logged as `hangul=on`, and jamo must not be sent into that IME.
+Shared: `ec_ensure_hangul_mode` reads the game thread language after the Korean layout request. A Chinese layout gets one more Korean request. If it is still Chinese, the line stops with `ime=zh-CN` (or `zh-TW` / `zh-HK`) and `hangul=off`. The 한/영 key runs only when the layout is Korean. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite lines that contain Hangul while the game input is a Chinese IME.
+Consent: user (check the Chinese IME as well).
+Result: `enter_chat.dll` rebuilt. Not run in game. The leader process must be restarted.
+
+## 2026-11-06 — Hangul invite follows the language bar, not only HKL 0412
+
+Intent: The first `/초대` lines reported success while Korean did not compose. After the language bar was cycled between Korean and English (United States), the same keys composed. Thread layout `0412` is both 한 and 영, so the prepare step treated English as ready.
+Shared: `ec_ensure_hangul_mode` in `ec_hangul.c` selects the installed ko-KR input processor, asks the game window for that layout, and reads the conversion mode back. It presses the 한/영 key once only when the mode still reads as 영. A confirmed 영 after that press aborts the line. An unreadable mode is left untoggled and logged as `hangul=?`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Invite-accept Y still forces English.
+Affects: party invite lines that contain Hangul, and any other `ec_run` text with Hangul.
+Consent: user (make the Hangul switch follow whichever input the language bar is on).
+Result: `enter_chat.dll` rebuilt. Not run in game. The leader process must be restarted. The invite log now includes `hkl=.... hangul=on|off|?`.
+
+## 2026-11-06 — Hangul invite switches the game IME before the jamo keys
+
+Intent: `/초대` reported `chars=11 keys=13` while the syllables never composed. The jamo keys were already on Interception. `ffa920b` (2026-11-03) had replaced the layout switch with one `PostMessage` and a 120ms sleep, and it no longer retried `한` mode after focusing the game.
+Shared: `ec_hangul_prepare` in `Engine/app/_06_party/enter_chat/src/ec_hangul.c` is the 2026-11-02 path again. It focuses the game, attaches to the game thread, and waits until layout `0412` sticks. If the default IME window does not enter `IME_CMODE_NATIVE`, it focuses the game and asks once more. A failed layout switch returns `EC_E_IME` and sends no jamo. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite lines that contain Hangul, and any other `ec_run` text with Hangul. Invite-accept Y still forces English and does not use this path.
+Consent: user (restore the Hangul switch and record it in the docs and the enter_chat README).
+Result: `enter_chat.dll` rebuilt from this source. Not run in game. The leader process must be restarted to load the new DLL.
+
 ## 2026-11-06 — two extra offset names removed
 
 Intent: `entities/settings_print_state.json` and `inventories/inventory_offsets.txt` were second names for the registry copies. Drop those names without rebuilding a DLL.

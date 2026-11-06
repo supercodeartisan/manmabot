@@ -9,7 +9,7 @@ echo [1/4] enter_chat.dll
 cl /nologo /O2 /W3 /MT /utf-8 /D_CRT_SECURE_NO_WARNINGS /DENTER_CHAT_EXPORTS /Iinclude /Isrc ^
    src\enter_chat.c src\ec_target.c src\ec_keyboard.c src\ec_hangul.c src\ec_text.c ^
    /Fe:bin\enter_chat.dll /LD /link /IMPLIB:bin\enter_chat.lib ^
-   user32.lib imm32.lib winmm.lib advapi32.lib
+   user32.lib imm32.lib winmm.lib advapi32.lib ole32.lib
 if errorlevel 1 exit /b 1
 
 echo [2/4] enter_chat_cli.exe (asInvoker)
