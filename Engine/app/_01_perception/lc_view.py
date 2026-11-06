@@ -349,8 +349,10 @@ def hotbar() -> Optional[dict[str, Any]]:
         return None
     slots: list[dict[str, Any]] = []
     for line in text.splitlines():
+        # hotbar_930.c: key type cfg id mid name. mid is optional for older lines.
         match = re.search(
-            r"key=(-?\d+)\s+type=(-?\d+)\s+cfg=(\d+)\s+id=(\d+)\s+name=(.*)$",
+            r"key=(-?\d+)\s+type=(-?\d+)\s+cfg=(\d+)\s+id=(\d+)"
+            r"(?:\s+mid=(-?\d+))?\s+name=(.*)$",
             line,
         )
         if not match:
@@ -363,7 +365,8 @@ def hotbar() -> Optional[dict[str, Any]]:
                 "type": int(match.group(2)),
                 "cfg": int(match.group(3)),
                 "id": int(match.group(4)),
-                "name": match.group(5).strip(),
+                "mid": int(match.group(5) or 0),
+                "name": match.group(6).strip(),
             }
         )
     if "t=" not in text and not slots:

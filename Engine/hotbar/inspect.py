@@ -455,6 +455,9 @@ def inspect_hotbars() -> DetectedLayout:
         label = fold_hotbar_name(raw_label)
         if not kr_name and label:
             kr_name = label
+        if kr_name in {"(empty)", "(?)"}:
+            kr_name = ""
+            label = ""
         template = icons.get(kr_name, "") or icons.get(raw_name, "")
         zh_name = ""
         count_raw = raw.get("count")
