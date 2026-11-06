@@ -266,8 +266,8 @@ def live_pose_from_state(state: Any, *, fresh: bool = False) -> Any | None:
 class WorldNavHooks:
     """Optional party hooks. Unset for solo, so a plan never waits on a rally."""
 
-    on_plan = None  # callable(plan) — leader announces an NPC teleporter
-    allow_npc_teleport = None  # callable(detail) -> bool
+    on_plan = None  # callable(plan) — leader announces the rally point
+    hold_at_step = None  # callable(step_i, pose) -> bool; True idles before that step
 
 
 @dataclass
@@ -412,6 +412,9 @@ class WorldNavSession:
                 self.fail("gate payload missing")
                 return Status.FAILURE
             return self._emit_gate(blackboard)
+
+        if self.phase == "ready" and self._party_hold(pose):
+            return self._idle(blackboard, "party rally wait members")
 
         if self.step_i >= len(self.plan.steps):
             self.complete()
@@ -867,14 +870,6 @@ class WorldNavSession:
                 f"want ({nx},{ny}) r≤{NPC_TP_APPROACH}"
             )
             return Status.FAILURE
-        allow = WorldNavHooks.allow_npc_teleport
-        if allow is not None:
-            try:
-                opened = bool(allow(det))
-            except Exception:
-                opened = True
-            if not opened:
-                return self._idle(blackboard, "party rally wait members")
         behavior = behavior_by_id(bid)
         if behavior is None or str(behavior.action) != ACTION_TELEPORTER:
             self.fail(f"unknown teleporter behavior {bid}")
@@ -1304,3 +1299,12 @@ class WorldNavSession:
         blackboard.current_goal = "world_nav"
         blackboard.emit(ActionType.IDLE, priority=0.4, reason=reason)
         return Status.SUCCESS
+
+    def _party_hold(self, pose: Any) -> bool:
+        hold = WorldNavHooks.hold_at_step
+        if hold is None:
+            return False
+        try:
+            return bool(hold(self.step_i, pose))
+        except Exception:
+            return False

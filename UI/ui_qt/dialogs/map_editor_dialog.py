@@ -234,6 +234,8 @@ class MapEditorWidget(QWidget):
         on_done: Callable[[], None] | None = None,
         language: str = "en",
         area_kind: str = "farm",
+        coord_load: Callable[[], dict | None] | None = None,
+        coord_save: Callable[[dict], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -242,6 +244,10 @@ class MapEditorWidget(QWidget):
         self._area_kind = "safe" if str(area_kind) == "safe" else "farm"
         self._on_changed = on_changed or (lambda: None)
         self._on_done = on_done or (lambda: None)
+        # When set, patrol/farm overlays load and save through the caller.
+        # The shared map yaml is not written. None keeps the solo map files.
+        self._coord_load = coord_load
+        self._coord_save = coord_save
         self.language = str(language or "en")
         self.map_id = ""
         self._pack = None
@@ -309,6 +315,14 @@ class MapEditorWidget(QWidget):
             tools.addWidget(btn)
             self._tool_buttons[key] = btn
         tools.addStretch(1)
+        area_btn = QPushButton("구역 +")
+        point_btn = QPushButton("점 +")
+        area_btn.clicked.connect(lambda: self._set_tool("area"))
+        point_btn.clicked.connect(lambda: self._set_tool("point"))
+        tools.addWidget(area_btn)
+        tools.addWidget(point_btn)
+        self._tool_buttons["area"] = area_btn
+        self._tool_buttons["point"] = point_btn
         zoom_out = QPushButton("−")
         zoom_in = QPushButton("+")
         zoom_out.setFixedSize(32, 28)
@@ -326,6 +340,7 @@ class MapEditorWidget(QWidget):
 
         split = QSplitter(Qt.Orientation.Horizontal)
         side = QWidget()
+        self._list_side = side
         side.setMinimumWidth(250)
         side_layout = QVBoxLayout(side)
         head = QHBoxLayout()
@@ -400,6 +415,19 @@ class MapEditorWidget(QWidget):
                 if self._dungeon and self.tool == "patrol"
                 else ""
             )
+        spot = self._spot_tools_active()
+        for key in ("area", "point"):
+            button = self._tool_buttons.get(key)
+            if button is None:
+                continue
+            button.setVisible(spot)
+            button.setStyleSheet(
+                f"background: {tokens.ACCENT}; color: white;"
+                if spot and self.tool == key
+                else ""
+            )
+        if hasattr(self, "_list_side"):
+            self._list_side.setMinimumWidth(360 if spot else 250)
         if hasattr(self, "list_title"):
             self.list_title.setText(self._area_title())
         if hasattr(self, "title_label"):
@@ -440,13 +468,20 @@ class MapEditorWidget(QWidget):
                     clearance_tiles=pack.clearance_tiles,
                     wall_penalty=pack.wall_penalty,
                 )
+                from app._04_decision.nav_config import _seal_silver_knight_inn
+
+                _seal_silver_knight_inn(terrain, str(getattr(pack, "id", "") or ""))
                 return terrain
             except Exception:
                 pass
-        return TerrainMap.from_png(
+        terrain = TerrainMap.from_png(
             pack.terrain_path,
             pixel_scale=max(1, int(pack.pixel_scale)),
         )
+        from app._04_decision.nav_config import _seal_silver_knight_inn
+
+        _seal_silver_knight_inn(terrain, str(getattr(pack, "id", "") or ""))
+        return terrain
 
     def load_map(self, map_id: str, *, dungeon: bool | None = None) -> None:
         self.map_id = str(map_id or "")
@@ -471,7 +506,12 @@ class MapEditorWidget(QWidget):
         self.subtitle.setText(
             self.s.editor_hint_dungeon if self._dungeon else self.s.editor_hint_island
         )
-        self.tool = "patrol" if self._dungeon else "select"
+        if self._dungeon:
+            self.tool = "patrol"
+        elif self._spot_tools_active():
+            self.tool = "area"
+        else:
+            self.tool = "select"
         self._dirty = False
         self._sync_tools()
         if self._pack is None:
@@ -515,12 +555,19 @@ class MapEditorWidget(QWidget):
                 self._base = None
         else:
             self.status.setText(self.s.map_missing_short)
+        bound = self._bound_coords()
         if not self._dungeon:
             try:
-                self._load_farms()
+                if bound is not None:
+                    self.farms = self._farms_from_bound(bound)
+                else:
+                    self._load_farms()
             except Exception:
                 self.farms = []
-        self.patrol = list_patrol_entries(self.map_id) if self._dungeon else []
+        if self._dungeon and bound is not None:
+            self.patrol = self._patrol_from_bound(bound)
+        else:
+            self.patrol = list_patrol_entries(self.map_id) if self._dungeon else []
         self._image_loading = False
         self.status.setText(
             self.s.map_missing_short if self._base is None else self._hint()
@@ -590,6 +637,130 @@ class MapEditorWidget(QWidget):
         except Exception:
             self._patrol_paths = []
 
+    def _bound_coords(self) -> dict | None:
+        """Party document, when this editor was opened for a party routine.
+
+        ``None`` means the shared map yaml (solo, or a party row not copied yet).
+        """
+        if self._coord_load is None:
+            return None
+        try:
+            loaded = self._coord_load()
+        except Exception:
+            return None
+        return loaded if isinstance(loaded, dict) else None
+
+    def _spot_tools_active(self) -> bool:
+        """Party hunt editor: rectangles and stake points. Solo stays rectangles."""
+        return (
+            self._coord_save is not None
+            and self._area_kind == "farm"
+            and not self._dungeon
+        )
+
+    def _is_point(self, farm: dict) -> bool:
+        return str(farm.get("shape") or "") == "point"
+
+    def _farms_from_bound(self, bound: dict) -> list[dict]:
+        farms: list[dict] = []
+        for i, item in enumerate(bound.get("areas") or []):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or f"area_{i + 1}")
+            region = str(item.get("region") or "")
+            shape = str(item.get("shape") or "area").strip().lower()
+            try:
+                if shape == "point":
+                    farms.append(
+                        {
+                            "name": name,
+                            "shape": "point",
+                            "region": region,
+                            "x": int(item["x"] if "x" in item else item["x0"]),
+                            "y": int(item["y"] if "y" in item else item["y0"]),
+                        }
+                    )
+                else:
+                    farms.append(
+                        {
+                            "name": name,
+                            "shape": "area",
+                            "region": region,
+                            "x0": int(item["x0"]),
+                            "y0": int(item["y0"]),
+                            "x1": int(item["x1"]),
+                            "y1": int(item["y1"]),
+                        }
+                    )
+            except (KeyError, TypeError, ValueError):
+                continue
+        return farms
+
+    def _patrol_from_bound(self, bound: dict) -> list[tuple[int, int, str]]:
+        points: list[tuple[int, int, str]] = []
+        for item in bound.get("patrol") or []:
+            if not isinstance(item, dict):
+                continue
+            try:
+                points.append(
+                    (int(item["x"]), int(item["y"]), str(item.get("name") or ""))
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+        return points
+
+    def _save_coord_document(self) -> bool:
+        """Write overlays to the party routine document. Does not touch map yaml."""
+        if self._coord_save is None:
+            return False
+        try:
+            areas: list[dict] = []
+            for farm in self.farms:
+                if farm.get("_preview"):
+                    continue
+                name = str(farm.get("name") or "").strip() or f"area_{len(areas) + 1}"
+                region = str(farm.get("region") or "")
+                if self._is_point(farm):
+                    areas.append(
+                        {
+                            "name": name,
+                            "shape": "point",
+                            "region": region,
+                            "x": int(farm["x"]),
+                            "y": int(farm["y"]),
+                        }
+                    )
+                else:
+                    areas.append(
+                        {
+                            "name": name,
+                            "shape": "area",
+                            "region": region,
+                            "x0": int(farm["x0"]),
+                            "y0": int(farm["y0"]),
+                            "x1": int(farm["x1"]),
+                            "y1": int(farm["y1"]),
+                        }
+                    )
+            patrol = [
+                {"x": int(x), "y": int(y), "name": str(name)}
+                for x, y, name in self.patrol
+            ]
+            self._coord_save({"areas": areas, "patrol": patrol})
+        except Exception as exc:
+            QMessageBox.warning(self, self.s.tab_farms, str(exc))
+            self.status.setText(str(exc))
+            return False
+        self._dirty = False
+        if self._dungeon:
+            self.status.setText(self.s.saved_patrol)
+        elif self._area_kind == "safe":
+            self.status.setText(self.s.saved_rest)
+        else:
+            self.status.setText(self.s.saved_areas)
+        self._on_changed()
+        return True
+
     def _load_farms(self) -> None:
         import yaml
 
@@ -627,6 +798,8 @@ class MapEditorWidget(QWidget):
             return False
         if self._pack is None:
             return False
+        if self._coord_save is not None:
+            return self._save_coord_document()
         try:
             ensure_userdata()
             root = manmabot_root()
@@ -768,7 +941,15 @@ class MapEditorWidget(QWidget):
             painter, self._base, ox, oy, self._scale, widget.width(), widget.height()
         )
         if not self._dungeon:
+            visible = [
+                i
+                for i, farm in enumerate(self.farms)
+                if not farm.get("_preview")
+            ]
+            order_of = {index: n for n, index in enumerate(visible, start=1)}
             for i, f in enumerate(self.farms):
+                if self._is_point(f):
+                    continue
                 x0, y0 = self._tile_to_canvas(f["x0"], f["y0"])
                 x1, y1 = self._tile_to_canvas(f["x1"] + 1, f["y1"] + 1)
                 selected = self.selected == ("farm", i)
@@ -779,16 +960,31 @@ class MapEditorWidget(QWidget):
                 painter.drawRect(QRectF(x0, y0, x1 - x0, y1 - y0))
                 if not preview:
                     painter.setPen(outline)
-                    painter.drawText(
-                        int(x0 + 4),
-                        int(max(12, y0 - 4)),
-                        route_point_display_name(str(f["name"]), self.language),
+                    label = (
+                        f"구역 {order_of.get(i, '')}"
+                        if self._spot_tools_active()
+                        else route_point_display_name(str(f["name"]), self.language)
                     )
+                    painter.drawText(int(x0 + 4), int(max(12, y0 - 4)), label)
                 if selected:
                     for hx, hy in self._handle_points(f).values():
                         painter.setBrush(QColor("white"))
                         painter.setPen(QPen(QColor("#dc2626"), 2))
                         painter.drawEllipse(QPointF(hx, hy), 5, 5)
+            for i, f in enumerate(self.farms):
+                if not self._is_point(f):
+                    continue
+                cx, cy = self._tile_to_canvas(int(f["x"]) + 0.5, int(f["y"]) + 0.5)
+                selected = self.selected == ("point", i)
+                painter.setPen(QPen(QColor("#1d4ed8"), 2))
+                painter.setBrush(QColor("#2563eb") if selected else QColor("#1d4ed8"))
+                painter.drawEllipse(QPointF(cx, cy), 6 if selected else 4, 6 if selected else 4)
+                painter.setPen(QColor("#1f2937"))
+                painter.drawText(
+                    int(cx + 8),
+                    int(cy - 8),
+                    f"점 {order_of.get(i, '')}",
+                )
         if len(self.patrol) >= 2:
             painter.setPen(QPen(QColor(56, 189, 248, 210), max(2, int(2 * self._scale))))
             paths = self._patrol_paths
@@ -1034,6 +1230,13 @@ class MapEditorWidget(QWidget):
             and self._can_edit()
         ):
             tx, ty = self._canvas_to_tile(event.position().x(), event.position().y())
+            if self._spot_tools_active():
+                hit_point = self._hit_point(tx, ty)
+                if hit_point is not None:
+                    self._select("point", hit_point)
+                    self._point_menu(hit_point, event.globalPosition().toPoint())
+                    event.accept()
+                    return
             hit = self._hit_farm(tx, ty)
             if hit is not None:
                 self._select("farm", hit)
@@ -1058,6 +1261,9 @@ class MapEditorWidget(QWidget):
             return
         cx, cy = event.position().x(), event.position().y()
         tx, ty = self._canvas_to_tile(cx, cy)
+        if self._spot_tools_active() and self.tool == "point":
+            self._place_point(tx, ty)
+            return
         if self._dungeon and self.tool == "patrol":
             hit = self._hit_patrol(tx, ty)
             if hit is not None:
@@ -1092,6 +1298,8 @@ class MapEditorWidget(QWidget):
             self._drag_origin = dict(self.farms[hit_f])
             self._hover_move = (tx, ty)
             self._sync_canvas_cursor(cx, cy)
+            return
+        if self._spot_tools_active() and self.tool != "area":
             return
         self._rect_anchor = (tx, ty)
         self.selected = None
@@ -1139,6 +1347,15 @@ class MapEditorWidget(QWidget):
             self.canvas.update()
             return
         kind, idx = self.selected
+        if kind == "point" and self._drag == "move" and 0 <= idx < len(self.farms):
+            if self._refuse_hunt_point(tx, ty):
+                self.canvas.update()
+                return
+            self.farms[idx]["x"] = tx
+            self.farms[idx]["y"] = ty
+            self._mark_dirty()
+            self.canvas.update()
+            return
         if kind == "patrol":
             if self._terrain is not None and not self._terrain.is_walkable(tx, ty):
                 return
@@ -1296,7 +1513,7 @@ class MapEditorWidget(QWidget):
                 order.append(i)
         for i in order:
             farm = self.farms[i]
-            if farm.get("_preview"):
+            if farm.get("_preview") or self._is_point(farm):
                 continue
             handle = self._hit_handle(farm, cx, cy)
             if handle:
@@ -1316,11 +1533,70 @@ class MapEditorWidget(QWidget):
     def _hit_farm(self, tx: int, ty: int) -> Optional[int]:
         for i in range(len(self.farms) - 1, -1, -1):
             f = self.farms[i]
-            if f.get("_preview"):
+            if f.get("_preview") or self._is_point(f):
                 continue
             if f["x0"] <= tx <= f["x1"] and f["y0"] <= ty <= f["y1"]:
                 return i
         return None
+
+    def _hit_point(self, tx: int, ty: int) -> Optional[int]:
+        best_i = None
+        best_d = 2
+        for i, farm in enumerate(self.farms):
+            if not self._is_point(farm):
+                continue
+            distance = max(abs(int(farm["x"]) - tx), abs(int(farm["y"]) - ty))
+            if distance <= best_d:
+                best_d = distance
+                best_i = i
+        return best_i
+
+    def _refuse_hunt_point(self, tx: int, ty: int) -> bool:
+        """Party hunt dot: the nav grid must be able to step onto this tile."""
+        from app._03_world.space.hunt_point import hunt_point_refused
+
+        if not hunt_point_refused(self._terrain, tx, ty):
+            return False
+        self.status.setText(self.s.hunt_point_refused)
+        return True
+
+    def _place_point(self, tx: int, ty: int) -> None:
+        hit = self._hit_point(tx, ty)
+        if hit is not None:
+            self._select("point", hit)
+            self._drag = "move"
+            self._drag_origin = dict(self.farms[hit])
+            return
+        if self._refuse_hunt_point(tx, ty):
+            return
+        taken = {
+            str(item.get("name"))
+            for item in self.farms
+            if self._is_point(item)
+        }
+        number = 1
+        while f"point_{number}" in taken:
+            number += 1
+        self.farms.append(
+            {
+                "shape": "point",
+                "name": f"point_{number}",
+                "region": self._pack.default_region if self._pack else "",
+                "x": tx,
+                "y": ty,
+            }
+        )
+        self._mark_dirty()
+        self._select("point", len(self.farms) - 1)
+        self._drag = "move"
+        self._drag_origin = dict(self.farms[-1])
+
+    def _point_menu(self, idx: int, global_pos) -> None:
+        menu = QMenu(self)
+        delete_act = menu.addAction(self.s.delete_selected)
+        chosen = menu.exec(global_pos)
+        if chosen is delete_act:
+            self._delete_selected()
 
     def _hit_patrol(self, tx: int, ty: int) -> Optional[int]:
         best_i = None
@@ -1343,13 +1619,21 @@ class MapEditorWidget(QWidget):
 
     def _deselect(self) -> None:
         self.selected = None
-        self.tool = "select"
+        if self.tool not in ("area", "point"):
+            self.tool = "select"
         self._refresh_list()
         self._fill_inspector()
         self.canvas.update()
 
     def _on_list_row(self, row: int) -> None:
         if row < 0:
+            return
+        item = self.item_list.item(row)
+        data = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if isinstance(data, tuple) and len(data) == 2:
+            kind, idx = data
+            if self.selected != (kind, int(idx)):
+                self._select(str(kind), int(idx))
             return
         if self._dungeon:
             if 0 <= row < len(self.patrol):
@@ -1398,11 +1682,25 @@ class MapEditorWidget(QWidget):
                 for i, (_x, _y, name) in enumerate(self.patrol)
             ]
         else:
-            rows = [
-                (route_point_display_name(str(f["name"]), self.language), "farm", i)
-                for i, f in enumerate(self.farms)
-                if not f.get("_preview")
-            ]
+            rows = []
+            order = 0
+            for i, f in enumerate(self.farms):
+                if f.get("_preview"):
+                    continue
+                order += 1
+                if self._spot_tools_active() and self._is_point(f):
+                    title = f"{order}. 점  ({int(f['x'])}, {int(f['y'])})"
+                    kind = "point"
+                elif self._spot_tools_active():
+                    title = (
+                        f"{order}. 구역  ({int(f['x0'])}, {int(f['y0'])} ~ "
+                        f"{int(f['x1'])}, {int(f['y1'])})"
+                    )
+                    kind = "farm"
+                else:
+                    title = route_point_display_name(str(f["name"]), self.language)
+                    kind = "farm"
+                rows.append((title, kind, i))
         self.list_count.setText(str(len(rows)))
         for title, kind, idx in rows:
             item = QListWidgetItem()
@@ -1431,7 +1729,7 @@ class MapEditorWidget(QWidget):
 
     def _farm_overlaps(self, rect: dict, ignore: int | None = None) -> bool:
         for i, other in enumerate(self.farms):
-            if other.get("_preview"):
+            if other.get("_preview") or self._is_point(other):
                 continue
             if ignore is not None and i == ignore:
                 continue
@@ -1456,7 +1754,7 @@ class MapEditorWidget(QWidget):
         if not self._can_edit() or not (0 <= idx < len(self.farms)):
             return
         src = self.farms[idx]
-        if src.get("_preview"):
+        if src.get("_preview") or self._is_point(src):
             return
         w = int(src["x1"]) - int(src["x0"])
         h = int(src["y1"]) - int(src["y0"])
@@ -1564,7 +1862,11 @@ class MapEditorWidget(QWidget):
         if self.selected is None:
             return
         kind, idx = self.selected
-        if kind == "farm" and 0 <= idx < len(self.farms) and not self.farms[idx].get("_preview"):
+        if (
+            kind in ("farm", "point")
+            and 0 <= idx < len(self.farms)
+            and not self.farms[idx].get("_preview")
+        ):
             del self.farms[idx]
         elif kind == "patrol" and 0 <= idx < len(self.patrol):
             del self.patrol[idx]
@@ -1621,11 +1923,11 @@ class MapEditorWidget(QWidget):
         if not self._can_edit():
             self.status.setText(self.s.editor_readonly)
             return
-        items = self.farms if kind == "farm" else self.patrol
+        items = self.patrol if kind == "patrol" else self.farms
         target = idx + int(delta)
         if target < 0 or target >= len(items):
             return
-        if kind == "farm" and (
+        if kind != "patrol" and (
             items[idx].get("_preview") or items[target].get("_preview")
         ):
             return
@@ -1646,6 +1948,8 @@ class MapEditorDialog(QDialog):
         on_changed: Callable[[], None] | None = None,
         on_closed: Callable[[], None] | None = None,
         area_kind: str = "farm",
+        coord_load: Callable[[], dict | None] | None = None,
+        coord_save: Callable[[dict], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.s = ui_strings(language)
@@ -1669,6 +1973,8 @@ class MapEditorDialog(QDialog):
             on_done=self.accept,
             language=language,
             area_kind=self._area_kind,
+            coord_load=coord_load,
+            coord_save=coord_save,
         )
         layout.addWidget(self.editor)
         QShortcut(
@@ -1723,6 +2029,8 @@ def open_map_editor(
     on_changed: Callable[[], None] | None = None,
     on_closed: Callable[[], None] | None = None,
     area_kind: str = "farm",
+    coord_load: Callable[[], dict | None] | None = None,
+    coord_save: Callable[[dict], None] | None = None,
 ) -> MapEditorDialog:
     dialog = MapEditorDialog(
         parent,
@@ -1733,6 +2041,8 @@ def open_map_editor(
         on_changed=on_changed,
         on_closed=on_closed,
         area_kind=area_kind,
+        coord_load=coord_load,
+        coord_save=coord_save,
     )
     # Flags only before the first show — never toggle after (QDialog hide/finished).
     # Stay on top whenever the shell does, so Edit map isn't buried under it.

@@ -1,4 +1,4 @@
-"""Party monitor UI — live etview + compact status + socket message log."""
+"""Party monitor UI — role dashboard + small live etview + socket message log."""
 
 from __future__ import annotations
 
@@ -11,9 +11,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPlainTextEdit,
-    QSizePolicy,
+    QPushButton,
+    QScrollArea,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from session.bot_controller import BotController
+from ui_qt.debug.party_dashboard import PartyDashboard, split_messages
 from ui_qt.debug.party_etview import PartyEtView, capture_lc_client
 
 
@@ -302,7 +305,8 @@ def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
         f"dist={_fmt(status.get('leader_dist'))}  "
         f"maps={_fmt(local_mid)}→{_fmt(leader_mid)}  "
         f"assist={_fmt(status.get('assist_src'))}:{_fmt(status.get('assist_name') or status.get('assist_track_id'))}\n"
-        f"SELF  xy={_fmt_xy(self_info.get('xy'))}  "
+        f"SELF  {str(self_info.get('name') or '—')}  "
+        f"xy={_fmt_xy(self_info.get('xy'))}  "
         f"hp={_fmt(self_info.get('hp'))}  mp={_fmt(self_info.get('mp'))}  "
         f"kind={kind}  action={_fmt(action.get('name'))}  "
         f"why={reason}  "
@@ -348,8 +352,27 @@ def _status_bits(snap: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_LIVE_W = 360
+_LIVE_H = 240
+_RIGHT_W = _LIVE_W + 60
+
+
+def _log_title(text: str) -> QLabel:
+    label = QLabel(text)
+    font = QFont(label.font())
+    font.setBold(True)
+    label.setFont(font)
+    return label
+
+
+def _log_titles(role: str) -> tuple[str, str]:
+    if role == "member":
+        return "Leader → this member (IN)", "This member → leader (OUT)"
+    return "Leader → members (OUT · chat typing)", "Members → leader (IN)"
+
+
 class PartyMonitorWindow(QMainWindow):
-    """Live etview (left) + socket message log (right) + compact player status."""
+    """Party dashboard (left) + small live view and socket log (right)."""
 
     def __init__(
         self,
@@ -366,9 +389,9 @@ class PartyMonitorWindow(QMainWindow):
         self._capture_tick = 0
         self._sized_to_client = False
         self.t = t or {}
-        self.setWindowTitle(self.t.get("party_monitor_title", "Party etview"))
-        self.resize(1200, 720)
-        self.setMinimumSize(900, 520)
+        self.setWindowTitle(self.t.get("party_monitor_title", "Party monitor"))
+        self.resize(1320, 860)
+        self.setMinimumSize(960, 600)
 
         root = QWidget()
         self.setCentralWidget(root)
@@ -377,6 +400,10 @@ class PartyMonitorWindow(QMainWindow):
         layout.setSpacing(6)
 
         top = QHBoxLayout()
+        self.live_on = QCheckBox(self.t.get("party_live_view", "Live view"))
+        self.live_on.setChecked(True)
+        self.live_on.toggled.connect(self._on_live_toggled)
+        top.addWidget(self.live_on)
         self.capture_bg = QCheckBox(
             self.t.get("etview_capture", "Game capture (BitBlt)")
         )
@@ -389,73 +416,90 @@ class PartyMonitorWindow(QMainWindow):
         top.addWidget(self.topmost)
         layout.addLayout(top)
 
+        manual = QHBoxLayout()
+        manual.setSpacing(6)
+        name_lbl = QLabel("Name")
+        manual.addWidget(name_lbl)
+        self.manual_name = QLineEdit()
+        self.manual_name.setPlaceholderText("character name")
+        self.manual_name.setClearButtonEnabled(True)
+        self.manual_name.setFixedWidth(180)
+        self.manual_name.setToolTip("Invite line is /초대 <name>, one space before the name")
+        manual.addWidget(self.manual_name)
+        self.invite_btn = QPushButton("Invite")
+        self.invite_btn.setToolTip(
+            "Queue /초대 <name> on the bot worker (same path as automatic invite)"
+        )
+        self.invite_btn.clicked.connect(self._on_invite_clicked)
+        manual.addWidget(self.invite_btn)
+        self.y_btn = QPushButton("Y+Enter")
+        self.y_btn.setToolTip(
+            "Queue Y then Enter on the bot worker (same path as automatic accept)"
+        )
+        self.y_btn.clicked.connect(self._on_y_clicked)
+        manual.addWidget(self.y_btn)
+        self.manual_status = QLabel("")
+        self.manual_status.setWordWrap(True)
+        manual.addWidget(self.manual_status, stretch=1)
+        layout.addLayout(manual)
+        self._chat_shown = ""
+        self._topmost_dropped = False
+
         main = QSplitter(Qt.Orientation.Horizontal)
 
-        # ---- left: live show + status + members ----
-        left = QWidget()
-        left_l = QVBoxLayout(left)
-        left_l.setContentsMargins(0, 0, 0, 0)
-        left_l.setSpacing(4)
+        # ---- left: role-aware dashboard ----
+        self.dashboard = PartyDashboard()
+        self.dashboard.member_picked.connect(self.manual_name.setText)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setWidget(self.dashboard)
+        scroll.setMinimumWidth(480)
+        main.addWidget(scroll)
 
-        self.etview = PartyEtView()
-        left_l.addWidget(self.etview, stretch=1)
-
-        self.status = QLabel("")
-        self.status.setWordWrap(True)
-        self.status.setContentsMargins(8, 6, 8, 6)
-        self.status.setFixedHeight(72)
-        self.status.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
-        )
-        self.status.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-        status_font = QFont(self.status.font())
-        status_font.setPointSize(max(9, status_font.pointSize()))
-        status_font.setBold(True)
-        self.status.setFont(status_font)
-        left_l.addWidget(self.status)
-
-        self.members = QTableWidget(0, 8)
-        self.members.setHorizontalHeaderLabels(
-            ["Name", "L", "HP", "MP", "Lv", "XY", "Map", "GUID"]
-        )
-        self.members.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
-        self.members.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.members.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows
-        )
-        # Fixed height so party row count cannot thrash the etview area.
-        self.members.setFixedHeight(110)
-        self.members.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self.members.verticalHeader().setVisible(False)
-        left_l.addWidget(self.members)
-        main.addWidget(left)
-
-        # ---- right: connection status + socket messages ----
+        # ---- right: small live view + leader / member message logs ----
         right = QWidget()
+        right.setMinimumWidth(_RIGHT_W)
+        right.setMaximumWidth(_RIGHT_W + 220)
         right_l = QVBoxLayout(right)
         right_l.setContentsMargins(0, 0, 0, 0)
         right_l.setSpacing(4)
-        self.conn_status = QLabel("")
-        self.conn_status.setWordWrap(True)
-        self.conn_status.setContentsMargins(8, 6, 8, 6)
-        right_l.addWidget(self.conn_status)
-        right_l.addWidget(
-            QLabel(self.t.get("party_messages", "Messages"))
-        )
-        self.messages = _message_view()
-        right_l.addWidget(self.messages, stretch=1)
+        self.etview = PartyEtView()
+        self.etview.setMinimumSize(_LIVE_W, _LIVE_H)
+        self.etview.setFixedSize(_LIVE_W, _LIVE_H)
+        right_l.addWidget(self.etview, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        logs = QSplitter(Qt.Orientation.Vertical)
+        logs.setChildrenCollapsible(False)
+        top_box = QWidget()
+        top_l = QVBoxLayout(top_box)
+        top_l.setContentsMargins(0, 0, 0, 0)
+        top_l.setSpacing(2)
+        self.out_title = _log_title("")
+        top_l.addWidget(self.out_title)
+        self.out_messages = _message_view()
+        top_l.addWidget(self.out_messages, stretch=1)
+        bottom_box = QWidget()
+        bottom_l = QVBoxLayout(bottom_box)
+        bottom_l.setContentsMargins(0, 0, 0, 0)
+        bottom_l.setSpacing(2)
+        self.in_title = _log_title("")
+        bottom_l.addWidget(self.in_title)
+        self.in_messages = _message_view()
+        bottom_l.addWidget(self.in_messages, stretch=1)
+        logs.addWidget(top_box)
+        logs.addWidget(bottom_box)
+        logs.setSizes([300, 300])
+        right_l.addWidget(logs, stretch=1)
+        # Older callers read ``.messages``; it is the leader-side log.
+        self.messages = self.out_messages
         main.addWidget(right)
 
         self._splitter = main
-        main.setStretchFactor(0, 3)
-        main.setStretchFactor(1, 2)
-        main.setSizes([780, 400])
+        main.setChildrenCollapsible(False)
+        main.setStretchFactor(0, 1)
+        main.setStretchFactor(1, 0)
+        main.setSizes([1320 - _RIGHT_W - 40, _RIGHT_W + 40])
         layout.addWidget(main, stretch=1)
 
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -465,9 +509,74 @@ class PartyMonitorWindow(QMainWindow):
         self._poll.start(100)
         self._on_poll()
 
+    def _on_invite_clicked(self) -> None:
+        name = self.manual_name.text().strip()
+        if not name:
+            self.manual_status.setText("Enter a character name")
+            return
+        self._queue_party_chat("invite", name)
+
+    def _on_y_clicked(self) -> None:
+        self._queue_party_chat("accept", "")
+
+    def _queue_party_chat(self, kind: str, name: str) -> None:
+        submit = getattr(self.controller, "submit_party_chat", None)
+        if not callable(submit):
+            self.manual_status.setText("rejected: bot has no party chat queue")
+            return
+        try:
+            text = str(submit(kind, name) or "")
+        except Exception as exc:
+            text = f"rejected: {exc}"
+        self._chat_shown = text
+        self.manual_status.setText(text)
+        if text.startswith("rejected") or text.startswith("Enter a character"):
+            return
+        self._yield_focus_to_game()
+
+    def _yield_focus_to_game(self) -> None:
+        """The click is on this window. Move LC to the foreground before keys.
+
+        Always-on-top would stay the focused window, so Interception would type
+        here. Drop that flag for this action, then focus the game on this
+        thread — it just received the click, so Windows allows the switch.
+        """
+        if self.topmost.isChecked():
+            self._topmost_dropped = True
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+            self.show()
+        self._focus_game()
+        QTimer.singleShot(0, self._focus_game)
+
+    def _focus_game(self) -> None:
+        try:
+            from session.probes import bring_game_to_front, probe_game
+
+            hwnd = int(getattr(probe_game(), "hwnd", 0) or 0)
+        except Exception:
+            return
+        if hwnd:
+            bring_game_to_front(hwnd)
+
+    def _restore_topmost(self, chat: dict) -> None:
+        if not self._topmost_dropped:
+            return
+        if str(chat.get("state") or "") not in ("done", "failed"):
+            return
+        self._topmost_dropped = False
+        if self.topmost.isChecked():
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+            self.show()
+
     def _on_topmost(self, checked: bool) -> None:
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, bool(checked))
         self.show()
+
+    def _on_live_toggled(self, checked: bool) -> None:
+        self.etview.setVisible(bool(checked))
+        self.capture_bg.setEnabled(bool(checked))
+        if not checked:
+            self.etview.clear_background()
 
     def _on_poll(self) -> None:
         if self._closing:
@@ -493,24 +602,24 @@ class PartyMonitorWindow(QMainWindow):
             snap.setdefault("dll_loaded", False)
             snap["probe_error"] = str(exc)
 
-        info = _status_bits(snap)
-        status = snap.get("status") if isinstance(snap.get("status"), dict) else {}
-        self.status.setText(
-            f"{info['headline']}\n"
-            f"LEADER  {info['seen'] or '—'}  [{info['activity']}|{info['map_tag']}]  "
-            f"hp={_fmt(info['leader_hp'])}  mp={_fmt(info['leader_mp'])}  "
-            f"xy={info['leader_xy']}  dist={_fmt(status.get('leader_dist'))}  "
-            f"tgt={info['tgt'] or '—'}  "
-            f"kind={info['kind']}  why={info.get('reason') or '—'}"
-        )
-        self.status.setStyleSheet(info["status_style"])
-        conn_text, conn_style = _socket_banner(snap)
-        self.conn_status.setText(conn_text)
-        self.conn_status.setStyleSheet(conn_style)
-        party = snap.get("party") if isinstance(snap.get("party"), dict) else None
-        _fill_members(self.members, party, info["farming"])
-        _fill_messages(self.messages, list(snap.get("messages") or []))
-        self._refresh_etview(snap, info)
+        self.dashboard.apply(snap)
+        chat = snap.get("chat_action") if isinstance(snap.get("chat_action"), dict) else {}
+        self._restore_topmost(chat)
+        chat_text = str(chat.get("text") or "")
+        if chat_text and chat_text != self._chat_shown:
+            self._chat_shown = chat_text
+            self.manual_status.setText(chat_text)
+        session = snap.get("session") if isinstance(snap.get("session"), dict) else {}
+        role = str(session.get("role") or "leader")
+        top_title, bottom_title = _log_titles(role)
+        if self.out_title.text() != top_title:
+            self.out_title.setText(top_title)
+            self.in_title.setText(bottom_title)
+        top, bottom = split_messages(list(snap.get("messages") or []), role)
+        _fill_messages(self.out_messages, top)
+        _fill_messages(self.in_messages, bottom)
+        if self.live_on.isChecked():
+            self._refresh_etview(snap, _status_bits(snap))
 
     def _refresh_etview(self, snap: dict[str, Any], info: dict[str, Any]) -> None:
         status = snap.get("status") if isinstance(snap.get("status"), dict) else {}
@@ -576,41 +685,12 @@ class PartyMonitorWindow(QMainWindow):
             status=hud,
             background=bg,
         )
-        # Prefer BitBlt dims when present (set_frame already synced etview).
+        # Keep the preview at the game aspect inside the small fixed box.
         cw, ch = self.etview.client_size()
-        self._maybe_size_to_client(cw, ch)
-
-    def _maybe_size_to_client(self, client_w: float, client_h: float) -> None:
-        """Fit the window once to the game client aspect; never thrash on poll."""
-        if self._sized_to_client or self._closing:
-            return
-        cw = max(1.0, float(client_w or 0))
-        ch = max(1.0, float(client_h or 0))
-        # Wait for a real capture / probe size (skip default 800x600 placeholder).
-        if cw < 2 or ch < 2:
-            return
-        is_default = abs(cw - 800.0) < 0.5 and abs(ch - 600.0) < 0.5
-        if is_default and not self.etview.has_background():
-            return
-
-        left_w = 780
-        right_w = 400
-        margin_x = 16  # layout margins
-        margin_y = 16
-        top_bar = 28
-        status_h = 72
-        members_h = 110
-        spacing = 4 + 6 + 4  # left column + root spacing ballpark
-        etview_h = max(320, int(round(left_w * ch / cw)))
-        win_w = left_w + right_w + margin_x + 8  # splitter handle slack
-        win_h = top_bar + etview_h + status_h + members_h + spacing + margin_y
-        win_w = max(900, min(1800, win_w))
-        win_h = max(520, min(1200, win_h))
-        self._sized_to_client = True
-        self.resize(win_w, win_h)
-        splitter = getattr(self, "_splitter", None)
-        if splitter is not None:
-            splitter.setSizes([left_w, right_w])
+        if cw > 1 and ch > 1:
+            h = max(120, min(_LIVE_H + 60, int(round(_LIVE_W * ch / cw))))
+            if self.etview.height() != h:
+                self.etview.setFixedSize(_LIVE_W, h)
 
     def closeEvent(self, event) -> None:
         if self._closing:

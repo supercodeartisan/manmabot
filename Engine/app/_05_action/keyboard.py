@@ -1,4 +1,4 @@
-"""Controls keyboard input using the Interception input driver."""
+"""Farm keyboard input through the hunt input backend."""
 from __future__ import annotations
 
 import random
@@ -6,11 +6,11 @@ import time
 from typing import Optional
 
 from app._05_action import humanize as hz
-from app._05_action.mouse import _ensure_captured, _get_interception
+from app._05_action import input_backend as ib
 
 
 class KeyboardController:
-    """Low-level keyboard control for game interaction (Interception driver)."""
+    """Low-level keyboard control for game interaction (hunt input backend)."""
 
     def __init__(
         self,
@@ -32,30 +32,30 @@ class KeyboardController:
         """Press and release a key with a humanized hold duration."""
         if not self.enabled:
             return
-        _ensure_captured()
+        ib.ensure_open()
         if duration is None:
             duration = (
                 hz.uniform(hz.KEY_HOLD, self._rng)
                 if self.humanize
                 else 0.05
             )
-        _get_interception().key_down(key)
+        ib.key_down(key)
         time.sleep(duration)
-        _get_interception().key_up(key)
+        ib.key_up(key)
 
     def hold(self, key: str) -> None:
         """Hold a key down (call release to let go)."""
         if not self.enabled:
             return
-        _ensure_captured()
-        _get_interception().key_down(key)
+        ib.ensure_open()
+        ib.key_down(key)
 
     def release(self, key: str) -> None:
         """Release a held key."""
         if not self.enabled:
             return
-        _ensure_captured()
-        _get_interception().key_up(key)
+        ib.ensure_open()
+        ib.key_up(key)
 
     def tap(self, key: str, count: int = 1, interval: float | None = None) -> None:
         """Tap a key multiple times."""
@@ -77,7 +77,7 @@ class KeyboardController:
         """Press multiple keys simultaneously."""
         if not self.enabled:
             return
-        _ensure_captured()
+        ib.ensure_open()
         if hold_time is None:
             hold_time = (
                 hz.uniform(hz.KEY_HOLD, self._rng)
@@ -85,7 +85,7 @@ class KeyboardController:
                 else 0.1
             )
         for key in keys:
-            _get_interception().key_down(key)
+            ib.key_down(key)
         time.sleep(hold_time)
         for key in reversed(keys):
-            _get_interception().key_up(key)
+            ib.key_up(key)

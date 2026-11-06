@@ -10,9 +10,11 @@ from typing import Any, Iterable
 
 from app._03_world.catalog.zh_convert import chinese_aliases, to_simplified
 
-# Engine/data/catalog/list (moved from Engine/analysis/list).
-_DATA_CATALOG = Path(__file__).resolve().parents[3] / "data" / "catalog"
+# JSON lists: Engine/data/catalog/list. Icon PNGs stayed in Engine/analysis/list/image.
+_ENGINE_ROOT = Path(__file__).resolve().parents[3]
+_DATA_CATALOG = _ENGINE_ROOT / "data" / "catalog"
 _LIST_ROOT = _DATA_CATALOG / "list"
+_ANALYSIS_LIST = _ENGINE_ROOT / "analysis" / "list"
 _IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 _STEM_ID = re.compile(r"^(.*)_(\d+)$")
 _MONSTER_IMAGE_FOLDERS = ("monsters", "monster", "몬스터")
@@ -68,17 +70,23 @@ def _unique_ids(values: Iterable[int]) -> tuple[int, ...]:
 
 
 def _file_name_key(name: str) -> str:
-    """``얼음 여왕`` → ``얼음_여왕`` as used by the official PNG stems."""
-    return re.sub(r"\s+", "_", str(name or "").strip())
+    """``얼음 여왕`` → ``얼음_여왕`` as used by the official PNG stems.
+
+    Catalog names use ``:`` (``마법의 투구: 신속``, ``커스: 블라인드``); the
+    PNGs use ``_`` there (``마법의_투구__신속``, ``커스__블라인드``).
+    """
+    text = str(name or "").strip().replace(":", "_")
+    return re.sub(r"\s+", "_", text)
 
 
 def _compact_name(name: str) -> str:
-    return re.sub(r"[\s_]+", "", str(name or "")).strip().lower()
+    return re.sub(r"[\s_:]+", "", str(name or "")).strip().lower()
 
 
 def _image_roots(kind: str) -> tuple[Path, ...]:
     folders = _MONSTER_IMAGE_FOLDERS if kind == "monster" else _ITEM_IMAGE_FOLDERS
     bases = (
+        _ANALYSIS_LIST / "image",
         _LIST_ROOT / "image",
         _DATA_CATALOG / "image",
     )
@@ -201,6 +209,8 @@ class ItemCatalogRow:
     category_zh: str
     category_zh_cn: str
     ids: tuple[int, ...] = ()
+    # Enchanted / alternate label from JSON ``name2`` (e.g. 투구 → 마법 방어 투구).
+    name2: str = ""
 
     def display_name(self, language: str | None) -> str:
         lang = str(language or "").strip().lower()
@@ -217,8 +227,8 @@ class ItemCatalogRow:
         return self.category_ko
 
     def search_names(self) -> tuple[str, ...]:
-        """JSON ``name`` fields used to match memory entities (아데나, 金幣)."""
-        names = [self.name_ko, self.name_zh, self.name_zh_cn]
+        """JSON ``name`` / ``name2`` used to match memory entities (아데나, 金幣)."""
+        names = [self.name_ko, self.name2, self.name_zh, self.name_zh_cn]
         names.extend(chinese_aliases(self.name_zh))
         names.extend(chinese_aliases(self.name_zh_cn))
         return _unique(names)
@@ -227,9 +237,8 @@ class ItemCatalogRow:
         return _unique([self.key, *self.search_names()])
 
     def image_path(self) -> Path | None:
-        return resolve_catalog_image(
-            "item",
-            (self.name_ko, self.name_zh, self.name_zh_cn),
+        return item_image_path(
+            (self.name_ko, self.name2, self.name_zh, self.name_zh_cn),
             self.ids,
         )
 
@@ -300,6 +309,7 @@ def list_item_rows() -> tuple[ItemCatalogRow, ...]:
         cat_ko = str(ko.get("categoryName") or "").strip()
         cat_zh = str(zh.get("categoryName") or "").strip()
         previous = merged.get(name_ko)
+        name2 = str(ko.get("name2") or "").strip()
         row = ItemCatalogRow(
             key=name_ko,
             name_ko=name_ko,
@@ -315,9 +325,37 @@ def list_item_rows() -> tuple[ItemCatalogRow, ...]:
                 else (previous.category_zh_cn if previous else cat_ko)
             ),
             ids=_unique_ids([*(previous.ids if previous else ()), sid]),
+            name2=name2 or (previous.name2 if previous else ""),
         )
         merged[name_ko] = row
     return tuple(sorted(merged.values(), key=lambda row: (row.category_ko, row.name_ko)))
+
+
+def item_image_path(
+    names: Iterable[str],
+    ids: Iterable[int] = (),
+) -> Path | None:
+    """Official list PNG, else hotbar ``icons_unique`` (말하는 두루마리 등)."""
+    found = resolve_catalog_image("item", names, ids)
+    if found is not None:
+        return found
+    try:
+        from hotbar.item_catalog import find_template_path_by_kr_name
+    except Exception:
+        return None
+    seen: set[str] = set()
+    for raw in names:
+        text = str(raw or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        try:
+            path = find_template_path_by_kr_name(text)
+        except Exception:
+            path = None
+        if path is not None:
+            return path
+    return None
 
 
 def _strip_monster_prefix(text: str) -> str:

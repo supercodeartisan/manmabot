@@ -38,7 +38,7 @@ def _click_uv(executor, bounds, uv, *, wait_s: float) -> None:
 
 def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) -> None:
     from app._05_action.coordinates import game_to_screen
-    import interception
+    from app._05_action.input_backend import scroll_wheel
 
     if steps <= 0:
         return
@@ -48,7 +48,7 @@ def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) 
         executor.mouse.move(sx, sy, snap=True)
         time.sleep(0.15)
     for _ in range(steps):
-        interception.scroll("down")
+        scroll_wheel("down")
         time.sleep(0.08)
     time.sleep(0.25)
 

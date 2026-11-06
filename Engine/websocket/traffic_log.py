@@ -66,13 +66,16 @@ def note(direction: str, message: Any) -> None:
         way = "OUT" if str(direction or "").lower().startswith("s") else "IN "
         detail = _body_text(body)
         line = f"{stamp}  {way}  {sender:<7}  {detail}"
-        with _lock:
-            _lines.append(line)
-        # Player heartbeats are frequent — file DEBUG; decisions/orders at INFO.
         kind = ""
         if isinstance(body, dict):
             kind = str(body.get("type") or "").strip().lower()
-        level = "debug" if kind in ("player", "report") else "info"
+        # member_state keep-alive repeats: file DEBUG only, not in the monitor list.
+        repeat = kind == "member_state" and not body.get("changed")
+        if not repeat:
+            with _lock:
+                _lines.append(line)
+        # Player heartbeats are frequent — file DEBUG; decisions/orders at INFO.
+        level = "debug" if kind in ("player", "report") or repeat else "info"
         _mirror_party_file(level, f"{way.strip()} {sender} {detail}")
     except Exception:
         return
@@ -85,6 +88,8 @@ def _body_text(body: Any) -> str:
             return _fmt_player(body)
         if kind == "decision":
             return _fmt_decision(body)
+        if kind == "member_state":
+            return _fmt_member_state(body)
         return _fmt_generic(body)
     if isinstance(body, list):
         return " · ".join(_fmt_value(x) for x in body[:8])
@@ -153,6 +158,26 @@ def _fmt_generic(body: dict[str, Any]) -> str:
         parts.append(f"{key}={_fmt_value(value)}")
         if len(parts) >= 6:
             break
+    return " · ".join(parts)
+
+
+def _fmt_member_state(body: dict[str, Any]) -> str:
+    party = body.get("party") if isinstance(body.get("party"), dict) else {}
+    inv = body.get("invite") if isinstance(body.get("invite"), dict) else {}
+    if party.get("mem") != "ok":
+        where = "party mem blind"
+    elif party.get("in_party"):
+        where = f"in party (leader {party.get('leader') or '—'})"
+    else:
+        where = "not in party"
+    parts = [
+        "member_state",
+        where,
+        f"policy {body.get('policy_id') or '—'}",
+        f"invite {inv.get('id') or '—'}:{inv.get('phase') or 'idle'}",
+        f"session {body.get('session') or '—'}",
+        f"#{body.get('seq')}",
+    ]
     return " · ".join(parts)
 
 

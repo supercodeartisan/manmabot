@@ -179,14 +179,17 @@ def blacklist_target(blackboard: "Blackboard", track_id: int, *, reason: str) ->
 
 
 def excluded_target_ids(blackboard: "Blackboard") -> set[int]:
-    """Give-up window (4s), 4s cursor-reject skips, and the session blacklist."""
+    """Give-up window (4s), 4s cursor-reject skips, the session blacklist,
+    and (party turret leader only) everything outside the anchor zone."""
     from app._04_decision.behaviors.combat import active_give_up_ids
+    from app._04_decision.behaviors.party_turret import turret_excluded_ids
 
     return (
         active_give_up_ids(blackboard)
         | _active_cursor_reject_ids(blackboard)
         | set(blackboard.blacklisted_target_ids)
         | set(blackboard.exp_kill_ids)
+        | turret_excluded_ids(blackboard)
     )
 
 

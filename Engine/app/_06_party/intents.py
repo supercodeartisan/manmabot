@@ -5,7 +5,7 @@ import random
 from typing import Any, Iterable, Optional
 
 from .config import PartyMemberConfig
-from .follow import choose_approach_tile, choose_settle_stand
+from .follow import FOLLOW_CLICK_TILES, choose_approach_tile, choose_settle_stand
 from .policy import MemberKind
 
 
@@ -64,6 +64,7 @@ def _plan_approach_hop(
     previous_goal: Optional[tuple[int, int]],
     rng: random.Random,
     reason_prefix: str,
+    max_hop: Optional[int] = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str]:
     """Shared TRAVELING hop toward a stand tile near ``target_tile``."""
     from app._04_decision.nav_config import get_terrain_map
@@ -93,6 +94,7 @@ def _plan_approach_hop(
         goal,
         previous_goal=previous_goal,
         reason_prefix=reason_prefix,
+        max_hop=max_hop,
         retry=lambda bad: choose_approach_tile(
             terrain.is_walkable,
             target_tile,
@@ -114,6 +116,7 @@ def _plan_hop_to_goal(
     previous_goal: Optional[tuple[int, int]],
     reason_prefix: str,
     retry: Optional[Any] = None,
+    max_hop: Optional[int] = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str]:
     """TRAVELING click toward ``goal``; ``retry(bad_goal)`` picks another on no path."""
     from app._04_decision.pathfinding import plan_travel_click
@@ -131,7 +134,9 @@ def _plan_hop_to_goal(
                 return idle("follow_in_transit"), goal, "follow_in_transit"
         except Exception:
             pass
-    dest, _path, waypoint = plan_travel_click(terrain, origin, goal)
+    dest, _path, waypoint = plan_travel_click(
+        terrain, origin, goal, max_hop=max_hop
+    )
     if dest is None:
         if retry is None:
             return idle("no_path"), None, "no_path"
@@ -140,7 +145,9 @@ def _plan_hop_to_goal(
             return idle("no_path"), None, "no_path"
         if goal == (ox, oy):
             return idle("at_approach"), goal, "at_approach"
-        dest, _path, waypoint = plan_travel_click(terrain, origin, goal)
+        dest, _path, waypoint = plan_travel_click(
+            terrain, origin, goal, max_hop=max_hop
+        )
         if dest is None:
             return idle("no_path"), None, "no_path"
     hop = waypoint if waypoint is not None else goal
@@ -178,6 +185,7 @@ def plan_follow_intent(
             (int(settle_stand[0]), int(settle_stand[1])),
             previous_goal=previous_goal,
             reason_prefix=stand_reason,
+            max_hop=FOLLOW_CLICK_TILES,
         )
     return _plan_approach_hop(
         game_state,
@@ -187,6 +195,7 @@ def plan_follow_intent(
         previous_goal=previous_goal,
         rng=rng,
         reason_prefix="follow",
+        max_hop=FOLLOW_CLICK_TILES,
     )
 
 
@@ -242,7 +251,10 @@ def plan_field_follow(
         except Exception:
             pass
     hop = select_click_waypoint(
-        path, origin, terrain=field.terrain, max_hop=_travel_max_hop()
+        path,
+        origin,
+        terrain=field.terrain,
+        max_hop=min(_travel_max_hop(), FOLLOW_CLICK_TILES),
     )
     if hop is None:
         return None
@@ -300,27 +312,6 @@ def pick_settle_stand(
     )
 
 
-def plan_close_in_intent(
-    game_state: Any,
-    origin: Any,
-    monster_tile: tuple[int, int],
-    *,
-    previous_goal: Optional[tuple[int, int]],
-    rng: random.Random,
-    radius: int = 1,
-) -> tuple[Any, Optional[tuple[int, int]], str]:
-    """Short hop toward the assist monster when out of attack range."""
-    return _plan_approach_hop(
-        game_state,
-        origin,
-        monster_tile,
-        radius=max(1, int(radius)),
-        previous_goal=previous_goal,
-        rng=rng,
-        reason_prefix="close_in",
-    )
-
-
 def intent_for_kind(
     kind: MemberKind,
     *,
@@ -333,7 +324,6 @@ def intent_for_kind(
     rng: Optional[random.Random] = None,
     defend_id: Optional[int] = None,
     assist_id: Optional[int] = None,
-    close_in_tile: Optional[tuple[int, int]] = None,
     settle_stand: Optional[tuple[int, int]] = None,
     stand_reason: str = "follow_settle",
     mid_act: bool = False,
@@ -348,7 +338,8 @@ def intent_for_kind(
     if kind is MemberKind.HOLD:
         return idle(reason), None, reason
     if kind is MemberKind.HEAL:
-        # Manager returns blackboard HEAL intent directly; idle is a safe fallback.
+        # Manager returns the stashed ``apply_party_support`` intent when policy
+        # picks HEAL. Idle only if that stash is missing.
         return idle(reason or "heal"), previous_goal, reason or "heal"
     if kind is MemberKind.BUFF:
         return idle(reason or "buff"), previous_goal, reason or "buff"
@@ -358,16 +349,6 @@ def intent_for_kind(
         return attack(defend_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.ASSIST and assist_id is not None:
         return attack(assist_id, reason, mid_act=mid_act), previous_goal, reason
-    if kind is MemberKind.CLOSE_IN:
-        if game_state is None or origin is None or close_in_tile is None:
-            return idle("close_in_incomplete"), previous_goal, "close_in_incomplete"
-        return plan_close_in_intent(
-            game_state,
-            origin,
-            close_in_tile,
-            previous_goal=previous_goal,
-            rng=rng or random.Random(),
-        )
     if kind is MemberKind.FOLLOW:
         if (
             game_state is None
@@ -394,7 +375,6 @@ __all__ = [
     "idle",
     "intent_for_kind",
     "pick_settle_stand",
-    "plan_close_in_intent",
     "plan_field_follow",
     "plan_follow_intent",
     "potion",

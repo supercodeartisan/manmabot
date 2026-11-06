@@ -19,6 +19,7 @@ def find_monitor_exe() -> Optional[Path]:
         here / "analysis" / MONITOR_EXE,
         here.parent / MONITOR_EXE,
         here.parent / "analysis" / MONITOR_EXE,
+        here.parent.parent / "Engine" / "analysis" / "bin" / MONITOR_EXE,
         here.parent.parent / "Engine" / "analysis" / MONITOR_EXE,
         here.parent.parent / "analysis" / MONITOR_EXE,
     ]

@@ -30,6 +30,9 @@ class MemberRuntime:
     leader_target_guid: str = ""
     leader_target_ent: str = ""
     assist_track_id: Optional[int] = None
+    # Mob this member started while the turret leader was idle. Kept until it
+    # dies even if the leader begins an attack.
+    own_hunt_id: Optional[int] = None
     assist_src: str = ""
     assist_name: str = ""
     tick: int = 0
@@ -49,6 +52,11 @@ class MemberRuntime:
     travel_offset: Optional[tuple[int, int]] = None
     # Last travel click tile on the walk path (in-transit check).
     follow_hop: Optional[tuple[int, int]] = None
+    # Turret radial seat around the leader; last seat that had no path.
+    turret_seat: Optional[tuple[int, int]] = None
+    turret_seat_bad: Optional[tuple[int, int]] = None
+    # Moving-mode area reading, e.g. "narrow:trail_seat0" / "open:open_field".
+    formation: str = ""
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 
@@ -57,6 +65,8 @@ class MemberRuntime:
             "chasing": self.chasing,
             "approach_goal": self.approach_goal,
             "settle_stand": self.settle_stand,
+            "turret_seat": self.turret_seat,
+            "formation": self.formation,
             "paused": self.paused,
             "last_reason": self.last_reason,
             "last_kind": self.last_kind,

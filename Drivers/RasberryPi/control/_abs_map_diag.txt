@@ -1,0 +1,11 @@
+mode ABS;up=1 us=6 rid=() in=();up=1 us=2 rid=() in=();up=1 us=2 rid=() in=()
+ping (1012.3400000002221, 1013.0723000002035, 1013.804600000185)
+REL (1770, 637) -> (1790, 637) dx=20
+ABS_RAW (960, 540) -> (960, 540) err=0 arrive_ms=5.43
+ABS_RAW (200, 150) -> (200, 150) err=0 arrive_ms=7.13
+ABS_RAW (1700, 900) -> (1700, 900) err=0 arrive_ms=7.08
+ABS_RAW (300, 300) -> (300, 300) err=0 arrive_ms=9.31
+ABS_RAW (960, 540) -> (960, 540) err=0 arrive_ms=7.51
+AIM (500, 400) ok=True pos=(500, 400) ms=39.11 corr=0
+AIM (1400, 800) ok=True pos=(1400, 800) ms=31.13 corr=0
+AIM (960, 540) ok=True pos=(960, 540) ms=31.30 corr=0

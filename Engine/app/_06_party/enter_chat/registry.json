@@ -1,0 +1,85 @@
+{
+  "name": "enter_chat",
+  "version": "1.0.0",
+  "kind": "input-method-registry",
+  "description": "PID-targeted mixed text injection (Hangul via Interception + Korean IME, other text via WM_CHAR), with characters-per-second, per-character jitter, and an optional final Enter.",
+  "language": "C (Win32 x64)",
+  "entrypoints": {
+    "dll": "bin/enter_chat.dll",
+    "import_library": "bin/enter_chat.lib",
+    "header": "include/enter_chat.h",
+    "cli": {
+      "as_invoker": "bin/enter_chat_cli.exe",
+      "require_administrator": "bin/enter_chat_cli_admin.exe"
+    },
+    "example": "bin/example_call.exe",
+    "c_api": [
+      "ec_run",
+      "ec_run_utf8",
+      "ec_decompose_hangul",
+      "ec_status_string",
+      "ec_version",
+      "ec_is_elevated"
+    ]
+  },
+  "request": {
+    "text": "UTF-16 NUL-terminated string (required)",
+    "pid": "target process id",
+    "hwnd": "optional explicit target window",
+    "chars_per_second": "typing speed; <= 0 means 10",
+    "jitter_ms": "uniform +/- random offset added to each character pause",
+    "jamo_delay_ms": "delay between jamo keys inside one Hangul syllable; <= 0 means 8",
+    "press_enter": "press Enter after the text",
+    "flags": "EC_FLAG_* bit mask",
+    "focus_timeout_ms": "foreground wait; 0 means 1500"
+  },
+  "result": {
+    "status": "EcStatus (0 = EC_OK)",
+    "os_error": "last Win32 error",
+    "pid": "resolved target pid",
+    "hwnd": "resolved target window",
+    "chars": "code points sent (or planned in dry-run)",
+    "keys": "text key events (jamo keys + WM_CHAR units)",
+    "failed": "code points that could not be sent",
+    "skipped": "control code points skipped",
+    "enter_pressed": "final Enter was sent",
+    "elapsed_ms": "wall time",
+    "message": "UTF-16 warnings/errors"
+  },
+  "flags": {
+    "EC_FLAG_CLEAR_FIRST": "send Esc before typing",
+    "EC_FLAG_OPEN_CHAT": "send Enter before typing",
+    "EC_FLAG_NO_FOCUS": "do not force foreground",
+    "EC_FLAG_SENDINPUT_FALLBACK": "SendInput fallback when WM_CHAR fails",
+    "EC_FLAG_DRY_RUN": "plan/count only",
+    "EC_FLAG_NO_START_COMMIT": "skip the initial IME composition flush"
+  },
+  "prerequisites": [
+    "Interception driver installed",
+    "interception.dll next to the host executable or on PATH",
+    "Korean keyboard layout 0412 for Hangul",
+    "Korean IME in Hangul (한) mode when ImmGetContext and the default IME window are unavailable",
+    "Administrator privileges for high-integrity targets",
+    "x64 build matching the host/target"
+  ],
+  "files": {
+    "include/enter_chat.h": "public API, request/result structs, status codes, flags",
+    "src/ec_internal.h": "private EcContext and cross-file prototypes",
+    "src/enter_chat.c": "orchestrator: validation, target, UIPI, focus, IME, text, Enter",
+    "src/ec_target.c": "PID -> window, focus resolution, foreground, integrity/UIPI",
+    "src/ec_keyboard.c": "Interception loading, scancode injection, VK/ASCII mapping",
+    "src/ec_hangul.c": "Hangul decomposition, Korean layout/IME prepare/restore, commit",
+    "src/ec_text.c": "UTF-8 conversion, WM_CHAR/SendInput, sleep, RNG, jitter",
+    "cli/enter_chat_cli.c": "CLI parser, BOM-aware text loading, JSON output",
+    "tests/test_hangul.c": "offline Hangul decomposition tests",
+    "examples/call_enter_chat.c": "minimal C API caller",
+    "examples/build_example.bat": "builds the C API example into bin/example_call.exe",
+    "build.bat": "MSVC x64 build for DLL, two CLIs, and tests",
+    "README.md": "usage, principles, file guide, constraints"
+  },
+  "build": {
+    "command": "build.bat",
+    "output_dir": "bin",
+    "test": "bin/test_hangul.exe"
+  }
+}

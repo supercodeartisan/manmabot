@@ -18,15 +18,13 @@ if TYPE_CHECKING:
 
 
 def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
-    """None = do not loot; True/False = ``list_lootable(..., ownership_filter=)``.
+    """None = this member does not loot.
 
-    Random ON → every member loots without ownership gate (False).
-    Random OFF + responsible → ownership gate on (True).
-    Random OFF + none → no loot.
-    Solo farm → own drops only (ownership gate on), whatever the party split.
+    Leader policy only. Random ON → party drops, no ownership gate (False);
+    the closest non-leader, non-wizard member is chosen separately.
+    Random OFF + responsible → own drops only (True).
+    Random OFF + none → no loot. ``none`` stays a leader roster value.
     """
-    if str(getattr(cfg, "farm_mode", "party") or "party") == "solo":
-        return True
     if bool(getattr(cfg, "random_loot", False)):
         return False
     role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
@@ -37,13 +35,6 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
 
 def party_may_loot(cfg: PartyMemberConfig) -> bool:
     return party_loot_ownership_filter(cfg) is not None
-
-
-def party_loot_first(cfg: PartyMemberConfig) -> bool:
-    """Party farm with loot-before-follow priority."""
-    if str(getattr(cfg, "farm_mode", "party") or "party") == "solo":
-        return False
-    return str(getattr(cfg, "loot_priority", "follow") or "follow") == "loot"
 
 
 def party_closest_looter_filter(
@@ -219,7 +210,6 @@ def find_party_pickup_range_loot(
 ) -> Optional["WorldObject"]:
     """Nearest lootable pile already within pickup tiles."""
     from app._04_decision.attack_feedback import excluded_target_ids
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
     from app._04_decision.behaviors.loot_hop import recently_clicked_loot
     from app._04_decision.behaviors.mode_actions import _effective_loot_mode
     from app._04_decision.combat_query import (
@@ -235,7 +225,7 @@ def find_party_pickup_range_loot(
 
     loot_mode = _effective_loot_mode(state)
     origin = blackboard.world_origin
-    skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
         for tid in blackboard.loot_clicked_ids
@@ -300,7 +290,6 @@ def try_party_hold_loot(
     from app._03_world import ObjectType
     from app._04_decision.attack_feedback import excluded_target_ids
     from app._04_decision.behavior_tree import Status
-    from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
     from app._04_decision.behaviors.loot_hop import (
         begin_loot_item,
         clear_loot_hop,
@@ -328,7 +317,7 @@ def try_party_hold_loot(
             return intent
 
     loot_mode = _effective_loot_mode(state)
-    skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+    skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
         for tid in blackboard.loot_clicked_ids
@@ -429,7 +418,6 @@ __all__ = [
     "clear_party_loot_sticky",
     "find_party_pickup_range_loot",
     "party_closest_looter_filter",
-    "party_loot_first",
     "party_loot_ownership_filter",
     "party_may_loot",
     "try_party_hold_loot",

@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import queue
+import random
 import threading
 from typing import Any, Callable, Optional
 
@@ -44,6 +45,7 @@ class PartyClient:
         self.on_message = on_message
         self.reconnect = bool(reconnect)
         self.reconnect_delay_s = max(0.2, float(reconnect_delay_s))
+        self._reconnect_wait = self.reconnect_delay_s
         self.inbox: queue.Queue[PartyMessage] = queue.Queue(maxsize=max(1, int(inbox_max)))
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -221,12 +223,17 @@ class PartyClient:
             self._ws = None
             if self._stop.is_set() or not self.reconnect:
                 break
+            # 2s + jitter at first, doubling, never past 15s. A live session
+            # resets the wait (see ``_session``).
+            jitter = random.uniform(0.0, min(1.0, self._reconnect_wait * 0.5))
+            pause = min(15.0, self._reconnect_wait + jitter)
             _log.info(
                 "party client reconnecting to %s in %.1fs",
                 self.uri,
-                self.reconnect_delay_s,
+                pause,
             )
-            await asyncio.sleep(self.reconnect_delay_s)
+            await asyncio.sleep(pause)
+            self._reconnect_wait = min(15.0, max(self.reconnect_delay_s, self._reconnect_wait * 2))
             first = False
 
     async def _session(self) -> None:
@@ -241,6 +248,7 @@ class PartyClient:
         ) as ws:
             self._ws = ws
             self._error = None
+            self._reconnect_wait = self.reconnect_delay_s
             if not self._ready.is_set():
                 self._ready.set()
             _log.info(

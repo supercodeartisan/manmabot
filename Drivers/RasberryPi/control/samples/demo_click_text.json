@@ -1,0 +1,6 @@
+[
+  {"t": 0.0, "kind": "move", "x": 400, "y": 300},
+  {"t": 0.4, "kind": "click", "x": 400, "y": 300, "mask": 1, "hold": 30},
+  {"t": 0.9, "kind": "hotkey", "hotkey": "ctrl+a"},
+  {"t": 1.2, "kind": "text", "text": "hello from control", "cps": 8}
+]

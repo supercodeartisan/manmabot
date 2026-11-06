@@ -72,9 +72,8 @@ def probe_party_live() -> dict[str, Any]:
     }
     if not path.is_file():
         out["error"] = (
-            f"DLL missing: {path.name}. "
-            "Run Engine/analysis/party/build_party_listen_dll.bat "
-            "(needs VS Build Tools / VCTools)."
+            f"DLL missing: {path}. "
+            "Place party.dll in Engine/analysis/dll."
         )
         return out
 

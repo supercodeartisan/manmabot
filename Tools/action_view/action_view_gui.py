@@ -1,6 +1,6 @@
 """Action window. Draws the live body action every 0.1s.
 
-The picture is the memory read of ActionComponent+0xC8.
+The picture is the memory read of ActionComponent+0xC0.
 A small mark under the figure is ActorController+0x58.
 Above the figure: HP/MP bars, Adena, and level with exp percent.
 Start, Pause, and Stop count Adena and exp percent from the moment Start is clicked.

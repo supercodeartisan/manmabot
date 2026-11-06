@@ -255,14 +255,41 @@ class BotController:
         self._settings_epoch = 0
         self._settings_applied = 0
         self._route_identity: tuple | None = None
-        # Party leader socket. Lives only while this worker runs.
+        # Party WebSocket I/O (leader server / member client). Session mirrors
+        # handles onto ``_party_ws`` / ``_party_client`` for the monitor UI.
+        from app._06_party.comms import PartyComms
+
+        self._party_comms = PartyComms()
         self._party_ws = None
         self._party_ws_owned = False
-        # Party member client. Reports player status while this worker runs.
         self._party_client = None
         self._party_heartbeat = None
         self._party_farm_started = False
         self._party_wait_log_at = 0.0
+        self._party_policy_key = ""
+        self._party_policy_at = 0.0
+        self._party_policy_id = ""
+        self._party_leader_name = ""
+        self._member_policy_sig = ""
+        self._invite_accepter = None
+        from app._06_party.chat_queue import PartyChatQueue
+
+        self._party_chat = PartyChatQueue()
+        self._member_state_reporter = None
+        # Monitor-only records (read by ``party_monitor_snapshot``).
+        self._party_invites = None
+        self._party_start_error = ""
+        self._party_start_wait: dict = {}
+        self._party_socket_wait_note_at = 0.0
+        self._party_turret_info: dict = {}
+        self._party_line_info: dict = {}
+        self._party_line_watch = None
+        self._party_line_map: Optional[int] = None
+        self._party_policy_info: dict = {}
+        self._member_policy_info: dict = {}
+        self._party_brain_ref = None
+        self._party_leader_ref = None
+        self._party_client_id = ""
 
     def _ui(self):
         return ui_strings(getattr(self._profile, "language", None))
@@ -556,6 +583,15 @@ class BotController:
             running = bool(st.get("running"))
             uri = str(st.get("uri") or (f"ws://{host}:{port}/" if host else ""))
             err = str(st.get("last_error") or "")
+            watch = self._party_comms.member_link_info()
+            if connected:
+                state = "connected"
+            elif not running:
+                state = "down"
+            elif watch["drops"] > 0:
+                state = "reconnecting"
+            else:
+                state = "connecting"
             out.update(
                 {
                     "role": "client",
@@ -565,11 +601,10 @@ class BotController:
                     "host": host,
                     "port": port,
                     "error": err,
-                    "state": (
-                        "connected"
-                        if connected
-                        else ("connecting" if running else "down")
-                    ),
+                    "state": state,
+                    "drops": watch["drops"],
+                    "restarts": watch["restarts"],
+                    "down_s": watch["down_s"],
                 }
             )
             return out
@@ -620,8 +655,17 @@ class BotController:
             snap["socket"] = self._party_socket_snapshot()
         except Exception as exc:
             snap["socket"] = {"role": "none", "state": "error", "error": str(exc)}
+        try:
+            snap["chat_action"] = self._party_chat.snapshot()
+        except Exception:
+            snap["chat_action"] = {}
         snap.setdefault("bot_state", self.state.value)
         snap.setdefault("bot_reason", self.reason)
+        snap["start_error"] = str(getattr(self, "_party_start_error", "") or "")
+        wait = dict(getattr(self, "_party_start_wait", None) or {})
+        if wait.get("since"):
+            wait["waited_s"] = round(max(0.0, time.time() - float(wait["since"])), 1)
+        snap["start_wait"] = wait
         snap.setdefault(
             "worker_alive",
             self._thread is not None and self._thread.is_alive(),
@@ -654,7 +698,247 @@ class BotController:
             )
         except Exception:
             snap["profile_party_enabled"] = False
+        try:
+            snap["session"] = self._party_session_snapshot(snap)
+        except Exception as exc:
+            snap["session"] = {"role": "unknown", "error": str(exc)}
         return snap
+
+    def _party_session_snapshot(self, snap: dict) -> dict:
+        """Role-specific party state for the monitor (read-only)."""
+        profile = self._profile
+        party_on = bool(snap.get("profile_party_enabled"))
+        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
+        if not party_on:
+            role = "solo"
+        out: dict = {"role": role, "now": time.time()}
+        party_raw = snap.get("party") if isinstance(snap.get("party"), dict) else None
+        party = party_raw or {}
+        in_party_names = {
+            str(m.get("name") or "").strip().casefold()
+            for m in (party.get("members") or [])
+            if isinstance(m, dict)
+        }
+        if role == "leader":
+            from settings.profile import normalize_party_roster
+            from app._06_party.comms.orders import rally
+
+            roster = normalize_party_roster(getattr(profile, "party_roster", None))
+            start = getattr(self, "_start_rally", None)
+            arrived = {str(n).casefold() for n in rally.arrived}
+            expected = sorted(getattr(start, "expected", set()) or set())
+            wait_started = getattr(start, "_wait_started", None)
+            out["rally"] = {
+                "state": str(getattr(start, "state", "off") or "off"),
+                "stage": rally.stage,
+                "armed": rally.armed,
+                "expected": expected,
+                "arrived": sorted(rally.arrived),
+                "missing": rally.missing(set(expected)) if expected else [],
+                "wait_s": (
+                    round(time.monotonic() - float(wait_started), 1)
+                    if wait_started is not None
+                    else None
+                ),
+            }
+            invites = getattr(self, "_party_invites", None)
+            invite = dict(getattr(invites, "info", None) or {})
+            inviter = getattr(invites, "inviter", None)
+            rstate = str(getattr(start, "state", "off") or "off")
+            if inviter is not None and inviter.active:
+                phase = "forming"
+            elif rstate in ("await_mark", "await_plan", "hold_at", "waiting"):
+                phase = "rally"
+            elif inviter is not None or rstate == "done":
+                phase = "hunting"
+            else:
+                phase = "off"
+            remaining = (
+                inviter.remaining_s()
+                if inviter is not None
+                else (start.remaining_s() if start is not None else None)
+            )
+            left_behind = {
+                str(n).casefold() for n in (getattr(start, "left_behind", None) or [])
+            }
+            invite_rows = {
+                str(r.get("name") or "").casefold(): r
+                for r in (invite.get("rows") or [])
+                if isinstance(r, dict)
+            }
+            out["phase"] = {
+                "name": phase,
+                "remaining_s": round(remaining, 1) if remaining is not None else None,
+                "start_wait_s": invite.get("start_wait_s"),
+                "late": list(invite.get("late") or []),
+                "not_arrived": list(getattr(start, "left_behind", None) or []),
+            }
+
+            def _member_state(key, joined, at, irow, fresh, acked, mphase) -> str:
+                if joined and at:
+                    return "ready"
+                if joined and key in left_behind:
+                    return "not_arrived"
+                if joined:
+                    return "following" if phase == "hunting" else "joined"
+                if not fresh:
+                    return "late_offline" if irow.get("late") else "offline"
+                if not acked:
+                    return "policy_wait"
+                if mphase in ("popup", "pressed"):
+                    return "accepting"
+                if irow.get("late"):
+                    return "late"
+                return "inviting"
+
+            from app._06_party.comms.orders import policy_acks
+            from app._06_party.sync import invite_accepts, member_states, reported_joined
+            from app._06_party.workflow import roster_member_steps
+
+            pid = str(getattr(self, "_party_policy_id", "") or "")
+            out["party_mem"] = "ok" if party_raw is not None else "blind"
+            out["roster"] = []
+            for row in roster:
+                key = row["name"].casefold()
+                irow = invite_rows.get(key) or {}
+                mstate = member_states.row(row["name"])
+                iacc = invite_accepts.row(row["name"])
+                if key in in_party_names and party.get("subs_ok") is not False:
+                    joined, joined_src = True, "leader memory"
+                elif reported_joined(row["name"], self._party_leader_name):
+                    joined, joined_src = True, "member memory"
+                elif irow.get("joined") and mstate.get("fresh"):
+                    joined, joined_src = True, "member report"
+                elif irow.get("joined"):
+                    joined, joined_src = True, "seen joined"
+                else:
+                    joined, joined_src = False, ""
+                at = key in arrived
+                ack = policy_acks.row(row["name"])
+                mparty = mstate.get("party") or {}
+                minv = mstate.get("invite") or {}
+                fresh = bool(mstate.get("fresh"))
+                acked = policy_acks.acked(row["name"], pid or None)
+                out["roster"].append(
+                    {
+                        "name": row["name"],
+                        "role": row.get("role", "mage"),
+                        "loot": row.get("loot", "none"),
+                        "in_party": joined,
+                        "in_party_src": joined_src,
+                        "state_fresh": fresh,
+                        "awaiting_fresh": bool(mstate.get("awaiting_fresh")),
+                        "state_age_s": mstate.get("age_s"),
+                        "state_frames": int(mstate.get("frames") or 0),
+                        "live": dict(mstate.get("live") or {}),
+                        "late": bool(irow.get("late")),
+                        "left": int(irow.get("left") or 0),
+                        "leaving_s": irow.get("leaving_s"),
+                        "state_mem": str(mparty.get("mem") or ""),
+                        "state_in_party": mparty.get("in_party"),
+                        "state_invite": f"{minv.get('id') or '—'}:{minv.get('phase') or 'idle'}",
+                        "invite_hold": str(irow.get("hold") or ""),
+                        "invite_accepted": bool(iacc),
+                        "invite_accept_id": str(iacc.get("accept_id") or ""),
+                        "invite_accept_at": iacc.get("at"),
+                        "at_rally": at,
+                        "policy_acked": acked,
+                        "ack_at": ack.get("at"),
+                        "invites": int(irow.get("invites") or 0),
+                        "invite_failed": int(irow.get("failed") or 0),
+                        "invite_ago_s": irow.get("last_ago_s"),
+                        "state": _member_state(
+                            key, joined, at, irow, fresh, acked,
+                            str(minv.get("phase") or ""),
+                        ),
+                    }
+                )
+                out["roster"][-1]["steps"] = roster_member_steps(
+                    out["roster"][-1], phase=phase
+                )
+            out["unnamed_member"] = member_states.unnamed_recent()
+            from app._06_party.member_discovery import discovery
+
+            out["discovery"] = discovery.snapshot(roster)
+            out["invite"] = invite
+            out["policy"] = dict(getattr(self, "_party_policy_info", {}) or {})
+            from app._06_party.workflow import leader_workflow
+
+            out["workflow"] = leader_workflow(
+                sock=snap.get("socket") if isinstance(snap.get("socket"), dict) else {},
+                roster=out["roster"],
+                policy=out["policy"],
+                invite=invite,
+                rally=out["rally"],
+                phase=phase,
+                now=out["now"],
+                party_mem=out["party_mem"],
+            )
+            out["turret"] = dict(getattr(self, "_party_turret_info", {}) or {})
+            out["line_wait"] = dict(getattr(self, "_party_line_info", {}) or {})
+            brain = getattr(self, "_party_leader_ref", None)
+            live_mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
+            if live_mode not in ("turret", "moving"):
+                live_mode = "moving"
+            out["settings"] = {
+                "leader_mode": live_mode,
+                "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
+                "random_loot": bool(getattr(profile, "party_random_loot", False)),
+            }
+        elif role == "member":
+            from app._06_party.comms.orders import member_orders
+
+            brain = getattr(self, "_party_brain_ref", None)
+            cfg = getattr(brain, "config", None)
+            base = getattr(brain, "base_config", None)
+            gather = member_orders.gather or {}
+            out["policy"] = dict(getattr(self, "_member_policy_info", {}) or {})
+            out["policy"]["received"] = member_orders.policy is not None
+            out["policy"]["overlay"] = bool(
+                brain is not None and getattr(brain, "leader_policy", None) is not None
+            )
+            if cfg is not None:
+                out["effective"] = {
+                    "leader_mode": cfg.leader_mode,
+                    "farm_mode": cfg.farm_mode,
+                    "seat_role": cfg.seat_role,
+                    "loot_role": cfg.loot_role,
+                    "random_loot": cfg.random_loot,
+                    "follow_tiles": cfg.follow_tiles,
+                    "stop_tiles": cfg.stop_tiles,
+                    "assist_leash_tiles": cfg.assist_leash_tiles,
+                }
+            if base is not None:
+                out["own"] = {
+                    "farm_mode": base.farm_mode,
+                    "follow_tiles": base.follow_tiles,
+                    "stop_tiles": base.stop_tiles,
+                }
+            out["orders"] = {
+                "gather_stage": str(gather.get("stage") or ""),
+                "gather_map": gather.get("map_id"),
+                "gather_xy": (
+                    [gather.get("x"), gather.get("y")] if gather else None
+                ),
+                "arrived": bool(member_orders.arrived),
+                "recovery": member_orders.recovery is not None,
+            }
+            from app._06_party.workflow import member_workflow
+
+            accepter = getattr(self, "_invite_accepter", None)
+            out["accept"] = accepter.status() if accepter is not None else {}
+            reporter = getattr(self, "_member_state_reporter", None)
+            out["sync"] = reporter.status() if reporter is not None else {}
+            out["workflow"] = member_workflow(
+                sock=snap.get("socket") if isinstance(snap.get("socket"), dict) else {},
+                policy=out["policy"],
+                party=party_raw,
+                orders=out["orders"],
+                accept=out["accept"],
+                now=out["now"],
+                sync=out["sync"],
+            )
+        return out
 
     def _publish_party_monitor(
         self,
@@ -708,6 +992,7 @@ class BotController:
                     "target_id": target_id,
                 },
                 "self": {
+                    "name": _player_chat_name(world, party),
                     "xy": self_xy,
                     "hp": self_hp,
                     "mp": self_mp,
@@ -1303,68 +1588,42 @@ class BotController:
             self._try_enter_running_locked(via="Auto-resume")
         return None
 
-    def _start_party_socket(self) -> None:
-        """Listen while this worker runs, only when Party is enabled as leader."""
-        profile = self._profile
-        if not bool(getattr(profile, "party_enabled", False)):
-            return
-        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
-        if role != "leader":
-            return
-        self._ensure_party_log(role=role)
-        try:
-            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
-        except (TypeError, ValueError):
-            port = 8765
-        port = max(1, min(65535, port))
-        try:
-            from websocket.active import current, publish
-            from websocket.netinfo import local_ipv4
-            from websocket.watchdog import PartyServerWatchdog
-
-            existing = current()
-            if (
-                existing is not None
-                and existing.running
-                and int(existing.server.port) == port
-            ):
-                self._party_ws = existing
-                self._party_ws_owned = False
-                self.log(
-                    f"Party socket already listening on port {port}. Using that server."
-                )
-                return
-
-            watchdog = PartyServerWatchdog(
-                host="0.0.0.0",
-                port=port,
-                relay=True,
-                announce=True,
-            )
-            watchdog.start(timeout=5.0)
-        except Exception as exc:
+    def _sync_party_handles(self) -> None:
+        """Mirror ``PartyComms`` handles for the monitor / legacy readers."""
+        comms = getattr(self, "_party_comms", None)
+        if comms is None:
             self._party_ws = None
             self._party_ws_owned = False
-            self.log(f"Party socket failed to start on port {port}: {exc}")
+            self._party_client = None
+            self._party_heartbeat = None
             return
-        publish(watchdog)
-        self._party_ws = watchdog
-        self._party_ws_owned = True
-        try:
-            advertise = local_ipv4()
-        except Exception:
-            advertise = "127.0.0.1"
-        listen_msg = (
-            f"Party socket listening on {advertise}:{port} (bind 0.0.0.0). "
-            "It stops when this bot stops."
-        )
-        self.log(listen_msg)
-        try:
-            from app._06_party.party_log import event as party_event
+        self._party_ws = comms.watchdog
+        self._party_ws_owned = bool(comms.leader_owned)
+        self._party_client = comms.client
+        self._party_heartbeat = comms.heartbeat
 
-            party_event("socket", "%s", listen_msg)
-        except Exception:
-            pass
+    def _start_party_socket(self) -> None:
+        """Listen while this worker runs, when Party is enabled as leader.
+
+        An empty roster still listens: members can hello and sit in discovery
+        until they match a saved name (invite/rally stay off).
+        """
+        if not self._party_server_on():
+            return
+        profile = self._profile
+        self._ensure_party_log(role="leader")
+
+        def _log(msg: str) -> None:
+            self.log(msg)
+            self._party_event(
+                "socket" if msg.startswith("Party socket") else "setup", msg
+            )
+
+        self._party_comms.start_leader(
+            port=getattr(profile, "party_ws_port", 8765),
+            log=_log,
+        )
+        self._sync_party_handles()
         from settings.profile import normalize_party_roster
 
         roster = [
@@ -1375,49 +1634,107 @@ class BotController:
         ]
         roster = [n for n in roster if n]
         if roster:
-            roster_msg = (
+            _log(
                 "Party roster: "
                 + ", ".join(roster)
                 + " — /초대 after the game world is ready (not the WS local test)."
             )
-            self.log(roster_msg)
-            try:
-                from app._06_party.party_log import event as party_event
-
-                party_event("setup", "%s", roster_msg)
-            except Exception:
-                pass
         else:
-            empty_msg = (
-                "Party roster empty — add names on the leader Party tab "
-                "or no /초대 will be typed."
+            _log(
+                "Party roster empty — server listening, waiting for member hello"
             )
-            self.log(empty_msg)
-            try:
-                from app._06_party.party_log import event as party_event
-
-                party_event("setup", "%s", empty_msg)
-            except Exception:
-                pass
 
     def _stop_party_socket(self) -> None:
-        watchdog = self._party_ws
-        owned = self._party_ws_owned
-        self._party_ws = None
-        self._party_ws_owned = False
-        if watchdog is None or not owned:
-            return
+        self._party_comms.stop_leader(log=self.log)
+        self._sync_party_handles()
+
+    # Log line cadence while a member waits for the leader socket.
+    MEMBER_WAIT_NOTE_S = 30.0
+
+    def _party_enabled(self) -> bool:
+        """Master Party-tab switch. Role leftovers must not bypass this."""
+        return bool(getattr(self._profile, "party_enabled", False))
+
+    def _leader_roster_ready(self) -> bool:
+        """Leader party needs at least one named seat."""
+        from settings.profile import normalize_party_roster
+
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        return any(str(row.get("name") or "").strip() for row in rows)
+
+    def _party_server_on(self) -> bool:
+        """Listen for member sockets. Roster may still be empty."""
+        if not self._party_enabled():
+            return False
+        role = str(
+            getattr(self._profile, "party_role", "member") or "member"
+        ).strip().lower()
+        return role == "leader"
+
+    def _party_leader_on(self) -> bool:
+        """Invite / rally / turret: leader server plus at least one approved name."""
+        return self._party_server_on() and self._leader_roster_ready()
+
+    def _leader_turret_on(self) -> bool:
+        """True while this leader stands on a party-map point."""
+        if not self._party_leader_on():
+            return False
+        brain = getattr(self, "_party_leader_ref", None)
+        return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
+
+    def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
+        """Area hunt: brief wait when half or more members lag ``party_lag_tiles``."""
+        profile = self._profile
+        brain = getattr(self, "_party_leader_ref", None)
+        if not (self._party_leader_on() and bool(getattr(brain, "on_area", False))):
+            self._party_line_watch = None
+            self._party_line_info = {}
+            return False
+        from app._06_party.formation import LeaderLineWatch, followers_from_party
+
         try:
-            from websocket.active import clear
+            lag = max(5, min(100, int(getattr(profile, "party_lag_tiles", 30) or 30)))
+        except (TypeError, ValueError):
+            lag = 30
+        watch = self._party_line_watch
+        if watch is None:
+            watch = self._party_line_watch = LeaderLineWatch(lag_tiles=lag)
+        watch.lag_tiles = lag
+        if map_id != self._party_line_map:
+            watch.reset()
+            self._party_line_map = map_id
+        origin = getattr(blackboard, "world_origin", None)
+        if origin is None:
+            return False
+        watch.observe((int(origin.x), int(origin.y)))
+        snap = getattr(world, "last_party", None)
+        followers = followers_from_party(
+            snap, map_id, self_name=_player_chat_name(world, snap)
+        )
+        res = watch.check(followers)
+        was = bool(self._party_line_info.get("hold"))
+        if res.hold and not was:
+            msg = f"Party: waiting for members ({res.behind}/{res.known} > {lag} tiles behind)"
+            self.log(msg)
+            self._party_event("line_wait", msg)
+        elif was and not res.hold:
+            self.log(f"Party: moving on ({res.reason})")
+        self._party_line_info = {
+            "hold": res.hold,
+            "reason": res.reason,
+            "behind": res.behind,
+            "known": res.known,
+            "held_s": round(res.held_s, 1),
+            "lag_tiles": lag,
+        }
+        return res.hold
 
-            clear(watchdog)
-            watchdog.stop(timeout=3.0)
-            self.log("Party socket stopped")
-        except Exception as exc:
-            self.log(f"Party socket stop failed: {exc}")
+    def _party_socket_note(self, msg: str) -> None:
+        self.log(msg)
+        self._party_event("socket", msg)
 
-    def _start_party_client(self) -> None:
-        """Member bot connects to the leader and reports player status."""
+    def _start_party_client(self) -> bool:
+        """Member bot connects to the leader. Returns False when party is on but unreachable."""
         profile = self._profile
         role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
         party_on = bool(
@@ -1428,84 +1745,93 @@ class BotController:
             )
         )
         member_on = bool(getattr(profile, "party_member_enabled", False))
+        self._party_start_error = ""
         if role != "member" or not party_on or not member_on:
-            return
+            return True
         host = str(getattr(profile, "party_leader_host", "") or "").strip()
-        if not host:
+        port = getattr(profile, "party_ws_port", 8765)
+        self._party_comms.start_member(host=host, port=port, log=self.log)
+        self._sync_party_handles()
+        if self._party_comms.client is None:
             self.log(
-                "Party member WebSocket: set Leader IP on the Party tab "
-                "(LAN address of the leader PC)."
+                "Party member: no leader socket — follow and combat use party memory only"
             )
-            return
-        try:
-            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
-        except (TypeError, ValueError):
-            port = 8765
-        port = max(1, min(65535, port))
-        try:
-            from websocket.client import PartyClient
-            from websocket.member_status import MemberHeartbeat
-
-            client = PartyClient(
-                host=host,
-                port=port,
-                sender="member",
-                reconnect=True,
-            )
-            # Non-blocking: reconnects until the leader socket is up.
-            client.connect(wait=False)
-        except Exception as exc:
-            self._party_client = None
-            self._party_heartbeat = None
-            self.log(f"Party member client failed to start: {exc}")
-            return
-        self._party_client = client
-        self._party_heartbeat = MemberHeartbeat(client)
+            return True
+        # The socket carries policy and rally. Follow and combat read party memory
+        # whether or not this connect ever succeeds.
+        self._party_start_wait = {"since": time.time(), "uri": f"{host}:{port}"}
+        self._party_socket_wait_note_at = 0.0
         self.log(
-            f"Party member WebSocket → {host}:{port} "
-            "(reconnects until the leader bot is Started). "
-            "Follow uses in-game party memory, not this socket."
+            f"Party member: leader socket {host}:{port} connecting in the background. "
+            "Follow and combat use party memory."
         )
+        return True
 
     def _stop_party_client(self) -> None:
-        client = self._party_client
-        self._party_client = None
-        self._party_heartbeat = None
-        if client is None:
-            return
-        try:
-            client.close(timeout=3.0)
-            self.log("Party member client stopped")
-        except Exception as exc:
-            self.log(f"Party member client stop failed: {exc}")
+        self._party_start_wait = {}
+        self._party_socket_wait_note_at = 0.0
+        self._party_comms.stop_member(log=self.log)
+        self._sync_party_handles()
+
+    def _member_socket_pending(self) -> bool:
+        """True until the first leader-socket connect.
+
+        Follow and combat do not wait on this. A drop keeps the last policy.
+        No leader IP leaves this false and the member runs on party memory only.
+        """
+        wait = getattr(self, "_party_start_wait", None) or {}
+        if not wait.get("since"):
+            return False
+        uri = str(wait.get("uri") or "")
+        if self._party_comms.member_connected:
+            since = float(wait.get("since") or 0.0)
+            waited = max(0.0, time.time() - since) if since else 0.0
+            self._party_start_wait = {}
+            self._party_socket_wait_note_at = 0.0
+            self.log(
+                f"Party member: connected to leader {uri} after {waited:.0f}s"
+            )
+            self._party_event("socket", f"connected {uri}")
+            return False
+        self._party_comms.watch_member(log=self._party_socket_note)
+        self._sync_party_handles()
+        now = time.monotonic()
+        last = float(getattr(self, "_party_socket_wait_note_at", 0.0) or 0.0)
+        if last <= 0.0:
+            self._party_socket_wait_note_at = now
+        elif now - last >= float(self.MEMBER_WAIT_NOTE_S):
+            self._party_socket_wait_note_at = now
+            since = float(wait.get("since") or 0.0)
+            waited = max(0.0, time.time() - since) if since else 0.0
+            self.log(
+                f"Party member: leader socket {uri} still down ({waited:.0f}s) — "
+                "follow and combat stay on party memory"
+            )
+        return True
 
     def _install_party_nav_hooks(self) -> None:
-        """Leader only: announce an NPC teleporter as soon as the plan exists."""
+        """Leader only: the start rally reads the first hunt route and holds on it."""
+        if not self._party_leader_on():
+            return
         from app._04_decision.world_nav.session import WorldNavHooks
-        from websocket.party_orders import note_hunt_plan, npc_click_allowed, party_member_names
+        from app._06_party.comms.orders import rally
+        from app._06_party.leader_rally import LeaderStartRally
 
-        def _allow(detail: dict) -> bool:
-            world = getattr(self, "_party_world", None)
-            snap = getattr(world, "last_party", None) if world is not None else None
-            names = party_member_names(snap)
-            connected = 0
-            server = getattr(self._party_ws, "server", None)
-            if server is not None:
-                try:
-                    connected = int(server.client_count())
-                except Exception:
-                    connected = 0
-            return npc_click_allowed(detail, connected=connected, names=names)
+        def _note(msg: str) -> None:
+            self.log(msg)
+            self._party_event("session", msg)
 
-        WorldNavHooks.on_plan = note_hunt_plan
-        WorldNavHooks.allow_npc_teleport = _allow
+        self._start_rally = LeaderStartRally(rally, log=_note)
+        WorldNavHooks.on_plan = self._start_rally.on_plan
+        WorldNavHooks.hold_at_step = self._start_rally.should_hold
 
     def _clear_party_nav_hooks(self) -> None:
         from app._04_decision.world_nav.session import WorldNavHooks
-        from websocket.party_orders import reset_orders
+        from app._06_party.comms.orders import reset_orders
 
         WorldNavHooks.on_plan = None
-        WorldNavHooks.allow_npc_teleport = None
+        WorldNavHooks.hold_at_step = None
+        self._start_rally = None
         reset_orders()
         self._party_tree_trip = ""
 
@@ -1528,6 +1854,8 @@ class BotController:
             if not party_on:
                 return
             role_txt = str(role or getattr(profile, "party_role", "") or "").strip()
+            if role_txt.lower() == "leader" and not self._leader_roster_ready():
+                return
             path = party_log.configure(
                 log_dir=manmabot_root() / "logs",
                 level=str(level or "INFO"),
@@ -1538,95 +1866,155 @@ class BotController:
             self.log(f"Party log open failed: {exc}")
 
     def _run_leader_party_setup(self, world) -> None:
-        """After the socket is up: leave if needed, then invite the roster."""
+        """Once after Start: policy first, leave if needed, then arm the inviter.
+
+        Invites themselves go out from ``_leader_invite_tick`` (one line per tick).
+        """
+        self._party_invites = None
+        if not self._party_leader_on():
+            return
         profile = self._profile
-        if not bool(getattr(profile, "party_enabled", False)):
-            return
-        role = str(getattr(profile, "party_role", "member") or "member").strip().lower()
-        if role != "leader":
-            return
-        self._ensure_party_log(role=role)
+        self._ensure_party_log(role="leader")
         from settings.profile import normalize_party_roster
-        from app._06_party.setup import configure_party_from_roster, send_game_chat
+        from app._06_party.invite import LeaderInvites
 
         rows = normalize_party_roster(getattr(profile, "party_roster", None))
         names = [str(row.get("name") or "").strip() for row in rows]
         if not any(names):
-            self.log("Party roster empty — no invitations")
+            self.log("Party roster empty — party not started")
             return
         snap = None
         try:
             from session.party_probe import probe_party_live
 
-            snap = probe_party_live().get("party")
+            probed = probe_party_live().get("party")
+            if isinstance(probed, dict) and probed.get("subs_ok") is not False:
+                snap = probed
         except Exception:
-            snap = getattr(world, "last_party", None)
-        if not isinstance(snap, dict):
-            snap = getattr(world, "last_party", None)
+            snap = None
+        if snap is None:
+            from app._06_party.invite import action_party_snapshot
+
+            snap = action_party_snapshot(world)
         self_name = _player_chat_name(world, snap)
-        in_party = bool(isinstance(snap, dict) and snap.get("in_party"))
-        lead = ""
-        if isinstance(snap, dict):
-            block = snap.get("leader")
-            if isinstance(block, dict):
-                lead = str(block.get("name") or "").strip()
-            lead = lead or str(snap.get("leader_name") or "").strip()
-        setup_msg = (
-            "Party setup: "
-            f"self={self_name or '—'} in_party={in_party} "
-            f"leader={lead or '—'} invite={', '.join(n for n in names if n) or '—'}"
-        )
-        self.log(setup_msg)
-        try:
-            from app._06_party.party_log import event as party_event
-
-            party_event("setup", "%s", setup_msg)
-        except Exception:
-            pass
-
-        def _send(line: str) -> None:
-            send_game_chat(line)
 
         def _setup_log(msg: str) -> None:
             self.log(msg)
-            try:
-                from app._06_party.party_log import event as party_event
+            self._party_event("setup", msg)
 
-                party_event("setup", "%s", msg)
-            except Exception:
-                pass
+        server = self._party_comms.server
 
-        sent = configure_party_from_roster(
-            names=names,
-            snapshot=snap if isinstance(snap, dict) else None,
-            self_name=self_name,
-            send_line=_send,
-            stopped=self._stop_event.is_set,
+        def _ws_clients() -> int:
+            return int(server.client_count()) if server is not None else 0
+
+        from app._06_party.sync import InviteHold, member_states, reported_joined
+
+        self._party_leader_name = self_name
+        invites = LeaderInvites(
+            publish_policy=lambda: self._publish_party_policy(force=True),
+            ws_clients=_ws_clients,
+            policy_acked=self._leader_policy_acked,
+            hold=InviteHold(member_states),
+            reported_joined=lambda name: reported_joined(name, self_name),
+            reported_out=lambda name: member_states.out_of_party(name, self_name),
+            wait=self._stop_event.wait,
             log=_setup_log,
+            on_beep=lambda: self._send_leader_beep("already_in_party"),
         )
+        self._party_invites = invites
+        invites.start(names, snapshot=snap, self_name=self_name)
+
+    def _send_leader_beep(self, why: str = "already_in_party") -> int:
+        """Broadcast a socket test beep. 0 = no member connected yet."""
+        try:
+            sent = int(self._party_comms.publish_beep(why=why) or 0)
+        except Exception as exc:
+            self.log(f"Party beep failed: {exc}")
+            return 0
         if sent:
-            self.log(f"Party setup sent {len(sent)} chat line(s)")
-            try:
-                from app._06_party.party_log import event as party_event
+            msg = f"Party beep → {sent} member(s) ({why})"
+            self.log(msg)
+            self._party_event("socket", msg)
+        return sent
 
-                party_event("setup", "sent %s chat line(s)", len(sent))
-            except Exception:
-                pass
-            try:
-                from websocket.traffic_log import note_local
+    def submit_party_chat(self, kind: str, name: str = "") -> str:
+        """Queue one monitor Invite or Y+Enter for the game worker.
 
-                for line in sent:
-                    note_local(f'chat "{line}"')
-            except Exception:
-                pass
-        else:
-            self.log("Party setup sent no chat lines (already in party or skipped)")
-            try:
-                from app._06_party.party_log import event as party_event
+        The worker runs it on the same path as automatic party chat. A paused
+        or minimized worker keeps the job until it is acting again.
+        """
+        kind_s = str(kind or "").strip().lower()
+        if kind_s not in ("invite", "accept"):
+            return "rejected: unknown party action"
+        if kind_s == "invite" and not str(name or "").strip():
+            return "Enter a character name"
+        if self.state != RunState.RUNNING or not (
+            self._thread is not None and self._thread.is_alive()
+        ):
+            return "rejected: bot is not running"
+        self._party_chat.submit(kind_s, name)
+        if not self._pause_gate.is_set():
+            text = "queued: bot is paused — runs when the worker resumes"
+            self._party_chat.note(text, state="queued")
+            return text
+        return "queued"
 
-                party_event("setup", "sent no chat lines (already in party or skipped)")
-            except Exception:
-                pass
+    def _drain_party_chat(self) -> str:
+        """Run at most one queued manual party action. Returns its kind, or ""."""
+        job = self._party_chat.pop()
+        if job is None:
+            return ""
+        try:
+            from session.probes import bring_game_to_front, probe_game
+
+            hwnd = int(getattr(probe_game(), "hwnd", 0) or 0)
+            if hwnd:
+                bring_game_to_front(hwnd)
+            if job.kind == "invite":
+                from app._06_party.invite import deliver_chat, invite_command
+
+                line = invite_command(job.name)
+                ok = deliver_chat(line, log=self.log)
+                invites = getattr(self, "_party_invites", None)
+                if invites is not None:
+                    invites.note_manual_invite(job.name, ok=ok)
+                text = f"manual {line}" if ok else f"manual {line} failed"
+            elif job.kind == "accept":
+                from app._06_party.accept import type_accept_key
+
+                err = type_accept_key()
+                ok = not err
+                text = "manual Y+Enter" if ok else f"manual Y+Enter failed: {err}"
+                if ok:
+                    from app._06_party import accept as accept_mod
+
+                    note = str(getattr(accept_mod, "_last_y_note", "") or "")
+                    if note:
+                        text += note
+            else:
+                ok = False
+                text = f"rejected: unknown party action {job.kind}"
+        except Exception as exc:
+            ok = False
+            text = f"manual party action failed: {exc}"
+        self._party_chat.finish(job, text, ok=ok)
+        self.log(text)
+        self._party_event("chat", text)
+        return job.kind if ok or job.kind in ("invite", "accept") else ""
+
+    def _leader_invite_tick(self, world, last_action, *, hold_chat: bool = False) -> None:
+        """One invite step per tick while the party window is open."""
+        if not self._party_leader_on():
+            return
+        invites = getattr(self, "_party_invites", None)
+        if invites is not None:
+            from app._06_party.invite import action_party_snapshot
+
+            invites.tick(
+                action_party_snapshot(world),
+                last_action,
+                hold_chat=hold_chat,
+            )
 
     def _log_party_until_farm(
         self,
@@ -1638,6 +2026,8 @@ class BotController:
     ) -> None:
         """Repeat wait reasons until follow/farm actually starts."""
         if self._party_farm_started:
+            return
+        if not bool(getattr(self._profile, "party_enabled", False)):
             return
         kind = ""
         reason = ""
@@ -1661,7 +2051,6 @@ class BotController:
                 "follow",
                 "assist",
                 "hold",
-                "close_in",
                 "defend",
             ) and (leader_name or dist is not None)
         elif party_role == "leader":
@@ -1711,9 +2100,10 @@ class BotController:
             ws = str(sock.get("state") or "")
         except Exception:
             ws = ""
+        mem = f"in_party={in_party} count={count}" if isinstance(party, dict) else "party_mem=blind"
         msg = (
             "Party wait: "
-            f"role={party_role} in_party={in_party} count={count} "
+            f"role={party_role} {mem} "
             f"mem_leader={mem_lead or '—'} xy={xy or '—'} map={pmap or '—'} "
             f"seen={leader_name or '—'} dist={dist} kind={kind or '—'} "
             f"reason={reason or '—'} ws={ws or '—'}"
@@ -1726,11 +2116,74 @@ class BotController:
         except Exception:
             pass
 
+    def _leader_party_policy_kwargs(self) -> dict:
+        """Global farm/loot knobs from the leader profile + roster."""
+        from settings.profile import normalize_party_roster
+
+        profile = self._profile
+        roster = normalize_party_roster(getattr(profile, "party_roster", None))
+        brain = getattr(self, "_party_leader_ref", None)
+        mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
+        if mode not in ("turret", "moving"):
+            mode = "moving"
+        return {
+            "leader_mode": mode,
+            "random_loot": bool(getattr(profile, "party_random_loot", False)),
+            "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
+            "yard_scale_with_roster": True,
+            "party_size": max(1, len(roster) + 1),
+            "roster": roster,
+            "leader_name": str(getattr(self, "_party_leader_name", "") or ""),
+        }
+
+    def _publish_party_policy(self, *, force: bool = False) -> int:
+        """Broadcast leader farm policy; refresh every few seconds or on change."""
+        import json
+        import time as _time
+
+        from app._06_party.comms.orders import leader_session, policy_message
+
+        kwargs = self._leader_party_policy_kwargs()
+        key = json.dumps(kwargs, sort_keys=True, default=str)
+        self._party_policy_id = str(policy_message(**kwargs).get("policy_id") or "")
+        now = _time.time()
+        last_at = float(getattr(self, "_party_policy_at", 0.0) or 0.0)
+        if (
+            not force
+            and key == getattr(self, "_party_policy_key", "")
+            and now - last_at < 5.0
+        ):
+            return 0
+        sent = int(self._party_comms.publish_policy(**kwargs) or 0)
+        self._party_policy_key = key
+        self._party_policy_at = now
+        prev = getattr(self, "_party_policy_info", {}) or {}
+        self._party_policy_info = {
+            "at": now,
+            "sent": sent,
+            "sends": int(prev.get("sends", 0)) + 1,
+            "policy_id": self._party_policy_id,
+            "session": leader_session(),
+            "leader_mode": kwargs["leader_mode"],
+            "random_loot": kwargs["random_loot"],
+            "party_size": kwargs["party_size"],
+        }
+        if sent or force:
+            self.log(
+                f"Party policy sent mode={kwargs['leader_mode']} "
+                f"loot={'solo' if kwargs['random_loot'] else 'responsible'} "
+                f"roster={len(kwargs['roster'])} → {sent} member(s)"
+            )
+        return sent
+
     def _leader_party_tick(self, world, blackboard, map_id) -> None:
-        """Send mother-tree recovery and collect member arrival reports."""
+        """Collect hellos / reports always; policy and recovery only with a roster."""
+        if not self._party_server_on():
+            return
+        self._drain_party_reports(world)
+        if not self._party_leader_on():
+            return
         from app._04_decision.world_nav.session import live_pose_from_state
-        from websocket.leader_decisions import publish_body
-        from websocket.party_orders import hunt_rally, party_member_names, recovery_message
 
         trip = str(blackboard.scratch.get("mother_tree_trip") or "")
         prev = str(getattr(self, "_party_tree_trip", "") or "")
@@ -1741,45 +2194,454 @@ class BotController:
             if pose is not None:
                 mx, my = int(pose.x), int(pose.y)
                 mid = int(pose.map_id)
-            sent = publish_body(recovery_message(map_id=mid, x=mx, y=my))
+            sent = self._party_comms.publish_recovery(map_id=mid, x=mx, y=my)
             self.log(f"Party recovery sent to {sent} member(s)")
         self._party_tree_trip = trip
+        self._publish_party_policy()
 
-        server = getattr(self._party_ws, "server", None)
-        if server is None:
+    def _drain_party_reports(self, world) -> int:
+        """Feed member reports to the rally, policy acks to the invite gate."""
+        from app._06_party.invite import roster_invite_names
+        from settings.profile import normalize_party_roster
+
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        snap = getattr(world, "last_party", None)
+
+        def _note(msg: str) -> None:
+            self.log(msg)
+            self._party_event("socket", msg)
+
+        return self._party_comms.drain_reports(
+            start_rally=getattr(self, "_start_rally", None),
+            party_snapshot=snap,
+            roster_names=roster_invite_names(
+                rows, _player_chat_name(world, snap)
+            ),
+            log=_note,
+        )
+
+    def _leader_policy_acked(self, name: str) -> bool:
+        """Invite gate: ``name`` confirmed the policy currently being sent.
+
+        A dropped socket must send a new ``member_state`` before another
+        ``/초대``. A name already in party memory is not in the due list.
+        """
+        from app._06_party.comms.orders import policy_acks
+        from app._06_party.sync import member_states
+
+        if member_states.awaiting_fresh(name):
+            return False
+        return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
+
+    def _leader_may_begin_start_rally(self, world) -> bool:
+        """Rally is after connect / policy / invite, not on the first hunt tick.
+
+        Empty roster stays off (the leader still farms). A named roster waits
+        until a member socket is up and the start-wait invite window is over
+        or the in-game party is already formed.
+        """
+        if not self._party_leader_on():
+            return False
+        start = getattr(self, "_start_rally", None)
+        if start is None or str(getattr(start, "state", "off") or "off") != "off":
+            return False
+        from app._06_party.invite import roster_required_names
+        from settings.profile import normalize_party_roster
+
+        snap = getattr(world, "last_party", None)
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        expected = set(roster_required_names(rows, _player_chat_name(world, snap)))
+        if not expected:
+            return False
+        server = getattr(getattr(self, "_party_comms", None), "server", None)
+        clients = int(server.client_count()) if server is not None else 0
+        if clients <= 0:
+            return False
+        invites = getattr(self, "_party_invites", None)
+        if invites is None:
+            return False
+        inviter = getattr(invites, "inviter", None)
+        if inviter is not None and inviter.active:
+            return False
+        return True
+
+    def _begin_leader_start_rally(self, world, blackboard) -> None:
+        """Party start: rally on this tile, or on the last teleport landing of the route."""
+        if not self._party_leader_on():
+            return
+        start = getattr(self, "_start_rally", None)
+        if start is None:
+            return
+        from app._04_decision.dungeon_floor_route import inside_target_dungeon
+        from app._04_decision.talking_scroll import player_on_selected_map
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.invite import roster_required_names
+        from settings.profile import normalize_party_roster
+
+        snap = getattr(world, "last_party", None)
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        expected = set(roster_required_names(rows, _player_chat_name(world, snap)))
+        travel = not (player_on_selected_map(blackboard) or inside_target_dungeon(blackboard))
+        invites = getattr(self, "_party_invites", None)
+        start.begin(
+            expected,
+            travel=travel,
+            pose=live_pose_from_state(world),
+            deadline=invites.deadline if invites is not None else None,
+        )
+
+    @staticmethod
+    def _party_event(channel: str, msg: str) -> None:
+        try:
+            from app._06_party.party_log import event as party_event
+
+            party_event(channel, "%s", msg)
+        except Exception:
+            pass
+
+    def _apply_member_party_policy(self, world, map_id, party_brain, policy) -> None:
+        """Overlay the leader policy on this member's own party knobs.
+
+        In memory only: the profile is never touched, so a solo run (party off)
+        always starts from the member's own settings. Re-applied when the policy
+        or this character's name changes (the policy can arrive before the
+        in-game invite, when the name is not known yet).
+        """
+        import json
+
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.comms.orders import self_name_from_party
+
+        snap = getattr(world, "last_party", None)
+        pose = live_pose_from_state(world)
+        px = py = None
+        mid = map_id
+        if pose is not None:
+            px, py = int(pose.x), int(pose.y)
+            mid = int(pose.map_id)
+        name = self_name_from_party(snap, mid, px, py) or _player_chat_name(world, snap)
+        body = {k: v for k, v in policy.items() if k not in ("ts", "sender")}
+        sig = json.dumps(body, sort_keys=True, default=str) + "|" + str(name or "")
+        if sig == getattr(self, "_member_policy_sig", ""):
+            return
+        self._member_policy_sig = sig
+        party_brain.apply_leader_policy(policy, self_name=name)
+        cfg = party_brain.config
+        prev = self._member_policy_info or {}
+        self._member_policy_info = {
+            **prev,
+            "applied_at": time.time(),
+            "applied_id": str(policy.get("policy_id") or ""),
+            "as_name": name or "",
+            "applies": int(prev.get("applies", 0)) + 1,
+        }
+        self.log(
+            f"Party policy applied (temporary) mode={cfg.leader_mode} "
+            f"farm={cfg.farm_mode} "
+            f"seat={cfg.seat_role} "
+            f"loot={'solo' if cfg.random_loot else cfg.loot_role} "
+            f"follow={cfg.follow_tiles}/{cfg.stop_tiles} as={name or '—'}"
+        )
+
+    def _reset_member_for_leader_session(self, session: str, party_brain) -> None:
+        """New leader run id: drop the overlay and start policy confirm again.
+
+        A member socket reconnect does not call this. ``InviteAccepter`` is
+        reset only when the leader bot starts a new run, not when the socket drops.
+        """
+        from app._06_party.comms.orders import member_orders
+
+        if party_brain is not None:
+            party_brain.reset_for_new_leader_session()
+        prev = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        first = not prev.get("session")
+        self._member_policy_sig = ""
+        # First contact often lands while the uidialog invite is already open.
+        # Resetting here restarts the 3-press Y budget mid-accept.
+        if self._invite_accepter is not None and not first:
+            self._invite_accepter.reset()
+        if self._member_state_reporter is not None:
+            self._member_state_reporter.reset()
+        self._party_beep_sent = False
+        self._member_hello_key = None
+        self._member_policy_info = {
+            "session": session,
+            "session_at": time.time(),
+            "session_resets": int(member_orders.session_resets),
+        }
+        msg = (
+            f"Party leader session {session} — "
+            + ("first contact" if first else f"leader restarted (was {prev.get('session')})")
+            + ": orders and policy reset, waiting for the new leader policy"
+        )
+        self.log(msg)
+        self._party_event("socket", msg)
+
+    def _member_client_id(self) -> str:
+        """Stable id for this member run, used to book unnamed policy acks."""
+        cid = str(getattr(self, "_party_client_id", "") or "").strip()
+        if cid:
+            return cid
+        import uuid
+
+        cid = uuid.uuid4().hex[:8]
+        self._party_client_id = cid
+        return cid
+
+    def _send_member_policy_ack(self, policy: dict) -> None:
+        """Answer each applied policy frame so the leader may invite this member."""
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        name = str(info.get("as_name") or "")
+        pid = str(policy.get("policy_id") or "")
+        try:
+            sent = self._party_comms.send_policy_ack(
+                name=name,
+                policy_id=pid,
+                client_id=self._member_client_id(),
+            )
+        except Exception as exc:
+            self.log(f"Party policy ack send failed: {exc}")
+            return
+        if not sent:
+            return
+        first = pid != str(info.get("acked_id") or "")
+        info["acked_at"] = time.time()
+        info["acked_id"] = pid
+        info["acks"] = int(info.get("acks", 0)) + 1
+        self._member_policy_info = info
+        if first:
+            msg = f"Party policy confirmed to leader as={name or 'member'} id={pid or '—'}"
+            self.log(msg)
+            self._party_event("socket", msg)
+
+    def _member_beep_if_already_in(self, world) -> None:
+        """Once: already in party (memory) → socket beep, no invite wait."""
+        from app._06_party.invite import already_in_party
+
+        if getattr(self, "_party_beep_sent", False):
+            return
+        from app._06_party.invite import action_party_snapshot
+
+        if not already_in_party(action_party_snapshot(world)):
+            return
+        if not self._party_comms.member_connected:
+            return
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        name = str(info.get("as_name") or "") or _player_chat_name(
+            world, getattr(world, "last_party", None)
+        ) or "member"
+        try:
+            ok = bool(self._party_comms.send_beep(name=name, why="already_in_party"))
+        except Exception as exc:
+            self.log(f"Party beep failed: {exc}")
+            return
+        if not ok:
+            return
+        self._party_beep_sent = True
+        msg = f"Party beep sent to leader as={name} (already in party)"
+        self.log(msg)
+        self._party_event("socket", msg)
+
+    def _member_invite_accept(self, world) -> None:
+        """Invite popup on screen → Y; once it closed, ``invite_accept`` to the leader."""
+        from app._06_party.accept import InviteAccepter
+        from app._06_party.comms.orders import member_orders
+        from app._06_party.invite_popup import party_invite
+        from app._06_party.sync import memory_in_party
+
+        if self._invite_accepter is None:
+            def _log(msg: str) -> None:
+                self.log(msg)
+                self._party_event("socket", msg)
+
+            def _send_accept(body: dict) -> bool:
+                if isinstance(body, dict) and not body.get("client_id"):
+                    body = {**body, "client_id": self._member_client_id()}
+                return self._party_comms.send_invite_accept(body)
+
+            self._invite_accepter = InviteAccepter(send_ack=_send_accept, log=_log)
+        from app._06_party.invite import action_party_snapshot
+
+        snap = action_party_snapshot(world)
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        self._invite_accepter.tick(
+            party_invite(getattr(world, "last_uidialog", None)),
+            leader_name=str((member_orders.policy or {}).get("leader_name") or ""),
+            name=str(info.get("as_name") or "") or _player_chat_name(world, snap) or "member",
+            session=member_orders.session,
+            in_party=memory_in_party(snap),
+        )
+
+    def _member_on_leader_roster(self, world, policy: dict) -> bool:
+        """Pending members do not overlay policy or walk a rally."""
+        from app._06_party.member_identity import name_on_roster
+
+        snap = getattr(world, "last_party", None)
+        name = _player_chat_name(world, snap)
+        return name_on_roster(name, (policy or {}).get("roster"))
+
+    def _member_hello_tick(self, world) -> None:
+        """Send ``member_hello`` once the local name is real; never a placeholder."""
+        from app._06_party.comms.orders import member_orders
+        from app._06_party.member_identity import (
+            CharacterIdentity,
+            build_member_hello,
+            class_token,
+        )
+
+        if not self._party_comms.member_connected:
+            return
+        snap = getattr(world, "last_party", None)
+        player = getattr(world, "player", None)
+        level = getattr(player, "level", None) if player is not None else None
+        ident = CharacterIdentity(
+            name=_player_chat_name(world, snap),
+            character_class=class_token(
+                getattr(player, "character_type", None) if player is not None else None
+            ),
+            level=level if isinstance(level, (int, float)) else None,
+        )
+        farm = ""
+        brain = getattr(self, "_party_brain_ref", None)
+        if brain is not None:
+            farm = str(getattr(getattr(brain, "config", None), "farm_mode", "") or "")
+        body = build_member_hello(
+            ident, client_id=self._member_client_id(), farm_mode=farm
+        )
+        if body is None:
+            return
+        key = (
+            ident.character_key.casefold(),
+            ident.character_class,
+            ident.level,
+            str(member_orders.session or ""),
+        )
+        if key == getattr(self, "_member_hello_key", None):
             return
         try:
-            frames = server.drain()
+            ok = bool(self._party_comms.send_member_hello(body))
         except Exception:
-            frames = []
-        for frame in frames:
-            body = getattr(frame, "message", None)
-            if not isinstance(body, dict) or str(body.get("type") or "") != "report":
-                continue
-            who = str(body.get("from") or getattr(frame, "sender", "") or "")
-            snap = getattr(world, "last_party", None)
-            hunt_rally.note_report(who, body, party_member_names(snap))
-        try:
-            connected = int(server.client_count())
-        except Exception:
-            connected = 0
-        if hunt_rally.repeat_if_members_joined(connected):
-            self.log("Party hunt move repeated for a new member")
+            ok = False
+        if not ok:
+            return
+        self._member_hello_key = key
+        self.log(f"Party hello sent as {ident.character_key}")
 
-    def _member_party_tick(self, world, map_id, *, send: bool) -> None:
-        """Read leader orders, then send buffs plus the item list."""
-        client = self._party_client
-        beat = self._party_heartbeat
-        if client is None:
+    def _member_state_report(self, world) -> None:
+        """Send ``member_state`` (party memory, policy, invite phase) on change / every 2 s."""
+        from app._06_party.comms.orders import member_orders
+        from app._06_party.sync import MemberStateReporter, party_view
+
+        if not member_orders.session:
+            return
+        if self._member_state_reporter is None:
+            self._member_state_reporter = MemberStateReporter()
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        acc = self._invite_accepter
+        invite = (
+            acc.report()
+            if acc is not None
+            else {"id": "", "phase": "idle", "presses": 0, "inviter": ""}
+        )
+        from app._06_party.invite import action_party_snapshot
+
+        snap = action_party_snapshot(world)
+        name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
+        self._member_state_reporter.tick(
+            self._party_comms.send_member_state,
+            name=name or "member",
+            session=member_orders.session,
+            policy_id=str(info.get("applied_id") or ""),
+            party=party_view(snap),
+            invite=invite,
+            live=self._member_live_view(world),
+            client_id=self._member_client_id(),
+        )
+
+    def _member_live_view(self, world) -> dict:
+        """Monitor extras for ``member_state``: bot state, map, xy, hp/mp, brain, rally."""
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.comms.orders import member_orders
+
+        out: dict = {"bot": self.state.value}
+        try:
+            pose = live_pose_from_state(world)
+        except Exception:
+            pose = None
+        if pose is not None:
+            out["map_id"] = int(pose.map_id)
+            out["xy"] = [int(pose.x), int(pose.y)]
+        player = getattr(world, "player", None)
+        for key in ("hp", "mp", "max_hp", "max_mp"):
+            val = getattr(player, key, None) if player is not None else None
+            if isinstance(val, (int, float)):
+                out[key] = int(val)
+        brain = getattr(self, "_party_brain_ref", None)
+        runtime = getattr(brain, "runtime", None)
+        if runtime is not None:
+            out["kind"] = str(getattr(runtime, "last_kind", "") or "")
+            out["reason"] = str(getattr(runtime, "last_reason", "") or "")[:80]
+        gather = member_orders.gather or {}
+        out["rally"] = str(gather.get("stage") or "")
+        out["arrived"] = bool(member_orders.arrived)
+        return out
+
+    def _member_party_tick(
+        self, world, map_id, *, send: bool, party_brain=None, skip_accept: bool = False
+    ) -> None:
+        """Read leader orders (incl. farm policy), then send buffs/items."""
+        if self._party_comms.client is None:
+            # Invite Y is a local popup. The socket only reports that it happened.
+            # Once per loop (the send=False pass). A manual Y this tick wins.
+            if not send and not skip_accept:
+                self._member_invite_accept(world)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
-        from websocket.party_orders import member_orders, self_name_from_party
+        from app._06_party.comms.orders import member_orders
 
         if not send:
+            restored = self._party_comms.watch_member(log=self._party_socket_note)
+            if restored:
+                self._member_hello_key = None
+                reporter = getattr(self, "_member_state_reporter", None)
+                if reporter is not None:
+                    reporter.nudge()
+                self.log(
+                    "Party socket restored — resend hello and member_state; "
+                    "invite accept is kept"
+                )
             try:
-                member_orders.ingest(client.drain())
+                self._party_comms.ingest_orders()
             except Exception as exc:
                 self.log(f"Party member order read failed: {exc}")
+            session = member_orders.take_session_change()
+            if session is not None:
+                self._reset_member_for_leader_session(session, party_brain)
+            beep = member_orders.take_beep()
+            if beep is not None:
+                why = str(beep.get("why") or "already_in_party")
+                msg = f"Party beep from leader — socket ok ({why})"
+                self.log(msg)
+                self._party_event("socket", msg)
+            fresh = member_orders.take_policy()
+            policy = member_orders.policy
+            rostered = bool(
+                policy is not None and self._member_on_leader_roster(world, policy)
+            )
+            if not rostered:
+                member_orders.gather = None
+                member_orders.recovery = None
+            if party_brain is not None and policy is not None and rostered:
+                self._apply_member_party_policy(
+                    world, map_id, party_brain, policy
+                )
+                if fresh is not None:
+                    self._send_member_policy_ack(fresh)
+            self._member_hello_tick(world)
+            if not skip_accept:
+                self._member_invite_accept(world)
+            self._member_beep_if_already_in(world)
+            self._member_state_report(world)
             return
         pose = live_pose_from_state(world)
         px = py = None
@@ -1787,34 +2649,9 @@ class BotController:
         if pose is not None:
             px, py = int(pose.x), int(pose.y)
             mid = int(pose.map_id)
-        name = self_name_from_party(getattr(world, "last_party", None), mid, px, py)
-        if beat is None:
-            return
-        try:
-            if member_orders.take_report():
-                beat.send_report(
-                    world,
-                    map_id=mid,
-                    name=name,
-                    x=px,
-                    y=py,
-                    arrived=True,
-                )
-                self.log("Party member reported buffs and items at the hunt NPC")
-            else:
-                beat.maybe_send(
-                    world,
-                    map_id=mid,
-                    name=name,
-                    x=px,
-                    y=py,
-                    arrived=bool(member_orders.arrived),
-                )
-        except Exception as beat_exc:
-            err = str(beat_exc)
-            if err != getattr(self, "_party_hb_err", ""):
-                self._party_hb_err = err
-                self.log(f"Party member status send failed: {err}")
+        self._party_comms.send_status(
+            world, map_id=mid, x=px, y=py, log=self.log
+        )
 
     def _worker(self) -> None:
         ensure_userdata()
@@ -1826,14 +2663,19 @@ class BotController:
             sys.stderr = open(os.devnull, "w", encoding="utf-8")
         crashed = False
         try:
+            self._clear_party_nav_hooks()
             self._start_party_socket()
-            self._start_party_client()
-            self._run_bot_loop()
+            if self._start_party_client():
+                self._run_bot_loop()
+            elif not self._stop_event.is_set():
+                self.stop(reason="party_ws_unreachable")
         except Exception:
             crashed = True
             self.log("Worker crashed:\n" + traceback.format_exc())
         finally:
             self._clear_party_nav_hooks()
+            self._party_brain_ref = None
+            self._party_leader_ref = None
             self._stop_party_socket()
             self._stop_party_client()
             with self._lock:
@@ -1882,6 +2724,11 @@ class BotController:
         from app._02_state import ActionType, CharacterType
         from app._03_world.merge.track import create_game_state
         from app._03_world.merge.memory_sync import world_origin_from_snapshot
+        from app._04_decision.behaviors.hold_ground import set_party_hold
+        from app._04_decision.behaviors.party_turret import (
+            set_party_turret,
+            turret_status,
+        )
         from app._04_decision.configure import apply_action_executor_options
         from app._04_decision.manager import DecisionManager
         from app._04_decision.talking_scroll import (
@@ -1935,11 +2782,14 @@ class BotController:
                 "loot_role": str(
                     getattr(profile, "party_loot_role", "none") or "none"
                 ),
-                "loot_priority": str(
-                    getattr(profile, "party_loot_priority", "follow") or "follow"
-                ),
                 "farm_mode": str(
                     getattr(profile, "party_farm_mode", "party") or "party"
+                ),
+                "seat_role": (
+                    "mage"
+                    if str(getattr(profile, "character", "") or "").strip().lower()
+                    == "mage"
+                    else "member"
                 ),
             }
         )
@@ -1952,14 +2802,19 @@ class BotController:
             f"{bool(getattr(profile, 'party_enabled', False))} "
             f"profile.party_member_enabled="
             f"{bool(getattr(profile, 'party_member_enabled', False))} "
-            f"→ party_mode={party_mode}"
+            f"→ party_mode={party_mode} "
+            f"server_on={self._party_server_on()} "
+            f"leader_on={self._party_leader_on()} "
+            f"roster={self._leader_roster_ready()}"
         )
-        if party_role == "leader":
+        if self._party_leader_on():
             self._install_party_nav_hooks()
             self.log(
-                "Party leader farms with the solo routine. "
+                "Party leader uses the party schedule. "
                 "NPC teleporter and mother-tree decisions are sent to members."
             )
+        else:
+            self._clear_party_nav_hooks()
         log_cfg = (config.get("logging") or {}) if isinstance(config, dict) else {}
         log_level = str(log_cfg.get("level") or "INFO")
         session_log = configure_bot_log(
@@ -2050,8 +2905,36 @@ class BotController:
         self._party_farm_started = False
         self._party_wait_log_at = 0.0
         party_brain: PartyMemberManager | None = None
+        leader_brain = None
+        self._member_policy_sig = ""
+        self._member_policy_info = {}
+        self._invite_accepter = None
+        self._member_state_reporter = None
+        self._party_policy_info = {}
+        self._party_policy_id = ""
+        self._party_leader_name = ""
+        self._party_invites = None
+        self._party_brain_ref = None
+        self._party_beep_sent = False
+        self._party_client_id = ""
+        self._party_leader_ref = None
+        from app._06_party.comms.orders import (
+            member_orders,
+            new_leader_session,
+            policy_acks,
+        )
+        from app._06_party.sync import invite_accepts
+
+        policy_acks.clear()
+        member_orders.clear()
+        invite_accepts.clear()
+        if self._party_leader_on():
+            session = new_leader_session()
+            self.log(f"Party leader session {session} (members reset on this id)")
+            self._party_event("session", f"leader session {session}")
         if party_mode:
             party_brain = PartyMemberManager(party_cfg)
+            self._party_brain_ref = party_brain
             party_brain.set_world_origin(world_origin)
             party_brain.set_nav_blackboard(decision.blackboard)
             self._publish_party_monitor(
@@ -2069,6 +2952,28 @@ class BotController:
                 "WebSocket is reports/orders only — it does not set the leader. "
                 "/초대 is typed by the leader bot after Start, not by this member."
             )
+        elif self._party_server_on():
+            from app._06_party.leader_manager import PartyLeaderManager
+
+            leader_brain = PartyLeaderManager(decision)
+            self._party_leader_ref = leader_brain
+            decision.blackboard.scratch["party_leader_no_loot"] = True
+            try:
+                count = leader_brain.arm(
+                    getattr(profile, "party_routine", None) or []
+                )
+                if count:
+                    self.log(
+                        "Party leader armed on party routine "
+                        f"({count} entries) — solo schedule left unused"
+                    )
+                else:
+                    self.log(
+                        "Party leader has no party routine — "
+                        "solo schedule was not armed"
+                    )
+            except Exception as exc:
+                self.log(f"Party leader routine init skipped: {exc}")
         else:
             with self._debug_lock:
                 self._party_monitor = {
@@ -2125,24 +3030,43 @@ class BotController:
         )
         from app._03_world.merge.apply_perception import apply_perception_buffer
 
+        want_party = bool(party_mode or self._party_server_on())
         sensors = PerceptionSensors(config)
         set_shared_sensors(sensors)
         for err in list(sensors.buffer.errors):
             self.log(f"Perception sensor: {err}")
         if sensors.monitor is not None:
             self.log(
-                "Player memory is read in this process "
-                "(realtime_monitor.dll, offsets.json). No separate console."
+                "Memory uses the single-version in-process readers "
+                "(print_state, realtime_monitor, inventory, hotbar, buff, dialog)."
             )
+            if want_party:
+                self.log("Party roster still comes from the party module.")
         else:
             self.log("Memory monitor unavailable at worker start")
-        want_party = bool(party_mode or party_role == "leader")
         buf0 = sensors.capture_tick(
             force_inventory=True, hotbar=True, party=want_party
         )
         # Party init is lazy inside capture_tick — surface those errors now.
         for err in list(sensors.buffer.errors):
             self.log(f"Perception sensor: {err}")
+        if want_party:
+            calib = sensors.party_calibration
+            if calib is None:
+                self.log("Party memory: not anchored (LC not running, not elevated, or old party_listen.dll)")
+            elif calib.get("subs_ok"):
+                delta = int(calib.get("delta") or 0)
+                self.log(
+                    "Party memory: OK"
+                    + (f" (party vfts calibrated {delta:+#x} vs PARTY_SEC17.txt)" if delta else "")
+                )
+            else:
+                self.log(
+                    "Party memory: PartySubsystem not found for this LC build — party "
+                    "state comes from member reports only. Check "
+                    "Engine/analysis/dll/party.dll and "
+                    "Engine/analysis/registry/LC930_REGISTRY.txt"
+                )
         if party_mode:
             from app._01_perception.party_listen_reader import default_dll_path
 
@@ -2155,8 +3079,7 @@ class BotController:
                 dll_name = default_dll_path().name
                 self.log(
                     f"Party member mode BLOCKED: {dll_name} missing. "
-                    "Build Engine/analysis/party/build_party_listen_dll.bat "
-                    "(needs VS Build Tools with VCTools), then restart."
+                    "Place it at Engine/analysis/dll/party.dll, then restart."
                 )
                 self._publish_party_monitor(
                     party_brain=party_brain,
@@ -2210,11 +3133,17 @@ class BotController:
         world.hotbar_layout = executor.hotbar_layout
         self._action_executor = executor
         try:
+            from app._05_action.input_backend import backend_name, configure_hunt_input
             from app._05_action.mouse import prepare_capture
 
+            configure_hunt_input(profile)
+            self.log(f"Hunt input: {backend_name()}")
             prepare_capture()
         except Exception as exc:
             self.log(f"Input capture failed: {exc}")
+            if backend_name() == "pico":
+                self._stop_event.set()
+                self._set_state(RunState.STOPPED, f"Input capture failed: {exc}")
 
         from hotbar.inspect import HotbarInspectError, inspect_hotbars
 
@@ -2310,7 +3239,6 @@ class BotController:
         last_logged_map_id: int | None = None
         map_id_start_logged = False
         leader_setup_done = False
-
         with self._debug_lock:
             self._routine_clock_gen += 1
             routine_clock_gen = self._routine_clock_gen
@@ -2521,12 +3449,74 @@ class BotController:
                     )
                     continue
 
-                if party_role == "leader" and not leader_setup_done:
+                if self._party_leader_on() and not leader_setup_done:
                     leader_setup_done = True
                     try:
                         self._run_leader_party_setup(world)
                     except Exception as setup_exc:
                         self.log(f"Party invite setup failed: {setup_exc}")
+                chat_kind = ""
+                try:
+                    chat_kind = self._drain_party_chat()
+                except Exception as chat_exc:
+                    self.log(f"Party chat queue failed: {chat_exc}")
+                if self._party_leader_on():
+                    try:
+                        self._leader_invite_tick(
+                            world, last_action, hold_chat=chat_kind == "invite"
+                        )
+                    except Exception as invite_exc:
+                        self.log(f"Party invite tick failed: {invite_exc}")
+
+                start_rally = (
+                    getattr(self, "_start_rally", None)
+                    if self._party_leader_on()
+                    else None
+                )
+                if start_rally is not None and start_rally.state == "off":
+                    try:
+                        if self._leader_may_begin_start_rally(world):
+                            self._begin_leader_start_rally(world, decision.blackboard)
+                    except Exception as rally_exc:
+                        start_rally.skip(f"failed: {rally_exc}")
+                if leader_brain is not None:
+                    try:
+                        leader_brain.prepare(world, rally=start_rally)
+                    except Exception as schedule_exc:
+                        self.log(f"Party schedule prepare failed: {schedule_exc}")
+                rally_hold = start_rally is not None and start_rally.waiting
+                invites_now = getattr(self, "_party_invites", None)
+                inviter_now = (
+                    getattr(invites_now, "inviter", None)
+                    if invites_now is not None
+                    else None
+                )
+                forming_hold = bool(
+                    inviter_now is not None and inviter_now.active
+                )
+                organize_hold = rally_hold or forming_hold
+                line_hold = False
+                if self._party_leader_on() and not organize_hold:
+                    try:
+                        line_hold = self._leader_line_hold(
+                            world, decision.blackboard, last_logged_map_id
+                        )
+                    except Exception as line_exc:
+                        self.log(f"Party line watch failed: {line_exc}")
+                set_party_hold(decision.blackboard, organize_hold or line_hold)
+                if organize_hold:
+                    _freeze_stay_clocks(decision.blackboard)
+                turret_anchor = getattr(
+                    getattr(self, "_party_leader_ref", None), "turret_anchor", None
+                )
+                set_party_turret(
+                    decision.blackboard,
+                    self._leader_turret_on() and not organize_hold,
+                    map_id=last_logged_map_id,
+                    anchor=turret_anchor,
+                )
+                if self._party_leader_on():
+                    self._party_turret_info = turret_status(decision.blackboard)
 
                 # Scroll land: solo always; party only while joining the leader's map.
                 party_joining = (
@@ -2539,9 +3529,22 @@ class BotController:
 
                 self._party_world = world
                 if party_brain is not None:
-                    self._member_party_tick(world, last_logged_map_id, send=False)
+                    # Socket is policy/rally only. Leader pose comes from party memory.
+                    self._member_socket_pending()
+                    self._member_party_tick(
+                        world,
+                        last_logged_map_id,
+                        send=False,
+                        party_brain=party_brain,
+                        skip_accept=chat_kind == "accept",
+                    )
                     action = party_brain.decide(world)
-                    self._member_party_tick(world, last_logged_map_id, send=True)
+                    self._member_party_tick(
+                        world,
+                        last_logged_map_id,
+                        send=True,
+                        party_brain=party_brain,
+                    )
                     party_joining = party_brain.joining_map()
                     self._publish_party_monitor(
                         party_brain=party_brain,
@@ -2549,22 +3552,17 @@ class BotController:
                         action=action,
                         note="decide",
                     )
-                else:
-                    action = decision.decide(world)
-                    if party_role == "leader":
+                elif leader_brain is not None:
+                    action = leader_brain.decide(world)
+                    try:
+                        self._leader_party_tick(
+                            world, decision.blackboard, last_logged_map_id
+                        )
+                    except Exception as party_tick_exc:
+                        self.log(f"Party leader tick failed: {party_tick_exc}")
+                    if self._party_leader_on():
                         try:
-                            self._leader_party_tick(
-                                world, decision.blackboard, last_logged_map_id
-                            )
-                        except Exception as party_tick_exc:
-                            self.log(f"Party leader tick failed: {party_tick_exc}")
-                    if party_role == "leader":
-                        try:
-                            from websocket.leader_decisions import (
-                                publish_leader_decision,
-                            )
-
-                            sent = publish_leader_decision(
+                            sent = self._party_comms.publish_decision(
                                 action,
                                 world,
                                 map_id=last_logged_map_id,
@@ -2573,7 +3571,9 @@ class BotController:
                                 self.log(f"Party leader decision sent: {sent}")
                         except Exception as party_exc:
                             self.log(f"Party leader decision send failed: {party_exc}")
-                if party_role in ("member", "leader"):
+                else:
+                    action = decision.decide(world)
+                if self._party_enabled() and party_role in ("member", "leader"):
                     try:
                         self._log_party_until_farm(
                             party_role=party_role,
@@ -2741,8 +3741,14 @@ class BotController:
         self._action_executor = None
 
 
+
 def _player_chat_name(world, snapshot) -> str:
-    """Local character name for invite skip / leader check."""
+    """Local character name for invite skip / leader check / member hello."""
+    from app._06_party.member_identity import my_player_name
+
+    seen = my_player_name(getattr(world, "last_print_state", None) if world is not None else None)
+    if seen:
+        return seen
     player = getattr(world, "player", None) if world is not None else None
     identity = getattr(player, "identity", None)
     name = str(getattr(identity, "name", None) or "").strip()
@@ -2753,8 +3759,8 @@ def _player_chat_name(world, snapshot) -> str:
         return name
     if not isinstance(snapshot, dict):
         return ""
-    from websocket.party_orders import self_name_from_party
     from app._04_decision.world_nav.session import live_pose_from_state
+    from app._06_party.comms.orders import self_name_from_party
 
     try:
         pose = live_pose_from_state(world)

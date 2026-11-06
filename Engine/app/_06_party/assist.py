@@ -549,9 +549,8 @@ def _assist_excluded_ids(blackboard: Any) -> set[int]:
         return set()
     try:
         from app._04_decision.attack_feedback import excluded_target_ids
-        from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
 
-        return set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+        return set(excluded_target_ids(blackboard))
     except Exception:
         return set()
 
@@ -590,6 +589,27 @@ def pick_assist_target(
     return None, "none"
 
 
+def turret_member_focus(
+    *,
+    leader_farming: bool,
+    own_id: Optional[int],
+    own_still_ok: bool,
+    yard_id: Optional[int],
+) -> tuple[str, Optional[int]]:
+    """Turret member while the leader rests, then while the leader strikes.
+
+    ``own_finish`` keeps the mob the member already started. ``yard`` is a new
+    self-hunt inside the yard. ``leader`` means assist the leader now.
+    """
+    if leader_farming:
+        if own_id is not None and own_still_ok:
+            return "own_finish", own_id
+        return "leader", None
+    if yard_id is not None:
+        return "yard", yard_id
+    return "none", None
+
+
 def pick_solo_farm_target(
     game_state: Any,
     *,
@@ -598,6 +618,7 @@ def pick_solo_farm_target(
     leash_tiles: int,
     previous_id: Optional[int] = None,
     blackboard: Any = None,
+    contains: Optional[Any] = None,
 ) -> Optional[Any]:
     """Own target for solo-farm members: nearest attackable near the leader.
 
@@ -620,6 +641,11 @@ def pick_solo_farm_target(
     leash = max(1, int(leash_tiles))
 
     def near_leader(obj: Any) -> bool:
+        if contains is not None:
+            try:
+                return bool(contains(obj))
+            except Exception:
+                return False
         try:
             tx, ty = object_absolute_tile(obj, origin)
             return tile_chebyshev(int(tx), int(ty), lx, ly) <= leash
@@ -630,9 +656,8 @@ def pick_solo_farm_target(
     if blackboard is not None:
         try:
             from app._04_decision.attack_feedback import excluded_target_ids
-            from app._04_decision.behaviors.combat import GIVE_UP_COOLDOWN_TICKS
 
-            skip = set(excluded_target_ids(blackboard, GIVE_UP_COOLDOWN_TICKS))
+            skip = set(excluded_target_ids(blackboard))
         except Exception:
             skip = set()
 
@@ -668,10 +693,11 @@ def pick_solo_farm_target(
 
 
 def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
-    """True when the member can cast/click the monster from here.
+    """True when the solo hunt range already reaches this monster.
 
-    Spell mages use mage spell range. Bow/melee (attack_mode ranged/melee, or
-    non-mage) use a short engage distance; the click strategies own fine aim.
+    Spell aim uses the mage cast range. Bow and melee use the solo click
+    range: on screen, or an off-screen memory cell inside that click range.
+    Out of range is not a reason to walk up to the monster.
     """
     if obj is None or not _assist_target_live(game_state, obj):
         return False
@@ -679,40 +705,29 @@ def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
     try:
         from app._04_decision import player_mode as pm
 
-        spell_aim = bool(getattr(pm, "uses_spell_aim", lambda: True)())
+        spell_aim = bool(pm.uses_spell_aim())
     except Exception:
         spell_aim = True
     if spell_aim:
+        pos = getattr(obj, "position", None)
+        if pos is None:
+            return False
         try:
-            pos = getattr(obj, "position", None)
-            if pos is not None:
-                from app._03_world.space.world_coords import in_mage_spell_range
+            from app._03_world.space.world_coords import in_mage_spell_range
 
-                if in_mage_spell_range(float(pos.x), float(pos.y)):
-                    return True
+            return bool(in_mage_spell_range(float(pos.x), float(pos.y)))
         except Exception:
-            pass
+            return False
     try:
-        from app._04_decision.combat_query import tile_distance_from_player
+        from app._04_decision.combat_query import in_attack_click_range
 
-        d = tile_distance_from_player(obj)
-        # Bow/melee: within attack click tiles (default ~6–8); mage fallback 2.
-        limit = 6 if not spell_aim else 2
-        try:
-            from app._04_decision import player_mode as pm
-
-            limit = int(getattr(pm, "ATTACK_CLICK_TILES", limit) or limit)
-        except Exception:
-            pass
-        if d is not None and int(d) <= max(2, limit):
-            return True
+        return bool(in_attack_click_range(obj))
     except Exception:
-        pass
-    return False
+        return False
 
 
 def assist_monster_tile(obj: Any, origin: Any) -> Optional[tuple[int, int]]:
-    """Nav tile of an assist monster for close-in hops."""
+    """Nav tile of an assist monster, used only to test the turret yard."""
     if obj is None:
         return None
     try:
@@ -739,6 +754,7 @@ __all__ = [
     "leader_attack_rows",
     "pick_assist_target",
     "pick_solo_farm_target",
+    "turret_member_focus",
     "resolve_external_target",
     "resolve_leader_attack_target",
     "resolve_leader_strike_target",

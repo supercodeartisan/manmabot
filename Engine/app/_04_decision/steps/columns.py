@@ -18,6 +18,7 @@ WORLD_NAV: tuple[str, ...] = (
     "survival.hp",
     "survival.mp_safe",
     "survival.return_vitals",
+    "party.hold_ground",  # leader rally wait only
     "shop.trip",  # handoff → SHOPPING (may clear+re-request world nav)
     "spell.support",
     "spell.buffs",
@@ -42,6 +43,7 @@ FARMING_ISLAND: tuple[str, ...] = (
     "survival.hp",
     "survival.mp_safe",
     "survival.return_vitals",
+    "party.hold_ground",  # leader rally wait only
     "survival.return_idle",
     "shop.before_world_nav",
     "nav.world",
@@ -53,7 +55,9 @@ FARMING_ISLAND: tuple[str, ...] = (
     "farm.upkeep",
     "farm.post_shop_return",
     "nav.hunt_map",
+    "party.turret_leash",  # party leader turret only
     "farm.engage",
+    "party.turret_idle",  # party leader turret only
     "farm.enter",
     "farm.search",
 )
@@ -63,6 +67,7 @@ FARMING_DUNGEON: tuple[str, ...] = (
     "survival.hp",
     "survival.mp_safe",
     "survival.return_vitals",
+    "party.hold_ground",  # leader rally wait only
     "survival.return_idle",
     "shop.before_world_nav",
     "nav.world",
@@ -73,7 +78,9 @@ FARMING_DUNGEON: tuple[str, ...] = (
     "nav.hunt_map",
     "dungeon.off_floor",
     "dungeon.blocked",
+    "party.turret_leash",  # party leader turret only
     "farm.engage",
+    "party.turret_idle",  # party leader turret only
     "dungeon.patrol",
     "dungeon.idle_nudge",
 )
@@ -84,6 +91,7 @@ TRAVELING: tuple[str, ...] = (
     "survival.hp",
     "survival.mp_safe",
     "survival.return_vitals",
+    "party.hold_ground",  # leader rally wait only
     # Schedule row minutes up → next row (do not wait for patrol/combat to end).
     # SHOPPING column omits this so an in-flight buy/sell is not aborted.
     "routine.duration",

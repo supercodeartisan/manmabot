@@ -36,7 +36,7 @@ def publish_leader_decision(
     if name not in CRITICAL_ACTIONS:
         _last_key = None
         return ""
-    # Mother-tree and the hunt NPC click have their own frames (recovery / hunt_move).
+    # Mother-tree and the start rally have their own frames (recovery / rally).
     if name == "return_to_mother_tree":
         return ""
     if name == "shop_run" and str(getattr(action, "shop_kind", "") or "") == "teleporter":
@@ -54,11 +54,15 @@ def publish_leader_decision(
 def publish_body(body: dict[str, Any]) -> int:
     """Broadcast one leader payload. Returns how many clients received it."""
     from .active import current
+    from .party_orders import leader_session
     from .protocol import PartyMessage
 
     watchdog = current()
     if watchdog is None or not watchdog.running or not watchdog.server.listening:
         return 0
+    session = leader_session()
+    if session and isinstance(body, dict):
+        body = {**body, "session": session}
     try:
         return int(
             watchdog.server.broadcast(PartyMessage(sender="leader", message=body))

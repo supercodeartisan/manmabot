@@ -1,4 +1,8 @@
-"""Controls mouse movement and clicks using the Interception input driver."""
+"""Farm mouse moves and clicks.
+
+The transport is ``input_backend``: Interception or the Pico HID board.
+Curves, click timing, and the ground-click repeat stay here.
+"""
 from __future__ import annotations
 
 import ctypes
@@ -7,6 +11,7 @@ import time
 from typing import Callable, Optional
 
 from app._05_action import humanize as hz
+from app._05_action import input_backend as ib
 from ctypes import wintypes
 
 from win32_prototypes import bind_user32
@@ -14,156 +19,39 @@ from win32_prototypes import bind_user32
 user32 = ctypes.windll.user32
 bind_user32(user32)
 
-_captured = False
-_interception = None
-# Exclusive \\.\interceptionXX handles need a beat after CloseHandle before
-# the next Start / autologin can open them again.
-_REBIND_PAUSES_S = (0.0, 0.05, 0.1, 0.2, 0.4)
 # Ground click only. Repeat while the body has not accepted the walk.
 GROUND_CLICK_INTERVAL_S = 0.1
 # Unreadable body: stop the repeat after this long.
 GROUND_CLICK_UNREAD_S = 1.0
 
 
-def _get_interception():
-    global _interception
-    if _interception is None:
-        import interception as _interception
-    return _interception
-
-
-def _bind_inputs_context(ctx) -> None:
-    """Point both the inputs module and star-import copy at the same context."""
-    from interception import inputs
-
-    inputs._g_context = ctx
-    try:
-        import interception
-
-        interception._g_context = ctx
-    except Exception:
-        pass
-
-
-def _current_context():
-    try:
-        from interception import inputs
-
-        return getattr(inputs, "_g_context", None)
-    except Exception:
-        return None
-
-
-def _context_usable(ctx) -> bool:
-    """True when the context still has a live mouse device handle."""
-    if ctx is None:
-        return False
-    devices = getattr(ctx, "devices", None) or []
-    if not devices:
-        return False
-    for index, device in enumerate(devices):
-        handle = getattr(device, "handle", -1)
-        if handle in (-1, 0, None):
-            continue
-        if 10 <= index <= 19:
-            return True
-    return False
-
-
-def _destroy_context(ctx) -> None:
-    if ctx is None:
-        return
-    try:
-        ctx.destroy()
-    except Exception:
-        pass
-
-
-def _open_context():
-    from interception.interception import Interception
-
-    last_error: Exception | None = None
-    for pause in _REBIND_PAUSES_S:
-        if pause:
-            time.sleep(pause)
-        try:
-            ctx = Interception()
-        except Exception as exc:
-            last_error = exc
-            continue
-        if _context_usable(ctx):
-            return ctx
-        _destroy_context(ctx)
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError("Interception context has no live mouse handle")
-
-
-def _ensure_live_context() -> None:
-    ctx = _current_context()
-    if _context_usable(ctx):
-        return
-    _destroy_context(ctx)
-    _bind_inputs_context(_open_context())
-
-
 def _ensure_captured() -> None:
-    """Bind keyboard/mouse devices, creating a fresh context after Stop."""
-    global _captured
-    if _captured and _context_usable(_current_context()):
-        return
-    _ensure_live_context()
-    _get_interception().auto_capture_devices(keyboard=True, mouse=True)
-    _captured = True
+    """Open the hunt input selected in driver setup."""
+    ib.ensure_open()
 
 
 def prepare_capture() -> None:
-    """Re-open devices for a new Start. Call after autologin has shut down."""
-    global _captured
-    _captured = False
-    _ensure_captured()
+    """Open hunt input for a new Start. Call after autologin has shut down."""
+    ib.prepare_capture()
 
 
 def is_captured() -> bool:
-    return bool(_captured) and _context_usable(_current_context())
+    return ib.is_captured()
 
 
 def release_capture() -> None:
-    """Lift buttons and free Interception devices for the next Start/login.
+    """Lift buttons and free the hunt input.
 
-    Do not construct a replacement context here. ``CreateFileA`` on the
-    interception devices is exclusive; an immediate reopen either fails and
-    leaves the destroyed context in place (next Start clicks go nowhere) or
-    steals the handles from autologin.
+    Interception handles stay exclusive: this does not reopen them. A Pico
+    session closes its COM port and restores pointer acceleration.
     """
-    global _captured
-    try:
-        if _captured:
-            try:
-                _send_button("left", down=False)
-                _send_button("right", down=False)
-            except Exception:
-                pass
-        ctx = _current_context()
-        _destroy_context(ctx)
-        _bind_inputs_context(None)
-    except Exception:
-        pass
-    _captured = False
+    ib.release_capture()
 
 
 def _cursor_pos() -> tuple[int, int]:
     pt = wintypes.POINT()
     user32.GetCursorPos(ctypes.byref(pt))
     return int(pt.x), int(pt.y)
-
-
-def _absolute_xy(px: int, py: int) -> tuple[int, int]:
-    """Same 0..65535 scale ``move_to`` uses for this pixel."""
-    from interception._utils import to_interception_coordinate
-
-    ax, ay = to_interception_coordinate(int(px), int(py))
-    return int(ax), int(ay)
 
 
 def _send_button(
@@ -173,40 +61,16 @@ def _send_button(
     px: int | None = None,
     py: int | None = None,
 ) -> None:
-    """Press or release at a screen pixel.
-
-    The button stroke carries that pixel as an absolute coordinate, the same
-    way login clicks do. An absolute (0, 0) stroke clicks the screen origin.
-    A relative stroke with no position was ignored on the customer PC.
-    Without a pixel, the current cursor is used so a release does not jump.
-    """
-    from interception.constants import MouseButtonFlag, MouseFlag
-    from interception.exceptions import UnknownButtonError
-    from interception.strokes import MouseStroke
-
-    try:
-        states = MouseButtonFlag.from_string(button)
-    except KeyError as exc:
-        raise UnknownButtonError(button) from exc
-    flag = int(states[0] if down else states[1])
-    ctx = _current_context()
-    if not _context_usable(ctx):
-        return
-    if px is None or py is None:
-        px, py = _cursor_pos()
-    ax, ay = _absolute_xy(px, py)
-    stroke = MouseStroke(int(MouseFlag.MOUSE_MOVE_ABSOLUTE), flag, 0, ax, ay)
-    ctx.send(ctx.mouse, stroke)
+    """Press or release at a screen pixel on the active hunt input."""
+    ib.button(button, down=down, px=px, py=py)
 
 
 def _button_gap_s() -> float:
-    from interception.inputs import MOUSE_BUTTON_DELAY
-
-    return float(MOUSE_BUTTON_DELAY)
+    return ib.button_gap_s()
 
 
 def _click_in_place(button: str, px: int, py: int) -> None:
-    """Down, hold, up at ``(px, py)``. The hold matches the library button delay."""
+    """Down, hold, up at ``(px, py)``. The hold matches the backend button gap."""
     gap = _button_gap_s()
     _send_button(button, down=True, px=px, py=py)
     if gap > 0.0:
@@ -217,7 +81,7 @@ def _click_in_place(button: str, px: int, py: int) -> None:
 
 
 class MouseController:
-    """Low-level mouse control for game interaction (Interception driver)."""
+    """Low-level mouse control for game interaction (hunt input backend)."""
 
     def __init__(
         self,
@@ -280,7 +144,7 @@ class MouseController:
         px, py = self._to_pixels(x, y)
 
         if not self.humanize_move:
-            _get_interception().move_to(px, py)
+            ib.move_abs(px, py)
             self._last_pos = (px, py)
             self.move_events += 1
             return
@@ -299,11 +163,11 @@ class MouseController:
         last = len(points) - 1
         for i, (qx, qy) in enumerate(points):
             if i != last and (time.perf_counter() - started) >= budget:
-                _get_interception().move_to(px, py)
+                ib.move_abs(px, py)
                 self._last_pos = (px, py)
                 self.move_events += 1
                 return
-            _get_interception().move_to(qx, qy)
+            ib.move_abs(qx, qy)
             self._last_pos = (qx, qy)
             self.move_events += 1
             if i == last:
@@ -341,6 +205,7 @@ class MouseController:
         _ensure_captured()
         px, py = self._to_pixels(x, y)
         self.move(px, py, snap=snap)
+        ib.aim(px, py)
         delay = (
             0.008
             if snap
@@ -442,6 +307,7 @@ class MouseController:
         _ensure_captured()
         px, py = self._to_pixels(x, y)
         self.move(px, py)
+        ib.aim(px, py)
         gap = _button_gap_s()
         _send_button(button, down=True, px=px, py=py)
         if gap > 0.0:

@@ -1,8 +1,10 @@
 """Schedule persistence and profile snapshots.
 
-Disk layout (ops v1): ``UserData/schedules/{id}/{meta,settings,routine}.json``
+Disk layout (ops v1): ``UserData/schedules/{id}/{meta,settings,routine,party_routine}.json``
 plus ``timeline.json``. ``ScheduleTask`` remains the UI/clock compat shape
 (settings may embed ``move.routine``; timing fields mirror timeline entries).
+``party_routine.json`` is the party hunt routine and is not merged into
+``routine.json``.
 """
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from settings.farm_schedule import normalize_routine
+from settings.party_routine import normalize_party_routine, take_party_routine
 from settings.hp_actions import normalize_hp_actions
 from settings.spell_defaults import spell_slot_bindings
 from session.paths import (
@@ -175,15 +178,19 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             ),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
-            "loot_priority": str(
-                getattr(profile, "party_loot_priority", "follow") or "follow"
+            "farm_mode": str(
+                getattr(profile, "party_farm_mode", "party") or "party"
             ),
-            "farm_mode": str(getattr(profile, "party_farm_mode", "party") or "party"),
+            "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
             "roster": [
-                {"name": str(row.get("name") or ""), "role": str(row.get("role") or "member")}
+                {
+                    "name": str(row.get("name") or ""),
+                    "role": str(row.get("role") or "mage"),
+                    "loot": str(row.get("loot") or "none"),
+                }
                 for row in (getattr(profile, "party_roster", None) or [])
                 if isinstance(row, dict)
             ],
@@ -363,6 +370,13 @@ def _load_schedule_task_from_dir(root: Path, timeline_entry: Any | None) -> Sche
         # Named presets are not timeline schedules; skip list unless needed later.
         return None
     embedded = merge_settings_routine(settings_n, routine)
+    party_file = read_json_list(root / "party_routine.json")
+    if party_file is None:
+        party_block = settings.get("party") if isinstance(settings.get("party"), dict) else {}
+        party_file = party_block.get("routine") if isinstance(party_block, dict) else []
+    party_out = embedded.setdefault("party", {})
+    if isinstance(party_out, dict):
+        party_out["routine"] = normalize_party_routine(party_file)
     raw: dict[str, Any] = {
         "id": sid,
         "name": meta.get("name") or sid,
@@ -395,6 +409,7 @@ def _write_schedule_dir(task: ScheduleTask) -> None:
     root = schedule_dir(sid)
     root.mkdir(parents=True, exist_ok=True)
     settings, routine = split_settings_routine(task.settings)
+    settings, party_routine = take_party_routine(settings)
     meta = {
         "id": sid,
         "name": str(task.name or "New task")[:80],
@@ -406,6 +421,7 @@ def _write_schedule_dir(task: ScheduleTask) -> None:
         "role": str(task.role or ""),
     }
     atomic_write_json(assert_userdata_write(root / "meta.json"), meta)
+    atomic_write_json(assert_userdata_write(root / "party_routine.json"), party_routine)
     atomic_write_json(assert_userdata_write(root / "settings.json"), settings)
     atomic_write_json(assert_userdata_write(root / "routine.json"), routine)
 

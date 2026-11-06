@@ -1,0 +1,9 @@
+A_ATTACK clicks=10/12 last_err=0 ms=699 OK
+B_DOUBLE_F8 got=2 OK keys=['F8', 'F8']
+C_KEY_THEN_CLICK keys=['F5'] clicks=1 OK
+D_ESC_CLICK keys=['Escape'] clicks=1 OK
+E_OVERLAP_KEYS got=['F1', 'F2', 'F3', 'F4'] probe_a=['a'] OK
+F_OVERLAP_CLICKS n=8 clean=1 move=(700, 300)->(700, 400) OK
+G_INTERLEAVE f4=6 clicks=6 OK
+FAILS []
+VERDICT PASS (project-like continuous click/key)

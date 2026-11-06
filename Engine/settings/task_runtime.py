@@ -200,8 +200,11 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     party_master = bool(party_master)
     set_value("party_enabled", party_master)
     # Member follow only when the master switch is on and this PC is a member.
-    # Leaders host the socket and farm solo — they never run the member brain.
+    # A leader runs PartyLeaderManager on party_routine, not this member brain.
     party_on = bool(party_master and party_role != "leader")
+    from settings.party_routine import normalize_party_routine
+
+    set_value("party_routine", normalize_party_routine(party.get("routine")))
     set_value("party_member_enabled", party_on)
     set_value("party_leader_name", "")
     follow_raw = party.get("follow_tiles")
@@ -280,22 +283,20 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     if loot_role not in ("none", "responsible"):
         loot_role = "none"
     set_value("party_loot_role", loot_role)
-    loot_priority = str(
-        party.get(
-            "loot_priority",
-            getattr(profile, "party_loot_priority", "follow"),
-        )
-        or "follow"
-    ).strip().lower()
-    if loot_priority not in ("follow", "loot"):
-        loot_priority = "follow"
-    set_value("party_loot_priority", loot_priority)
     farm_mode = str(
-        party.get("farm_mode", getattr(profile, "party_farm_mode", "party")) or "party"
+        party.get("farm_mode", getattr(profile, "party_farm_mode", "party"))
+        or "party"
     ).strip().lower()
     if farm_mode not in ("party", "solo"):
         farm_mode = "party"
     set_value("party_farm_mode", farm_mode)
+    try:
+        lag_tiles = int(
+            party.get("lag_tiles", getattr(profile, "party_lag_tiles", 30)) or 30
+        )
+    except (TypeError, ValueError):
+        lag_tiles = 30
+    set_value("party_lag_tiles", max(5, min(100, lag_tiles)))
     set_value(
         "party_roster",
         normalize_party_roster(
@@ -778,6 +779,7 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         "humanize_move",
         bool(other.get("humanize_move", getattr(profile, "humanize_move", True))),
     )
+    # Hunt input is the toolbar choice. A schedule must not put it back.
     set_value(
         "game_language",
         normalize_game_language(str(other.get("game_language", profile.game_language))),

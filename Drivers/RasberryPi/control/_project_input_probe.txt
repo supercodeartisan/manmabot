@@ -1,0 +1,10 @@
+AIM (960, 540) -> (960, 540) err=0 ms=121 OK
+AIM (220, 180) -> (220, 180) err=0 ms=121 OK
+AIM (1840, 1000) -> (1840, 1000) err=0 ms=121 OK
+AIM (400, 300) -> (400, 300) err=0 ms=121 OK
+CLICK (410, 260) ms=80 pos=(410, 260)
+KEYS sent=['esc', 'f1', 'f2', 'f3', 'f4', 'f8', 'enter', 'a', 'space']
+KEYS got=['esc', 'f1', 'f2', 'f3', 'f4', 'f8', 'enter', 'a', 'space']
+KEYS missing=[] OK
+TYPE got_tail=['p', 'i', 'c', 'o', 'shift_l', 'o', 'shift_l', 'k'] OK
+VERDICT PASS for Manmabot input use

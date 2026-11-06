@@ -154,6 +154,10 @@ class Profile:
     humanize: bool = True
     # Curved mouse path. Off jumps the cursor. On finishes each move within 0.02s.
     humanize_move: bool = True
+    # Hunt clicks/keys. Login and party chat stay on Interception.
+    input_backend: str = "interception"
+    pico_com: str = ""
+    pico_baud: int = 115200
     show_preview: bool = False
     hotkeys: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_HOTKEYS))
     spell_slots: dict[str, dict] = field(default_factory=default_spell_bindings)
@@ -166,6 +170,8 @@ class Profile:
     selected_account_id: str | None = None
     # Schedule UI move.routine[] (battle/break). Empty → single active_map fallback.
     routine: list = field(default_factory=list)
+    # Party map editor rows. The leader brain reads this. Solo ``routine`` does not.
+    party_routine: list = field(default_factory=list)
     # Party member (``app._06_party``): mirror a leader instead of solo farm.
     # Master switch for the Party tab (member follow or leader socket).
     party_enabled: bool = False
@@ -181,16 +187,17 @@ class Profile:
     party_potion_hp_ratio: float = 0.45
     party_random_loot: bool = False
     party_loot_role: str = "none"
-    # follow = loot only while holding. loot = party drops before follow.
-    party_loot_priority: str = "follow"
-    # party = assist the leader's fight; solo = follow the leader, farm own mobs.
+    # Member farm: party = attack the leader's target; solo = own mobs near leader.
     party_farm_mode: str = "party"
+    # Area hunt: the leader waits briefly when half or more members are this far behind.
+    # A party-map point is turret and does not use this.
+    party_lag_tiles: int = 30
     # member = existing follow/assist. leader = this PC hosts the party socket.
     party_role: str = "member"
     party_ws_port: int = 8765
     # Member client: address of the leader PC's party socket.
     party_leader_host: str = ""
-    # Leader roster: [{"name": str, "role": "member"|"mage"|"shopkeeper"}].
+    # Leader roster: name, seat role, optional loot (none|responsible).
     party_roster: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -396,6 +403,21 @@ class Profile:
         )
         if "show_preview" in kwargs:
             kwargs["show_preview"] = bool(kwargs["show_preview"])
+        if "input_backend" in kwargs:
+            name = str(kwargs.get("input_backend") or "").strip().lower()
+            kwargs["input_backend"] = (
+                "pico"
+                if name in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            )
+        if "pico_com" in kwargs:
+            kwargs["pico_com"] = str(kwargs.get("pico_com") or "").strip()
+        if "pico_baud" in kwargs:
+            try:
+                baud = int(kwargs.get("pico_baud") or 115200)
+            except (TypeError, ValueError):
+                baud = 115200
+            kwargs["pico_baud"] = baud if 1200 <= baud <= 1_000_000 else 115200
         if "selected_account_id" in kwargs:
             selected = kwargs["selected_account_id"]
             kwargs["selected_account_id"] = (
@@ -452,8 +474,18 @@ class Profile:
                 kwargs.get("return_weight_above"), DEFAULT_RETURN_WEIGHT_ABOVE
             )
         if "party_loot_priority" in kwargs:
-            priority = str(kwargs.get("party_loot_priority") or "follow").strip().lower()
-            kwargs["party_loot_priority"] = priority if priority in ("follow", "loot") else "follow"
+            kwargs.pop("party_loot_priority", None)
+        if "party_farm_mode" in kwargs:
+            mode = str(kwargs.get("party_farm_mode") or "party").strip().lower()
+            kwargs["party_farm_mode"] = mode if mode in ("party", "solo") else "party"
+        if "party_leader_mode" in kwargs:
+            kwargs.pop("party_leader_mode", None)
+        if "party_lag_tiles" in kwargs:
+            try:
+                lag = int(kwargs.get("party_lag_tiles"))
+            except (TypeError, ValueError):
+                lag = 30
+            kwargs["party_lag_tiles"] = max(5, min(100, lag))
         if "party_role" in kwargs:
             role = str(kwargs.get("party_role") or "member").strip().lower()
             kwargs["party_role"] = role if role in ("member", "leader") else "member"
@@ -477,10 +509,20 @@ class Profile:
 
 
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
+_ROSTER_LOOT = ("none", "responsible")
+
+
+def _roster_on(item: dict, key: str, default: bool = True) -> bool:
+    if key not in item:
+        return default
+    raw = item.get(key)
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() not in ("0", "false", "no", "off")
 
 
 def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
-    """Leader seat list: name plus member, mage, or shopkeeper."""
+    """Leader seat list: name, seat (default mage), optional loot seat."""
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
     items = raw if isinstance(raw, (list, tuple)) else []
@@ -494,10 +536,19 @@ def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
         if key in seen:
             continue
         seen.add(key)
-        role = str(item.get("role") or "member").strip().lower()
+        role = str(item.get("role") or "mage").strip().lower()
         if role not in _ROSTER_ROLES:
-            role = "member"
-        rows.append({"name": name, "role": role})
+            role = "mage"
+        loot = str(item.get("loot") or item.get("loot_role") or "none").strip().lower()
+        if loot not in _ROSTER_LOOT:
+            loot = "none"
+        rows.append({
+            "name": name,
+            "role": role,
+            "loot": loot,
+            "enabled": "1" if _roster_on(item, "enabled", True) else "0",
+            "required": "1" if _roster_on(item, "required", True) else "0",
+        })
     return rows
 
 
@@ -534,6 +585,21 @@ def load_profile(path: Path | None = None) -> Profile:
         profile.language = normalize_language(str(app["language"]))
     profile.wizard_completed = bool(app.get("wizard_completed", False))
     profile.always_on_top = bool(app.get("always_on_top", False))
+    if app.get("input_backend"):
+        profile.input_backend = (
+            "pico"
+            if str(app.get("input_backend") or "").strip().lower()
+            in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+            else "interception"
+        )
+    if "pico_com" in app and app.get("pico_com") is not None:
+        profile.pico_com = str(app.get("pico_com") or "").strip()
+    if app.get("pico_baud") not in (None, ""):
+        try:
+            baud = int(app.get("pico_baud") or 115200)
+        except (TypeError, ValueError):
+            baud = 115200
+        profile.pico_baud = baud if 1200 <= baud <= 1_000_000 else 115200
     trial_settings, trial_routine = load_trial()
     has_trial = bool(trial_routine) or any(
         bool(trial_settings.get(section)) for section in TOP_SECTIONS
@@ -551,6 +617,18 @@ def load_profile(path: Path | None = None) -> Profile:
         ScheduleTask(settings=settings, account_id=None, character=char),
         profile,
     )
+    if not app.get("input_backend"):
+        other = trial_settings.get("other") if isinstance(trial_settings, dict) else None
+        if isinstance(other, dict) and other.get("input_backend"):
+            raw_name = str(other.get("input_backend") or "").strip().lower()
+            profile.input_backend = (
+                "pico"
+                if raw_name
+                in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            )
+            if other.get("pico_com"):
+                profile.pico_com = str(other.get("pico_com") or "").strip()
     profile.selected_account_id = None
     return profile
 
@@ -588,6 +666,16 @@ def save_profile(profile: Profile, path: Path | None = None) -> None:
             "language": profile.language,
             "wizard_completed": bool(profile.wizard_completed),
             "always_on_top": bool(profile.always_on_top),
+            "input_backend": (
+                "pico"
+                if str(getattr(profile, "input_backend", "interception") or "")
+                .strip()
+                .lower()
+                in {"pico", "raspberry", "raspberrypi", "rasberry", "rasberrypi"}
+                else "interception"
+            ),
+            "pico_com": str(getattr(profile, "pico_com", "") or "").strip(),
+            "pico_baud": int(getattr(profile, "pico_baud", 115200) or 115200),
         }
     )
 

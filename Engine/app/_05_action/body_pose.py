@@ -1,11 +1,8 @@
 """Live body action at ActionComponent+0xC8, and the command at +0x58.
 
-Standing is BreathAction (0x11E0550, bodyact VFT_BREATHACT). A failed read is None, not standing.
-HP/MP come from the status HUD (char_offsets ST_*), with the encoded
-CharacterData status used when that decode succeeds. Level uses that same
-status (LEVEL), then the HUD ST_LEVEL. Exp percent is the HudCharacterInfo
-LoadingBar float (the charread chain, then the UI window). ExperiencePct64
-is used only when that bar is missing and the double is a real 0–100 percent.
+The action slot is read directly, the same walk ``fix/single-version`` uses.
+Standing is BreathAction (0x11E0550). A failed read is None, not standing.
+HP, MP, level, and exp come from dll/realtime_monitor.dll.
 """
 from __future__ import annotations
 
@@ -64,8 +61,8 @@ _k32.DeviceIoControl.argtypes = [
     ctypes.POINTER(wintypes.DWORD),
     ctypes.c_void_p,
 ]
-# Shared with the in-process monitor. An exclusive open loses to whichever
-# side attached first and then every later read stays empty.
+# Shared with print_state. An exclusive open loses to whichever side
+# attached first and then every later read stays empty.
 _FILE_SHARE_READ_WRITE = 0x1 | 0x2
 _handle = None
 _pid = 0
@@ -188,7 +185,7 @@ def _load_find() -> None:
     global _find_ready
     if _find_ready:
         return
-    path = Path(__file__).resolve().parents[2] / "analysis" / "entities" / "entity_offsets.txt"
+    path = Path(__file__).resolve().parents[2] / "analysis" / "registry" / "entity_offsets.txt"
     if path.is_file():
         classes = ""
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -453,48 +450,31 @@ def body_is_standing() -> bool | None:
 
 # HUD block + encoded status. char_offsets.txt overrides these defaults.
 _HUD = {
-    "ST_BLOCK": 0,
+    "ST_BLOCK": 0x16DED20,
     "ST_HP": 0x1C,
     "ST_MAXHP": 0x20,
     "ST_MP": 0x24,
     "ST_MAXMP": 0x28,
-    "MGR": 0x16EB6F0,
-    "CD_VFT": 0x11E5088,
+    "MGR": 0x16F8A00,
+    "CD_VFT": 0x11F90D8,
     "CD_OFF": 0x498,
-    "VFT_STATUS": 0x11E50F8,
+    "VFT_STATUS": 0x11F90B8,
     "K_XOR": 0x2F8B1064,
     "K_MUL": 0x7F4A7C15,
     "HOLDER_OFF": 0xD0,
     "SUBLIST_BEG": 0x180,
     "SUBLIST_END": 0x188,
     "ST_LEVEL": 0x2C,
-    "LEVEL": 0x268,
-    "HP": 0x2D8,
-    "MP": 0x2F0,
-    "MAXMP": 0x2FC,
+    "LEVEL": 0x248,
+    "HP": 0x2B8,
+    "MP": 0x2D0,
+    "MAXMP": 0x2DC,
 }
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
-_EXP_RVA = 0x1644BF0
+_EXP_RVA = 0x1641B00
 _exp_ready = False
-# HudCharacterInfo LoadingBar. Registry overrides; these match LC930 v36.
-_EXP = {
-    "EXP_CD_0": 0x1B0,
-    "EXP_CD_1": 0x28,
-    "EXP_CD_2": 0x110,
-    "EXP_HUD_BAR": 0xE8,
-    "EXP_BAR_PCT": 0x704,
-    "VFT_LOADINGBAR": 0x12AB908,
-    "VFT_HUDCHARINFO": 0x127E3A8,
-    "VFT_UISUBSYSTEM": 0x11E2718,
-    "UIDLG_CONT_VAL": 0x38,
-    "RTTI_COL_TD_OFF": 0xC,
-    "RTTI_TD_NAME_OFF": 0x10,
-}
-_HCI_CLASS = "HudCharacterInfoLayoutPCImpl"
-_exp_chain_ready = False
-_exp_bar = 0
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
 
@@ -506,7 +486,7 @@ def _load_hud() -> None:
     global _hud_ready
     if _hud_ready:
         return
-    table = _ANALYSIS / "char_offsets.txt"
+    table = _ANALYSIS / "registry" / "char_offsets.txt"
     if table.is_file():
         for line in table.read_text(encoding="utf-8", errors="replace").splitlines():
             text = line.strip()
@@ -575,44 +555,53 @@ def _hud_u32(blob: bytes, off: int) -> int | None:
     return struct.unpack_from("<I", blob, off)[0]
 
 
-def read_vitals() -> dict | None:
-    """Live HP/MP. None when the game driver is not open."""
-    if not _ensure():
+def _opt_int(raw: dict, *keys: str) -> int | None:
+    for key in keys:
+        if key not in raw or raw[key] is None:
+            continue
+        try:
+            return int(raw[key])
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _monitor_player() -> dict | None:
+    """Player block from the process monitor. Does not start charread."""
+    snap = None
+    try:
+        from app._01_perception import sensors as sensor_mod
+
+        live = sensor_mod._SHARED
+        if live is not None:
+            snap = live.pull_player(fresh=False)
+    except Exception:
+        snap = None
+    if not isinstance(snap, dict):
+        try:
+            from session.player_monitor import shared_monitor
+
+            snap = shared_monitor().snapshot(fresh=False)
+        except Exception:
+            return None
+    if not isinstance(snap, dict):
         return None
-    _load_hud()
-    block = _read(_pid, _base + _HUD["ST_BLOCK"], 0x40)
-    hp = max_hp = mp = max_mp = None
-    if block:
-        hp = _hud_u32(block, _HUD["ST_HP"])
-        max_hp = _hud_u32(block, _HUD["ST_MAXHP"])
-        mp = _hud_u32(block, _HUD["ST_MP"])
-        max_mp = _hud_u32(block, _HUD["ST_MAXMP"])
-    status = _find_status()
-    if status:
-        decoded_hp = _decode(status, _HUD["HP"])
-        decoded_mp = _decode(status, _HUD["MP"])
-        decoded_max_mp = _decode(status, _HUD["MAXMP"])
-        if decoded_hp:
-            hp = decoded_hp
-        if decoded_mp is not None:
-            mp = decoded_mp
-        if decoded_max_mp:
-            max_mp = decoded_max_mp
-    if (
-        hp is not None
-        and max_hp is not None
-        and (hp > 2_000_000 or max_hp > 2_000_000 or (max_hp and hp > max_hp * 2))
-    ):
-        hp = max_hp = None
-    if mp is not None and max_mp is not None and (
-        mp > 2_000_000 or max_mp > 2_000_000 or (max_mp and mp > max_mp * 2)
-    ):
-        mp = max_mp = None
+    raw = snap.get("player")
+    if isinstance(raw, dict):
+        return raw
+    return None
+
+
+def read_vitals() -> dict | None:
+    """Live HP/MP from realtime_monitor. None when that sample is missing."""
+    raw = _monitor_player()
+    if not raw:
+        return None
     return {
-        "hp": hp,
-        "max_hp": max_hp,
-        "mp": mp,
-        "max_mp": max_mp,
+        "hp": _opt_int(raw, "hp"),
+        "max_hp": _opt_int(raw, "maxHp", "max_hp"),
+        "mp": _opt_int(raw, "mp"),
+        "max_mp": _opt_int(raw, "maxMp", "max_mp"),
     }
 
 
@@ -620,7 +609,7 @@ def _load_exp_rva() -> None:
     global _exp_ready, _EXP_RVA
     if _exp_ready:
         return
-    path = _ANALYSIS / "offsets.json"
+    path = _ANALYSIS / "registry" / "offsets.json"
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -632,138 +621,6 @@ def _load_exp_rva() -> None:
     _exp_ready = True
 
 
-def _load_exp_chain() -> None:
-    """LoadingBar offsets from the LC930 registry. Missing keys keep the defaults."""
-    global _exp_chain_ready, _HCI_CLASS
-    if _exp_chain_ready:
-        return
-    path = _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
-    if path.is_file():
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            text = line.strip()
-            if not text or text.startswith("#") or "=" not in text:
-                continue
-            key, raw = text.split("=", 1)
-            key = key.strip()
-            raw = raw.strip()
-            if key == "HCI_CLASS" and raw:
-                _HCI_CLASS = raw
-                continue
-            if key not in _EXP:
-                continue
-            try:
-                _EXP[key] = int(raw, 0)
-            except ValueError:
-                continue
-    _exp_chain_ready = True
-
-
-def _in_module(addr: int) -> bool:
-    return bool(_base) and _base <= addr < _base + _size
-
-
-def _find_subsystem(want: int) -> int:
-    mgr = _q(_pid, _base + _HUD["MGR"])
-    if not _heap(mgr):
-        return 0
-    holder = _q(_pid, mgr + _HUD["HOLDER_OFF"])
-    if not _heap(holder):
-        return 0
-    begin = _q(_pid, holder + _HUD["SUBLIST_BEG"])
-    end = _q(_pid, holder + _HUD["SUBLIST_END"])
-    if not _heap(begin) or end <= begin:
-        return 0
-    count = min(64, (end - begin) // 16)
-    for index in range(count):
-        sub = _q(_pid, begin + index * 16)
-        if _heap(sub) and _vrva(sub) == want:
-            return sub
-    return 0
-
-
-def _rtti_name(vft: int) -> str:
-    if not _in_module(vft):
-        return ""
-    col = _q(_pid, vft - 8)
-    if not _in_module(col):
-        return ""
-    slot = _base + _d(_pid, col + _EXP["RTTI_COL_TD_OFF"])
-    if not _in_module(slot):
-        return ""
-    raw = _read(_pid, slot + _EXP["RTTI_TD_NAME_OFF"], 160)
-    if not raw:
-        return ""
-    text = raw.split(b"\x00", 1)[0].decode("ascii", "replace")
-    if text.startswith(".?AV"):
-        text = text[4:]
-    return text.split("@", 1)[0]
-
-
-def _bar_percent(bar: int) -> float | None:
-    if not _heap(bar) or _vrva(bar) != _EXP["VFT_LOADINGBAR"]:
-        return None
-    blob = _read(_pid, bar + _EXP["EXP_BAR_PCT"], 4)
-    if not blob:
-        return None
-    value = struct.unpack("<f", blob)[0]
-    if value != value or value < 0.0 or value > 100.0:
-        return None
-    return float(value)
-
-
-def _exp_from_chain() -> int:
-    """CharacterData → HudCharacterInfo → LoadingBar. 0 when the slot is empty."""
-    status = _find_status()
-    if not status:
-        return 0
-    cd = status - _HUD["CD_OFF"]
-    p0 = _q(_pid, cd + _EXP["EXP_CD_0"])
-    if not _heap(p0):
-        return 0
-    p1 = _q(_pid, p0 + _EXP["EXP_CD_1"])
-    if not _heap(p1):
-        return 0
-    p2 = _q(_pid, p1 + _EXP["EXP_CD_2"])
-    if not _heap(p2) or _vrva(p2) != _EXP["VFT_HUDCHARINFO"]:
-        return 0
-    bar = _q(_pid, p2 + _EXP["EXP_HUD_BAR"])
-    if _bar_percent(bar) is None:
-        return 0
-    return bar
-
-
-def _find_hud_char(ui: int) -> int:
-    if not _heap(ui):
-        return 0
-    want = _HCI_CLASS
-    val = _EXP["UIDLG_CONT_VAL"]
-    for head, nxt in ((0x38, 0x18), (0x28, 0x28)):
-        node = _q(_pid, ui + head)
-        for _ in range(4096):
-            if not _heap(node):
-                break
-            obj = _q(_pid, node + val)
-            if _heap(obj) and _rtti_name(_q(_pid, obj)) == want:
-                return obj
-            nxt_node = _q(_pid, node + nxt)
-            if nxt_node == node:
-                break
-            node = nxt_node
-    return 0
-
-
-def _mirror_percent() -> float | None:
-    blob = _read(_pid, _base + _EXP_RVA, 8)
-    if not blob:
-        return None
-    value = struct.unpack("<d", blob)[0]
-    # A stale address can be a subnormal that still falls inside 0..100
-    # and then prints as 0.00%. Exact 0 is a real empty bar.
-    if value == value and (value == 0.0 or 1e-4 <= value <= 100.0):
-        return float(value)
-    return None
-
-
 def _level_ok(value: int | None) -> int | None:
     if value is None or not (1 <= int(value) <= 255):
         return None
@@ -771,40 +628,85 @@ def _level_ok(value: int | None) -> int | None:
 
 
 def read_progress() -> dict | None:
-    """Live level and exp percent (0–100). None when the game driver is not open.
-
-    Level prefers the encoded CharacterData field, then the HUD block.
-    Exp percent is the LoadingBar float. The BSS mirror is the fallback
-    only when that float is missing and the double is a real percent.
-    """
-    global _exp_bar
-    if not _ensure():
+    """Live level and exp percent from realtime_monitor."""
+    raw = _monitor_player()
+    if not raw:
         return None
-    _load_hud()
-    _load_exp_rva()
-    _load_exp_chain()
-    level = None
-    block = _read(_pid, _base + _HUD["ST_BLOCK"], 0x40)
-    if block:
-        level = _level_ok(_hud_u32(block, _HUD["ST_LEVEL"]))
-    status = _find_status()
-    if status:
-        decoded = _level_ok(_decode(status, _HUD["LEVEL"]))
-        if decoded is not None:
-            level = decoded
-    bar = _exp_from_chain()
-    if not bar:
-        bar = _exp_bar if _bar_percent(_exp_bar) is not None else 0
-    if not bar:
-        _exp_bar = 0
-        ui = _find_subsystem(_EXP["VFT_UISUBSYSTEM"])
-        hci = _find_hud_char(ui)
-        if _heap(hci):
-            bar = _q(_pid, hci + _EXP["EXP_HUD_BAR"])
-    exp = _bar_percent(bar) if bar else None
+    exp = raw.get("expPct")
     if exp is None:
-        _exp_bar = 0
-        exp = _mirror_percent()
-    else:
-        _exp_bar = bar
-    return {"level": level, "exp_percent": exp}
+        exp = raw.get("exp_percent")
+    try:
+        exp_percent = float(exp) if exp is not None else None
+    except (TypeError, ValueError):
+        exp_percent = None
+    return {"level": _opt_int(raw, "level", "lv"), "exp_percent": exp_percent}
+
+
+def _bind_action_vfts() -> None:
+    """Action class ids follow the dropped registry, not a baked table."""
+    global BREATH_VFT, MOVE_VFTS, BODY, CMD
+    try:
+        from app._01_perception.registry_apply import parse_registry, source_registry
+    except Exception:
+        return
+    path = source_registry()
+    if path is None:
+        return
+    reg = parse_registry(path)
+
+    def take(key: str) -> int:
+        raw = reg.get(key)
+        if not raw:
+            return 0
+        try:
+            return int(raw, 0)
+        except ValueError:
+            return 0
+
+    labels = (
+        ("VFT_BREATHACT", "stand"),
+        ("VFT_MOVINGACT", "walk"),
+        ("VFT_MOVINGBACK", "walkback"),
+        ("VFT_ATTACKACT", "attack"),
+        ("VFT_ACTIONBASE", "actionbase"),
+        ("VFT_CHANGEDIR", "turn"),
+        ("VFT_SPELLACT", "spell"),
+        ("VFT_DEATH", "death"),
+        ("VFT_DEADBODY", "death"),
+        ("VFT_DAMAGEDACTION", "damaged"),
+        ("VFT_DAMAGEDREACTION", "damaged"),
+        ("VFT_EFFECTACTION", "effect"),
+    )
+    body: dict[int, str] = {}
+    for key, label in labels:
+        value = take(key)
+        if value:
+            body[value] = label
+    if body:
+        BODY = body
+    breath = take("VFT_BREATHACT")
+    if breath:
+        BREATH_VFT = breath
+    moving = {value for value in (take("VFT_MOVINGACT"), take("VFT_MOVINGBACK")) if value}
+    if moving:
+        MOVE_VFTS = frozenset(moving)
+    commands = {
+        take("VFT_CMDMOVE"): "move",
+        take("VFT_CMDATTACK"): "attack",
+        take("VFT_CMDINTERACT"): "interact",
+    }
+    commands.pop(0, None)
+    if commands:
+        CMD = commands
+    mgr = take("MGR")
+    actor = take("VFT_ACTORSUBS")
+    me = take("VFT_SELF")
+    if mgr:
+        _FIND["MGR"] = mgr
+    if actor:
+        _FIND["ACTOR_VFT"] = actor
+    if me:
+        _FIND["MY_PLAYER"] = me
+
+
+_bind_action_vfts()

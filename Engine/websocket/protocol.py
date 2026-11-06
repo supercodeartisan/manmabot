@@ -24,6 +24,8 @@ class PartyMessage:
     sender: str
     message: MessageBody
     ts: float = 0.0
+    # Local only. The server stamps the socket id; it is not on the wire.
+    peer: str = ""
 
     def __post_init__(self) -> None:
         self.sender = str(self.sender or "").strip()

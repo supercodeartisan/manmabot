@@ -166,7 +166,7 @@ def choice_for_raw_map(map_id: int) -> Optional[MapChoice]:
 
 
 def floors_entrances_path() -> Path:
-    return manmabot_root() / "analysis" / "lc930" / "dungeon" / "floors_entrances.txt"
+    return manmabot_root() / "analysis" / "data" / "dungeon" / "floors_entrances.txt"
 
 
 _MAP_CACHE: list[MapChoice] | None = None

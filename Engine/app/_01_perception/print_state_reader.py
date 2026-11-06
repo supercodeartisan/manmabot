@@ -1,11 +1,9 @@
 """In-process print_state sweep. One call reads LC memory and returns JSON.
 
-The DLL keeps a roster across calls (slow grid sweep ~100ms, fast PRES_B poll
-every snapshot) and adds ``iscr`` (A→B interpolated screen). The player
-object and each live entity also carry ``iso`` (A/B and age) when PRES_B has a step.
-``entities[]`` includes ``guid``, item ``contrib``/``own`` (extra_ent drop claim), ``qty``,
-``bait``, AttackAction ``atk``/``owner``/``tgt``, ``screen``/``iscr``. Offsets come from settings_print_state.json,
-then entity_offsets.txt in the same folder (TXT wins).
+The DLL is the same reader ``fix/single-version`` uses: roster plus a fast
+PRES_B poll, then ``iscr``. Settings come from ``settings_print_state.json``,
+then ``entity_offsets.txt`` in the same folder. Solo and party ticks both
+keep HP, MP, and level on this snapshot.
 """
 from __future__ import annotations
 
@@ -15,19 +13,21 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-# One process-wide DLL. The bot worker and the idle field view must not
-# enter print_state_snapshot / shutdown at the same time.
+# One process-wide DLL. The bot worker and a field view must not enter
+# print_state_snapshot / shutdown at the same time.
 _DLL_LOCK = threading.Lock()
 
-_ENTITIES = Path(__file__).resolve().parents[2] / "analysis" / "entities"
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
+_DLL = _ANALYSIS / "dll"
+_REGISTRY = _ANALYSIS / "registry"
 
 
 def default_dll_path() -> Path:
     """Newest print_state image. A locked live DLL keeps the previous build beside it."""
     candidates = [
-        _ENTITIES / "print_state.new.dll",
-        _ENTITIES / "print_state.iso.dll",
-        _ENTITIES / "print_state.dll",
+        _DLL / "print_state.new.dll",
+        _DLL / "print_state.iso.dll",
+        _DLL / "print_state.dll",
     ]
     found = [path for path in candidates if path.is_file()]
     if not found:
@@ -36,7 +36,7 @@ def default_dll_path() -> Path:
 
 
 def default_settings_path() -> Path:
-    return _ENTITIES / "settings_print_state.json"
+    return _REGISTRY / "settings_print_state.json"
 
 
 class PrintStateReader:
@@ -71,7 +71,10 @@ class PrintStateReader:
             if n < 0:
                 return None
             raw = self._buf.raw[:n]
-        return json.loads(raw.decode("utf-8"))
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            return None
+        return data
 
     def close(self) -> None:
         with _DLL_LOCK:
@@ -82,3 +85,6 @@ class PrintStateReader:
                 self._shutdown()
             except Exception:
                 pass
+
+
+__all__ = ["PrintStateReader", "default_dll_path", "default_settings_path"]

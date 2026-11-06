@@ -67,6 +67,7 @@ class PartyServer:
         self._ready = threading.Event()
         self._error: Optional[BaseException] = None
         self._clients: dict[str, Any] = {}
+        self._dropped: list[str] = []
         self._client_lock = threading.Lock()
         self._seq = 0
         self._server = None
@@ -484,11 +485,20 @@ class PartyServer:
 
     def _unregister(self, client_id: str) -> None:
         with self._client_lock:
-            self._clients.pop(client_id, None)
+            if self._clients.pop(client_id, None) is not None:
+                self._dropped.append(client_id)
+
+    def take_dropped(self) -> list[str]:
+        """Socket ids removed since the last call. The worker reconciles these."""
+        with self._client_lock:
+            dropped = list(self._dropped)
+            self._dropped.clear()
+            return dropped
 
     def _deliver(self, msg: PartyMessage, client_id: str) -> None:
         from .traffic_log import note
 
+        msg.peer = client_id
         note("recv", msg)
         try:
             self.inbox.put_nowait(msg)

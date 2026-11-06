@@ -1,0 +1,13 @@
+[
+  {"t": 0.0, "kind": "move", "x": 300, "y": 200},
+  {"t": 0.7, "kind": "move", "x": 1100, "y": 300},
+  {"t": 1.4, "kind": "move", "x": 900, "y": 600},
+  {"t": 2.0, "kind": "click", "x": 900, "y": 600, "mask": 1, "hold": 30},
+  {"t": 2.6, "kind": "text", "text": "UI TEST line-1", "cps": 8},
+  {"t": 3.6, "kind": "key", "key": "enter"},
+  {"t": 4.0, "kind": "text", "text": "abc XYZ 123", "cps": 8},
+  {"t": 5.0, "kind": "hotkey", "hotkey": "ctrl+a"},
+  {"t": 5.6, "kind": "key", "key": "end"},
+  {"t": 6.0, "kind": "wheel", "dy": -1},
+  {"t": 6.4, "kind": "wheel", "dy": 1}
+]

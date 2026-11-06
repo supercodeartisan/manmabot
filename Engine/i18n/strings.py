@@ -148,6 +148,7 @@ class UiStrings:
     saved_patrol: str
     farms_unsupported_dungeon: str
     patrol_not_walkable: str
+    hunt_point_refused: str
     map_missing_short: str
     map_loading_short: str
     select_tool: str
@@ -360,6 +361,13 @@ class UiStrings:
     drivers_setup_hint: str
     interception_driver: str
     install_interception: str
+    hunt_input: str
+    hunt_input_interception: str
+    hunt_input_pico: str
+    pico_port: str
+    pico_refresh_ports: str
+    pico_check: str
+    hunt_input_saved: str
     setup_memory_reader: str
     check_again: str
     driver_ready: str
@@ -493,6 +501,7 @@ _EN = UiStrings(
         "Farming areas are not used in dungeons. Click Edit patrol to place points."
     ),
     patrol_not_walkable="That tile is not walkable.",
+    hunt_point_refused="Can't choose this point.",
     map_missing_short="Map image is missing.",
     map_loading_short="Loading image…",
     select_tool="Select",
@@ -742,9 +751,16 @@ _EN = UiStrings(
     driver_ok="{msg}\n\nApprove UAC if prompted, then use Start monitor & connect.",
     driver_fail_prefix="{msg}",
     drivers_setup="Set up drivers",
-    drivers_setup_hint="Both drivers must be ready before ZF can start.",
+    drivers_setup_hint="Memory must be ready. Choose the hunt input below. Login and party chat keep using Interception.",
     interception_driver="Interception input",
     install_interception="Install input driver (admin)…",
+    hunt_input="Hunt input",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="Data COM",
+    pico_refresh_ports="Refresh ports",
+    pico_check="Check Pico",
+    hunt_input_saved="Hunt input saved.",
     setup_memory_reader="Set up memory reader (admin)…",
     check_again="Check again",
     driver_ready="Ready",
@@ -830,6 +846,10 @@ _EN = UiStrings(
         "worker_crashed": (
             "Stopped — ZF worker crashed. Check the log, then press Start."
         ),
+        "party_ws_unreachable": (
+            "Stopped — no leader socket address. "
+            "Set the leader IP / port on the Party tab."
+        ),
         "map_missing": "Cannot start — map data is missing.",
     },
     loot_labels={
@@ -872,7 +892,7 @@ _EN = UiStrings(
     wizard_memory_hint=(
         "Reads player HP/MP/position in this process. "
         "Approve UAC if the driver must be loaded. LC.exe should be running. "
-        "Change offsets in analysis/offsets.json."
+        "Change offsets in analysis/registry/offsets.json."
     ),
     wizard_not_tested="Not tested",
     wizard_starting_monitor="Starting monitor…",
@@ -998,6 +1018,7 @@ _KO = UiStrings(
         "던전에서는 사냥터 영역을 사용하지 않습니다. 패트롤 편집에서 지점을 배치하세요."
     ),
     patrol_not_walkable="이동할 수 없는 타일입니다.",
+    hunt_point_refused="이 점은 선택할 수 없습니다.",
     map_missing_short="맵 이미지가 없습니다.",
     map_loading_short="이미지 불러오는 중",
     select_tool="선택",
@@ -1248,9 +1269,16 @@ _KO = UiStrings(
     driver_ok="{msg}\n\nUAC가 뜨면 승인한 뒤 모니터 시작 & 연결을 사용하세요.",
     driver_fail_prefix="{msg}",
     drivers_setup="드라이버 설정",
-    drivers_setup_hint="종횡을 시작하려면 두 드라이버가 모두 준비되어야 합니다.",
+    drivers_setup_hint="메모리는 준비되어 있어야 합니다. 아래에서 사냥 입력을 고르세요. 로그인과 파티 채팅은 Interception을 그대로 씁니다.",
     interception_driver="Interception 입력",
     install_interception="입력 드라이버 설치 (관리자)…",
+    hunt_input="사냥 입력",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="데이터 COM",
+    pico_refresh_ports="포트 새로고침",
+    pico_check="Pico 확인",
+    hunt_input_saved="사냥 입력을 저장했습니다.",
     setup_memory_reader="메모리 읽기 설정 (관리자)…",
     check_again="다시 확인",
     driver_ready="준비됨",
@@ -1336,6 +1364,10 @@ _KO = UiStrings(
         "worker_crashed": (
             "중지됨 — 종횡 워커가 비정상 종료되었습니다. 로그를 확인한 뒤 시작을 누르세요."
         ),
+        "party_ws_unreachable": (
+            "중지됨 — 파티장 소켓 주소가 없습니다. "
+            "파티 탭에서 파티장 IP·포트를 설정하세요."
+        ),
         "map_missing": "시작할 수 없음 — 맵 데이터가 없습니다.",
     },
     loot_labels={
@@ -1377,7 +1409,7 @@ _KO = UiStrings(
     wizard_memory_hint=(
         "이 프로세스에서 플레이어 HP/MP/위치를 읽습니다. "
         "드라이버 로드가 필요하면 UAC를 승인하세요. LC.exe가 실행 중이어야 합니다. "
-        "오프셋은 analysis/offsets.json에서 바꿉니다."
+        "오프셋은 analysis/registry/offsets.json에서 바꿉니다."
     ),
     wizard_not_tested="테스트 안 됨",
     wizard_starting_monitor="모니터 시작 중…",
@@ -1499,6 +1531,7 @@ _ZH = UiStrings(
     saved_patrol="已保存此地下城的巡逻点。",
     farms_unsupported_dungeon="地下城不使用猎场区域。请打开“编辑巡逻”放置点。",
     patrol_not_walkable="该格子不可行走。",
+    hunt_point_refused="无法选择该点。",
     map_missing_short="缺少地图图像。",
     map_loading_short="正在加载图像…",
     select_tool="选择",
@@ -1749,9 +1782,16 @@ _ZH = UiStrings(
     driver_ok="{msg}\n\n如出现 UAC 请批准，然后使用“启动监视器并连接”。",
     driver_fail_prefix="{msg}",
     drivers_setup="设置驱动程序",
-    drivers_setup_hint="启动纵锋前，两个驱动程序都必须准备就绪。",
+    drivers_setup_hint="内存必须就绪。在下方选择狩猎输入。登录和队伍聊天仍使用 Interception。",
     interception_driver="Interception 输入",
     install_interception="安装输入驱动（管理员）…",
+    hunt_input="狩猎输入",
+    hunt_input_interception="Interception",
+    hunt_input_pico="Raspberry Pi",
+    pico_port="数据 COM",
+    pico_refresh_ports="刷新端口",
+    pico_check="检查 Pico",
+    hunt_input_saved="已保存狩猎输入。",
     setup_memory_reader="设置内存读取（管理员）…",
     check_again="重新检查",
     driver_ready="已就绪",
@@ -1835,6 +1875,10 @@ _ZH = UiStrings(
         "worker_crashed": (
             "已停止 — 纵锋工作线程异常退出。请查看日志后再次点击开始。"
         ),
+        "party_ws_unreachable": (
+            "已停止 — 没有队长套接字地址。"
+            "请在队伍页设置队长 IP 和端口。"
+        ),
         "map_missing": "无法启动 — 缺少地图数据。",
     },
     loot_labels={
@@ -1874,7 +1918,7 @@ _ZH = UiStrings(
     wizard_memory_hint=(
         "在本进程中读取玩家 HP/MP/位置。"
         "如需加载驱动请批准 UAC。LC.exe 应在运行中。"
-        "偏移只改 analysis/offsets.json。"
+        "偏移只改 analysis/registry/offsets.json。"
     ),
     wizard_not_tested="未测试",
     wizard_starting_monitor="正在启动监视器…",

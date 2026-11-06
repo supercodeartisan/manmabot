@@ -7,11 +7,14 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
+    QButtonGroup,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QVBoxLayout,
     QWidget,
 )
@@ -42,6 +45,8 @@ class DriverSetupDialog(QDialog):
         self.on_log = on_log
         self.ready = False
         self._working = False
+        self._loading = True
+        self._profile = self._load_profile(parent)
         self._bridge = _WorkerBridge(self)
         self._bridge.finished.connect(self._memory_done)
         self._bridge.logLine.connect(
@@ -49,7 +54,7 @@ class DriverSetupDialog(QDialog):
         )
 
         self.setWindowTitle(self.s.drivers_setup)
-        self.setFixedSize(480, 330)
+        self.setFixedSize(520, 460)
         self.setModal(True)
 
         root = QVBoxLayout(self)
@@ -61,12 +66,37 @@ class DriverSetupDialog(QDialog):
         hint.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
         root.addWidget(hint)
 
+        hunt = QLabel(self.s.hunt_input)
+        hunt.setStyleSheet("font-weight: 600; margin-top: 6px;")
+        root.addWidget(hunt)
+        radios = QHBoxLayout()
+        self._backend_group = QButtonGroup(self)
+        self.interception_radio = QRadioButton(self.s.hunt_input_interception)
+        self.pico_radio = QRadioButton(self.s.hunt_input_pico)
+        self._backend_group.addButton(self.interception_radio)
+        self._backend_group.addButton(self.pico_radio)
+        radios.addWidget(self.interception_radio)
+        radios.addWidget(self.pico_radio)
+        radios.addStretch(1)
+        root.addLayout(radios)
+        port_row = QHBoxLayout()
+        port_row.addWidget(QLabel(self.s.pico_port))
+        self.port_label = QLabel("—")
+        port_row.addWidget(self.port_label, stretch=1)
+        root.addLayout(port_row)
+
         self.input_status = self._status_row(
             self.s.interception_driver,
             self.s.install_interception,
             self._install_input,
         )
         root.addWidget(self.input_status["row"])
+        self.pico_status = self._status_row(
+            self.s.hunt_input_pico,
+            self.s.pico_check,
+            self._check_pico,
+        )
+        root.addWidget(self.pico_status["row"])
         self.memory_status = self._status_row(
             self.s.lamp_memory,
             self.s.setup_memory_reader,
@@ -89,6 +119,9 @@ class DriverSetupDialog(QDialog):
         self.close_btn.clicked.connect(self._close)
         footer.addWidget(self.close_btn)
         root.addLayout(footer)
+        self._apply_profile_to_form()
+        self.interception_radio.toggled.connect(self._save_choice)
+        self._loading = False
         self.refresh()
 
     def _status_row(self, title: str, button_text: str, command) -> dict[str, Any]:
@@ -105,16 +138,19 @@ class DriverSetupDialog(QDialog):
 
     def _set_working(self, working: bool) -> None:
         self._working = working
-        for item in (self.input_status, self.memory_status):
+        for item in (self.input_status, self.pico_status, self.memory_status):
             item["button"].setEnabled(not working)
+        self.interception_radio.setEnabled(not working)
+        self.pico_radio.setEnabled(not working)
         self.retry_btn.setEnabled(not working)
         self.close_btn.setEnabled(not working)
 
     def refresh(self) -> None:
-        state = driver_readiness()
+        state = driver_readiness(self._profile)
         self.ready = bool(state.ready)
         for ok, detail, item in (
             (state.interception, state.interception_detail, self.input_status),
+            (state.pico, state.pico_detail, self.pico_status),
             (state.memory, state.memory_detail, self.memory_status),
         ):
             item["label"].setText(
@@ -132,6 +168,58 @@ class DriverSetupDialog(QDialog):
     def _thread_log(self, message: str) -> None:
         """Marshal monitor install logs onto the UI thread."""
         self._bridge.logLine.emit(str(message))
+
+    def _load_profile(self, parent: QWidget | None):
+        profile = getattr(parent, "profile", None)
+        if profile is not None:
+            return profile
+        from settings.profile import load_profile
+
+        return load_profile()
+
+    def _apply_profile_to_form(self) -> None:
+        backend = str(getattr(self._profile, "input_backend", "interception") or "")
+        self.pico_radio.setChecked(backend.strip().lower() == "pico")
+        self.interception_radio.setChecked(not self.pico_radio.isChecked())
+        self._reload_ports()
+
+    def _reload_ports(self) -> None:
+        from app._05_action.input_backend import resolve_pico_port
+
+        found = resolve_pico_port("", getattr(self._profile, "pico_baud", 115200))
+        self.port_label.setText(found or "—")
+        self._profile.pico_com = found
+        if self._loading:
+            return
+        try:
+            from settings.profile import save_profile
+
+            save_profile(self._profile)
+        except Exception:
+            pass
+
+    def _save_choice(self, *_args) -> None:
+        if self._loading:
+            return
+        from settings.profile import save_profile
+
+        backend = "pico" if self.pico_radio.isChecked() else "interception"
+        if backend == "pico":
+            self._reload_ports()
+        if backend == str(getattr(self._profile, "input_backend", "") or ""):
+            return
+        self._profile.input_backend = backend
+        try:
+            save_profile(self._profile)
+        except Exception as exc:
+            self.restart_hint.setText(str(exc))
+            return
+        if self.on_log is not None:
+            self.on_log(self.s.hunt_input_saved)
+
+    def _check_pico(self) -> None:
+        self._save_choice()
+        self.refresh()
 
     def _install_input(self) -> None:
         ok, detail = install_interception_driver(log=self.on_log)
@@ -165,6 +253,7 @@ class DriverSetupDialog(QDialog):
     def _close(self) -> None:
         if self._working:
             return
+        self._save_choice()
         if self.require_ready and not self.ready:
             QMessageBox.information(self, self.s.drivers_setup, self.s.drivers_setup_hint)
             return

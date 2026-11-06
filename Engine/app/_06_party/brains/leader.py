@@ -1,9 +1,7 @@
-"""Team-leader brain (팀장).
+"""Team-leader seat (팀장).
 
-Seat for the PC that hosts the party. Farming stays on the solo decision
-loop; this brain will later adopt only the decisions the party must share
-(map change, shop run, return). It does not replace solo farm and does not
-emit an intent yet.
+The live leader tick is ``PartyLeaderManager``. This seat does not emit an
+intent yet.
 """
 from __future__ import annotations
 

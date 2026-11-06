@@ -15,12 +15,16 @@ LogFn = Callable[[str], None]
 class DriverReadiness:
     interception: bool
     memory: bool
+    pico: bool
     interception_detail: str
     memory_detail: str
+    pico_detail: str
+    hunt_backend: str
 
     @property
     def ready(self) -> bool:
-        return self.interception and self.memory
+        hunt_ok = self.pico if self.hunt_backend == "pico" else self.interception
+        return hunt_ok and self.memory
 
 
 def interception_ready() -> tuple[bool, str]:
@@ -39,14 +43,36 @@ def interception_ready() -> tuple[bool, str]:
         return False, f"Interception input driver is unavailable: {exc}"
 
 
-def driver_readiness() -> DriverReadiness:
+def hunt_input_ready(profile=None) -> tuple[bool, str]:
+    """Ready state of the hunt input selected on the profile."""
+    from app._05_action.input_backend import probe_pico, resolve_hunt_input
+
+    name, port, baud = resolve_hunt_input(profile)
+    if name == "pico":
+        return probe_pico(port, baud)
+    return interception_ready()
+
+
+def driver_readiness(profile=None) -> DriverReadiness:
+    from app._05_action.input_backend import probe_pico, resolve_hunt_input
+
     input_ok, input_detail = interception_ready()
+    name, port, baud = resolve_hunt_input(profile)
+    if name == "pico":
+        pico_ok, pico_detail = probe_pico(port, baud)
+    else:
+        pico_ok, pico_detail = (False, "Hunt input is Interception.")
+        if port:
+            pico_ok, pico_detail = probe_pico(port, baud)
     memory = probe_memory()
     return DriverReadiness(
         interception=input_ok,
         memory=memory.lamp in (Lamp.GREEN, Lamp.YELLOW),
+        pico=pico_ok,
         interception_detail=input_detail,
         memory_detail=memory.detail,
+        pico_detail=pico_detail,
+        hunt_backend=name,
     )
 
 

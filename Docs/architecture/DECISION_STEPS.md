@@ -65,6 +65,7 @@ Sticky `PlayerMode.WORLD_NAV`. 진입: `begin_world_nav` / farming `nav.world`·
 | 3 | `survival.hp` | heal/… | emit / handoff retreating | — |
 | 4 | `survival.mp_safe` | — | handoff retreating | — |
 | 5 | `survival.return_vitals` | — | handoff retreating | — |
+| 5a | `party.hold_ground` | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `shop.trip` | `SHOP_*` / scroll / walk | **handoff SHOPPING** (request after_shop) | wait |
 | 7 | `spell.support` | heal | emit | — |
 | 8 | `spell.buffs` | `BUFF` | emit | — |
@@ -100,6 +101,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 3 | `survival.hp` | `apply_hp_actions` | heal/potion/`TELEPORT`/… | emit / **handoff retreating** | — |
 | 4 | `survival.mp_safe` | `_maybe_low_mp_to_safe` | — | **handoff retreating** | — |
 | 5 | `survival.return_vitals` | `_maybe_return_on_vitals` | — | **handoff retreating** | — |
+| 5a | `party.hold_ground` | `step_party_hold_ground` | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `survival.return_idle` | `_maybe_return_on_idle` | — | **handoff retreating** | — |
 | 7 | `shop.before_world_nav` | `_shop_before_world_nav` | `SHOP_*`, scroll, walk | **handoff SHOPPING** | wait |
 | 8 | `nav.world` | `_maybe_world_nav` | scroll/gate/`IDLE`; walk→engage | emit | wait |
@@ -111,7 +113,9 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 14 | `farm.upkeep` | `_try_farm_upkeep` | — | handoff **traveling** | — |
 | 15 | `farm.post_shop_return` | `_maybe_post_shop_farm_return` | nav request | emit / pass | — |
 | 16 | `nav.hunt_map` | `_maybe_scroll_to_hunt_map` | scroll / world_nav | emit | — |
+| 16a | `party.turret_leash` | `step_party_turret_leash` | `TRAVELING` (back to anchor) | emit / pass (party leader turret only) | — |
 | 17 | `farm.engage` | `farm_loot_or_combat` | `ATTACK`, `PICKUP`, approach | emit | fail |
+| 17a | `party.turret_idle` | `step_party_turret_idle` | `TRAVELING` / `IDLE` | emit (party leader turret only) | — |
 | 18 | `farm.enter` | `_enter_farm_if_needed` | `TRAVELING`, `IDLE` | emit / handoff traveling | fail |
 | 19 | `farm.search` | `_search_inside_farm` | `SEARCHING`, `IDLE` | emit | fail |
 
@@ -126,6 +130,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 2 | `survival.hp` | shared (+ dungeon_policy) | — |
 | 3 | `survival.mp_safe` | shared | — |
 | 4 | `survival.return_vitals` | shared | — |
+| 4a | `party.hold_ground` | shared | — |
 | 5 | `survival.return_idle` | shared | — |
 | 6 | `shop.before_world_nav` | shared | wait |
 | 7 | `nav.world` | shared | wait |
@@ -139,7 +144,9 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 12 | `nav.hunt_map` | shared | — |
 | 13 | `dungeon.off_floor` | `IDLE` if wrong floor | fail |
 | 14 | `dungeon.blocked` | `try_blocked_step` → walk / `IDLE` | gap |
+| 14a | `party.turret_leash` | shared (party leader turret only) | — |
 | 15 | `farm.engage` | shared | fail |
+| 15a | `party.turret_idle` | shared (party leader turret only) | — |
 | 16 | `dungeon.patrol` | handoff traveling | — |
 | 17 | `dungeon.idle_nudge` | `try_idle_nudge` | gap |
 
@@ -154,6 +161,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 3 | `survival.hp` | shared | … | emit / handoff retreating | — |
 | 4 | `survival.mp_safe` | shared | — | handoff retreating | — |
 | 5 | `survival.return_vitals` | shared | — | handoff retreating | — |
+| 5a | `party.hold_ground` | shared | `ATTACK` / `IDLE` | emit (leader rally wait only) | — |
 | 6 | `routine.duration` | `_maybe_routine_duration` | — | **handoff WORLD_NAV** (row minutes up) | — |
 | 7 | `spell.support` | shared | | emit | — |
 | 8 | `spell.buffs` | shared | `BUFF` | emit | — |
@@ -198,6 +206,8 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | `survival.hp` | island, dungeon, traveling | — |
 | `survival.mp_safe` | island, dungeon, traveling | — |
 | `survival.return_vitals` | island, dungeon, traveling | — |
+| `party.hold_ground` | world_nav, island, dungeon, traveling | — |
+| `party.turret_leash` / `party.turret_idle` | island, dungeon | — |
 | `survival.return_idle` | island, dungeon | — |
 | `survival.inplace_hp` | retreating | — |
 | `shop.before_world_nav` | island, dungeon | wait |

@@ -18,7 +18,6 @@ class MemberKind(str, Enum):
     DEFEND = "defend"
     JOIN_MAP = "join_map"
     FOLLOW = "follow"
-    CLOSE_IN = "close_in"  # short step toward assist target (out of range)
     ASSIST = "assist"
     HOLD = "hold"
 
@@ -43,16 +42,27 @@ class PolicyInput:
     leader_farming: bool = False
     # Leader pose unchanged long enough (not farming) → settle to stop_tiles.
     leader_stopped: bool = False
-    # Stopped leader: on the locked cardinal stand? None = no stand available.
+    # Kept for callers; follow_kind ignores slot/stand (close on the leader).
     at_settle_stand: Optional[bool] = None
-    # Walking leader: within Arrive tolerance of formation slot? None = no slot.
     at_travel_spot: Optional[bool] = None
     # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
     leader_walk_dist: Optional[int] = None
-    # Assist target exists but outside attack/spell range → step closer.
+    # Assist target exists but is outside the solo hunt range, so follow.
     need_combat_step: bool = False
     # Solo farm: own target fights inside the assist leash, leader fight or not.
     solo_farm: bool = False
+    # Turret yard: member / target currently inside the farm box.
+    in_farm_yard: bool = True
+    target_in_yard: bool = True
+    # Same assist target as last tick (a fight already in progress).
+    assist_sticky: bool = False
+    # Turret: no live target and not on the radial seat around the leader.
+    off_turret_seat: bool = False
+    # In-place heal / buff already armed this tick (manager stashed the intent).
+    need_heal: bool = False
+    need_buff: bool = False
+    # Tile is the 15s/45s cache, not a live party or entity pose.
+    leader_pose_stale: bool = False
 
 
 @dataclass(frozen=True)
@@ -63,16 +73,21 @@ class PolicyResult:
 
 
 def decide_policy(inp: PolicyInput) -> PolicyResult:
-    """Member brain: travel leash / stop settle / combat assist+step / hold."""
+    """Member brain: heal/buff/potion, defend, assist, then follow/hold."""
     cfg = inp.config
     if inp.paused:
         return PolicyResult(MemberKind.STOP, False, "paused")
     if inp.dead:
         return PolicyResult(MemberKind.STOP, False, "dead")
-    if not inp.origin_ok:
-        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
+    # In-place HP before origin/travel: matches the old support early-return.
+    if inp.need_heal:
+        return PolicyResult(MemberKind.HEAL, False, "self_heal")
+    if inp.need_buff:
+        return PolicyResult(MemberKind.BUFF, False, "self_buff")
     if inp.need_potion:
         return PolicyResult(MemberKind.POTION, False, "self_potion")
+    if not inp.origin_ok:
+        return PolicyResult(MemberKind.WAIT, False, "waiting_origin")
     if cfg.defend_self and inp.self_threat:
         return PolicyResult(MemberKind.DEFEND, False, "defend_self")
 
@@ -84,47 +99,36 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
 
     dist = int(inp.leader_dist)
 
-    # Lost from entity sweep: always walk to PartySubsystem pose (never idle HOLD).
-    if not inp.leader_in_ui:
+    # In the solo hunt range: attack from here. Out of range: follow the leader.
+    if inp.assist_ready and not inp.need_combat_step:
+        yard = "turret_" if cfg.turret_farm else ""
+        out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
+        what = "solo_farm" if inp.solo_farm else "assist"
+        return PolicyResult(
+            MemberKind.ASSIST, False, f"{yard}{what}{out} dist={dist}"
+        )
+
+    # A cached tile is a clue, not a live follow goal.
+    if inp.leader_pose_stale:
+        return PolicyResult(
+            MemberKind.WAIT,
+            False,
+            f"leader_pose_stale dist={dist}",
+        )
+
+    # On-screen and off-screen fresh poses share the stop/start band below.
+    in_leash = dist <= int(cfg.assist_leash_tiles)
+
+    # --- Leader turret mode: back into the yard ---
+    if cfg.turret_farm and in_leash and not inp.in_farm_yard:
         return PolicyResult(
             MemberKind.FOLLOW,
             True,
-            f"follow_off_ui dist={dist}",
+            f"turret_rejoin_yard dist={dist}",
         )
 
-    # --- Solo farm: hunt own target while the leader is within the leash ---
-    if inp.solo_farm and inp.assist_ready and dist <= int(cfg.assist_leash_tiles):
-        if inp.need_combat_step:
-            return PolicyResult(
-                MemberKind.CLOSE_IN,
-                False,
-                f"solo_close_in dist={dist}",
-            )
-        return PolicyResult(
-            MemberKind.ASSIST,
-            False,
-            f"solo_farm dist={dist}",
-        )
-
-    # --- Party farm: attack the leader's target when resolved ---
-    # assist_ready alone is enough (contested / print_state atk/tgt). Do not
-    # require leader_farming — that flag can lag one tick behind the resolve.
-    if (
-        not inp.solo_farm
-        and inp.assist_ready
-        and dist <= int(cfg.assist_leash_tiles)
-    ):
-        if inp.need_combat_step:
-            return PolicyResult(
-                MemberKind.CLOSE_IN,
-                False,
-                f"close_in dist={dist}",
-            )
-        return PolicyResult(
-            MemberKind.ASSIST,
-            False,
-            f"assist dist={dist}",
-        )
+    # Turret ring seat is not a walk goal: it pulled the member around the
+    # leader. Idle hold is ``stop_tiles``. Yard rejoin stays above.
 
     # --- Combat leash: leader fighting but no live assist target yet ---
     if inp.leader_farming:

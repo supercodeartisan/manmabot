@@ -22,10 +22,10 @@ from PySide6.QtWidgets import (
 
 from settings.profile import normalize_party_roster
 from ui_qt.editors.form_helpers import add_check, add_spin_row, card, configure_table_fill
+from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 _LOOT_ROLES = ("none", "responsible")
-_LOOT_PRIORITIES = ("follow", "loot")
 _FARM_MODES = ("party", "solo")
 _PARTY_ROLES = ("member", "leader")
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
@@ -45,6 +45,8 @@ class PartyTab(QWidget):
         strings: dict[str, str],
         language: str = "en",
         on_log: Callable[[str], None] | None = None,
+        profile=None,
+        can_edit_map: Callable[[], bool] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -52,6 +54,9 @@ class PartyTab(QWidget):
         self.t = strings
         self.language = language
         self.on_log = on_log or (lambda _m: None)
+        self._profile = profile
+        self._can_edit_map = can_edit_map
+        self.routine_panel: PartyRoutinePanel | None = None
         self._lan_ip = ""
         self._ws_testing = False
         self._ws_status_target: QLabel | None = None
@@ -132,17 +137,20 @@ class PartyTab(QWidget):
         test_row.addWidget(self.ws_status, stretch=1)
         ws_lay.addLayout(test_row)
 
+        farm_hint = QLabel(
+            self.t.get(
+                "party_farm_hint",
+                "Party: attack what the leader fights. "
+                "Solo: hunt own monsters near the leader.",
+            )
+        )
+        farm_hint.setWordWrap(True)
+        member_lay.addWidget(farm_hint)
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel(self.t.get("party_farm_mode", "Farming method")))
         self.party_farm_mode = QComboBox()
-        self.party_farm_mode.addItem(
-            self.t.get("party_farm_party", "Party farm"),
-            "party",
-        )
-        self.party_farm_mode.addItem(
-            self.t.get("party_farm_solo", "Solo farm"),
-            "solo",
-        )
+        self.party_farm_mode.addItem(self.t.get("party_farm_party", "Party"), "party")
+        self.party_farm_mode.addItem(self.t.get("party_farm_solo", "Solo"), "solo")
         self._select_farm_mode()
         self.party_farm_mode.currentIndexChanged.connect(self._on_farm_mode_changed)
         mode_row.addWidget(self.party_farm_mode)
@@ -181,57 +189,22 @@ class PartyTab(QWidget):
             1,
             40,
         )
-        self.party_random_loot = add_check(
-            member_lay,
-            self.bag,
-            "party",
-            "random_loot",
-            self.t.get("party_random_loot", "Random"),
-            False,
-            on_change=self._on_loot_mode_changed,
+        member_hint = QLabel(
+            self.t.get(
+                "party_member_policy_hint",
+                "Turret follows the leader's party-map point. Loot rules come "
+                "from the party leader over WebSocket. Farming method and "
+                "follow / stop / assist are this bot's own.",
+            )
         )
-        role_row = QHBoxLayout()
-        role_row.addWidget(QLabel(self.t.get("party_loot_role", "Role")))
-        self.party_loot_role = QComboBox()
-        self.party_loot_role.addItem(
-            self.t.get("party_loot_role_none", "None"), "none"
-        )
-        self.party_loot_role.addItem(
-            self.t.get("party_loot_role_responsible", "Responsible"),
-            "responsible",
-        )
-        current = str(self.bag.get_str("party", "loot_role", "none") or "none")
-        if current not in _LOOT_ROLES:
-            current = "none"
-        idx = self.party_loot_role.findData(current)
-        self.party_loot_role.setCurrentIndex(max(0, idx))
-        self.party_loot_role.currentIndexChanged.connect(self._on_loot_role_changed)
-        role_row.addWidget(self.party_loot_role)
-        role_row.addStretch(1)
-        member_lay.addLayout(role_row)
-        priority_row = QHBoxLayout()
-        priority_row.addWidget(
-            QLabel(self.t.get("party_loot_priority", "Priority"))
-        )
-        self.party_loot_priority = QComboBox()
-        self.party_loot_priority.addItem(
-            self.t.get("party_loot_priority_follow", "Follow first"), "follow"
-        )
-        self.party_loot_priority.addItem(
-            self.t.get("party_loot_priority_loot", "Loot first"), "loot"
-        )
-        self._select_loot_priority()
-        self.party_loot_priority.currentIndexChanged.connect(
-            self._on_loot_priority_changed
-        )
-        priority_row.addWidget(self.party_loot_priority)
-        priority_row.addStretch(1)
-        member_lay.addLayout(priority_row)
+        member_hint.setWordWrap(True)
+        member_lay.addWidget(member_hint)
         lay.addWidget(self.member_panel)
 
         self.leader_panel = QWidget()
         leader_lay = QVBoxLayout(self.leader_panel)
         leader_lay.setContentsMargins(0, 0, 0, 0)
+        self._build_leader_farm(leader_lay)
         self._build_roster(leader_lay)
         self.ip_edit = self._address_row(
             leader_lay, self.t.get("party_ws_ip", "IP")
@@ -284,7 +257,18 @@ class PartyTab(QWidget):
         lay.addWidget(self.leader_panel)
 
         self.role_farm.currentIndexChanged.connect(self._on_role_combo_changed)
-        body.addStretch(1)
+        if self._profile is not None:
+            self.routine_panel = PartyRoutinePanel(
+                bag=self.bag,
+                profile=self._profile,
+                strings=self.t,
+                language=self.language,
+                on_log=self.on_log,
+                can_edit_map=self._can_edit_map,
+            )
+            body.addWidget(self.routine_panel, stretch=1)
+        else:
+            body.addStretch(1)
         self._apply_role(self._role())
 
     def _migrate_enabled_flag(self) -> None:
@@ -315,6 +299,78 @@ class PartyTab(QWidget):
         layout.addLayout(row)
         return combo
 
+    def _build_leader_farm(self, layout: QVBoxLayout) -> None:
+        """Global farm + loot knobs broadcast to members as ``party_policy``."""
+        box = card(
+            self.leader_panel,
+            self.t.get("party_farm_title", "Party farming"),
+        )
+        layout.addWidget(box)
+        lay = box.layout()
+        assert isinstance(lay, QVBoxLayout)
+        hint = QLabel(
+            self.t.get(
+                "party_leader_mode_hint",
+                "A point on the party map is turret hunting at that tile. "
+                "An area is a moving hunt. There is no separate turret switch.",
+            )
+        )
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        self.party_lag_tiles = add_spin_row(
+            lay,
+            self.bag,
+            "party",
+            "lag_tiles",
+            self.t.get("party_lag_tiles", "Wait when behind (tiles)"),
+            30,
+            5,
+            100,
+        )
+        self.party_lag_tiles.setToolTip(
+            self.t.get(
+                "party_lag_tiles_hint",
+                "On an area, the leader waits briefly when half or more members "
+                "are farther behind than this. A point does not wait.",
+            )
+        )
+
+        loot_hint = QLabel(
+            self.t.get(
+                "party_loot_hint",
+                "Random loot: the closest member, except the leader and the wizard, "
+                "picks up party drops. Off: only roster rows marked Responsible "
+                "pick up their own drops. Members do not loot while the leader is moving.",
+            )
+        )
+        loot_hint.setWordWrap(True)
+        lay.addWidget(loot_hint)
+        self.party_random_loot = add_check(
+            lay,
+            self.bag,
+            "party",
+            "random_loot",
+            self.t.get("party_random_loot", "Solo loot (everyone)"),
+            False,
+            on_change=self._on_loot_mode_changed,
+        )
+        # Kept for bag compatibility; responsible seats are per roster row.
+        self.party_loot_role = QComboBox()
+        self.party_loot_role.addItem(
+            self.t.get("party_loot_role_none", "None"), "none"
+        )
+        self.party_loot_role.addItem(
+            self.t.get("party_loot_role_responsible", "Responsible"),
+            "responsible",
+        )
+        self.party_loot_role.hide()
+        current = str(self.bag.get_str("party", "loot_role", "none") or "none")
+        if current not in _LOOT_ROLES:
+            current = "none"
+        idx = self.party_loot_role.findData(current)
+        self.party_loot_role.setCurrentIndex(max(0, idx))
+        self.party_loot_role.currentIndexChanged.connect(self._on_loot_role_changed)
+
     def _build_roster(self, layout: QVBoxLayout) -> None:
         box = card(
             self.leader_panel,
@@ -333,7 +389,20 @@ class PartyTab(QWidget):
         self.roster_role = QComboBox()
         for role in _ROSTER_ROLES:
             self.roster_role.addItem(self._roster_role_label(role), role)
+        # Default seat for new members is mage.
+        mage_idx = self.roster_role.findData("mage")
+        self.roster_role.setCurrentIndex(max(0, mage_idx))
         form.addWidget(self.roster_role)
+        form.addWidget(QLabel(self.t.get("party_roster_loot", "Loot")))
+        self.roster_loot = QComboBox()
+        self.roster_loot.addItem(
+            self.t.get("party_loot_role_none", "None"), "none"
+        )
+        self.roster_loot.addItem(
+            self.t.get("party_loot_role_responsible", "Responsible"),
+            "responsible",
+        )
+        form.addWidget(self.roster_loot)
         add_btn = QPushButton(self.t.get("add", "Add"))
         add_btn.clicked.connect(self._add_roster_row)
         form.addWidget(add_btn)
@@ -342,14 +411,18 @@ class PartyTab(QWidget):
         form.addWidget(remove_btn)
         box_lay.addLayout(form)
 
-        self.roster_table = QTableWidget(0, 3)
+        self.roster_table = QTableWidget(0, 6)
         self.roster_table.setHorizontalHeaderLabels(
             [
                 self.t.get("number", "No"),
                 self.t.get("party_roster_name", "Name"),
                 self.t.get("party_roster_role", "Role"),
+                self.t.get("party_roster_loot", "Loot"),
+                self.t.get("party_roster_enabled", "On"),
+                self.t.get("party_roster_required", "Wait"),
             ]
         )
+        self.roster_table.itemChanged.connect(self._on_roster_flag)
         self.roster_table.verticalHeader().setVisible(False)
         self.roster_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
@@ -361,7 +434,9 @@ class PartyTab(QWidget):
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
         self.roster_table.setMinimumHeight(160)
-        configure_table_fill(self.roster_table, 1, fixed={0: 48, 2: 120})
+        configure_table_fill(
+            self.roster_table, 1, fixed={0: 48, 2: 100, 3: 110, 4: 48, 5: 56}
+        )
         box_lay.addWidget(self.roster_table)
         self._fill_roster_table()
 
@@ -371,8 +446,13 @@ class PartyTab(QWidget):
             "mage": ("party_seat_mage", "Mage"),
             "shopkeeper": ("party_seat_shopkeeper", "Shopkeeper"),
         }
-        key, fallback = labels.get(role, labels["member"])
+        key, fallback = labels.get(role, labels["mage"])
         return self.t.get(key, fallback)
+
+    def _roster_loot_label(self, loot: str) -> str:
+        if loot == "responsible":
+            return self.t.get("party_loot_role_responsible", "Responsible")
+        return self.t.get("party_loot_role_none", "None")
 
     def _roster_rows(self) -> list[dict[str, str]]:
         return normalize_party_roster(self.bag.get("party", "roster", []))
@@ -385,20 +465,57 @@ class PartyTab(QWidget):
         if not isinstance(table, QTableWidget):
             return
         rows = self._roster_rows()
+        table.blockSignals(True)
         table.setRowCount(len(rows))
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        check_flags = flags | Qt.ItemFlag.ItemIsUserCheckable
         for index, row in enumerate(rows):
             number = QTableWidgetItem(str(index + 1))
             number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             name = QTableWidgetItem(row["name"])
-            role = str(row.get("role") or "member")
+            role = str(row.get("role") or "mage")
             role_item = QTableWidgetItem(self._roster_role_label(role))
             role_item.setData(Qt.ItemDataRole.UserRole, role)
-            for item in (number, name, role_item):
+            loot = str(row.get("loot") or "none")
+            loot_item = QTableWidgetItem(self._roster_loot_label(loot))
+            loot_item.setData(Qt.ItemDataRole.UserRole, loot)
+            enabled = QTableWidgetItem("")
+            enabled.setFlags(check_flags)
+            enabled.setCheckState(
+                Qt.CheckState.Checked
+                if str(row.get("enabled", "1")) != "0"
+                else Qt.CheckState.Unchecked
+            )
+            required = QTableWidgetItem("")
+            required.setFlags(check_flags)
+            required.setCheckState(
+                Qt.CheckState.Checked
+                if str(row.get("required", "1")) != "0"
+                else Qt.CheckState.Unchecked
+            )
+            for item in (number, name, role_item, loot_item):
                 item.setFlags(flags)
             table.setItem(index, 0, number)
             table.setItem(index, 1, name)
             table.setItem(index, 2, role_item)
+            table.setItem(index, 3, loot_item)
+            table.setItem(index, 4, enabled)
+            table.setItem(index, 5, required)
+        table.blockSignals(False)
+
+    def _on_roster_flag(self, item: QTableWidgetItem) -> None:
+        column = item.column()
+        if column not in (4, 5):
+            return
+        rows = self._roster_rows()
+        index = item.row()
+        if index < 0 or index >= len(rows):
+            return
+        key = "enabled" if column == 4 else "required"
+        rows[index][key] = (
+            "1" if item.checkState() == Qt.CheckState.Checked else "0"
+        )
+        self._store_roster(rows)
 
     def _add_roster_row(self) -> None:
         name = str(self.roster_name.text() or "").strip()
@@ -416,10 +533,19 @@ class PartyTab(QWidget):
                 )
             )
             return
-        role = str(self.roster_role.currentData() or "member")
+        role = str(self.roster_role.currentData() or "mage")
         if role not in _ROSTER_ROLES:
-            role = "member"
-        rows.append({"name": name, "role": role})
+            role = "mage"
+        loot = str(self.roster_loot.currentData() or "none")
+        if loot not in _LOOT_ROLES:
+            loot = "none"
+        rows.append({
+            "name": name,
+            "role": role,
+            "loot": loot,
+            "enabled": "1",
+            "required": "1",
+        })
         self._store_roster(rows)
         self.roster_name.clear()
         self._fill_roster_table()
@@ -628,23 +754,6 @@ class PartyTab(QWidget):
             role = "none"
         self.bag.set("party", "loot_role", role)
 
-    def _loot_priority(self) -> str:
-        value = str(self.bag.get_str("party", "loot_priority", "follow") or "follow")
-        return value if value in _LOOT_PRIORITIES else "follow"
-
-    def _select_loot_priority(self) -> None:
-        self.party_loot_priority.blockSignals(True)
-        idx = self.party_loot_priority.findData(self._loot_priority())
-        self.party_loot_priority.setCurrentIndex(max(0, idx))
-        self.party_loot_priority.blockSignals(False)
-
-    def _on_loot_priority_changed(self) -> None:
-        value = str(self.party_loot_priority.currentData() or "follow")
-        if value not in _LOOT_PRIORITIES:
-            value = "follow"
-        self.bag.set("party", "loot_priority", value)
-        self._on_loot_mode_changed()
-
     def _on_role_combo_changed(self) -> None:
         combo = self.sender()
         if not isinstance(combo, QComboBox):
@@ -678,19 +787,12 @@ class PartyTab(QWidget):
         self._refresh_enabled_state()
 
     def _on_loot_mode_changed(self) -> None:
-        on = self._party_on() and self._role() == "member"
-        party_loot = on and self._farm_mode() == "party"
+        on = self._party_on() and self._role() == "leader"
         random_on = self.bag.get_bool("party", "random_loot", False)
-        # Random / Role only drive follow-first loot.
-        follow_first = self._loot_priority() == "follow"
-        if hasattr(self, "party_loot_priority"):
-            self.party_loot_priority.setEnabled(party_loot)
         if hasattr(self, "party_random_loot"):
-            self.party_random_loot.setEnabled(party_loot and follow_first)
-        if hasattr(self, "party_loot_role"):
-            self.party_loot_role.setEnabled(
-                party_loot and follow_first and not random_on
-            )
+            self.party_random_loot.setEnabled(on)
+        if hasattr(self, "roster_loot"):
+            self.roster_loot.setEnabled(on and not random_on)
 
     def _on_party_enabled_changed(self) -> None:
         self._sync_member_enabled_flag()
@@ -719,8 +821,7 @@ class PartyTab(QWidget):
             self.ws_local_btn.setEnabled(can_local)
         if hasattr(self, "ws_lan_btn"):
             self.ws_lan_btn.setEnabled(can_local)
-        # Within the member panel, loot still depends on farm mode.
-        if on and self._role() == "member":
+        if on and self._role() == "leader":
             self._on_loot_mode_changed()
 
     def reload_from_bag(self) -> None:
@@ -766,7 +867,6 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
-        self._select_loot_priority()
         if hasattr(self, "party_ws_port"):
             self.party_ws_port.blockSignals(True)
             self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
@@ -782,6 +882,16 @@ class PartyTab(QWidget):
             )
             self.leader_host.blockSignals(False)
         self._select_farm_mode()
+        if hasattr(self, "party_lag_tiles"):
+            self.party_lag_tiles.blockSignals(True)
+            self.party_lag_tiles.setValue(self.bag.get_int("party", "lag_tiles", 30))
+            self.party_lag_tiles.blockSignals(False)
         self._lan_ip = ""
         self._fill_roster_table()
         self._apply_role(self._role())
+        if self.routine_panel is not None:
+            self.routine_panel.load_from_bag()
+
+    def flush_routine(self) -> None:
+        if self.routine_panel is not None:
+            self.routine_panel._persist_routine()
