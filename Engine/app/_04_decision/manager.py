@@ -713,7 +713,7 @@ class DecisionManager:
         if loot_id is not None:
             from app._04_decision.behaviors.loot_hop import mark_loot_clicked
 
-            mark_loot_clicked(self.blackboard, int(loot_id))
+            mark_loot_clicked(self.blackboard, int(loot_id), state)
 
     def reset(self) -> None:
         """Clear decision memory (new session / tests)."""

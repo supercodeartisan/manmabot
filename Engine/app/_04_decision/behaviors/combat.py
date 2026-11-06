@@ -25,7 +25,8 @@ STICKY_REBIND_TILES = 2
 # Same world tile after this many attack clicks. Living sticky is not dropped.
 ATTACK_STILL_TRIES = 5
 # Exp rise releases the sticky kill while the corpse row can still be listed.
-EXP_KILL_RELEASE_ENABLED = True
+# Temporarily off: a rise is logged only and does not drop the sticky.
+EXP_KILL_RELEASE_ENABLED = False
 SCRATCH_STILL_TILE = "attack_still_tile"
 SCRATCH_STILL_TRIES = "attack_still_tries"
 # Executor drops ``_attack_aim_lock`` for this id on the next execute.

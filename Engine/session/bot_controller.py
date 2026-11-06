@@ -2845,6 +2845,12 @@ class BotController:
             seen_epoch = self._settings_epoch
             profile_snap = snapshot_profile(profile)
         world_origin = install_profile_runtime(profile_snap, config, navigation=True)
+        from app._04_decision.game_language import get_game_language
+
+        get_logger("session").info(
+            "click language=%s (account server locale)",
+            get_game_language(),
+        )
         self._route_identity = route_identity(profile_snap)
         with self._lock:
             self._settings_applied = seen_epoch

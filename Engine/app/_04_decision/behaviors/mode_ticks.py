@@ -13,8 +13,12 @@ from app._04_decision.behaviors.mode_actions import (
     HP_RETREAT_STARTED,
     apply_hp_actions,
     apply_inplace_hp_support,
+    SCRATCH_APPROACH_HOLD_FIRE,
+    approach_counterattack,
+    clear_approach_hold_tick,
     continue_or_start_loot,
     farm_loot_or_combat,
+    hold_fire_outside_hunt,
     maybe_escalate_teleport_to_safe,
     maybe_heal_mp_to_hp_at_tree,
     maybe_mother_tree_before_passive_wait,
@@ -298,7 +302,13 @@ def _drive_world_nav(
 
     During ``walk``, combat/loot runs *before* nav hop advance so sticky
     engage is not starved by world-nav waypoint clicks every tick.
+    A hunt-rect or dungeon-entrance arrival finishes before that, so the
+    leftover walk to the center never starts.
     """
+    from app._04_decision.world_nav.hooks import finish_hunt_edge_arrival
+
+    if finish_hunt_edge_arrival(state, blackboard):
+        return None
     from app._04_decision.world_nav import (
         SCRATCH_NEED_WORLD_NAV,
         SCRATCH_ROUTINE_KIND,
@@ -311,10 +321,15 @@ def _drive_world_nav(
     session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
     need = blackboard.scratch.get(SCRATCH_NEED_WORLD_NAV)
     phase = getattr(session, "phase", None) if session is not None else None
-    if phase == "walk":
-        fought = farm_loot_or_combat(
-            state, blackboard, restrict_to_farm=False
-        )
+    if phase == "walk" or (
+        phase == "gate_approach" and hold_fire_outside_hunt(state, blackboard)
+    ):
+        if hold_fire_outside_hunt(state, blackboard):
+            fought = approach_counterattack(state, blackboard)
+        else:
+            fought = farm_loot_or_combat(
+                state, blackboard, restrict_to_farm=False
+            )
         if fought is not None:
             if session is not None or need:
                 ensure_world_nav_mode(blackboard)
@@ -328,9 +343,12 @@ def _drive_world_nav(
     phase = getattr(session, "phase", None) if session is not None else None
     # ready→walk this tick: overlay once after the first hop is armed.
     if phase == "walk":
-        fought = farm_loot_or_combat(
-            state, blackboard, restrict_to_farm=False
-        )
+        if hold_fire_outside_hunt(state, blackboard):
+            fought = approach_counterattack(state, blackboard)
+        else:
+            fought = farm_loot_or_combat(
+                state, blackboard, restrict_to_farm=False
+            )
         if fought is not None:
             return fought
     if status is not None:
@@ -756,6 +774,11 @@ def _step_spell_support(
 def _step_farm_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
+    if hold_fire_outside_hunt(state, blackboard):
+        result = approach_counterattack(state, blackboard)
+        if result is not None:
+            _refresh_combat_activity(state, blackboard)
+        return result
     result = farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
     if result is not None:
         _refresh_combat_activity(state, blackboard)
@@ -897,6 +920,16 @@ def _step_retreat_wait(
 def _step_retreat_exit(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
+    from app._04_decision.behaviors.mode_actions import (
+        HP_RETREAT_STARTED,
+        maybe_hp_return_while_retreating,
+    )
+
+    started = maybe_hp_return_while_retreating(state, blackboard)
+    if started is HP_RETREAT_STARTED:
+        return _tick_mother_tree_retreat(state, blackboard)
+    if started is not None:
+        return started
     if retreat_exit_ready(blackboard, state):
         finish_retreat(blackboard)
         return Status.FAILURE
@@ -974,6 +1007,143 @@ def _maybe_confined_escape(
     return None
 
 
+# World-nav walks only. Scroll, settle, NPC teleporter, and gate click stand
+# on purpose and must not burn a teleport.
+_WORLD_NAV_CONFINE_HOLD = "world_nav_confine_hold"
+_WORLD_NAV_CONFINE_PHASES = frozenset({"walk", "gate_approach"})
+_WORLD_NAV_CONFINE_HOLD_S = 12.0
+
+
+def _world_nav_confine_left(state: "GameState", blackboard: "Blackboard", hold: dict) -> bool:
+    """True once the cast has left the 3-tile bubble or the map."""
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision import player_mode as pm
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    ax, ay = int(hold.get("x") or 0), int(hold.get("y") or 0)
+    if tile_chebyshev(
+        int(blackboard.world_origin.x),
+        int(blackboard.world_origin.y),
+        ax,
+        ay,
+    ) > int(pm.UNSTICK_CONFINED_TILES):
+        return True
+    pose = live_pose_from_state(state)
+    anchor_map = hold.get("map_id")
+    if (
+        pose is not None
+        and anchor_map is not None
+        and int(pose.map_id) != int(anchor_map)
+    ):
+        return True
+    return False
+
+
+def _world_nav_at_hunt_edge(state: "GameState", blackboard: "Blackboard", session: object) -> bool:
+    """Arrival belongs to the drive step. Do not teleport off the destination."""
+    from app._04_decision.world_nav.hooks import SCRATCH_ROUTINE
+    from app._04_decision.world_nav.routine import pose_hunt_arrival
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    if getattr(session, "phase", None) != "walk":
+        return False
+    cursor = blackboard.scratch.get(SCRATCH_ROUTINE)
+    entry = cursor.active() if cursor is not None else None
+    if entry is None:
+        return False
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return False
+    return bool(
+        pose_hunt_arrival(
+            pose, entry, blackboard, reason=str(getattr(session, "reason", "") or "")
+        )
+    )
+
+
+def _maybe_world_nav_confined(
+    state: "GameState", blackboard: "Blackboard"
+) -> Status | None:
+    """13 s / 3 tiles during a world-nav walk, then the same teleport or scroll.
+
+    The live plan is dropped. After the pose leaves that bubble the same
+    routine reason is requested again, so the next plan starts from the
+    landing and still aims at the row that was in progress. Scroll, NPC
+    teleporter, and gate-click phases do not start the clock.
+    """
+    import time
+
+    from app._04_decision.behaviors.unstick import reset_confined_progress
+    from app._04_decision.dungeon_policy import unstick_disabled
+    from app._04_decision.world_nav.hooks import (
+        SCRATCH_WORLD_NAV,
+        _drop_world_nav_session,
+        request_world_nav,
+    )
+    from app._04_decision.world_nav.session import live_pose_from_state
+    from app.bot_log import get_logger
+
+    hold = blackboard.scratch.get(_WORLD_NAV_CONFINE_HOLD)
+    if isinstance(hold, dict):
+        since = float(hold.get("since") or 0.0)
+        left = _world_nav_confine_left(state, blackboard, hold)
+        timed_out = since > 0.0 and (time.time() - since) >= _WORLD_NAV_CONFINE_HOLD_S
+        if left or timed_out:
+            reason = str(hold.get("reason") or "start")
+            blackboard.scratch.pop(_WORLD_NAV_CONFINE_HOLD, None)
+            request_world_nav(blackboard, reason)
+            get_logger("nav").info(
+                "world nav confined resume reason=%s how=%s",
+                reason,
+                "land" if left else "timeout",
+            )
+            return None
+        blackboard.current_goal = "world_nav"
+        blackboard.emit(
+            ActionType.IDLE,
+            priority=0.4,
+            reason="world nav confined wait",
+        )
+        return Status.SUCCESS
+
+    session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
+    if session is None:
+        return None
+    phase = str(getattr(session, "phase", "") or "")
+    if phase not in _WORLD_NAV_CONFINE_PHASES or unstick_disabled():
+        reset_confined_progress(blackboard)
+        return None
+    if _world_nav_at_hunt_edge(state, blackboard, session):
+        return None
+    status = _maybe_confined_escape(state, blackboard)
+    if status is None:
+        return None
+    pose = live_pose_from_state(state)
+    reason = str(getattr(session, "reason", "") or "start")
+    blackboard.scratch[_WORLD_NAV_CONFINE_HOLD] = {
+        "reason": reason,
+        "map_id": None if pose is None else int(pose.map_id),
+        "x": int(blackboard.world_origin.x),
+        "y": int(blackboard.world_origin.y),
+        "since": time.time(),
+    }
+    _drop_world_nav_session(blackboard)
+    from app._04_decision.talking_scroll import SCRATCH_UNSTICK_SCROLL_RETURN
+
+    # Farming reads this after a mainland unstick scroll. World nav already
+    # resumes the same row, so leaving the flag would idle outside the farm.
+    blackboard.scratch.pop(SCRATCH_UNSTICK_SCROLL_RETURN, None)
+    get_logger("nav").info(
+        "world nav confined escape reason=%s phase=%s anchor=(%s,%s) map=%s",
+        reason,
+        phase,
+        int(blackboard.world_origin.x),
+        int(blackboard.world_origin.y),
+        "-" if pose is None else int(pose.map_id),
+    )
+    return Status.SUCCESS
+
+
 def tick_traveling(state: "GameState", blackboard: "Blackboard") -> Status:
     """L3 column `TRAVELING` — implementation after farm-entry helpers."""
     return _tick_traveling_column(state, blackboard)
@@ -1038,6 +1208,24 @@ def _step_travel_hunt_map(
     return None
 
 
+def _step_travel_entered_farm(
+    state: "GameState", blackboard: "Blackboard"
+) -> Status | None:
+    """Inside the hunt rect, farm search takes over. The center is not a goal."""
+    del state
+    if blackboard.travel_purpose not in (PURPOSE_ENTER_FARM, PURPOSE_NEXT_FARM):
+        return None
+    farm = get_active_farm(blackboard.farm_area_index)
+    if farm is None:
+        return None
+    ox, oy = int(blackboard.world_origin.x), int(blackboard.world_origin.y)
+    if not farm.contains(ox, oy):
+        return None
+    complete_travel_arrival(blackboard)
+    blackboard.note_no_intent("entered farm rect -> farming")
+    return Status.FAILURE
+
+
 def _step_travel_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
@@ -1046,6 +1234,10 @@ def _step_travel_engage(
         or _patrol_travel(blackboard)
         or _dungeon_floor_travel(blackboard)
     ):
+        if _enter_farm_travel(blackboard) and hold_fire_outside_hunt(
+            state, blackboard
+        ):
+            return approach_counterattack(state, blackboard)
         return farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
     return None
 
@@ -1185,6 +1377,7 @@ def _handlers_traveling() -> dict:
         "shop.trip": _maybe_shop_trip,
         "travel.training_done": _step_travel_training_done,
         "nav.hunt_map": _step_travel_hunt_map,
+        "travel.entered_farm": _step_travel_entered_farm,
         "farm.engage": _step_travel_engage,
         "travel.push_deeper_farm": _step_travel_push_deeper,
         "travel.arrive": _step_travel_arrive,
@@ -1502,9 +1695,12 @@ def _enter_farm_if_needed(
     hunt_map = _maybe_scroll_to_hunt_map(state, blackboard)
     if hunt_map is not None:
         return hunt_map
-    loot = continue_or_start_loot(
-        state, blackboard, allow_new=True, restrict_to_farm=False
-    )
+    if hold_fire_outside_hunt(state, blackboard):
+        loot = approach_counterattack(state, blackboard)
+    else:
+        loot = continue_or_start_loot(
+            state, blackboard, allow_new=True, restrict_to_farm=False
+        )
     if loot is not None:
         return loot
     goal = farm.interior_walkable(terrain, (ox, oy), margin=farm_area.ARRIVE_TILES)
@@ -2207,6 +2403,7 @@ def _handlers_world_nav() -> dict:
         "shop.trip": _shop_before_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),
+        "unstick.confined": _maybe_world_nav_confined,
         "world_nav.drive": _drive_world_nav,
     }
 
@@ -2248,6 +2445,9 @@ def tick_mode(state: "GameState", blackboard: "Blackboard") -> Status:
     """Dispatch GLOBAL column then the sticky PlayerMode column."""
     from app._04_decision.steps import GLOBAL, run_column
 
+    clear_approach_hold_tick(blackboard)
+    if hold_fire_outside_hunt(state, blackboard):
+        blackboard.scratch[SCRATCH_APPROACH_HOLD_FIRE] = True
     prefix = run_column(
         GLOBAL,
         {

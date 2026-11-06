@@ -1,20 +1,27 @@
-"""NPC teleporter shortcuts for world-nav (same-map land → destination dungeon gate).
+"""NPC teleporter shortcuts for world-nav.
 
-Land xy is unknown at plan time. Each teleporter behavior names a
-``destination_dungeon`` (LC mapId). Planner edges link the NPC tile only to
-``ground_enter`` transitions whose ``to_map`` matches that destination.
-After SHOP_RUN, settle polls live pose until xy leaves the NPC cell, then
-the nearest matching entrance is used for gate approach.
+Two arrival models (``ShoppingBehavior.teleport_kind``):
+
+- ``dungeon_gate`` (legacy): dialog lands on the NPC map near a dungeon door.
+  Planner edges link the NPC tile to a ``ground_enter`` whose ``to_map`` matches
+  ``destination_dungeon``. After SHOP_RUN, settle rewrites the next gate.
+- ``field_land``: dialog lands at an absolute field xy (often same mainland map).
+  Planner edges link the NPC tile to ``(land_map_id, land_world)``. No gate rewrite.
 
 Which teleporters are eligible is ``world_nav: true`` on the behavior in
 ``npc_behaviors.yaml`` (Shopping Practice checkbox). Korean base ids are
-stored; Chinese locale uses ``<base>_ch``.
+stored; the account server language ``zh`` uses ``<base>_ch`` when that row exists.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
+
+from shop.behaviors import (
+    TELEPORT_KIND_DUNGEON_GATE,
+    TELEPORT_KIND_FIELD_LAND,
+)
 
 # Legacy hard-coded set (pre-YAML flag). Still used as default when the YAML
 # key is omitted; prefer ``world_nav`` on each teleporter behavior.
@@ -89,25 +96,109 @@ def list_world_nav_teleporter_base_ids(
 def resolve_world_nav_teleporter_ids(
     locale: object | None = None,
 ) -> frozenset[str]:
-    """YAML teleporter ids for the active shop locale (``ko`` / ``zh``).
+    """YAML teleporter ids for the account server language (``ko`` / ``zh``).
 
     Enabled set = teleporters with ``world_nav: true`` (Shopping Practice).
-    ``zh`` → ``<base>_ch``, ``ko`` → base. Missing catalog rows are skipped
-    later by ``behavior_by_id``.
+    When ``locale`` is omitted, the live click language is used. Start copies
+    the account server locale into that language (``shop_locale``).
+    ``zh`` → ``<base>_ch`` when that row exists, else the Korean base (so a
+    newly calibrated field_land is not dropped until a ``_ch`` UV is saved).
+    ``ko`` → base. Missing catalog rows are still skipped by ``behavior_by_id``.
     """
-    from app._04_decision.shops import SHOP_LOCALE, normalize_shop_locale
+    from app._04_decision.shops import normalize_shop_locale
+    from shop.behaviors import behavior_by_id
 
-    chinese = (
-        normalize_shop_locale(locale if locale is not None else SHOP_LOCALE)
-        == "zh"
-    )
+    if locale is None:
+        from app._04_decision.game_language import get_game_language
+
+        locale = get_game_language()
+    chinese = normalize_shop_locale(locale) == "zh"
     bases = list_world_nav_teleporter_base_ids()
     if not bases:
         # No flagged rows yet — keep historical three so old YAML still works.
         bases = WORLD_NAV_TELEPORTER_BASE_IDS
-    if chinese:
-        return frozenset(f"{bid}_ch" for bid in bases)
-    return frozenset(bases)
+    if not chinese:
+        return frozenset(bases)
+    catalog = _cached_behaviors()
+    out: set[str] = set()
+    for bid in bases:
+        ch = f"{bid}_ch"
+        if behavior_by_id(ch, catalog) is not None:
+            out.add(ch)
+        else:
+            out.add(bid)
+    return frozenset(out)
+
+
+def dungeon_gate_serves_goal(
+    transitions: Iterable[Any],
+    *,
+    destination_dungeon: int,
+    goal_map: int,
+) -> bool:
+    """True when a dungeon_gate TP into ``destination_dungeon`` helps reach ``goal_map``.
+
+    Same map, or ``goal_map`` reachable from the destination by ``floor_ladder``
+    edges only (deeper floors of that complex). Stops mainland shutter TPs from
+    being used as cheap blinks when the goal is an unrelated dungeon/field.
+    """
+    dest = int(destination_dungeon)
+    goal = int(goal_map)
+    if dest <= 0:
+        return False
+    if dest == goal:
+        return True
+    # BFS on floor_ladder only, starting at dest.
+    adj: dict[int, set[int]] = {}
+    for t in transitions:
+        if str(getattr(t, "edge_type", "") or "") != "floor_ladder":
+            continue
+        a = int(getattr(t, "from_map", -1))
+        b = int(getattr(t, "to_map", -1))
+        if a < 0 or b < 0:
+            continue
+        adj.setdefault(a, set()).add(b)
+        adj.setdefault(b, set()).add(a)
+    seen = {dest}
+    stack = [dest]
+    while stack:
+        cur = stack.pop()
+        for nxt in adj.get(cur, ()):
+            if nxt in seen:
+                continue
+            if nxt == goal:
+                return True
+            seen.add(nxt)
+            stack.append(nxt)
+    return False
+
+
+def filter_teleporter_links_for_goal(
+    links: Iterable[NpcTeleporterLink],
+    transitions: Iterable[Any],
+    *,
+    goal_map: int,
+    same_map: bool,
+) -> list[NpcTeleporterLink]:
+    """Drop dungeon_gate links that do not serve the goal; keep field_land.
+
+    On the goal map, only field_land remains (dungeon_gate would leave it).
+    """
+    out: list[NpcTeleporterLink] = []
+    gm = int(goal_map)
+    for link in links:
+        if link.is_field_land:
+            out.append(link)
+            continue
+        if same_map:
+            continue
+        if dungeon_gate_serves_goal(
+            transitions,
+            destination_dungeon=int(link.destination_dungeon),
+            goal_map=gm,
+        ):
+            out.append(link)
+    return out
 
 
 @dataclass(frozen=True)
@@ -118,24 +209,36 @@ class NpcTeleporterLink:
     npc_x: int
     npc_y: int
     adena_cost: int
+    teleport_kind: str
     destination_dungeon: int
-    gate_edge_id: str
-    gate_x: int
-    gate_y: int
-    gate_to_x: int
-    gate_to_y: int
+    # Planner arrival cell: dungeon gate approach, or field land xy.
+    land_map_id: int
+    land_x: int
+    land_y: int
+    gate_edge_id: str = ""
+    gate_to_x: int = 0
+    gate_to_y: int = 0
 
     @property
     def npc_key(self) -> tuple[int, int, int]:
         return (int(self.map_id), int(self.npc_x), int(self.npc_y))
 
     @property
+    def land_key(self) -> tuple[int, int, int]:
+        return (int(self.land_map_id), int(self.land_x), int(self.land_y))
+
+    @property
     def gate_key(self) -> tuple[int, int, int]:
-        return (int(self.map_id), int(self.gate_x), int(self.gate_y))
+        """Back-compat alias for planner nodes (same as ``land_key``)."""
+        return self.land_key
 
     @property
     def cost_tiles(self) -> int:
         return int(TELEPORTER_META_COST_TILES)
+
+    @property
+    def is_field_land(self) -> bool:
+        return str(self.teleport_kind) == TELEPORT_KIND_FIELD_LAND
 
 
 def _cheb(ax: int, ay: int, bx: int, by: int) -> int:
@@ -149,11 +252,12 @@ def load_npc_teleporter_links(
     behavior_ids: frozenset[str] | None = None,
     link_radius: int = GROUND_ENTER_LINK_RADIUS,
 ) -> list[NpcTeleporterLink]:
-    """Build NPC→ground_enter links for planner edges.
+    """Build NPC→arrival links for planner edges.
 
-    Only ``ground_enter`` edges with ``to_map == behavior.destination_dungeon``.
+    - ``dungeon_gate``: ``ground_enter`` with ``to_map == destination_dungeon``.
+    - ``field_land``: direct edge to ``(land_map_id, land_world)``.
     ``adena``: when set, skip links whose fare exceeds current adena.
-    Behaviors with ``destination_dungeon == 0`` are skipped.
+    Incomplete rows (dest/land unset) are skipped.
     """
     from shop.behaviors import ACTION_TELEPORTER, behavior_by_id
 
@@ -165,13 +269,12 @@ def load_npc_teleporter_links(
         if behavior_ids is not None
         else resolve_world_nav_teleporter_ids()
     )
-    npcs: list[tuple[Any, int, int, int, int]] = []
+    links: list[NpcTeleporterLink] = []
+    radius = max(0, int(link_radius))
+
     for bid in sorted(want):
         b = behavior_by_id(bid, catalog)
         if b is None or str(b.action) != ACTION_TELEPORTER:
-            continue
-        dest = max(0, int(getattr(b, "destination_dungeon", 0) or 0))
-        if dest <= 0:
             continue
         mid = pack_ids.pack_id_to_map_id(str(b.map_id or ""))
         if mid is None:
@@ -179,12 +282,39 @@ def load_npc_teleporter_links(
         fare = max(0, int(getattr(b, "adena_cost", 0) or 0))
         if adena is not None and fare > int(adena):
             continue
-        npcs.append((b, int(mid), int(b.npc_world_x), int(b.npc_world_y), dest))
+        nx, ny = int(b.npc_world_x), int(b.npc_world_y)
+        kind = str(getattr(b, "teleport_kind", "") or TELEPORT_KIND_DUNGEON_GATE)
+        if getattr(b, "is_field_land", None) and b.is_field_land():
+            kind = TELEPORT_KIND_FIELD_LAND
+        elif kind not in (TELEPORT_KIND_DUNGEON_GATE, TELEPORT_KIND_FIELD_LAND):
+            kind = TELEPORT_KIND_DUNGEON_GATE
 
-    links: list[NpcTeleporterLink] = []
-    radius = max(0, int(link_radius))
-    for b, mid, nx, ny, dest in npcs:
-        fare = max(0, int(getattr(b, "adena_cost", 0) or 0))
+        if kind == TELEPORT_KIND_FIELD_LAND:
+            land_mid = max(0, int(getattr(b, "land_map_id", 0) or 0))
+            lx = int(getattr(b, "land_world_x", 0) or 0)
+            ly = int(getattr(b, "land_world_y", 0) or 0)
+            if land_mid <= 0:
+                continue
+            links.append(
+                NpcTeleporterLink(
+                    behavior_id=str(b.id),
+                    name=str(b.name or b.id),
+                    map_id=int(mid),
+                    npc_x=nx,
+                    npc_y=ny,
+                    adena_cost=fare,
+                    teleport_kind=TELEPORT_KIND_FIELD_LAND,
+                    destination_dungeon=0,
+                    land_map_id=land_mid,
+                    land_x=lx,
+                    land_y=ly,
+                )
+            )
+            continue
+
+        dest = max(0, int(getattr(b, "destination_dungeon", 0) or 0))
+        if dest <= 0:
+            continue
         for t in transitions:
             if str(getattr(t, "edge_type", "") or "") != "ground_enter":
                 continue
@@ -200,14 +330,16 @@ def load_npc_teleporter_links(
                 NpcTeleporterLink(
                     behavior_id=str(b.id),
                     name=str(b.name or b.id),
-                    map_id=mid,
+                    map_id=int(mid),
                     npc_x=nx,
                     npc_y=ny,
                     adena_cost=fare,
+                    teleport_kind=TELEPORT_KIND_DUNGEON_GATE,
                     destination_dungeon=dest,
+                    land_map_id=int(mid),
+                    land_x=gx,
+                    land_y=gy,
                     gate_edge_id=str(getattr(t, "edge_id", "") or ""),
-                    gate_x=gx,
-                    gate_y=gy,
                     gate_to_x=int(t.to_x),
                     gate_to_y=int(t.to_y),
                 )

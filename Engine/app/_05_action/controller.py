@@ -1024,6 +1024,17 @@ class ActionExecutor:
 
         if LOOT_PICKUP_USE_F4:
             del bounds
+            from app._04_decision.behaviors.loot_hop import f4_allowed
+
+            # Decide already waits for a stop. Refuse again if this tick is
+            # still a walk or an attack, and do not mark the pile clicked.
+            if not f4_allowed(
+                getattr(self, "_blackboard", None),
+                game_state,
+                action.target_id,
+            ):
+                note_skip(f"loot id={action.target_id} why=not-still")
+                return
             # Leave leftover attack hover (corpse/empty arrow) before F4.
             from app._05_action.cursor_verify import clear_loot_attack_hover
 

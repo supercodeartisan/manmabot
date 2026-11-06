@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-05 — merge main, keep party analysis and raspberry
+
+Intent: Bring main onto this branch again. Party, the cleaned analysis module, and the Raspberry Pi input stay on this branch. Solo bot changes take main.
+Shared: `arm_loot_side_intent` still skips loot when `party_leader_no_loot` is set, and it keeps main's sticky-loot guard. `body_pose` still reads the analysis registry. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not edited by hand.
+Affects: solo loot, world nav, and shops follow main. Party, analysis DLLs, and Raspberry input stay as they are on this branch.
+Consent: user (remerge; party, analysis, and raspberry win; solo bot takes main).
+Result: merge resolved that way. Not run in game.
+
 ## 2026-11-04 — turret hunting is the party-map point
 
 Intent: The turret/moving combo is not a setting. The leader turrets only while standing on a point marked on the party map. The anchor is that point. An area is a moving hunt. Travel and a map-only row are not turret. Members hear the same mode through party policy. Lag wait runs only inside an area. Rally wait still holds the hunt; when it ends on a point, turret turns on.
@@ -15,6 +23,22 @@ Shared: `continue_or_start_loot` and `arm_loot_side_intent` skip loot when `part
 Affects: party leader farming and member pickup. Solo loot is unchanged.
 Consent: user (leader must not loot; members follow leader policy; drop the priority setting).
 Result: party loot policy test passed. Not run in game.
+
+## 2026-11-04 — item $id names prefer the Korean table
+
+Intent: hotbar and bag item names use the Korean column of `item_name_kr.csv` for a `$mid`, the same order as 11_04 `hotbar_930`. `desc*` / `string*` / empty cells fall through to the memory string. Spell text on the slot is unchanged.
+Shared: `itemNameKr` in the hotbar nametable and `inventory_listen` `msgNameStatic`. HP potion matching, hotbar roles, and bag name checks read those names. Movement, combat selection, retreat, and login are unchanged.
+Affects: hotbar item labels and inventory `name`. A Chinese account still receives the Korean item column. Shop and storage readers still use the memory string.
+Consent: user (apply the 11_04 Korean item-name lookup to this project).
+Result: table copied to `Engine/analysis/data/item_name_kr.csv`. `hotbar_listen.dll` and `inventory_listen.dll` rebuilt. Lookup checked for 아데나, 체력 회복제, 가죽 재킷, 해독제, 말하는 두루마리. Not run in game.
+
+## 2026-11-04 — memory offsets synced to 11_04 registry v36
+
+Intent: point the existing memory readers at the 2026-11-04 client anchors. Read order, struct offsets, and decision code stay as they are.
+Shared: `LC930_REGISTRY.txt` (129 keys), `char_offsets.txt`, `entity_offsets.txt`, `offsets.json` (`MapSubsystemVftRva`, `PosXAbs`/`PosYAbs`), inventory and hotbar tables, `body_pose.py` action vfts, `shop_listen.c` anchors. `STAT_*` fields are +0x20. `K_MUL`/`K_XOR`, `MAP_ID_OFF` 0x718, `AC_ACTION_OFF` 0xC8, and `ST_BLOCK` are unchanged. `STRINGS_CSV` path and `UI_BFS_*` stay. `EntCtrl*` in `offsets.json` was not remapped.
+Affects: position, map id, HP/stats, entities, inventory, hotbar, buff, shop, body pose. Movement, combat, retreat, loot, and login logic are unchanged. Chat line layout and the EXP mirror global are unchanged. Party registry copies were not on the live path and were left as v35.
+Consent: user (apply the constant-only update; do not change read logic).
+Result: constants written. `shop_listen.dll` must be rebuilt before shop reads the new anchors. Other readers load the tables at startup. Not run in game.
 
 ## 2026-11-03 — party leader schedule is separate from the solo routine
 
@@ -200,6 +224,22 @@ Affects: leader socket start (empty roster listens, workflow waits). Member hell
 Consent: user (discovery layer P0 spec).
 Result: not run in game.
 
+## 2026-11-01 — dungeon hop matches the 2026-10-19 click
+
+Intent: a dungeon hop within one tile drops that click and plans the next one on the same tick. Two tiles out, while the body is walking, the click moves farther only when the line stays straight. The route-cell chain is not used.
+Shared: `emit_travel_hop`. The field branch already used this near-tile and straight-extend rule, so its clicks stay the same. `choose_body_click`, loot, combat, and HP are unchanged.
+Affects: dungeon patrol and other dungeon travel hops. A bend waits until the click is within one tile. The dungeon hop cap stays 3.
+Consent: user (dungeon movement and patrol clicks match 2026-10-19 commit 2f76607; do not change the shared click picker or adena loot).
+Result: implemented in `travel.py`. Not run in game.
+
+## 2026-11-01 — item F4 press matches the 2026-10-19 range
+
+Intent: press F4 when the pile is within one tile, on that tick, with no stand sample and no 0.4s gap before a repeat. This is the press rule in commit `2f76607`.
+Shared: none. Dungeon travel, combat, retreat, the approach hop, and how long a listed pile is held are unchanged. `loot_awaiting_memory_gone` still releases a ghost after three presses and 8 seconds, not after the old 0.8 seconds. A side F4 still does not run while attack, travel, or search owns the tick.
+Affects: the first loot F4 and a retry while the pile is still within one tile. Distance 2 still walks. A pile that leaves that range is approached again. Small named adena outside the range is still not walked back to.
+Consent: user (make only the item-loot F4 press rule identical to the October 19 version; do not touch anything else).
+Result: implemented in `loot_hop.py`. Not run in game.
+
 ## 2026-10-31 — invite accept Y uses the same enter_chat ec_run as /초대
 
 Intent: `ec_press_key` is not in enter_chat.dll 1.0.0, so member Y could not use the invite typing module. User asked to use the same API as inviting.
@@ -272,6 +312,46 @@ Affects: leader party monitor badges; when start rally begins. Empty roster: lea
 Consent: user (rally/hunt active while connect/policy/invite waiting).
 Result: not run in game.
 
+## 2026-10-31 — loot F4 on the matching tile, dungeon keeps a live click
+
+Intent: press F4 on the tick the live tile equals the pile, with no ground click on that tick, and stop reissuing a dungeon walk click just because the next route cell changed.
+Shared: none. `try_unstick_escape`, combat, retreat, and the field branch of `emit_travel_hop` are unchanged. `f4_allowed` still requires a stand unless this loot press set `_loot_f4_match` for that id, so a side F4 during another action does not fire while walking. The 0.4s gap remains only between retries in `try_finish_pending_pickup`. A walkable pile at Chebyshev 1 does not match.
+Affects: sticky loot approach and the dungeon hop while a click is already active. Mainland and Talking Island travel still extend only on a straight line. After three failed presses the pile is walked again. A listed pile still holds the character until it leaves, the bag rises, or the give-up cap.
+Consent: user (adena: loot_hop approach only, F4 when the live tile matches, no stand or 0.4s on that press, hold until the pile is gone, no F4 at distance 1 while moving; dungeon: travel.py dungeon branch only, new click only when the current line is blocked or that direction cannot continue).
+Result: implemented. Checked by a local decision simulation, not by a game log. A portable exe built before this change does not include it.
+
+## 2026-10-31 — world nav uses the 13 s confined teleport
+
+Intent: a world-nav walk that stays inside 3 tiles for 13 seconds uses the hotbar teleport, or the talking scroll when teleport cannot fire, then plans again from the landing to the same routine row.
+Shared: `WORLD_NAV` column and `_maybe_world_nav_confined`. `try_confined_escape` / `try_unstick_teleport` are unchanged, so island and travel escapes stay as they are. The clock runs only in `walk` and `gate_approach`. Scroll, settle, NPC teleporter, and gate click reset it. A hunt-edge arrival is left to `world_nav.drive`. Dungeon maps still disable unstick. After the cast, the live plan is dropped and the mode stays `WORLD_NAV` until the pose leaves that bubble (or 12 seconds pass), then `request_world_nav` uses the same reason. The old step list is not resumed. A mainland scroll's `unstick_scroll_return` flag is cleared here so farming does not idle on it afterward.
+Affects: world-nav walks and gate approaches, including the Talking Island walk from the magic-book merchant. Shop, retreat, combat selection, HP, and login are unchanged. A sticky fight still clears the clock. A second standstill after the new plan can teleport again.
+Consent: user (add the 13-second teleport to world nav, then continue the trip that was in progress; stop first if that would break the existing route).
+Result: implemented. Not run in game.
+
+## 2026-10-31 — account server language picks teleporter clicks again
+
+Intent: account management server language `zh-CN` must select the Chinese dialog rows. On 2026-10-22 teleporter ids were switched from that account locale to the profile game language, which stays `ko`, so a Chinese account still clicked `teleport_gludin`.
+Shared: `configure_decision` copies `shop_locale` (the account locale) into the live click language. `resolve_world_nav_teleporter_ids` and the recover-arrow shop points read that language. Buy/sell ids already used `shop_locale`. Movement, combat, HP, and login are unchanged. A missing `_ch` row still uses the Korean row.
+Affects: world-nav NPC teleporter dialogs, including Gludin. A Korean account keeps the Korean rows. The profile field `game_language` on disk is not rewritten; the session log line `click language=` is the value the clicks use.
+Consent: user (account server language Chinese must use the Chinese settings, as it did before the 2026-10-22 split).
+Result: implemented. A config with `shop_locale=zh` and `game_language=ko` selects `teleport_gludin_ch`. The reverse selects `teleport_gludin`. Not run in game. The profile file still says `game_language=ko`.
+
+## 2026-10-31 — exp percent comes from the LoadingBar, not the BSS mirror
+
+Intent: the income bar and the monitor `expPct` follow charread. Read the HudCharacterInfo LoadingBar float (CharacterData chain, then the UI window). Use ExperiencePct64 only when that bar is missing and the double is a real 0–100 percent. Do not replace the mirror RVA.
+Shared: `body_pose.read_progress`, `realtime_monitor_full.c` `readHudExp`. `EXP_KILL_RELEASE_ENABLED` stays false, so a real percent does not release a sticky target. Movement, combat clicks, loot, HP, and login are unchanged.
+Affects: the hourly exp rate and the monitor field. A running process keeps the old reader until it starts again.
+Consent: user (wire the income bar and monitor expPct to the LoadingBar; keep the mirror as the fallback).
+Result: implemented. Live `read_progress` and a new monitor snapshot both returned level 15 and 25.1605%. A process that already loaded the previous DLL keeps that image until it starts again.
+
+## 2026-10-31 — F4 only after a stop, and a listed pile is not dropped at 0.8s
+
+Intent: press pickup only when the character is on the pile and standing. Do not press during a walk or an attack. Keep the pile until it leaves the world or the bag count rises, instead of releasing it 0.8s after F4 and letting patrol walk away. A failed press rechecks the tile. A side F4 does not run while attack, travel, search, or sticky loot owns the tick.
+Shared: `tick_loot_item`, `try_finish_pending_pickup`, `loot_awaiting_memory_gone`, `mark_loot_clicked`, `f4_allowed`, `arm_loot_side_intent`, `controller._loot`. Combat clicks, travel hops, and `ExperiencePct64` are unchanged. Sticky combat can still preempt loot. After three standing F4s the tile is walked again. A pile still listed 8s after several F4s is released so a ghost does not pin the character.
+Affects: hunt loot and the pickup that used to run beside an attack or a patrol click. Movement geometry and attack selection are unchanged.
+Consent: user (fix the F4 loot path from the log; do not touch the exp address; keep movement and combat impact small).
+Result: implemented. Not run in game.
+
 ## 2026-10-30 — member heal/buff on the policy ladder; HP while waiting for the leader socket
 
 Intent: Item 7 was two ladders, not a broken heal. Live heal/buff returned from `apply_party_support` before gather/policy, while `decide_policy` never emitted HEAL/BUFF and `intent_for_kind` idled those kinds. Unify: stash support, skip gather when heal/buff is needed (heal still beats the start rally), policy emits HEAL/BUFF first, manager returns the stash. Item 10: leftover `WorldNavHooks` cleared at `_worker` start (party-off Start already cleared them); `merge_leader_policy` imports `comms.orders` not `websocket.party_orders`; member Start enters the bot loop and runs HP-only (`decide_survival`) until the leader socket connects. There is no 60 s connect timeout — 30 s is log cadence. Empty leader IP still fails immediately.
@@ -279,6 +359,22 @@ Shared: `decide_policy` / `PolicyInput.need_heal`/`need_buff`; `PartyMemberManag
 Affects: party members only (policy order, start-rally vs heal, first-connect wait). Leader and solo decide paths are unchanged. After the first connect, a socket drop still farms on the last policy.
 Consent: user (item 7 policy order + item 10 leftover hooks / import boundary / HP before connect).
 Result: not run in game.
+
+## 2026-10-30 — exp-rise kill release is off
+
+Intent: stop treating a level or exp rise as a kill. The sticky monster stays the attack target until a memory death signal drops it.
+Shared: `EXP_KILL_RELEASE_ENABLED` in `sample_kill_progress`. While false, a rise only writes a clickgap log. It does not call `_release_sticky_for_kill`, add `exp_kill_ids`, or clear `_attack_aim_lock`. Memory omission, bait, the 2-tile dead window, and `finish-gone` still end the attack.
+Affects: farm and dungeon engage, including `finish_kill`. Loot, movement, HP, and login do not use this switch. A kill with no exp still waits for the row to leave the list, as it already did.
+Consent: user (turn off the exp-rise stop-attack path so it does not run).
+Result: flag set false. Not run in game.
+
+## 2026-10-30 — memory constants moved to registry v35 (26.10.27.2001)
+
+Intent: readers use `D:\dist_10_28` registry v35. Same chains (mgr → holder → vft subsystem, map id at MapSubsystem+0x718, encoded CharacterData status). Moved RVAs and the two shifted fields only.
+Shared: `LC930_REGISTRY.txt`, `char_offsets.txt`, `entity_offsets.txt`, `offsets.json`, inventory/hotbar tables, `body_pose` action vfts. Action pointer is ActionComponent+0xC8. Door frame is +0xE0. `char_offsets` `ST_BLOCK` stays 0. HP decode, move/attack labels, and login clicks are unchanged.
+Affects: map id, cell xy, entity class, buffs, inventory, hotbar, shop list, body stand/walk. `not_permitted` no longer matches door gfx 0x8009.
+Consent: user (apply the folder’s updated offset constants without breaking the running project).
+Result: constants written. Rebuilt `print_state.dll`, `realtime_monitor.dll`, `shop_listen.dll`, `attacks_me.dll`, `contested_mobs.dll`. Buff, dialog, inventory, and hotbar still read their tables at startup. Not run in game.
 
 ## 2026-10-29 — start rally yields to combat on the member
 
@@ -429,6 +525,70 @@ Shared: `invite.PartyInviter.tick(ready=…)` skips names that have not confirme
 Affects: leader party invites only. A member bot without this build never confirms, so it is never invited until it is updated (wire: leader and member must be deployed together). Rally, hunt, combat, HP, movement, and login are unchanged. Party monitor: left dashboard keeps its width (right column fixed ~420–640 px, wrapping badge rows), Workflow card on top, log split into leader messages (top) and member messages (bottom).
 Consent: user asked for this workflow (socket → policy → member response → invite) and the `/초대` command; hard ACK (no timeout) as described.
 Result: logs 03:48 and 04:03 showed `/파티` then `/초대` "typed" while the main log had `Party invite tick failed: enter_chat.dll not found` every 20 s — `Engine/analysis/enter_chat/bin` was never built after the move. Rebuilt with `build.bat` (BUILD_OK, DLL loads). Gate simulated: no invite before ack, invite right after, stale `policy_id` rejected, failed chat counts as failed. Monitor rendered offscreen. Not run in game.
+
+## 2026-10-22 — Chinese game language uses the new `_ch` teleporters
+
+Intent: Shopping Practice now has Chinese dialog rows for the three new field teleports (`teleport_giran_dragonvalley_ch`, `teleport_silver_desertoasis_ch`, `teleport_woodbeck_desertoasis_ch`). Starting with the UI game language set to Chinese still planned the Korean ids, because teleporter selection followed account `SHOP_LOCALE` (often `ko`) instead of game language.
+Shared: `resolve_world_nav_teleporter_ids`. Omitted locale now reads `get_game_language()` (set from the profile at Start). `zh` still prefers `<base>_ch` and falls back to the Korean row only when `_ch` is missing. An explicit `locale=` argument is unchanged. Buy/sell ids still follow account shop locale. Combat, HP, and login are unchanged.
+Affects: every world-nav NPC teleporter, including the older dungeon gates that already have `_ch` rows. Korean game language keeps the Korean ids even when the account server locale is Chinese.
+Consent: user (“게임 언어를 중국어로 선택하고 프로젝트를 실행시킬때 정상동작하도록 구현해줘”).
+Result: with game language `zh`, the three `_ch` ids are selected and the Korean twins are not. With `ko`, the reverse. Not run in game.
+
+## 2026-10-22 — world-nav: same-map talking scroll competes on cost
+
+Intent: Farm on mainland Dragon Valley from another mainland tile planned as walk~560 to Giran NPC then field TP. User expected talking-scroll to the Giran hub (cheaper). Planner had `allow_scroll = … and not same_map`, so scroll never entered the cost graph on same map.
+Shared: `ready/planner.py` — drop the same-map ban; keep `not near_entrance`. Meta-search already compares `scroll_cost_tiles` vs walk.
+Affects: same-map world-nav (scroll vs walk vs field TP). Cross-map and near-entrance behavior unchanged.
+Consent: user (“같은 맵이라도 비용계산해서 싼쪽으로… 수정해줘”).
+Result: implemented; replay start(33961,33257)→farm picks scroll→giran hub→field TP.
+
+## 2026-10-22 — wire teleport_giran_dragonvalley into world-nav (goal filter + zh)
+
+Intent: User added `teleport_giran_dragonvalley` (field_land, world_nav) in Shopping Practice. Engine already loaded the link, but (1) zh locale looked up missing `_ch` and dropped it, (2) planner treated any dungeon_gate shutter as a 15-tile blink, so Gludin→dungeon7 beat Giran→Dragon Valley on paths to map 30.
+Shared: `filter_teleporter_links_for_goal` / `dungeon_gate_serves_goal` (dungeon_gate only if dest serves goal map via floor_ladder); `resolve_world_nav_teleporter_ids` falls back to Korean base when `_ch` absent; YAML `teleport_giran_dragonvalley_ch` (same land/adena; recalibrate zh option UV in the tool).
+Affects: world-nav teleporter selection. Buy/sell/combat/HP/login unchanged. Giran→53 dungeon_gate still plans.
+Consent: user (“shopping practice로 추가… 엔진에서 정확히 동작하려면… 고칠거 있음 고쳐”).
+Result: from Giran NPC → map30 uses field_land; unrelated shutters no longer steal DV routes; zh resolves `_ch`.
+
+## 2026-10-22 — NPC teleporter field_land (mainland region TP, e.g. Giran → Dragon Valley)
+
+Intent: Shopping Practice / world-nav already model dungeon shutter TPs (`destination_dungeon` → nearest `ground_enter`). User needs same dialog flow for village teleporters that land on another mainland field (same mapId, new xy; e.g. Giran option → Dragon Valley for 187 adena) without walking from the village.
+Shared: `ShoppingBehavior.teleport_kind` (`dungeon_gate` | `field_land`) + `land_map_id`/`land_world`; Behaviors editor Teleport kind + Land map/xy + Fill land from memory; `list_land_map_choices`; `npc_teleporters` field links; planner allows same-map field TP only (dungeon_gate still off-map); session settle waits near planned land and retargets next walk (no gate rewrite).
+Affects: world-nav plan/execute for teleporters; Shopping Practice Behaviors tab; probe catalog labels. Buy/sell/login/combat/HP unchanged. Existing dungeon_gate YAML rows keep working (kind defaults to dungeon_gate).
+Consent: user (“엔진의 연결부문에까지 제대로 구현… 다른 영향이 없게”).
+Result: implemented. No sample field_land row added to yaml — calibrate per destination in the tool.
+
+## 2026-10-22 — ivory tower land cell, and no entrance ring after the map flips
+
+Intent: a click that already entered ivory tower floor 1 counts as landed at `(32763, 32902)`. A second entrance ring does not run once the live map is the destination, so the cursor stays off the desktop corner. When the live cell is outside the planned interior, the following walk starts at the live cell.
+Shared: `ground_enter:oren-ivory` `to`. `dest_entry_pose` / `run_gate_click` / `_one_gate_attempt`. `note_gate_result` calls `retarget_walk_from_after_gate` when the landed cell differs from the planned interior and the next walk still starts there. `gate_land_watch`, combat, HP, and login are unchanged.
+Affects: every world-nav and dungeon-floor gate click. A landing within 24 tiles of the planned interior still succeeds as before. A dest-map pose still within 24 of the entrance or the pre-click cell fails the gate with `dest map with source xy` and does not advance. A dest-map pose outside both neighborhoods succeeds and, when the next walk's `from` is the planned interior, that `from` moves to the live cell and its stored polyline is dropped. Floor routes share the same click helper, so they also stop the ring and accept that landing by map id.
+Consent: user agreed to this scope (fix the ivory tower interior cell, and do not circle the entrance once the destination map is live).
+Result: both edge files use interior `(32763, 32902)`. The 02:44 pose `(32763, 32902)` classifies as landed against that cell, and as relocated against the old `(32765, 32866)`. A dest map still sitting on `(34041, 32156)` classifies as stale. Not run in game.
+
+## 2026-10-22 — ivory tower floor 1 cursor centers on (34041, 32155)
+
+Intent: after the Oren teleporter lands in front of ivory tower floor 1, the dungeon-entrance cursor circles `(34041, 32155)` on the mainland. The previous center was `(34041, 32158)`.
+Shared: edge `world_nav:ground_enter:oren-ivory` `from` only. `run_gate_click` still circles that cell. Teleporter clicks, gate rewrite, and the portal rows `tmo:4:127` / `tmo:4:128` stay as they are.
+Affects: world-nav entry into ivory tower floor 1 (`teleport_oren` / `teleport_oren_ch`, destination map 75). A landing at `(34041, 32158)` is still within the 5-tile approach, so the circle starts without an extra walk. Combat, HP, and login are unchanged.
+Consent: user asked to move the entrance cursor to mainland `(34041, 32155)` and circle there.
+Result: both the live `map_transitions.json` edge and the provider `30_edges_ground_enter.json` now use `(34041, 32155)`. Not run in game.
+
+## 2026-10-22 — unread body pose no longer freezes a loot hop
+
+Intent: a loot hop whose body slot stays unread must not treat that as "still walking" for the rest of the process. The same live tile for 0.8s follows the standing path and repeats the ground click. A tile that is still changing keeps the click. The reader itself retries a failed module/player walk instead of caching the failure, and opens WinNotify shared.
+Shared: `body_pose._ensure` / `read_action` / `body_is_moving`; `loot_hop._loot_click_still_open` and the `tick_loot_item` hold. `classify_ground_reclick`, `try_movement_unstick`, and dungeon `unstick_disabled` are unchanged. A failed read is still None, not standing.
+Affects: loot approach on a dungeon and on the field. Travel and search still hold while the slot is unread. While the slot reads a real walk, the hop holds as before. One missed sample during a walk waits out the 0.8s window before a reclick. If the live tile is frozen while the character is actually walking and the slot is unread, that reclick can cancel the step.
+Consent: user agreed this scope (recover the pose read; loot uses the live tile when the read stays empty; do not change the reclick classifier or dungeon unstick).
+Result: pose open no longer sticks after a failed base walk, and a loot hop at a still tile reclicks while the slot is unread. Not run in game.
+
+## 2026-10-22 — a nearby body no longer pulls a loot click off the item line
+
+Intent: when the guide toward an item is clear, the hop click stays on that line. A living body inside the 10-tile window moves the click aside only when it, or a wall, actually closes the guide hop.
+Shared: `choose_body_click`. It now takes `_farthest_guide_click`, then `_adjacent_guide_step`, and calls `plan_avoidance_click` only when those two have no click. `plan_body_click`, `click_clear`, and `unstick nearby` are unchanged.
+Affects: loot approach, world-nav hops, and farm search, because they all click through `plan_body_click`. A monster standing off the line no longer bends the 5-tile hop. A monster or wall on the line still steps aside. The 5-second nearby sweep still runs when the tile does not change.
+Consent: user agreed this scope for the main tree and the release they ran (`release\portable\ZF`).
+Result: on an open field, adena 292's off-line body `(3,-7)` now clicks `(612,1211)` on the item line; the old click was `(612,1206)`. Adena 324's body six tiles north now clicks `(368,1259)` on the item line. A body standing on that hop still steps aside (`(612,1206)` and `(368,1255)`). Release pyd and `SHA256SUMS.txt` updated in `release\portable\ZF`, and the same two files replaced in `release\ManmabotV1.zip`. Not run in game.
 
 ## 2026-10-22 — teleporter door swap also moves the inside walk start
 

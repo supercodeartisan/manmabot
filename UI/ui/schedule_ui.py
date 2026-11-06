@@ -3418,6 +3418,9 @@ class UnifiedTaskEditor(ttk.Frame):
 
         area = self._attack_card(middle, self.t["area_switch"])
         area.pack(fill="x")
+        self._attack_flag(
+            area, self.t["approach_no_engage"], "hunt.approach_no_engage", False
+        )
         self._attack_inline(
             area, "hunt.area_empty", False, [
                 ("check", ""),
@@ -3494,6 +3497,8 @@ class UnifiedTaskEditor(ttk.Frame):
         ]
         if priorities:
             lines.append(f"{self.t['target_priority']}: {', '.join(priorities)}")
+        if self._summary_on("hunt.approach_no_engage"):
+            lines.append(self.t["approach_no_engage"])
         area_bits = []
         if self._summary_on("hunt.area_empty"):
             seconds = self._summary_number("hunt.area_empty_seconds", 60)

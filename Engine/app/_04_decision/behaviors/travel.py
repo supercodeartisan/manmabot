@@ -226,7 +226,7 @@ def _client_line_continues(
 
     ``game_client_walk_tiles`` is diagonal first, then the leftover axis.
     The step into W and the step out of W must be the same vector.
-    Field travel uses this. Dungeon travel follows the route cell instead.
+    Dungeon and field both use this for the two-tile straight extend.
     """
     from app._04_decision.pathfinding import game_client_walk_tiles
 
@@ -255,7 +255,7 @@ def _straight_extend_waypoint(
 ) -> tuple[int, int] | None:
     """Farthest guide tile past the current click that stays on the same line.
 
-    Field travel only. The hop cap, click region, and arrival radius are
+    Dungeon and field. The hop cap, click region, and arrival radius are
     unchanged. An open door or the final goal ends the scan.
     """
     from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
@@ -307,43 +307,6 @@ def _straight_extend_waypoint(
     if best == current:
         return None
     return best
-
-
-def _chain_route_click(
-    blackboard: "Blackboard",
-    terrain: object,
-    state: object | None,
-    waypoint: tuple[int, int],
-) -> tuple[int, int] | None:
-    """Next dungeon route click from the live tile, or None to keep ``waypoint``.
-
-    A sidestep that is off the guide is kept until a route cell is clear again.
-    Field travel does not call this.
-    """
-    from app._04_decision.avoidance import collect_body_tiles, travel_max_hop
-    from app._04_decision.doors import refresh_live_doors
-
-    origin = blackboard.world_origin
-    guide = [(int(x), int(y)) for x, y in blackboard.nav_path]
-    if not guide:
-        return None
-    snap = getattr(state, "last_print_state", None) if state is not None else None
-    if isinstance(snap, dict):
-        refresh_live_doors(snap)
-    bodies = collect_body_tiles(state, origin) if state is not None else set()
-    goal = blackboard.nav_goal
-    nxt = _next_route_click(
-        terrain,
-        origin,
-        guide,
-        (int(goal[0]), int(goal[1])) if goal is not None else None,
-        bodies,
-        max_hop=int(travel_max_hop()),
-    )
-    current = (int(waypoint[0]), int(waypoint[1]))
-    if nxt is None or nxt == current:
-        return None
-    return nxt
 
 
 def _reset_stuck(blackboard: "Blackboard") -> None:
@@ -825,37 +788,14 @@ def emit_travel_hop(
         blackboard.scratch["travel_hop_miss"] = miss
         return False
 
-    # Active hop. Dungeon chains the next clear route cell while walking.
-    # Field still extends only along a straight line, two tiles before arrival.
+    # Active hop. Within one tile the click is dropped and the next click
+    # is planned on this tick. Two tiles out, while walking, a farther tile
+    # is used only on the same straight line. Dungeon matches 2026-10-19.
     if blackboard.travel_hop_active and blackboard.nav_waypoint is not None:
         wp = (int(blackboard.nav_waypoint[0]), int(blackboard.nav_waypoint[1]))
-        from app._04_decision.dungeon import is_dungeon_map
         from app._04_decision.mode_control import PURPOSE_ENTER_FARM
 
-        if is_dungeon_map():
-            chained = None
-            if not blackboard.travel_unstick_active:
-                chained = _chain_route_click(blackboard, terrain, state, wp)
-            if chained is not None:
-                from app.bot_log import event
-
-                event(
-                    "travel",
-                    "hop chain wp=%s -> %s purpose=%s",
-                    wp,
-                    chained,
-                    blackboard.travel_purpose,
-                )
-                _emit_click(
-                    blackboard,
-                    content=waypoint_to_content(chained, blackboard.world_origin),
-                    waypoint=chained,
-                    reason=reason,
-                    priority=priority,
-                    mid_act=False,
-                )
-                return True
-        elif _near_tile(blackboard, wp):
+        if _near_tile(blackboard, wp):
             from app.bot_log import event
 
             event(
@@ -871,7 +811,7 @@ def emit_travel_hop(
             if travel_arrived(blackboard):
                 blackboard.scratch["travel_hop_miss"] = "hop_arrive_final"
                 return False
-            # Fall through and plan the next field hop this tick.
+            # Fall through and plan the next hop this tick.
         else:
             from app._05_action.body_pose import body_is_moving
 
@@ -916,7 +856,7 @@ def emit_travel_hop(
                     )
                     return True
 
-        if is_dungeon_map() or not _near_tile(blackboard, wp):
+        if not _near_tile(blackboard, wp):
             _ticks, elapsed = _stuck_sample(blackboard)
             if try_movement_unstick(
                 blackboard,

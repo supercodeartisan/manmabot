@@ -23,8 +23,13 @@ TRANSITION_WAIT_S = 5.0
 # this wait and may take the second ring.
 STUCK_POSE_S = TRANSITION_WAIT_S
 GATE_STUCK_POSE = "gate stuck pose unchanged"
+# Dest mapId flipped while xy is still the source cell. Do not circle the
+# entrance (that projects off the window) and do not advance the plan.
+GATE_SOURCE_XY = "dest map with source xy"
 # Dest mapId can flip a tick before absolute xy updates (seen: map1 with TI cell
 # 32477 → dungeon walk no_path). Require landing within this Chebyshev of to-xy.
+# The same radius around the entrance and the pre-click cell is still the
+# source map. A dest-map pose outside both is a real landing.
 LAND_XY_SLACK = 24
 # Cursor search → click → mapId(+xy) wait; one full retry if land fails.
 GATE_ATTEMPTS = 2
@@ -77,6 +82,42 @@ def _landed(
     return _chev(live[1], live[2], expect_xy[0], expect_xy[1]) <= LAND_XY_SLACK
 
 
+def dest_entry_pose(
+    live: Optional[tuple[int, int, int]],
+    *,
+    expect_map: int,
+    expect_xy: Optional[tuple[int, int]],
+    entrance_xy: tuple[int, int],
+    source_xy: tuple[int, int],
+) -> Optional[str]:
+    """``landed``, ``relocated``, ``stale``, or None when not on the dest map.
+
+    ``landed`` is within ``LAND_XY_SLACK`` of the planned interior.
+    ``stale`` is still within that radius of the entrance or the pre-click
+    cell: the map id flipped before xy left the source map.
+    ``relocated`` is on the dest map and outside both neighborhoods.
+    """
+    if live is None or int(live[0]) != int(expect_map):
+        return None
+    if _landed(live, expect_map, expect_xy):
+        return "landed"
+    x, y = int(live[1]), int(live[2])
+    near_source = (
+        _chev(x, y, int(entrance_xy[0]), int(entrance_xy[1])) <= LAND_XY_SLACK
+        or _chev(x, y, int(source_xy[0]), int(source_xy[1])) <= LAND_XY_SLACK
+    )
+    if near_source:
+        return "stale"
+    return "relocated"
+
+
+def _pose_result(live: tuple[int, int, int], kind: str) -> tuple[bool, str]:
+    if kind == "stale":
+        return False, GATE_SOURCE_XY
+    off = " off plan" if kind == "relocated" else ""
+    return True, f"landed map{int(live[0])} ({int(live[1])},{int(live[2])}){off}"
+
+
 def run_gate_click(
     *,
     actions: Any,
@@ -97,8 +138,9 @@ def run_gate_click(
     it before/during the cursor loop (driver hang looked like a crash).
 
     ``expect_xy`` is the planned destination cell on ``expect_map_id``. When set,
-    success requires live xy near that cell so a mapId-only flip with stale
-    source-map coordinates cannot advance the plan.
+    success requires live xy near that cell, or a dest-map cell outside the
+    source neighborhood. A mapId flip whose xy is still the pre-click cell
+    does not advance and does not start another entrance ring.
 
     Rings: ``GATE_RADIUS_FRACS`` × client height, ``GATE_STEP_DEG`` around the
     entrance. Probe moves use ``snap=True`` so all ring samples are visited.
@@ -111,6 +153,10 @@ def run_gate_click(
     )
     fx, fy = int(entrance_abs[0]), int(entrance_abs[1])
     px, py = int(pose_abs[0]), int(pose_abs[1])
+    # Pre-click cell. Later poses must not replace this: a dest-map xy near
+    # the updated cell would look like the source neighborhood.
+    source_xy = (px, py)
+    entrance_xy = (fx, fy)
 
     last_err = "GATE cursor not found"
     for attempt in range(1, GATE_ATTEMPTS + 1):
@@ -119,16 +165,27 @@ def run_gate_click(
 
         # Cached only — fresh monitor here hung ~28s between attempts (worker dead).
         live0 = read_pose()
-        if _landed(live0, expect, land_xy):
-            return True, f"already on dest map{expect}"
+        kind0 = dest_entry_pose(
+            live0,
+            expect_map=expect,
+            expect_xy=land_xy,
+            entrance_xy=entrance_xy,
+            source_xy=source_xy,
+        )
+        if kind0 in ("landed", "relocated", "stale") and live0 is not None:
+            ok0, detail0 = _pose_result(live0, kind0)
+            if ok0:
+                return True, detail0
+            return False, detail0
         if live0 is not None:
             px, py = live0[1], live0[2]
 
         ok, detail = _one_gate_attempt(
             actions=actions,
             bounds=bounds,
-            entrance_abs=(fx, fy),
+            entrance_abs=entrance_xy,
             pose_abs=(px, py),
+            source_xy=source_xy,
             expect_map_id=expect,
             expect_xy=land_xy,
             read_pose=read_pose,
@@ -145,7 +202,8 @@ def run_gate_click(
             px, py = live[1], live[2]
         _log(f"GATE attempt {attempt}/{GATE_ATTEMPTS} failed: {detail}")
         # Same tile did not take the click. The caller steps aside once.
-        if detail == GATE_STUCK_POSE:
+        # Source xy on the dest map must not start another entrance ring.
+        if detail in (GATE_STUCK_POSE, GATE_SOURCE_XY):
             return False, detail
 
     return False, last_err
@@ -181,6 +239,7 @@ def _one_gate_attempt(
     bounds: Any,
     entrance_abs: tuple[int, int],
     pose_abs: tuple[int, int],
+    source_xy: tuple[int, int],
     expect_map_id: int,
     read_pose: Callable[[], Optional[tuple[int, int, int]]],
     read_land: Callable[[], Optional[tuple[int, int, int]]],
@@ -227,8 +286,15 @@ def _one_gate_attempt(
         else:
             pose_src = "fresh"
         if live_start is not None:
-            if _landed(live_start, int(expect_map_id), land_xy):
-                return True, "already on dest"
+            kind = dest_entry_pose(
+                live_start,
+                expect_map=int(expect_map_id),
+                expect_xy=land_xy,
+                entrance_xy=(fx, fy),
+                source_xy=source_xy,
+            )
+            if kind in ("landed", "relocated", "stale"):
+                return _pose_result(live_start, kind)
             px, py = int(live_start[1]), int(live_start[2])
 
         content0 = world_to_content(float(fx - px), float(fy - py))
@@ -253,8 +319,15 @@ def _one_gate_attempt(
             if stop is not None and stop():
                 return False, "interrupted"
             live = read_pose()
-            if _landed(live, int(expect_map_id), land_xy):
-                return True, "already on dest"
+            kind = dest_entry_pose(
+                live,
+                expect_map=int(expect_map_id),
+                expect_xy=land_xy,
+                entrance_xy=(fx, fy),
+                source_xy=source_xy,
+            )
+            if kind in ("landed", "relocated", "stale"):
+                return _pose_result(live, kind)
             r_px = float(r_frac) * client_h
             rad = math.radians(ang_deg)
             sx = int(round(cx + r_px * math.cos(rad)))
@@ -334,6 +407,17 @@ def _one_gate_attempt(
             return True, f"landed map{live[0]} ({live[1]},{live[2]})"
         if watch == GATE_STUCK_POSE:
             return False, GATE_STUCK_POSE
+        # A dest-map cell outside the source neighborhood is the landing.
+        # Keep waiting while xy is still the pre-click cell; it may catch up.
+        if dest_entry_pose(
+            live,
+            expect_map=int(expect_map_id),
+            expect_xy=land_xy,
+            entrance_xy=(fx, fy),
+            source_xy=source_xy,
+        ) == "relocated":
+            assert live is not None
+            return _pose_result(live, "relocated")
         time.sleep(0.15)
     # The loop stops just before the wait ends, so judge the last pose once more.
     watch = gate_land_watch(
@@ -348,17 +432,15 @@ def _one_gate_attempt(
         return True, f"landed map{last_live[0]} ({last_live[1]},{last_live[2]})"
     if watch == GATE_STUCK_POSE:
         return False, GATE_STUCK_POSE
-    if last_live is not None and int(last_live[0]) == int(expect_map_id):
-        return (
-            False,
-            f"mapId={expect_map_id} but xy=({last_live[1]},{last_live[2]}) "
-            f"not near land"
-            + (
-                f" ({land_xy[0]},{land_xy[1]})±{LAND_XY_SLACK}"
-                if land_xy is not None
-                else ""
-            ),
-        )
+    end_kind = dest_entry_pose(
+        last_live,
+        expect_map=int(expect_map_id),
+        expect_xy=land_xy,
+        entrance_xy=(fx, fy),
+        source_xy=source_xy,
+    )
+    if end_kind in ("landed", "relocated", "stale") and last_live is not None:
+        return _pose_result(last_live, end_kind)
     return False, f"mapId did not become {expect_map_id} within {TRANSITION_WAIT_S:.0f}s"
 
 
