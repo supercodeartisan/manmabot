@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-06 — exp mirror moved to the live BSS double
+
+Intent: exp percent stayed 0 while the character window was closed, because `ExperiencePct64` still pointed at `0x1644BF0`.
+Shared: the registry key and `offsets.json` now use `0x1641B00`. That slot has the level qword at -8 and the lagging double at -0x10. The monitor DLL already reads this key at startup. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the income-bar exp percent and the `exp=` field on sticky release. A process that already loaded the monitor keeps the old address until it starts again.
+Consent: user (read exp from memory with the character window closed).
+Result: one live hit, level 12, moving double 66.951386, twin 68.786915. The pair did not move during a 3s idle sample. Not run through a bot restart.
+
 ## 2026-11-06 — two extra offset names removed
 
 Intent: `entities/settings_print_state.json` and `inventories/inventory_offsets.txt` were second names for the registry copies. Drop those names without rebuilding a DLL.

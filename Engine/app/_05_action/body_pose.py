@@ -473,7 +473,7 @@ _HUD = {
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
-_EXP_RVA = 0x1644BF0
+_EXP_RVA = 0x1641B00
 _exp_ready = False
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 

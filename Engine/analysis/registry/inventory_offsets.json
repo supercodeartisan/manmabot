@@ -1,7 +1,7 @@
 {
   "_tool": "__OneHelper__ offset discovery",
   "_moduleBase": "0x7FF615460000",
-  "_moduleSize": "0x3F5F000",
+  "_moduleSize": "0x3F6E000",
   "PlayerBase": 23388956,
   "PlayerBaseDirect": 1,
   "Hp": 0,
@@ -41,7 +41,7 @@
   "ItemEquipped": 12,
   "ItemSlot": 14,
   "ItemWeight": 0,
-  "ItemEntityVtableRva": "0x123AD68",
+  "ItemEntityVtableRva": "0x1226E20",
   "ItemEntityId": 48,
   "ItemEntityQuantity": 56,
   "ItemEntityGuid": 16,
