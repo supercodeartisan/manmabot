@@ -52,11 +52,6 @@ Desktop.ini
 # Binaries, build output, generated nav / model blobs
 # ---------------------------------------------------------------------------
 *.exe
-*.dll
-# Party registry written at runtime (lc930 registry + PARTY_SEC17.txt)
-Engine/analysis/party/registry/_merged_party_registry.txt
-Engine/analysis/party/registry/_calib_party_registry.txt
-Engine/analysis/party/tools/_probe_registry.txt
 *.pyd
 *.sys
 *.lib
