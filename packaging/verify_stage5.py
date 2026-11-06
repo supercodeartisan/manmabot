@@ -54,7 +54,7 @@ def main() -> int:
     # offsets.json may be restored by ensure_packed_assets (overlay). That is OK
     # when analysis_text.pack exists. Fail only if pack is missing (handled above)
     # and plain offsets remain without a pack.
-    offsets = engine / "analysis" / "offsets.json"
+    offsets = engine / "analysis" / "registry" / "offsets.json"
     if offsets.is_file() and not analysis_pack.is_file():
         errors.append("plain offsets.json without analysis_text.pack")
     elif not offsets.is_file() and analysis_pack.is_file():

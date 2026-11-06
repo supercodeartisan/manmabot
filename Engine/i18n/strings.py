@@ -892,7 +892,7 @@ _EN = UiStrings(
     wizard_memory_hint=(
         "Reads player HP/MP/position in this process. "
         "Approve UAC if the driver must be loaded. LC.exe should be running. "
-        "Change offsets in analysis/offsets.json."
+        "Change offsets in analysis/registry/offsets.json."
     ),
     wizard_not_tested="Not tested",
     wizard_starting_monitor="Starting monitor…",
@@ -1409,7 +1409,7 @@ _KO = UiStrings(
     wizard_memory_hint=(
         "이 프로세스에서 플레이어 HP/MP/위치를 읽습니다. "
         "드라이버 로드가 필요하면 UAC를 승인하세요. LC.exe가 실행 중이어야 합니다. "
-        "오프셋은 analysis/offsets.json에서 바꿉니다."
+        "오프셋은 analysis/registry/offsets.json에서 바꿉니다."
     ),
     wizard_not_tested="테스트 안 됨",
     wizard_starting_monitor="모니터 시작 중…",
@@ -1918,7 +1918,7 @@ _ZH = UiStrings(
     wizard_memory_hint=(
         "在本进程中读取玩家 HP/MP/位置。"
         "如需加载驱动请批准 UAC。LC.exe 应在运行中。"
-        "偏移只改 analysis/offsets.json。"
+        "偏移只改 analysis/registry/offsets.json。"
     ),
     wizard_not_tested="未测试",
     wizard_starting_monitor="正在启动监视器…",

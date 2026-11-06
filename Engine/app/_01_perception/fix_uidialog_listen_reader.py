@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-_LC930 = _ANALYSIS / "lc930"
 _DLL_LOCK = threading.Lock()
 _SHARED_LOCK = threading.Lock()
 _SHARED: Optional["UiDialogListenReader"] = None
@@ -26,7 +25,7 @@ _DEFAULT_POLL_S = 0.20
 
 
 def default_dll_path() -> Path:
-    folder = _LC930 / "uidialog"
+    folder = _ANALYSIS / "dll"
     # Prefer the freshly built image when the live DLL is still mapped and locked.
     built = folder / "uidialog_listen_build.dll"
     live = folder / "uidialog_listen.dll"

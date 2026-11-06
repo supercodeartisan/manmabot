@@ -2,7 +2,7 @@
 
 The action slot is read directly, the same walk ``fix/single-version`` uses.
 Standing is BreathAction (0x11E0550). A failed read is None, not standing.
-HP, MP, level, and exp stay on the charread module.
+HP, MP, level, and exp come from dll/realtime_monitor.dll.
 """
 from __future__ import annotations
 
@@ -185,7 +185,7 @@ def _load_find() -> None:
     global _find_ready
     if _find_ready:
         return
-    path = Path(__file__).resolve().parents[2] / "analysis" / "entities" / "entity_offsets.txt"
+    path = Path(__file__).resolve().parents[2] / "analysis" / "registry" / "entity_offsets.txt"
     if path.is_file():
         classes = ""
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -486,7 +486,7 @@ def _load_hud() -> None:
     global _hud_ready
     if _hud_ready:
         return
-    table = _ANALYSIS / "char_offsets.txt"
+    table = _ANALYSIS / "registry" / "char_offsets.txt"
     if table.is_file():
         for line in table.read_text(encoding="utf-8", errors="replace").splitlines():
             text = line.strip()
@@ -555,21 +555,53 @@ def _hud_u32(blob: bytes, off: int) -> int | None:
     return struct.unpack_from("<I", blob, off)[0]
 
 
-def read_vitals() -> dict | None:
-    """Live HP/MP from the charread module. None when that sample is missing."""
-    try:
-        from app._01_perception.lc_view import char_vitals
+def _opt_int(raw: dict, *keys: str) -> int | None:
+    for key in keys:
+        if key not in raw or raw[key] is None:
+            continue
+        try:
+            return int(raw[key])
+        except (TypeError, ValueError):
+            continue
+    return None
 
-        vitals = char_vitals()
+
+def _monitor_player() -> dict | None:
+    """Player block from the process monitor. Does not start charread."""
+    snap = None
+    try:
+        from app._01_perception import sensors as sensor_mod
+
+        live = sensor_mod._SHARED
+        if live is not None:
+            snap = live.pull_player(fresh=False)
     except Exception:
+        snap = None
+    if not isinstance(snap, dict):
+        try:
+            from session.player_monitor import shared_monitor
+
+            snap = shared_monitor().snapshot(fresh=False)
+        except Exception:
+            return None
+    if not isinstance(snap, dict):
         return None
-    if vitals is None:
+    raw = snap.get("player")
+    if isinstance(raw, dict):
+        return raw
+    return None
+
+
+def read_vitals() -> dict | None:
+    """Live HP/MP from realtime_monitor. None when that sample is missing."""
+    raw = _monitor_player()
+    if not raw:
         return None
     return {
-        "hp": vitals.get("hp"),
-        "max_hp": vitals.get("max_hp"),
-        "mp": vitals.get("mp"),
-        "max_mp": vitals.get("max_mp"),
+        "hp": _opt_int(raw, "hp"),
+        "max_hp": _opt_int(raw, "maxHp", "max_hp"),
+        "mp": _opt_int(raw, "mp"),
+        "max_mp": _opt_int(raw, "maxMp", "max_mp"),
     }
 
 
@@ -577,7 +609,7 @@ def _load_exp_rva() -> None:
     global _exp_ready, _EXP_RVA
     if _exp_ready:
         return
-    path = _ANALYSIS / "offsets.json"
+    path = _ANALYSIS / "registry" / "offsets.json"
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -596,16 +628,18 @@ def _level_ok(value: int | None) -> int | None:
 
 
 def read_progress() -> dict | None:
-    """Live level and exp percent from the charread module."""
+    """Live level and exp percent from realtime_monitor."""
+    raw = _monitor_player()
+    if not raw:
+        return None
+    exp = raw.get("expPct")
+    if exp is None:
+        exp = raw.get("exp_percent")
     try:
-        from app._01_perception.lc_view import char_vitals
-
-        vitals = char_vitals()
-    except Exception:
-        return None
-    if vitals is None:
-        return None
-    return {"level": vitals.get("level"), "exp_percent": vitals.get("exp_percent")}
+        exp_percent = float(exp) if exp is not None else None
+    except (TypeError, ValueError):
+        exp_percent = None
+    return {"level": _opt_int(raw, "level", "lv"), "exp_percent": exp_percent}
 
 
 def _bind_action_vfts() -> None:

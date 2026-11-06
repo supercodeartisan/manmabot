@@ -17,16 +17,8 @@ _DLL_DIR = _ANALYSIS / "dll"
 _REGISTRY = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
 
 # interval_ms, optional extra KEY=VALUE params (registry names).
+# Party roster only. Player, entities, bag, and the other reads are in-process DLLs.
 _MODULES: dict[str, tuple[int, str]] = {
-    "charread": (100, ""),
-    "map": (200, ""),
-    "enttrack": (100, "ENT_SWEEP_MS=400;ENT_READ_INTERVAL_MS=100"),
-    "bodyact": (50, ""),
-    "inventory": (500, ""),
-    "hotbar": (400, ""),
-    "shop": (400, ""),
-    "buff": (300, ""),
-    "uidialogmon": (200, ""),
     "party": (300, ""),
 }
 

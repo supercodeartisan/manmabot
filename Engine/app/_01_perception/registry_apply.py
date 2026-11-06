@@ -16,20 +16,9 @@ from pathlib import Path
 _ENGINE = Path(__file__).resolve().parents[2]
 _ANALYSIS = _ENGINE / "analysis"
 _DROP = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
-_LC930 = _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
-_PARTY_REG = _ANALYSIS / "party" / "registry" / "LC930_REGISTRY.txt"
-_PARTY_KEYS = _ANALYSIS / "party" / "registry" / "PARTY_SEC17.txt"
-_MERGED = _ANALYSIS / "party" / "registry" / "_merged_party_registry.txt"
+_PARTY_KEYS = _ANALYSIS / "registry" / "PARTY_SEC17.txt"
 _STAMP = _ANALYSIS / "registry" / ".applied.sha"
 _DIST = _ENGINE / "dist" / "registry" / "LC930_REGISTRY.txt"
-
-# uidialog_listen.c defaults. Dist does not ship these.
-_BOT_KEYS = (
-    "UIDLG_RESCAN_MS=2000",
-    "UI_BFS_MAX_NODES=60000",
-    "UI_BFS_NODE_READ=0x100",
-    "UI_BFS_STOP_AT_LAYOUT=1",
-)
 
 _CHAR_MAP = {
     "MGR": "MGR",
@@ -114,8 +103,6 @@ def source_registry() -> Path | None:
         _DROP.parent.mkdir(parents=True, exist_ok=True)
         _DROP.write_bytes(_DIST.read_bytes())
         return _DROP
-    if _LC930.is_file():
-        return _LC930
     return None
 
 
@@ -165,18 +152,8 @@ def _set_json(path: Path, updates: dict[str, object]) -> None:
 
 
 def _publish_registry(drop: Path, reg: dict[str, str]) -> None:
-    text = drop.read_text(encoding="utf-8", errors="replace")
-    if not text.endswith("\n"):
-        text += "\n"
-    extra = [line for line in _BOT_KEYS if line.split("=", 1)[0] not in reg]
-    published = text
-    if extra:
-        published += "\n# Manmabot uidialog timing. Dist registry does not carry these.\n"
-        published += "\n".join(extra) + "\n"
-    _LC930.parent.mkdir(parents=True, exist_ok=True)
-    _LC930.write_text(published, encoding="utf-8")
-    _PARTY_REG.parent.mkdir(parents=True, exist_ok=True)
-    _PARTY_REG.write_text(text, encoding="utf-8")
+    """Readers open ``registry/LC930_REGISTRY.txt`` itself. No second copy."""
+    del drop, reg
 
 
 def _party_vfts(reg: dict[str, str]) -> None:
@@ -188,15 +165,8 @@ def _party_vfts(reg: dict[str, str]) -> None:
     build = reg.get("BUILD")
     if build:
         updates["PARTY_BUILD"] = build
-    _set_kv(_PARTY_KEYS, updates)
-    if _LC930.is_file() and _PARTY_KEYS.is_file():
-        merged = (
-            _LC930.read_text(encoding="utf-8", errors="replace")
-            + "\n\n"
-            + _PARTY_KEYS.read_text(encoding="utf-8", errors="replace")
-            + "\n"
-        )
-        _MERGED.write_text(merged, encoding="utf-8")
+    if _PARTY_KEYS.is_file():
+        _set_kv(_PARTY_KEYS, updates)
 
 
 def _char_offsets(reg: dict[str, str]) -> None:
@@ -205,7 +175,7 @@ def _char_offsets(reg: dict[str, str]) -> None:
         value = _u32(reg, src)
         if value is not None:
             updates[dest] = _hx(value)
-    path = _ANALYSIS / "char_offsets.txt"
+    path = _ANALYSIS / "registry" / "char_offsets.txt"
     _set_kv(path, updates)
     if path.is_file():
         text = path.read_text(encoding="utf-8")
@@ -319,9 +289,9 @@ def _entity_files(reg: dict[str, str]) -> None:
     cam = _u32(reg, "CAM_GLOB")
     if cam:
         updates["CAM_GLOB"] = f"{cam:X}"
-    _set_kv(_ANALYSIS / "entities" / "entity_offsets.txt", updates)
+    _set_kv(_ANALYSIS / "registry" / "entity_offsets.txt", updates)
 
-    settings = _ANALYSIS / "entities" / "settings_print_state.json"
+    settings = _ANALYSIS / "registry" / "settings_print_state.json"
     json_updates: dict[str, object] = {}
     if px is not None:
         json_updates["player_x_offset"] = _hx(px)
@@ -381,7 +351,7 @@ def _combat(reg: dict[str, str]) -> None:
         "player_y_offset": _hx(block + (_u32(reg, "ST_Y") or 4)),
     }
     for name in ("settings_attacks_me.json", "settings_contested_mobs.json"):
-        _set_json(_ANALYSIS / "combat_attack" / name, common)
+        _set_json(_ANALYSIS / "registry" / name, common)
 
 
 def _inventory_hotbar(reg: dict[str, str]) -> None:
@@ -403,7 +373,7 @@ def _inventory_hotbar(reg: dict[str, str]) -> None:
         value = _u32(reg, src)
         if value is not None:
             inv[dest] = _hx(value)
-    _set_kv(_ANALYSIS / "inventories" / "inventory_offsets.txt", inv)
+    _set_kv(_ANALYSIS / "registry" / "inventory_offsets.txt", inv)
     module = reg.get("MODULE_SIZE")
     item = _u32(reg, "ITEM_VFT")
     map_vft = _u32(reg, "VFT_MAPSUBS")
@@ -414,7 +384,7 @@ def _inventory_hotbar(reg: dict[str, str]) -> None:
         json_updates["MapSubsystemVftRva"] = _hx(map_vft)
     if item is not None:
         json_updates["ItemEntityVtableRva"] = _hx(item)
-    _set_json(_ANALYSIS / "inventories" / "offsets.json", json_updates)
+    _set_json(_ANALYSIS / "registry" / "inventory_offsets.json", json_updates)
 
     hot = {"MGR": _hx(_need(reg, "MGR"))}
     primary = _u32(reg, "VFT_HUDSLOT")
@@ -426,7 +396,7 @@ def _inventory_hotbar(reg: dict[str, str]) -> None:
         hot["HSD_VFT2"] = f"{primary:X}"
     if adj is not None:
         hot["HSD_ADJ"] = _hx(adj)
-    _set_kv(_ANALYSIS / "Hotbar" / "skill_offsets.txt", hot)
+    _set_kv(_ANALYSIS / "registry" / "skill_offsets.txt", hot)
 
 
 def _player_json(reg: dict[str, str]) -> None:
@@ -456,7 +426,7 @@ def _player_json(reg: dict[str, str]) -> None:
     exp = _u32(reg, "ExperiencePct64")
     if exp is not None:
         updates["ExperiencePct64"] = exp
-    _set_json(_ANALYSIS / "offsets.json", updates)
+    _set_json(_ANALYSIS / "registry" / "offsets.json", updates)
 
 
 def apply_registry(force: bool = False) -> Path | None:

@@ -1,8 +1,8 @@
 """In-process hotbar_listen. One call reads LC 24 hotbar slots as JSON.
 
 The DLL is the same reader as hotbar_listen.exe. It is not injected into
-LC.exe. Offsets come from analysis/Hotbar/skill_offsets.txt, then
-analysis/inventories/inventory_offsets.txt for item names.
+LC.exe. Offsets come from analysis/registry/skill_offsets.txt, then
+inventory_offsets.txt for item names.
 """
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_HOTBAR = Path(__file__).resolve().parents[2] / "analysis" / "Hotbar"
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["HotbarListenReader"] = None
 
 
 def default_dll_path() -> Path:
-    built = _HOTBAR / "hotbar_listen_build.dll"
-    live = _HOTBAR / "hotbar_listen.dll"
+    built = _ANALYSIS / "dll" / "hotbar_listen_build.dll"
+    live = _ANALYSIS / "dll" / "hotbar_listen.dll"
     if built.is_file() and (
         not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
     ):
@@ -28,7 +28,7 @@ def default_dll_path() -> Path:
 
 
 def default_offsets_path() -> Path:
-    return _HOTBAR / "skill_offsets.txt"
+    return _ANALYSIS / "registry" / "skill_offsets.txt"
 
 
 class HotbarListenReader:

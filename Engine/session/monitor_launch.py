@@ -26,7 +26,7 @@ class MonitorEnsureResult:
 
 
 def monitor_exe_path() -> Path:
-    return manmabot_root() / "analysis" / MONITOR_EXE_NAME
+    return manmabot_root() / "analysis" / "bin" / MONITOR_EXE_NAME
 
 
 def driver_script_path() -> Path:

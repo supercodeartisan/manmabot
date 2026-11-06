@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import threading
 import time
+from pathlib import Path
 
+from app._01_perception import lc_session as lc
 from app._01_perception.lc_session import LcSession
 
 
@@ -29,20 +31,27 @@ def test_ensure_waits_until_the_stopped_thread_leaves() -> None:
             current -= 1
 
     session._run = fake_run  # type: ignore[method-assign]
-    session.ensure("party")
-    session.ensure("enttrack")
-    assert inside.wait(2.0)
-    deadline = time.monotonic() + 2.0
-    while starts < 2 and time.monotonic() < deadline:
-        time.sleep(0.01)
-    assert starts == 2
-
-    session.stop()
-    for _ in range(20):
+    real_is_file = Path.is_file
+    Path.is_file = lambda self: True  # type: ignore[method-assign]
+    lc._MODULES["slot_b"] = lc._MODULES["party"]
+    try:
         session.ensure("party")
-        session.ensure("enttrack")
-    assert starts == 2
-    assert peak == 2
+        session.ensure("slot_b")
+        assert inside.wait(2.0)
+        deadline = time.monotonic() + 2.0
+        while starts < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert starts == 2
+
+        session.stop()
+        for _ in range(20):
+            session.ensure("party")
+            session.ensure("slot_b")
+        assert starts == 2
+        assert peak == 2
+    finally:
+        lc._MODULES.pop("slot_b", None)
+        Path.is_file = real_is_file  # type: ignore[method-assign]
 
     leave.set()
     deadline = time.monotonic() + 2.0

@@ -2,7 +2,7 @@
 
 The DLL is the same reader as inventory_listen.exe, without a console or
 named pipe. It is not injected into LC.exe. Offsets come from
-analysis/inventories/offsets.json, then inventory_offsets.txt (TXT wins).
+analysis/registry/inventory_offsets.json, then inventory_offsets.txt (TXT wins).
 Names use the static FNV table first; a heap scan fills gaps when names are missing.
 """
 from __future__ import annotations
@@ -14,17 +14,17 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-_INVENTORIES = Path(__file__).resolve().parents[2] / "analysis" / "inventories"
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["InventoryListenReader"] = None
 
 
 def default_dll_path() -> Path:
-    return _INVENTORIES / "inventory_listen.dll"
+    return _ANALYSIS / "dll" / "inventory_listen.dll"
 
 
 def default_offsets_path() -> Path:
-    return _INVENTORIES / "offsets.json"
+    return _ANALYSIS / "registry" / "inventory_offsets.json"
 
 
 class InventoryListenReader:

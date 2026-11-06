@@ -1,2 +1,0 @@
-# registry=D:\WorkSpace\ManmabotV1_final_final_final\Engine\analysis\registry/LC930_REGISTRY.txt sub=000001B47C62C010 rc=01229350 how=discover join=0
-# party t=0ms how=discover leader=(?) lf28=0 cnt=0 members=0 driver_calls=53 time=0.4225ms  (no active party / 0 members)

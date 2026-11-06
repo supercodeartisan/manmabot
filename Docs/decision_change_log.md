@@ -1,5 +1,53 @@
 # Decision change log
 
+## 2026-11-06 — two extra offset names removed
+
+Intent: `entities/settings_print_state.json` and `inventories/inventory_offsets.txt` were second names for the registry copies. Drop those names without rebuilding a DLL.
+Shared: `attacks_me` keeps cell offsets from `registry/settings_attacks_me.json`. `hotbar_listen` falls back to `registry/inventory_offsets.txt`. `print_state.dll` and `analysis/char_offsets.txt` stay. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: attacks cell overlay and hotbar item-name offsets. Both still read the registry file.
+Consent: user (remove only the two names that do not need a rebuild).
+Result: the two names and their empty folders are gone. Registry copies remain. Not run in game.
+
+## 2026-11-06 — analysis folder reduced to the live readers
+
+Intent: `Engine/analysis` held both the live listen modules and the old lcapi modules. Keep the files the bot opens, and keep the recovered listen sources so a later rebuild can write the same DLL names.
+Shared: In-process sources moved from `analysis/old` to `analysis/src/listen`. Their build scripts write `analysis/dll`. `lc_session` starts `party` only. Stair list path is `analysis/data/dungeon/floors_entrances.txt`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party roster still uses `dll/party.dll`. Player, bag, shop, buff, dialog, attacks, and warehouse still use the listen DLLs and `registry/`. Three names stay outside the six folders because the current DLLs open them: `char_offsets.txt`, `entities/settings_print_state.json`, `inventories/inventory_offsets.txt`.
+Consent: user (clean the analysis directory as discussed).
+Result: unused lcapi DLLs, exes, and sources removed. `storewin_build.dll` has no C source. Listen sources were not recompiled. Not run in game.
+
+## 2026-11-06 — vitals no longer read the charread sample
+
+Intent: The income bar and action view still decoded HP, level, and exp from the charread module text. That module is not started.
+Shared: `body_pose.read_vitals` and `read_progress` read the `player` block from the live `realtime_monitor` snapshot. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the income bar level and exp, and the action-view HP line.
+Consent: user (update every remaining old memory read).
+Result: not run in game.
+
+## 2026-11-06 — remaining readers open dll and bin
+
+Intent: The player monitor, bag UI, shop debug, dialog watch, and contested probe still started the old module DLLs. Optional exe launchers still looked beside `analysis/` and in `inventories/`.
+Shared: Those imports now open `dll/realtime_monitor.dll`, `inventory_listen.dll`, `hotbar_listen.dll`, `shop_listen.dll`, `buff_listen.dll`, `uidialog_listen.dll`, `attacks_me.dll`, and `contested_mobs.dll`, with settings from `registry/`. `realtime_monitor_full.exe` and `inventory_listen.exe` are launched from `analysis/bin`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the UI player chip, bag and equipment reads, shop debug rows, dialog watch, and the contested probe.
+Consent: user (open the memory modules from the sample folders).
+Result: imports resolve to `dll/` and `bin/`. Not run in game.
+
+## 2026-11-06 — storewin and party readers use dll and registry
+
+Intent: Warehouse and party registry routes still opened `NPC_conv` and `lc930`. Those reads should use the same `dll/` and `registry/` folders as the other memory readers.
+Shared: `storewin_reader` opens `dll/storewin_build.dll` and `registry/LC930_REGISTRY.txt`. `dll/storewin.dll` stays the lcapi module. `party_listen_reader` still starts `dll/party.dll`; its registry helper now uses `registry/LC930_REGISTRY.txt`. `registry_apply` no longer copies that file into `lc930` or `party`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: warehouse window list, and where a party registry overlay would be written.
+Consent: user (match memory modules and reader routes to the folder structure).
+Result: `storewin_build.dll` loads and exports `storewin_snapshot`. Not run in game.
+
+## 2026-11-06 — analysis runtime files follow the module folders
+
+Intent: Keep every current analysis file, and place the bot's runtime pieces in the same folders as `11-4analysis`: DLLs in `dll/`, programs in `bin/`, offset tables in `registry/`.
+Shared: The listen and print_state readers, `body_pose`, and `registry_apply` now open those paths. `dll/party.dll` and `registry/LC930_REGISTRY.txt` stay. Hard links remain at `char_offsets.txt`, `offsets.json`, `entities/settings_print_state.json`, `entities/entity_offsets.txt`, and `inventories/inventory_offsets.txt` because those DLLs also open the old relative names. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: where player, entity, bag, hotbar, shop, buff, dialog, and attacker files are loaded from.
+Consent: user (match the 11-4 folder shape and update the reader paths).
+Result: readers load the DLLs from `dll/`. Not run in game.
+
 ## 2026-11-06 — dialog reader uses the live registry
 
 Intent: The talking-scroll open check always timed out. The dialog DLL looked for `analysis/lc930/registry/LC930_REGISTRY.txt`, which this branch does not have, and the constructor returned without an error.

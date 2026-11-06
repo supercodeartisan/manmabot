@@ -14,7 +14,7 @@ PIPE_NAME = r"\\.\pipe\inv_listen"
 
 
 def inventory_exe_path() -> Path:
-    return manmabot_root() / "analysis" / "inventories" / INVENTORY_EXE_NAME
+    return manmabot_root() / "analysis" / "bin" / INVENTORY_EXE_NAME
 
 
 def is_inventory_process_running() -> bool:

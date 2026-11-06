@@ -3063,8 +3063,9 @@ class BotController:
             else:
                 self.log(
                     "Party memory: PartySubsystem not found for this LC build — party "
-                    "state comes from member reports only. Run (elevated) "
-                    "Engine/analysis/party/tools/probe_party_vft.py"
+                    "state comes from member reports only. Check "
+                    "Engine/analysis/dll/party.dll and "
+                    "Engine/analysis/registry/LC930_REGISTRY.txt"
                 )
         if party_mode:
             from app._01_perception.party_listen_reader import default_dll_path
@@ -3078,8 +3079,7 @@ class BotController:
                 dll_name = default_dll_path().name
                 self.log(
                     f"Party member mode BLOCKED: {dll_name} missing. "
-                    "Build Engine/analysis/party/build.bat "
-                    "(needs VS Build Tools with VCTools), then restart."
+                    "Place it at Engine/analysis/dll/party.dll, then restart."
                 )
                 self._publish_party_monitor(
                     party_brain=party_brain,

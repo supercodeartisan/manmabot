@@ -13,11 +13,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-_PARTY = _ANALYSIS / "party"
-_LC930_REGISTRY = _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
-_PARTY_KEYS = _PARTY / "registry" / "PARTY_SEC17.txt"
-# Generated: current anchors (lc930) + party keys. The DLL takes one file.
-_MERGED = _PARTY / "registry" / "_merged_party_registry.txt"
+_REGISTRY = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
+_PARTY_KEYS = _ANALYSIS / "registry" / "PARTY_SEC17.txt"
+# Optional overlay. party.dll already reads PARTY_VFT_* from _REGISTRY.
+_MERGED = _ANALYSIS / "registry" / "_merged_party_registry.txt"
 _DLL_LOCK = threading.Lock()
 
 
@@ -48,9 +47,9 @@ def _party_keys_text(delta: int = 0) -> str:
 
 
 def merged_registry_path(delta: int = 0, *, out: Optional[Path] = None) -> Path:
-    """Write lc930 registry + party keys (vfts shifted by ``delta``) and return it."""
+    """Write registry/LC930_REGISTRY.txt plus PARTY_SEC17 keys and return it."""
     text = (
-        _LC930_REGISTRY.read_text(encoding="utf-8")
+        _REGISTRY.read_text(encoding="utf-8")
         + "\n\n"
         + _party_keys_text(delta)
         + "\n"
@@ -62,17 +61,16 @@ def merged_registry_path(delta: int = 0, *, out: Optional[Path] = None) -> Path:
 
 
 def default_registry_path() -> Path:
-    """lc930 registry (anchors, same as every other reader) + ``PARTY_SEC17.txt``.
+    """Party vfts live in ``registry/LC930_REGISTRY.txt``, the file ``party.dll`` reads.
 
-    Falls back to the old standalone party registry when either part is missing.
+    ``PARTY_SEC17.txt`` is an optional overlay in the same folder.
     """
-    legacy = _PARTY / "registry" / "LC930_REGISTRY.txt"
-    if not (_LC930_REGISTRY.is_file() and _PARTY_KEYS.is_file()):
-        return legacy
+    if not (_REGISTRY.is_file() and _PARTY_KEYS.is_file()):
+        return _REGISTRY
     try:
         return merged_registry_path()
     except OSError:
-        return legacy
+        return _REGISTRY
 
 
 def leader_stats(snapshot: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:

@@ -1,7 +1,8 @@
 """In-process storewin. One call reads the NPC warehouse window list as JSON.
 
-DLL is Engine/analysis/NPC_conv/storewin.dll. Offsets are
-Engine/analysis/lc930/registry/LC930_REGISTRY.txt. Not injected into LC.exe.
+DLL is Engine/analysis/dll/storewin_build.dll (storewin_snapshot).
+Offsets are Engine/analysis/registry/LC930_REGISTRY.txt. Not injected into LC.exe.
+dll/storewin.dll is the lcapi module and does not export storewin_snapshot.
 Rows are the window slot order: idx, name, qty.
 """
 from __future__ import annotations
@@ -22,18 +23,11 @@ def default_dll_path() -> Path:
     env = os.environ.get("STOREWIN_DLL", "").strip()
     if env:
         return Path(env)
-    folder = _ANALYSIS / "NPC_conv"
-    built = folder / "storewin_build.dll"
-    live = folder / "storewin.dll"
-    if built.is_file() and (
-        not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
-    ):
-        return built
-    return live
+    return _ANALYSIS / "dll" / "storewin_build.dll"
 
 
 def default_registry_path() -> Path:
-    return _ANALYSIS / "lc930" / "registry" / "LC930_REGISTRY.txt"
+    return _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
 
 
 class StorewinReader:
@@ -54,8 +48,13 @@ class StorewinReader:
         self._buf = ctypes.create_string_buffer(1 << 20)
         if not dll.is_file() or not registry.is_file():
             return
-        self._lib = ctypes.CDLL(str(dll))
-        self._snap = self._lib.storewin_snapshot
+        try:
+            self._lib = ctypes.CDLL(str(dll))
+            self._snap = self._lib.storewin_snapshot
+        except (OSError, AttributeError):
+            self._lib = None
+            self._snap = None
+            return
         self._snap.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
         self._snap.restype = ctypes.c_int
         self._shutdown = self._lib.storewin_shutdown

@@ -2,7 +2,7 @@
 
 The DLL is the same reader as realtime_monitor_full.exe --pipe, without the
 console or the named pipe. It is not injected into LC.exe. Offsets come from
-analysis/offsets.json on every snapshot.
+analysis/registry/offsets.json on every snapshot.
 """
 from __future__ import annotations
 
@@ -19,9 +19,10 @@ _SHARED: Optional["RealtimeMonitorReader"] = None
 
 def default_dll_path() -> Path:
     """Newest monitor image. A locked live DLL keeps the previous build beside it."""
+    dll = _ANALYSIS / "dll"
     candidates = [
-        _ANALYSIS / "realtime_monitor.new.dll",
-        _ANALYSIS / "realtime_monitor.dll",
+        dll / "realtime_monitor.new.dll",
+        dll / "realtime_monitor.dll",
     ]
     found = [path for path in candidates if path.is_file()]
     if not found:
@@ -30,7 +31,7 @@ def default_dll_path() -> Path:
 
 
 def default_offsets_path() -> Path:
-    return _ANALYSIS / "offsets.json"
+    return _ANALYSIS / "registry" / "offsets.json"
 
 
 class RealtimeMonitorReader:

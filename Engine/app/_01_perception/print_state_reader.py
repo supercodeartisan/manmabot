@@ -17,15 +17,17 @@ from typing import Any, Optional
 # print_state_snapshot / shutdown at the same time.
 _DLL_LOCK = threading.Lock()
 
-_ENTITIES = Path(__file__).resolve().parents[2] / "analysis" / "entities"
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
+_DLL = _ANALYSIS / "dll"
+_REGISTRY = _ANALYSIS / "registry"
 
 
 def default_dll_path() -> Path:
     """Newest print_state image. A locked live DLL keeps the previous build beside it."""
     candidates = [
-        _ENTITIES / "print_state.new.dll",
-        _ENTITIES / "print_state.iso.dll",
-        _ENTITIES / "print_state.dll",
+        _DLL / "print_state.new.dll",
+        _DLL / "print_state.iso.dll",
+        _DLL / "print_state.dll",
     ]
     found = [path for path in candidates if path.is_file()]
     if not found:
@@ -34,7 +36,7 @@ def default_dll_path() -> Path:
 
 
 def default_settings_path() -> Path:
-    return _ENTITIES / "settings_print_state.json"
+    return _REGISTRY / "settings_print_state.json"
 
 
 class PrintStateReader:

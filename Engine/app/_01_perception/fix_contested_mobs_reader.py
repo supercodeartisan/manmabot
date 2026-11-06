@@ -1,6 +1,6 @@
 """In-process contested_mobs sweep. Mobs attacked by other visible players.
 
-Dedicated DLL (analysis/combat_attack/contested_mobs.dll). If the other user
+Dedicated DLL (analysis/dll/contested_mobs.dll). If the other user
 is not in the entity sweep, the mob is absent (= free).
 """
 from __future__ import annotations
@@ -10,15 +10,15 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-_COMBAT = Path(__file__).resolve().parents[2] / "analysis" / "combat_attack"
+_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
 
 def default_dll_path() -> Path:
-    return _COMBAT / "contested_mobs.dll"
+    return _ANALYSIS / "dll" / "contested_mobs.dll"
 
 
 def default_settings_path() -> Path:
-    return _COMBAT / "settings_contested_mobs.json"
+    return _ANALYSIS / "registry" / "settings_contested_mobs.json"
 
 
 class ContestedMobsReader:
