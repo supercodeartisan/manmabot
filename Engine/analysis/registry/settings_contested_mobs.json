@@ -11,7 +11,5 @@
   "vft_self": "0x11E1388",
   "vft_player": "0x11E1350",
   "vft_monster": "0x11E1240",
-  "vft_summon": "0x11E17E8",
-  "player_x_offset": "0x16EA0F0",
-  "player_y_offset": "0x16EA0F4"
+  "vft_summon": "0x11E17E8"
 }

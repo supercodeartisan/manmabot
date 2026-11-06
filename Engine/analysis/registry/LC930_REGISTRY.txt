@@ -293,7 +293,7 @@ CI_INT=0xC8
 #     검증: bar.vft == VFT_LOADINGBAR ; mid.vft == VFT_HUDCHARINFO
 #   상태 의존(라이브 실측): EXP_CD_2 슬롯(HudZone+0x110)은 HudCharacterInfo 미부착
 #     시 NULL → 체인이 끊긴다. 즉 정본 체인은 상시 존재를 보장하지 않는다.
-#   ExperiencePct64 = 모듈 BSS f64 미러. 상시 유효, 체인 성공값과 일치.
+#   ExperiencePct64 = 모듈 BSS f64 미러(0x1636BD0). 상시 유효, 체인 성공값과 일치.
 #     · 체인 '정본 위치' 정적 유도에 미러를 단독 사용하는 것만 금지(미러는 종점 대조용).
 #     · charread 출력값은 체인 실패 시 미러로 폴백한다(추가 IOCTL 0; 이미 매 표본 읽음).
 # -----------------------------------------------------------------------------
@@ -305,7 +305,7 @@ EXP_CD_1=0x28
 EXP_CD_2=0x110
 EXP_HUD_BAR=0xE8
 EXP_BAR_PCT=0x704
-ExperiencePct64=0x1641B00
+ExperiencePct64=0x1644BF0
 # static player block (모듈 상대)
 ST_BLOCK=0x16EA0F0
 ST_X=0x0

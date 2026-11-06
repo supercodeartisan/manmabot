@@ -19,9 +19,9 @@ if not exist "core\signeddrv_client.obj" (
 cl /LD /DUIDIALOG_LISTEN_DLL uidialog\uidialog_listen.c core\signeddrv_client.obj /O2 /Fe:..\..\..\dll\uidialog_listen.dll /Icore /D_CRT_SECURE_NO_WARNINGS /nologo /link user32.lib
 if errorlevel 1 (
   echo LIVE locked — building uidialog_listen_build.dll
-  cl /LD /DUIDIALOG_LISTEN_DLL uidialog\uidialog_listen.c core\signeddrv_client.obj /O2 /Fe:..\..\..\dll\uidialog_listen.dll /Icore /D_CRT_SECURE_NO_WARNINGS /nologo /link user32.lib
+  cl /LD /DUIDIALOG_LISTEN_DLL uidialog\uidialog_listen.c core\signeddrv_client.obj /O2 /Fe:..\..\..\dll\uidialog_listen_build.dll /Icore /D_CRT_SECURE_NO_WARNINGS /nologo /link user32.lib
   if errorlevel 1 exit /b 1
 )
 
 echo BUILD OK
-dir /T:W ..\..\..\dll\uidialog_listen.dll
+dir /T:W ..\..\..\dll\uidialog_listen.dll ..\..\..\dll\uidialog_listen_build.dll
