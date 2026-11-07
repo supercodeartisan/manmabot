@@ -194,11 +194,11 @@ class PartyRoutinePanel(MoveTab):
 
     def _farm_choice_label(self, name: str, note: str, index: int) -> str:
         if str(name).startswith("point_"):
-            return tx(self.strings, "party_ui_point_row", "{index}. 점  {note}").format(
+            return tx(self.t, "party_ui_point_row", "{index}. 점  {note}").format(
                 index=index, note=note
             ).strip()
         if str(name).startswith("area_") or " ~ " in str(note):
-            return tx(self.strings, "party_ui_area_row", "{index}. 구역  {note}").format(
+            return tx(self.t, "party_ui_area_row", "{index}. 구역  {note}").format(
                 index=index, note=note
             ).strip()
         if note:
