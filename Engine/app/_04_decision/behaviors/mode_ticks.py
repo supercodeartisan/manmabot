@@ -473,6 +473,10 @@ def _maybe_support_spells(
         return heal
     if not allow_buffs:
         return None
+    from app._04_decision.solo_mage import maybe_solo_mage_buffs, solo_mage_active
+
+    if solo_mage_active(state, blackboard):
+        return maybe_solo_mage_buffs(state, blackboard)
     return maybe_cast_buff(state, blackboard)
 
 

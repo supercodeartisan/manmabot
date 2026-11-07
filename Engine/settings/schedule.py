@@ -47,6 +47,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
     """Return schedule-shaped settings backed by the existing Profile."""
     from settings.profile import (
         DEFAULT_RETURN_WEIGHT_ABOVE,
+        attack_mode_for_character,
         snap_return_weight_above,
     )
 
@@ -71,7 +72,7 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "transit_route": "",
         },
         "hunt": {
-            "attack_mode": str(getattr(profile, "attack_mode", "magic") or "magic"),
+            "attack_mode": attack_mode_for_character(profile.character),
             "attack_range": 16,
             "keep_distance": True,
             "keep_distance_tiles": 3,

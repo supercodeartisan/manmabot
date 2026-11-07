@@ -253,12 +253,30 @@ def cursor_is_spell_aim(executor: "ActionExecutor" | None = None) -> bool:
     )
 
 
+def _right_click_here(executor: "ActionExecutor") -> None:
+    """Right-click the current pixel. Cast aim cancels; it is not an attack."""
+    mouse = getattr(executor, "mouse", None)
+    if mouse is None:
+        return
+    pos = getattr(mouse, "_last_pos", None)
+    if not isinstance(pos, tuple) or len(pos) < 2:
+        return
+    try:
+        mouse.click(float(pos[0]), float(pos[1]), button="right", snap=True)
+    except Exception:
+        return
+
+
 def cancel_spell_aim(
     executor: "ActionExecutor",
     *,
     reason: str = "",
 ) -> bool:
-    """Esc once to leave cast-target mode. Returns whether aim looked active."""
+    """Leave cast-target mode. Esc first; a right-click if the circle remains.
+
+    Returns whether aim looked active. The right-click stays on the current
+    pixel so it does not become an attack click.
+    """
     active = cursor_is_spell_aim(executor)
     if not active:
         return False
@@ -269,6 +287,10 @@ def cancel_spell_aim(
     settle = float(CURSOR_SEARCH_SETTLE_S or 0.0)
     if settle > 0:
         time.sleep(settle)
+    if cursor_is_spell_aim(executor):
+        _right_click_here(executor)
+        if settle > 0:
+            time.sleep(settle)
     try:
         from app.bot_log import get_logger
 
@@ -755,9 +777,9 @@ def find_attack_aim_point(
 ) -> tuple[float, float] | None:
     """Hover like elf aim; return the pixel where the attack cursor is valid.
 
-    Accepts the same knife/bow/fist labels as :func:`attack_click_search`
-    (``arrow``, ``fist``, ``sword``). Does **not** click. Used by mage to
-    lock the monster body before pressing the spell key.
+    Accepts knife/bow/fist (``arrow``, ``fist``, ``sword``) and an already
+    armed ``spell`` circle. ``spell_out_range`` and ``spell_disable`` cancel
+    the circle and are not attack-cursor misses. Does **not** click.
     """
     pts = _dedupe_screen_points(points)
     if not pts:
@@ -766,8 +788,12 @@ def find_attack_aim_point(
     tid = int(target_id) if target_id is not None else None
     thr = float(get_cursor_matcher().min_score)
     wanted = {str(label).strip().lower() for label in ATTACK_OK_LABELS}
+    spell_ready = {"spell"}
+    spell_drop = {"spell_out_range", "spell_disable"}
     stop = {"arrow_lack", "dialog"}
-    probe = wanted | stop
+    probe = wanted | stop | spell_ready | spell_drop
+    executor.mage_spell_ready = False
+    executor.spell_aim_suppressed = False
 
     def _accept(x: float, y: float) -> tuple[float, float] | None:
         if not CURSOR_VERIFY_ENABLED:
@@ -775,17 +801,29 @@ def find_attack_aim_point(
         match = _probe_labels(executor, x, y, probe)
         if match is None:
             return None
+        label = str(match.label or "")
         if float(match.score) < thr:
             executor.last_cursor_reject_reason = _format_cursor_score_reason(
                 match, thr=thr
             )
             return None
-        if match.label in stop:
+        if label in stop:
             executor.last_cursor_reject_reason = (
                 f"{_format_cursor_score_reason(match, thr=thr)} blocked"
             )
             return None
-        if match.label in wanted:
+        if label in spell_ready:
+            executor.spell_aim_suppressed = False
+            executor.mage_spell_ready = True
+            return (float(x), float(y))
+        if label in spell_drop:
+            executor.spell_aim_suppressed = True
+            executor.last_cursor_reject_reason = None
+            cancel_spell_aim(executor, reason="aim:spell circle")
+            return None
+        if label in wanted:
+            executor.spell_aim_suppressed = False
+            executor.mage_spell_ready = False
             return (float(x), float(y))
         executor.last_cursor_reject_reason = (
             f"{_format_cursor_score_reason(match, thr=thr)} not allowed"

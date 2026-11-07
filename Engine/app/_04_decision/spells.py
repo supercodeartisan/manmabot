@@ -93,6 +93,8 @@ _BUFF_MATCH: dict[str, dict[str, object]] = {
         "needles": ("홀리 웨폰", "인챈트 웨폰", "holy weapon", "enchant weapon"),
     },
 }
+# Checked mage attack spells for the solo cast key. Empty for other classes.
+SOLO_MAGE_ATTACKS: tuple = ()
 # Survive pause/resume and blackboard.reset within the same process.
 _persisted_buff_last_cast: dict[str, float] = {}
 _persisted_buff_session_at: float = 0.0
@@ -532,6 +534,36 @@ def set_auto_buffs(rows) -> None:
     AUTO_BUFFS = tuple(parsed)
 
 
+def set_solo_mage_attacks(rows) -> None:
+    """Install checked mage attack spells. Other classes pass an empty list."""
+    global SOLO_MAGE_ATTACKS
+    from settings.auto_buffs import AutoBuff
+
+    parsed: list[AutoBuff] = []
+    for row in rows or []:
+        if isinstance(row, AutoBuff):
+            parsed.append(row)
+            continue
+        if not isinstance(row, dict):
+            continue
+        try:
+            parsed.append(
+                AutoBuff(
+                    skill_id=int(row["skill_id"]),
+                    priority=int(row.get("priority") or 1),
+                    names=tuple(
+                        str(name)
+                        for name in (row.get("names") or [])
+                        if str(name or "").strip()
+                    ),
+                    duration_s=float(row.get("duration_s") or 0),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    SOLO_MAGE_ATTACKS = tuple(parsed)
+
+
 def _auto_buff(token: str):
     text = str(token or "")
     if not text.startswith("buff:"):
@@ -881,6 +913,7 @@ __all__ = [
     "hp_to_mp_on_live_hotbar",
     "assigned_buff_on_live_hotbar",
     "due_buff",
+    "set_solo_mage_attacks",
     "mark_buff_cast",
     "note_buffs_active",
     "persist_buff_timers",
