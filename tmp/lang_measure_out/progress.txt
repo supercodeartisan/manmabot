@@ -1,0 +1,28 @@
+platform windows
+micro tr ko: n=5 median=0ms max=0ms min=0ms
+micro tr zh: n=5 median=0ms max=0ms min=0ms
+micro merge ko: n=5 median=0ms max=0ms min=0ms
+micro merge zh: n=5 median=0ms max=0ms min=0ms
+font cold ko: 182ms
+font warm ko: 34ms
+font cold zh: 46ms
+font warm zh: 47ms
+constructing shell
+shell construct+show+events: 4981ms
+begin first-other solo ko
+done first-other handler=8690.5 events=136.4 paint=8748.2 parts={'addApplicationFont': {'incl_ms': 27.2, 'excl_ms': 27.2, 'calls': 3}, '_build': {'incl_ms': 3301.0, 'excl_ms': 967.1, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 516.8, 'excl_ms': 516.8, 'calls': 1}, 'TaskEditor': {'incl_ms': 1817.0, 'excl_ms': 1110.1, 'calls': 1}, 'PartyTab': {'incl_ms': 286.9, 'excl_ms': 286.9, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 420.0, 'excl_ms': 420.0, 'calls': 1}, '_edit_selected': {'incl_ms': 84.1, 'excl_ms': 84.1, 'calls': 1}, '_refresh_operator': {'incl_ms': 52.5, 'excl_ms': 52.5, 'calls': 1}}
+begin first-back solo zh
+done first-back handler=12427.6 events=128.0 paint=12485.2 parts={'addApplicationFont': {'incl_ms': 46.5, 'excl_ms': 46.5, 'calls': 3}, '_build': {'incl_ms': 3136.2, 'excl_ms': 866.9, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 515.5, 'excl_ms': 515.5, 'calls': 1}, 'TaskEditor': {'incl_ms': 1753.8, 'excl_ms': 1078.2, 'calls': 1}, 'PartyTab': {'incl_ms': 287.2, 'excl_ms': 287.2, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 388.4, 'excl_ms': 388.4, 'calls': 1}, '_edit_selected': {'incl_ms': 82.2, 'excl_ms': 82.2, 'calls': 1}, '_refresh_operator': {'incl_ms': 64.7, 'excl_ms': 64.7, 'calls': 1}}
+begin repeat-other-0 solo ko
+done repeat-other-0 handler=16268.7 events=162.2 paint=16328.8 parts={'addApplicationFont': {'incl_ms': 32.4, 'excl_ms': 32.4, 'calls': 3}, '_build': {'incl_ms': 3259.5, 'excl_ms': 894.6, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 532.4, 'excl_ms': 532.4, 'calls': 1}, 'TaskEditor': {'incl_ms': 1832.5, 'excl_ms': 1122.2, 'calls': 1}, 'PartyTab': {'incl_ms': 286.4, 'excl_ms': 286.4, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 423.9, 'excl_ms': 423.9, 'calls': 1}, '_edit_selected': {'incl_ms': 94.5, 'excl_ms': 94.5, 'calls': 1}, '_refresh_operator': {'incl_ms': 65.2, 'excl_ms': 65.2, 'calls': 1}}
+begin repeat-back-0 solo zh
+done repeat-back-0 handler=20203.7 events=154.6 paint=20282.5 parts={'addApplicationFont': {'incl_ms': 49.4, 'excl_ms': 49.4, 'calls': 3}, '_build': {'incl_ms': 3206.6, 'excl_ms': 893.0, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 510.6, 'excl_ms': 510.6, 'calls': 1}, 'TaskEditor': {'incl_ms': 1803.0, 'excl_ms': 1105.5, 'calls': 1}, 'PartyTab': {'incl_ms': 304.2, 'excl_ms': 304.2, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 393.2, 'excl_ms': 393.2, 'calls': 1}, '_edit_selected': {'incl_ms': 86.4, 'excl_ms': 86.4, 'calls': 1}, '_refresh_operator': {'incl_ms': 53.2, 'excl_ms': 53.2, 'calls': 1}}
+begin repeat-other-1 solo ko
+done repeat-other-1 handler=24456.4 events=138.0 paint=24528.8 parts={'addApplicationFont': {'incl_ms': 29.1, 'excl_ms': 29.1, 'calls': 3}, '_build': {'incl_ms': 3247.0, 'excl_ms': 910.5, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 516.4, 'excl_ms': 516.4, 'calls': 1}, 'TaskEditor': {'incl_ms': 1820.0, 'excl_ms': 1096.6, 'calls': 1}, 'PartyTab': {'incl_ms': 286.5, 'excl_ms': 286.5, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 436.9, 'excl_ms': 436.9, 'calls': 1}, '_edit_selected': {'incl_ms': 84.5, 'excl_ms': 84.5, 'calls': 1}, '_refresh_operator': {'incl_ms': 65.4, 'excl_ms': 65.4, 'calls': 1}}
+begin repeat-back-1 solo zh
+done repeat-back-1 handler=28526.6 events=138.8 paint=28593.4 parts={'addApplicationFont': {'incl_ms': 46.5, 'excl_ms': 46.5, 'calls': 3}, '_build': {'incl_ms': 3209.9, 'excl_ms': 897.3, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 505.8, 'excl_ms': 505.8, 'calls': 1}, 'TaskEditor': {'incl_ms': 1806.9, 'excl_ms': 1135.2, 'calls': 1}, 'PartyTab': {'incl_ms': 289.1, 'excl_ms': 289.1, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 382.6, 'excl_ms': 382.6, 'calls': 1}, '_edit_selected': {'incl_ms': 85.2, 'excl_ms': 85.2, 'calls': 1}, '_refresh_operator': {'incl_ms': 70.5, 'excl_ms': 70.5, 'calls': 1}}
+begin repeat-other-2 solo ko
+done repeat-other-2 handler=32289.4 events=142.3 paint=32360.5 parts={'addApplicationFont': {'incl_ms': 34.5, 'excl_ms': 34.5, 'calls': 3}, '_build': {'incl_ms': 3266.0, 'excl_ms': 909.1, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 491.0, 'excl_ms': 491.0, 'calls': 1}, 'TaskEditor': {'incl_ms': 1865.9, 'excl_ms': 1163.7, 'calls': 1}, 'PartyTab': {'incl_ms': 290.6, 'excl_ms': 290.6, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 411.6, 'excl_ms': 411.6, 'calls': 1}, '_edit_selected': {'incl_ms': 80.9, 'excl_ms': 80.9, 'calls': 1}, '_refresh_operator': {'incl_ms': 85.4, 'excl_ms': 85.4, 'calls': 1}}
+begin repeat-back-2 solo zh
+done repeat-back-2 handler=36749.5 events=155.1 paint=36825.8 parts={'addApplicationFont': {'incl_ms': 53.6, 'excl_ms': 53.6, 'calls': 3}, '_build': {'incl_ms': 3274.1, 'excl_ms': 895.7, 'calls': 1}, 'ScheduleListPane': {'incl_ms': 514.3, 'excl_ms': 514.3, 'calls': 1}, 'TaskEditor': {'incl_ms': 1864.0, 'excl_ms': 1175.0, 'calls': 1}, 'PartyTab': {'incl_ms': 289.0, 'excl_ms': 289.0, 'calls': 1}, 'PartyWorkspace': {'incl_ms': 400.0, 'excl_ms': 400.0, 'calls': 1}, '_edit_selected': {'incl_ms': 85.3, 'excl_ms': 85.3, 'calls': 1}, '_refresh_operator': {'incl_ms': 70.9, 'excl_ms': 70.9, 'calls': 1}}
+begin repeat-other-3 solo ko

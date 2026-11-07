@@ -396,6 +396,9 @@ class TaskEditor(QWidget):
             self.server_value.setText(empty)
             self.order_value.setText(empty)
             self.type_value.setText(empty)
+            note = getattr(getattr(self, "party_tab", None), "note_local_character", None)
+            if callable(note):
+                note("")
             return
         self.server_value.setText(
             display_server_name(
@@ -406,6 +409,10 @@ class TaskEditor(QWidget):
             or empty
         )
         self.order_value.setText(str(getattr(account, "character_number", empty)))
+        note_name = getattr(self, "party_tab", None)
+        note = getattr(note_name, "note_local_character", None)
+        if callable(note):
+            note(str(getattr(account, "display_name", "") or ""))
         character = str(getattr(account, "character_type", "") or "")
         self.type_value.setText(self.t.get(character, character) or empty)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -24,16 +24,26 @@ from PySide6.QtWidgets import (
 )
 
 from settings.profile import normalize_party_roster
-from ui_qt.editors.form_helpers import add_check, add_spin_row, card, configure_table_fill
+from ui_qt.editors.form_helpers import (
+    add_check,
+    add_check_spin,
+    add_spin_row,
+    card,
+    configure_table_fill,
+    table_row_height_for_controls,
+    wrap_cell_widget,
+)
 from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.i18n_overlay import tx
 from ui_qt.i18n_refresh import bind_tx_keys
 from ui_qt.viewmodels.settings_bag import SettingsBag
+from ui_qt.widgets.step_spin import StepSpinBox
 
 _LOOT_ROLES = ("none", "responsible")
 _FARM_MODES = ("party", "solo")
 _PARTY_ROLES = ("member", "leader")
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
+_ABSENCE_ACTIONS = ("hunt", "hold", "move")
 
 
 class _WsTestBridge(QObject):
@@ -109,6 +119,7 @@ class PartyTab(QWidget):
             "link": self._build_member_link(),
             "follow": self._build_member_follow(),
             "assist": self._build_member_assist(),
+            "support": self._build_member_support(),
             "personal": self._build_member_personal(),
             "status": self._build_member_status(),
         }
@@ -250,6 +261,436 @@ class PartyTab(QWidget):
         lay.addStretch(1)
         return host
 
+    def _build_member_support(self) -> QWidget:
+        """F05 display and saved choices. Combat does not read these yet."""
+        host, lay = self._section()
+        hit = card(host, self._tx("party_ui_hit_title", "파티원 피격 시 지원"))
+        lay.addWidget(hit)
+        hit_lay = hit.layout()
+        assert isinstance(hit_lay, QVBoxLayout)
+        self.member_hit_group = QButtonGroup(host)
+        self.member_hit_group.setExclusive(True)
+        mode = str(self.bag.get_str("party", "hit_support", "immediate") or "immediate")
+        if mode not in ("immediate", "finish"):
+            mode = "immediate"
+        options = (
+            (
+                "immediate",
+                "party_ui_hit_now",
+                "즉시 지원",
+                "party_ui_hit_now_note",
+                "파티원이 몬스터에게 공격받으면 현재 공격 중인 몬스터를 중단하고 "
+                "해당 파티원을 공격하는 몬스터를 즉시 공격한다.",
+            ),
+            (
+                "finish",
+                "party_ui_hit_after",
+                "현재 공격하던 몬스터 처치 후 지원",
+                "party_ui_hit_after_note",
+                "현재 공격 중인 몬스터를 먼저 처치한 다음 "
+                "해당 파티원을 공격하는 몬스터를 공격한다.",
+            ),
+        )
+        self.member_hit_buttons: dict[str, QRadioButton] = {}
+        for value, title_key, title_fallback, note_key, note_fallback in options:
+            button = QRadioButton(self._tx(title_key, title_fallback))
+            button.setChecked(mode == value)
+            self.member_hit_group.addButton(button)
+            hit_lay.addWidget(button)
+            note = QLabel(self._tx(note_key, note_fallback))
+            note.setWordWrap(True)
+            hit_lay.addWidget(note)
+            self.member_hit_buttons[value] = button
+            button.toggled.connect(
+                lambda checked, chosen=value: self._on_hit_support(chosen, checked)
+            )
+        if not any(button.isChecked() for button in self.member_hit_buttons.values()):
+            self.member_hit_buttons["immediate"].setChecked(True)
+
+        danger = card(host, self._tx("party_ui_hp_title", "파티원 체력 위험 시 긴급 지원"))
+        lay.addWidget(danger)
+        danger_lay = danger.layout()
+        assert isinstance(danger_lay, QVBoxLayout)
+        percent = self.bag.get_int("party", "hp_emergency_percent", 30)
+        if percent < 1 or percent > 100:
+            percent = 30
+        self.member_hp_emergency, self.member_hp_emergency_pct = add_check_spin(
+            danger_lay,
+            self.bag,
+            "hp_emergency_enabled",
+            False,
+            self._tx("party_ui_hp_enable", "체력 임계값 사용"),
+            "hp_emergency_percent",
+            percent,
+            1,
+            100,
+            "%",
+            section="party",
+        )
+        hp_note = QLabel(
+            self._tx(
+                "party_ui_hp_note",
+                "파티원 중 누구든지 HP가 설정한 임계값 이하로 내려가면 "
+                "모든 파티원이 해당 파티원을 공격하고 있는 몬스터를 즉시 공격한다. "
+                "이 긴급 지원은 일반 피격 대응보다 우선한다.",
+            )
+        )
+        hp_note.setWordWrap(True)
+        danger_lay.addWidget(hp_note)
+        self._build_member_heal(host, lay)
+        lay.addStretch(1)
+        return host
+
+    def _on_hit_support(self, mode: str, checked: bool) -> None:
+        if checked:
+            self.bag.set("party", "hit_support", mode)
+
+    def _build_member_heal(self, host: QWidget, lay: QVBoxLayout) -> None:
+        """F06 settings. Live HP and cast results stay blank until the engine has them."""
+        box = card(host, self._tx("party_ui_heal_title", "파티원 힐 관리 (F06)"))
+        self.member_heal_box = box
+        lay.addWidget(box)
+        inner = box.layout()
+        assert isinstance(inner, QVBoxLayout)
+
+        self.member_heal_table = self._heal_table(
+            (
+                ("party_ui_heal_col_number", "번호"),
+                ("party_ui_heal_col_name", "캐릭터 이름"),
+                ("party_ui_heal_col_use", "힐 사용"),
+                ("party_ui_heal_col_hp", "HP 임계값(%)"),
+                ("party_ui_heal_col_priority", "치료 우선순위"),
+            )
+        )
+        inner.addWidget(self.member_heal_table)
+
+        skill_row = QHBoxLayout()
+        skill_row.addWidget(QLabel(self._tx("party_ui_heal_skill", "힐 스킬")))
+        self.member_heal_skill = QComboBox()
+        skill_row.addWidget(self.member_heal_skill, stretch=1)
+        inner.addLayout(skill_row)
+
+        slot_row = QHBoxLayout()
+        slot_row.addWidget(QLabel(self._tx("party_ui_heal_slot", "스킬 슬롯")))
+        self.member_heal_slot_box = QComboBox()
+        self.member_heal_slot_key = QComboBox()
+        for box_no in (1, 2, 3):
+            self.member_heal_slot_box.addItem(f"F{box_no}", box_no)
+        for key in ("f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"):
+            self.member_heal_slot_key.addItem(key.upper(), key)
+        slot_row.addWidget(self.member_heal_slot_box)
+        slot_row.addWidget(self.member_heal_slot_key)
+        self.member_heal_reuse = QLabel("")
+        slot_row.addWidget(self.member_heal_reuse)
+        slot_row.addStretch(1)
+        inner.addLayout(slot_row)
+
+        self.member_heal_mp = QLabel("")
+        self.member_heal_mp.setWordWrap(True)
+        inner.addWidget(self.member_heal_mp)
+
+        self.member_heal_status = self._heal_table(
+            (
+                ("party_ui_heal_col_name", "캐릭터 이름"),
+                ("party_ui_heal_status_hp", "현재 HP"),
+                ("party_ui_heal_status_threshold", "설정된 HP 임계값"),
+                ("party_ui_heal_status_state", "치료 상태"),
+                ("party_ui_heal_status_result", "최근 힐 결과"),
+                ("party_ui_heal_status_reason", "실패 사유"),
+            )
+        )
+        inner.addWidget(self.member_heal_status)
+        self._refresh_party_heal()
+
+    def _heal_table(self, columns: tuple[tuple[str, str], ...]) -> QTableWidget:
+        table = QTableWidget(0, len(columns))
+        table.setHorizontalHeaderLabels(
+            [self._tx(key, fallback) for key, fallback in columns]
+        )
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        configure_table_fill(table, 1)
+        return table
+
+    def note_local_character(self, name: str) -> None:
+        """This PC's roster name. Used only to leave self off the heal target list."""
+        self._local_character_name = str(name or "").strip()
+        self._refresh_party_heal()
+        self._refresh_successor_choices()
+
+    def _local_character_name_text(self) -> str:
+        return str(getattr(self, "_local_character_name", "") or "").strip()
+
+    def _heal_targets(self) -> list[dict[str, str]]:
+        self_name = self._local_character_name_text().casefold()
+        targets = []
+        for row in self._roster_rows():
+            name = str(row.get("name") or "").strip()
+            if not name or name.casefold() == self_name:
+                continue
+            targets.append(row)
+        return targets
+
+    def _heal_target_saved(self) -> dict[str, dict[str, object]]:
+        raw = self.bag.get("party", "heal_targets", {})
+        if not isinstance(raw, dict):
+            return {}
+        saved: dict[str, dict[str, object]] = {}
+        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
+        default_hp = min(100, max(1, default_hp or 50))
+        for name, item in raw.items():
+            key = str(name or "").strip()
+            if not key or not isinstance(item, dict):
+                continue
+            try:
+                hp = int(item.get("hp_percent", default_hp))
+            except (TypeError, ValueError):
+                hp = default_hp
+            if hp < 1 or hp > 100:
+                hp = default_hp
+            try:
+                priority = int(item.get("priority", 1))
+            except (TypeError, ValueError):
+                priority = 1
+            saved[key] = {
+                "enabled": bool(item.get("enabled", False)),
+                "hp_percent": hp,
+                "priority": max(1, priority),
+            }
+        return saved
+
+    def _write_heal_target(self, name: str, **fields: object) -> None:
+        saved = self._heal_target_saved()
+        row = dict(saved.get(name) or {})
+        row.update(fields)
+        saved[name] = row
+        self.bag.set("party", "heal_targets", saved)
+
+    def _registered_heal_skills(self) -> list[object]:
+        try:
+            from settings.skill_catalog import load_skill_catalog
+        except Exception:
+            return []
+        try:
+            catalog = load_skill_catalog()
+        except Exception:
+            return []
+        ui_class = str(self.bag.get_str("magic", "class", "elf") or "elf")
+        if ui_class not in ("elf", "mage", "knight", "royal"):
+            ui_class = "elf"
+        return [
+            skill
+            for skill in catalog.for_filter(ui_class, "recovery")
+            if str(getattr(skill, "ko", "") or "") == "힐"
+        ]
+
+    def _existing_heal_slot(self) -> tuple[int, str, float]:
+        from settings.spell_defaults import merge_spell_slots
+
+        raw = self.bag.get("magic", "spell_slots", None)
+        if not isinstance(raw, dict) or not raw:
+            profile = getattr(self, "_profile", None)
+            raw = getattr(profile, "spell_slots", None) if profile is not None else None
+        merged = merge_spell_slots(raw if isinstance(raw, dict) else None)
+        spec = merged.get("heal") if isinstance(merged.get("heal"), dict) else {}
+        try:
+            box = int(spec.get("box") or 0)
+        except (TypeError, ValueError):
+            box = 0
+        key = str(spec.get("key") or "").strip().lower()
+        try:
+            reuse = float(spec.get("reuse_s") or 0)
+        except (TypeError, ValueError):
+            reuse = 0.0
+        return box, key, max(0.0, reuse)
+
+    def _selected_heal_slot(self) -> tuple[int, str]:
+        saved_box = self.bag.get_int("party", "heal_slot_box", 0)
+        saved_key = str(self.bag.get_str("party", "heal_slot_key", "") or "").strip().lower()
+        if saved_box in (1, 2, 3) and saved_key in (
+            "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"
+        ):
+            return saved_box, saved_key
+        box, key, _reuse = self._existing_heal_slot()
+        if box not in (1, 2, 3):
+            box = 1
+        if key not in ("f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"):
+            key = "f8"
+        return box, key
+
+    def _heal_fail_label(self, code: str) -> str:
+        labels = {
+            "mp": ("party_ui_heal_fail_mp", "MP 부족"),
+            "unusable": ("party_ui_heal_fail_unusable", "스킬 사용 불가"),
+            "cooldown": ("party_ui_heal_fail_cooldown", "재사용 대기"),
+            "target": ("party_ui_heal_fail_target", "대상 정보 확인 실패"),
+            "range": ("party_ui_heal_fail_range", "사거리 초과"),
+        }.get(str(code or "").strip())
+        if labels is None:
+            return self.t.get("value_empty", "—")
+        return self._tx(labels[0], labels[1])
+
+    def _refresh_party_heal(self) -> None:
+        if getattr(self, "member_heal_box", None) is None:
+            return
+        self._fill_heal_skill_choices()
+        self._fill_heal_slot_choices()
+        self._fill_heal_mp_line()
+        self._fill_heal_target_table()
+        self._fill_heal_status_table()
+
+    def _fill_heal_skill_choices(self) -> None:
+        combo = getattr(self, "member_heal_skill", None)
+        if combo is None:
+            return
+        selected = str(self.bag.get_str("party", "heal_skill_key", "") or "")
+        combo.blockSignals(True)
+        combo.clear()
+        for skill in self._registered_heal_skills():
+            combo.addItem(skill.label(self.language), skill.setting_key)
+        index = combo.findData(selected)
+        if index < 0 and combo.count():
+            index = 0
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        combo.blockSignals(False)
+        if not getattr(self, "_heal_skill_wired", False):
+            combo.currentIndexChanged.connect(self._on_heal_skill)
+            self._heal_skill_wired = True
+
+    def _on_heal_skill(self) -> None:
+        combo = getattr(self, "member_heal_skill", None)
+        if combo is None:
+            return
+        self.bag.set("party", "heal_skill_key", str(combo.currentData() or ""))
+
+    def _fill_heal_slot_choices(self) -> None:
+        box_combo = getattr(self, "member_heal_slot_box", None)
+        key_combo = getattr(self, "member_heal_slot_key", None)
+        reuse = getattr(self, "member_heal_reuse", None)
+        if box_combo is None or key_combo is None:
+            return
+        box, key = self._selected_heal_slot()
+        _box, _key, seconds = self._existing_heal_slot()
+        box_combo.blockSignals(True)
+        key_combo.blockSignals(True)
+        box_index = box_combo.findData(box)
+        key_index = key_combo.findData(key)
+        if box_index >= 0:
+            box_combo.setCurrentIndex(box_index)
+        if key_index >= 0:
+            key_combo.setCurrentIndex(key_index)
+        box_combo.blockSignals(False)
+        key_combo.blockSignals(False)
+        if not getattr(self, "_heal_slot_wired", False):
+            box_combo.currentIndexChanged.connect(self._on_heal_slot)
+            key_combo.currentIndexChanged.connect(self._on_heal_slot)
+            self._heal_slot_wired = True
+        if reuse is not None:
+            shown = f"{seconds:g}"
+            reuse.setText(
+                self._tx("party_ui_heal_reuse", "재사용 {seconds}초").format(seconds=shown)
+            )
+
+    def _on_heal_slot(self) -> None:
+        box_combo = getattr(self, "member_heal_slot_box", None)
+        key_combo = getattr(self, "member_heal_slot_key", None)
+        if box_combo is None or key_combo is None:
+            return
+        self.bag.set("party", "heal_slot_box", int(box_combo.currentData() or 0))
+        self.bag.set("party", "heal_slot_key", str(key_combo.currentData() or ""))
+
+    def _fill_heal_mp_line(self) -> None:
+        label = getattr(self, "member_heal_mp", None)
+        if label is None:
+            return
+        stop = self.bag.get_bool("magic", "stop_below_mp", False)
+        stop_pct = self.bag.get_int("magic", "stop_below_mp_pct", 20)
+        reserve = self.bag.get_int("magic", "spell_reserve_pct", 20)
+        stop_text = self.t.get("stop_mp", "Stop below MP")
+        reserve_text = self.t.get("reserve_mp", "Reserve MP")
+        state = self.t.get("summary_on", "ON") if stop else self.t.get("summary_off", "OFF")
+        label.setText(f"{stop_text} {stop_pct}% ({state}) · {reserve_text} {reserve}%")
+
+    def _release_table_widgets(self, table: QTableWidget) -> None:
+        for row in range(table.rowCount()):
+            for col in range(table.columnCount()):
+                widget = table.cellWidget(row, col)
+                if widget is None:
+                    continue
+                table.removeCellWidget(row, col)
+                widget.setParent(None)
+                widget.deleteLater()
+        table.setRowCount(0)
+
+    def _fill_heal_target_table(self) -> None:
+        table = getattr(self, "member_heal_table", None)
+        if table is None:
+            return
+        targets = self._heal_targets()
+        saved = self._heal_target_saved()
+        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
+        default_hp = min(100, max(1, default_hp or 50))
+        self._release_table_widgets(table)
+        table.blockSignals(True)
+        for index, row in enumerate(targets):
+            name = str(row.get("name") or "")
+            item = saved.get(name) or {}
+            table.insertRow(index)
+            number = QTableWidgetItem(str(index + 1))
+            number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            table.setItem(index, 0, number)
+            table.setItem(index, 1, QTableWidgetItem(name))
+            check = QCheckBox()
+            check.setChecked(bool(item.get("enabled", False)))
+            check.toggled.connect(
+                lambda checked, who=name: self._write_heal_target(who, enabled=bool(checked))
+            )
+            table.setCellWidget(index, 2, wrap_cell_widget(check))
+            hp = StepSpinBox(compact=True)
+            hp.setRange(1, 100)
+            hp.setValue(int(item.get("hp_percent", default_hp)))
+            hp.valueChanged.connect(
+                lambda value, who=name: self._write_heal_target(who, hp_percent=int(value))
+            )
+            table.setCellWidget(index, 3, wrap_cell_widget(hp))
+            priority = StepSpinBox(compact=True)
+            priority.setRange(1, max(1, len(targets)))
+            priority.setValue(min(max(1, len(targets)), int(item.get("priority", index + 1))))
+            priority.valueChanged.connect(
+                lambda value, who=name: self._write_heal_target(who, priority=int(value))
+            )
+            table.setCellWidget(index, 4, wrap_cell_widget(priority))
+            table.setRowHeight(index, table_row_height_for_controls())
+        table.blockSignals(False)
+
+    def _fill_heal_status_table(self) -> None:
+        table = getattr(self, "member_heal_status", None)
+        if table is None:
+            return
+        empty = self.t.get("value_empty", "—")
+        saved = self._heal_target_saved()
+        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
+        default_hp = min(100, max(1, default_hp or 50))
+        self._release_table_widgets(table)
+        for index, row in enumerate(self._heal_targets()):
+            name = str(row.get("name") or "")
+            item = saved.get(name) or {}
+            table.insertRow(index)
+            values = (
+                name,
+                empty,
+                str(item.get("hp_percent", default_hp)),
+                empty,
+                empty,
+                self._heal_fail_label(""),
+            )
+            for col, text in enumerate(values):
+                cell = QTableWidgetItem(text)
+                table.setItem(index, col, cell)
+        table.blockSignals(False)
+
     def _build_member_personal(self) -> QWidget:
         host, lay = self._section()
         box = card(host, self._tx("party_ui_personal_title", "개인 행동 설정"))
@@ -314,46 +755,140 @@ class PartyTab(QWidget):
     def _build_leader_manage(self) -> QWidget:
         host, lay = self._section()
         self._build_roster(lay)
+        self._build_leader_succession(host, lay)
         lay.addStretch(1)
         return host
 
-    def _build_leader_ops(self) -> QWidget:
-        host, lay = self._section()
-        absent = card(host, self._tx("party_ui_absent_title", "파티장 부재 시 운영"))
-        lay.addWidget(absent)
-        absent_lay = absent.layout()
-        assert isinstance(absent_lay, QVBoxLayout)
-        absent_note = QLabel(
+    def _build_leader_succession(self, host: QWidget, lay: QVBoxLayout) -> None:
+        """F08 settings. Transfer result stays blank until the engine reports it."""
+        box = card(host, self._tx("party_ui_succession_title", "파티장 자동 인계"))
+        lay.addWidget(box)
+        inner = box.layout()
+        assert isinstance(inner, QVBoxLayout)
+        self.succession_enable = add_check(
+            inner,
+            self.bag,
+            "party",
+            "succession_enabled",
+            self._tx("party_ui_succession_enable", "파티장 자동 인계 사용"),
+            False,
+            on_change=self._refresh_succession_warning,
+        )
+        note = QLabel(
             self._tx(
-                "party_ui_absent_note",
-                "화면 구성만 되어 있습니다. 선택값은 저장되지 않고 실행되지도 않습니다.",
+                "party_ui_succession_note",
+                "파티장이 마을로 이동하면 지정된 차기 파티원에게 파티장 권한을 인계합니다.",
             )
         )
-        absent_note.setWordWrap(True)
-        absent_lay.addWidget(absent_note)
-        absent_lay.addWidget(QLabel(self._tx("party_ui_absent_action", "파티장 부재 시 행동")))
-        self.ops_absent_group = QButtonGroup(host)
-        self.ops_absent_group.setExclusive(True)
-        for key, fallback in (
-            ("party_ui_keep_hunting", "계속 사냥"),
-            ("party_ui_hold", "제자리 대기"),
-            ("party_ui_move_spot", "지정 장소로 이동"),
-        ):
-            button = QRadioButton(self._tx(key, fallback))
-            self.ops_absent_group.addButton(button)
-            absent_lay.addWidget(button)
-        self.ops_handover = QCheckBox(self._tx("party_ui_handover", "파티장 인계 사용"))
-        absent_lay.addWidget(self.ops_handover)
-        hand = QHBoxLayout()
-        hand.addWidget(QLabel(self._tx("party_ui_successor", "차기 파티장")))
-        self.ops_successor = QComboBox()
-        self.ops_successor.setMinimumWidth(160)
-        hand.addWidget(self.ops_successor)
-        hand.addStretch(1)
-        absent_lay.addLayout(hand)
+        note.setWordWrap(True)
+        inner.addWidget(note)
+        row = QHBoxLayout()
+        row.addWidget(QLabel(self._tx("party_ui_successor", "차기 파티장")))
+        self.succession_combo = QComboBox()
+        self.succession_combo.setMinimumWidth(160)
+        self.succession_combo.currentIndexChanged.connect(self._on_successor_changed)
+        row.addWidget(self.succession_combo)
+        row.addStretch(1)
+        inner.addLayout(row)
+        self.succession_warning = QLabel(
+            self._tx(
+                "party_ui_succession_need",
+                "자동 인계를 사용하려면 차기 파티장을 한 명 지정하세요.",
+            )
+        )
+        self.succession_warning.setWordWrap(True)
+        self.succession_warning.setObjectName("muted")
+        inner.addWidget(self.succession_warning)
+        self.succession_state = QLabel("")
+        self.succession_state.setWordWrap(True)
+        inner.addWidget(self.succession_state)
+        self.succession_reason = QLabel("")
+        self.succession_reason.setWordWrap(True)
+        inner.addWidget(self.succession_reason)
+        self._refresh_successor_choices()
+        self._show_succession_result("", "")
+
+    def _build_leader_ops(self) -> QWidget:
+        host, lay = self._section()
+        self._leader_ops_host = host
+        self._build_leader_absence(host, lay)
         self._add_attack_target_box(host, lay, editable=True)
         lay.addStretch(1)
+        host.installEventFilter(self)
         return host
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802
+        if (
+            watched is getattr(self, "_leader_ops_host", None)
+            and event.type() == QEvent.Type.Show
+        ):
+            self._fill_absence_places()
+        return super().eventFilter(watched, event)
+
+    def _build_leader_absence(self, host: QWidget, lay: QVBoxLayout) -> None:
+        """F09 settings. Live action state stays blank until the engine reports it."""
+        box = card(host, self._tx("party_ui_absence_title", "파티장 부재 시 파티원 행동"))
+        lay.addWidget(box)
+        inner = box.layout()
+        assert isinstance(inner, QVBoxLayout)
+        note = QLabel(
+            self._tx(
+                "party_ui_absence_note",
+                "파티장이 마을로 이동하고 파티장 인계가 진행되는 동안 "
+                "나머지 파티원들이 수행할 행동을 설정합니다.",
+            )
+        )
+        note.setWordWrap(True)
+        inner.addWidget(note)
+        self.absence_group = QButtonGroup(host)
+        self.absence_group.setExclusive(True)
+        self.absence_buttons: dict[str, QRadioButton] = {}
+        options = (
+            ("hunt", "party_ui_absence_hunt", "기존 사냥 계속하기"),
+            ("hold", "party_ui_absence_hold", "현재 위치에서 대기하기"),
+            ("move", "party_ui_absence_move", "지정 장소로 이동하기"),
+        )
+        current = self._absence_action()
+        for key, text_key, fallback in options:
+            button = QRadioButton(self._tx(text_key, fallback))
+            self.absence_group.addButton(button)
+            self.absence_buttons[key] = button
+            inner.addWidget(button)
+        for key, button in self.absence_buttons.items():
+            button.setChecked(key == current)
+            button.toggled.connect(
+                lambda checked, chosen=key: self._on_absence_action(chosen, checked)
+            )
+        place_row = QHBoxLayout()
+        place_row.addWidget(QLabel(self._tx("party_ui_absence_place", "지정 장소")))
+        self.absence_place = QComboBox()
+        self.absence_place.setMinimumWidth(220)
+        self.absence_place.currentIndexChanged.connect(self._on_absence_place)
+        place_row.addWidget(self.absence_place, stretch=1)
+        inner.addLayout(place_row)
+        self.absence_place_pending = QLabel(
+            self._tx("party_ui_absence_place_pending", "추후 연결 필요")
+        )
+        self.absence_place_pending.setWordWrap(True)
+        self.absence_place_pending.setObjectName("muted")
+        inner.addWidget(self.absence_place_pending)
+        self.absence_place_warning = QLabel(
+            self._tx(
+                "party_ui_absence_place_missing",
+                "지정한 장소를 현재 사냥터 데이터에서 찾지 못했습니다.",
+            )
+        )
+        self.absence_place_warning.setWordWrap(True)
+        self.absence_place_warning.setObjectName("muted")
+        inner.addWidget(self.absence_place_warning)
+        self.absence_state = QLabel("")
+        self.absence_state.setWordWrap(True)
+        inner.addWidget(self.absence_state)
+        self.absence_reason = QLabel("")
+        self.absence_reason.setWordWrap(True)
+        inner.addWidget(self.absence_reason)
+        self._fill_absence_places()
+        self._show_absence_result("", "")
 
     def _add_attack_target_box(
         self,
@@ -738,26 +1273,219 @@ class PartyTab(QWidget):
     def _store_roster(self, rows: list[dict[str, str]]) -> None:
         self.bag.set("party", "roster", normalize_party_roster(rows))
         self._refresh_successor_choices()
+        self._refresh_party_heal()
 
-    def _refresh_successor_choices(self) -> None:
-        combo = getattr(self, "ops_successor", None)
-        if not isinstance(combo, QComboBox):
-            return
-        current = str(combo.currentData() or "")
-        combo.blockSignals(True)
-        combo.clear()
-        combo.addItem(self._tx("party_ui_successor_none", "선택 안 함"), "")
+    def _successor_candidates(self) -> list[str]:
+        leader = self._local_character_name_text().casefold()
+        names: list[str] = []
         seen: set[str] = set()
         for row in self._roster_rows():
             name = str(row.get("name") or "").strip()
             key = name.casefold()
-            if not name or key in seen:
+            if not name or key in seen or (leader and key == leader):
                 continue
             seen.add(key)
+            names.append(name)
+        return names
+
+    def _refresh_successor_choices(self) -> None:
+        combo = getattr(self, "succession_combo", None)
+        if not isinstance(combo, QComboBox):
+            return
+        saved = str(self.bag.get_str("party", "successor_name", "") or "").strip()
+        names = self._successor_candidates()
+        valid = ""
+        for name in names:
+            if name.casefold() == saved.casefold():
+                valid = name
+                break
+        if saved and not valid:
+            self.bag.set("party", "successor_name", "")
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(self._tx("party_ui_successor_none", "선택 안 함"), "")
+        for name in names:
             combo.addItem(name, name)
-        index = combo.findData(current)
+        index = combo.findData(valid)
         combo.setCurrentIndex(index if index >= 0 else 0)
         combo.blockSignals(False)
+        self._refresh_succession_warning()
+
+    def _on_successor_changed(self) -> None:
+        combo = getattr(self, "succession_combo", None)
+        if not isinstance(combo, QComboBox):
+            return
+        self.bag.set("party", "successor_name", str(combo.currentData() or ""))
+        self._refresh_succession_warning()
+
+    def _refresh_succession_warning(self) -> None:
+        label = getattr(self, "succession_warning", None)
+        if label is None:
+            return
+        enabled = self.bag.get_bool("party", "succession_enabled", False)
+        name = str(self.bag.get_str("party", "successor_name", "") or "").strip()
+        known = {item.casefold() for item in self._successor_candidates()}
+        label.setVisible(bool(enabled and (not name or name.casefold() not in known)))
+
+    def _succession_state_label(self, code: str) -> str:
+        labels = {
+            "wait": ("party_ui_succession_wait", "인계 대기"),
+            "running": ("party_ui_succession_running", "인계 진행 중"),
+            "ok": ("party_ui_succession_ok", "인계 성공"),
+            "fail": ("party_ui_succession_fail", "인계 실패"),
+        }.get(str(code or "").strip())
+        if labels is None:
+            return self.t.get("value_empty", "—")
+        return self._tx(labels[0], labels[1])
+
+    def _show_succession_result(self, code: str, reason: str) -> None:
+        state = getattr(self, "succession_state", None)
+        reason_label = getattr(self, "succession_reason", None)
+        if state is not None:
+            state.setText(
+                self._tx("party_ui_succession_state", "인계 상태")
+                + ": "
+                + self._succession_state_label(code)
+            )
+        if reason_label is not None:
+            text = str(reason or "").strip()
+            reason_label.setText(
+                self._tx("party_ui_fail_reason", "실패 사유")
+                + ": "
+                + (text if code == "fail" and text else self.t.get("value_empty", "—"))
+            )
+
+    def _absence_action(self) -> str:
+        mode = str(self.bag.get_str("party", "absence_action", "hunt") or "hunt")
+        return mode if mode in _ABSENCE_ACTIONS else "hunt"
+
+    def _on_absence_action(self, mode: str, checked: bool) -> None:
+        if not checked:
+            return
+        if mode not in _ABSENCE_ACTIONS:
+            mode = "hunt"
+        self.bag.set("party", "absence_action", mode)
+        self._fill_absence_places()
+
+    def _place_key(self, map_id: str, area: dict) -> str:
+        name = str(area.get("name") or "").strip()
+        shape = str(area.get("shape") or "")
+        if not map_id or not name:
+            return ""
+        if shape == "point":
+            ident = f"{area.get('x')},{area.get('y')}"
+        elif shape == "area":
+            ident = f"{area.get('x0')},{area.get('y0')},{area.get('x1')},{area.get('y1')}"
+        else:
+            return ""
+        return f"{map_id}|{shape}|{name}|{ident}"
+
+    def _party_places(self) -> list[tuple[str, str]]:
+        raw = self.bag.get("party", "routine", None)
+        if not isinstance(raw, list):
+            return []
+        from settings.party_routine import normalize_party_routine
+
+        places: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for row in normalize_party_routine(raw):
+            map_id = str(row.get("map_id") or "")
+            for area in row.get("areas") or []:
+                if not isinstance(area, dict):
+                    continue
+                key = self._place_key(map_id, area)
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                label = f"{area.get('name')} ({map_id})"
+                places.append((key, label))
+        return places
+
+    def _fill_absence_places(self) -> None:
+        combo = getattr(self, "absence_place", None)
+        if not isinstance(combo, QComboBox):
+            return
+        places = self._party_places()
+        saved = str(self.bag.get_str("party", "absence_place", "") or "")
+        valid = saved if any(key == saved for key, _label in places) else ""
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(self._tx("party_ui_successor_none", "선택 안 함"), "")
+        for key, label in places:
+            combo.addItem(label, key)
+        index = combo.findData(valid)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+        combo.blockSignals(False)
+        self._apply_absence_place_enabled(places)
+
+    def _apply_absence_place_enabled(self, places: list[tuple[str, str]] | None = None) -> None:
+        combo = getattr(self, "absence_place", None)
+        pending = getattr(self, "absence_place_pending", None)
+        warning = getattr(self, "absence_place_warning", None)
+        if combo is None or pending is None or warning is None:
+            return
+        if places is None:
+            places = self._party_places()
+        move = self._absence_action() == "move"
+        combo.setEnabled(bool(move and places))
+        pending.setVisible(bool(move and not places))
+        saved = str(self.bag.get_str("party", "absence_place", "") or "")
+        known = any(key == saved for key, _label in places)
+        warning.setVisible(bool(move and saved and not known and places))
+
+    def _on_absence_place(self) -> None:
+        combo = getattr(self, "absence_place", None)
+        if not isinstance(combo, QComboBox):
+            return
+        chosen = str(combo.currentData() or "")
+        if chosen and chosen not in {key for key, _label in self._party_places()}:
+            return
+        self.bag.set("party", "absence_place", chosen)
+        self._apply_absence_place_enabled()
+
+    def _absence_state_label(self, code: str) -> str:
+        labels = {
+            "hunt": ("party_ui_absence_state_hunt", "사냥 계속 중"),
+            "hold": ("party_ui_absence_state_hold", "제자리 대기 중"),
+            "move": ("party_ui_absence_state_move", "지정 장소 이동 중"),
+            "fail": ("party_ui_absence_state_fail", "행동 전환 실패"),
+        }.get(str(code or "").strip())
+        if labels is None:
+            return self.t.get("value_empty", "—")
+        return self._tx(labels[0], labels[1])
+
+    def _show_absence_result(self, code: str, reason: str) -> None:
+        state = getattr(self, "absence_state", None)
+        reason_label = getattr(self, "absence_reason", None)
+        if state is not None:
+            state.setText(
+                self._tx("party_ui_absence_state", "행동 상태")
+                + ": "
+                + self._absence_state_label(code)
+            )
+        if reason_label is not None:
+            text = str(reason or "").strip()
+            reason_label.setText(
+                self._tx("party_ui_fail_reason", "실패 사유")
+                + ": "
+                + (text if code == "fail" and text else self.t.get("value_empty", "—"))
+            )
+
+    def _sync_leader_handover_forms(self) -> None:
+        box = getattr(self, "succession_enable", None)
+        if isinstance(box, QCheckBox):
+            box.blockSignals(True)
+            box.setChecked(self.bag.get_bool("party", "succession_enabled", False))
+            box.blockSignals(False)
+        buttons = getattr(self, "absence_buttons", None)
+        if isinstance(buttons, dict):
+            mode = self._absence_action()
+            for key, button in buttons.items():
+                button.blockSignals(True)
+                button.setChecked(key == mode)
+                button.blockSignals(False)
+        self._refresh_successor_choices()
+        self._fill_absence_places()
 
     def _fill_roster_table(self) -> None:
         table = getattr(self, "roster_table", None)
@@ -1383,7 +2111,7 @@ class PartyTab(QWidget):
             )
             self.leader_host.blockSignals(False)
         self._select_farm_mode()
-        self._refresh_successor_choices()
+        self._sync_leader_handover_forms()
         self._lan_ip = ""
         self._fill_roster_table()
         self._apply_role(self._role())

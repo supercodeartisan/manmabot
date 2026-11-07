@@ -37,6 +37,35 @@ TONES = {
 }
 
 
+_SUCCESSION_STATES = {
+    "wait": "인계 대기",
+    "running": "인계 진행 중",
+    "ok": "인계 성공",
+    "fail": "인계 실패",
+}
+_ABSENCE_STATES = {
+    "hunt": "사냥 계속 중",
+    "hold": "제자리 대기 중",
+    "move": "지정 장소 이동 중",
+    "fail": "행동 전환 실패",
+}
+
+
+def monitor_state_text(raw: object, kind: str) -> str:
+    """Show an engine state only when the snapshot carries a known code."""
+    labels = _SUCCESSION_STATES if kind == "succession" else _ABSENCE_STATES
+    if not isinstance(raw, dict):
+        return "—"
+    return labels.get(str(raw.get("state") or "").strip(), "—")
+
+
+def monitor_failure_reason(raw: object) -> str:
+    if not isinstance(raw, dict) or str(raw.get("state") or "").strip() != "fail":
+        return "—"
+    text = str(raw.get("reason") or "").strip()
+    return text or "—"
+
+
 def _fmt(v: Any, fallback: str = "—") -> str:
     if v is None or v == "":
         return fallback
@@ -743,6 +772,10 @@ class PartyDashboard(QWidget):
                     if line
                     else "—",
                 ),
+                ("Succession", monitor_state_text(session.get("succession"), "succession")),
+                ("Succession reason", monitor_failure_reason(session.get("succession"))),
+                ("Absence", monitor_state_text(session.get("absence"), "absence")),
+                ("Absence reason", monitor_failure_reason(session.get("absence"))),
             ]
         )
 

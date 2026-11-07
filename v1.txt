@@ -1,0 +1,88 @@
+
+v1.log
+本地文件
+
+
+
+
+
+分享
+15:15:37  WinNotify is already running.
+15:15:46  Memory connected — waiting for player data
+15:19:22  已保存筛选。
+15:19:23  已保存筛选。
+15:19:24  已保存筛选。
+15:19:25  已保存筛选。
+15:19:30  已保存筛选。
+15:19:32  已保存筛选。
+15:19:32  已保存筛选。
+15:40:57  开始
+15:41:14  计划已保存。
+15:41:14  正在等待下一个日程。
+15:41:14  Preparing session (memory driver / player monitor)…
+15:41:14  启动 → 运行中
+15:41:15  Loading Manmabot from C:\Users\Administrator\Desktop\zf\Engine
+15:41:15  15:41:14  [session] Loading Manmabot from C:\Users\Administrator\Desktop\zf\Engine
+15:41:15  Session log C:\Users\Administrator\Desktop\zf\Engine\logs\bot-20261105-154114.log
+15:41:15  15:41:14  [session] Session log C:\Users\Administrator\Desktop\zf\Engine\logs\bot-20261105-154114.log
+15:41:15  15:41:14  [session] character=elf loot=all_items game_lang=ko map=talking_island farms=['area_1'] file=C:\Users\Administrator\Desktop\zf\Engine\logs\bot-20261105-154114.log
+15:41:15  15:41:15  [nav] nav prebuild loaded pack=talking_island 512x576 nodes=194 cluster=32 (7 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=talking_island map=0 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=eva_kingdom_dungeon_F1 map=59 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=eva_kingdom_dungeon_F2 map=60 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=eva_kingdom_dungeon_F3 map=61 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=training_dungeon_F1 map=25 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=training_dungeon_F2 map=26 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=training_dungeon_F3 map=27 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=training_dungeon_F4 map=28 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=mutant_ant_dungeon map=217 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F1 map=43 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F2 map=44 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F3 map=45 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F4 map=46 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F5 map=47 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F6 map=48 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F7 map=49 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F8 map=50 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ant_cave_dungeon_F9 map=51 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gerard_test_dungeon map=221 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gunters_house_dungeon map=3 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F1 map=7 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F2 map=8 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F3 map=9 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F4 map=10 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F5 map=11 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F6 map=12 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludio_dungeon_F7 map=13 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=gludin_talkingisland_ship_dungeon map=6 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=giran_dungeon_F1 map=53 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=giran_dungeon_F2 map=54 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=giran_dungeon_F3 map=55 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=giran_dungeon_F4 map=56 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=giran_inner_castle_dungeon map=52 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=nerupas_cave_dungeon map=17 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=darkelf_dungeon map=209 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=darkelf_dungeon_m213 map=213 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=polluted_land_of_blessing_dungeon map=244 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=dupelgenon_dungeon map=18 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=mage_quest_dungeon map=201 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=talking_island_dungeon_F1 map=1 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=talking_island_dungeon_F2 map=2 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=talkingisland_gludin_ship_dungeon map=5 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=island_of_dreams_dungeon map=303 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=unknown_99_dungeon map=99 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=lair_of_valakas_dungeon map=67 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F1 map=75 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F2 map=76 (2 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F3 map=77 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F4 map=78 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F5 map=79 (5 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F6 map=80 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F7 map=81 (4 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=oren_ivory_tower_dungeon_F8 map=82 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=fallen_cave_underwater_dungeon map=779 (5 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=aden_inner_castle_dungeon map=300 (1 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=mainland map=4 (9 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=lair_of_antharas_dungeon map=37 (3 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ice_crystal_cave_dungeon map=72 (4 ms)
+15:41:15  15:41:15  [nav] walk components ready pack=ice_queens_castle_dungeon_F2 map=73 (3 ms)

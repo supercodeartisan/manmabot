@@ -31,6 +31,7 @@ _MEMBER_MENUS = (
     ("link", "party_ui_menu_link", "파티장 연결"),
     ("follow", "party_ui_menu_follow", "따라가기"),
     ("assist", "party_ui_menu_assist", "공격 지원"),
+    ("support", "party_ui_menu_support", "지원 및 보호"),
     ("personal", "party_ui_menu_personal", "개인 행동 설정"),
     ("status", "party_ui_menu_status", "파티 상태"),
 )

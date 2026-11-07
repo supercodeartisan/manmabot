@@ -1,0 +1,62 @@
+[
+  {
+    "label": "to-other",
+    "mode": "solo",
+    "language": "ko",
+    "title": "종횡",
+    "handler_ms": 8621.0,
+    "widgets_before": 1371,
+    "widgets_after_events": 1307,
+    "save_ms": 2.2,
+    "theme": {
+      "language": "ko",
+      "children": [
+        1371
+      ],
+      "total_ms": 4559.6,
+      "stylesheet_ms": 4459.8,
+      "setfont_ms": 57.0,
+      "setfont_calls": 1430
+    }
+  },
+  {
+    "label": "back",
+    "mode": "solo",
+    "language": "zh",
+    "title": "纵锋",
+    "handler_ms": 12827.4,
+    "widgets_before": 1307,
+    "widgets_after_events": 1309,
+    "save_ms": 2.4,
+    "theme": {
+      "language": "zh",
+      "children": [
+        1307
+      ],
+      "total_ms": 8794.5,
+      "stylesheet_ms": 8681.7,
+      "setfont_ms": 44.2,
+      "setfont_calls": 1366
+    }
+  },
+  {
+    "label": "party",
+    "mode": "party",
+    "language": "ko",
+    "title": "종횡",
+    "handler_ms": 16709.5,
+    "widgets_before": 1309,
+    "widgets_after_events": 1311,
+    "save_ms": 2.1,
+    "theme": {
+      "language": "ko",
+      "children": [
+        1309
+      ],
+      "total_ms": 12550.6,
+      "stylesheet_ms": 12463.9,
+      "setfont_ms": 47.9,
+      "setfont_calls": 1368
+    }
+  }
+]

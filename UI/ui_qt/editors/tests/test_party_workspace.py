@@ -15,7 +15,10 @@ for _path in (_ROOT / "UI", _ROOT / "Engine"):
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QRadioButton
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QCheckBox, QGroupBox, QLabel, QRadioButton
+
+from ui_qt.widgets.step_spin import StepSpinBox
 
 from settings.profile import Profile
 from ui_qt.editors.move_tab import MoveTab
@@ -199,7 +202,12 @@ def test_map_and_ops_pages_keep_existing_settings() -> None:
 
     ops = tab.leader_sections["ops"]
     radios = [button.text() for button in ops.findChildren(QRadioButton)]
-    assert radios[:3] == ["계속 사냥", "제자리 대기", "지정 장소로 이동"]
+    assert radios[:3] == [
+        "기존 사냥 계속하기",
+        "현재 위치에서 대기하기",
+        "지정 장소로 이동하기",
+    ]
+    assert "파티장 공격 대상 따라가기" in radios
     support_text = " ".join(
         label.text() for label in tab.leader_sections["support"].findChildren(QLabel)
     )
@@ -212,15 +220,11 @@ def test_map_and_ops_pages_keep_existing_settings() -> None:
 
     before = copy.deepcopy(tab.bag.section("party") or {})
     ops.findChildren(QRadioButton)[0].setChecked(True)
-    tab.ops_handover.setChecked(True)
     tab._store_roster(
         [
             {"name": "알파", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
         ]
     )
-    names = [tab.ops_successor.itemText(i) for i in range(tab.ops_successor.count())]
-    assert "알파" in names
-    tab.ops_successor.setCurrentIndex(tab.ops_successor.findText("알파"))
     after = copy.deepcopy(tab.bag.section("party") or {})
     after.pop("roster", None)
     before.pop("roster", None)
@@ -286,3 +290,244 @@ def test_simplified_chinese_replaces_party_labels() -> None:
     assert "炮台" not in tab.ops_attack_status.text()
     hangul = [label for label in labels if any("\uac00" <= ch <= "\ud7a3" for ch in label)]
     assert hangul == []
+
+
+def test_member_support_saves_hit_mode_and_hp_threshold() -> None:
+    from settings.settings_sections import normalize_settings
+
+    workspace = _workspace("member")
+    workspace._on_role_chosen("member")
+    assert "지원 및 보호" in workspace.visible_menu_labels()
+    assert "파티장 연결" in workspace.visible_menu_labels()
+    assert "따라가기" in workspace.visible_menu_labels()
+    tab = workspace.tab
+    tab.party_enable.setChecked(True)
+    assert tab.leader_sections["support"].findChildren(QRadioButton) == []
+    support = tab.member_sections["support"]
+    assert [button.text() for button in tab.member_hit_buttons.values()] == [
+        "즉시 지원",
+        "현재 공격하던 몬스터 처치 후 지원",
+    ]
+    assert tab.member_hit_buttons["immediate"].isChecked()
+    assert tab.member_hit_buttons["finish"].isChecked() is False
+    tab.member_hit_buttons["finish"].setChecked(True)
+    assert tab.member_hit_buttons["immediate"].isChecked() is False
+    assert tab.bag.get_str("party", "hit_support", "") == "finish"
+    tab.member_hit_buttons["immediate"].setChecked(True)
+    assert tab.bag.get_str("party", "hit_support", "") == "immediate"
+
+    assert tab.member_hp_emergency.isChecked() is False
+    assert tab.member_hp_emergency_pct.value() == 30
+    assert tab.member_hp_emergency_pct.isEnabled() is False
+    tab.member_hp_emergency.setChecked(True)
+    assert tab.member_hp_emergency_pct.isEnabled() is True
+    tab.member_hp_emergency_pct.setValue(45)
+    assert tab.bag.get_bool("party", "hp_emergency_enabled", False) is True
+    assert tab.bag.get_int("party", "hp_emergency_percent", 0) == 45
+    tab.member_hp_emergency.setChecked(False)
+    assert tab.bag.get_bool("party", "hp_emergency_enabled", True) is False
+    assert tab.member_hp_emergency_pct.value() == 45
+
+    stored = normalize_settings({"party": dict(tab.bag.section("party"))})
+    assert stored["party"]["hit_support"] == "immediate"
+    assert stored["party"]["hp_emergency_enabled"] is False
+    assert stored["party"]["hp_emergency_percent"] == 45
+    reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
+    assert reopened.member_hit_buttons["immediate"].isChecked()
+    assert reopened.member_hp_emergency.isChecked() is False
+    assert reopened.member_hp_emergency_pct.value() == 45
+    follow_text = " ".join(
+        label.text() for label in tab.member_sections["follow"].findChildren(QLabel)
+    )
+    assert "파티원 피격 시 지원" not in follow_text
+    map_text = " ".join(
+        label.text() for label in tab.leader_sections["map"].findChildren(QLabel)
+    )
+    assert "파티원 피격 시 지원" not in map_text
+    assert support.findChildren(QRadioButton)[0].group() is tab.member_hit_group
+
+
+def _self_hidden(widget) -> bool:
+    return widget.testAttribute(Qt.WidgetAttribute.WA_WState_Hidden)
+
+
+def test_party_heal_is_visible_for_every_member() -> None:
+    workspace = _workspace("member")
+    tab = workspace.tab
+    tab.party_enable.setChecked(True)
+    titles = [
+        box.title()
+        for box in tab.member_sections["support"].findChildren(QGroupBox)
+    ]
+    assert titles[:3] == [
+        "파티원 피격 시 지원",
+        "파티원 체력 위험 시 긴급 지원",
+        "파티원 힐 관리 (F06)",
+    ]
+    assert _self_hidden(tab.member_heal_box) is False
+    tab.bag.set("magic", "class", "mage")
+    tab._store_roster(
+        [
+            {"name": "힐러", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "탱커", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+        ]
+    )
+    tab.note_local_character("힐러")
+    assert _self_hidden(tab.member_heal_box) is False
+
+    tab._store_roster(
+        [
+            {"name": "힐러", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "탱커", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "버퍼", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+        ]
+    )
+    assert _self_hidden(tab.member_heal_box) is False
+    names = [
+        tab.member_heal_table.item(row, 1).text()
+        for row in range(tab.member_heal_table.rowCount())
+    ]
+    assert names == ["탱커", "버퍼"]
+    use = tab.member_heal_table.cellWidget(0, 2).findChild(QCheckBox)
+    hp = tab.member_heal_table.cellWidget(0, 3).findChild(StepSpinBox)
+    priority = tab.member_heal_table.cellWidget(0, 4).findChild(StepSpinBox)
+    assert use is not None and hp is not None and priority is not None
+    use.setChecked(True)
+    hp.setValue(40)
+    priority.setValue(2)
+    saved = tab.bag.get("party", "heal_targets", {})
+    assert saved["탱커"]["enabled"] is True
+    assert saved["탱커"]["hp_percent"] == 40
+    assert saved["탱커"]["priority"] == 2
+    slots_before = copy.deepcopy(tab.bag.get("magic", "spell_slots", None))
+    tab.member_heal_slot_box.setCurrentIndex(tab.member_heal_slot_box.findData(2))
+    tab.member_heal_slot_key.setCurrentIndex(tab.member_heal_slot_key.findData("f6"))
+    assert tab.bag.get_int("party", "heal_slot_box", 0) == 2
+    assert tab.bag.get_str("party", "heal_slot_key", "") == "f6"
+    assert tab.bag.get("magic", "spell_slots", None) == slots_before
+    assert tab.member_heal_skill.count() >= 1
+    tab.member_heal_skill.setCurrentIndex(0)
+    tab._on_heal_skill()
+    assert tab.bag.get_str("party", "heal_skill_key", "")
+    assert tab.member_heal_status.item(0, 1).text() == "—"
+    assert tab.member_heal_status.item(0, 4).text() == "—"
+    assert tab.member_heal_status.item(0, 5).text() == "—"
+    assert tab._heal_fail_label("mp") == "MP 부족"
+    assert tab._heal_fail_label("range") == "사거리 초과"
+    assert tab.leader_sections["support"].findChildren(QGroupBox) == []
+
+    reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
+    reopened.note_local_character("힐러")
+    assert _self_hidden(reopened.member_heal_box) is False
+    assert reopened.member_heal_table.item(0, 1).text() == "탱커"
+    assert reopened.member_heal_table.cellWidget(0, 2).findChild(QCheckBox).isChecked()
+    assert reopened.member_heal_table.cellWidget(0, 3).findChild(StepSpinBox).value() == 40
+    assert reopened.member_heal_table.cellWidget(0, 4).findChild(StepSpinBox).value() == 2
+    assert reopened.member_heal_slot_box.currentData() == 2
+    assert reopened.member_heal_slot_key.currentData() == "f6"
+    reopened.note_local_character("탱커")
+    assert _self_hidden(reopened.member_heal_box) is False
+
+
+def test_leader_succession_and_absence_settings() -> None:
+    from ui_qt.debug.party_dashboard import monitor_failure_reason, monitor_state_text
+
+    workspace = _workspace("leader")
+    tab = workspace.tab
+    tab.party_enable.setChecked(True)
+    manage = tab.leader_sections["manage"]
+    assert [box.title() for box in manage.findChildren(QGroupBox)][:2] == [
+        "파티 관리",
+        "파티장 자동 인계",
+    ]
+    assert tab.roster_table.columnCount() == 7
+    tab.note_local_character("알파")
+    tab._store_roster(
+        [
+            {"name": "알파", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "브라보", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "찰리", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+        ]
+    )
+    assert [
+        tab.succession_combo.itemText(i) for i in range(tab.succession_combo.count())
+    ] == ["선택 안 함", "브라보", "찰리"]
+    assert _self_hidden(tab.succession_warning)
+    tab.succession_enable.setChecked(True)
+    assert _self_hidden(tab.succession_warning) is False
+    tab.succession_combo.setCurrentIndex(tab.succession_combo.findData("브라보"))
+    assert tab.bag.get_str("party", "successor_name", "") == "브라보"
+    assert _self_hidden(tab.succession_warning)
+    tab._store_roster(
+        [
+            {"name": "알파", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "찰리", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
+        ]
+    )
+    assert tab.bag.get_str("party", "successor_name", "") == ""
+    assert tab.succession_combo.currentData() in ("", None)
+    assert tab.succession_state.text() == "인계 상태: —"
+    assert "인계 성공" not in tab.succession_state.text()
+    assert tab._succession_state_label("running") == "인계 진행 중"
+    assert tab._succession_state_label("ok") == "인계 성공"
+    assert tab._succession_state_label("") == "—"
+
+    ops = tab.leader_sections["ops"]
+    assert [box.title() for box in ops.findChildren(QGroupBox)][:2] == [
+        "파티장 부재 시 파티원 행동",
+        "공격 대상 선택",
+    ]
+    assert tab.absence_buttons["hunt"].isChecked()
+    tab.absence_buttons["hold"].setChecked(True)
+    assert tab.absence_buttons["hunt"].isChecked() is False
+    assert tab.absence_buttons["move"].isChecked() is False
+    assert tab.bag.get_str("party", "absence_action", "") == "hold"
+    tab.absence_buttons["move"].setChecked(True)
+    assert tab.bag.get_str("party", "absence_action", "") == "move"
+    assert tab.absence_place.isEnabled() is False
+    assert _self_hidden(tab.absence_place_pending) is False
+    assert tab.absence_place.count() == 1
+    routine = [
+        {
+            "id": "row1",
+            "map_id": "map-a",
+            "kind": "battle",
+            "duration_minutes": 60,
+            "areas": [
+                {"name": "북쪽", "shape": "area", "x0": 1, "y0": 2, "x1": 3, "y1": 4},
+            ],
+            "patrol": [{"x": 9, "y": 8, "name": "길"}],
+        }
+    ]
+    tab.bag.set("party", "routine", copy.deepcopy(routine))
+    tab._fill_absence_places()
+    assert tab.absence_place.isEnabled() is True
+    labels = [tab.absence_place.itemText(i) for i in range(tab.absence_place.count())]
+    assert labels == ["선택 안 함", "북쪽 (map-a)"]
+    tab.absence_place.setCurrentIndex(1)
+    saved_place = tab.bag.get_str("party", "absence_place", "")
+    assert saved_place == "map-a|area|북쪽|1,2,3,4"
+    assert tab.bag.get("party", "routine", None) == routine
+    assert tab.absence_state.text() == "행동 상태: —"
+    assert tab._absence_state_label("fail") == "행동 전환 실패"
+    assert "행동 전환 실패" not in tab.absence_state.text()
+
+    for section in tab.member_sections.values():
+        text = " ".join(box.title() for box in section.findChildren(QGroupBox))
+        assert "파티장 자동 인계" not in text
+        assert "파티장 부재 시 파티원 행동" not in text
+    workspace._on_role_chosen("member")
+    assert workspace._stack.currentWidget() is workspace._member_page
+
+    reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
+    reopened.party_enable.setChecked(True)
+    reopened.note_local_character("알파")
+    assert reopened.succession_enable.isChecked() is True
+    assert reopened.succession_combo.currentData() in ("", None)
+    assert reopened.absence_buttons["move"].isChecked()
+    assert reopened.absence_place.currentData() == saved_place
+    assert monitor_state_text(None, "succession") == "—"
+    assert monitor_state_text({"state": "ok"}, "succession") == "인계 성공"
+    assert monitor_state_text({"state": "done"}, "succession") == "—"
+    assert monitor_failure_reason({"state": "ok", "reason": "없음"}) == "—"
+    assert monitor_failure_reason({"state": "fail", "reason": "대상 없음"}) == "대상 없음"

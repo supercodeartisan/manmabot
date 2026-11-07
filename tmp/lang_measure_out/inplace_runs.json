@@ -1,0 +1,80 @@
+{
+  "before": {
+    "app": 1794012462594288900,
+    "settings": 1794009950073130000,
+    "routine": 1794009950079135500
+  },
+  "after": {
+    "app": 1794012462594288900,
+    "settings": 1794009950073130000,
+    "routine": 1794009950079135500
+  },
+  "rows": [
+    {
+      "label": "to-other",
+      "language": "zh",
+      "title": "\u7eb5\u950b",
+      "handler_ms": 1038.6,
+      "widgets_before": 1369,
+      "widgets_after": 1435,
+      "selected": 0,
+      "typed": "keep-this-name",
+      "solo_button": "\u5355\u4eba\u673a\u5668\u4eba",
+      "font": "Manmabot Noto SC Medium",
+      "hangul_labels": 14,
+      "theme": [
+        {
+          "language": "zh",
+          "restyle": false,
+          "total_ms": 148.5,
+          "stylesheet_ms": 0.0
+        }
+      ],
+      "saves": 1
+    },
+    {
+      "label": "back",
+      "language": "ko",
+      "title": "\uc885\ud6a1",
+      "handler_ms": 945.5,
+      "widgets_before": 1435,
+      "widgets_after": 1501,
+      "selected": 0,
+      "typed": "keep-this-name",
+      "solo_button": "\uc194\ub85c\ubd07",
+      "font": "Manmabot Noto KR Medium",
+      "hangul_labels": 339,
+      "theme": [
+        {
+          "language": "ko",
+          "restyle": false,
+          "total_ms": 52.4,
+          "stylesheet_ms": 0.0
+        }
+      ],
+      "saves": 2
+    },
+    {
+      "label": "to-other-again",
+      "language": "zh",
+      "title": "\u7eb5\u950b",
+      "handler_ms": 926.5,
+      "widgets_before": 1501,
+      "widgets_after": 1567,
+      "selected": 0,
+      "typed": "keep-this-name",
+      "solo_button": "\u5355\u4eba\u673a\u5668\u4eba",
+      "font": "Manmabot Noto SC Medium",
+      "hangul_labels": 26,
+      "theme": [
+        {
+          "language": "zh",
+          "restyle": false,
+          "total_ms": 54.0,
+          "stylesheet_ms": 0.0
+        }
+      ],
+      "saves": 3
+    }
+  ]
+}
