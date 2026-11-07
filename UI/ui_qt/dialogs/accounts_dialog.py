@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from settings.accounts import Account, AccountStore, AccountStoreError
 from settings.profile import Profile, save_profile
 from settings.server_list import (
+    display_server_name,
     server_cells_list,
     server_name_at_slot,
     server_slot_key,
@@ -305,16 +306,20 @@ class AccountEditorDialog(QDialog):
         self.server.clear()
         selected = -1
         for name, cell in cells:
-            self.server.addItem(name, cell)
+            shown = display_server_name(name, self.language, locale)
+            self.server.addItem(shown, cell)
             if selected < 0 and slot and cell == slot:
                 selected = self.server.count() - 1
-        if selected < 0 and chosen:
+        shown_chosen = (
+            display_server_name(chosen, self.language, locale) if chosen else ""
+        )
+        if selected < 0 and shown_chosen:
             for index in range(self.server.count()):
-                if self.server.itemText(index) == chosen:
+                if self.server.itemText(index) == shown_chosen:
                     selected = index
                     break
-        if selected < 0 and chosen:
-            self.server.insertItem(0, chosen, slot or None)
+        if selected < 0 and shown_chosen:
+            self.server.insertItem(0, shown_chosen, slot or None)
             selected = 0
         if selected >= 0:
             self.server.setCurrentIndex(selected)
@@ -322,6 +327,29 @@ class AccountEditorDialog(QDialog):
             self.server.setCurrentIndex(0)
         self.server.blockSignals(False)
         self._server_locale = locale
+
+    def refresh_server_language(self, language: str, strings: dict[str, str]) -> None:
+        """Repaint server names when the window language changes."""
+        self.language = language
+        self.t = strings
+        self.setWindowTitle(strings.get("account", "Account"))
+        locale = str(getattr(self, "_server_locale", "") or self.locale.currentData() or "ko")
+        self._reload_servers(locale, self._stored_server_name(), locale)
+
+    def _stored_server_name(self) -> str:
+        """Keep the name written for the account's server language."""
+        locale = str(self.locale.currentData() or "ko")
+        slot = self.server.currentData()
+        if isinstance(slot, str) and slot.count("|") == 2:
+            stored = server_name_at_slot(locale, slot)
+            if stored:
+                return stored
+        shown = self.server.currentText().strip()
+        return translate_server_name(
+            shown,
+            locale,
+            "zh-CN" if str(self.language).startswith("zh") else "ko",
+        )
 
     def _region_changed(self) -> None:
         previous = self._server_locale
@@ -351,7 +379,7 @@ class AccountEditorDialog(QDialog):
             "password": self.password.text(),
             "region": str(self.region.currentData() or "Korea"),
             "locale": str(self.locale.currentData() or "ko"),
-            "server": self.server.currentText().strip(),
+            "server": self._stored_server_name(),
             "character_number": slot,
             "character_type": str(self.character_type.currentData() or "royal"),
             "purple_launcher_path": self.purple_path.text().strip(),
@@ -451,6 +479,26 @@ class AccountsDialog(QDialog):
 
         self.reload()
 
+    def refresh_server_language(self, language: str, strings: dict[str, str]) -> None:
+        self.language = language
+        self.t = strings
+        self.setWindowTitle(strings.get("manage_accounts", "Accounts"))
+        self.region_ids = {
+            strings.get("region_korea", "Korea"): "Korea",
+            strings.get("region_china", "China"): "China",
+        }
+        self.locale_ids = {
+            strings.get("locale_korean", "Korean"): "ko",
+            strings.get("locale_simplified_chinese", "Simplified Chinese"): "zh-CN",
+        }
+        self.character_ids = {
+            strings.get("royal", "Royal"): "royal",
+            strings.get("knight", "Knight"): "knight",
+            strings.get("elf", "Elf"): "elf",
+            strings.get("mage", "Mage"): "mage",
+        }
+        self.reload()
+
     def reload(self) -> None:
         self.table.setRowCount(0)
         try:
@@ -480,7 +528,7 @@ class AccountsDialog(QDialog):
             self.table.insertRow(row)
             values = (
                 account.display_name or account.username,
-                account.server,
+                display_server_name(account.server, self.language, account.locale),
                 str(account.character_number),
                 account.username,
                 "••••••" if account.password else "",

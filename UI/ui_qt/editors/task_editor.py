@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QStackedWidget,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -22,6 +23,8 @@ from settings.accounts import AccountStore
 from settings.farm_schedule import normalize_routine
 from settings.profile import Profile
 from settings.schedule import ScheduleTask
+from settings.server_list import display_server_name
+from ui_qt.i18n_overlay import tx
 from ui_qt.editors.equipment_tab import EquipmentTab
 from ui_qt.shell.live_income_bar import LiveIncomeBar
 from ui_qt.editors.hunt_tab import HuntTab
@@ -29,6 +32,7 @@ from ui_qt.editors.magic_tab import MagicTab
 from ui_qt.editors.move_tab import MoveTab
 from ui_qt.editors.other_tab import OtherTab
 from ui_qt.editors.party_tab import PartyTab
+from ui_qt.editors.party_workspace import PartyWorkspace
 from ui_qt.editors.recovery_tab import RecoveryTab
 from ui_qt.facade.qt_bridge import QtBridge
 from ui_qt.theme import tokens
@@ -98,6 +102,74 @@ class TaskEditor(QWidget):
         self.party_tab: PartyTab | None = None
         self.other_tab: OtherTab | None = None
         self._build()
+
+    def set_settings_mode(self, mode: str) -> None:
+        """Show the solo notebook or the party role workspace."""
+        party = str(mode or "") == "party"
+        stack = getattr(self, "_settings_stack", None)
+        if stack is None:
+            return
+        stack.setCurrentIndex(1 if party else 0)
+        if party and self.party_tab is not None:
+            self.party_tab.reload_from_bag()
+            workspace = getattr(self, "party_workspace", None)
+            if workspace is not None:
+                workspace.present()
+
+    def party_role_change_allowed(self) -> bool:
+        """Reuse RunState plus the existing arming flag. There is no ARMING state."""
+        try:
+            from session.bot_controller import RunState
+        except Exception:
+            return True
+        if bool(getattr(self.bridge, "arming", False)):
+            return False
+        controller = getattr(self.bridge, "controller", None)
+        if controller is None:
+            return True
+        if controller.state != RunState.STOPPED:
+            return False
+        return bool(controller.worker_stopped())
+
+    def party_lock_reason(self) -> str:
+        try:
+            from session.bot_controller import RunState
+        except Exception:
+            return ""
+        if bool(getattr(self.bridge, "arming", False)):
+            return tx(self.t, "party_ui_lock_arming", "실행 준비 중에는 역할을 바꿀 수 없습니다.")
+        controller = getattr(self.bridge, "controller", None)
+        if controller is None:
+            return ""
+        if controller.state == RunState.RUNNING:
+            return tx(self.t, "party_ui_lock_running", "실행 중에는 역할을 바꿀 수 없습니다.")
+        if controller.state == RunState.PAUSED:
+            return tx(self.t, "party_ui_lock_paused", "일시정지 중에는 역할을 바꿀 수 없습니다.")
+        if controller.state == RunState.STOPPED and not controller.worker_stopped():
+            return tx(
+                self.t,
+                "party_ui_lock_stopping",
+                "종료 중입니다. 마우스 입력이 해제된 뒤에 역할을 바꿀 수 없습니다.",
+            )
+        return ""
+
+    def sync_party_role_lock(self) -> None:
+        workspace = getattr(self, "party_workspace", None)
+        if workspace is None:
+            return
+        reason = self.party_lock_reason()
+        workspace.set_locked(bool(reason), reason)
+
+    def party_start_block_message(self) -> str | None:
+        workspace = getattr(self, "party_workspace", None)
+        if workspace is None or workspace.role_ready():
+            return None
+        return tx(self.t, "party_ui_start_need_role", "역할을 선택한 뒤 파티봇을 시작할 수 없습니다.")
+
+    def set_party_motion(self, text: str) -> None:
+        tab = getattr(self, "party_tab", None)
+        if tab is not None:
+            tab.set_motion_text(text)
 
     def _maps_editable(self) -> bool:
         try:
@@ -213,7 +285,7 @@ class TaskEditor(QWidget):
             profile=self.profile,
             can_edit_map=self._maps_editable,
         )
-        tabs.addTab(self.party_tab, self.t.get("party", "Party"))
+        self.party_workspace = PartyWorkspace(self.party_tab)
 
         self.other_tab = OtherTab(
             profile=self.profile,
@@ -230,7 +302,13 @@ class TaskEditor(QWidget):
             clear_shell_logs=self.clear_shell_logs,
         )
         tabs.addTab(self.other_tab, self.t.get("other", "other"))
-        layout.addWidget(tabs, stretch=1)
+
+        # Solo tabs stay on the routine/hunt notebook. Party settings open
+        # from the shell mode switch and fill this same area.
+        self._settings_stack = QStackedWidget()
+        self._settings_stack.addWidget(tabs)
+        self._settings_stack.addWidget(self.party_workspace)
+        layout.addWidget(self._settings_stack, stretch=1)
         self.move_tab.on_content_changed = self.schedule_content_touched
         if self.party_tab.routine_panel is not None:
             self.party_tab.routine_panel.on_content_changed = self.schedule_content_touched
@@ -319,7 +397,14 @@ class TaskEditor(QWidget):
             self.order_value.setText(empty)
             self.type_value.setText(empty)
             return
-        self.server_value.setText(str(getattr(account, "server", "") or empty))
+        self.server_value.setText(
+            display_server_name(
+                str(getattr(account, "server", "") or ""),
+                self.language,
+                str(getattr(account, "locale", "") or ""),
+            )
+            or empty
+        )
         self.order_value.setText(str(getattr(account, "character_number", empty)))
         character = str(getattr(account, "character_type", "") or "")
         self.type_value.setText(self.t.get(character, character) or empty)

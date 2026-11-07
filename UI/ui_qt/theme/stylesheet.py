@@ -13,10 +13,13 @@ def build_qss(
     section_family: str | None = None,
     section_size: int | None = None,
 ) -> str:
-    """Return application-wide QSS. ``font_size`` is classic Tk body points."""
-    family = font_family.replace('"', "")
+    """Return application-wide QSS. ``font_size`` is classic Tk body points.
+
+    The face is applied with ``QFont``. Keeping it out of this sheet lets a
+    language switch change the face without walking every widget again.
+    """
+    del font_family, section_family
     size = max(8, min(16, int(font_size)))
-    sec_family = (section_family or font_family).replace('"', "")
     sec_size = max(8, min(16, int(section_size if section_size is not None else size)))
     # Integer px keeps Korean jamo (ㅈ in 작/시작) sharp — same as body_font().
     size_px = max(10, min(24, int(round(size * 96.0 / 72.0))))
@@ -41,7 +44,6 @@ def build_qss(
     combo_down_dis = qss_url(icons / "combo_down_dis.png")
     return f"""
 * {{
-    font-family: "{family}";
     font-size: {size_px}px;
     color: {t.TEXT};
 }}
@@ -89,7 +91,6 @@ QPushButton {{
     border-radius: 6px;
     padding: 3px 10px;
     min-height: 22px;
-    font-family: "{family}";
     font-size: {size_px}px;
 }}
 QPushButton:hover {{
@@ -142,7 +143,6 @@ QLineEdit, QTextEdit, QPlainTextEdit {{
     padding: {pad_y}px {pad_x}px;
     selection-background-color: {t.ACCENT_SOFT};
     selection-color: {t.TEXT};
-    font-family: "{family}";
     font-size: {size_px}px;
     min-height: {field_min_h}px;
 }}
@@ -154,7 +154,6 @@ QSpinBox, QDoubleSpinBox {{
     padding: {pad_y}px {pad_x}px;
     selection-background-color: {t.ACCENT_SOFT};
     selection-color: {t.TEXT};
-    font-family: "{family}";
     font-size: {size_px}px;
     min-height: {field_min_h}px;
 }}
@@ -262,7 +261,6 @@ QComboBox {{
     /* Room for a separate bordered drop button on the right. */
     padding: {pad_y}px {step_w + 6}px {pad_y}px {pad_x}px;
     min-height: {field_min_h}px;
-    font-family: "{family}";
     font-size: {size_px}px;
 }}
 QComboBox:hover, QComboBox:focus {{
@@ -356,7 +354,6 @@ QGroupBox {{
     border-radius: 4px;
     margin-top: 12px;
     padding-top: 8px;
-    font-family: "{sec_family}";
     font-size: {sec_px}px;
     font-weight: bold;
 }}
@@ -367,7 +364,6 @@ QGroupBox::title {{
     padding: 0 4px;
     color: {t.ACCENT};
     background: {t.SURFACE};
-    font-family: "{sec_family}";
     font-size: {sec_px}px;
     font-weight: bold;
 }}
@@ -429,7 +425,6 @@ QHeaderView::section {{
     border-right: 1px solid {t.BORDER};
     border-bottom: 1px solid {t.BORDER};
     padding: 4px 6px;
-    font-family: "{sec_family}";
     font-size: {sec_px}px;
     font-weight: bold;
 }}

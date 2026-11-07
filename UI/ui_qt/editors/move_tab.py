@@ -70,6 +70,18 @@ def _format_area_timer(seconds: float) -> str:
     return f"{minutes}:{secs:02d}"
 
 
+def _release_cell_widgets(table: QTableWidget) -> None:
+    """Drop cell hosts before the row is removed so they do not stay in the tree."""
+    for row in range(table.rowCount()):
+        for column in range(table.columnCount()):
+            host = table.cellWidget(row, column)
+            if host is None:
+                continue
+            table.removeCellWidget(row, column)
+            host.setParent(None)
+            host.deleteLater()
+
+
 class MoveTab(QWidget):
     def __init__(
         self,
@@ -264,9 +276,10 @@ class MoveTab(QWidget):
         self.summary.setMinimumHeight(72)
         root.addWidget(self.summary, stretch=0)
 
-    def refresh(self) -> None:
+    def refresh(self, *, notify: bool = True) -> None:
         self.vm.invalidate_selection()
         self.table.blockSignals(True)
+        _release_cell_widgets(self.table)
         self.table.setRowCount(0)
         for index, entry in enumerate(self.vm.rows, start=1):
             row = index - 1
@@ -322,7 +335,7 @@ class MoveTab(QWidget):
         self.table.setColumnWidth(4, max(150, self.table.columnWidth(4)))
         self.table.setColumnWidth(5, max(88, self.table.columnWidth(5)))
         self.summary.setPlainText("\n".join(self.vm.summary_lines(self.t)))
-        if callable(self.on_routine_changed):
+        if notify and callable(self.on_routine_changed):
             try:
                 self.on_routine_changed()
             except Exception:

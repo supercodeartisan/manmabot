@@ -410,14 +410,19 @@ def monster_by_key(key: str) -> MonsterCatalogRow | None:
     return None
 
 
+@lru_cache(maxsize=1)
+def _items_by_catalog_key() -> dict[str, ItemCatalogRow]:
+    found: dict[str, ItemCatalogRow] = {}
+    for row in list_item_rows():
+        found.setdefault(row.key, row)
+    return found
+
+
 def item_by_key(key: str) -> ItemCatalogRow | None:
     catalog = resolve_item_key(key)
     if not catalog:
         return None
-    for row in list_item_rows():
-        if row.key == catalog:
-            return row
-    return None
+    return _items_by_catalog_key().get(catalog)
 
 
 def _index_get(index: dict[str, str], text: str) -> str | None:

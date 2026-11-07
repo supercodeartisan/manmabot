@@ -16,17 +16,15 @@ from ctypes import wintypes
 
 _CLASS = "ZFStartupSplash"
 _BRAND_MARK = "纵锋"
-_WIDTH = 400
-_HEIGHT = 460
+_WIDTH = 228
+_HEIGHT = 201
 _MIN_UI_W = 480
 _MIN_UI_H = 320
 _FALLBACK_HITS = 8
 
 _PIX_PARGB = 0x000E200B
-_UNIT_PX = 2
 _SMOOTH = 4
 _QUALITY = 2
-_TEXT_AA = 3
 _INTERP = 7
 _AC_SRC_ALPHA = 1
 _ULW_ALPHA = 2
@@ -133,7 +131,6 @@ _born = 0
 _alpha = 0
 _ui_hits = 0
 _tick = 0
-_loading_text = "正在加载"
 _logo = ctypes.c_void_p()
 _gdiplus_token = ctypes.c_ulong()
 _bitmap = ctypes.c_void_p()
@@ -141,11 +138,6 @@ _graphics = ctypes.c_void_p()
 _mem_dc = None
 _dib = None
 _old_bmp = None
-_title_font = ctypes.c_void_p()
-_body_font = ctypes.c_void_p()
-_title_family = ctypes.c_void_p()
-_body_family = ctypes.c_void_p()
-_format = ctypes.c_void_p()
 
 
 class _WNDCLASSW(ctypes.Structure):
@@ -197,19 +189,6 @@ class _GdiplusStartupInput(ctypes.Structure):
     ]
 
 
-class _RectF(ctypes.Structure):
-    _fields_ = [
-        ("X", ctypes.c_float),
-        ("Y", ctypes.c_float),
-        ("Width", ctypes.c_float),
-        ("Height", ctypes.c_float),
-    ]
-
-
-def _argb(alpha: int, red: int, green: int, blue: int) -> int:
-    return ((alpha & 255) << 24) | ((red & 255) << 16) | ((green & 255) << 8) | (blue & 255)
-
-
 def _gp(name: str, restype, argtypes) -> None:
     fn = getattr(_gdiplus, name)
     fn.restype = restype
@@ -232,69 +211,13 @@ def _bind_gdiplus() -> None:
     _gp("GdipSetSmoothingMode", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
     _gp("GdipSetCompositingQuality", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
     _gp("GdipSetInterpolationMode", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
-    _gp("GdipSetTextRenderingHint", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
     _gp("GdipSetPixelOffsetMode", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
-    _gp("GdipCreatePath", ctypes.c_int, [ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)])
-    _gp("GdipAddPathArc", ctypes.c_int, [
-        ctypes.c_void_p, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float,
-        ctypes.c_float, ctypes.c_float,
-    ])
-    _gp("GdipClosePathFigure", ctypes.c_int, [ctypes.c_void_p])
-    _gp("GdipDeletePath", ctypes.c_int, [ctypes.c_void_p])
-    _gp("GdipCreateSolidFill", ctypes.c_int, [ctypes.c_uint, ctypes.POINTER(ctypes.c_void_p)])
-    _gp("GdipFillPath", ctypes.c_int, [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p])
-    _gp("GdipDeleteBrush", ctypes.c_int, [ctypes.c_void_p])
-    _gp("GdipSetClipPath", ctypes.c_int, [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int])
-    _gp("GdipResetClip", ctypes.c_int, [ctypes.c_void_p])
     _gp("GdipDrawImageRect", ctypes.c_int, [
         ctypes.c_void_p, ctypes.c_void_p, ctypes.c_float, ctypes.c_float,
         ctypes.c_float, ctypes.c_float,
     ])
-    _gp("GdipCreateFontFamilyFromName", ctypes.c_int, [
-        wintypes.LPCWSTR, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p),
-    ])
-    _gp("GdipCreateFont", ctypes.c_int, [
-        ctypes.c_void_p, ctypes.c_float, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p),
-    ])
-    _gp("GdipCreateStringFormat", ctypes.c_int, [
-        ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p),
-    ])
-    _gp("GdipSetStringFormatAlign", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
-    _gp("GdipSetStringFormatLineAlign", ctypes.c_int, [ctypes.c_void_p, ctypes.c_int])
-    _gp("GdipDrawString", ctypes.c_int, [
-        ctypes.c_void_p, wintypes.LPCWSTR, ctypes.c_int, ctypes.c_void_p,
-        ctypes.POINTER(_RectF), ctypes.c_void_p, ctypes.c_void_p,
-    ])
-    _gp("GdipDeleteFont", ctypes.c_int, [ctypes.c_void_p])
-    _gp("GdipDeleteFontFamily", ctypes.c_int, [ctypes.c_void_p])
-    _gp("GdipDeleteStringFormat", ctypes.c_int, [ctypes.c_void_p])
     _gp("GdipDeleteGraphics", ctypes.c_int, [ctypes.c_void_p])
     _gp("GdipDisposeImage", ctypes.c_int, [ctypes.c_void_p])
-
-
-def _round_path(x: float, y: float, w: float, h: float, radius: float):
-    path = ctypes.c_void_p()
-    if _gdiplus.GdipCreatePath(0, ctypes.byref(path)) != 0 or not path:
-        return None
-    diameter = radius * 2.0
-    _gdiplus.GdipAddPathArc(path, x, y, diameter, diameter, 180.0, 90.0)
-    _gdiplus.GdipAddPathArc(path, x + w - diameter, y, diameter, diameter, 270.0, 90.0)
-    _gdiplus.GdipAddPathArc(path, x + w - diameter, y + h - diameter, diameter, diameter, 0.0, 90.0)
-    _gdiplus.GdipAddPathArc(path, x, y + h - diameter, diameter, diameter, 90.0, 90.0)
-    _gdiplus.GdipClosePathFigure(path)
-    return path
-
-
-def _fill_round(x: float, y: float, w: float, h: float, radius: float, color: int) -> None:
-    path = _round_path(x, y, w, h, radius)
-    brush = ctypes.c_void_p()
-    if path is None or _gdiplus.GdipCreateSolidFill(color, ctypes.byref(brush)) != 0:
-        if path:
-            _gdiplus.GdipDeletePath(path)
-        return
-    _gdiplus.GdipFillPath(_graphics, brush, path)
-    _gdiplus.GdipDeleteBrush(brush)
-    _gdiplus.GdipDeletePath(path)
 
 
 def _startup_gdiplus() -> bool:
@@ -317,36 +240,8 @@ def _load_logo() -> None:
         _logo = image
 
 
-def _make_font(
-    family_name: str,
-    size: float,
-    style: int,
-    slot: str,
-    *,
-    fallback: str = "Segoe UI",
-) -> None:
-    family = ctypes.c_void_p()
-    font = ctypes.c_void_p()
-    if _gdiplus.GdipCreateFontFamilyFromName(family_name, None, ctypes.byref(family)) != 0:
-        if not fallback or _gdiplus.GdipCreateFontFamilyFromName(
-            fallback, None, ctypes.byref(family)
-        ) != 0:
-            return
-    if _gdiplus.GdipCreateFont(family, size, style, _UNIT_PX, ctypes.byref(font)) != 0:
-        _gdiplus.GdipDeleteFontFamily(family)
-        return
-    if slot == "title":
-        global _title_family, _title_font
-        _title_family = family
-        _title_font = font
-    else:
-        global _body_family, _body_font
-        _body_family = family
-        _body_font = font
-
-
 def _create_surface() -> bool:
-    global _mem_dc, _dib, _bitmap, _graphics, _format
+    global _mem_dc, _dib, _bitmap, _graphics
     info = _BITMAPINFOHEADER()
     info.biSize = ctypes.sizeof(_BITMAPINFOHEADER)
     info.biWidth = _WIDTH
@@ -372,58 +267,13 @@ def _create_surface() -> bool:
     _gdiplus.GdipSetSmoothingMode(_graphics, _SMOOTH)
     _gdiplus.GdipSetCompositingQuality(_graphics, _QUALITY)
     _gdiplus.GdipSetInterpolationMode(_graphics, _INTERP)
-    _gdiplus.GdipSetTextRenderingHint(_graphics, _TEXT_AA)
     _gdiplus.GdipSetPixelOffsetMode(_graphics, 4)
-    if _gdiplus.GdipCreateStringFormat(0, 0, ctypes.byref(_format)) == 0 and _format:
-        _gdiplus.GdipSetStringFormatAlign(_format, 1)
-        _gdiplus.GdipSetStringFormatLineAlign(_format, 1)
     return True
 
 
-def _draw_text(text: str, font, x: float, y: float, w: float, h: float, color: int) -> None:
-    if not font or not _format:
-        return
-    brush = ctypes.c_void_p()
-    if _gdiplus.GdipCreateSolidFill(color, ctypes.byref(brush)) != 0:
-        return
-    rect = _RectF(x, y, w, h)
-    _gdiplus.GdipDrawString(_graphics, text, -1, font, ctypes.byref(rect), _format, brush)
-    _gdiplus.GdipDeleteBrush(brush)
-
-
-def _draw_frame(now_ms: int) -> None:
-    _gdiplus.GdipGraphicsClear(_graphics, _argb(0, 0, 0, 0))
-    card_x, card_y, card_w, card_h = 36.0, 28.0, 328.0, 400.0
-    for shift, alpha in ((14, 16), (8, 24), (4, 34)):
-        _fill_round(card_x, card_y + shift, card_w, card_h, 28.0, _argb(alpha, 31, 35, 40))
-    _fill_round(card_x, card_y, card_w, card_h, 28.0, _argb(255, 255, 255, 255))
-
-    logo = 120.0
-    logo_x = card_x + (card_w - logo) / 2.0
-    logo_y = card_y + 36.0
-    if _logo:
-        clip = _round_path(logo_x, logo_y, logo, logo, 22.0)
-        if clip:
-            _gdiplus.GdipSetClipPath(_graphics, clip, 0)
-            _gdiplus.GdipDrawImageRect(_graphics, _logo, logo_x, logo_y, logo, logo)
-            _gdiplus.GdipResetClip(_graphics)
-            _gdiplus.GdipDeletePath(clip)
-
-    _draw_text(
-        _BRAND_MARK, _title_font, card_x, logo_y + logo + 6.0, card_w, 42.0, _argb(255, 31, 35, 40)
-    )
-    _draw_text(
-        _loading_text, _body_font, card_x, logo_y + logo + 48.0, card_w, 22.0, _argb(255, 107, 114, 128)
-    )
-
-    track_w, track_h = 148.0, 3.0
-    track_x = card_x + (card_w - track_w) / 2.0
-    track_y = card_y + card_h - 42.0
-    _fill_round(track_x, track_y, track_w, track_h, track_h, _argb(255, 232, 241, 254))
-    phase = 0.5 - 0.5 * math.cos((now_ms - _born) / 420.0)
-    span = 52.0
-    glide = track_x + (track_w - span) * phase
-    _fill_round(glide, track_y, span, track_h, track_h, _argb(255, 58, 130, 246))
+def _draw_frame() -> None:
+    _gdiplus.GdipGraphicsClear(_graphics, 0)
+    _gdiplus.GdipDrawImageRect(_graphics, _logo, 0.0, 0.0, _WIDTH, _HEIGHT)
 
 
 def _present(now_ms: int) -> None:
@@ -433,8 +283,10 @@ def _present(now_ms: int) -> None:
     if _closing:
         _alpha = max(0, _alpha - 22)
     else:
-        _alpha = min(255, _alpha + 18)
-    _draw_frame(now_ms)
+        elapsed = (now_ms - _born) & 0xFFFFFFFF
+        phase = 0.5 - 0.5 * math.cos(math.tau * elapsed / 1800.0)
+        fade_in = min(1.0, (elapsed + 16) / 180.0)
+        _alpha = round((120 + 135 * phase) * fade_in)
     origin = wintypes.POINT(0, 0)
     size = wintypes.SIZE(_WIDTH, _HEIGHT)
     dest = wintypes.POINT(
@@ -506,26 +358,14 @@ def _wnd_proc(hwnd, msg, wparam, lparam):
 
 
 def _run() -> None:
-    global _proc_ref, _hwnd, _born, _loading_text
+    global _proc_ref, _hwnd, _born
     _bind_gdiplus()
     if not _startup_gdiplus():
         return
-    _loading_text = "正在加载"
     _load_logo()
-    for face_name in ("Microsoft YaHei", "SimSun", "DengXian", "Microsoft JhengHei"):
-        _make_font(face_name, 30.0, 1, "title", fallback="")
-        if _title_font.value:
-            break
-    if not _title_font.value:
-        _make_font("Segoe UI", 30.0, 1, "title")
-    for face_name in ("Microsoft YaHei", "SimSun", "DengXian", "Microsoft JhengHei"):
-        _make_font(face_name, 13.0, 0, "body", fallback="")
-        if _body_font.value:
-            break
-    if not _body_font.value:
-        _make_font("Segoe UI", 13.0, 0, "body")
-    if not _create_surface():
+    if not _logo or not _create_surface():
         return
+    _draw_frame()
     instance = _kernel32.GetModuleHandleW(None)
     _proc_ref = _WNDPROC(_wnd_proc)
     klass = _WNDCLASSW()

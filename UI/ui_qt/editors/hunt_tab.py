@@ -434,7 +434,11 @@ class HuntTab(QWidget):
         key = self.bag.get_str("hunt", "haste_potion_item", "")
         if not key:
             return self.t.get("haste_potion_none", "No potion selected")
-        return self.t.get("haste_potion_selected", "Potion: {name}").format(name=key)
+        from i18n.localized_names import memory_name_for_ui
+
+        return self.t.get("haste_potion_selected", "Potion: {name}").format(
+            name=memory_name_for_ui(key, self.language)
+        )
 
     def _haste_hotbar_layout(self) -> dict:
         layout = self.bag.get("magic", "hotbar_layout", {}) or {}
@@ -556,7 +560,11 @@ class HuntTab(QWidget):
         key = self.bag.get_str("hunt", "antidote_potion_item", "")
         if not key:
             return self.t.get("antidote_potion_none", "No potion selected")
-        return self.t.get("antidote_potion_selected", "Potion: {name}").format(name=key)
+        from i18n.localized_names import memory_name_for_ui
+
+        return self.t.get("antidote_potion_selected", "Potion: {name}").format(
+            name=memory_name_for_ui(key, self.language)
+        )
 
     def _antidote_hotbar_text(self) -> str:
         none = self.t.get("hp_action_hotbar_none", "Not on hotbar")
@@ -718,8 +726,16 @@ class HuntTab(QWidget):
                 return "—"
             return str(value)
 
+        from i18n.localized_names import memory_name_for_ui
+
+        def shown_name(value: object) -> str:
+            text = cell(value)
+            if not text or text == "—":
+                return text
+            return memory_name_for_ui(text, self.language) or text
+
         rows: list[tuple[str, str, str]] = [
-            (cell(item.get("slot")), cell(item.get("name")), cell(item.get("count")))
+            (cell(item.get("slot")), shown_name(item.get("name")), cell(item.get("count")))
             for item in items
         ]
         stamp = tuple(rows)
@@ -745,14 +761,18 @@ class HuntTab(QWidget):
     def _refresh_attack_summary(self) -> None:
         if not hasattr(self, "attack_summary"):
             return
+        from i18n.localized_names import memory_name_for_ui
+
         lines = []
         if self.bag.get_bool("hunt", "use_haste_potion"):
-            haste_name = self.bag.get_str("hunt", "haste_potion_item", "") or "—"
+            raw_haste = self.bag.get_str("hunt", "haste_potion_item", "") or "—"
+            haste_name = memory_name_for_ui(raw_haste, self.language) or raw_haste
             lines.append(
                 f"{self.t.get('use_haste_potion', 'Haste potion')}: {haste_name}"
             )
         if self.bag.get_bool("hunt", "use_antidote_potion"):
-            antidote_name = self.bag.get_str("hunt", "antidote_potion_item", "") or "—"
+            raw_antidote = self.bag.get_str("hunt", "antidote_potion_item", "") or "—"
+            antidote_name = memory_name_for_ui(raw_antidote, self.language) or raw_antidote
             lines.append(
                 f"{self.t.get('use_antidote_potion', 'Antidote')}: {antidote_name}"
             )

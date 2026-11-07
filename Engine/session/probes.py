@@ -86,8 +86,15 @@ def load_map_pack_safe(map_id: str):
         return None
 
 
+_MAP_CHOICE_CACHE: dict[str, list[tuple[str, str, bool]]] = {}
+
+
 def list_map_choices(language: str | None = None) -> list[tuple[str, str, bool]]:
     """``(pack_id, display_name, is_dungeon)`` sorted by id."""
+    cache_key = str(language or "")
+    cached = _MAP_CHOICE_CACHE.get(cache_key)
+    if cached is not None:
+        return list(cached)
     try:
         _ensure_manmabot_on_path()
         from app._03_world.space.map_pack import list_map_packs, resolve_maps_dir
@@ -98,7 +105,7 @@ def list_map_choices(language: str | None = None) -> list[tuple[str, str, bool]]
         if maps_dir is None:
             maps_dir = manmabot_root() / "data" / "maps"
         packs = list_map_packs(maps_dir)
-        return [
+        choices = [
             (
                 p.id,
                 map_display_name(p.id, language, p.name),
@@ -106,6 +113,8 @@ def list_map_choices(language: str | None = None) -> list[tuple[str, str, bool]]
             )
             for p in packs
         ]
+        _MAP_CHOICE_CACHE[cache_key] = choices
+        return list(choices)
     except Exception:
         return []
 
@@ -337,6 +346,34 @@ def _probe_texts(language: str | None) -> dict[str, str]:
     from ui.schedule_i18n import tr
 
     return tr(normalize_language(language))
+
+
+def localized_map_title(probe: MapProbe, language: str | None) -> str:
+    """Map chip title in the window language."""
+    from i18n.localized_names import map_display_name
+
+    return map_display_name(
+        str(getattr(probe, "map_id", "") or ""),
+        language,
+        str(getattr(probe, "map_name", "") or ""),
+    )
+
+
+def localized_map_detail(probe: MapProbe, language: str | None) -> str:
+    """Status sentence for the current map, in the window language."""
+    texts = _probe_texts(language)
+    title = localized_map_title(probe, language)
+    if getattr(probe, "lamp", None) != Lamp.GREEN:
+        return localize_probe_detail(str(getattr(probe, "detail", "") or ""), language)
+    if getattr(probe, "dungeon", False):
+        count = int(getattr(probe, "patrol_count", 0) or 0)
+        return str(texts.get("probe_map_patrol", "{title} · {n} patrol points")).format(
+            title=title, n=count
+        )
+    count = len(getattr(probe, "farm_names", None) or [])
+    return str(texts.get("probe_map_farms", "{title} · {n} farms")).format(
+        title=title, n=count
+    )
 
 
 def localize_probe_detail(detail: str, language: str | None) -> str:

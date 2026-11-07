@@ -661,28 +661,33 @@ def _fold_memory_label(name: str) -> str:
     return fold_hotbar_name(name)
 
 
+@lru_cache(maxsize=1)
+def _skill_by_alias() -> dict[str, object]:
+    from settings.skill_catalog import load_skill_catalog
+
+    index: dict[str, object] = {}
+    for skill in load_skill_catalog().skills:
+        for alias in (skill.ko, skill.zh_tw, skill.zh_cn):
+            if not alias:
+                continue
+            index.setdefault(alias, skill)
+            index.setdefault("".join(alias.split()).lower(), skill)
+    return index
+
+
 def skill_catalog_display_name(name: str, language: str | None) -> str | None:
     """Localized skill label, or None when the name is not a known skill."""
     text = _fold_memory_label(name)
     if not text:
         return None
     try:
-        from settings.skill_catalog import load_skill_catalog
+        index = _skill_by_alias()
     except Exception:
         return None
-    try:
-        catalog = load_skill_catalog()
-    except Exception:
+    skill = index.get(text) or index.get("".join(text.split()).lower())
+    if skill is None:
         return None
-    folded = "".join(text.split()).lower()
-    lang = normalize_language(language)
-    for skill in catalog.skills:
-        aliases = (skill.ko, skill.zh_tw, skill.zh_cn)
-        if text in aliases:
-            return skill.label(lang)
-        if any("".join(alias.split()).lower() == folded for alias in aliases if alias):
-            return skill.label(lang)
-    return None
+    return skill.label(normalize_language(language))
 
 
 def memory_name_for_ui(name: str, language: str | None) -> str:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from hotbar.inspect import load_role_map, resolve_role
@@ -106,6 +107,7 @@ class SkillCatalog:
         ]
 
 
+@lru_cache(maxsize=1)
 def load_skill_catalog() -> SkillCatalog:
     payload = json.loads(_SKILLS_PATH.read_text(encoding="utf-8"))
     icons = _icon_index()

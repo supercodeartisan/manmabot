@@ -146,8 +146,9 @@ class OtherTab(QWidget):
                 if i < self.tabs.count():
                     self.tabs.setTabText(i, title)
         self.refresh_hotbar_view()
-        self._reload_profile_table()
+        self._refresh_profile_language()
         self._load_hotkey_fields()
+        self._refresh_hotkey_notes()
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
@@ -169,6 +170,7 @@ class OtherTab(QWidget):
         self.refresh_hotbar_view()
         self._reload_profile_table()
         self._load_hotkey_fields()
+        self._refresh_hotkey_notes()
         if self.get_log_lines is not None:
             for line in self.get_log_lines():
                 stamp, _, message = str(line).partition("  ")
@@ -221,6 +223,7 @@ class OtherTab(QWidget):
 
         cards = QHBoxLayout()
         cards.setSpacing(8)
+        self._hotbar_titles: list[tuple[QLabel, str, int]] = []
         for index, box in enumerate((1, 2, 3)):
             card_box = QFrame()
             card_box.setObjectName("hotbarCard")
@@ -231,10 +234,8 @@ class OtherTab(QWidget):
             card_layout = QVBoxLayout(card_box)
             card_layout.setContentsMargins(0, 0, 0, 0)
             card_layout.setSpacing(0)
-            title_row = QLabel(
-                f"{_CLASS_MARKS[index]}  "
-                + self.t.get("hotbar_class_n", "F{n} class").format(n=box)
-            )
+            title_row = QLabel("")
+            self._hotbar_titles.append((title_row, _CLASS_MARKS[index], box))
             title_row.setStyleSheet(
                 f"background: {tokens.ACCENT_SOFT}; padding: 8px 10px; color: {tokens.TEXT};"
             )
@@ -278,7 +279,23 @@ class OtherTab(QWidget):
         scroll.setWidget(host)
         layout.addWidget(scroll)
 
+    def _refresh_hotkey_notes(self) -> None:
+        notes = getattr(self, "_hotkey_notes", None)
+        if notes is None:
+            return
+        notes.setText(
+            f"{self.t.get('hotkey_global_note', '')}  "
+            f"{self.t.get('hotkey_duplicate_note', '')}"
+        )
+
     def refresh_hotbar_view(self) -> None:
+        for label, mark, box in getattr(self, "_hotbar_titles", ()):
+            label.setText(
+                f"{mark}  " + self.t.get("hotbar_class_n", "F{n} class").format(n=box)
+            )
+        basis = getattr(self, "_hotbar_basis", None)
+        if basis is not None:
+            basis.setText(self.t.get("hotbar_memory_basis", ""))
         layout: dict[str, Any] = {}
         if self.bag is not None:
             raw = self.bag.get("magic", "hotbar_layout", {})
@@ -591,9 +608,13 @@ class OtherTab(QWidget):
             caption, color = self._lamp_caption(lamp)
             self._status_states[key].setText(caption)
             self._status_states[key].setStyleSheet(f"color: {color}; font-weight: 600;")
-            self._status_values[key].setText(
-                localize_probe_detail(str(detail or ""), self.language)
-            )
+            if key == "map":
+                from session.probes import localized_map_detail
+
+                shown = localized_map_detail(map_probe, self.language)
+            else:
+                shown = localize_probe_detail(str(detail or ""), self.language)
+            self._status_values[key].setText(shown)
         state = self.bridge.coordinator.controller.state
         if state == RunState.RUNNING:
             caption, color = self.t.get("status_ok", "Normal"), "#16a34a"
@@ -822,10 +843,25 @@ class OtherTab(QWidget):
             row = self.profile_table.rowCount()
             self.profile_table.insertRow(row)
             self.profile_table.setItem(row, 0, QTableWidgetItem(name))
-            self.profile_table.setItem(
-                row, 1, QTableWidgetItem(self._profile_class_label(character))
-            )
+            class_item = QTableWidgetItem(self._profile_class_label(character))
+            class_item.setData(Qt.ItemDataRole.UserRole + 42, character)
+            self.profile_table.setItem(row, 1, class_item)
             self.profile_table.setItem(row, 2, QTableWidgetItem(stamp))
+        self._show_selected_profile()
+
+    def _refresh_profile_language(self) -> None:
+        table = getattr(self, "profile_table", None)
+        if table is None:
+            return
+        role = Qt.ItemDataRole.UserRole + 42
+        for row in range(table.rowCount()):
+            item = table.item(row, 1)
+            if item is None:
+                continue
+            character = item.data(role)
+            if not isinstance(character, str) or not character:
+                continue
+            item.setText(self._profile_class_label(character))
         self._show_selected_profile()
 
     def _show_selected_profile(self) -> None:
@@ -1031,10 +1067,8 @@ class OtherTab(QWidget):
         buttons.addStretch(1)
         buttons.addWidget(apply_btn)
         settings.layout().addLayout(buttons)
-        notes = QLabel(
-            f"{self.t.get('hotkey_global_note', '')}  "
-            f"{self.t.get('hotkey_duplicate_note', '')}"
-        )
+        notes = QLabel("")
+        self._hotkey_notes = notes
         notes.setWordWrap(True)
         notes.setObjectName("muted")
         settings.layout().addWidget(notes)

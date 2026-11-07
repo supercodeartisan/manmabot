@@ -29,6 +29,7 @@ _FALLBACK_SECTION = {
 }
 
 _loaded_ids: list[int] = []
+_registered_files: set[str] = set()
 _resolved_body: dict[str, str] = {}
 _resolved_section: dict[str, str] = {}
 
@@ -76,23 +77,34 @@ def resolve_section_family(language: str) -> str:
 
 
 def load_qt_fonts(language: str) -> str:
-    """Register bundled TTFs with Qt + GDI; return the classic Medium body family."""
+    """Register bundled TTFs with Qt + GDI; return the classic Medium body family.
+
+    Each face is registered once. A later language switch reuses that face.
+    """
     key = _lang_key(language)
-    _resolved_body.pop(key, None)
-    _resolved_section.pop(key, None)
+    names = font_files_for_language(language)
+    if (
+        key in _resolved_body
+        and key in _resolved_section
+        and all(name in _registered_files for name in names)
+    ):
+        return _resolved_body[key]
     try:
         load_bundled_fonts(language)
     except Exception:
         pass
     preferred_body = _BODY_FAMILY[key]
     preferred_section = _SECTION_FAMILY[key]
-    for name in font_files_for_language(language):
+    for name in names:
+        if name in _registered_files:
+            continue
         path = FONT_DIR / name
         if not path.is_file():
             continue
         font_id = QFontDatabase.addApplicationFont(str(path))
         if font_id < 0:
             continue
+        _registered_files.add(name)
         _loaded_ids.append(font_id)
         for family in QFontDatabase.applicationFontFamilies(font_id):
             if family == preferred_body or " Medium" in family:

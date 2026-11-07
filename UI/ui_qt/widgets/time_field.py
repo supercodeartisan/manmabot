@@ -46,7 +46,9 @@ class TimeField(QWidget):
         if pt <= 0:
             pt = max(8, round(self.font().pixelSize() * 0.75))
         field = max(metrics.horizontalAdvance("88"), metrics.boundingRect("88").width())
-        width = max(field + 36, 64)
+        # Two digits plus the stepper column. The old 64px floor made the
+        # schedule pane wider than the clock row.
+        width = max(field + 22, 45)
         height = max(metrics.height() + max(8, round(pt * 0.7)), 26)
         for spin in (self.hour, self.minute):
             spin.setFixedWidth(width)

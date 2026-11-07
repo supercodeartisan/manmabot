@@ -10,6 +10,7 @@ from datetime import datetime
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -38,7 +39,8 @@ from settings.profile import Profile, load_profile, save_profile
 from settings.schedule import ScheduleStore, ScheduleTask
 from settings.schedule_clock import ScheduleSession
 from ui.schedule_i18n import LANGUAGES, LANGUAGE_NAMES, tr
-from ui_qt.i18n_overlay import merge_ui_strings
+from ui_qt.i18n_overlay import merge_ui_strings, tx
+from ui_qt.i18n_refresh import bind_tx_keys, retranslate_tree
 from ui_qt.dialogs.accounts_dialog import AccountsDialog
 from ui_qt.dialogs.driver_setup_dialog import show_driver_setup
 from ui_qt.dialogs.map_editor_dialog import open_map_editor as launch_map_editor
@@ -142,6 +144,16 @@ def _force_window_top(hwnd: int, *, topmost: bool) -> None:
             user32.AttachThreadInput(fg_thread, this_thread, False)
 
 
+_ROUTINE_DISABLED_QSS = (
+    "QGroupBox { color: #a0a6ad; }"
+    "QGroupBox::title { color: #a0a6ad; }"
+    "QTableWidget { background: #f6f7f8; color: #a0a6ad; "
+    "selection-background-color: #e6eaee; selection-color: #a0a6ad; }"
+    "QHeaderView::section { background: #eef1f4; color: #a0a6ad; }"
+    "QLabel { color: #a0a6ad; }"
+)
+
+
 class ScheduleShell(QMainWindow):
     """PySide schedule root with list + full editor tabs."""
 
@@ -201,7 +213,8 @@ class ScheduleShell(QMainWindow):
         if logo is not None:
             self.setWindowIcon(QIcon(str(logo)))
         self.setMinimumSize(tokens.MIN_WIDTH, tokens.MIN_HEIGHT)
-        self.resize(tokens.DEFAULT_WIDTH, tokens.DEFAULT_HEIGHT)
+        # 75px comes off the schedule pane only. The editor keeps its width.
+        self.resize(tokens.DEFAULT_WIDTH - 75, tokens.DEFAULT_HEIGHT)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         from PySide6.QtWidgets import QApplication
 
@@ -213,24 +226,25 @@ class ScheduleShell(QMainWindow):
             apply_classic_qt_theme(
                 app, self.language, self, font_size=body, section_size=section
             )
-        self._build()
-        self.schedule_list.set_live_clock_provider(self._live_routine_clock)
-        self.setWindowFlag(
-            Qt.WindowType.WindowStaysOnTopHint, bool(self.profile.always_on_top)
-        )
-        self._refresh_operator(force=True)
+        with bind_tx_keys():
+            self._build()
+            self.schedule_list.set_live_clock_provider(self._live_routine_clock)
+            self.setWindowFlag(
+                Qt.WindowType.WindowStaysOnTopHint, bool(self.profile.always_on_top)
+            )
+            self._refresh_operator(force=True)
 
-        self._poll_timer = QTimer(self)
-        self._poll_timer.setInterval(1000)
-        self._poll_timer.timeout.connect(self._on_poll)
-        self._poll_timer.start()
-        QTimer.singleShot(400, self._warm_memory_monitor)
+            self._poll_timer = QTimer(self)
+            self._poll_timer.setInterval(1000)
+            self._poll_timer.timeout.connect(self._on_poll)
+            self._poll_timer.start()
+            QTimer.singleShot(400, self._warm_memory_monitor)
 
-        if self.tasks:
-            self.schedule_list.refresh(select=0)
-            self._edit_selected()
-        else:
-            self._begin_new()
+            if self.tasks:
+                self.schedule_list.refresh(select=0)
+                self._edit_selected()
+            else:
+                self._begin_new()
         QTimer.singleShot(0, self._lock_pane_split)
 
     def _warm_memory_monitor(self) -> None:
@@ -262,6 +276,13 @@ class ScheduleShell(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         self._main_splitter = splitter
+        # Mode buttons stay on the left. A full-width row left an empty band
+        # above the income cards and the account group.
+        left_pane = QWidget()
+        left_col = QVBoxLayout(left_pane)
+        left_col.setContentsMargins(0, 0, 0, 0)
+        left_col.setSpacing(4)
+        left_col.addWidget(self._build_mode_bar())
         self.schedule_list = ScheduleListPane(
             store=self.store,
             tasks=self.tasks,
@@ -271,7 +292,8 @@ class ScheduleShell(QMainWindow):
         self.schedule_list.taskSelected.connect(self._on_task_selected)
         self.schedule_list.newRequested.connect(self._begin_new)
         self.schedule_list.editRequested.connect(self._edit_selected)
-        splitter.addWidget(self.schedule_list)
+        left_col.addWidget(self.schedule_list, stretch=1)
+        splitter.addWidget(left_pane)
 
         self.editor = TaskEditor(
             profile=self.profile,
@@ -291,6 +313,9 @@ class ScheduleShell(QMainWindow):
             clear_shell_logs=self._clear_shell_logs,
         )
         self.editor.accountChanged.connect(self._sync_list_account)
+        self.editor.set_settings_mode(getattr(self, "_settings_mode", "solo"))
+        self.editor.sync_party_role_lock()
+        self._apply_schedule_pane_mode()
         if self.editor.move_tab is not None:
             self.editor.move_tab.set_farm_clock_provider(self._live_farm_clock)
         self.editor.set_timing_reader(self.schedule_list.read_timing_into)
@@ -302,7 +327,7 @@ class ScheduleShell(QMainWindow):
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         # Classic: sash locked to randomize row; placeholder until first lock.
-        splitter.setSizes([360, max(400, tokens.DEFAULT_WIDTH - 360)])
+        splitter.setSizes([314, max(400, tokens.DEFAULT_WIDTH - 75 - 314)])
         splitter.setHandleWidth(0)
         splitter.handle(1).setEnabled(False)
         layout.addWidget(splitter, stretch=1)
@@ -391,6 +416,8 @@ class ScheduleShell(QMainWindow):
             app, self.language, self, font_size=body, section_size=section
         )
         self._lock_pane_split()
+        if hasattr(self, "_solo_mode_btn"):
+            self._paint_mode_buttons()
 
     def _status_chip(self, strip: QFrame) -> QLabel:
         chip = QLabel("")
@@ -407,6 +434,78 @@ class ScheduleShell(QMainWindow):
             f"QLabel#statusChip {{ background: {bg}; color: {fg}; "
             f"padding: 3px 10px; border: none; }}"
         )
+
+    def _build_mode_bar(self) -> QWidget:
+        """Solo notebook vs party settings. View only — does not start a bot."""
+        bar = QWidget()
+        row = QHBoxLayout(bar)
+        row.setContentsMargins(0, 2, 0, 2)
+        row.setSpacing(8)
+
+        self._solo_mode_btn = QPushButton(self.t.get("mode_solo_bot", "솔로봇"))
+        self._party_mode_btn = QPushButton(self.t.get("mode_party_bot", "파티봇"))
+        self._mode_group = QButtonGroup(self)
+        self._mode_group.setExclusive(True)
+        for index, button in enumerate((self._solo_mode_btn, self._party_mode_btn)):
+            button.setCheckable(True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setMinimumHeight(32)
+            self._mode_group.addButton(button, index)
+        self._settings_mode = getattr(self, "_settings_mode", "solo")
+        self._mode_group.blockSignals(True)
+        if self._settings_mode == "party":
+            self._party_mode_btn.setChecked(True)
+        else:
+            self._solo_mode_btn.setChecked(True)
+        self._mode_group.blockSignals(False)
+        self._mode_group.idClicked.connect(self._on_mode_button)
+        self._paint_mode_buttons()
+
+        row.addWidget(self._solo_mode_btn)
+        row.addWidget(self._party_mode_btn)
+        row.addStretch(1)
+        return bar
+
+    def _on_mode_button(self, index: int) -> None:
+        mode = "party" if int(index) == 1 else "solo"
+        self._settings_mode = mode
+        self.editor.set_settings_mode(mode)
+        self.editor.sync_party_role_lock()
+        self._apply_schedule_pane_mode()
+        self._paint_mode_buttons()
+
+    def _party_mode(self) -> bool:
+        return getattr(self, "_settings_mode", "solo") == "party"
+
+    def _apply_schedule_pane_mode(self) -> None:
+        """Party view keeps the schedule pane, but blocks every control on it."""
+        pane = getattr(self, "schedule_list", None)
+        if pane is None:
+            return
+        party = self._party_mode()
+        pane.setEnabled(not party)
+        routine = getattr(pane, "routine_box", None)
+        if routine is None:
+            return
+        routine.setEnabled(not party)
+        routine.setStyleSheet(_ROUTINE_DISABLED_QSS if party else "")
+
+    def _paint_mode_buttons(self) -> None:
+        on = (
+            "QPushButton { background: #3a82f6; color: #ffffff; "
+            "border: 1px solid #2f6fdb; border-radius: 6px; "
+            "padding: 6px 18px; font-weight: 700; }"
+            "QPushButton:hover { background: #2f6fdb; }"
+        )
+        off = (
+            "QPushButton { background: #ffffff; color: #1f2328; "
+            "border: 1px solid #d5dbe3; border-radius: 6px; "
+            "padding: 6px 18px; font-weight: 600; }"
+            "QPushButton:hover { background: #f4f7fb; }"
+        )
+        solo_on = self._solo_mode_btn.isChecked()
+        self._solo_mode_btn.setStyleSheet(on if solo_on else off)
+        self._party_mode_btn.setStyleSheet(off if solo_on else on)
 
     def _build_header(self) -> QWidget:
         # Classic order: strip · … · accounts · language · topmost · debug · power · stop
@@ -733,34 +832,154 @@ class ScheduleShell(QMainWindow):
         code = str(self.language_combo.currentData() or self.language)
         if code == self.language:
             return
+        if not self._save_ui_language(code):
+            self._set_language_combo(self.language)
+            return
         self._rebuild_for_language(code)
 
-    def _rebuild_for_language(self, language: str) -> None:
-        """Classic parity: destroy chrome and rebuild labels without restarting the process."""
-        editing_id = self._editing_id
-        creating = self._creating_new
-        selected = self.schedule_list.selected_index()
+    def _save_ui_language(self, language: str) -> bool:
+        """Persist the UI language only. Trial settings stay untouched."""
+        from settings.trial_store import load_app_state, save_app_state
+
+        previous = self.profile.language
         self.profile.language = language
-        save_profile(self.profile)
-        if self._debug_win is not None:
-            try:
-                self._debug_win.close()
-            except Exception:
-                pass
-            self._debug_win = None
-        if self._party_win is not None:
-            try:
-                self._party_win.close()
-            except Exception:
-                pass
-            self._party_win = None
-        self._poll_timer.stop()
+        try:
+            state = load_app_state()
+            state["language"] = language
+            save_app_state(state)
+        except Exception:
+            self.profile.language = previous
+            return False
+        return True
+
+    def _set_language_combo(self, language: str) -> None:
+        combo = getattr(self, "language_combo", None)
+        if combo is None:
+            return
+        combo.blockSignals(True)
+        for index in range(combo.count()):
+            if combo.itemData(index) == language:
+                combo.setCurrentIndex(index)
+                break
+        combo.blockSignals(False)
+
+    def _refresh_composed_labels(self) -> None:
+        """Repaint sentences that were built from the previous language."""
         editor = getattr(self, "editor", None)
+        if editor is None:
+            return
+        other = getattr(editor, "other_tab", None)
+        if other is not None and hasattr(other, "retranslate"):
+            try:
+                other.retranslate(self.t, self.language)
+            except Exception:
+                pass
+        hunt = getattr(editor, "hunt_tab", None)
+        if hunt is not None:
+            paint = getattr(hunt, "_paint_haste_hotbar", None)
+            refresh_hunt = getattr(hunt, "_refresh_haste_labels", None)
+            for refresh in (paint, refresh_hunt):
+                if not callable(refresh):
+                    continue
+                try:
+                    refresh(force=True) if refresh is paint else refresh()
+                except TypeError:
+                    refresh()
+                except Exception:
+                    pass
+        for tab, name in (
+            (getattr(editor, "magic_tab", None), "_refresh_magic_summary"),
+            (getattr(editor, "recovery_tab", None), "_refresh_summary"),
+        ):
+            refresh = getattr(tab, name, None) if tab is not None else None
+            if not callable(refresh):
+                continue
+            try:
+                refresh()
+            except Exception:
+                pass
+
+    def _refresh_routine_language(self) -> None:
+        """Repaint routine rows from the current language without saving."""
+        editor = getattr(self, "editor", None)
+        if editor is None:
+            return
+        party = getattr(editor, "party_tab", None)
+        tabs = [
+            getattr(editor, "move_tab", None),
+            getattr(party, "routine_panel", None) if party is not None else None,
+        ]
+        for tab in tabs:
+            if tab is None:
+                continue
+            if hasattr(tab, "t"):
+                tab.t = self.t
+            if hasattr(tab, "language"):
+                tab.language = self.language
+            vm = getattr(tab, "vm", None)
+            if vm is not None:
+                vm.language = self.language
+                if hasattr(vm, "strings"):
+                    vm.strings = self.t
+                reload_catalog = getattr(vm, "reload_catalog", None)
+                if callable(reload_catalog):
+                    try:
+                        reload_catalog()
+                    except Exception:
+                        pass
+            refresh = getattr(tab, "refresh", None)
+            if not callable(refresh):
+                continue
+            try:
+                refresh(notify=False)
+            except TypeError:
+                refresh()
+
+    def _push_ui_language(self) -> None:
+        """Point open editors at the new string table without rebuilding them."""
+        editor = getattr(self, "editor", None)
+        pairs = [self.schedule_list, editor]
+        if editor is not None:
+            pairs.extend(
+                getattr(editor, name, None)
+                for name in (
+                    "move_tab",
+                    "hunt_tab",
+                    "recovery_tab",
+                    "magic_tab",
+                    "equipment_tab",
+                    "other_tab",
+                    "party_tab",
+                    "party_workspace",
+                )
+            )
+            party = getattr(editor, "party_tab", None)
+            panel = getattr(party, "routine_panel", None) if party is not None else None
+            pairs.append(panel)
+            vm = getattr(panel, "vm", None) if panel is not None else None
+            if vm is not None:
+                vm.language = self.language
+                if hasattr(vm, "strings"):
+                    vm.strings = self.t
+        for widget in pairs:
+            if widget is None:
+                continue
+            if hasattr(widget, "t"):
+                widget.t = self.t
+            if hasattr(widget, "language"):
+                widget.language = self.language
         bar = getattr(editor, "income_bar", None) if editor is not None else None
-        if bar is not None:
-            bar.shutdown()
+        if bar is not None and hasattr(bar, "_language"):
+            bar._language = self.language
+            bar.update()
+
+    def _rebuild_for_language(self, language: str) -> None:
+        """Keep the open screen and replace its wording and font."""
+        previous = self.t
+        selected = self.schedule_list.selected_index()
         self.language = language
         self.t = merge_ui_strings(language, tr(language))
+        self._push_ui_language()
         from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance()
@@ -768,39 +987,45 @@ class ScheduleShell(QMainWindow):
             body, section, _title = font_roles_for_window(self.width(), self.height())
             self._ui_scale_font_px = body
             apply_classic_qt_theme(
-                app, language, self, font_size=body, section_size=section
+                app,
+                language,
+                self,
+                font_size=body,
+                section_size=section,
+                restyle=False,
             )
+        skip = (
+            self.language_combo,
+            self.schedule_list.account_combo,
+            getattr(self.editor, "account_combo", None),
+        )
+        retranslate_tree(self, previous, self.t, skip=skip)
+        if app is not None:
+            for window in app.topLevelWidgets():
+                if window is self or not isinstance(window, QWidget):
+                    continue
+                retranslate_tree(window, previous, self.t)
+                refresh_servers = getattr(window, "refresh_server_language", None)
+                if callable(refresh_servers):
+                    refresh_servers(language, self.t)
         self.setWindowTitle(self.t["console_title"])
-        old = self.takeCentralWidget()
-        if old is not None:
-            old.deleteLater()
-        self._build()
-        self.schedule_list.set_live_clock_provider(self._live_routine_clock)
-        self.language_combo.blockSignals(True)
-        for i in range(self.language_combo.count()):
-            if self.language_combo.itemData(i) == language:
-                self.language_combo.setCurrentIndex(i)
-                break
-        self.language_combo.blockSignals(False)
-        if creating:
-            self._begin_new()
-        elif editing_id:
-            for i, task in enumerate(self.tasks):
-                if task.id == editing_id:
-                    self.schedule_list.refresh(select=i)
-                    self._edit_selected()
-                    break
-            else:
-                self.schedule_list.refresh(
-                    select=selected if selected is not None else None
-                )
-        else:
-            self.schedule_list.refresh(
-                select=selected if selected is not None else (0 if self.tasks else None)
-            )
-        self._poll_timer.start()
+        self._set_language_combo(language)
+        self.schedule_list.refresh(select=selected, announce=False)
+        self._refresh_routine_language()
+        show_account = getattr(self.editor, "_show_account_details", None)
+        if callable(show_account):
+            show_account()
+        self._refresh_composed_labels()
+        party = getattr(self.editor, "party_tab", None)
+        if party is not None:
+            if hasattr(party, "_fill_roster_table"):
+                party._fill_roster_table()
+            if hasattr(party, "_refresh_member_summary"):
+                party._refresh_member_summary()
+            if hasattr(party, "_refresh_personal_summary"):
+                party._refresh_personal_summary()
+        self._sync_party_role_chrome()
         self._refresh_operator(force=True)
-        QTimer.singleShot(0, self._lock_pane_split)
 
     def _on_topmost(self, checked: bool) -> None:
         self.profile.always_on_top = bool(checked)
@@ -1026,6 +1251,8 @@ class ScheduleShell(QMainWindow):
 
     def _commit_update(self) -> bool:
         """Overwrite the schedule under edit and stay on that edit."""
+        if self._party_mode():
+            return False
         if not self._editing_id:
             return False
         if self._block_editor_routine("save"):
@@ -1059,6 +1286,8 @@ class ScheduleShell(QMainWindow):
 
     def _commit_add(self) -> bool:
         """Store the form as a new list row, then open that row for edit."""
+        if self._party_mode():
+            return False
         if self._block_editor_routine("create"):
             return False
         collected = self.editor.collect_task()
@@ -1354,6 +1583,9 @@ class ScheduleShell(QMainWindow):
     def _start(self) -> None:
         """Classic Start: arm schedule clock, then unattended session prepare."""
         self._append_log(self.t.get("start", "Start"))
+        if self._party_mode():
+            self._start_party()
+            return
         if self._editing_id and self.editor.has_unsaved_changes():
             try:
                 if not self._commit_editor():
@@ -1387,6 +1619,17 @@ class ScheduleShell(QMainWindow):
             self._warn_incomplete_routine([], action="start", sections=sections)
             self._refresh_operator(force=True)
             return
+
+        if getattr(self, "_settings_mode", "solo") == "party":
+            block = self.editor.party_start_block_message()
+            if block:
+                QMessageBox.warning(
+                    self,
+                    self.t.get("title", self.t.get("console_title", "ZF")),
+                    block,
+                )
+                self._refresh_operator(force=True)
+                return
 
         will_start = (
             self.bridge.controller.state == RunState.STOPPED
@@ -1457,7 +1700,64 @@ class ScheduleShell(QMainWindow):
         )
         self._refresh_operator(force=True)
 
+    def _start_party(self) -> None:
+        """Start the party bot without arming the solo schedule clock."""
+        block = self.editor.party_start_block_message()
+        if block:
+            QMessageBox.warning(
+                self,
+                self.t.get("title", self.t.get("console_title", "ZF")),
+                block,
+            )
+            self._refresh_operator(force=True)
+            return
+        stopped = (
+            self.bridge.controller.state == RunState.STOPPED
+            and not self.bridge.arming
+        )
+        if not stopped:
+            self._append_log(
+                "Start skipped "
+                f"(state={self.bridge.controller.state}, arming={self.bridge.arming})"
+            )
+            self._refresh_operator(force=True)
+            return
+        if (
+            QMessageBox.question(
+                self,
+                self.t.get("start", "Start"),
+                self.t.get(
+                    "party_start_confirm",
+                    "파티봇을 시작할까요? 솔로봇 일정은 실행하지 않습니다.",
+                ),
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            self._append_log(self.t.get("start_confirm_no", "Start cancelled"))
+            self._refresh_operator(force=True)
+            return
+        self._session.disarm()
+        tab = getattr(self.editor, "party_tab", None)
+        if tab is not None:
+            tab.flush_routine()
+        self._overlay_party_from_editor()
+        if not self._game_is_up():
+            self._append_log(
+                self.t.get(
+                    "party_start_needs_game",
+                    "파티봇은 솔로봇 일정을 기다리지 않습니다. 게임이 켜진 뒤에 시작하세요.",
+                )
+            )
+            self._refresh_operator(force=True)
+            return
+        error = self.bridge.start(unattended=True)
+        if error:
+            self._report_start_error(error)
+        self._refresh_operator(force=True)
+
     def _drive_schedule(self) -> None:
+        if self._party_mode():
+            return
         if not self._session.armed or self._closing or self._session.switching:
             return
         for _ in range(max(2, len(self.tasks) + 2)):
@@ -1648,9 +1948,29 @@ class ScheduleShell(QMainWindow):
         else:
             self._poll_timer.setInterval(1000)
         self._refresh_operator(force=False)
+        self._sync_party_role_chrome()
         self.schedule_list.paint_routine_timers()
         if self.editor.move_tab is not None:
             self.editor.move_tab.paint_farm_timers()
+
+    def _party_motion_text(self) -> str:
+        if self.bridge.arming:
+            return tx(self.t, "party_ui_state_arming", "실행 준비")
+        state = self.bridge.controller.state
+        if state == RunState.RUNNING:
+            return tx(self.t, "party_ui_state_running", "실행 중")
+        if state == RunState.PAUSED:
+            return tx(self.t, "party_ui_state_paused", "일시정지")
+        if not self.bridge.controller.worker_stopped():
+            return tx(self.t, "party_ui_state_stopping", "종료 중")
+        return tx(self.t, "party_ui_state_stopped", "정지")
+
+    def _sync_party_role_chrome(self) -> None:
+        editor = getattr(self, "editor", None)
+        if editor is None:
+            return
+        editor.sync_party_role_lock()
+        editor.set_party_motion(self._party_motion_text())
 
     def _refresh_operator(self, force: bool = False) -> None:
         state = self.bridge.controller.state
@@ -1744,7 +2064,9 @@ class ScheduleShell(QMainWindow):
         else:
             mem_text = self.t.get("chip_mem_off", "Memory")
         if map_probe.lamp == Lamp.GREEN:
-            title = str(getattr(map_probe, "map_name", "") or "").strip() or self.t.get(
+            from session.probes import localized_map_title
+
+            title = localized_map_title(map_probe, self.language) or self.t.get(
                 "chip_map_on", "Map"
             )
             if getattr(map_probe, "dungeon", False):
