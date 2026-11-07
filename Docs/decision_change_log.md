@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-08 — party assist reuses the solo shot gate
+
+Intent: A party member clicked the leader's monster through the inn wall. Target choice stays the party picker. The click is refused when solo's locked-target gate says the shot is closed.
+Shared: `intent_for_kind` for `ASSIST` calls `assist_shot_gate`, which calls `sticky_target_alive` and `can_engage_target`. A closed line or a click-range miss becomes idle and keeps the same id for the next party tick. No new target, no wall detour. `list_attackable`, follow, loot, defend, and the solo attack path are unchanged.
+Affects: party member assist clicks (`leader_attack`, `leader_strike`, external, `own_finish`, solo-farm assist). Self-defense still emits its own attack.
+Consent: user (keep party target selection, reuse the solo attack check immediately before the click).
+Result: unit tests in `Engine/app/_06_party/tests/test_assist_shot_gate.py`. Not run in game.
+
+## 2026-11-08 — safe-zone scroll waits until HP is almost full
+
+Intent: After a talking-scroll landing with no heal and no potion, the retreat ended as soon as HP crossed the retreat line (30%). The character scrolled back to the hunt with the bar still near a third.
+Shared: `resume_hunt_above_retreat_limit` stays quiet while that HP-safe scroll is in flight or its landing is confirmed (`hp_safe_regen`). `retreat_exit_ready` then uses `is_almost_full_hp` (95%). A scroll that times out never sets the mark, so the 30% exit remains in the hunt. `begin_retreat`, `apply_hp_actions`, mother-tree, MP retreat, and login clicks are unchanged.
+Affects: HP retreats that land on a wheel-0 safe-zone scroll. Return to the hunt waits for 95%, including when heal exists but MP is under 20. Walking to a safe area without the scroll still leaves at the retreat line.
+Consent: user (wait at the safe zone until HP reaches 95%, without colliding with the other retreat exits).
+Result: not run in game.
+
 ## 2026-11-07 — solo selector turns the party switch off
 
 Intent: The party checkbox is hidden. 솔로봇 must hunt the solo schedule. Party runs only after 파티봇 and a role choice.

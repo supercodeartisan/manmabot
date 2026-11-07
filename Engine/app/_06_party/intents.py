@@ -348,6 +348,19 @@ def intent_for_kind(
     if kind is MemberKind.DEFEND and defend_id is not None:
         return attack(defend_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.ASSIST and assist_id is not None:
+        # Party already chose this id. Solo's locked-target gate runs once
+        # more on the current cell, and a closed line does not retarget.
+        from .assist import assist_shot_gate
+
+        allowed, blocked = assist_shot_gate(
+            game_state,
+            origin,
+            int(assist_id),
+            source=reason,
+        )
+        if not allowed:
+            why = blocked or "assist_blocked"
+            return idle(why), previous_goal, why
         return attack(assist_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.FOLLOW:
         if (

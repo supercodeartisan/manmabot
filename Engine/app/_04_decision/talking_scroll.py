@@ -88,6 +88,9 @@ SCRATCH_RETREAT_SCROLL_I = "retreat_scroll_i"
 # One HP safe-zone talking-scroll per retreat (wheel-0 lottery, no 마법서 상인).
 SCRATCH_HP_SAFE_SCROLLED = "hp_safe_scrolled"
 SCRATCH_HP_SAFE_SPOT = "hp_safe_scroll_spot"
+# Set only after that scroll's landing is confirmed. The retreat then waits
+# for almost-full HP. A timed-out scroll never sets this.
+SCRATCH_HP_SAFE_REGEN = "hp_safe_regen"
 # Destination map already queued for a talking-scroll nav reload this hop.
 SCRATCH_NAV_RELOAD_MAP = "nav_reload_map"
 # After shop buy/sell finishes: scroll (or walk) back toward the farm map.
@@ -790,6 +793,17 @@ def apply_talking_scroll_arrival(
         getattr(pose, "y", ly),
         dest or "-",
     )
+    safe_spot = str(blackboard.scratch.get(SCRATCH_HP_SAFE_SPOT) or "")
+    if (
+        blackboard.scratch.get(SCRATCH_HP_SAFE_SCROLLED)
+        and safe_spot
+        and spot_id == safe_spot
+    ):
+        blackboard.scratch[SCRATCH_HP_SAFE_REGEN] = True
+        get_logger("hp").info(
+            "hp safe landed spot=%s, natural regen until almost full",
+            safe_spot,
+        )
     _clear_scroll_arrival(blackboard)
     return True
 
@@ -1028,6 +1042,7 @@ __all__ = [
     "SCRATCH_RETREAT_SCROLL_I",
     "SCRATCH_HP_SAFE_SCROLLED",
     "SCRATCH_HP_SAFE_SPOT",
+    "SCRATCH_HP_SAFE_REGEN",
     "SCRATCH_NAV_RELOAD_MAP",
     "SCRATCH_POST_SHOP_RETURN",
     "SCRATCH_HUNT_MAP_SCROLL_AT",
