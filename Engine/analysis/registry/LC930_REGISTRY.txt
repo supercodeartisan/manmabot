@@ -305,7 +305,7 @@ EXP_CD_1=0x28
 EXP_CD_2=0x110
 EXP_HUD_BAR=0xE8
 EXP_BAR_PCT=0x704
-ExperiencePct64=0x1644BF0
+ExperiencePct64=0x1641B00
 # static player block (모듈 상대)
 ST_BLOCK=0x16EA0F0
 ST_X=0x0
