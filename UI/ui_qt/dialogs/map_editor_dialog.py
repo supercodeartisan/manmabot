@@ -315,8 +315,8 @@ class MapEditorWidget(QWidget):
             tools.addWidget(btn)
             self._tool_buttons[key] = btn
         tools.addStretch(1)
-        area_btn = QPushButton("구역 +")
-        point_btn = QPushButton("점 +")
+        area_btn = QPushButton(self._shape_label("area") + " +")
+        point_btn = QPushButton(self._shape_label("point") + " +")
         area_btn.clicked.connect(lambda: self._set_tool("area"))
         point_btn.clicked.connect(lambda: self._set_tool("point"))
         tools.addWidget(area_btn)
@@ -650,6 +650,14 @@ class MapEditorWidget(QWidget):
             return None
         return loaded if isinstance(loaded, dict) else None
 
+    def _shape_label(self, kind: str) -> str:
+        """Display word only. Saved shape stays area or point."""
+        if self.language == "zh":
+            return "区域" if kind == "area" else "点"
+        if self.language == "en":
+            return "Area" if kind == "area" else "Point"
+        return "구역" if kind == "area" else "점"
+
     def _spot_tools_active(self) -> bool:
         """Party hunt editor: rectangles and stake points. Solo stays rectangles."""
         return (
@@ -961,7 +969,7 @@ class MapEditorWidget(QWidget):
                 if not preview:
                     painter.setPen(outline)
                     label = (
-                        f"구역 {order_of.get(i, '')}"
+                        f"{self._shape_label('area')} {order_of.get(i, '')}"
                         if self._spot_tools_active()
                         else route_point_display_name(str(f["name"]), self.language)
                     )
@@ -983,7 +991,7 @@ class MapEditorWidget(QWidget):
                 painter.drawText(
                     int(cx + 8),
                     int(cy - 8),
-                    f"점 {order_of.get(i, '')}",
+                    f"{self._shape_label('point')} {order_of.get(i, '')}",
                 )
         if len(self.patrol) >= 2:
             painter.setPen(QPen(QColor(56, 189, 248, 210), max(2, int(2 * self._scale))))
@@ -1689,11 +1697,15 @@ class MapEditorWidget(QWidget):
                     continue
                 order += 1
                 if self._spot_tools_active() and self._is_point(f):
-                    title = f"{order}. 점  ({int(f['x'])}, {int(f['y'])})"
+                    title = (
+                        f"{order}. {self._shape_label('point')}  "
+                        f"({int(f['x'])}, {int(f['y'])})"
+                    )
                     kind = "point"
                 elif self._spot_tools_active():
                     title = (
-                        f"{order}. 구역  ({int(f['x0'])}, {int(f['y0'])} ~ "
+                        f"{order}. {self._shape_label('area')}  "
+                        f"({int(f['x0'])}, {int(f['y0'])} ~ "
                         f"{int(f['x1'])}, {int(f['y1'])})"
                     )
                     kind = "farm"

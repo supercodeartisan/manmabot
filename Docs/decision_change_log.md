@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-07 — solo selector turns the party switch off
+
+Intent: The party checkbox is hidden. 솔로봇 must hunt the solo schedule. Party runs only after 파티봇 and a role choice.
+Shared: `set_master_enabled` is the old `party.enabled` flag. Opening the party page no longer checks it. Choosing 파티장 or 파티원 checks it. 솔로봇 and both solo start paths uncheck it before the profile overlay. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: solo start, schedule handover, and party start. A saved leader role no longer arms the party brain while 솔로봇 is selected.
+Consent: user (the selector replaces the checkbox; party runs after leader or member is chosen).
+Result: not run in game. The next solo start should log `enabled=OFF` and use the solo schedule.
+
 ## 2026-11-06 — exp mirror moved to the live BSS double
 
 Intent: exp percent stayed 0 while the character window was closed, because `ExperiencePct64` still pointed at `0x1644BF0`.

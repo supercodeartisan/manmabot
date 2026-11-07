@@ -160,6 +160,16 @@ def server_slot_key(name: str, from_locale: str = "") -> str:
     return ""
 
 
+def ui_server_locale(ui_language: str) -> str:
+    """Server-name table that matches the schedule window language."""
+    return "zh-CN" if str(ui_language or "").lower().startswith("zh") else "ko"
+
+
+def display_server_name(name: str, ui_language: str, account_locale: str = "") -> str:
+    """Show one server in the window language. The stored name stays put."""
+    return translate_server_name(name, ui_server_locale(ui_language), account_locale)
+
+
 def translate_server_name(name: str, to_locale: str, from_locale: str = "") -> str:
     """Same server cell, written in ``to_locale``.
 

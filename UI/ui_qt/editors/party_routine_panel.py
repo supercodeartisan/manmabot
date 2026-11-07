@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Callable
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLabel, QWidget
 
 from session.probes import (
     farms_yaml_path,
@@ -18,6 +18,7 @@ from session.probes import (
 )
 from settings.party_routine import normalize_party_routine
 from ui_qt.editors.move_tab import MoveTab
+from ui_qt.i18n_overlay import tx
 from ui_qt.viewmodels.routine_vm import RoutineViewModel
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
@@ -60,6 +61,10 @@ def shared_area_rects(map_id: str, *, rest: bool) -> list[dict[str, Any]]:
 class PartyRoutineViewModel(RoutineViewModel):
     """Party rows keep their own coordinates. Ready means those coordinates exist."""
 
+    def __init__(self, language: str, strings: dict | None = None) -> None:
+        super().__init__(language)
+        self.strings = strings or {}
+
     def payload(self) -> list[dict[str, Any]]:
         return normalize_party_routine(copy.deepcopy(self.rows))
 
@@ -68,10 +73,16 @@ class PartyRoutineViewModel(RoutineViewModel):
             if not isinstance(area, dict) or str(area.get("name") or "") != name:
                 continue
             if str(area.get("shape") or "") == "point":
-                return f"점 ({area.get('x')}, {area.get('y')})"
-            return (
-                f"구역 ({area.get('x0')}, {area.get('y0')} ~ "
-                f"{area.get('x1')}, {area.get('y1')})"
+                return tx(self.strings, "party_ui_point", "점 ({x}, {y})").format(
+                    x=area.get("x"), y=area.get("y")
+                )
+            return tx(
+                self.strings, "party_ui_area", "구역 ({x0}, {y0} ~ {x1}, {y1})"
+            ).format(
+                x0=area.get("x0"),
+                y0=area.get("y0"),
+                x1=area.get("x1"),
+                y1=area.get("y1"),
             )
         return str(name)
 
@@ -123,10 +134,20 @@ class PartyRoutinePanel(MoveTab):
         )
         self.on_routine_changed = self._persist_routine
         self.setMinimumHeight(320)
+        self._hide_top_hint()
         self.load_from_bag()
 
+    def _hide_top_hint(self) -> None:
+        hint = str(self.t.get("routine_hint", "") or "")
+        if not hint:
+            return
+        for label in self.findChildren(QLabel):
+            if label.text() == hint:
+                label.hide()
+                break
+
     def _make_vm(self) -> PartyRoutineViewModel:
-        return PartyRoutineViewModel(self.language)
+        return PartyRoutineViewModel(self.language, self.t)
 
     def load_from_bag(self) -> None:
         raw = self.bag.get("party", "routine", None)
@@ -173,9 +194,13 @@ class PartyRoutinePanel(MoveTab):
 
     def _farm_choice_label(self, name: str, note: str, index: int) -> str:
         if str(name).startswith("point_"):
-            return f"{index}. 점  {note}".strip()
+            return tx(self.strings, "party_ui_point_row", "{index}. 점  {note}").format(
+                index=index, note=note
+            ).strip()
         if str(name).startswith("area_") or " ~ " in str(note):
-            return f"{index}. 구역  {note}".strip()
+            return tx(self.strings, "party_ui_area_row", "{index}. 구역  {note}").format(
+                index=index, note=note
+            ).strip()
         if note:
             return f"{index}. {name}  {note}".strip()
         return f"{index}. {name}"

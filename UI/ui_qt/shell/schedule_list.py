@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from settings.accounts import AccountStore
 from settings.farm_schedule import normalize_routine
 from settings.schedule import ScheduleStore, ScheduleTask
+from settings.server_list import display_server_name
 from session.probes import list_map_choices
 from ui_qt.theme import tokens
 from ui_qt.widgets.step_spin import StepSpinBox
@@ -40,6 +41,8 @@ _WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 # Classic ``_SCHEDULE_COLUMNS`` widths (stretch=False).
 _SCHEDULE_COLUMN_WIDTHS = (64, 110, 136, 100, 72, 80, 72)
+# Previous time-row pane was 389px. 75px narrower, so the editor stays put.
+_PANE_WIDTH = 314
 
 
 def _shown_elapsed(clock: dict) -> float:
@@ -125,8 +128,9 @@ class ScheduleListPane(QWidget):
         except Exception:
             return 360
         if right < 80:
-            return 360
-        return max(280, min(560, int(right) + 10))
+            return _PANE_WIDTH
+        fitted = max(280, min(560, int(right) + 4))
+        return max(_PANE_WIDTH, fitted)
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
@@ -150,7 +154,9 @@ class ScheduleListPane(QWidget):
                     field._fit_spins()
                 except Exception:
                     pass
-        width = max(40, int(row.sizeHint().width()), int(row.width()))
+        # sizeHint tracks the time spins. The laid-out width includes leftover
+        # stretch, and using it as a minimum froze the pane wider than the fields.
+        width = max(40, int(row.sizeHint().width()))
         if width < 80:
             # Classic retries until the time row has a real layout width.
             self._align_tries = int(getattr(self, "_align_tries", 0)) + 1
@@ -213,6 +219,8 @@ class ScheduleListPane(QWidget):
         self.random_minutes = StepSpinBox()
         self.random_minutes.setRange(0, 120)
         self.random_minutes.setValue(int(self.store.randomize_minutes or 0))
+        # Three digits plus the stepper. The default hint was wider than this row needs.
+        self.random_minutes.setFixedWidth(66)
         self.randomize.setChecked(bool(self.store.randomize_enabled))
         self.randomize.toggled.connect(self._save_randomize)
         self.random_minutes.valueChanged.connect(self._save_randomize)
@@ -292,12 +300,13 @@ class ScheduleListPane(QWidget):
         dup.clicked.connect(self.duplicate_selected)
         delete.clicked.connect(self.delete_selected)
         for btn in (edit, dup, delete):
-            btn.setMinimumWidth(72)
+            btn.setMinimumWidth(max(48, btn.sizeHint().width()))
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             toolbar.addWidget(btn, stretch=1)
         col.addLayout(toolbar)
 
         routine_box = QGroupBox(self.t.get("routine_of_schedule", "Routine"))
+        self.routine_box = routine_box
         col.addWidget(routine_box, stretch=2)
         rcol = QVBoxLayout(routine_box)
         self.routine_table = QTableWidget(0, 3)
@@ -317,8 +326,8 @@ class ScheduleListPane(QWidget):
         rheader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         rheader.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         rheader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        self.routine_table.setColumnWidth(1, 96)
-        self.routine_table.setColumnWidth(2, 88)
+        self.routine_table.setColumnWidth(1, 72)
+        self.routine_table.setColumnWidth(2, 72)
         rcol.addWidget(self.routine_table)
         self.routine_hint = QLabel(self.t.get("routine_list_empty", ""))
         self.routine_hint.setObjectName("muted")
@@ -394,11 +403,21 @@ class ScheduleListPane(QWidget):
         }
 
     def refresh(
-        self, select: int | None = None, *, reload_accounts: bool = True
+        self,
+        select: int | None = None,
+        *,
+        reload_accounts: bool = True,
+        announce: bool = True,
     ) -> None:
         if reload_accounts:
             self.refresh_accounts()
         self._suppress_select = True
+        for row in range(self.table.rowCount()):
+            host = self.table.cellWidget(row, 0)
+            if host is not None:
+                self.table.removeCellWidget(row, 0)
+                host.setParent(None)
+                host.deleteLater()
         self.table.setRowCount(0)
         for index, task in enumerate(self.tasks):
             self.table.insertRow(index)
@@ -445,19 +464,33 @@ class ScheduleListPane(QWidget):
             self.table.setItem(
                 index, 5, QTableWidgetItem(self.t.get(task.character, task.character))
             )
-            self.table.setItem(index, 6, QTableWidgetItem(task.server or ""))
+            self.table.setItem(
+                index,
+                6,
+                QTableWidgetItem(
+                    display_server_name(task.server or "", self.language) or ""
+                ),
+            )
         from ui_qt.editors.form_helpers import fit_table_columns
 
         fit_table_columns(self.table, stretch_last=True, min_width=56)
         # Keep the On checkbox column compact.
         self.table.setColumnWidth(0, _SCHEDULE_COLUMN_WIDTHS[0])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self._suppress_select = False
         if self.tasks:
             index = select if select is not None and 0 <= select < len(self.tasks) else 0
+            if not announce:
+                self._suppress_select = True
+            else:
+                self._suppress_select = False
             self.table.selectRow(index)
+            if not announce:
+                self._suppress_select = False
+                self._paint_routine(self.selected_task())
         else:
-            self.taskSelected.emit(None)
+            self._suppress_select = False
+            if announce:
+                self.taskSelected.emit(None)
             self._paint_routine(None)
         self.tasksChanged.emit()
 

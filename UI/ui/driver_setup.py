@@ -137,9 +137,9 @@ class DriverSetupDialog(ctk.CTkToplevel):
         self.close_btn.configure(state=state)
 
     def _reload_ports(self) -> None:
-        from app._05_action.input_backend import resolve_pico_port
+        from app._05_action.input_backend import find_pico_data_port
 
-        found = resolve_pico_port("", getattr(self._profile, "pico_baud", 115200))
+        found = find_pico_data_port()
         self.port_label.configure(text=found or "—")
         self._profile.pico_com = found
         if self._loading:
