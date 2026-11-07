@@ -692,6 +692,128 @@ def pick_solo_farm_target(
     )
 
 
+_assist_block_log_key: tuple[Any, ...] | None = None
+
+
+def assist_shot_gate(
+    game_state: Any,
+    origin: Any,
+    track_id: int,
+    *,
+    source: str = "",
+) -> tuple[bool, str]:
+    """Solo shoot check for a monster the party already chose.
+
+    Uses the same locked-target gate as solo combat: the monster is still
+    alive, then ``can_engage_target`` (straight line, then click range).
+    Does not pick another monster, and does not start a wall detour.
+    A blocked shot returns a stable reason. The coordinate line is logged
+    once per target and block, then again only when that block changes.
+    """
+    global _assist_block_log_key
+
+    src = _assist_source_label(source)
+    tid = int(track_id)
+    if origin is None or game_state is None:
+        _note_assist_block(tid, src, "no_origin", None, None, "no_origin")
+        return False, f"assist_blocked id={tid} src={src} reason=no_origin"
+
+    from app._04_decision.behaviors.combat import sticky_target_alive
+
+    obj = None
+    get = getattr(game_state, "get_object", None)
+    if callable(get):
+        obj = get(tid)
+    if obj is None or not sticky_target_alive(game_state, tid):
+        cause = "dead" if obj is not None else "missing"
+        _note_assist_block(tid, src, cause, origin, obj, cause)
+        return False, f"assist_blocked id={tid} src={src} reason={cause}"
+
+    from app._04_decision.combat_query import (
+        attack_line_block,
+        attack_line_refusal_text,
+        can_engage_target,
+    )
+
+    if can_engage_target(obj, origin):
+        _assist_block_log_key = None
+        return True, ""
+
+    blocked = attack_line_block(obj, origin)
+    if blocked:
+        record = attack_line_refusal_text(obj, origin, game_state)
+        info = record[0] if record is not None else blocked
+        segment = record[1] if record is not None else ""
+        cause = _skip_reason(blocked)
+        _note_assist_block(tid, src, cause, origin, obj, info, segment=segment)
+        return False, f"assist_blocked id={tid} src={src} reason={cause}"
+
+    _note_assist_block(tid, src, "range", origin, obj, "reason=range")
+    return False, f"assist_blocked id={tid} src={src} reason=range"
+
+
+def _assist_source_label(source: str) -> str:
+    text = str(source or "")
+    mark = "src="
+    if mark in text:
+        return text.split(mark, 1)[1].split()[0] or "-"
+    text = text.strip()
+    return text or "-"
+
+
+def _skip_reason(blocked: str) -> str:
+    from app._04_decision.combat_query import _attack_skip_reason
+
+    return _attack_skip_reason(blocked)
+
+
+def _note_assist_block(
+    track_id: int,
+    source: str,
+    cause: str,
+    origin: Any,
+    obj: Any,
+    detail: str,
+    *,
+    segment: str = "",
+) -> None:
+    """One combat line per (target, cause, block). Repeats stay quiet."""
+    global _assist_block_log_key
+    key = (int(track_id), str(source), str(cause), str(detail))
+    if key == _assist_block_log_key:
+        return
+    _assist_block_log_key = key
+    from app.bot_log import get_logger
+
+    place = ""
+    text = str(detail or "")
+    if "P=" not in text:
+        px = getattr(origin, "x", None) if origin is not None else None
+        py = getattr(origin, "y", None) if origin is not None else None
+        mx = my = None
+        if obj is not None and origin is not None:
+            try:
+                from app._04_decision.combat_query import object_absolute_tile
+
+                mx, my = object_absolute_tile(obj, origin)
+            except Exception:
+                mx = getattr(obj, "world_cx", None)
+                my = getattr(obj, "world_cy", None)
+        if px is not None and py is not None:
+            place = f" P=({int(px)},{int(py)})"
+        if mx is not None and my is not None:
+            place += f" M=({int(mx)},{int(my)})"
+    get_logger("combat").info(
+        "party assist hold id=%s src=%s%s %s",
+        int(track_id),
+        source,
+        place,
+        detail,
+    )
+    if segment:
+        get_logger("combat").debug("party assist hold %s", segment)
+
+
 def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
     """True when the solo hunt range already reaches this monster.
 
@@ -749,6 +871,7 @@ def assist_monster_tile(obj: Any, origin: Any) -> Optional[tuple[int, int]]:
 
 __all__ = [
     "assist_in_attack_range",
+    "assist_shot_gate",
     "assist_monster_tile",
     "describe_leader_target",
     "leader_attack_rows",

@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QSize, Qt, QThread, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -46,7 +46,8 @@ from ui_qt.editors.form_helpers import (
     configure_select_rows,
     configure_table_fill,
 )
-from ui_qt.icon_helpers import HUNT_ICON_SIZE, hunt_icon
+from ui_qt.editors.sell_icon_loader import SellIconLoader
+from ui_qt.icon_helpers import HUNT_ICON_SIZE
 from ui_qt.theme import tokens
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
@@ -59,6 +60,8 @@ class _SellRow:
     is_own: bool
     icon: Path | None = None
     source_category: str = ""
+    icon_names: tuple[str, ...] = ()
+    icon_ids: tuple[int, ...] = ()
 
 
 class _SellInventoryWorker(QThread):
@@ -103,6 +106,11 @@ class EquipmentTab(QWidget):
         self._owned_rows: list[_SellRow] = []
         self._owned_keys: set[str] = set()
         self._sell_worker: _SellInventoryWorker | None = None
+        self._sell_icons = SellIconLoader(self)
+        self._sell_icons.updated.connect(self._apply_sell_icon)
+        self._sell_icon_rows: dict[str, list[int]] = {}
+        self._sell_filling = False
+        self.destroyed.connect(self._sell_icons.shutdown)
         self._build()
 
     def _build(self) -> None:
@@ -136,6 +144,12 @@ class EquipmentTab(QWidget):
             self._build_sell(self.sell_page)
             self._sell_built = True
             self._reload_sell_owned()
+            return
+        if self._sell_built and index != 1:
+            self._sell_icons.cancel()
+            return
+        if self._sell_built and index == 1:
+            QTimer.singleShot(0, self._queue_visible_sell_icons)
 
     def _build_buy(self, page: QWidget) -> None:
         body = QHBoxLayout(page)
@@ -375,6 +389,25 @@ class EquipmentTab(QWidget):
     def _own_label(self) -> str:
         return str(self.t.get("filter_own", "Own"))
 
+    @staticmethod
+    def _icon_names(entry: object) -> tuple[str, ...]:
+        names: list[str] = []
+        for attr in ("name_ko", "name2", "name_zh", "name_zh_cn"):
+            text = str(getattr(entry, attr, "") or "").strip()
+            if text and text not in names:
+                names.append(text)
+        return tuple(names)
+
+    @staticmethod
+    def _icon_ids(entry: object) -> tuple[int, ...]:
+        found: list[int] = []
+        for raw in getattr(entry, "ids", ()) or ():
+            try:
+                found.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        return tuple(found)
+
     def _build_sell(self, page: QWidget) -> None:
         layout = page.layout() or QVBoxLayout(page)
         settings = card(page, self.t.get("sell_settings", "Sell"))
@@ -456,6 +489,9 @@ class EquipmentTab(QWidget):
         self.sell_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.sell_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.sell_table.doubleClicked.connect(self._toggle_keep)
+        sell_bar = self.sell_table.verticalScrollBar()
+        sell_bar.valueChanged.connect(self._on_sell_scroll)
+        sell_bar.rangeChanged.connect(lambda _lo, _hi: self._on_sell_scroll())
         col.addWidget(self.sell_table, stretch=1)
 
         actions = QHBoxLayout()
@@ -497,19 +533,15 @@ class EquipmentTab(QWidget):
                     )
                     or entry.display_category(self.language)
                 )
-                icon = None
-                try:
-                    icon = entry.image_path()
-                except Exception:
-                    icon = None
                 self._catalog_rows.append(
                     _SellRow(
                         key=entry.key,
                         name=label,
                         category=category,
                         is_own=False,
-                        icon=icon,
                         source_category=category,
+                        icon_names=self._icon_names(entry),
+                        icon_ids=self._icon_ids(entry),
                     )
                 )
         except Exception:
@@ -592,23 +624,33 @@ class EquipmentTab(QWidget):
         if not hasattr(self, "sell_table"):
             return
         rows = self._visible_sell_rows()
+        self._sell_filling = True
+        self._sell_icons.cancel()
+        self._sell_icon_rows = {}
         self.sell_table.setRowCount(0)
         keep_label = self.t.get("filter_save", self.t.get("filter_keep", "Keep"))
-        for row in rows:
-            kept = row.key in self._keep or row.name in self._keep
-            index = self.sell_table.rowCount()
-            self.sell_table.insertRow(index)
-            icon_item = QTableWidgetItem()
-            icon_item.setIcon(QIcon(hunt_icon(row.icon)))
-            icon_item.setData(Qt.ItemDataRole.UserRole, row.key)
-            self.sell_table.setItem(index, 0, icon_item)
-            self.sell_table.setItem(
-                index, 1, QTableWidgetItem(keep_label if kept else "—")
-            )
-            self.sell_table.setItem(index, 2, QTableWidgetItem(row.category))
-            name_item = QTableWidgetItem(row.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, row.key)
-            self.sell_table.setItem(index, 3, name_item)
+        placeholder = QIcon(self._sell_icons.placeholder())
+        try:
+            for row in rows:
+                kept = row.key in self._keep or row.name in self._keep
+                index = self.sell_table.rowCount()
+                self.sell_table.insertRow(index)
+                self._sell_icons.remember(row.key, row.icon_names, row.icon_ids)
+                icon_item = QTableWidgetItem()
+                cached = self._sell_icons.cached(row.key)
+                icon_item.setIcon(QIcon(cached) if cached is not None else placeholder)
+                icon_item.setData(Qt.ItemDataRole.UserRole, row.key)
+                self.sell_table.setItem(index, 0, icon_item)
+                self._sell_icon_rows.setdefault(row.key, []).append(index)
+                self.sell_table.setItem(
+                    index, 1, QTableWidgetItem(keep_label if kept else "—")
+                )
+                self.sell_table.setItem(index, 2, QTableWidgetItem(row.category))
+                name_item = QTableWidgetItem(row.name)
+                name_item.setData(Qt.ItemDataRole.UserRole, row.key)
+                self.sell_table.setItem(index, 3, name_item)
+        finally:
+            self._sell_filling = False
         from ui_qt.editors.form_helpers import fit_table_columns
 
         fit_table_columns(self.sell_table, stretch_last=True, min_width=48)
@@ -634,6 +676,64 @@ class EquipmentTab(QWidget):
                 f"{len(rows)} / keep {len(self._keep)} / own {len(self._owned_rows)}"
             )
         self._refresh_sell_summary()
+        QTimer.singleShot(0, self._queue_visible_sell_icons)
+
+    def _on_sell_scroll(self, *_args: object) -> None:
+        if self._sell_filling or not hasattr(self, "sell_table"):
+            return
+        self._queue_visible_sell_icons()
+
+    def _visible_sell_keys(self) -> list[str]:
+        table = self.sell_table
+        count = table.rowCount()
+        if count <= 0:
+            return []
+        height = table.viewport().height()
+        top = table.rowAt(0)
+        if top < 0:
+            top = 0
+        if height <= 0:
+            bottom = min(count - 1, top + 24)
+        else:
+            bottom = table.rowAt(max(0, height - 1))
+            if bottom < 0:
+                row_h = table.rowHeight(top) or (HUNT_ICON_SIZE + 6)
+                bottom = min(count - 1, top + max(1, height // max(1, row_h)) + 2)
+        top = max(0, top - 4)
+        bottom = min(count - 1, bottom + 8)
+        keys: list[str] = []
+        for row in range(top, bottom + 1):
+            item = table.item(row, 0)
+            if item is None:
+                continue
+            key = str(item.data(Qt.ItemDataRole.UserRole) or "")
+            if key:
+                keys.append(key)
+        return keys
+
+    def _queue_visible_sell_icons(self) -> None:
+        if not hasattr(self, "sell_table"):
+            return
+        visible = self._visible_sell_keys()
+        self._sell_icons.enqueue(visible, front=True)
+        if self._sell_icons.rest_queued:
+            return
+        visible_set = set(visible)
+        rest = [key for key in self._sell_icon_rows if key not in visible_set]
+        self._sell_icons.enqueue(rest, front=False)
+        self._sell_icons.rest_queued = True
+
+    def _apply_sell_icon(self, key: str, pixmap: QPixmap) -> None:
+        if not hasattr(self, "sell_table"):
+            return
+        icon = QIcon(pixmap)
+        for row in self._sell_icon_rows.get(str(key), ()):
+            item = self.sell_table.item(row, 0)
+            if item is None:
+                continue
+            if str(item.data(Qt.ItemDataRole.UserRole) or "") != str(key):
+                continue
+            item.setIcon(icon)
 
     def _refresh_sell_summary(self) -> None:
         if not hasattr(self, "sell_summary"):
@@ -787,13 +887,12 @@ class EquipmentTab(QWidget):
                 continue
             seen.add(key)
             source_cat = ""
-            icon = None
+            icon_names: tuple[str, ...] = ()
+            icon_ids: tuple[int, ...] = ()
             if entry is not None:
                 shown = item_catalog_display_name(entry.name_ko, self.language) or entry.name_ko
-                try:
-                    icon = entry.image_path()
-                except Exception:
-                    icon = None
+                icon_names = self._icon_names(entry)
+                icon_ids = self._icon_ids(entry)
                 source_cat = (
                     item_category_display_name(
                         entry.display_category(self.language), self.language
@@ -803,23 +902,19 @@ class EquipmentTab(QWidget):
                 )
             else:
                 shown = memory_name_for_ui(name or key, self.language) or key
-                try:
-                    from app._03_world.catalog.game_catalog import item_image_path
-
-                    icon = item_image_path(
-                        [name, shown, key],
-                        [item_id] if item_id else (),
-                    )
-                except Exception:
-                    icon = None
+                icon_names = tuple(
+                    text for text in (name, shown, key) if str(text or "").strip()
+                )
+                icon_ids = (item_id,) if item_id else ()
             rows.append(
                 _SellRow(
                     key=key,
                     name=shown,
                     category=own_label,
                     is_own=True,
-                    icon=icon,
                     source_category=source_cat,
+                    icon_names=icon_names,
+                    icon_ids=icon_ids,
                 )
             )
         rows.sort(key=lambda row: row.name.lower())

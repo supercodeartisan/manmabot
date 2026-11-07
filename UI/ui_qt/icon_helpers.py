@@ -37,7 +37,7 @@ def _fit_icon(image, size: int):
     return canvas
 
 
-def _pil_to_qpixmap(image) -> QPixmap:
+def _pil_to_qimage(image) -> QImage:
     if image.mode != "RGBA":
         image = image.convert("RGBA")
     data = image.tobytes("raw", "RGBA")
@@ -48,16 +48,19 @@ def _pil_to_qpixmap(image) -> QPixmap:
         image.width * 4,
         QImage.Format.Format_RGBA8888,
     )
-    # Copy so QImage owns its buffer after PIL buffer may free.
-    return QPixmap.fromImage(qimage.copy())
+    # Copy so the Qt image owns its buffer after the PIL buffer is freed.
+    return qimage.copy()
 
 
-def hunt_icon(path: Path | str | None, *, enabled: bool = True, size: int = HUNT_ICON_SIZE) -> QPixmap:
-    key_path = str(path or "")
-    cache_key = (key_path, int(size), bool(enabled))
-    cached = _CACHE.get(cache_key)
-    if cached is not None:
-        return cached
+def _pil_to_qpixmap(image) -> QPixmap:
+    return QPixmap.fromImage(_pil_to_qimage(image))
+
+
+def prepare_hunt_image(path: Path | str | None, *, enabled: bool = True, size: int = HUNT_ICON_SIZE):
+    """Fit one catalog PNG to the hunt cell. Safe to call off the UI thread.
+
+    A missing or unreadable file becomes the same placeholder ``hunt_icon`` uses.
+    """
     from PIL import Image, ImageEnhance
     from settings.map_previews import placeholder_thumb
 
@@ -79,7 +82,21 @@ def hunt_icon(path: Path | str | None, *, enabled: bool = True, size: int = HUNT
         faded = ImageEnhance.Brightness(gray).enhance(1.2)
         plate = Image.new("RGBA", image.size, (243, 244, 246, 255))
         image = Image.blend(faded, plate, 0.5)
-    pixmap = _pil_to_qpixmap(image)
+    return image
+
+
+def hunt_qimage(path: Path | str | None, *, enabled: bool = True, size: int = HUNT_ICON_SIZE) -> QImage:
+    """Decoded hunt cell. Safe to call off the UI thread."""
+    return _pil_to_qimage(prepare_hunt_image(path, enabled=enabled, size=size))
+
+
+def hunt_icon(path: Path | str | None, *, enabled: bool = True, size: int = HUNT_ICON_SIZE) -> QPixmap:
+    key_path = str(path or "")
+    cache_key = (key_path, int(size), bool(enabled))
+    cached = _CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    pixmap = _pil_to_qpixmap(prepare_hunt_image(path, enabled=enabled, size=size))
     _CACHE[cache_key] = pixmap
     return pixmap
 

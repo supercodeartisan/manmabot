@@ -16,7 +16,14 @@ for _path in (_ROOT / "UI", _ROOT / "Engine"):
         sys.path.insert(0, text)
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QCheckBox, QGroupBox, QLabel, QRadioButton
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QGroupBox,
+    QLabel,
+    QRadioButton,
+    QStyleOptionViewItem,
+)
 
 from ui_qt.widgets.step_spin import StepSpinBox
 
@@ -533,3 +540,99 @@ def test_leader_succession_and_absence_settings() -> None:
     assert monitor_state_text({"state": "done"}, "succession") == "—"
     assert monitor_failure_reason({"state": "ok", "reason": "없음"}) == "—"
     assert monitor_failure_reason({"state": "fail", "reason": "대상 없음"}) == "대상 없음"
+
+
+def test_roster_name_role_and_loot_edit_in_place() -> None:
+    workspace = _workspace("leader")
+    tab = workspace.tab
+    tab._store_roster(
+        [
+            {"name": "알파", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+            {"name": "브라보", "role": "member", "loot": "none", "enabled": "1", "required": "0"},
+        ]
+    )
+    tab.bag.set("party", "successor_name", "알파")
+    tab.bag.set(
+        "party",
+        "heal_targets",
+        {"알파": {"enabled": True, "hp_percent": 40, "priority": 2}},
+    )
+    tab._fill_roster_table()
+    table = tab.roster_table
+    assert table.editTriggers() == table.EditTrigger.DoubleClicked
+    assert table.columnWidth(0) == 34
+    assert table.columnWidth(3) == 100
+    name = table.item(0, 2)
+    number = table.item(0, 1)
+    enabled = table.item(0, 5)
+    assert name.flags() & Qt.ItemFlag.ItemIsEditable
+    assert not (number.flags() & Qt.ItemFlag.ItemIsEditable)
+    assert enabled.flags() & Qt.ItemFlag.ItemIsUserCheckable
+    assert not (enabled.flags() & Qt.ItemFlag.ItemIsEditable)
+
+    name.setText("  찰리  ")
+    assert tab._roster_rows()[0]["name"] == "찰리"
+    assert name.text() == "찰리"
+    assert tab.bag.get_str("party", "successor_name", "") == "찰리"
+    assert "찰리" in tab.bag.get("party", "heal_targets", {})
+    assert "알파" not in tab.bag.get("party", "heal_targets", {})
+
+    name.setText("   ")
+    assert tab._roster_rows()[0]["name"] == "찰리"
+    assert name.text() == "찰리"
+    name.setText("브라보")
+    assert tab._roster_rows()[0]["name"] == "찰리"
+    assert name.text() == "찰리"
+
+    option = QStyleOptionViewItem()
+    role_delegate = table.itemDelegateForColumn(3)
+    role_index = table.model().index(0, 3)
+    role_editor = role_delegate.createEditor(table.viewport(), option, role_index)
+    assert [role_editor.itemData(i) for i in range(role_editor.count())] == [
+        "member",
+        "mage",
+        "shopkeeper",
+    ]
+    role_editor.setCurrentIndex(role_editor.findData("member"))
+    role_delegate.setModelData(role_editor, table.model(), role_index)
+    assert tab._roster_rows()[0]["role"] == "member"
+    assert table.item(0, 3).text() == "파티원"
+    role_editor.setCurrentIndex(role_editor.findData("shopkeeper"))
+    role_delegate.setModelData(role_editor, table.model(), role_index)
+    assert tab._roster_rows()[0]["role"] == "shopkeeper"
+    assert table.item(0, 3).text() == "상점"
+
+    loot_delegate = table.itemDelegateForColumn(4)
+    loot_index = table.model().index(0, 4)
+    loot_editor = loot_delegate.createEditor(table.viewport(), option, loot_index)
+    assert [loot_editor.itemData(i) for i in range(loot_editor.count())] == [
+        "none",
+        "responsible",
+    ]
+    loot_editor.setCurrentIndex(loot_editor.findData("responsible"))
+    loot_delegate.setModelData(loot_editor, table.model(), loot_index)
+    assert tab._roster_rows()[0]["loot"] == "responsible"
+    assert table.item(0, 4).text() == "담당"
+
+    enabled.setCheckState(Qt.CheckState.Unchecked)
+    assert tab._roster_rows()[0]["enabled"] == "0"
+    table.item(0, 6).setCheckState(Qt.CheckState.Checked)
+    assert tab._roster_rows()[0]["required"] == "1"
+
+    tab._fill_roster_table()
+    box = table.cellWidget(0, 0).findChild(QCheckBox)
+    assert box is not None
+    box.setChecked(True)
+    sent: list[str] = []
+    tab._party_chat_submit = lambda: (lambda kind, who: sent.append(who) or "queued")  # type: ignore[method-assign]
+    assert tab._invite_selected() == ["찰리"]
+    assert sent == ["찰리"]
+
+    reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
+    saved = reopened._roster_rows()
+    assert saved[0]["name"] == "찰리"
+    assert saved[0]["role"] == "shopkeeper"
+    assert saved[0]["loot"] == "responsible"
+    assert saved[0]["enabled"] == "0"
+    assert reopened.roster_table.item(0, 3).text() == "상점"
+    assert reopened.roster_table.columnCount() == 7
