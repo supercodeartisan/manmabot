@@ -29,6 +29,29 @@ def potion(reason: str = "self_potion") -> Any:
     )
 
 
+def list_heal(
+    name: str,
+    click_x: int,
+    click_y: int,
+    *,
+    hp_pct: int,
+    hotbar_box: Optional[int] = None,
+    hotbar_key: Optional[str] = None,
+) -> Any:
+    """Heal by clicking that member's party-list row, not their body."""
+    from .types import ActionIntent, ActionType
+
+    return ActionIntent(
+        action=ActionType.HEAL,
+        priority=0.88,
+        reason=f"party_member:list heal {name} hp={int(hp_pct)}",
+        hotbar_box=hotbar_box,
+        hotbar_key=hotbar_key,
+        click_x=int(click_x),
+        click_y=int(click_y),
+    )
+
+
 def attack(track_id: int, reason: str, *, mid_act: bool = False) -> Any:
     from .types import ActionIntent, ActionType
 
@@ -374,6 +397,7 @@ __all__ = [
     "attack",
     "idle",
     "intent_for_kind",
+    "list_heal",
     "pick_settle_stand",
     "plan_field_follow",
     "plan_follow_intent",

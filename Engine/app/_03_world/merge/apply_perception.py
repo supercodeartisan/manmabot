@@ -142,6 +142,9 @@ def apply_perception_buffer(
     if party_ok:
         world.last_party = buffer.party
 
+    if buffer.party_hud_ok and isinstance(buffer.party_hud, dict):
+        world.last_party_hud = buffer.party_hud
+
     return result
 
 

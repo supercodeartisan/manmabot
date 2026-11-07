@@ -1761,6 +1761,12 @@ def maybe_recovery_support(
     return apply_inplace_hp_support(state, blackboard)
 
 
+def _solo_mage_attack_fields(state: "GameState", blackboard: "Blackboard") -> dict:
+    from app._04_decision.solo_mage import solo_mage_attack_fields
+
+    return solo_mage_attack_fields(state, blackboard)
+
+
 def continue_or_start_combat(
     state: "GameState",
     blackboard: "Blackboard",
@@ -1867,6 +1873,7 @@ def continue_or_start_combat(
                     priority=0.5,
                     reason="attack target",
                     mid_act=True,
+                    **_solo_mage_attack_fields(state, blackboard),
                 )
                 return Status.SUCCESS
 
@@ -1944,6 +1951,7 @@ def continue_or_start_combat(
         priority=0.5,
         reason=engage_reason,
         mid_act=False,
+        **_solo_mage_attack_fields(state, blackboard),
     )
     return Status.SUCCESS
 
