@@ -418,23 +418,36 @@ class PartyMonitorWindow(QMainWindow):
 
         manual = QHBoxLayout()
         manual.setSpacing(6)
-        name_lbl = QLabel("Name")
+        name_lbl = QLabel(self.t.get("party_ui_mon_name", "Name"))
         manual.addWidget(name_lbl)
         self.manual_name = QLineEdit()
-        self.manual_name.setPlaceholderText("character name")
+        self.manual_name.setPlaceholderText(
+            self.t.get("party_ui_mon_name_hint", "character name")
+        )
         self.manual_name.setClearButtonEnabled(True)
         self.manual_name.setFixedWidth(180)
-        self.manual_name.setToolTip("Invite line is /초대 <name>, one space before the name")
+        self.manual_name.setToolTip(
+            self.t.get(
+                "party_ui_mon_invite_tip",
+                "Invite line is /초대 <name>, one space before the name",
+            )
+        )
         manual.addWidget(self.manual_name)
-        self.invite_btn = QPushButton("Invite")
+        self.invite_btn = QPushButton(self.t.get("party_ui_mon_invite", "Invite"))
         self.invite_btn.setToolTip(
-            "Queue /초대 <name> on the bot worker (same path as automatic invite)"
+            self.t.get(
+                "party_ui_mon_invite_tip",
+                "Queue /초대 <name> on the bot worker (same path as automatic invite)",
+            )
         )
         self.invite_btn.clicked.connect(self._on_invite_clicked)
         manual.addWidget(self.invite_btn)
         self.y_btn = QPushButton("Y+Enter")
         self.y_btn.setToolTip(
-            "Queue Y then Enter on the bot worker (same path as automatic accept)"
+            self.t.get(
+                "party_ui_mon_accept_tip",
+                "Queue Y then Enter on the bot worker (same path as automatic accept)",
+            )
         )
         self.y_btn.clicked.connect(self._on_y_clicked)
         manual.addWidget(self.y_btn)

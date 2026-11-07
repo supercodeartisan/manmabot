@@ -339,6 +339,34 @@ def _probe_texts(language: str | None) -> dict[str, str]:
     return tr(normalize_language(language))
 
 
+def localized_map_title(probe: MapProbe, language: str | None) -> str:
+    """Map chip title in the window language."""
+    from i18n.localized_names import map_display_name
+
+    return map_display_name(
+        str(getattr(probe, "map_id", "") or ""),
+        language,
+        str(getattr(probe, "map_name", "") or ""),
+    )
+
+
+def localized_map_detail(probe: MapProbe, language: str | None) -> str:
+    """Status sentence for the current map, in the window language."""
+    texts = _probe_texts(language)
+    title = localized_map_title(probe, language)
+    if getattr(probe, "lamp", None) != Lamp.GREEN:
+        return localize_probe_detail(str(getattr(probe, "detail", "") or ""), language)
+    if getattr(probe, "dungeon", False):
+        count = int(getattr(probe, "patrol_count", 0) or 0)
+        return str(texts.get("probe_map_patrol", "{title} · {n} patrol points")).format(
+            title=title, n=count
+        )
+    count = len(getattr(probe, "farm_names", None) or [])
+    return str(texts.get("probe_map_farms", "{title} · {n} farms")).format(
+        title=title, n=count
+    )
+
+
 def localize_probe_detail(detail: str, language: str | None) -> str:
     """Show a probe status line in the operator UI language."""
     text = str(detail or "")

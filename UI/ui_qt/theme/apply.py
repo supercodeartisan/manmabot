@@ -23,11 +23,12 @@ def apply_classic_qt_theme(
     *widgets: QWidget,
     font_size: int = 8,
     section_size: int | None = None,
+    restyle: bool = True,
 ) -> str:
     """Load fonts + QSS + palette. Returns the resolved body font family.
 
-    Uses the same Manmabot Medium / Regular+Bold roles as classic Tk
-    ``design_system`` so strings stay clean and tidy at the scaled point size.
+    ``restyle=False`` only swaps the already-loaded face. Reapplying the
+    application stylesheet walks every widget and freezes the window.
     """
     load_qt_fonts(language)
     body_family = resolve_family(language)
@@ -37,7 +38,15 @@ def apply_classic_qt_theme(
     font = body_font(language, size)
     section = section_font(language, sec_size)
     app.setFont(font)
-    app.setStyleSheet(build_qss(body_family, size, section_family=section_family, section_size=sec_size))
+    if restyle:
+        app.setStyleSheet(
+            build_qss(
+                body_family,
+                size,
+                section_family=section_family,
+                section_size=sec_size,
+            )
+        )
 
     palette = app.palette()
     palette.setColor(QPalette.ColorRole.Window, QColor(t.BG))
