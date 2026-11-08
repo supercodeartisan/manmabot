@@ -135,6 +135,7 @@ def _items(player: Any) -> dict[str, Any]:
         "hp_potion": getattr(inv, "hp_potion", 0) if inv is not None else 0,
         "mp_potion": getattr(inv, "mp_potion", 0) if inv is not None else 0,
         "arrows": getattr(inv, "arrows", 0) if inv is not None else 0,
+        "silver_arrows": getattr(inv, "silver_arrows", 0) if inv is not None else 0,
         "list": rows,
     }
 

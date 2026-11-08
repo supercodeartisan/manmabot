@@ -1057,12 +1057,33 @@ class PartyTab(QWidget):
         note = QLabel(
             self._tx(
                 "party_ui_supply_note",
-                "보급 담당은 파티 관리의 자리 역할에서 상점 역할로 지정합니다. "
-                "별도 보급 화면은 아직 없고, 기존 파티원 명단은 그대로 유지됩니다.",
+                "상점 역할이 화살을 채웁니다. 담당 자신의 화살이 기준 미만이면 "
+                "기존 화살 상점을 가고, 다른 파티원이 기준 미만이면 그 옆에 "
+                "부족한 만큼을 떨어뜨립니다.",
             )
         )
         note.setWordWrap(True)
         inner.addWidget(note)
+        self.party_member_arrow_min = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "member_arrow_min",
+            self._tx("party_ui_member_arrow", "파티원 화살"),
+            300,
+            0,
+            9999,
+        )
+        self.party_shopkeeper_arrow_min = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "shopkeeper_arrow_min",
+            self._tx("party_ui_keeper_arrow", "상점 담당 화살"),
+            300,
+            0,
+            9999,
+        )
         lay.addStretch(1)
         return host
 
@@ -1090,6 +1111,30 @@ class PartyTab(QWidget):
             self._tx("party_ui_random_loot", "무작위 루팅"),
             False,
             on_change=self._on_loot_mode_changed,
+        )
+        self.party_loot_pickup = QComboBox(host)
+        self.party_loot_pickup.addItem(
+            self._tx("party_ui_loot_all", "아이템과 아데나"), "all"
+        )
+        self.party_loot_pickup.addItem(
+            self._tx("party_ui_loot_adena", "아데나만"), "adena"
+        )
+        pickup = str(self.bag.get_str("party", "loot_pickup", "all") or "all")
+        if pickup not in ("all", "adena"):
+            pickup = "all"
+        self.party_loot_pickup.setCurrentIndex(0 if pickup == "all" else 1)
+        self.party_loot_pickup.currentIndexChanged.connect(self._on_loot_pickup_changed)
+        inner.addWidget(self.party_loot_pickup)
+        self.party_loot_weight_pct = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "loot_weight_pct",
+            self._tx("party_ui_loot_weight", "아데나 전환 무게"),
+            30,
+            1,
+            100,
+            "%",
         )
         self.party_loot_role = QComboBox(host)
         self.party_loot_role.addItem(self._tx("party_ui_loot_none", "없음"), "none")
@@ -2142,6 +2187,14 @@ class PartyTab(QWidget):
         self._refresh_personal_summary()
         self._on_loot_mode_changed()
 
+    def _on_loot_pickup_changed(self) -> None:
+        if not hasattr(self, "party_loot_pickup"):
+            return
+        mode = str(self.party_loot_pickup.currentData() or "all")
+        if mode not in ("all", "adena"):
+            mode = "all"
+        self.bag.set("party", "loot_pickup", mode)
+
     def _on_loot_role_changed(self) -> None:
         data = self.party_loot_role.currentData()
         role = str(data or "none")
@@ -2254,6 +2307,29 @@ class PartyTab(QWidget):
         idx = self.party_loot_role.findData(role)
         self.party_loot_role.setCurrentIndex(max(0, idx))
         self.party_loot_role.blockSignals(False)
+        if hasattr(self, "party_loot_pickup"):
+            pickup = str(self.bag.get_str("party", "loot_pickup", "all") or "all")
+            self.party_loot_pickup.blockSignals(True)
+            self.party_loot_pickup.setCurrentIndex(0 if pickup != "adena" else 1)
+            self.party_loot_pickup.blockSignals(False)
+        if hasattr(self, "party_member_arrow_min"):
+            self.party_member_arrow_min.blockSignals(True)
+            self.party_member_arrow_min.setValue(
+                self.bag.get_int("party", "member_arrow_min", 300)
+            )
+            self.party_member_arrow_min.blockSignals(False)
+        if hasattr(self, "party_shopkeeper_arrow_min"):
+            self.party_shopkeeper_arrow_min.blockSignals(True)
+            self.party_shopkeeper_arrow_min.setValue(
+                self.bag.get_int("party", "shopkeeper_arrow_min", 300)
+            )
+            self.party_shopkeeper_arrow_min.blockSignals(False)
+        if hasattr(self, "party_loot_weight_pct"):
+            self.party_loot_weight_pct.blockSignals(True)
+            self.party_loot_weight_pct.setValue(
+                self.bag.get_int("party", "loot_weight_pct", 30)
+            )
+            self.party_loot_weight_pct.blockSignals(False)
         if hasattr(self, "party_ws_port"):
             self.party_ws_port.blockSignals(True)
             self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))

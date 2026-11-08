@@ -30,6 +30,8 @@ class InventoryItem:
     name_tw: str = ""
     name_cn: str = ""
     name_en: str = ""
+    # Bag list index from inventory_listen. -1 when the reader did not send one.
+    slot: int = -1
 
 
 @dataclass

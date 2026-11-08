@@ -55,6 +55,12 @@ class PartyMemberConfig:
     seat_role: str = "member"
     # Position in the leader roster (turret radial seat); None = unknown.
     seat_index: Optional[int] = None
+    # Leader supply. Arrow counts below these start a buy or a ground drop.
+    member_arrow_min: int = 300
+    shopkeeper_arrow_min: int = 300
+    # all = items until the weight line, then adena. adena = adena only.
+    loot_pickup: str = "all"
+    loot_weight_pct: int = 30
 
     @property
     def solo_farm(self) -> bool:
@@ -125,6 +131,14 @@ class PartyMemberConfig:
                 if self.seat_index is None
                 else max(0, min(19, int(self.seat_index)))
             ),
+            member_arrow_min=max(0, min(9999, int(self.member_arrow_min))),
+            shopkeeper_arrow_min=max(0, min(9999, int(self.shopkeeper_arrow_min))),
+            loot_pickup=(
+                "adena"
+                if str(self.loot_pickup or "").strip().lower() == "adena"
+                else "all"
+            ),
+            loot_weight_pct=max(1, min(100, int(self.loot_weight_pct))),
         )
 
     def merge_leader_policy(
@@ -181,6 +195,12 @@ class PartyMemberConfig:
             "party_size": policy.get("party_size", self.party_size),
             "seat_role": seat,
             "seat_index": seat_i,
+            "member_arrow_min": policy.get("member_arrow_min", self.member_arrow_min),
+            "shopkeeper_arrow_min": policy.get(
+                "shopkeeper_arrow_min", self.shopkeeper_arrow_min
+            ),
+            "loot_pickup": policy.get("loot_pickup", self.loot_pickup),
+            "loot_weight_pct": policy.get("loot_weight_pct", self.loot_weight_pct),
         }
         return self.from_mapping(raw)
 
@@ -268,7 +288,20 @@ class PartyMemberConfig:
             party_size=int(raw.get("party_size", 1) or 1),
             seat_role=str(raw.get("seat_role") or "member"),
             seat_index=si_i,
+            member_arrow_min=_cfg_int(raw.get("member_arrow_min"), 300),
+            shopkeeper_arrow_min=_cfg_int(raw.get("shopkeeper_arrow_min"), 300),
+            loot_pickup=str(raw.get("loot_pickup") or "all"),
+            loot_weight_pct=_cfg_int(raw.get("loot_weight_pct"), 30),
         ).clamped()
+
+
+def _cfg_int(value: Any, default: int) -> int:
+    try:
+        if value is None or str(value).strip() == "":
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 __all__ = ["FARM_MODES", "LEADER_MODES", "PartyMemberConfig"]

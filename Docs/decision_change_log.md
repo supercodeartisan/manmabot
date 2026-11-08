@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — party shopkeeper supplies arrows
+
+Intent: The roster shopkeeper buys arrows with the existing solo arrow shop when their own count is under the party boss threshold, and drops the shortfall beside a member who is under the member threshold. After the shop, world nav uses the leader's live tile as the goal, including on the same mainland or Talking Island map. The leader does not start an arrow shop while that shopkeeper socket is up, and does not count the shopkeeper as lagging during shop or supply. A dropped socket ends that exclusion immediately and lets the leader's existing arrow shop run. Random closest-member loot stays selectable. Party looters use the boss pickup mode and weight line. The short member picks up the dropped pile.
+Shared: `needs_arrow_buy` returns false only when scratch `party_arrow_shop_covered` is set. `choose_shopping_behavior` returns `party_pin_shop_behavior` only when that scratch is set and no shop is already sticky. `apply_cursor_verify_feedback` skips `mark_post_shop_return` only while `party_shopkeeper_arrow` is set. `continue_or_start_loot` and the leader no-loot scratch are unchanged. Sell, HP potion, depoison, HP retreat, login, and combat target choice are unchanged.
+Affects: party leader policy and the 마을 및 보급 / 아이템 및 루팅 pages, the shopkeeper member, party loot mode, and the area-hunt line watch. Solo without a party leader is unchanged.
+Consent: "좋다. 기능구현을 시작하자. 현재 존재하는 다른 로직과 워크플로는 모두 보존하여야 한다."
+Result: unit tests in `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game. A ground drop does not click when `Engine/data/supply/inventory_grid.json` is missing or the bag row has no slot.
+
 ## 2026-11-08 — leader forwards party reports to the shopkeeper
 
 Intent: Every `HEARTBEAT_S` the leader sends the latest member `report` frames plus its own report (same `build_report` shape) to the roster shopkeeper only.

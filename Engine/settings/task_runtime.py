@@ -295,6 +295,47 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         lag_tiles = 30
     set_value("party_lag_tiles", max(5, min(100, lag_tiles)))
     set_value(
+        "party_member_arrow_min",
+        _int_range(
+            party.get(
+                "member_arrow_min",
+                getattr(profile, "party_member_arrow_min", 300),
+            ),
+            300,
+            0,
+            9999,
+        ),
+    )
+    set_value(
+        "party_shopkeeper_arrow_min",
+        _int_range(
+            party.get(
+                "shopkeeper_arrow_min",
+                getattr(profile, "party_shopkeeper_arrow_min", 300),
+            ),
+            300,
+            0,
+            9999,
+        ),
+    )
+    pickup = str(
+        party.get("loot_pickup", getattr(profile, "party_loot_pickup", "all"))
+        or "all"
+    ).strip().lower()
+    set_value("party_loot_pickup", "adena" if pickup == "adena" else "all")
+    set_value(
+        "party_loot_weight_pct",
+        _int_range(
+            party.get(
+                "loot_weight_pct",
+                getattr(profile, "party_loot_weight_pct", 30),
+            ),
+            30,
+            1,
+            100,
+        ),
+    )
+    set_value(
         "party_roster",
         normalize_party_roster(
             party.get("roster", getattr(profile, "party_roster", None))

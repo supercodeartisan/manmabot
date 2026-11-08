@@ -242,6 +242,7 @@ class PartyMemberManager:
     def decide(self, game_state: Any) -> Any:
         """Same contract as ``DecisionManager.decide`` → one ActionIntent."""
         self.runtime.tick += 1
+        self.runtime.duty_phase = "follow"
         cfg = self.config.clamped()
         self.config = cfg
 
@@ -343,6 +344,34 @@ class PartyMemberManager:
                 )
                 if loot_item_ok is None:
                     loot_own = None
+            if loot_own is not None and self._nav_blackboard is not None:
+                self._nav_blackboard.scratch["party_loot_pickup"] = cfg.loot_pickup
+                self._nav_blackboard.scratch["party_loot_weight"] = (
+                    int(cfg.loot_weight_pct) / 100.0
+                )
+                from .arrow_policy import pile_reserved
+                from .comms.orders import member_orders
+                from .loot import _self_row_name
+
+                me = ""
+                if origin_ok:
+                    me = _self_row_name(
+                        getattr(game_state, "last_party", None),
+                        (int(origin.x), int(origin.y)),
+                        self.runtime.local_map_id,
+                    )
+                claim = member_orders.supply_drop
+                if isinstance(claim, dict):
+                    base_ok = loot_item_ok
+
+                    def _leave_supply(item: Any, _base=base_ok, _claim=claim, _me=me) -> bool:
+                        if pile_reserved(
+                            item, origin, _claim, _me, self.runtime.local_map_id
+                        ):
+                            return False
+                        return True if _base is None else bool(_base(item))
+
+                    loot_item_ok = _leave_supply
         if (
             not dead
             and not bool(self.runtime.paused)
@@ -361,6 +390,26 @@ class PartyMemberManager:
                 self.runtime.chasing = False
                 self._record_decision(escape)
                 return escape
+
+            from .arrow_duty import tick_shopkeeper_duty, tick_supply_pickup
+            from .loot import _self_row_name
+
+            seat_name = ""
+            if origin_ok:
+                seat_name = _self_row_name(
+                    getattr(game_state, "last_party", None),
+                    (int(origin.x), int(origin.y)),
+                    self.runtime.local_map_id,
+                )
+            picked = tick_supply_pickup(self, game_state, self_name=seat_name)
+            if picked is not None:
+                self._record_decision(picked)
+                return picked
+            if str(cfg.seat_role or "") == "shopkeeper":
+                duty = tick_shopkeeper_duty(self, game_state, self_name=seat_name)
+                if duty is not None:
+                    self._record_decision(duty)
+                    return duty
 
             support = apply_party_support(
                 game_state,

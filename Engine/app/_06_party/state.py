@@ -57,6 +57,10 @@ class MemberRuntime:
     turret_seat_bad: Optional[tuple[int, int]] = None
     # Moving-mode area reading, e.g. "narrow:trail_seat0" / "open:open_field".
     formation: str = ""
+    # follow | shop | supply. The leader omits shop and supply from the line watch.
+    duty_phase: str = "follow"
+    # Last ground drop this shopkeeper made. The leader broadcasts it.
+    supply_notice: Optional[dict[str, Any]] = None
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 

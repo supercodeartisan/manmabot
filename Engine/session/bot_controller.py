@@ -1708,8 +1708,19 @@ class BotController:
             return False
         watch.observe((int(origin.x), int(origin.y)))
         snap = getattr(world, "last_party", None)
+        from app._06_party.arrow_policy import line_omit_names
+        from app._06_party.sync import member_states
+
+        omit = line_omit_names(
+            member_states.rows,
+            member_states.peer_for,
+            member_states.awaiting_fresh,
+        )
         followers = followers_from_party(
-            snap, map_id, self_name=_player_chat_name(world, snap)
+            snap,
+            map_id,
+            self_name=_player_chat_name(world, snap),
+            omit_names=omit,
         )
         res = watch.check(followers)
         was = bool(self._party_line_info.get("hold"))
@@ -2134,6 +2145,12 @@ class BotController:
             "party_size": max(1, len(roster) + 1),
             "roster": roster,
             "leader_name": str(getattr(self, "_party_leader_name", "") or ""),
+            "member_arrow_min": int(getattr(profile, "party_member_arrow_min", 300) or 300),
+            "shopkeeper_arrow_min": int(
+                getattr(profile, "party_shopkeeper_arrow_min", 300) or 300
+            ),
+            "loot_pickup": str(getattr(profile, "party_loot_pickup", "all") or "all"),
+            "loot_weight_pct": int(getattr(profile, "party_loot_weight_pct", 30) or 30),
         }
 
     def _publish_party_policy(self, *, force: bool = False) -> int:
@@ -2199,6 +2216,7 @@ class BotController:
         self._party_tree_trip = trip
         self._publish_party_policy()
         self._publish_shop_reports(world, map_id)
+        self._publish_supply_notice()
 
     def _publish_shop_reports(self, world, map_id) -> None:
         """Forward member reports and this leader's report to the shopkeeper."""
@@ -2223,6 +2241,89 @@ class BotController:
         )
         if sent:
             self.log(f"Party reports sent to shopkeeper ({sent})")
+
+    def _arm_party_arrow_cover(self, blackboard) -> None:
+        """While the shopkeeper socket is up, the leader does not start an arrow shop."""
+        if not self._party_leader_on():
+            blackboard.scratch.pop("party_arrow_shop_covered", None)
+            return
+        from app._06_party.arrow_policy import shopkeeper_socket_live
+        from app._06_party.comms.publish import _shopkeeper_names
+        from app._06_party.sync import member_states
+        from settings.profile import normalize_party_roster
+
+        names = _shopkeeper_names(
+            normalize_party_roster(getattr(self._profile, "party_roster", None))
+        )
+        live = shopkeeper_socket_live(
+            names[:1],
+            member_states.peer_for,
+            member_states.awaiting_fresh,
+        )
+        if live:
+            blackboard.scratch["party_arrow_shop_covered"] = True
+        else:
+            blackboard.scratch.pop("party_arrow_shop_covered", None)
+
+    def _leader_supply_claim(self) -> dict | None:
+        from app._06_party.comms.publish import _shopkeeper_names
+        from app._06_party.sync import member_states
+        from settings.profile import normalize_party_roster
+
+        names = _shopkeeper_names(
+            normalize_party_roster(getattr(self._profile, "party_roster", None))
+        )
+        if not names:
+            return None
+        row = member_states.rows.get(names[0])
+        if not isinstance(row, dict):
+            for key, value in member_states.rows.items():
+                if str(key).casefold() == names[0].casefold():
+                    row = value
+                    break
+        live = row.get("live") if isinstance(row, dict) else None
+        supply = live.get("supply") if isinstance(live, dict) else None
+        return dict(supply) if isinstance(supply, dict) else None
+
+    def _leader_arrow_pickup(self, world, blackboard):
+        claim = self._leader_supply_claim()
+        if not isinstance(claim, dict):
+            return None
+        me = _player_chat_name(world, getattr(world, "last_party", None))
+        who = str(claim.get("for") or "").strip()
+        if not me or not who or me.casefold() != who.casefold():
+            return None
+        from app._06_party.arrow_duty import leader_supply_pickup
+
+        return leader_supply_pickup(world, blackboard, claim)
+
+    def _publish_supply_notice(self) -> None:
+        claim = self._leader_supply_claim()
+        sent_id = str(getattr(self, "_party_supply_id", "") or "")
+        from app._06_party.comms.publish import publish_body
+
+        if not isinstance(claim, dict) or not claim.get("id"):
+            if not sent_id:
+                return
+            publish_body({"type": "supply_drop", "from": "leader", "clear": True})
+            self._party_supply_id = ""
+            return
+        if str(claim.get("id")) == sent_id:
+            return
+        publish_body(
+            {
+                "type": "supply_drop",
+                "from": "leader",
+                "clear": False,
+                "id": claim.get("id"),
+                "for": claim.get("for"),
+                "map_id": claim.get("map_id"),
+                "x": claim.get("x"),
+                "y": claim.get("y"),
+                "qty": claim.get("qty"),
+            }
+        )
+        self._party_supply_id = str(claim.get("id"))
 
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
@@ -2606,6 +2707,18 @@ class BotController:
         if runtime is not None:
             out["kind"] = str(getattr(runtime, "last_kind", "") or "")
             out["reason"] = str(getattr(runtime, "last_reason", "") or "")[:80]
+            phase = str(getattr(runtime, "duty_phase", "") or "follow")
+            out["phase"] = phase if phase in ("follow", "shop", "supply") else "follow"
+            notice = getattr(runtime, "supply_notice", None)
+            if isinstance(notice, dict) and notice.get("id"):
+                out["supply"] = {
+                    "id": notice.get("id"),
+                    "for": notice.get("for"),
+                    "map_id": notice.get("map_id"),
+                    "x": notice.get("x"),
+                    "y": notice.get("y"),
+                    "qty": notice.get("qty"),
+                }
         gather = member_orders.gather or {}
         out["rally"] = str(gather.get("stage") or "")
         out["arrived"] = bool(member_orders.arrived)
@@ -3578,7 +3691,11 @@ class BotController:
                         note="decide",
                     )
                 elif leader_brain is not None:
-                    action = leader_brain.decide(world)
+                    self._arm_party_arrow_cover(decision.blackboard)
+                    pickup = None
+                    if self._party_leader_on():
+                        pickup = self._leader_arrow_pickup(world, decision.blackboard)
+                    action = pickup if pickup is not None else leader_brain.decide(world)
                     try:
                         self._leader_party_tick(
                             world, decision.blackboard, last_logged_map_id

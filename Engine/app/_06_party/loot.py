@@ -25,6 +25,10 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
     Random OFF + responsible → own drops only (True).
     Random OFF + none → no loot. ``none`` stays a leader roster value.
     """
+    # The shopkeeper seat does not take ordinary ground loot.
+    # A supply pile aimed at someone else is handled by the caller.
+    if str(getattr(cfg, "seat_role", "") or "").strip().lower() == "shopkeeper":
+        return None
     if bool(getattr(cfg, "random_loot", False)):
         return False
     role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
@@ -211,7 +215,6 @@ def find_party_pickup_range_loot(
     """Nearest lootable pile already within pickup tiles."""
     from app._04_decision.attack_feedback import excluded_target_ids
     from app._04_decision.behaviors.loot_hop import recently_clicked_loot
-    from app._04_decision.behaviors.mode_actions import _effective_loot_mode
     from app._04_decision.combat_query import (
         is_adena,
         list_lootable,
@@ -223,7 +226,7 @@ def find_party_pickup_range_loot(
     if is_hp_zero(state):
         return None
 
-    loot_mode = _effective_loot_mode(state)
+    loot_mode = _party_loot_mode(state, blackboard)
     origin = blackboard.world_origin
     skip = set(excluded_target_ids(blackboard))
     skip.update(
@@ -297,7 +300,6 @@ def try_party_hold_loot(
         tick_loot_item,
         try_finish_pending_pickup,
     )
-    from app._04_decision.behaviors.mode_actions import _effective_loot_mode
     from app._04_decision.combat_query import (
         memory_target_gone,
         nearest_lootable,
@@ -316,7 +318,7 @@ def try_party_hold_loot(
             _tag_party_loot(intent)
             return intent
 
-    loot_mode = _effective_loot_mode(state)
+    loot_mode = _party_loot_mode(state, blackboard)
     skip = set(excluded_target_ids(blackboard))
     skip.update(
         tid
@@ -401,6 +403,27 @@ def try_party_hold_loot(
             _tag_party_loot(intent)
             return intent
     return None
+
+
+def _party_loot_mode(state: "GameState", blackboard: "Blackboard") -> str:
+    """Boss pickup rule when the member tick stored it. Otherwise solo loot."""
+    from app._04_decision.behaviors.mode_actions import _effective_loot_mode
+    from app._04_decision.player_mode import LOOT_MODE_ADENA, LOOT_MODE_ALL
+
+    pickup = str(blackboard.scratch.get("party_loot_pickup") or "")
+    if pickup not in ("all", "adena"):
+        return _effective_loot_mode(state)
+    if pickup == "adena":
+        return LOOT_MODE_ADENA
+    from app._04_decision.shop_trip import bag_weight_ratio
+
+    try:
+        limit = float(blackboard.scratch.get("party_loot_weight") or 0.30)
+    except (TypeError, ValueError):
+        limit = 0.30
+    if bag_weight_ratio(state) >= max(0.01, min(1.0, limit)):
+        return LOOT_MODE_ADENA
+    return LOOT_MODE_ALL
 
 
 def _tag_party_loot(intent: Any) -> None:

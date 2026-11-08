@@ -118,6 +118,10 @@ def inventory_state_from_snapshot(
         except (TypeError, ValueError):
             kind = 0
         name = str(raw.get("name") or raw.get("name_tw") or raw.get("name_cn") or raw.get("name_en") or "").strip()
+        try:
+            slot = int(raw.get("slot"))
+        except (TypeError, ValueError):
+            slot = -1
         parsed.append(
             InventoryItem(
                 name=name or f"id:{item_id}",
@@ -128,6 +132,7 @@ def inventory_state_from_snapshot(
                 name_tw=str(raw.get("name_tw") or "").strip(),
                 name_cn=str(raw.get("name_cn") or "").strip(),
                 name_en=str(raw.get("name_en") or "").strip(),
+                slot=slot,
             )
         )
 

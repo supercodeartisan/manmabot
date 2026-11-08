@@ -576,7 +576,11 @@ class DecisionManager:
                     and self.blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT)
                     != "retreat"
                 ):
-                    mark_post_shop_return(self.blackboard)
+                    if self.blackboard.scratch.get("party_shopkeeper_arrow"):
+                        self.blackboard.scratch["party_join_leader"] = True
+                        self.blackboard.scratch.pop("party_pin_shop_behavior", None)
+                    else:
+                        mark_post_shop_return(self.blackboard)
             else:
                 from app._04_decision.shops import is_teleporter_behavior
                 from app._04_decision.world_nav.hooks import apply_npc_teleporter_result
@@ -586,6 +590,10 @@ class DecisionManager:
                     self.blackboard, behavior_id=bid
                 ):
                     clear_shop_trip(self.blackboard)
+                elif self.blackboard.scratch.get("party_shopkeeper_arrow"):
+                    clear_shop_trip(self.blackboard)
+                    self.blackboard.scratch["party_join_leader"] = True
+                    self.blackboard.scratch.pop("party_pin_shop_behavior", None)
                 else:
                     clear_shop_trip(self.blackboard)
                     from app._04_decision.talking_scroll import mark_post_shop_return
