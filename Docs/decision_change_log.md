@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-08 — leader forwards party reports to the shopkeeper
+
+Intent: Every `HEARTBEAT_S` the leader sends the latest member `report` frames plus its own report (same `build_report` shape) to the roster shopkeeper only.
+Shared: follow, combat, heal, and loot are unchanged. `MemberOrders.party_reports` holds the bundle on the shopkeeper. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader send and the shopkeeper member mailbox. Other members do not receive the bundle.
+Consent: user (send every member report, including the leader, to the shop member, on the report interval, using the same variable).
+Result: not run in game.
+
+## 2026-11-07 — party assist uses the solo shot line
+
+Intent: A member still attacks the monster the leader is attacking. The click now goes through the solo combat tick, so a fence or a closed tile holds or detours instead of shooting through it.
+Shared: `continue_or_start_combat`, `attack_line_clear`, `begin_engage`. Follow, heal, and loot are unchanged. The member does not pick a different monster.
+Affects: party member assist and self-defense. Solo hunt is unchanged.
+Consent: user asked to check and fix assist so it uses solo attack logic.
+Result: not run in game.
+
 ## 2026-11-07 — solo selector turns the party switch off
 
 Intent: The party checkbox is hidden. 솔로봇 must hunt the solo schedule. Party runs only after 파티봇 and a role choice.

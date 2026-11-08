@@ -110,7 +110,9 @@ class ControlClient(object):
     ):
         """Farm aim: prefer true ABS (1 HID report); REL burst is fallback.
 
-        ABS board: no SYNC, short poll (~20ms), no REL correction by default.
+        ABS board: no SYNC and no relative correction. The click that follows
+        uses the cursor's real position, so this waits until that position
+        matches. A 15ms give-up left the talking-scroll click on the hover row.
         REL board: SYNC + burst + poll + optional one REL correction.
         Returns (ok, (px, py), elapsed_ms, corrections).
         """
@@ -123,7 +125,7 @@ class ControlClient(object):
             mode = self.ensure_mode(timeout=0.8) or "REL"
 
         if timeout_s is None:
-            timeout_s = 0.02 if mode == "ABS" else 0.12
+            timeout_s = 0.12
         if correct is None:
             correct = mode != "ABS"
         if resync is None:
@@ -134,7 +136,7 @@ class ControlClient(object):
 
         # Fast path: absolute HID one-shot (no SYNC)
         self.move_abs(x, y, resync=False)
-        deadline = t0 + (0.015 if mode == "ABS" else float(timeout_s))
+        deadline = t0 + float(timeout_s)
         pos = cur.position()
         while time.perf_counter() < deadline:
             pos = cur.position()
@@ -143,10 +145,18 @@ class ControlClient(object):
                     self._hid_mode = "ABS"
                 ms = (time.perf_counter() - t0) * 1000.0
                 return True, pos, ms, corrections
-            time.sleep(0.0002)
+            time.sleep(0.002)
 
-        # Fallback: REL path (SYNC + firmware burst / abs retry with sync)
+        # The list click is one row under the hover. Resend once and settle.
         if mode == "ABS" and not correct:
+            self.move_abs(x, y, resync=False)
+            deadline = time.perf_counter() + 0.08
+            while time.perf_counter() < deadline:
+                pos = cur.position()
+                if abs(pos[0] - x) <= tolerance and abs(pos[1] - y) <= tolerance:
+                    ms = (time.perf_counter() - t0) * 1000.0
+                    return True, pos, ms, corrections
+                time.sleep(0.002)
             pos = cur.position()
             ok = abs(pos[0] - x) <= tolerance and abs(pos[1] - y) <= tolerance
             ms = (time.perf_counter() - t0) * 1000.0

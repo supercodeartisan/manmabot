@@ -1453,16 +1453,21 @@ class ActionExecutor:
                 click_bounds = fresh
         wheels = int(getattr(action, "scroll_times", 0) or 0)
         if wheels > 0:
-            log.info("talking scroll open — wheel then click wheels=%d", wheels)
+            from app._05_action.input_backend import list_wheel_count, scroll_wheel
+
+            sent = list_wheel_count(wheels)
+            log.info(
+                "talking scroll open — wheel then click wheels=%d sent=%d",
+                wheels,
+                sent,
+            )
             # Hover list body (not camera), then wheel — same as Extra_data live.
             hover_u = min(0.18, max(0.06, float(action.destination.x)))
             hx, hy = game_to_screen(hover_u, 0.20, click_bounds)
             self.mouse.move(hx, hy, snap=True)
             time.sleep(0.2)
             try:
-                from app._05_action.input_backend import scroll_wheel
-
-                for i in range(wheels):
+                for i in range(sent):
                     scroll_wheel("down")
                     time.sleep(0.06 if i < 8 else 0.05)
                 time.sleep(0.25)

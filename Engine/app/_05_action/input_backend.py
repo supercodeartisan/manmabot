@@ -295,6 +295,19 @@ def scroll_wheel(direction: str) -> None:
     current().wheel(direction)
 
 
+def list_wheel_count(notches: int) -> int:
+    """How many detents to send so a list moves ``notches`` rows.
+
+    Interception's 18 and 36 land on the calibrated row. Pico's same counts
+    land on the row above (글루딘 여관 → 창고지기, 은기사 여관 → 창고지기).
+    The first Pico detent does not move that list, so a Pico burst sends one more.
+    """
+    count = max(0, int(notches))
+    if count and getattr(current(), "kind", "") == "pico":
+        return count + 1
+    return count
+
+
 def key_down(key: str) -> None:
     current().key_down(str(key))
 
@@ -701,8 +714,10 @@ class PicoHuntInput(HuntInput):
         px: int | None = None,
         py: int | None = None,
     ) -> None:
-        del px, py
         client = self._require()
+        # Pico clicks the cursor, not the pixel in the packet. Settle first.
+        if down and px is not None and py is not None:
+            client.move_abs_aim(int(px), int(py))
         mask = self._mask(name)
         if down:
             client.button_down(mask)

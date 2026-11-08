@@ -139,4 +139,58 @@ def _items(player: Any) -> dict[str, Any]:
     }
 
 
-__all__ = ["HEARTBEAT_S", "MemberHeartbeat"]
+def build_report(
+    world: Any,
+    map_id: Optional[int],
+    *,
+    name: str,
+    x: Any = None,
+    y: Any = None,
+    arrived: bool = False,
+    order: str = "",
+) -> dict[str, Any]:
+    """Same payload a member ``report`` frame carries."""
+    return _report(
+        world,
+        map_id,
+        name=name,
+        x=x,
+        y=y,
+        arrived=arrived,
+        order=order,
+    )
+
+
+class ReportBook:
+    """Latest member ``report`` frames, and the clock for forwarding them.
+
+    The forward uses ``HEARTBEAT_S``, the same interval as ``MemberHeartbeat``.
+    """
+
+    def __init__(self) -> None:
+        self.rows: dict[str, dict[str, Any]] = {}
+        self._next = 0.0
+
+    def clear(self) -> None:
+        self.rows.clear()
+        self._next = 0.0
+
+    def note(self, body: dict[str, Any]) -> None:
+        who = str((body or {}).get("from") or "").strip()
+        if who:
+            self.rows[who.casefold()] = dict(body)
+
+    def snapshot(self) -> list[dict[str, Any]]:
+        return [dict(row) for row in self.rows.values()]
+
+    def due(self, now: float) -> bool:
+        return float(now) >= self._next
+
+    def mark_sent(self, now: float) -> None:
+        self._next = float(now) + HEARTBEAT_S
+
+
+member_reports = ReportBook()
+
+
+__all__ = ["HEARTBEAT_S", "MemberHeartbeat", "ReportBook", "build_report", "member_reports"]

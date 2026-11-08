@@ -1,8 +1,8 @@
 # control/pico/boot.py — CDC + keyboard + REL mouse + ABS mouse (report id 4)
 #
-# Fast aim uses AbsolutePointer (1 HID report). Relative mouse remains for
-# click/wheel and REL fallback. boot.py runs only on full reset (T_RESET /
-# power cycle), not on main.py autoreload.
+# Fast aim, click, and wheel use AbsolutePointer. The builtin relative mouse
+# stays only as the fallback when the absolute device is missing. boot.py
+# runs on full reset (T_RESET / power cycle), not on main.py autoreload.
 
 import usb_cdc
 import usb_hid

@@ -503,6 +503,8 @@ class MemberOrders:
         self.session_resets = 0
         self._session_changed = False
         self._beep: Optional[dict[str, Any]] = None
+        # Latest ``party_reports`` bundle from the leader (shopkeeper mailbox).
+        self.party_reports: list[dict[str, Any]] = []
 
     @property
     def order_kind(self) -> str:
@@ -516,6 +518,7 @@ class MemberOrders:
         self._reported = False
         self._report_pending = False
         self._policy_dirty = False
+        self.party_reports = []
 
     def clear(self) -> None:
         self._drop_orders()
@@ -568,6 +571,12 @@ class MemberOrders:
             if kind == POLICY:
                 self.policy = dict(body)
                 self._policy_dirty = True
+                continue
+            if kind == "party_reports":
+                rows = body.get("reports")
+                self.party_reports = [
+                    dict(row) for row in rows if isinstance(row, dict)
+                ] if isinstance(rows, list) else []
                 continue
             if kind == RALLY:
                 # A rally pin is not a walk goal. Follow uses party memory.

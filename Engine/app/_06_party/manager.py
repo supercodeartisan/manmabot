@@ -839,32 +839,53 @@ class PartyMemberManager:
                 intent, goal, detail, self.runtime.follow_hop = field_plan
             else:
                 self.runtime.follow_hop = None
-                intent, goal, detail = intent_for_kind(
-                    result.kind,
-                    reason=reason,
-                    game_state=game_state,
-                    origin=origin,
-                    leader_tile=leader_tile,
-                    config=cfg,
-                    previous_goal=self.runtime.approach_goal,
-                    rng=self._rng,
-                    defend_id=(
-                        int(getattr(threat, "track_id", 0) or 0)
-                        if threat is not None
-                        else None
-                    ),
-                    assist_id=self.runtime.assist_track_id,
-                    settle_stand=stand,
-                    stand_reason=(
-                        "follow_settle" if leader_stopped else "follow_close"
-                    ),
-                    mid_act=(
-                        result.kind
-                        in (MemberKind.ASSIST, MemberKind.DEFEND)
-                        and prev_assist_id is not None
-                        and self.runtime.assist_track_id == prev_assist_id
-                    ),
-                )
+                combat_obj = None
+                if result.kind is MemberKind.ASSIST:
+                    combat_obj = assist_obj
+                elif result.kind is MemberKind.DEFEND:
+                    combat_obj = threat
+                if (
+                    combat_obj is not None
+                    and game_state is not None
+                    and self._nav_blackboard is not None
+                ):
+                    from .assist import engage_like_solo
+
+                    intent = engage_like_solo(
+                        game_state,
+                        self._nav_blackboard,
+                        combat_obj,
+                        reason=reason,
+                    )
+                    goal = None
+                    detail = str(getattr(intent, "reason", "") or reason)
+                else:
+                    intent, goal, detail = intent_for_kind(
+                        result.kind,
+                        reason=reason,
+                        game_state=game_state,
+                        origin=origin,
+                        leader_tile=leader_tile,
+                        config=cfg,
+                        previous_goal=self.runtime.approach_goal,
+                        rng=self._rng,
+                        defend_id=(
+                            int(getattr(threat, "track_id", 0) or 0)
+                            if threat is not None
+                            else None
+                        ),
+                        assist_id=self.runtime.assist_track_id,
+                        settle_stand=stand,
+                        stand_reason=(
+                            "follow_settle" if leader_stopped else "follow_close"
+                        ),
+                        mid_act=(
+                            result.kind
+                            in (MemberKind.ASSIST, MemberKind.DEFEND)
+                            and prev_assist_id is not None
+                            and self.runtime.assist_track_id == prev_assist_id
+                        ),
+                    )
             if result.kind is MemberKind.FOLLOW and detail == "no_path":
                 self.runtime.approach_goal = None
             if route_detail and result.kind is MemberKind.FOLLOW:

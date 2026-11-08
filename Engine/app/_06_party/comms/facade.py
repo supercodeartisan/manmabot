@@ -58,8 +58,11 @@ class PartyComms:
     # --- lifecycle ---
 
     def start_leader(self, *, port: Any = 8765, log: Optional[LogFn] = None) -> bool:
+        from websocket.member_status import member_reports
+
         self.stop_leader(log=log)
         member_states.clear()
+        member_reports.clear()
         invite_accepts.clear()
         discovery.clear()
         self._leader = link.start_leader_link(port=port, log=log)
@@ -173,8 +176,11 @@ class PartyComms:
     def stop_all(self, *, log: Optional[LogFn] = None) -> None:
         self.stop_leader(log=log)
         self.stop_member(log=log)
+        from websocket.member_status import member_reports
+
         reset_orders()
         member_states.clear()
+        member_reports.clear()
         invite_accepts.clear()
         discovery.clear()
 

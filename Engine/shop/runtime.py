@@ -38,10 +38,11 @@ def _click_uv(executor, bounds, uv, *, wait_s: float) -> None:
 
 def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) -> None:
     from app._05_action.coordinates import game_to_screen
-    from app._05_action.input_backend import scroll_wheel
+    from app._05_action.input_backend import list_wheel_count, scroll_wheel
 
     if steps <= 0:
         return
+    steps = list_wheel_count(steps)
     if move:
         u, v = _uv_xy(scroll_uv)
         sx, sy = game_to_screen(u, v, bounds)

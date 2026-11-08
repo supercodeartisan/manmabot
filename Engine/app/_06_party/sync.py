@@ -191,6 +191,16 @@ class MemberStates:
     def name_for_peer(self, peer: str) -> str:
         return str(self._peers.get(str(peer or "").strip()) or "")
 
+    def peer_for(self, name: str) -> str:
+        """Socket id that last spoke as ``name``. Empty when none is known."""
+        key = _key(name)
+        if not key:
+            return ""
+        for peer, who in self._peers.items():
+            if _key(who) == key:
+                return str(peer)
+        return ""
+
     def forget_peer(self, peer: str) -> None:
         self._peers.pop(str(peer or "").strip(), None)
 

@@ -692,6 +692,70 @@ def pick_solo_farm_target(
     )
 
 
+def engage_like_solo(
+    game_state: Any,
+    blackboard: Any,
+    obj: Any,
+    *,
+    reason: str,
+) -> Any:
+    """Attack one already chosen monster with the solo combat tick.
+
+    The caller picks the monster (the leader's target, or a self-defense
+    target). Fence, closed tiles, and the wall detour are the same functions
+    solo uses. A clear line clicks. A blocked line does not.
+    """
+    from .intents import idle
+
+    if game_state is None or blackboard is None or obj is None:
+        return idle("assist_incomplete")
+    tid = int(getattr(obj, "track_id", 0) or 0)
+    if tid <= 0:
+        return idle("assist_incomplete")
+    try:
+        from app._04_decision.species_rules import is_avoided_for_state
+
+        avoided = bool(is_avoided_for_state(game_state, obj))
+    except Exception:
+        avoided = False
+    if avoided:
+        if getattr(blackboard, "current_target_id", None) == tid:
+            from app._04_decision.behaviors.combat import clear_engage_state
+
+            blackboard.current_target_id = None
+            clear_engage_state(blackboard)
+        return idle("assist_species")
+
+    from app._04_decision.behaviors.combat import begin_engage, clear_engage_state
+    from app._04_decision.behaviors.mode_actions import continue_or_start_combat
+    from app._04_decision.combat_query import attack_line_clear
+
+    prev = getattr(blackboard, "current_target_id", None)
+    if prev is not None and int(prev) != tid:
+        blackboard.current_target_id = None
+        clear_engage_state(blackboard)
+
+    origin = getattr(blackboard, "world_origin", None)
+    blocked = origin is not None and not attack_line_clear(obj, origin)
+    blackboard.intent = None
+    if blocked:
+        if getattr(blackboard, "current_target_id", None) != tid:
+            begin_engage(game_state, blackboard, tid, finish_kill=False)
+        continue_or_start_combat(game_state, blackboard, allow_new=False)
+    else:
+        continue_or_start_combat(
+            game_state,
+            blackboard,
+            allow_new=True,
+            chosen=obj,
+            reason=reason,
+        )
+    intent = getattr(blackboard, "intent", None)
+    if intent is None:
+        return idle("assist_no_shot")
+    return intent
+
+
 def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
     """True when the solo hunt range already reaches this monster.
 
@@ -750,6 +814,7 @@ def assist_monster_tile(obj: Any, origin: Any) -> Optional[tuple[int, int]]:
 __all__ = [
     "assist_in_attack_range",
     "assist_monster_tile",
+    "engage_like_solo",
     "describe_leader_target",
     "leader_attack_rows",
     "pick_assist_target",
