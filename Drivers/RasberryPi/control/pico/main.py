@@ -182,11 +182,12 @@ class Hid:
         self._burst_rel(dx, dy)
 
     def button(self, mask, action):
-        if self.abs_ptr is not None and (mask & 0x07) and self.mouse is None:
+        # ABS mode: click on the same device that moved the cursor.
+        if self.abs_ptr is not None:
             if action == 0:
-                self.abs_ptr.up(mask & 0x07)
+                self.abs_ptr.up(mask)
             else:
-                self.abs_ptr.down(mask & 0x07)
+                self.abs_ptr.down(mask)
             return
         if not self.mouse:
             return
@@ -196,6 +197,10 @@ class Hid:
             self.mouse.press(mask)
 
     def wheel(self, dy):
+        # ABS mode: wheel on the same device that moved the cursor.
+        if self.abs_ptr is not None:
+            self.abs_ptr.wheel(dy)
+            return
         if self.mouse:
             self.mouse.move(wheel=int(dy))
 

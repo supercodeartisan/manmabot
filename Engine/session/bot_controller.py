@@ -2198,6 +2198,31 @@ class BotController:
             self.log(f"Party recovery sent to {sent} member(s)")
         self._party_tree_trip = trip
         self._publish_party_policy()
+        self._publish_shop_reports(world, map_id)
+
+    def _publish_shop_reports(self, world, map_id) -> None:
+        """Forward member reports and this leader's report to the shopkeeper."""
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.comms.publish import publish_shop_reports
+        from settings.profile import normalize_party_roster
+
+        pose = live_pose_from_state(world)
+        x = y = None
+        mid = map_id
+        if pose is not None:
+            x, y = int(pose.x), int(pose.y)
+            mid = int(pose.map_id)
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        sent = publish_shop_reports(
+            world,
+            rows,
+            _player_chat_name(world, getattr(world, "last_party", None)),
+            mid,
+            x,
+            y,
+        )
+        if sent:
+            self.log(f"Party reports sent to shopkeeper ({sent})")
 
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""

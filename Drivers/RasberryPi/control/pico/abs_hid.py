@@ -1,8 +1,10 @@
 # control/pico/abs_hid.py — absolute mouse for Windows system cursor
 #
-# 5-byte report (Report ID 4): buttons(1) + X uint16 + Y uint16, range 0..32767
-# CircuitPython 10 often leaves report_ids empty on Device objects; find the
-# Generic-Desktop Mouse that is NOT the first (builtin relative) mouse.
+# 6-byte report (Report ID 4): buttons(1) + X uint16 + Y uint16 + wheel int8.
+# X/Y are 0..32767. Wheel is one detent, then a zero report so it does not repeat.
+# Move, button, and wheel share this device. CircuitPython 10 often leaves
+# report_ids empty; find the Generic-Desktop Mouse that is NOT the builtin
+# relative mouse.
 
 REPORT_DESCRIPTOR = bytes(
     (
@@ -61,7 +63,19 @@ REPORT_DESCRIPTOR = bytes(
         0x95,
         0x02,
         0x81,
-        0x02,  #     Input Abs
+        0x02,  #     Input Abs X/Y
+        0x09,
+        0x38,  #     Usage (Wheel)
+        0x15,
+        0x81,  #     Logical Min -127
+        0x25,
+        0x7F,  #     Logical Max 127
+        0x75,
+        0x08,
+        0x95,
+        0x01,
+        0x81,
+        0x06,  #     Input Wheel (Data, Var, Rel)
         0xC0,
         0xC0,
     )
@@ -81,7 +95,7 @@ def make_device():
         usage_page=_USAGE_PAGE_GD,
         usage=_USAGE_MOUSE,
         report_ids=(_REPORT_ID,),
-        in_report_lengths=(5,),
+        in_report_lengths=(6,),
         out_report_lengths=(0,),
     )
 
@@ -135,20 +149,23 @@ class AbsolutePointer(object):
         vy = int(round(y * MAXV / float(sy)))
         return max(0, min(MAXV, vx)), max(0, min(MAXV, vy))
 
-    def _send(self, force=False):
+    def _send(self, force=False, wheel=0):
         vx, vy = self._scaled(self.pos[0], self.pos[1])
-        key = (self.buttons & 0x1F, vx, vy)
-        if not force and key == self._last:
+        buttons = self.buttons & 0x1F
+        wheel = max(-127, min(127, int(wheel)))
+        # A non-zero wheel must be followed by a zero report. Do not drop that.
+        if wheel == 0 and not force and self._last == (buttons, vx, vy):
             return
-        self._last = key
+        self._last = None if wheel else (buttons, vx, vy)
         self.device.send_report(
             bytes(
                 (
-                    self.buttons & 0x1F,
+                    buttons,
                     vx & 0xFF,
                     (vx >> 8) & 0xFF,
                     vy & 0xFF,
                     (vy >> 8) & 0xFF,
+                    wheel & 0xFF,
                 )
             )
         )
@@ -166,7 +183,11 @@ class AbsolutePointer(object):
         self._send(force=True)
 
     def wheel(self, dy):
-        pass
+        step = max(-127, min(127, int(dy)))
+        if step == 0:
+            return
+        self._send(force=True, wheel=step)
+        self._send(force=True, wheel=0)
 
     def click(self, x, y, hold_ms=20):
         import time as _t

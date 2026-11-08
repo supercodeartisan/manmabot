@@ -204,6 +204,11 @@ def drain_leader_reports(
             continue
         if not character_name(who) or _name_in_conflict(who, cid):
             continue
+        from websocket.member_status import member_reports
+
+        if peer:
+            member_states.bind_peer(peer, who)
+        member_reports.note(body)
         rally.note_report(who, body, names)
     try:
         connected = int(server.client_count())

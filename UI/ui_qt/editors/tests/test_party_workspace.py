@@ -19,8 +19,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QDialog,
     QGroupBox,
     QLabel,
+    QPushButton,
     QRadioButton,
     QStyleOptionViewItem,
 )
@@ -208,6 +210,54 @@ def test_map_and_ops_pages_keep_existing_settings() -> None:
     assert all(label.isHidden() for label in panel.findChildren(QLabel) if label.text() == hint)
     solo = MoveTab(profile=profile, strings=strings, language="ko", load_profile=False)
     assert any(label.text() == hint and label.isHidden() is False for label in solo.findChildren(QLabel))
+
+    bag = SettingsBag(profile)
+    bag.set(
+        "party",
+        "routine",
+        [
+            {
+                "id": "row-1",
+                "map_id": "talking_island",
+                "kind": "battle",
+                "duration_minutes": 60,
+                "selected_farms": ["point_1"],
+                "farm_stays_s": {"point_1": 600.0},
+                "coords_saved": True,
+                "areas": [
+                    {
+                        "name": "마을 중간",
+                        "shape": "area",
+                        "x0": 215,
+                        "y0": 295,
+                        "x1": 299,
+                        "y1": 356,
+                    },
+                    {"name": "point_1", "shape": "point", "x": 217, "y": 406},
+                ],
+                "patrol": [],
+            }
+        ],
+    )
+    hunt = PartyRoutinePanel(
+        bag=bag,
+        profile=profile,
+        strings={**strings, "routine_area_set": "구역 · 완료"},
+        language="ko",
+    )
+    setting = next(
+        button
+        for button in hunt.table.findChildren(QPushButton)
+        if "구역" in button.text()
+    )
+    setting.click()
+    opened = [
+        widget
+        for widget in QApplication.instance().topLevelWidgets()
+        if isinstance(widget, QDialog) and widget.isVisible()
+    ]
+    assert opened
+    opened[0].close()
 
     ops = tab.leader_sections["ops"]
     radios = [button.text() for button in ops.findChildren(QRadioButton)]

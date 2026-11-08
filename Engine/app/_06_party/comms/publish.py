@@ -44,10 +44,92 @@ def publish_beep(*, why: str = "already_in_party") -> int:
     return publish_body(beep_message(who="leader", why=why))
 
 
+def publish_shop_reports(
+    world: Any,
+    roster: Any,
+    leader_name: str,
+    map_id: Optional[int],
+    x: Any,
+    y: Any,
+) -> int:
+    """Send every stored member report plus the leader's own report.
+
+    Only the roster shopkeeper receives it. The wait is ``HEARTBEAT_S``,
+    the same clock member ``report`` frames use. Returns sockets reached.
+    """
+    import time
+
+    from websocket.active import current
+    from websocket.member_status import build_report, member_reports
+    from websocket.party_orders import leader_session
+    from websocket.protocol import PartyMessage
+    from websocket.traffic_log import note
+
+    from ..sync import member_states
+
+    now = time.monotonic()
+    if not member_reports.due(now):
+        return 0
+    peers: list[str] = []
+    for name in _shopkeeper_names(roster):
+        peer = member_states.peer_for(name)
+        if peer and peer not in peers:
+            peers.append(peer)
+    if not peers:
+        return 0
+    watchdog = current()
+    if watchdog is None or not watchdog.running or not getattr(watchdog.server, "listening", False):
+        return 0
+    leader = str(leader_name or "").strip() or "leader"
+    reports = [
+        row
+        for row in member_reports.snapshot()
+        if str(row.get("from") or "").strip().casefold() != leader.casefold()
+    ]
+    reports.append(
+        build_report(world, map_id, name=leader, x=x, y=y, arrived=False, order="")
+    )
+    body: dict[str, Any] = {
+        "type": "party_reports",
+        "from": "leader",
+        "reports": reports,
+    }
+    session = leader_session()
+    if session:
+        body["session"] = session
+    frame = PartyMessage(sender="leader", message=body)
+    sent = 0
+    for peer in peers:
+        try:
+            if watchdog.server.send_to(peer, frame, sender="leader"):
+                sent += 1
+        except Exception:
+            continue
+    if sent:
+        note("sent", frame)
+        member_reports.mark_sent(now)
+    return sent
+
+
+def _shopkeeper_names(roster: Any) -> list[str]:
+    names: list[str] = []
+    rows = roster if isinstance(roster, (list, tuple)) else []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("role") or "").strip().lower() != "shopkeeper":
+            continue
+        name = str(row.get("name") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
 __all__ = [
     "publish_beep",
     "publish_body",
     "publish_leader_decision",
     "publish_policy",
     "publish_recovery",
+    "publish_shop_reports",
 ]

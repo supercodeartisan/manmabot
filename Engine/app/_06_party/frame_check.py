@@ -21,6 +21,7 @@ _MEMBER_TYPES = frozenset({
 })
 _LEADER_TYPES = frozenset({
     "party_policy",
+    "party_reports",
     "rally",
     "recovery",
     "beep",
