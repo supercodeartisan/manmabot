@@ -1442,13 +1442,40 @@ def _dungeon_teleport_mother_tree_due(
     return True
 
 
+def _hp_safe_natural_wait(blackboard: "Blackboard") -> bool:
+    """HP safe-zone scroll is in flight, or its landing was confirmed.
+
+    ``retreat_exit_ready`` then uses almost-full HP. A scroll that times out
+    never sets the regen mark, so the retreat-line exit still applies in the hunt.
+    """
+    from app._04_decision.talking_scroll import (
+        SCRATCH_HP_SAFE_REGEN,
+        SCRATCH_HP_SAFE_SCROLLED,
+        SCRATCH_HP_SAFE_SPOT,
+        SCRATCH_SCROLL_ARRIVAL,
+        SCRATCH_SCROLL_SPOT,
+    )
+
+    if not blackboard.scratch.get(SCRATCH_HP_SAFE_SCROLLED):
+        return False
+    if blackboard.scratch.get(SCRATCH_HP_SAFE_REGEN):
+        return True
+    if not blackboard.scratch.get(SCRATCH_SCROLL_ARRIVAL):
+        return False
+    spot = str(blackboard.scratch.get(SCRATCH_SCROLL_SPOT) or "")
+    safe = str(blackboard.scratch.get(SCRATCH_HP_SAFE_SPOT) or "")
+    return bool(safe) and spot == safe
+
+
 def resume_hunt_above_retreat_limit(
     state: "GameState", blackboard: "Blackboard"
 ) -> bool:
     """Leave an HP retreat when recovery items cannot run and HP is above the retreat line.
 
-    Under 95% is still a retreat while heal or a potion can be used, and while
-    a mother-tree trip is in progress. MP and return retreats do not use this.
+    Under 95% is still a retreat while heal or a potion can be used, while a
+    mother-tree trip is in progress, and while an HP safe-zone scroll is in
+    flight or has landed. That landing waits for natural regen to 95%. MP and
+    return retreats do not use this.
     """
     from app._04_decision.mode_control import RETREAT_FOR_HP, hp_ratio
     from app.bot_log import get_logger
@@ -1456,6 +1483,8 @@ def resume_hunt_above_retreat_limit(
     if blackboard.scratch.get("retreat_for") != RETREAT_FOR_HP:
         return False
     if blackboard.scratch.get("mother_tree_trip"):
+        return False
+    if _hp_safe_natural_wait(blackboard):
         return False
     ratio = hp_ratio(state)
     limit = _retreat_limit_ratio()
@@ -1761,6 +1790,12 @@ def maybe_recovery_support(
     return apply_inplace_hp_support(state, blackboard)
 
 
+def _solo_mage_attack_fields(state: "GameState", blackboard: "Blackboard") -> dict:
+    from app._04_decision.solo_mage import solo_mage_attack_fields
+
+    return solo_mage_attack_fields(state, blackboard)
+
+
 def continue_or_start_combat(
     state: "GameState",
     blackboard: "Blackboard",
@@ -1867,6 +1902,7 @@ def continue_or_start_combat(
                     priority=0.5,
                     reason="attack target",
                     mid_act=True,
+                    **_solo_mage_attack_fields(state, blackboard),
                 )
                 return Status.SUCCESS
 
@@ -1944,6 +1980,7 @@ def continue_or_start_combat(
         priority=0.5,
         reason=engage_reason,
         mid_act=False,
+        **_solo_mage_attack_fields(state, blackboard),
     )
     return Status.SUCCESS
 

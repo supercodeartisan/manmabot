@@ -87,6 +87,7 @@ class PerceptionSensors:
         self._buff = None
         self._uidialog = None
         self._party = None
+        self._party_hud = None
         self._party_init_tried = False
         self._entity_sweep = None
         self._last_hotbar_at = 0.0
@@ -209,8 +210,19 @@ class PerceptionSensors:
                 self.buffer.errors.append(
                     f"party: DLL missing ({default_dll_path().name})"
                 )
+            from app._01_perception.party_hud_reader import (
+                PartyHudReader,
+                default_dll_path as hud_dll_path,
+            )
+
+            self._party_hud = PartyHudReader()
+            if not getattr(self._party_hud, "dll_loaded", False):
+                self.buffer.errors.append(
+                    f"partyhud: DLL missing ({hud_dll_path().name})"
+                )
         except Exception as exc:
             self._party = None
+            self._party_hud = None
             self.buffer.errors.append(f"party: {exc}")
 
     @property
@@ -549,6 +561,19 @@ class PerceptionSensors:
         if isinstance(snap, dict) and "leader" in snap and snap.get("subs_ok") is not False:
             buf.party = snap
             buf.party_ok = True
+        self._capture_party_hud(buf)
+
+    def _capture_party_hud(self, buf: PerceptionBuffer) -> None:
+        if self._party_hud is None or not getattr(self._party_hud, "dll_loaded", False):
+            return
+        try:
+            snap = self._party_hud.snapshot()
+        except Exception as exc:
+            buf.errors.append(f"partyhud: {exc}")
+            return
+        if isinstance(snap, dict) and isinstance(snap.get("slots"), list):
+            buf.party_hud = snap
+            buf.party_hud_ok = True
 
     @property
     def party_calibration(self) -> Optional[dict[str, Any]]:

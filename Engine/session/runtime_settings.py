@@ -259,6 +259,10 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
         row.as_dict() if hasattr(row, "as_dict") else row
         for row in (getattr(profile, "auto_buff_plan", ()) or ())
     ]
+    spells_cfg["solo_mage_attacks"] = [
+        row.as_dict() if hasattr(row, "as_dict") else row
+        for row in (getattr(profile, "solo_mage_attack_plan", ()) or ())
+    ]
     decision_cfg["hp"] = hp
     decision_cfg["mp"] = mp
     decision_cfg["farm"] = farm

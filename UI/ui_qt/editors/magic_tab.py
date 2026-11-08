@@ -70,6 +70,7 @@ class MagicTab(QWidget):
         self._individual_built = False
         self._catalog = load_skill_catalog()
         self._ui_class = "elf"
+        self._locked_class = ""
         self._category = "attack_buff"
         self._skill_guard = False
         self._skills_ready = False
@@ -235,25 +236,11 @@ class MagicTab(QWidget):
         title.setStyleSheet("font-weight: 600;")
         layout.addWidget(title)
 
-        picker = QHBoxLayout()
-        picker.addWidget(QLabel(self.t.get("magic_class", "Class")))
-        self.class_combo = QComboBox()
-        for name in ("elf", "mage", "knight", "royal"):
-            self.class_combo.addItem(self.t.get(name, name), name)
-        character = self.bag.get_str("magic", "class", "elf")
+        character = self._locked_class or self.bag.get_str("magic", "class", "elf")
         if character not in ("elf", "mage", "knight", "royal"):
             character = "elf"
         self._ui_class = character
-        index = self.class_combo.findData(character)
-        if index >= 0:
-            self.class_combo.setCurrentIndex(index)
-        self.class_combo.currentIndexChanged.connect(self._on_class)
-        picker.addWidget(self.class_combo)
-        class_hint = QLabel(self.t.get("class_magic_hint", ""))
-        class_hint.setWordWrap(True)
-        class_hint.setObjectName("muted")
-        picker.addWidget(class_hint, stretch=1)
-        layout.addLayout(picker)
+        self._locked_class = character
 
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel(self.t.get("filter_search", "Search")))
@@ -330,10 +317,18 @@ class MagicTab(QWidget):
         self._ensure_skill_model()
         self._select_category(self._category)
 
-    def _on_class(self) -> None:
-        self._ui_class = str(self.class_combo.currentData() or "elf")
-        self.bag.set("magic", "class", self._ui_class)
-        self._refresh_skills()
+    def set_account_character(self, character: str) -> None:
+        """Skill list follows the account class. There is no class picker."""
+        char = str(character or "").strip().lower()
+        if char == "prince":
+            char = "royal"
+        if char not in ("elf", "mage", "knight", "royal"):
+            return
+        self._locked_class = char
+        self._ui_class = char
+        self.bag.set("magic", "class", char)
+        if self._individual_built:
+            self._refresh_skills()
 
     def _select_category(self, key: str) -> None:
         self._category = key

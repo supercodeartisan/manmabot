@@ -29,6 +29,29 @@ def potion(reason: str = "self_potion") -> Any:
     )
 
 
+def list_heal(
+    name: str,
+    click_x: int,
+    click_y: int,
+    *,
+    hp_pct: int,
+    hotbar_box: Optional[int] = None,
+    hotbar_key: Optional[str] = None,
+) -> Any:
+    """Heal by clicking that member's party-list row, not their body."""
+    from .types import ActionIntent, ActionType
+
+    return ActionIntent(
+        action=ActionType.HEAL,
+        priority=0.88,
+        reason=f"party_member:list heal {name} hp={int(hp_pct)}",
+        hotbar_box=hotbar_box,
+        hotbar_key=hotbar_key,
+        click_x=int(click_x),
+        click_y=int(click_y),
+    )
+
+
 def attack(track_id: int, reason: str, *, mid_act: bool = False) -> Any:
     from .types import ActionIntent, ActionType
 
@@ -348,6 +371,19 @@ def intent_for_kind(
     if kind is MemberKind.DEFEND and defend_id is not None:
         return attack(defend_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.ASSIST and assist_id is not None:
+        # Party already chose this id. Solo's locked-target gate runs once
+        # more on the current cell, and a closed line does not retarget.
+        from .assist import assist_shot_gate
+
+        allowed, blocked = assist_shot_gate(
+            game_state,
+            origin,
+            int(assist_id),
+            source=reason,
+        )
+        if not allowed:
+            why = blocked or "assist_blocked"
+            return idle(why), previous_goal, why
         return attack(assist_id, reason, mid_act=mid_act), previous_goal, reason
     if kind is MemberKind.FOLLOW:
         if (
@@ -374,6 +410,7 @@ __all__ = [
     "attack",
     "idle",
     "intent_for_kind",
+    "list_heal",
     "pick_settle_stand",
     "plan_field_follow",
     "plan_follow_intent",

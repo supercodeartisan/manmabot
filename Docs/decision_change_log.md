@@ -16,6 +16,85 @@ Affects: party member assist and self-defense. Solo hunt is unchanged.
 Consent: user asked to check and fix assist so it uses solo attack logic.
 Result: not run in game.
 
+## 2026-11-08 — party assist reuses the solo shot gate
+
+Intent: A party member clicked the leader's monster through the inn wall. Target choice stays the party picker. The click is refused when solo's locked-target gate says the shot is closed.
+Shared: `intent_for_kind` for `ASSIST` calls `assist_shot_gate`, which calls `sticky_target_alive` and `can_engage_target`. A closed line or a click-range miss becomes idle and keeps the same id for the next party tick. No new target, no wall detour. `list_attackable`, follow, loot, defend, and the solo attack path are unchanged.
+Affects: party member assist clicks (`leader_attack`, `leader_strike`, external, `own_finish`, solo-farm assist). Self-defense still emits its own attack.
+Consent: user (keep party target selection, reuse the solo attack check immediately before the click).
+Result: unit tests in `Engine/app/_06_party/tests/test_assist_shot_gate.py`. Not run in game.
+
+## 2026-11-08 — safe-zone scroll waits until HP is almost full
+
+Intent: After a talking-scroll landing with no heal and no potion, the retreat ended as soon as HP crossed the retreat line (30%). The character scrolled back to the hunt with the bar still near a third.
+Shared: `resume_hunt_above_retreat_limit` stays quiet while that HP-safe scroll is in flight or its landing is confirmed (`hp_safe_regen`). `retreat_exit_ready` then uses `is_almost_full_hp` (95%). A scroll that times out never sets the mark, so the 30% exit remains in the hunt. `begin_retreat`, `apply_hp_actions`, mother-tree, MP retreat, and login clicks are unchanged.
+Affects: HP retreats that land on a wheel-0 safe-zone scroll. Return to the hunt waits for 95%, including when heal exists but MP is under 20. Walking to a safe area without the scroll still leaves at the retreat line.
+Consent: user (wait at the safe zone until HP reaches 95%, without colliding with the other retreat exits).
+Result: not run in game.
+
+## 2026-11-07 — party mage skips a dead or out-of-reach member
+
+Intent: A party mage does not press heal for another member at 0% HP, on another map, or farther than 9 tiles (Chebyshev). The next living member under 80% HP who is inside that reach is still chosen. Self heal, self buff, a potion, and self-defense stay ahead of the list heal.
+Shared: `heal_targets` / `in_heal_reach` in `hud_heal.py`. `PartyMemberManager._party_list_heal` passes the mage tile and map, and emits nothing when that pose is missing. Attack `MAGE_SPELL_RANGE` stays 10. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member mage list heals only. Other classes, solo mage, and the party leader's farm columns are unchanged.
+Consent: user (skip dead and out of heal reach; heal reach base is 9).
+Result: unit check in `Engine/app/_06_party/tests/test_hud_heal.py`. Not run in game.
+
+## 2026-11-07 — party mage clicks the list row to heal
+
+Intent: After a party mage picks another member under 80% HP, the heal key is pressed and that member's left-list row is clicked. The lowest percent is first. Self heal, self buff, a potion, and a monster that is hitting this mage still come first. Assist stays off for a mage.
+Shared: `PartyMemberManager._party_list_heal` emits the click. `ActionExecutor._heal` clicks only when the intent carries client pixels and the heal key was pressed. Key-only heals stay a key press. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member mage ticks that are not self-heal, self-buff, potion, or self-defense. Other classes do not take this click. The party leader's own farm columns are unchanged.
+Consent: user (party mage clicks the chosen left-list row; assist for a mage stays off except when this mage is attacked).
+Result: unit check in `Engine/app/_06_party/tests/test_hud_heal.py`. Not run in game.
+
+## 2026-11-07 — a mage party member does not assist
+
+Intent: A party member whose character is a mage does not take an assist target. Knight, elf, and royal members still assist the leader. Follow, hold, heal, buff, and potions stay. `defend_self` still fights a monster that is hitting this mage.
+Shared: `PartyMemberManager.decide` drops the chosen target after `pick_assist_target`, solo-farm pick, and turret own-hunt, when `mage_skips_party_assist` is true. `pick_assist_target`, `pick_solo_farm_target`, `turret_member_focus`, and `decide_policy` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party member assist for a mage, including leader attack, leader strike, solo-farm targets, and turret own-hunt. A sticky assist ends on the next tick. The party leader's own farm columns are unchanged.
+Consent: user (mage party members do not assist; other classes still assist; defend when this mage is attacked stays).
+Result: unit check in `Engine/app/_06_party/tests/test_mage_skips_assist.py`. Not run in game.
+
+## 2026-11-07 — a stuck mage spell circle is clicked or cancelled
+
+Intent: Once the cast circle is on a monster, that pixel finishes the cast. `spell_out_range` and `spell_disable` cancel the circle and do not count as the 4-second cursor drop. Walking keeps cancelling: Esc, then one right-click on the current pixel if the circle remains.
+Shared: `find_attack_aim_point`, `MageCombatStrategy.attack`, `cancel_spell_aim`, and the travel click loop. Elf, knight, and royal weapon aim, spell range, heal, teleport, party, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. A fist or sword miss still drops the target after five rejects.
+Consent: user (click a live spell circle; cancel an out-of-range circle without dropping the target; Esc then right-click while walking).
+Result: unit check in `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+
+## 2026-11-07 — solo mage attack spells rotate one press each
+
+Intent: A solo mage in spell mode casts each checked attack spell once, in priority order, then repeats. A tick that never presses the key keeps the same spell.
+Shared: `solo_mage_attack_fields` picks the due cell. `note_solo_mage_attack_pressed` advances only after `MageCombatStrategy` presses that key. `continue_or_start_combat` still only adds the hotbar fields. Buffs, party, other classes, spell range, cursor aim, cast gap, heal, teleport, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the attack key of a solo spell-mode mage. One spell on the hotbar still repeats. No checked spell on the bar still uses `mage_attack`.
+Consent: user (checked attack magic, one cast each, in order; advance only after the key press).
+Result: unit check in `Engine/app/_04_decision/tests/test_solo_mage.py`. Not run in game.
+
+## 2026-11-07 — schedule attack mode follows the account class
+
+Intent: A mage account was stored with `hunt.attack_mode` `ranged`, so spell buffs and cast never ran. The account class now chooses the hunt method: mage `magic`, elf `ranged`, knight and royal `melee`. A saved hunt value no longer overrides that.
+Shared: `attack_mode_for_character`. `apply_runtime_settings` writes that value onto the profile. `profile_snapshot` and schedule save stamp the same value. `combat_strategy_for` is unchanged: only a mage is remapped by the mode. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the next start of a mage schedule uses the spell path. An elf schedule stays on bow clicks. Knight and royal combat strategies still ignore `attack_mode`.
+Consent: user (mage account runs mage workflow; a ranged class stays ranged).
+Result: unit check in `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
+## 2026-11-07 — walk component stamp is not refreshed on launch
+
+Intent: A bot launch was rewriting every `walk_components/meta.json` when `nav.png` mtime differed and the bytes did not. The hash already accepts that file, so the launch no longer writes a new `source_mtime_ns`.
+Shared: `try_load_components` and `load_or_build_components` still load a matching cache. `_write_component_cache` still runs when the cache is missing or the bytes differ. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: map load of white-tile component ids. A copied `nav.png` with the same hash is read and left on disk as-is. A changed `nav.png` still rebuilds the cache, including `source_mtime_ns`.
+Consent: user (stop unnecessary `source_mtime_ns` updates).
+Result: not run in game. The next launch should leave existing `walk_components/meta.json` files unmodified when `nav.png` bytes match.
+
+## 2026-11-07 — solo mage casts checked buffs before the next target
+
+Intent: A solo mage in spell mode uses the individual magic table. Checked lasting buffs go out in priority order before a new fight, and only after memory shows the effect above the existing 10s remain. A live sticky target keeps being attacked. Checked attack spells on the hotbar replace the cast key in the same order; a missing hotbar cell is skipped, and no checked attack spell on the bar keeps `mage_attack`. Three presses that never produce the buff park that skill for 30s. MP at or under the reserve does not wait on the buff.
+Shared: `maybe_cast_buff` is unchanged and still used for other classes and for a party leader (`party_leader_no_loot`). `continue_or_start_combat` only adds hotbar fields when `solo_mage_active`. `MageCombatStrategy` presses that cell when the intent carries one, otherwise `mage_attack`. Heal, teleport, spell range, cursor aim, cast gap, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: solo mage spell-mode buff step and the attack key. Party member, party leader, elf, knight, and royal stay on the previous buff and `mage_attack` paths.
+Consent: user (solo mage only; checked skills in priority; buff before a new target; memory remain; retry cap; hotbar miss skips; keep range, cursor, interval, heal, teleport, and party).
+Result: unit tests in `Engine/app/_04_decision/tests/test_solo_mage.py`. Not run in game.
+
 ## 2026-11-07 — solo selector turns the party switch off
 
 Intent: The party checkbox is hidden. 솔로봇 must hunt the solo schedule. Party runs only after 파티봇 and a role choice.
