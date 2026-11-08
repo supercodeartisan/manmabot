@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Optional
 
 from .config import PartyMemberConfig
-from .follow import follow_kind
+from .follow import ARRIVAL_TOLERANCE, follow_kind
 
 
 class MemberKind(str, Enum):
@@ -63,6 +63,9 @@ class PolicyInput:
     need_buff: bool = False
     # Tile is the 15s/45s cache, not a live party or entity pose.
     leader_pose_stale: bool = False
+    # Chebyshev steps to this member's formation slot. None keeps the old
+    # distance-to-leader band for callers that have no slot yet.
+    slot_dist: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,29 @@ class PolicyResult:
     kind: MemberKind
     chasing: bool
     reason: str
+
+
+def _slot_hold(inp: PolicyInput) -> Optional[PolicyResult]:
+    """Hold on the formation slot. Follow when this member is off it.
+
+    ``None`` when the caller did not supply a slot, so the leader-distance
+    band stays in force.
+    """
+    if inp.slot_dist is None:
+        return None
+    slot = int(inp.slot_dist)
+    dist = int(inp.leader_dist or 0)
+    if slot <= ARRIVAL_TOLERANCE:
+        return PolicyResult(
+            MemberKind.HOLD,
+            False,
+            f"hold_slot slot={slot} dist={dist}",
+        )
+    return PolicyResult(
+        MemberKind.FOLLOW,
+        True,
+        f"follow_slot slot={slot} dist={dist}",
+    )
 
 
 def decide_policy(inp: PolicyInput) -> PolicyResult:
@@ -138,7 +164,10 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
                 True,
                 f"follow_combat_leash dist={dist}",
             )
-        # Farming but no live target yet — keep near stop band.
+        # Farming but no live target yet — walk to the slot, not the leader tile.
+        slot_hold = _slot_hold(inp)
+        if slot_hold is not None:
+            return slot_hold
         if dist > int(cfg.stop_tiles):
             return PolicyResult(
                 MemberKind.FOLLOW,
@@ -152,6 +181,9 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         )
 
     # --- Travel / idle ---
+    slot_hold = _slot_hold(inp)
+    if slot_hold is not None:
+        return slot_hold
     walk = int(inp.leader_walk_dist) if inp.leader_walk_dist is not None else dist
     band, chasing = follow_kind(
         walk,

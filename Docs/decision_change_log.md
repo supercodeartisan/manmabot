@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-08 — party formation slots are the walk goal
+
+Intent: A moving member walks to a side-by-side slot (right, then left, then farther). A narrow trail tile replaces that line. A stopped leader, including a standing fight, uses a 3×3 grid for up to five followers and a 5×5 grid for more. The click is a hop of at most 2 tiles toward that absolute tile. Leader pose stays a successful memory read. No websocket pose.
+Shared: `choose_formation_goal`, `decide_policy` when `slot_dist` is set, `plan_slot_hop`. Distance-to-leader hold remains only when no slot is supplied. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Assist still fires when the leader's mob is in range.
+Affects: party member follow and hold. Solo hunt is unchanged.
+Consent: user (implement the guide's formations; memory pose, not websocket).
+Result: unit checks only. Not run in game.
+
+## 2026-11-08 — leader pose comes from this tick's memory read
+
+Intent: Follow and stop use the PartySubsystem pose only when this frame's memory read succeeded. A failed read keeps the old snapshot for diagnostics and does not refresh its time or sequence. No websocket leader pose.
+Shared: `apply_perception_buffer`, `resolve_leader`, `_apply_sticky_party_pose`, `_leader_is_moving`. The cached tile is not copied back onto the live view. An in-flight map join keeps its last armed destination across one missed read. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party member follow, leader moving/stopped, and join retarget. Solo hunt is unchanged.
+Consent: user (fix position judgment from memory; do not use the guide's websocket pose).
+Result: unit checks only. Not run in game.
+
 ## 2026-11-08 — leader forwards party reports to the shopkeeper
 
 Intent: Every `HEARTBEAT_S` the leader sends the latest member `report` frames plus its own report (same `build_report` shape) to the roster shopkeeper only.

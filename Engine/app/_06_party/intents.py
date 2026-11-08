@@ -5,7 +5,12 @@ import random
 from typing import Any, Iterable, Optional
 
 from .config import PartyMemberConfig
-from .follow import FOLLOW_CLICK_TILES, choose_approach_tile, choose_settle_stand
+from .follow import (
+    ARRIVAL_TOLERANCE,
+    FOLLOW_CLICK_TILES,
+    choose_approach_tile,
+    choose_settle_stand,
+)
 from .policy import MemberKind
 
 
@@ -265,6 +270,55 @@ def plan_field_follow(
         reason=f"party_member:follow_walk {goal[0]},{goal[1]}",
     )
     detail = f"walk {len(path) - 1} hop {hop[0]},{hop[1]} → {goal[0]},{goal[1]}"
+    return intent, goal, detail, hop
+
+
+def plan_slot_hop(
+    origin: Any,
+    slot: tuple[int, int],
+    *,
+    previous_goal: Optional[tuple[int, int]],
+    previous_hop: Optional[tuple[int, int]],
+    kind: str,
+) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
+    """Short hop toward an absolute formation tile. Does not aim at the leader."""
+    from app._04_decision.nav_config import get_terrain_map
+    from app._04_decision.pathfinding import plan_travel_click
+
+    from .types import ActionIntent, ActionType
+
+    ox, oy = int(origin.x), int(origin.y)
+    goal = (int(slot[0]), int(slot[1]))
+    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= ARRIVAL_TOLERANCE:
+        return idle("at_slot"), goal, "at_slot", None
+    if (
+        previous_goal == goal
+        and previous_hop is not None
+        and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
+    ):
+        try:
+            from app._05_action.body_pose import body_is_moving
+
+            if body_is_moving():
+                return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+        except Exception:
+            pass
+    terrain = get_terrain_map()
+    if terrain is None:
+        return idle("no_terrain"), goal, "no_terrain", None
+    dest, _path, waypoint = plan_travel_click(
+        terrain, origin, goal, max_hop=FOLLOW_CLICK_TILES
+    )
+    if dest is None:
+        return idle("no_path"), None, "no_path", None
+    hop = waypoint if waypoint is not None else goal
+    intent = ActionIntent(
+        action=ActionType.TRAVELING,
+        destination=dest,
+        priority=0.55,
+        reason=f"party_member:{kind} {goal[0]},{goal[1]}",
+    )
+    detail = f"{kind} hop {hop[0]},{hop[1]} → {goal[0]},{goal[1]}"
     return intent, goal, detail, hop
 
 

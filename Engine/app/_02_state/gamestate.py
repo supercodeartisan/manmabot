@@ -53,9 +53,13 @@ class GameState:
         self.last_buff: dict[str, Any] | None = None
         self.last_uidialog: dict[str, Any] | None = None
         self.last_party: dict[str, Any] | None = None
-        # False = this frame's party read failed (unknown). None = no frame yet.
-        # A failed read does not clear ``last_party``; follow may keep the last pose.
+        # False = this frame's party read failed. None = no frame yet.
+        # A failed read keeps ``last_party`` for diagnostics and does not
+        # advance ``party_pose_seq`` / ``party_pose_at``. Follow must not
+        # treat that preserved snapshot as a new pose.
         self.party_read_ok: bool | None = None
+        self.party_pose_seq: int = 0
+        self.party_pose_at: float = 0.0
         self.last_perception_buffer: Any | None = None
         # MapSubsystem mapId for which ``attacked_me`` latches were armed.
         self.attacked_me_map_id: int | None = None

@@ -18,7 +18,8 @@ from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
-from .intents import intent_for_kind, plan_field_follow
+from .formation_goal import choose_formation_goal
+from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
 from .join_map import PartyJoinNav
 from .leader import (
     LeaderView,
@@ -37,9 +38,31 @@ from .support import apply_party_support
 _log = _party_logger("member")
 
 _DECISION_HISTORY = 20
-# Keep last PartySubsystem pose when xy drops to 0,0 / missing (off-UI chase).
-_STICKY_PARTY_POSE_SEC = 15.0
-_STICKY_PARTY_POSE_OFF_UI_SEC = 45.0
+# A gap longer than this is not continued stationary evidence.
+_MOTION_GAP_S = 30.0
+
+
+def _terrain_or_none() -> Any:
+    try:
+        from app._04_decision.nav_config import get_terrain_map
+
+        return get_terrain_map()
+    except Exception:
+        return None
+
+
+def _sample_age(now: float, seen_at: Any) -> Optional[float]:
+    """Age of a successful sample. None on a clock change or a long gap."""
+    try:
+        then = float(seen_at)
+    except (TypeError, ValueError):
+        return None
+    if then > now:
+        return None
+    age = now - then
+    if age > _MOTION_GAP_S:
+        return None
+    return age
 
 
 class PartyMemberManager:
@@ -131,47 +154,18 @@ class PartyMemberManager:
         )
 
     def _apply_sticky_party_pose(self, view: LeaderView) -> None:
-        """Refresh or reuse last PartySubsystem pose for off-screen follow."""
-        now = time.time()
+        """Remember the last live memory pose. Never copy it back onto ``view``."""
         rt = self.runtime
-        # Always remember last good party/entity tile while we believe same map
-        # (or map unknown). Cleared only when both map ids are known and differ.
-        if view.tile is not None and view.same_map:
-            rt.sticky_leader_tile = view.tile
-            rt.sticky_leader_map_id = view.map_id
-            rt.sticky_leader_pose_at = now
-            return
         if not view.same_map:
-            # Other map: join-nav uses live party xy; drop same-map sticky.
             rt.sticky_leader_tile = None
             rt.sticky_leader_map_id = None
             rt.sticky_leader_pose_at = 0.0
             return
-        sticky = rt.sticky_leader_tile
-        if sticky is None:
+        if not view.fresh or view.tile is None:
             return
-        age = now - float(rt.sticky_leader_pose_at or 0.0)
-        # Longer sticky while entity sweep lost the leader — keep chasing.
-        limit = (
-            _STICKY_PARTY_POSE_OFF_UI_SEC
-            if view.entity is None
-            else _STICKY_PARTY_POSE_SEC
-        )
-        if age > limit:
-            return
-        sticky_mid = rt.sticky_leader_map_id
-        local = rt.local_map_id
-        if (
-            sticky_mid is not None
-            and local is not None
-            and int(sticky_mid) != int(local)
-        ):
-            return
-        view.tile = sticky
-        if view.map_id is None and sticky_mid is not None:
-            view.map_id = int(sticky_mid)
-        src = str(view.source or "").strip()
-        view.source = f"{src}+sticky" if src else "party_sticky"
+        rt.sticky_leader_tile = view.tile
+        rt.sticky_leader_map_id = view.map_id
+        rt.sticky_leader_pose_at = time.monotonic()
 
     def set_external_target(
         self,
@@ -580,13 +574,10 @@ class PartyMemberManager:
 
         leader_stopped = self._leader_looks_stopped(
             leader_tile=leader_tile if leader_present else None,
-            farming=bool(view.farming),
         )
         leader_moving = self._leader_is_moving(
             leader_tile if leader_present else None
-        ) or ("sticky" in str(view.source or ""))
-        # Close on the leader. Behind-slot / cardinal stand / turret seat are
-        # not click goals — they walked the member around or past the leader.
+        )
         self._update_settle_stand(
             game_state,
             origin,
@@ -596,17 +587,51 @@ class PartyMemberManager:
             field=None,
         )
         from .follow import tile_chebyshev
+        from .intents import _occupied_tiles
 
-        if origin_ok and leader_tile is not None and self.runtime.approach_goal is not None:
-            me = (int(origin.x), int(origin.y))
-            goal = self.runtime.approach_goal
-            if tile_chebyshev(goal, leader_tile) > tile_chebyshev(me, leader_tile):
-                self.runtime.approach_goal = None
-        self._formation_trail_tile(
+        trail_tile = self._formation_trail_tile(
             cfg, leader_tile=leader_tile if leader_present else None
         )
-        self.runtime.travel_offset = None
-        self.runtime.scratch.pop("travel_lateral", None)
+        held = bool(leader_stopped or cfg.turret_farm)
+        bodies: set[tuple[int, int]] = set()
+        if game_state is not None and origin_ok:
+            try:
+                bodies = {
+                    t
+                    for t in _occupied_tiles(game_state, origin)
+                    if me_tile is None or t != me_tile
+                }
+            except Exception:
+                bodies = set()
+        formed = choose_formation_goal(
+            leader_tile if leader_present else None,
+            forward=self._leader_move_dir(),
+            seat=cfg.seat_index,
+            followers=max(1, int(cfg.party_size)),
+            stopped=held,
+            trail_tile=None if held else trail_tile,
+            terrain=_terrain_or_none(),
+            occupied=bodies,
+            previous=self.runtime.scratch.get("formation_slot"),
+            previous_leader=self.runtime.scratch.get("formation_leader"),
+        )
+        slot_tile = formed.tile
+        if slot_tile is not None and leader_tile is not None:
+            self.runtime.scratch["formation_slot"] = slot_tile
+            self.runtime.scratch["formation_leader"] = (
+                int(leader_tile[0]),
+                int(leader_tile[1]),
+            )
+        elif not leader_present:
+            self.runtime.scratch.pop("formation_slot", None)
+            self.runtime.scratch.pop("formation_leader", None)
+        self.runtime.formation = (
+            f"{formed.kind}:{formed.reason}" if formed.kind != "none" else ""
+        )
+        self.runtime.travel_offset = slot_tile
+        slot_dist = None
+        if slot_tile is not None and me_tile is not None:
+            slot_dist = tile_chebyshev(me_tile, slot_tile)
         stand = None
 
         result = decide_policy(
@@ -636,7 +661,8 @@ class PartyMemberManager:
                 target_in_yard=target_in_yard,
                 assist_sticky=assist_sticky,
                 off_turret_seat=off_turret_seat,
-                leader_pose_stale="sticky" in str(view.source or ""),
+                leader_pose_stale=bool(leader_tile is not None and not view.fresh),
+                slot_dist=slot_dist,
             )
         )
         self.runtime.chasing = result.chasing
@@ -748,15 +774,26 @@ class PartyMemberManager:
         if pending_own is not None and self.runtime.own_hunt_id is None:
             self.runtime.own_hunt_id = pending_own
 
-        party_xy = (
-            _party_game_xy(party_block) if isinstance(party_block, dict) else None
+        party_fresh = (
+            game_state is not None
+            and getattr(game_state, "party_read_ok", None) is True
         )
-        dest_map = view.map_id
-        if dest_map is None and isinstance(party_block, dict):
-            try:
-                dest_map = int(party_block.get("map_id"))
-            except (TypeError, ValueError):
-                dest_map = None
+        party_xy = (
+            _party_game_xy(party_block)
+            if party_fresh and isinstance(party_block, dict)
+            else None
+        )
+        dest_map = view.map_id if party_fresh else None
+        if (
+            not party_fresh
+            and self._join_nav.active
+            and self._join_nav.target_key is not None
+        ):
+            # One missed memory read does not retarget an in-flight join.
+            old_map, old_x, old_y = self._join_nav.target_key
+            dest_map = old_map
+            if old_x is not None and old_y is not None:
+                party_xy = (int(old_x), int(old_y))
 
         use_world_nav = False
         route_detail = ""
@@ -819,6 +856,22 @@ class PartyMemberManager:
             self.runtime.last_kind = result.kind.value
             field_plan = None
             if (
+                result.kind is MemberKind.FOLLOW
+                and slot_tile is not None
+                and origin_ok
+            ):
+                try:
+                    field_plan = plan_slot_hop(
+                        origin,
+                        slot_tile,
+                        previous_goal=self.runtime.approach_goal,
+                        previous_hop=self.runtime.follow_hop,
+                        kind=formed.kind,
+                    )
+                except Exception as exc:
+                    _log.debug("party slot hop failed: %s", exc)
+                    field_plan = None
+            elif (
                 result.kind is MemberKind.FOLLOW
                 and stand is None
                 and follow_field is not None
@@ -1150,13 +1203,15 @@ class PartyMemberManager:
         self,
         *,
         leader_tile: Optional[tuple[int, int]],
-        farming: bool,
         settle_sec: float = 0.7,
     ) -> bool:
-        """True when leader pose is stable and not fighting (settle to stop_tiles)."""
+        """True after continued fresh samples of the same tile.
+
+        A standing fight stays stopped. Combat is not movement.
+        """
         scratch = self.runtime.scratch
-        now = time.time()
-        if farming or leader_tile is None:
+        now = time.monotonic()
+        if leader_tile is None:
             scratch.pop("leader_tile_seen", None)
             scratch.pop("leader_tile_seen_at", None)
             scratch.pop("leader_move_dir", None)
@@ -1175,8 +1230,11 @@ class PartyMemberManager:
             scratch["leader_tile_seen"] = tile
             scratch["leader_tile_seen_at"] = now
             return False
-        seen_at = float(scratch.get("leader_tile_seen_at") or now)
-        return (now - seen_at) >= float(settle_sec)
+        age = _sample_age(now, scratch.get("leader_tile_seen_at"))
+        if age is None:
+            scratch["leader_tile_seen_at"] = now
+            return False
+        return age >= float(settle_sec)
 
     def _leader_is_moving(
         self,
@@ -1184,19 +1242,24 @@ class PartyMemberManager:
         *,
         settle_sec: float = 0.7,
     ) -> bool:
-        """True while the leader tile is changing. A standing fight is not moving."""
+        """True when a fresh sample moved. A missing sample is not movement."""
         scratch = self.runtime.scratch
         if leader_tile is None:
-            return True
-        now = time.time()
+            scratch.pop("leader_walk_tile", None)
+            scratch.pop("leader_walk_at", None)
+            return False
+        now = time.monotonic()
         tile = (int(leader_tile[0]), int(leader_tile[1]))
         prev = scratch.get("leader_walk_tile")
         if prev != tile:
             scratch["leader_walk_tile"] = tile
             scratch["leader_walk_at"] = now
             return True
-        seen_at = float(scratch.get("leader_walk_at") or now)
-        return (now - seen_at) < float(settle_sec)
+        age = _sample_age(now, scratch.get("leader_walk_at"))
+        if age is None:
+            scratch["leader_walk_at"] = now
+            return True
+        return age < float(settle_sec)
 
     def _leader_move_dir(self) -> Optional[tuple[int, int]]:
         """Last leader tile delta (facing while walking); None until first step."""

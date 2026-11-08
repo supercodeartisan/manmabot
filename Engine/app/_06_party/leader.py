@@ -175,6 +175,8 @@ class LeaderView:
     ent: str = ""
     track_id: Optional[int] = None
     farming: bool = False
+    # True only when ``tile`` came from this tick's memory read.
+    fresh: bool = False
     # etview-style AttackAction target (contested row).
     target_name: str = ""
     target_guid: str = ""
@@ -232,26 +234,32 @@ def resolve_leader(
             except Exception:
                 view.tile = None
 
+    fresh_party = bool(
+        game_state is not None and getattr(game_state, "party_read_ok", None) is True
+    )
     if party is not None:
         view.name = memory_name or view.name
         view.guid = memory_guid or view.guid
-        try:
-            view.hp = int(party.get("hp"))
-        except (TypeError, ValueError):
-            view.hp = None
-        try:
-            view.mp = int(party.get("mp"))
-        except (TypeError, ValueError):
-            view.mp = None
-        view.map_id = _party_map_id(party)
-        party_tile = _party_tile(party)
-        # PartySubsystem xy (realtime_party) is the follow truth — works off-screen.
-        # Entity remains for assist/identity; do not prefer screen-local entity tile.
-        if party_tile is not None:
-            view.tile = party_tile
-            view.source = "party" if view.entity is None else "entity+party"
-        elif view.source == "entity":
-            view.source = "entity+party"
+        # Name and guid may come from the preserved row so the entity can be
+        # matched. Map and xy are a pose only when this tick's read succeeded.
+        if fresh_party:
+            try:
+                view.hp = int(party.get("hp"))
+            except (TypeError, ValueError):
+                view.hp = None
+            try:
+                view.mp = int(party.get("mp"))
+            except (TypeError, ValueError):
+                view.mp = None
+            view.map_id = _party_map_id(party)
+            party_tile = _party_tile(party)
+            # PartySubsystem xy is the follow tile, including off-screen.
+            # Entity remains for assist. Do not copy a preserved snapshot.
+            if party_tile is not None:
+                view.tile = party_tile
+                view.source = "party" if view.entity is None else "entity+party"
+            elif view.source == "entity":
+                view.source = "entity+party"
 
     if not view.ent and config.leader_ent:
         view.ent = str(config.leader_ent)
@@ -272,6 +280,7 @@ def resolve_leader(
         view.same_map = False
         view.tile = None
 
+    view.fresh = bool(view.tile is not None and view.same_map)
     return view
 
 
