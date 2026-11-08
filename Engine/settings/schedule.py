@@ -28,7 +28,7 @@ from session.paths import (
     ensure_userdata,
     schedule_dir,
 )
-from settings.profile import Profile
+from settings.profile import DEFAULT_PARTY_NEAR_TILES, Profile
 from settings.settings_sections import (
     TOP_SECTIONS,
     merge_settings_routine,
@@ -182,6 +182,10 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
                 getattr(profile, "party_farm_mode", "party") or "party"
             ),
             "lag_tiles": int(getattr(profile, "party_lag_tiles", 30) or 30),
+            "near_tiles": int(
+                getattr(profile, "party_near_tiles", DEFAULT_PARTY_NEAR_TILES)
+                or DEFAULT_PARTY_NEAR_TILES
+            ),
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — leader waits for the nearest member
+
+Intent: The party leader stands when the nearest same-map member is farther than the leader-page distance. That distance is the form value (`party.near_tiles` → `party_near_tiles`). 5 is only the value when the form is empty. Every known member on another map also waits. A failed party-memory read keeps the previous answer. No readable member does not start a wait.
+Shared: existing `set_party_hold` only, OR'd with the area line-hold and rally/invite hold. `LeaderLineWatch`, member formation, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement while the nearest member is past the setting. The half-party 30-tile area wait is unchanged.
+Consent: user (stand when the nearest member is about 5 tiles away; put the distance on the leader page; default 5; keep other behavior untouched).
+Result: unit checks only. Not run in game.
+
 ## 2026-11-08 — party formation slots are the walk goal
 
 Intent: A moving member walks to a side-by-side slot (right, then left, then farther). A narrow trail tile replaces that line. A stopped leader, including a standing fight, uses a 3×3 grid for up to five followers and a 5×5 grid for more. The click is a hop of at most 2 tiles toward that absolute tile. Leader pose stays a successful memory read. No websocket pose.

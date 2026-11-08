@@ -285,6 +285,7 @@ class BotController:
         self._party_line_info: dict = {}
         self._party_line_watch = None
         self._party_line_map: Optional[int] = None
+        self._party_near_hold = False
         self._party_policy_info: dict = {}
         self._member_policy_info: dict = {}
         self._party_brain_ref = None
@@ -1728,6 +1729,48 @@ class BotController:
             "lag_tiles": lag,
         }
         return res.hold
+
+    def _leader_near_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
+        """Stand while the nearest member is farther than the leader form value.
+
+        A failed party-memory read keeps the previous answer. No readable
+        member does not start a wait.
+        """
+        if not self._party_leader_on():
+            self._party_near_hold = False
+            return False
+        if getattr(world, "party_read_ok", None) is not True:
+            return bool(self._party_near_hold)
+        origin = getattr(blackboard, "world_origin", None)
+        if origin is None:
+            return bool(self._party_near_hold)
+        from settings.profile import party_near_limit
+
+        limit = party_near_limit(profile=self._profile)
+        from app._06_party.formation import (
+            followers_from_party,
+            nearest_follower_gap,
+            nearest_gap_hold,
+        )
+
+        snap = getattr(world, "last_party", None)
+        followers = followers_from_party(
+            snap, map_id, self_name=_player_chat_name(world, snap)
+        )
+        nearest, other = nearest_follower_gap(
+            (int(origin.x), int(origin.y)), followers
+        )
+        hold = nearest_gap_hold(nearest, other, limit)
+        was = bool(self._party_near_hold)
+        if hold and not was:
+            shown = nearest if nearest is not None else "other map"
+            msg = f"Party: waiting, nearest member is {shown} tiles (limit {limit})"
+            self.log(msg)
+            self._party_event("near_wait", msg)
+        elif was and not hold:
+            self.log(f"Party: nearest member is within {limit} tiles")
+        self._party_near_hold = hold
+        return hold
 
     def _party_socket_note(self, msg: str) -> None:
         self.log(msg)
@@ -3521,6 +3564,7 @@ class BotController:
                 )
                 organize_hold = rally_hold or forming_hold
                 line_hold = False
+                near_hold = False
                 if self._party_leader_on() and not organize_hold:
                     try:
                         line_hold = self._leader_line_hold(
@@ -3528,7 +3572,17 @@ class BotController:
                         )
                     except Exception as line_exc:
                         self.log(f"Party line watch failed: {line_exc}")
-                set_party_hold(decision.blackboard, organize_hold or line_hold)
+                if not organize_hold:
+                    try:
+                        near_hold = self._leader_near_hold(
+                            world, decision.blackboard, last_logged_map_id
+                        )
+                    except Exception as near_exc:
+                        self.log(f"Party near wait failed: {near_exc}")
+                        near_hold = bool(self._party_near_hold)
+                set_party_hold(
+                    decision.blackboard, organize_hold or line_hold or near_hold
+                )
                 if organize_hold:
                     _freeze_stay_clocks(decision.blackboard)
                 turret_anchor = getattr(
