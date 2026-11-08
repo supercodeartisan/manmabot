@@ -585,6 +585,7 @@ def finish_retreat(blackboard: "Blackboard") -> None:
     blackboard.scratch.pop("hp_retreat_kind", None)
     blackboard.scratch.pop("hp_post_land_tree_tried", None)
     from app._04_decision.talking_scroll import (
+        SCRATCH_HP_SAFE_REGEN,
         SCRATCH_HP_SAFE_SCROLLED,
         SCRATCH_HP_SAFE_SPOT,
         SCRATCH_NAV_RELOAD_MAP,
@@ -594,6 +595,7 @@ def finish_retreat(blackboard: "Blackboard") -> None:
     )
 
     blackboard.scratch.pop(SCRATCH_RETREAT_SCROLL, None)
+    blackboard.scratch.pop(SCRATCH_HP_SAFE_REGEN, None)
     blackboard.scratch.pop(SCRATCH_HP_SAFE_SCROLLED, None)
     blackboard.scratch.pop(SCRATCH_HP_SAFE_SPOT, None)
     blackboard.scratch.pop(SCRATCH_NAV_RELOAD_MAP, None)

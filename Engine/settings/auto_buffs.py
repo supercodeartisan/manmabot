@@ -156,6 +156,50 @@ def auto_buffs_for_magic(magic: dict[str, Any] | None, ui_class: str) -> tuple[A
     return tuple(found)
 
 
+def mage_attack_plan(magic: dict[str, Any] | None, ui_class: str) -> tuple[AutoBuff, ...]:
+    """Checked mage attack spells, lowest priority number first.
+
+    Other classes get an empty plan. Instant attacks have no catalog duration;
+    ``duration_s`` stays 0 and is not used as a buff timer.
+    """
+    from settings.skill_catalog import load_skill_catalog
+
+    character = str(ui_class or "").strip()
+    if character != "mage":
+        return ()
+    block = magic if isinstance(magic, dict) else {}
+    found: list[AutoBuff] = []
+    for skill in load_skill_catalog().skills:
+        if skill.ui_class != character or skill.category != "attack_magic":
+            continue
+        if skill.ko in _SKIP_KO:
+            continue
+        entry = _entry_for(block, skill.setting_key)
+        if not _selected(entry):
+            continue
+        try:
+            priority = int(entry.get("priority") or 1)
+        except (TypeError, ValueError):
+            priority = 1
+        names = tuple(
+            dict.fromkeys(
+                name
+                for name in (skill.ko, skill.zh_tw, skill.zh_cn)
+                if str(name or "").strip()
+            )
+        )
+        found.append(
+            AutoBuff(
+                skill_id=int(skill.skill_id),
+                priority=max(1, priority),
+                names=names,
+                duration_s=0.0,
+            )
+        )
+    found.sort(key=lambda row: (row.priority, row.skill_id))
+    return tuple(found)
+
+
 def press_for_buff(snap: Any, buff: AutoBuff) -> tuple[int, str] | None:
     """First live hotbar cell whose name is this buff. None when it is not on the bar."""
     from app._05_action.spell_box import SKILL_KEYS

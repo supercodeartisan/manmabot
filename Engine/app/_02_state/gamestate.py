@@ -53,6 +53,7 @@ class GameState:
         self.last_buff: dict[str, Any] | None = None
         self.last_uidialog: dict[str, Any] | None = None
         self.last_party: dict[str, Any] | None = None
+        self.last_party_hud: dict[str, Any] | None = None
         # False = this frame's party read failed. None = no frame yet.
         # A failed read keeps ``last_party`` for diagnostics and does not
         # advance ``party_pose_seq`` / ``party_pose_at``. Follow must not

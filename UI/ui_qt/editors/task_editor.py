@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from settings.accounts import AccountStore
 from settings.farm_schedule import normalize_routine
-from settings.profile import Profile
+from settings.profile import Profile, attack_mode_for_character
 from settings.schedule import ScheduleTask
 from settings.server_list import display_server_name
 from ui_qt.i18n_overlay import tx
@@ -400,6 +400,7 @@ class TaskEditor(QWidget):
             note = getattr(getattr(self, "party_tab", None), "note_local_character", None)
             if callable(note):
                 note("")
+            self._sync_magic_class()
             return
         self.server_value.setText(
             display_server_name(
@@ -416,6 +417,21 @@ class TaskEditor(QWidget):
             note(str(getattr(account, "display_name", "") or ""))
         character = str(getattr(account, "character_type", "") or "")
         self.type_value.setText(self.t.get(character, character) or empty)
+        self._sync_magic_class()
+
+    def _sync_magic_class(self) -> None:
+        """Individual magic follows the account class and cannot be switched."""
+        if self.magic_tab is None:
+            return
+        account = self._accounts_by_id.get(self.account_combo.currentData() or "")
+        character = (
+            str(getattr(account, "character_type", "") or "")
+            if account is not None
+            else ""
+        )
+        if character not in ("elf", "mage", "knight", "royal") and self.task is not None:
+            character = str(getattr(self.task, "character", "") or "")
+        self.magic_tab.set_account_character(character)
 
     def _primary_battle_map_id(self) -> str:
         if self.move_tab is None:
@@ -660,6 +676,12 @@ class TaskEditor(QWidget):
             label = account.display_name or account.username
             if label:
                 result.name = str(label)[:80]
+        hunt = result.settings.setdefault("hunt", {})
+        if isinstance(hunt, dict):
+            hunt["attack_mode"] = attack_mode_for_character(result.character)
+        magic = result.settings.setdefault("magic", {})
+        if isinstance(magic, dict) and result.character in ("elf", "mage", "knight", "royal"):
+            magic["class"] = result.character
         return result
 
     def append_log_row(self, stamp: str, message: str) -> None:

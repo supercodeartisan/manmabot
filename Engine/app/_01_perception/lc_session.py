@@ -17,9 +17,11 @@ _DLL_DIR = _ANALYSIS / "dll"
 _REGISTRY = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
 
 # interval_ms, optional extra KEY=VALUE params (registry names).
-# Party roster only. Player, entities, bag, and the other reads are in-process DLLs.
+# Party roster and the party-HUD list boxes. Player, entities, bag, and the
+# other reads are in-process DLLs.
 _MODULES: dict[str, tuple[int, str]] = {
     "party": (300, ""),
+    "partyhud": (300, ""),
 }
 
 _SINK = ctypes.CFUNCTYPE(

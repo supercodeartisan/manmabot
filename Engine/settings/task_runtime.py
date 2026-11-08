@@ -127,12 +127,9 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     species_sort = str(hunt.get("species_sort", profile.species_sort))
     if species_sort in ("name", "level"):
         set_value("species_sort", species_sort)
-    attack_mode = str(
-        hunt.get("attack_mode", getattr(profile, "attack_mode", "magic")) or "magic"
-    ).strip().lower()
-    if attack_mode not in ("ranged", "magic", "melee"):
-        attack_mode = "magic"
-    set_value("attack_mode", attack_mode)
+    from settings.profile import attack_mode_for_character
+
+    set_value("attack_mode", attack_mode_for_character(profile.character))
     set_value("attack_jitter", bool(hunt.get("attack_jitter", getattr(profile, "attack_jitter", False))))
     set_value(
         "attack_jitter_ms",
@@ -823,10 +820,10 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
     set_value("shop_locale", shop_locale)
     # Decorative preview is intentionally disabled in the classic UI.
     set_value("show_preview", False)
-    from settings.auto_buffs import auto_buffs_for_magic
+    from settings.auto_buffs import auto_buffs_for_magic, mage_attack_plan
 
-    profile.auto_buff_plan = auto_buffs_for_magic(
-        magic if isinstance(magic, dict) else {},
-        str(getattr(profile, "character", "") or ""),
-    )
+    character = str(getattr(profile, "character", "") or "")
+    block = magic if isinstance(magic, dict) else {}
+    profile.auto_buff_plan = auto_buffs_for_magic(block, character)
+    profile.solo_mage_attack_plan = mage_attack_plan(block, character)
     return changed

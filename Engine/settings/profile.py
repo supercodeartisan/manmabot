@@ -34,6 +34,25 @@ DEFAULT_MAP_ID = "talking_island"
 # Empty party-leader wait field only. The running distance is the form value.
 DEFAULT_PARTY_NEAR_TILES = 5
 CHARACTER_IDS = ("royal", "knight", "elf", "mage")
+
+
+def attack_mode_for_character(character: str) -> str:
+    """Hunt method for an account class.
+
+    Mage casts (``magic``). Elf shoots (``ranged``). Knight and royal use
+    melee clicks. ``attack_mode`` only changes the mage combat path; the
+    other classes keep their own strategy.
+    """
+    char = str(character or "").strip().lower()
+    if char == "prince":
+        char = "royal"
+    if char == "mage":
+        return "magic"
+    if char == "elf":
+        return "ranged"
+    if char in ("knight", "royal"):
+        return "melee"
+    return "magic"
 # Shop-return bag weight threshold choices (GUI listbox / combo only).
 RETURN_WEIGHT_PCT_CHOICES = (50, 60, 70)
 DEFAULT_RETURN_WEIGHT_ABOVE = 70
@@ -71,7 +90,7 @@ class Profile:
     language: str = "en"
     game_language: str = "ko"
     character: str = "mage"
-    # Hunt Attack radios: ranged | magic | melee (mage ranged = bow).
+    # Follows the account class: mage magic, elf ranged, knight/royal melee.
     attack_mode: str = "magic"
     loot_mode: str = "all_items"
     loot_adena_weight_ratio: float = 0.70

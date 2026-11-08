@@ -153,6 +153,8 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             ).strip()
         if "auto_buffs" in spells_cfg:
             spell_mod.set_auto_buffs(spells_cfg.get("auto_buffs") or ())
+        if "solo_mage_attacks" in spells_cfg:
+            spell_mod.set_solo_mage_attacks(spells_cfg.get("solo_mage_attacks") or ())
 
     elf_cfg = root.get("elf") or {}
     if "mother_tree" in elf_cfg:

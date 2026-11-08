@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -44,6 +45,39 @@ _FARM_MODES = ("party", "solo")
 _PARTY_ROLES = ("member", "leader")
 _ROSTER_ROLES = ("member", "mage", "shopkeeper")
 _ABSENCE_ACTIONS = ("hunt", "hold", "move")
+
+
+class _RosterChoiceDelegate(QStyledItemDelegate):
+    """Combo editor for one roster column. Choices are ``(stored id, label)``."""
+
+    def __init__(self, choices, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._choices = choices
+
+    def createEditor(self, parent, option, index):  # noqa: ANN001
+        combo = QComboBox(parent)
+        combo.setEditable(False)
+        for value, label in self._choices():
+            combo.addItem(str(label), value)
+        combo.activated.connect(lambda _index, box=combo: self.commitData.emit(box))
+        return combo
+
+    def setEditorData(self, editor, index) -> None:  # noqa: ANN001
+        if not isinstance(editor, QComboBox):
+            return
+        current = index.data(Qt.ItemDataRole.UserRole)
+        found = editor.findData(current)
+        editor.blockSignals(True)
+        editor.setCurrentIndex(found if found >= 0 else 0)
+        editor.blockSignals(False)
+        QTimer.singleShot(0, editor.showPopup)
+
+    def setModelData(self, editor, model, index) -> None:  # noqa: ANN001
+        if not isinstance(editor, QComboBox):
+            return
+        value = editor.currentData()
+        model.setData(index, value, Qt.ItemDataRole.UserRole)
+        model.setData(index, editor.currentText(), Qt.ItemDataRole.EditRole)
 
 
 class _WsTestBridge(QObject):
@@ -1246,7 +1280,13 @@ class PartyTab(QWidget):
             QAbstractItemView.SelectionMode.SingleSelection
         )
         self.roster_table.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
+            QAbstractItemView.EditTrigger.DoubleClicked
+        )
+        self.roster_table.setItemDelegateForColumn(
+            3, _RosterChoiceDelegate(self._roster_role_choices, self.roster_table)
+        )
+        self.roster_table.setItemDelegateForColumn(
+            4, _RosterChoiceDelegate(self._roster_loot_choices, self.roster_table)
         )
         self.roster_table.setMinimumHeight(160)
         configure_table_fill(
@@ -1293,6 +1333,12 @@ class PartyTab(QWidget):
         )
         box_lay.addWidget(self.roster_result)
         self._fill_roster_table()
+
+    def _roster_role_choices(self) -> list[tuple[str, str]]:
+        return [(role, self._roster_role_label(role)) for role in _ROSTER_ROLES]
+
+    def _roster_loot_choices(self) -> list[tuple[str, str]]:
+        return [(loot, self._roster_loot_label(loot)) for loot in _LOOT_ROLES]
 
     def _roster_role_label(self, role: str) -> str:
         return {
@@ -1559,8 +1605,10 @@ class PartyTab(QWidget):
                 if str(row.get("required", "1")) != "0"
                 else Qt.CheckState.Unchecked
             )
-            for item in (number, name, role_item, loot_item):
-                item.setFlags(flags)
+            number.setFlags(flags)
+            edit_flags = flags | Qt.ItemFlag.ItemIsEditable
+            for item in (name, role_item, loot_item):
+                item.setFlags(edit_flags)
             table.setCellWidget(index, 0, self._roster_select_box())
             table.setItem(index, 1, number)
             table.setItem(index, 2, name)
@@ -1728,7 +1776,18 @@ class PartyTab(QWidget):
         return text, "", ""
 
     def _on_roster_flag(self, item: QTableWidgetItem) -> None:
+        if getattr(self, "_roster_edit_guard", False):
+            return
         column = item.column()
+        if column == 2:
+            self._commit_roster_name(item)
+            return
+        if column == 3:
+            self._commit_roster_choice(item, "role", _ROSTER_ROLES, "mage")
+            return
+        if column == 4:
+            self._commit_roster_choice(item, "loot", _LOOT_ROLES, "none")
+            return
         if column not in (5, 6):
             return
         rows = self._roster_rows()
@@ -1739,6 +1798,98 @@ class PartyTab(QWidget):
         rows[index][key] = (
             "1" if item.checkState() == Qt.CheckState.Checked else "0"
         )
+        self._store_roster(rows)
+
+    def _restore_roster_text(self, item: QTableWidgetItem, text: str) -> None:
+        table = getattr(self, "roster_table", None)
+        self._roster_edit_guard = True
+        if isinstance(table, QTableWidget):
+            table.blockSignals(True)
+        item.setText(text)
+        if isinstance(table, QTableWidget):
+            table.blockSignals(False)
+        self._roster_edit_guard = False
+
+    def _commit_roster_name(self, item: QTableWidgetItem) -> None:
+        rows = self._roster_rows()
+        index = item.row()
+        if index < 0 or index >= len(rows):
+            return
+        old = str(rows[index].get("name") or "")
+        new = str(item.text() or "").strip()
+        if not new:
+            self._restore_roster_text(item, old)
+            return
+        if any(
+            other != index and str(row.get("name") or "").casefold() == new.casefold()
+            for other, row in enumerate(rows)
+        ):
+            self.on_log(
+                self.t.get(
+                    "party_roster_duplicate",
+                    "That name is already in the party list.",
+                )
+            )
+            self._restore_roster_text(item, old)
+            return
+        if new == old:
+            if item.text() != old:
+                self._restore_roster_text(item, old)
+            return
+        self._rename_roster_links(old, new)
+        rows[index]["name"] = new
+        if item.text() != new:
+            self._restore_roster_text(item, new)
+        self._store_roster(rows)
+
+    def _rename_roster_links(self, old: str, new: str) -> None:
+        """Point existing name keys at the renamed character. No new settings."""
+        saved = str(self.bag.get_str("party", "successor_name", "") or "").strip()
+        if saved and saved.casefold() == old.casefold():
+            self.bag.set("party", "successor_name", new)
+        raw = self.bag.get("party", "heal_targets", {})
+        if not isinstance(raw, dict):
+            return
+        match = next(
+            (
+                key
+                for key in raw
+                if str(key).strip().casefold() == old.casefold()
+            ),
+            None,
+        )
+        if match is None or str(match) == new:
+            return
+        updated = dict(raw)
+        payload = updated.pop(match)
+        if new not in updated:
+            updated[new] = payload
+        self.bag.set("party", "heal_targets", updated)
+
+    def _commit_roster_choice(
+        self,
+        item: QTableWidgetItem,
+        field: str,
+        allowed: tuple[str, ...],
+        default: str,
+    ) -> None:
+        rows = self._roster_rows()
+        index = item.row()
+        if index < 0 or index >= len(rows):
+            return
+        value = str(item.data(Qt.ItemDataRole.UserRole) or "").strip().lower()
+        if value not in allowed:
+            value = str(rows[index].get(field) or default)
+        label = (
+            self._roster_role_label(value)
+            if field == "role"
+            else self._roster_loot_label(value)
+        )
+        if item.text() != label:
+            self._restore_roster_text(item, label)
+        if str(rows[index].get(field) or "") == value:
+            return
+        rows[index][field] = value
         self._store_roster(rows)
 
     def _add_roster_row(self) -> None:

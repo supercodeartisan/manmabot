@@ -28,6 +28,9 @@ class ActionIntent:
     item_key: Optional[str] = None
     hotbar_box: Optional[int] = None
     hotbar_key: Optional[str] = None
+    # Party-list heal: client pixels of the member row. None keeps a key-only heal.
+    click_x: Optional[int] = None
+    click_y: Optional[int] = None
     scroll_times: int = 0
     gate_entrance: Optional[tuple[int, int]] = None
     gate_expect_map_id: Optional[int] = None

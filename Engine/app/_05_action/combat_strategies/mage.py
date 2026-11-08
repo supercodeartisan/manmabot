@@ -45,7 +45,8 @@ class MageCombatStrategy:
 
         from app._04_decision.spells import can_cast_spell
 
-        if not sb.slot_is_enabled("mage_attack"):
+        named = bool(getattr(action, "hotbar_box", None) and getattr(action, "hotbar_key", None))
+        if not named and not sb.slot_is_enabled("mage_attack"):
             return
         if not can_cast_spell(game_state, role="mage_attack"):
             return
@@ -70,26 +71,52 @@ class MageCombatStrategy:
             sticky=bool(mid_act),
         )
         if aim is None:
+            # A bad spell circle was cancelled. Do not count it as a miss.
+            if getattr(executor, "spell_aim_suppressed", False):
+                return
             executor.last_cursor_reject_target_id = action.target_id
             if not executor.last_cursor_reject_reason:
                 executor.last_cursor_reject_reason = "no attack cursor on target"
             return
 
-        # 2) Spell key, then click that same pixel only when cursor is ``spell``.
+        # 2) Spell key, unless the circle is already on this pixel, then click.
         hold = (
             hz.uniform(hz.MAGE_KEY_HOLD, executor._rng)
             if executor.humanize
             else hz.MAGE_KEY_HOLD[0]
         )
-        executor._press_assigned_skill("mage_attack", duration=hold)
+        already_armed = bool(getattr(executor, "mage_spell_ready", False))
+        if not already_armed:
+            if named:
+                executor._press_box_skill(
+                    int(action.hotbar_box),
+                    str(action.hotbar_key).strip().lower(),
+                    duration=hold,
+                )
+                pressed = time.time()
+                executor._last_magic_at = pressed
+                executor._last_mage_cast = pressed
+                from app._04_decision.solo_mage import note_solo_mage_attack_pressed
+
+                note_solo_mage_attack_pressed(getattr(executor, "_blackboard", None))
+            else:
+                executor._press_assigned_skill("mage_attack", duration=hold)
         if not mage_cast_at_point(
             executor,
             aim[0],
             aim[1],
             target_id=action.target_id,
         ):
+            label = str(
+                getattr(getattr(executor, "last_cursor_match", None), "label", "")
+                or ""
+            )
+            if label in ("spell", "spell_out_range", "spell_disable"):
+                from app._05_action.cursor_verify import cancel_spell_aim
+
+                cancel_spell_aim(executor, reason="cast miss")
+                return
             executor.last_cursor_reject_target_id = action.target_id
-            # Skill entered aim mode but no spell cursor — Esc cancels thrash.
             try:
                 executor.keyboard.press("esc")
             except Exception:

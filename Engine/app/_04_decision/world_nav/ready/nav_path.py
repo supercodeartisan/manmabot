@@ -200,7 +200,8 @@ def _stamp_matches(meta: dict[str, Any], nav: Path, pack: MapPack, shape: tuple[
     if int(meta.get("source_size") or -1) != int(stat.st_size):
         return False
     if int(meta.get("source_mtime_ns") or -1) != int(stat.st_mtime_ns):
-        # Same bytes renamed or copied: trust the hash, then refresh the stamp.
+        # Same bytes renamed or copied: the hash is enough. Leave the stamp
+        # alone so a launch does not rewrite meta.json.
         if str(meta.get("source_sha256") or "") != _sha256(nav):
             return False
     return True
@@ -275,8 +276,6 @@ def try_load_components(pack: MapPack) -> WalkComponents | None:
         return None
     if labels.shape != shape:
         return None
-    if int(meta.get("source_mtime_ns") or -1) != int(nav.stat().st_mtime_ns):
-        _write_component_cache(directory, labels, nav, pack, shape)
     return WalkComponents(
         labels=labels,
         origin_x=int(pack.origin_x),
@@ -313,8 +312,6 @@ def load_or_build_components(pack: MapPack, grid: WalkGrid):
             if isinstance(meta, dict) and _stamp_matches(meta, nav, pack, walk.shape):
                 labels = np.load(labels_path)
                 if labels.shape == walk.shape:
-                    if int(meta.get("source_mtime_ns") or -1) != int(nav.stat().st_mtime_ns):
-                        _write_component_cache(directory, labels, nav, pack, walk.shape)
                     return np.asarray(labels, dtype=np.int32)
         except (OSError, ValueError, json.JSONDecodeError):
             pass

@@ -767,3 +767,78 @@ def party() -> Optional[dict[str, Any]]:
         "in_party": bool(members),
         "subs_ok": True,
     }
+
+
+_SLOT_LINE = re.compile(
+    r"SLOT\s+(\d+)\s+guid=(0x[0-9A-Fa-f]+)\s+hp=([-\d.]+)\s+mp=([-\d.]+)\s+active=(\d+)"
+)
+_WIDGET_LINE = re.compile(
+    r"W \+0x([0-9A-Fa-f]+)\s+\S+\s+abs=\([^)]*\)\s+size=\([^)]*\)\s+px=\[(-?\d+),(-?\d+),(-?\d+),(-?\d+)\]"
+)
+# Click the member row, not the name text or the HP bar.
+_ROW_OFFS = ("0D0", "060")
+
+
+def parse_party_hud_text(text: str) -> Optional[dict[str, Any]]:
+    """Party HUD sample: one client-pixel box per active member row.
+
+    The box is the row button (``+0xD0``) when that widget is on screen,
+    otherwise the row layout (``+0x60``).
+    """
+    if not text or ("partyhud" not in text.lower() and "SLOT " not in text and "창 없음" not in text):
+        return None
+    slots: list[dict[str, Any]] = []
+    current: Optional[dict[str, Any]] = None
+    widgets: dict[str, dict[str, int]] = {}
+
+    def finish() -> None:
+        nonlocal current, widgets
+        if current is None:
+            return
+        row = None
+        for off in _ROW_OFFS:
+            box = widgets.get(off)
+            if box is not None:
+                row = {"off": f"0x{off}", **box}
+                break
+        current["row"] = row
+        slots.append(current)
+        current = None
+        widgets = {}
+
+    for line in text.splitlines():
+        slot_m = _SLOT_LINE.search(line)
+        if slot_m:
+            finish()
+            current = {
+                "index": int(slot_m.group(1)),
+                "guid": slot_m.group(2),
+                "hp": float(slot_m.group(3)),
+                "mp": float(slot_m.group(4)),
+                "active": slot_m.group(5) == "1",
+            }
+            widgets = {}
+            continue
+        if current is None:
+            continue
+        widget_m = _WIDGET_LINE.search(line)
+        if not widget_m or "미배치" in line:
+            continue
+        widgets[widget_m.group(1).upper()] = {
+            "x0": int(widget_m.group(2)),
+            "y0": int(widget_m.group(3)),
+            "x1": int(widget_m.group(4)),
+            "y1": int(widget_m.group(5)),
+        }
+    finish()
+    return {
+        "open": "창 없음" not in text and "WIN " in text,
+        "slots": slots,
+    }
+
+
+def party_hud() -> Optional[dict[str, Any]]:
+    text = session.text("partyhud")
+    if not text:
+        return None
+    return parse_party_hud_text(text)

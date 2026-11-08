@@ -889,7 +889,7 @@ class ActionExecutor:
         dialog_seen = 0
         seen_labels: list[str] = []
         door_note = ""
-        spell_cancel_done = False
+        spell_cancels = 0
         intent_reason = str(getattr(action, "reason", "") or "")
         index = 0
         while index < len(dests):
@@ -935,13 +935,14 @@ class ActionExecutor:
                     seen_labels.append(label)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
-            # Leftover mage/buff cast circle: Esc once, retry this tile.
-            if not spell_cancel_done and (
-                label.startswith("spell") or category is CursorCategory.SPELL
-            ):
+            # Leftover cast circle: Esc, then a right-click if it remains.
+            if label.startswith("spell") or category is CursorCategory.SPELL:
+                if spell_cancels >= 3:
+                    break
                 cancel_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
-                spell_cancel_done = True
+                spell_cancels += 1
                 probes += 1
+                index -= 1
                 if travel_click(self, x, y):
                     self.last_travel_click_relative = rel
                     match = getattr(self, "last_cursor_match", None)
@@ -1264,12 +1265,27 @@ class ActionExecutor:
                 self._last_mage_cast = now
 
     def _heal(self, bounds: WindowBounds, intent: ActionIntent | None = None) -> None:
-        """Press the heal key decision already chose. No second veto."""
-        del bounds
+        """Press the heal key decision already chose. No second veto.
+
+        A party-list heal also clicks that member's row. The point is client
+        pixels; the window origin turns it into a desktop click.
+        """
         forced: tuple[int, str] | None = None
         if intent is not None and intent.hotbar_box and intent.hotbar_key:
             forced = (int(intent.hotbar_box), str(intent.hotbar_key).strip().lower())
+        before = float(self._last_magic_at or 0.0)
         self._press_assigned_skill("heal", forced_slot=forced)
+        cx = getattr(intent, "click_x", None) if intent is not None else None
+        cy = getattr(intent, "click_y", None) if intent is not None else None
+        if cx is None or cy is None or not bounds.valid:
+            return
+        if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
+            return
+        self.mouse.click(
+            float(bounds.left) + int(cx),
+            float(bounds.top) + int(cy),
+            snap=True,
+        )
 
     def _buff(self, which: str, intent: ActionIntent | None = None) -> None:
         """Self buff: checked catalog buff, or haste / legacy role slot."""
