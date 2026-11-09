@@ -150,24 +150,24 @@ class LeaderStartRally:
             return
         del travel, pose
         self.state = "await_mark"
-        self._log("Party start rally waits at the party mark")
+        self._log("Party start rally walks to the party mark")
 
     def note_arrived(self, point: tuple[int, int, int]) -> None:
-        """The party schedule is inside its mark. Wait here."""
+        """The leader is on the mark. Hunt starts. Members are not waited on."""
         if self.state != "await_mark":
             return
-        self._arm(STAGE_START, (int(point[0]), int(point[1]), int(point[2])))
-        self._enter_waiting()
+        del point
+        self.state = "done"
+        self._log("Party start rally complete — at the mark, hunt")
 
     def on_plan(self, plan: Any) -> None:
         """Travel owns the route. A plan does not start this wait."""
         del plan
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
-        """World-nav hook before each step. True keeps the leader on the spot."""
-        if self.state == "hold_at" and self.hold_step is not None and step_i >= self.hold_step:
-            self._enter_waiting()
-        return self.state == "waiting"
+        """The leader does not stand for members. The walk to the mark continues."""
+        del step_i, pose
+        return False
 
     def update(self, connected: int, snapshot: Any) -> None:
         """Each tick: resend if needed, count arrivals, finish when all are in."""

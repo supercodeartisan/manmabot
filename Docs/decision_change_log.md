@@ -1,5 +1,37 @@
 # Decision change log
 
+## 2026-11-08 — party assist ignores the solo species blacklist
+
+Intent: A party member attacks the monster the leader is attacking even when that species is on the solo blacklist. Self-defense still uses the list. Solo hunting is unchanged.
+Shared: `engage_like_solo` gains `ignore_species`. The party member calls it for assist only. `is_avoided_for_state`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member assist.
+Consent: user (remove the solo blacklist from party members; always attack the leader's monster).
+Result: not run in game.
+
+## 2026-11-08 — leader no longer waits for party members
+
+Intent: Remove every leader stand that exists only because a member has not arrived. The leader still walks to the rally mark, then hunts. Invites keep going.
+Shared: `set_party_hold` is cleared every leader tick. Rally arrival no longer enters `waiting`. `LeaderStartRally.should_hold` stays false. The leader-ops spin "가까운 파티원 대기" is gone. Line-lag and nearest-member holds are gone. Member follow, assist, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader hunt after Start, and the leader 사냥 운영 page.
+Consent: user (delete the wait-for-members logic from the UI through the decision).
+Result: the first start after the removal crashed (`organize_hold` was still read). That leftover read is gone. Not run in game after the fix.
+
+## 2026-11-08 — leader walks to the rally point as soon as the party starts
+
+Intent: Party start arms the rally immediately and the leader walks to the mark. The invite window no longer stands the leader before that walk finishes. The stand at the mark, after arrival, is unchanged.
+Shared: `_leader_may_begin_start_rally` and the forming half of `set_party_hold`. Rally wait after arrival, member follow, assist, the post-rally distance hold, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement from Start until the leader reaches the mark.
+Consent: user (on party start, go to the rally point first; checked against the live log).
+Result: not run in game.
+
+## 2026-11-08 — leader distance hold starts after the rally
+
+Intent: The nearest-member stand uses the leader form distance only after the start rally state is `done`. Before that, including the walk to the mark and the rally wait, that stand stays off.
+Shared: `_leader_near_hold` only. Rally wait, member follow, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement before the start rally finishes.
+Consent: user (distance keeping starts only once they have rallied; it must not run before that).
+Result: unit checks only. Not run in game.
+
 ## 2026-11-08 — leader walks to the rally point before waiting
 
 Intent: During the start rally the leader keeps walking to the hunt mark's center. Entering the rectangle does not start the wait or cancel that walk. The wait starts when the leader is within one tile of that point. Members are still not sent the tile; they follow the leader.

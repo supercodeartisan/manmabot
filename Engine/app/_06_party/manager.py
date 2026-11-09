@@ -936,6 +936,7 @@ class PartyMemberManager:
                         self._nav_blackboard,
                         combat_obj,
                         reason=reason,
+                        ignore_species=result.kind is MemberKind.ASSIST,
                     )
                     goal = None
                     detail = str(getattr(intent, "reason", "") or reason)

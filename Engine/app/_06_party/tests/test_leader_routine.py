@@ -221,7 +221,7 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         edge = LeaderStartRally(Rally(), log=lambda _message: None)
         edge.begin({"poorboy"}, travel=False, pose=None)
         _run(33199, 33435, edge)
-        assert edge.state == "waiting"
+        assert edge.state == "done"
         assert walked == []
         assert farmed == [1]
     finally:
