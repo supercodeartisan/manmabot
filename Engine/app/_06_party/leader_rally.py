@@ -1,10 +1,11 @@
 """Leader start rally: wait at the party schedule mark, then hunt.
 
-The party schedule walks to its own mark. This wait does not stop that walk
-at the current tile or at the first teleporter. When the leader is inside
-the mark, ``note_arrived`` starts the wait. Members are not sent the tile.
-Once party memory says they are in the party, they follow the leader's live
-tile. After the wait, the schedule stays on that mark and hunts.
+The party schedule walks to its own mark point. This wait does not stop that
+walk at the current tile or at the first teleporter. ``note_arrived`` starts
+the wait when the leader is on that point, not merely inside a hunt rectangle.
+Members are not sent the tile. Once party memory says they are in the party,
+they follow the leader's live tile. After the wait, the schedule stays on
+that mark and hunts.
 
 Waits for every roster member, then continues. With ``deadline`` (the leader
 start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — leader walks to the rally point before waiting
+
+Intent: During the start rally the leader keeps walking to the hunt mark's center. Entering the rectangle does not start the wait or cancel that walk. The wait starts when the leader is within one tile of that point. Members are still not sent the tile; they follow the leader.
+Shared: `PartyLeaderManager.prepare` only. `set_party_hold` still stands once the rally state is `waiting`. Member follow, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement from the moment the start rally is armed until the leader reaches the mark point.
+Consent: user (fix the rally so the leader goes to the rally point, then members follow).
+Result: unit checks only. Not run in game.
+
 ## 2026-11-08 — leader waits for the nearest member
 
 Intent: The party leader stands when the nearest same-map member is farther than the leader-page distance. That distance is the form value (`party.near_tiles` → `party_near_tiles`). 5 is only the value when the form is empty. Every known member on another map also waits. A failed party-memory read keeps the previous answer. No readable member does not start a wait.
