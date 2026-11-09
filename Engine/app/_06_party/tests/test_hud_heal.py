@@ -85,6 +85,25 @@ def test_dead_other_map_and_past_9_are_skipped():
     assert next_heal_target([dead], slots, here=here) is None
 
 
+def test_raw_party_pos_reaches_nav_here():
+    from app._03_world.merge.memory_sync import get_map_origin
+
+    ox, oy = get_map_origin()
+    here = (700, 1200, 4)
+    slots = parse_party_hud_text(_SAMPLE)["slots"]
+    near = {
+        "name": "매력여기사",
+        "guid": "0x08C6D8A3",
+        "hp_pct": 56,
+        "map_id": 4,
+        "x": ox + 700,
+        "y": oy + 1200 + 4,
+    }
+    far = dict(near, y=oy + 1200 + 20)
+    assert next_heal_target([near], slots, here=here, self_name="poorboy")["name"] == "매력여기사"
+    assert next_heal_target([far], slots, here=here, self_name="poorboy") is None
+
+
 def test_closed_bar_has_no_rows():
     snap = parse_party_hud_text("# partyhud t=1ms  창 없음 ioctl=3\n")
     assert snap is not None
@@ -98,5 +117,6 @@ if __name__ == "__main__":
     test_lowest_under_80_and_skip_self()
     test_click_is_the_row_center()
     test_dead_other_map_and_past_9_are_skipped()
+    test_raw_party_pos_reaches_nav_here()
     test_closed_bar_has_no_rows()
     print("ok")

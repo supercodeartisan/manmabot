@@ -5,6 +5,7 @@ raw snapshots into ``PlayerState``, ``WorldObject`` rows, bag counts, hotbar.
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -141,6 +142,8 @@ def apply_perception_buffer(
     world.party_read_ok = party_ok
     if party_ok:
         world.last_party = buffer.party
+        world.party_pose_seq = int(getattr(world, "party_pose_seq", 0) or 0) + 1
+        world.party_pose_at = time.monotonic()
 
     if buffer.party_hud_ok and isinstance(buffer.party_hud, dict):
         world.last_party_hud = buffer.party_hud

@@ -149,7 +149,7 @@ def action_party_snapshot(world: Any) -> Any:
     """Party snapshot for invite, leave, and join.
 
     A failed read this frame (``party_read_ok`` false) is None: unknown.
-    ``last_party`` is not cleared, so follow can keep the last good pose.
+    ``last_party`` is kept for diagnostics and is not a live pose.
     """
     if world is None:
         return None

@@ -1189,6 +1189,7 @@ class ActionExecutor:
         duration: float | None = None,
         *,
         forced_slot: tuple[int, str] | None = None,
+        once: bool = False,
     ) -> None:
         # Heal was already accepted by decision. Action only presses the key,
         # except the shared absolute MP floor on heal and teleport.
@@ -1238,15 +1239,16 @@ class ActionExecutor:
             return
         from app.bot_log import get_logger
 
+        second = sb.slot_is_double(name) and not once
         get_logger("action").info(
             "skill press name=%s box=%s key=%s double=%s",
             name,
             int(box),
             key,
-            int(sb.slot_is_double(name)),
+            0 if once else int(sb.slot_is_double(name)),
         )
         self._press_box_skill(box, key, duration=duration)
-        if sb.slot_is_double(name):
+        if second:
             if self.humanize:
                 hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
             else:
@@ -1267,25 +1269,35 @@ class ActionExecutor:
     def _heal(self, bounds: WindowBounds, intent: ActionIntent | None = None) -> None:
         """Press the heal key decision already chose. No second veto.
 
-        A party-list heal also clicks that member's row. The point is client
-        pixels; the window origin turns it into a desktop click.
+        A party-list heal presses the key once, then clicks that member's row.
+        A second press before the click clears the target cursor. A self heal
+        keeps the double press. The point is client pixels; the window origin
+        turns it into a desktop click.
         """
         forced: tuple[int, str] | None = None
         if intent is not None and intent.hotbar_box and intent.hotbar_key:
             forced = (int(intent.hotbar_box), str(intent.hotbar_key).strip().lower())
-        before = float(self._last_magic_at or 0.0)
-        self._press_assigned_skill("heal", forced_slot=forced)
         cx = getattr(intent, "click_x", None) if intent is not None else None
         cy = getattr(intent, "click_y", None) if intent is not None else None
-        if cx is None or cy is None or not bounds.valid:
+        list_target = cx is not None and cy is not None and bounds.valid
+        before = float(self._last_magic_at or 0.0)
+        self._press_assigned_skill("heal", forced_slot=forced, once=list_target)
+        if not list_target:
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
             return
-        self.mouse.click(
-            float(bounds.left) + int(cx),
-            float(bounds.top) + int(cy),
-            snap=True,
+        screen_x = float(bounds.left) + int(cx)
+        screen_y = float(bounds.top) + int(cy)
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "party list heal click client=(%s,%s) screen=(%s,%s)",
+            int(cx),
+            int(cy),
+            int(screen_x),
+            int(screen_y),
         )
+        self.mouse.click(screen_x, screen_y, snap=True)
 
     def _buff(self, which: str, intent: ActionIntent | None = None) -> None:
         """Self buff: checked catalog buff, or haste / legacy role slot."""
