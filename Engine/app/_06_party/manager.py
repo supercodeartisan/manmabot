@@ -472,6 +472,26 @@ class PartyMemberManager:
                 origin=origin,
                 blackboard=self._nav_blackboard,
             )
+            if assist_obj is None:
+                from .assist import resolve_member_help_target
+                from .loot import _self_row_name
+
+                seat = ""
+                if origin_ok and origin is not None:
+                    seat = _self_row_name(
+                        getattr(game_state, "last_party", None),
+                        (int(origin.x), int(origin.y)),
+                        self.runtime.local_map_id,
+                    )
+                helped = resolve_member_help_target(
+                    game_state,
+                    getattr(game_state, "last_party", None),
+                    self_name=seat,
+                    origin=origin,
+                )
+                if helped is not None:
+                    assist_obj = helped
+                    assist_src = "member_help"
         self.runtime.assist_track_id = (
             int(getattr(assist_obj, "track_id", 0) or 0) if assist_obj else None
         )
@@ -994,7 +1014,11 @@ class PartyMemberManager:
                         self._nav_blackboard,
                         combat_obj,
                         reason=reason,
-                        ignore_species=result.kind is MemberKind.ASSIST,
+                        ignore_species=(
+                            result.kind is MemberKind.ASSIST
+                            and self.runtime.assist_src
+                            in ("leader_attack", "leader_strike", "external")
+                        ),
                     )
                     goal = None
                     detail = str(getattr(intent, "reason", "") or reason)

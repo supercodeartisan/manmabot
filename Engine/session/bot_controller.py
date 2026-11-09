@@ -3655,6 +3655,12 @@ class BotController:
                     except Exception as schedule_exc:
                         self.log(f"Party schedule prepare failed: {schedule_exc}")
                 set_party_hold(decision.blackboard, False)
+                help_scratch = getattr(decision.blackboard, "scratch", None)
+                if isinstance(help_scratch, dict):
+                    if self._party_leader_on():
+                        help_scratch["party_help_open"] = True
+                    else:
+                        help_scratch.pop("party_help_open", None)
                 turret_anchor = getattr(
                     getattr(self, "_party_leader_ref", None), "turret_anchor", None
                 )

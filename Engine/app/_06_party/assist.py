@@ -469,6 +469,106 @@ def resolve_leader_attack_target(
     return _nearest_monster(origin, found)
 
 
+def resolve_member_help_target(
+    game_state: Any,
+    snapshot: Any,
+    *,
+    self_name: str = "",
+    origin: Any = None,
+) -> Any:
+    """Monster a party member is attacking, from the party row ``atk`` field.
+
+    Skips this character and the leader. The leader's own target stays on
+    the assist path. Empty when nobody else has a live attack target.
+    """
+    if game_state is None or not isinstance(snapshot, dict):
+        return None
+    me = str(self_name or "").strip().casefold()
+    found: list[Any] = []
+    seen: set[int] = set()
+    for raw in snapshot.get("members") or []:
+        if not isinstance(raw, dict) or raw.get("is_leader"):
+            continue
+        name = str(raw.get("name") or "").strip()
+        if me and name.casefold() == me:
+            continue
+        key = guid_key(raw.get("atk_guid"))
+        if key is None or key == 0:
+            continue
+        obj = _monster_for_row(
+            game_state,
+            {"guid": raw.get("atk_guid"), "name": raw.get("atk_name")},
+        )
+        if obj is None or not _assist_target_live(game_state, obj):
+            continue
+        tid = int(getattr(obj, "track_id", 0) or 0)
+        if tid in seen:
+            continue
+        seen.add(tid)
+        found.append(obj)
+    return _nearest_monster(origin, found)
+
+
+def _member_is_mage(raw: dict[str, Any]) -> bool:
+    kind = str(raw.get("type") or "").strip()
+    if kind in ("마법사", "mage", "wizard", "Mage", "Wizard"):
+        return True
+    try:
+        return int(raw.get("cls")) == 3
+    except (TypeError, ValueError):
+        return False
+
+
+def resolve_mage_member_threat(
+    game_state: Any,
+    snapshot: Any,
+    *,
+    self_name: str = "",
+    origin: Any = None,
+) -> Any:
+    """Nearest monster whose attack target is a mage party member.
+
+    The leader row is skipped. Empty when no mage member is being hit.
+    """
+    if game_state is None or not isinstance(snapshot, dict):
+        return None
+    me = str(self_name or "").strip().casefold()
+    wanted: set[int] = set()
+    for raw in snapshot.get("members") or []:
+        if not isinstance(raw, dict) or raw.get("is_leader"):
+            continue
+        if not _member_is_mage(raw):
+            continue
+        name = str(raw.get("name") or "").strip()
+        if me and name.casefold() == me:
+            continue
+        key = guid_key(raw.get("guid"))
+        if key is None or key == 0:
+            continue
+        wanted.add(key)
+    if not wanted:
+        return None
+    found: list[Any] = []
+    seen: set[int] = set()
+    for row in _print_entities(game_state):
+        cls = str(row.get("class") or "")
+        if cls not in _STRIKE_CLASSES:
+            continue
+        if row.get("atk") not in (1, True):
+            continue
+        if guid_key(row.get("tgt")) not in wanted:
+            continue
+        obj = _monster_for_row(game_state, row)
+        if obj is None or not _assist_target_live(game_state, obj):
+            continue
+        tid = int(getattr(obj, "track_id", 0) or 0)
+        if tid in seen:
+            continue
+        seen.add(tid)
+        found.append(obj)
+    return _nearest_monster(origin, found)
+
+
 def resolve_leader_strike_target(
     game_state: Any,
     leader: Any,

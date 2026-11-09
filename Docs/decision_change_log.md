@@ -1,5 +1,28 @@
 # Decision change log
 
+## 2026-11-09 — leader hunts in the 5×5 around a map dot
+
+Intent: On a party-map point, the leader hunts anywhere in the 5×5 centered on that dot and is not pulled back to the center. Stepping outside that box keeps the current monster until it is finished, then the leader walks back to the dot. A new monster outside the box is not started.
+Shared: party leader schedule place check, the turret anchor, and `party.turret_leash` / `party.turret_idle`. The anchor is the dot's nav tile, the same space as `world_origin`. A point's farm rect is that 5×5. Area marks, member follow, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader turret while the current row has a map dot. Leaving the box pauses the row timer. An in-flight walk back keeps going until it finishes.
+Consent: user (move smoothly in the 5×5; outside the box, finish the current target, then return).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-08 — leader drops the fight when a mage member is hit
+
+Intent: While this bot is the party leader, a monster whose attack target is a mage party member is taken before the current sticky fight, attacks-me, loot, and helping whatever another member is attacking. Solo hunting does not set `party_help_open`.
+Shared: `farm_loot_or_combat` only, and only when `party_help_open` is set. `begin_engage` switches the lock and does not give the previous target up. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader hunt. Member assist order is unchanged.
+Consent: user (from the leader, once a mage member is attacked, that help is priority one and must happen).
+Result: not run in game.
+
+## 2026-11-08 — help the monster a party member is attacking
+
+Intent: Read each member's current attack target from the party line `atk`. A member attacks that monster only when the leader has no assist target. The leader attacks it only after the current fight and anything attacking the leader are finished, and after loot.
+Shared: `farm_loot_or_combat` checks `party_help_open`, set only while this bot is the party leader. Solo hunting does not set the flag. `engage_like_solo` still ignores the species list only for the leader's own target. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member assist fallback and party-leader hunt after a kill.
+Consent: user (recognize the attacking monster and implement; help is below leader assist; the leader helps after its own fight).
+Result: not run in game. `PARTY_JOIN_ACTOR=1` is read by the existing `party.dll`; the DLL was not rebuilt.
 ## 2026-11-09 — party recovery uses the party window, including before a policy
 
 Intent: While a character is in a party, heal, HP potion, retreat, mother tree, talking scroll, and safe zone follow the party support page. Before a leader policy arrives, the party defaults are used (heal 70, potion 50, mage list-heal 80, retreat 30, mother tree on with HP≥85/MP≤80 and heal HP≤40/MP≥80, talking scroll on, safe zone on). The mage's own heal and potion, and the leader's own character, use those same lines. After a member finishes recovery they follow the leader and do not walk back to the hunt. Solo recovery is unchanged when the party overlay is absent.

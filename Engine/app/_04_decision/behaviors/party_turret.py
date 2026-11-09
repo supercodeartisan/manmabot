@@ -1,14 +1,17 @@
-"""Party leader turret: hunt from one anchor tile, moving at most ~2 tiles.
+"""Party leader turret: hunt inside the 5×5 around one map dot.
 
-The session arms this while the party leader stands on a party-map point.
-The anchor is that point. A saved turret/moving choice is not read. An area
-mark does not arm this.
+The session arms this while the leader's nav tile is within two tiles of a
+party-map point. The anchor is that point, in the same nav tiles as
+``world_origin``. A saved turret/moving choice is not read. An area mark
+does not arm this.
 
-- ``party.turret_leash`` (before ``farm.engage``): marks monsters and loot
-  outside the anchor zone as excluded, drops a sticky target that left the
-  zone, and walks back when the leader drifted past the leash.
-- ``party.turret_idle`` (after ``farm.engage``): nothing to fight or loot →
-  walk back to the anchor or idle on it instead of farm search / patrol.
+- Inside the box the leader hunts and does not walk back to the center.
+- Outside the box a fight already in progress is finished. Other monsters
+  and loot are excluded. When that target is gone, the leader walks back
+  to the dot.
+- ``party.turret_leash`` (before ``farm.engage``) applies that filter.
+- ``party.turret_idle`` (after ``farm.engage``): nothing to fight → idle
+  inside the box, or walk back to the dot from outside it.
 
 Solo bots never set the flag, so every step is a no-op for them.
 """
@@ -26,10 +29,8 @@ if TYPE_CHECKING:  # pragma: no cover
 SCRATCH_TURRET = "party_turret"
 SCRATCH_TURRET_EXCLUDE = "party_turret_exclude"
 
-# Leader may stand this far from the anchor while fighting / looting.
+# 5×5 box: the dot, plus two tiles each way. Same radius as POINT_BOX_TILES.
 LEASH_TILES = 2
-# Idle with nothing to do: return when farther than this.
-IDLE_RETURN_TILES = 1
 # Anchor farther than this (after a long trip) is dropped and re-picked.
 ANCHOR_FORGET_TILES = 40
 
@@ -215,19 +216,29 @@ def _walk_to(blackboard: "Blackboard", goal: Tile, reason: str) -> Optional[Stat
     return Status.SUCCESS
 
 
-def _target_in_reach(state: "GameState", blackboard: "Blackboard") -> bool:
-    tid = blackboard.current_target_id
+def _hunt_target_alive(state: "GameState", blackboard: "Blackboard") -> bool:
+    """True while the leader's current monster is still the fight to finish."""
+    tid = getattr(blackboard, "current_target_id", None)
     if tid is None:
         return False
-    obj = state.get_object(tid)
-    if obj is None:
-        return False
-    from app._04_decision.combat_query import tile_distance_from_player
-
     try:
-        return int(tile_distance_from_player(obj)) <= _reach(state)
+        from app._04_decision.behaviors.combat import sticky_target_alive
+
+        return bool(sticky_target_alive(state, int(tid)))
     except (TypeError, ValueError):
         return False
+
+
+def _outside_ids(state: "GameState", keep: Optional[int]) -> set[int]:
+    """Every monster except the fight in progress, plus every ground item."""
+    out: set[int] = set()
+    for kind in (ObjectType.MONSTER, ObjectType.ITEM):
+        for obj in state.objects(kind):
+            tid = int(obj.track_id)
+            if keep is not None and tid == int(keep) and kind is ObjectType.MONSTER:
+                continue
+            out.add(tid)
+    return out
 
 
 def step_party_turret_leash(
@@ -243,6 +254,13 @@ def step_party_turret_leash(
         return None
     st = blackboard.scratch[SCRATCH_TURRET]
     leash = int(st.get("leash", LEASH_TILES))
+    me = _me(blackboard)
+    outside = _cheb(me, anchor) > leash
+    if outside and _hunt_target_alive(state, blackboard):
+        keep = int(blackboard.current_target_id)
+        blackboard.scratch[SCRATCH_TURRET_EXCLUDE] = _outside_ids(state, keep)
+        return None
+
     excluded = _zone_exclusions(state, blackboard, anchor, leash)
     blackboard.scratch[SCRATCH_TURRET_EXCLUDE] = excluded
 
@@ -261,10 +279,7 @@ def step_party_turret_leash(
         clear_loot_hop(blackboard)
         blackboard.current_item_id = None
 
-    me = _me(blackboard)
-    if _cheb(me, anchor) <= leash + 1:
-        return None
-    if _target_in_reach(state, blackboard):
+    if not outside:
         return None
     return _walk_to(
         blackboard,
@@ -283,7 +298,8 @@ def step_party_turret_idle(
     anchor = turret_anchor(blackboard)
     if anchor is None:
         return None
-    if _cheb(_me(blackboard), anchor) > IDLE_RETURN_TILES:
+    leash = int(blackboard.scratch[SCRATCH_TURRET].get("leash", LEASH_TILES))
+    if _cheb(_me(blackboard), anchor) > leash:
         return _walk_to(
             blackboard,
             anchor,
@@ -300,7 +316,6 @@ def step_party_turret_idle(
 
 __all__ = [
     "ANCHOR_FORGET_TILES",
-    "IDLE_RETURN_TILES",
     "LEASH_TILES",
     "SCRATCH_TURRET",
     "SCRATCH_TURRET_EXCLUDE",

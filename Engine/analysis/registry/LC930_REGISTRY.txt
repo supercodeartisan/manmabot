@@ -1121,8 +1121,8 @@ PARTY_RESCAN_MS=5000
 ENT_LEVEL_OFF=0x120
 # 실시간 파티 출력주기(ms) — realtime_party 전용
 REALTIME_PARTY_PERIOD_MS=1000
-# realtime_party: 액터 조인(레벨/사망/대상) 여부. 1=조인(드라이버 콜 증가), 0=미조인(저호출<10)
-PARTY_JOIN_ACTOR=0
+# realtime_party: 액터 조인(레벨/사망/공격대상) 여부. 1=조인(드라이버 콜 증가), 0=미조인
+PARTY_JOIN_ACTOR=1
 # 파티 출력에 맵ID/지역명/부분지역명 포함 여부. 1=포함(기본), 0=생략
 PARTY_SHOW_MAP=1
 

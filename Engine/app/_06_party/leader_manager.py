@@ -83,6 +83,14 @@ class PartyLeaderManager:
             self._clear_travel(scratch)
             self._farm(blackboard)
             return
+        # Left the dot's 5×5 with a fight still going: finish it, then walk back.
+        if self._finish_point_target(world, row, pose):
+            self._pin_point_anchor(row, pose)
+            self._mount(blackboard, row)
+            schedule.note_inside(now, False)
+            self._clear_travel(scratch)
+            self._farm(blackboard)
+            return
         schedule.note_inside(now, False)
         self._arm_travel(blackboard, world, pose)
 
@@ -118,29 +126,32 @@ class PartyLeaderManager:
         self.turret_anchor = anchor if self.hunt_mode == "turret" else None
 
     def _apply_place(self, row: dict[str, Any], pose: Any) -> None:
-        """Turret on a point tile. An area is moving hunt. Travel stays moving."""
+        """Turret inside a dot's 5×5. An area is moving hunt. Travel stays moving."""
         nav = self._nav_xy(str(row.get("map_id") or ""), pose)
         if nav is None:
             self._set_place("moving")
             return
         place = self.schedule.place_nav(nav[0], nav[1])
         if place == "point":
-            self._set_place("turret", anchor=self._point_anchor(row, nav, pose))
+            center = self.schedule.point_nav(nav[0], nav[1])
+            self._set_place("turret", anchor=center)
             return
         self._set_place("moving", on_area=place == "area")
 
-    def _point_anchor(
-        self,
-        row: dict[str, Any],
-        nav: tuple[int, int],
-        pose: Any,
-    ) -> tuple[int, int]:
-        from app._04_decision.world_nav import pack_ids
+    def _pin_point_anchor(self, row: dict[str, Any], pose: Any) -> None:
+        """Keep the dot as the turret center while a fight outside the box ends."""
+        nav = self._nav_xy(str(row.get("map_id") or ""), pose)
+        center = None if nav is None else self.schedule.nearest_point_nav(nav[0], nav[1])
+        self._set_place("turret", anchor=center)
 
-        abs_xy = pack_ids.nav_to_abs(str(row.get("map_id") or ""), int(nav[0]), int(nav[1]))
-        if abs_xy is not None:
-            return int(abs_xy[0]), int(abs_xy[1])
-        return int(pose.x), int(pose.y)
+    def _finish_point_target(self, world: Any, row: dict[str, Any], pose: Any) -> bool:
+        """True when this row has a dot and the current monster is still alive."""
+        if not self.schedule.has_point() or not self._on_row_map(row, pose):
+            return False
+        nav = self._nav_xy(str(row.get("map_id") or ""), pose)
+        if nav is None or self.schedule.point_nav(nav[0], nav[1]) is not None:
+            return False
+        return self._hunt_target_alive(world)
 
     def _inside(self, row: dict[str, Any], pose: Any) -> bool:
         if not self._on_row_map(row, pose):
@@ -192,17 +203,21 @@ class PartyLeaderManager:
         )
         if self._mounted == key:
             return
-        rects = [
-            {
-                "name": str(mark["name"]),
-                "region": "",
-                "x0": int(mark["x0"]),
-                "y0": int(mark["y0"]),
-                "x1": int(mark["x1"]),
-                "y1": int(mark["y1"]),
-            }
-            for mark in marks
-        ]
+        from app._06_party.leader_schedule import point_farm_bounds
+
+        rects = []
+        for mark in marks:
+            x0, y0, x1, y1 = point_farm_bounds(mark)
+            rects.append(
+                {
+                    "name": str(mark["name"]),
+                    "region": "",
+                    "x0": x0,
+                    "y0": y0,
+                    "x1": x1,
+                    "y1": y1,
+                }
+            )
         scratch = blackboard.scratch
         cfg = scratch.get("runtime_config")
         if not isinstance(cfg, dict):
@@ -307,6 +322,18 @@ class PartyLeaderManager:
         if phase in ("done", "fail", "idle"):
             scratch.pop("world_nav_session", None)
         scratch.pop("need_world_nav", None)
+
+    def _hunt_target_alive(self, world: Any) -> bool:
+        blackboard = self.decision.blackboard
+        tid = getattr(blackboard, "current_target_id", None)
+        if tid is None or world is None:
+            return False
+        try:
+            from app._04_decision.behaviors.combat import sticky_target_alive
+
+            return bool(sticky_target_alive(world, int(tid)))
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def _farm(blackboard: Any) -> None:
