@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — follow clicks on each new party-memory sample
+
+Intent: A member follow click uses the formation tile from the latest party-memory read. The click rate is that read rate. There is no 0.5s reclick clock. A repeated sample while the body is still walking the same slot does not click again.
+Shared: `plan_slot_hop` and `plan_field_follow` only. Leader loot, retreat, HP, and login clicks are unchanged.
+Affects: party-member local follow. A new `party_pose_seq` clicks the current slot. The same sequence keeps the step already in progress.
+Consent: user ("just keep the memory reading speed not 0.5s").
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-09 — a one-tile leader step moves the member at once
 
 Intent: When the leader's party-memory tile changes by one tile, the member's side slot moves with it on that read, and a member one tile off that slot walks. The slot is no longer kept for a one-tile drift, and standing one tile off the slot is no longer a hold.
