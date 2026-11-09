@@ -7,6 +7,13 @@ Shared: `PartyLeaderManager.prepare` only. `set_party_hold` still stands once th
 Affects: party-leader movement from the moment the start rally is armed until the leader reaches the mark point.
 Consent: user (fix the rally so the leader goes to the rally point, then members follow).
 Result: unit checks only. Not run in game.
+## 2026-11-08 — party list heal uses nav tiles
+
+Intent: A mage heals another member, including the party boss, from the party list when that member's `hp_pct` is under 80. The distance check was comparing PartySubsystem world coordinates to the nav tile the follower already uses, so a neighbor looked farther than 9 tiles and the cast never started.
+Shared: `in_heal_reach` / `heal_targets` only. Self `apply_hp_actions`, follow, assist, and loot are unchanged. The party log records a `list heal:` line when that note changes (cast, closed list, mp, range, missing row).
+Affects: mage party-list heal. Solo heal is unchanged.
+Consent: user (resolve the missed heal and log the party decision).
+Result: unit check for a raw party position against a nav tile. Not run in game.
 
 ## 2026-11-08 — leader waits for the nearest member
 
