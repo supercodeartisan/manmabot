@@ -18,7 +18,9 @@ from .tactics._grid import Tile, cheb, walkable
 
 # Same-map teleport. A jump this far drops the sticky slot.
 _JUMP_TILES = 6
-_ARRIVE = 1
+# Keep the previous side tile only while it is still the ideal. A one-tile
+# leader step moves the slot immediately.
+_ARRIVE = 0
 
 
 @dataclass(frozen=True)

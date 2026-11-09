@@ -10,8 +10,8 @@ TRAVEL_LEAD_TILES = 2
 CLOSE_RESTART_GAP = 1
 # A follow click stays inside this many tiles so the hop cannot walk past the leader.
 FOLLOW_CLICK_TILES = 2
-# Reynolds Arrive: close enough to the formation slot to stop (no exact tile).
-ARRIVAL_TOLERANCE = 1
+# On the formation slot. One tile off follows at once, including a one-tile leader step.
+ARRIVAL_TOLERANCE = 0
 # Keep the absolute click goal while the ideal slot drifts within this Chebyshev.
 STICKY_GOAL_SLACK = 2
 

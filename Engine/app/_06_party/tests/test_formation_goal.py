@@ -130,9 +130,29 @@ def test_slot_distance_replaces_the_leader_band():
     hold = decide_policy(_policy(leader_dist=1, slot_dist=0))
     assert hold.kind is MemberKind.HOLD
     assert hold.reason.startswith("hold_slot")
-    follow = decide_policy(_policy(leader_dist=1, slot_dist=3))
+    follow = decide_policy(_policy(leader_dist=1, slot_dist=1))
     assert follow.kind is MemberKind.FOLLOW
     assert follow.reason.startswith("follow_slot")
+
+
+def test_one_leader_step_moves_the_side_slot():
+    leader = (10, 10)
+    first = choose_formation_goal(
+        leader, forward=(1, 0), seat=0, followers=2, stopped=False, trail_tile=None
+    )
+    nxt = choose_formation_goal(
+        (11, 10),
+        forward=(1, 0),
+        seat=0,
+        followers=2,
+        stopped=False,
+        trail_tile=None,
+        previous=first.tile,
+        previous_leader=leader,
+    )
+    assert first.tile == (10, 11)
+    assert nxt.kind == "side"
+    assert nxt.tile == (11, 11)
 
 
 def test_standing_fight_stays_stopped():
@@ -150,5 +170,6 @@ if __name__ == "__main__":
     test_trail_is_used_only_when_the_side_is_blocked()
     test_stopped_grid_excludes_the_leader()
     test_slot_distance_replaces_the_leader_band()
+    test_one_leader_step_moves_the_side_slot()
     test_standing_fight_stays_stopped()
     print("ok")
