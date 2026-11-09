@@ -1,9 +1,9 @@
-"""Party recovery uses party defaults before a policy, then the leader's lines."""
+"""Mage list-heal stays on the leader policy. Self recovery stays on solo lines."""
 
 from app._04_decision.behaviors.mode_actions import _hp_action_enabled
 from app._04_decision.hp_actions import action_threshold, default_hp_actions
 from app._06_party.config import PartyMemberConfig
-from app._06_party.recovery import PartyRecovery, bind
+from app._06_party.recovery import PartyRecovery
 
 
 def test_care_lines_use_party_defaults_before_a_policy() -> None:
@@ -60,9 +60,9 @@ def test_solo_thresholds_stay_when_party_recovery_is_absent() -> None:
     assert _hp_action_enabled(disabled, "heal") is False
 
 
-def test_party_overlay_replaces_solo_lines() -> None:
+def test_a_stored_party_recovery_does_not_replace_solo_lines() -> None:
     disabled = [{"id": "heal", "enabled": False, "hp_below": 0.10}]
-    recovery = PartyRecovery(
+    PartyRecovery(
         heal_pct=40,
         potion_pct=25,
         retreat_pct=20,
@@ -70,13 +70,5 @@ def test_party_overlay_replaces_solo_lines() -> None:
         talking_scroll=False,
         mother_tree=False,
     )
-    with bind(recovery):
-        assert action_threshold(disabled, "heal") == 0.40
-        assert action_threshold(disabled, "hp_potion") == 0.25
-        assert action_threshold(disabled, "retreat") == 0.20
-        assert action_threshold(disabled, "safe_zone") == 0.20
-        assert _hp_action_enabled(disabled, "heal") is True
-        assert _hp_action_enabled(disabled, "safe_zone") is False
-        assert _hp_action_enabled(disabled, "mother_tree") is False
     assert action_threshold(disabled, "heal") is None
     assert _hp_action_enabled(disabled, "heal") is False

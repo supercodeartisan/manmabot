@@ -254,7 +254,6 @@ class PartyTab(QWidget):
             "manage": self._build_leader_manage(),
             "ops": self._build_leader_ops(),
             "map": self._build_leader_map(),
-            "support": self._build_leader_support(),
             "supply": self._build_leader_supply(),
             "loot": self._build_leader_loot(),
             "common": self._build_leader_common(),
@@ -710,6 +709,7 @@ class PartyTab(QWidget):
         self._leader_ops_host = host
         self._build_leader_absence(host, lay)
         self._add_attack_target_box(host, lay, editable=True)
+        self._build_leader_mage_heal(host, lay)
         lay.addStretch(1)
         host.installEventFilter(self)
         return host
@@ -906,46 +906,22 @@ class PartyTab(QWidget):
             lay.addStretch(1)
         return host
 
-    def _build_leader_support(self) -> QWidget:
-        host, lay = self._section()
-        box = card(host, self._tx("party_ui_care_title", "파티원 회복"))
+    def _build_leader_mage_heal(self, host: QWidget, lay: QVBoxLayout) -> None:
+        """Other-member heal line. Self heal, potions, and retreat stay on solo."""
+        box = card(host, self._tx("party_ui_care_mage", "마법사가 다른 파티원을 힐"))
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
         note = QLabel(
             self._tx(
-                "party_ui_care_note",
-                "파티에 들어가면 법사 본인과 파티장 자신을 포함해 이 칸의 값으로 "
-                "힐, 물약, 후퇴를 합니다. 정책이 오기 전에는 여기 적힌 기본값을 씁니다. "
-                "어머니 숲, 말하는 두루마리, 안전지대도 이 칸을 따릅니다. "
-                "회복이 끝나면 사냥터로 돌아가지 않고 파티장을 따라갑니다. "
-                "솔로 회복 탭은 그대로입니다.",
+                "party_ui_care_mage_note",
+                "다른 파티원의 체력이 이 값보다 낮으면 마법사가 파티 목록에서 힐합니다. "
+                "본인 힐, 물약, 후퇴, 어머니 숲, 말하는 두루마리, 안전지대는 "
+                "각 캐릭터의 솔로 설정을 씁니다.",
             )
         )
         note.setWordWrap(True)
         inner.addWidget(note)
-        self.party_member_heal_pct = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "member_heal_pct",
-            self._tx("party_ui_care_heal", "힐"),
-            70,
-            1,
-            100,
-            "%",
-        )
-        self.party_member_potion_pct = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "member_potion_pct",
-            self._tx("party_ui_care_potion", "HP 물약"),
-            50,
-            1,
-            100,
-            "%",
-        )
         self.party_mage_heal_pct = add_spin_row(
             inner,
             self.bag,
@@ -957,103 +933,6 @@ class PartyTab(QWidget):
             100,
             "%",
         )
-        self.party_retreat_pct = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "retreat_pct",
-            self._tx("party_ui_care_retreat", "후퇴"),
-            30,
-            1,
-            100,
-            "%",
-        )
-        self.party_mother_tree = add_check(
-            inner,
-            self.bag,
-            "party",
-            "mother_tree",
-            self._tx("party_ui_care_tree", "어머니 숲"),
-            True,
-        )
-        self.party_tree_hp_to_mp = add_check(
-            inner,
-            self.bag,
-            "party",
-            "tree_hp_to_mp",
-            self._tx("party_ui_care_tree_convert", "숲에서 체력을 마력으로"),
-            True,
-        )
-        self.party_tree_hp_to_mp_hp = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "tree_hp_to_mp_hp",
-            self._tx("party_ui_care_tree_hp_ge", "그때 HP ≥"),
-            85,
-            1,
-            100,
-            "%",
-        )
-        self.party_tree_hp_to_mp_mp = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "tree_hp_to_mp_mp",
-            self._tx("party_ui_care_tree_mp_le", "그때 MP ≤"),
-            80,
-            1,
-            100,
-            "%",
-        )
-        self.party_tree_heal = add_check(
-            inner,
-            self.bag,
-            "party",
-            "tree_heal",
-            self._tx("party_ui_care_tree_heal", "숲에서 힐"),
-            True,
-        )
-        self.party_tree_heal_hp = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "tree_heal_hp",
-            self._tx("party_ui_care_tree_heal_hp", "그때 HP ≤"),
-            40,
-            1,
-            100,
-            "%",
-        )
-        self.party_tree_heal_mp = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "tree_heal_mp",
-            self._tx("party_ui_care_tree_heal_mp", "그때 MP ≥"),
-            80,
-            1,
-            100,
-            "%",
-        )
-        self.party_talking_scroll = add_check(
-            inner,
-            self.bag,
-            "party",
-            "talking_scroll",
-            self._tx("party_ui_care_scroll", "말하는 두루마리"),
-            True,
-        )
-        self.party_safe_zone = add_check(
-            inner,
-            self.bag,
-            "party",
-            "safe_zone",
-            self._tx("party_ui_care_safe", "안전지대"),
-            True,
-        )
-        lay.addStretch(1)
-        return host
 
     def _build_leader_supply(self) -> QWidget:
         host, lay = self._section()

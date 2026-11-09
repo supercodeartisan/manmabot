@@ -355,7 +355,7 @@ class PartyRolePicker(QWidget):
                 ("users", tx(strings, "party_ui_feat_roster", "파티원 관리")),
                 ("map", tx(strings, "party_ui_feat_map", "사냥터 및 순찰 지도")),
                 ("crosshair", tx(strings, "party_ui_feat_hunt", "사냥 방식")),
-                ("shield", tx(strings, "party_ui_feat_guard", "지원 및 보호")),
+                ("package", tx(strings, "party_ui_menu_supply", "마을 및 보급")),
                 ("package", tx(strings, "party_ui_feat_loot", "아이템 및 루팅")),
             ],
             accent=_BLUE,

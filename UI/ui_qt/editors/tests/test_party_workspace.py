@@ -74,8 +74,7 @@ def test_leader_and_member_menus_do_not_overlap() -> None:
     assert leader_labels == [
         "파티 관리",
         "사냥터 및 지도",
-        "사냥 운영",
-        "지원 및 보호",
+        "파티운영",
         "마을 및 보급",
         "아이템 및 루팅",
         "공통 설정",
@@ -267,10 +266,7 @@ def test_map_and_ops_pages_keep_existing_settings() -> None:
         "지정 장소로 이동하기",
     ]
     assert "파티장 공격 대상 따라가기" in radios
-    support_text = " ".join(
-        label.text() for label in tab.leader_sections["support"].findChildren(QLabel)
-    )
-    assert "뒤처지면 대기" not in support_text
+    assert "support" not in tab.leader_sections
     assert not hasattr(tab, "party_lag_tiles")
     assert tab.member_sections["follow"].isAncestorOf(tab.party_follow_tiles)
     ops_text = " ".join(label.text() for label in ops.findChildren(QLabel))
@@ -363,7 +359,7 @@ def test_member_support_saves_hit_mode_and_hp_threshold() -> None:
     assert "따라가기" in workspace.visible_menu_labels()
     tab = workspace.tab
     tab.party_enable.setChecked(True)
-    assert tab.leader_sections["support"].findChildren(QRadioButton) == []
+    assert "support" not in tab.leader_sections
     support = tab.member_sections["support"]
     assert [button.text() for button in tab.member_hit_buttons.values()] == [
         "즉시 지원",
@@ -411,22 +407,12 @@ def test_party_heal_is_visible_for_every_member() -> None:
         "파티 지원 마법",
     ]
     assert "파티원 체력 위험 시 긴급 지원" not in titles
-    leader_titles = [
-        box.title()
-        for box in tab.leader_sections["support"].findChildren(QGroupBox)
+    ops_titles = [
+        box.title() for box in tab.leader_sections["ops"].findChildren(QGroupBox)
     ]
-    assert leader_titles == ["파티원 회복"]
-    assert tab.party_member_heal_pct.value() == 70
-    assert tab.party_member_potion_pct.value() == 50
+    assert "마법사가 다른 파티원을 힐" in ops_titles
+    assert "support" not in tab.leader_sections
     assert tab.party_mage_heal_pct.value() == 80
-    assert tab.party_retreat_pct.value() == 30
-    assert tab.party_mother_tree.isChecked()
-    assert tab.party_talking_scroll.isChecked()
-    assert tab.party_safe_zone.isChecked()
-    assert tab.party_tree_hp_to_mp.isChecked()
-    assert tab.party_tree_hp_to_mp_hp.value() == 85
-    assert tab.party_tree_heal.isChecked()
-    assert tab.party_tree_heal_hp.value() == 40
     assert "파티원 힐 관리 (F06)" not in titles
     assert tab.member_support_magic_table.item(0, 2).text() == "힐"
 
@@ -565,9 +551,10 @@ def test_leader_succession_and_absence_settings() -> None:
     assert tab._succession_state_label("") == "—"
 
     ops = tab.leader_sections["ops"]
-    assert [box.title() for box in ops.findChildren(QGroupBox)][:2] == [
+    assert [box.title() for box in ops.findChildren(QGroupBox)][:3] == [
         "파티장 부재 시 파티원 행동",
         "공격 대상 선택",
+        "마법사가 다른 파티원을 힐",
     ]
     assert tab.absence_buttons["hunt"].isChecked()
     tab.absence_buttons["hold"].setChecked(True)

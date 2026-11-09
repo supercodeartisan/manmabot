@@ -21,8 +21,7 @@ from ui_qt.i18n_refresh import bind_tx_keys
 _LEADER_MENUS = (
     ("manage", "party_ui_menu_manage", "파티 관리"),
     ("map", "party_ui_menu_map", "사냥터 및 지도"),
-    ("ops", "party_ui_menu_ops", "사냥 운영"),
-    ("support", "party_ui_menu_support", "지원 및 보호"),
+    ("ops", "party_ui_menu_ops", "파티운영"),
     ("supply", "party_ui_menu_supply", "마을 및 보급"),
     ("loot", "party_ui_menu_loot", "아이템 및 루팅"),
     ("common", "party_ui_menu_common", "공통 설정"),
