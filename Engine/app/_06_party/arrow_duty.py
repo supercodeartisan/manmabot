@@ -315,6 +315,9 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
     board.scratch.pop("party_arrow_buy_qty", None)
     arrived = _beside_member(manager, state, duty)
     if arrived is not True:
+        job = board.scratch.get("party_supply_drop")
+        if isinstance(job, dict):
+            job["active"] = False
         return arrived
     from .supply_drop import step_ground_drop
 
@@ -326,10 +329,13 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         from .intents import idle
 
         return idle("arrow drop")
-    if result.get("blocked"):
-        runtime.duty_phase = DUTY_FOLLOW
+    if result.get("blocked") or not result.get("ok"):
+        runtime.duty_phase = DUTY_SUPPLY
+        runtime.last_kind = "supply"
         runtime.last_reason = str(result.get("reason") or "arrow drop blocked")
-        return None
+        from .intents import idle
+
+        return idle(str(result.get("reason") or "arrow drop blocked"))
     runtime.supply_notice = {
         "id": f"{item}:{duty['name']}:{int(time.time())}",
         "for": str(duty["name"]),
@@ -366,15 +372,20 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
 
         return idle("arrow drop no pose")
     if int(pose.map_id) != mid:
+        # World nav wants the report's game xy. Do not convert that branch.
         return _tick_nav(manager, state, mid, mx, my, reason="party_supply_walk")
+    from app._03_world.merge.memory_sync import game_to_nav
     from app._03_world.space.world_coords import tile_chebyshev
 
+    # Reports carry raw game xy (~32k). start_travel and world_origin are nav tiles.
+    # game_to_nav leaves an already-nav pair unchanged.
+    mx, my = game_to_nav(mx, my)
     dist = tile_chebyshev(int(origin.x), int(origin.y), mx, my)
     if dist <= _NEAR:
         return True
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
-    goal = (mx, my)
+    goal = (int(mx), int(my))
     if getattr(board, "nav_goal", None) != goal:
         start_travel(board, goal, reason="party arrow drop")
     if emit_travel_hop(board, reason="party arrow drop", priority=0.6, state=state):

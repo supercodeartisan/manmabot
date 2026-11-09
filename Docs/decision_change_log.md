@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — shopkeeper drop waits for each gesture before the next
+
+Intent: Beside the leader, the shopkeeper opens the inventory, re-reads the already chosen arrow slot, Shift-drags, and types the give count only after the quantity prompt is visible. A supply notice is published only after that arrow's bag count falls by the requested amount. The same failure does not repeat without a pause, and follow does not resume until the drop is confirmed.
+Shared: `_maybe_dismiss_ui` allows `Inventory` only while `party_supply_drop.active` is set. Solo and every other party action still pass an empty allow list. Shop buy, the approach, item-id choice, give count, drop-tile formula, and the notice fields are unchanged.
+Affects: the shopkeeper's ground drop after it is already next to the short member.
+Consent: user (the supply-drop stabilization task).
+Result: `Engine/app/_06_party/tests/test_supply_drop_flow.py`. Not run in game.
+
+## 2026-11-10 — shopkeeper drop walk converts report xy to nav tiles
+
+Intent: A same-map arrow drop walks to the short member's nav tile. Report xy stays game coordinates for a different-map world-nav walk.
+Shared: `game_to_nav` inside `_beside_member` after the other-map branch. Follow, pickup claims (already nav), shortage math, unstick, and solo travel are unchanged.
+Affects: shopkeeper drop approach on the member's map. An off-map goal no longer reaches `start_travel`.
+Consent: user (the coordinate-conversion task, apply if no side effect).
+Result: `test_same_map_drop_converts_game_xy_before_travel` passed with the existing arrow-supply tests. Not run in game.
+
 ## 2026-11-09 — supply pickup matches the notified count
 
 Intent: The member named on a supply drop picks up the pile only when its ground count equals the notified count. An unread ground count still uses the name and the tile. Other seats still leave that tile alone by location.
