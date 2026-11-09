@@ -2156,8 +2156,41 @@ class BotController:
             "shopkeeper_arrow_buy": int(
                 getattr(profile, "party_shopkeeper_arrow_buy", 200) or 200
             ),
+            "member_hp_min": int(getattr(profile, "party_member_hp_min", 10) or 0),
+            "shopkeeper_hp_min": int(getattr(profile, "party_shopkeeper_hp_min", 20) or 0),
+            "member_hp_give": int(getattr(profile, "party_member_hp_give", 10) or 10),
+            "shopkeeper_hp_buy": int(getattr(profile, "party_shopkeeper_hp_buy", 20) or 20),
+            "member_depoison_min": int(
+                getattr(profile, "party_member_depoison_min", 1) or 0
+            ),
+            "shopkeeper_depoison_min": int(
+                getattr(profile, "party_shopkeeper_depoison_min", 2) or 0
+            ),
+            "member_depoison_give": int(
+                getattr(profile, "party_member_depoison_give", 1) or 1
+            ),
+            "shopkeeper_depoison_buy": int(
+                getattr(profile, "party_shopkeeper_depoison_buy", 5) or 5
+            ),
+            "member_mp_min": int(getattr(profile, "party_member_mp_min", 5) or 0),
+            "shopkeeper_mp_min": int(getattr(profile, "party_shopkeeper_mp_min", 10) or 0),
+            "member_mp_give": int(getattr(profile, "party_member_mp_give", 5) or 5),
+            "shopkeeper_mp_buy": int(getattr(profile, "party_shopkeeper_mp_buy", 10) or 10),
             "loot_pickup": str(getattr(profile, "party_loot_pickup", "all") or "all"),
             "loot_weight_pct": int(getattr(profile, "party_loot_weight_pct", 30) or 30),
+            "member_heal_pct": int(getattr(profile, "party_member_heal_pct", 70) or 70),
+            "member_potion_pct": int(getattr(profile, "party_member_potion_pct", 50) or 50),
+            "mage_heal_pct": int(getattr(profile, "party_mage_heal_pct", 80) or 80),
+            "retreat_pct": int(getattr(profile, "party_retreat_pct", 30) or 30),
+            "mother_tree": bool(getattr(profile, "party_mother_tree", True)),
+            "talking_scroll": bool(getattr(profile, "party_talking_scroll", True)),
+            "safe_zone": bool(getattr(profile, "party_safe_zone", True)),
+            "tree_hp_to_mp": bool(getattr(profile, "party_tree_hp_to_mp", True)),
+            "tree_hp_to_mp_hp": int(getattr(profile, "party_tree_hp_to_mp_hp", 85) or 85),
+            "tree_hp_to_mp_mp": int(getattr(profile, "party_tree_hp_to_mp_mp", 80) or 80),
+            "tree_heal": bool(getattr(profile, "party_tree_heal", True)),
+            "tree_heal_hp": int(getattr(profile, "party_tree_heal_hp", 40) or 40),
+            "tree_heal_mp": int(getattr(profile, "party_tree_heal_mp", 80) or 80),
         }
 
     def _publish_party_policy(self, *, force: bool = False) -> int:
@@ -2324,6 +2357,7 @@ class BotController:
                 "clear": False,
                 "id": claim.get("id"),
                 "for": claim.get("for"),
+                "item": claim.get("item") or "arrow",
                 "map_id": claim.get("map_id"),
                 "x": claim.get("x"),
                 "y": claim.get("y"),
@@ -2711,6 +2745,7 @@ class BotController:
                 out["supply"] = {
                     "id": notice.get("id"),
                     "for": notice.get("for"),
+                    "item": notice.get("item") or "arrow",
                     "map_id": notice.get("map_id"),
                     "x": notice.get("x"),
                     "y": notice.get("y"),
@@ -3677,7 +3712,13 @@ class BotController:
                     pickup = None
                     if self._party_leader_on():
                         pickup = self._leader_arrow_pickup(world, decision.blackboard)
-                    action = pickup if pickup is not None else leader_brain.decide(world)
+                    if pickup is not None:
+                        action = pickup
+                    else:
+                        from app._06_party.recovery import bind, recovery_from_profile
+
+                        with bind(recovery_from_profile(profile)):
+                            action = leader_brain.decide(world)
                     try:
                         self._leader_party_tick(
                             world, decision.blackboard, last_logged_map_id

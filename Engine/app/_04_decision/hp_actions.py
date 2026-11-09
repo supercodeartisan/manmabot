@@ -203,6 +203,11 @@ def pick_hp_action(
 
 def action_threshold(actions: Iterable[Mapping[str, Any]], action_id: str) -> float | None:
     wanted = canonical_action_id(action_id)
+    from app._06_party.recovery import line_for
+
+    party_line = line_for(wanted)
+    if party_line is not None:
+        return party_line
     for row in actions:
         if canonical_action_id(str(row.get("id") or "")) == wanted and row.get("enabled", True):
             try:

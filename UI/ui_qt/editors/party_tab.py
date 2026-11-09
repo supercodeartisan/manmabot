@@ -5,18 +5,21 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QObject, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QSizePolicy,
     QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
@@ -27,13 +30,13 @@ from PySide6.QtWidgets import (
 from settings.profile import normalize_party_roster
 from ui_qt.editors.form_helpers import (
     add_check,
-    add_check_spin,
     add_spin_row,
     card,
     configure_table_fill,
     table_row_height_for_controls,
     wrap_cell_widget,
 )
+from ui_qt.widgets.step_spin import StepSpinBox
 from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.i18n_overlay import tx
 from ui_qt.i18n_refresh import bind_tx_keys
@@ -84,6 +87,96 @@ class _WsTestBridge(QObject):
     """Marshal WebSocket probe results back onto the UI thread."""
 
     finished = Signal(bool, str)
+
+
+class _SupportMagicTable(QTableWidget):
+    """Party support spells. Description rows grow and shrink with the width."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(0, 4, parent)
+        self._fitting = False
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        header.setStretchLastSection(False)
+        header.setMinimumSectionSize(48)
+        self.setColumnWidth(0, 56)
+        header.sectionResized.connect(self._on_section_resized)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self.apply_description_width()
+        self.refit()
+
+    def apply_description_width(self) -> None:
+        """Give the explanation column whatever width the table has left."""
+        if self._fitting or self.columnCount() < 4:
+            return
+        used = sum(self.columnWidth(index) for index in range(3))
+        leftover = self.width() - self.frameWidth() * 2 - used
+        if leftover < 48:
+            leftover = 48
+        if self.columnWidth(3) == leftover:
+            return
+        self._fitting = True
+        try:
+            self.setColumnWidth(3, leftover)
+        finally:
+            self._fitting = False
+
+    def _on_section_resized(self, index: int, _old: int, _new: int) -> None:
+        if self._fitting:
+            return
+        if index in (1, 2):
+            self.apply_description_width()
+        if index in (1, 2, 3):
+            self.refit()
+
+    def refit(self) -> None:
+        if self._fitting or self.columnCount() < 4:
+            return
+        self._fitting = True
+        try:
+            width = self.columnWidth(3)
+            if width < 48:
+                width = 360
+            total = self.horizontalHeader().height() + 4
+            text_width = max(48, width - 16)
+            flags = int(
+                Qt.TextFlag.TextWordWrap
+                | Qt.AlignmentFlag.AlignLeft
+                | Qt.AlignmentFlag.AlignTop
+            )
+            for row in range(self.rowCount()):
+                host = self.cellWidget(row, 3)
+                label = host if isinstance(host, QLabel) else None
+                if label is None and host is not None:
+                    label = host.findChild(QLabel)
+                text_height = 28
+                if isinstance(label, QLabel):
+                    rect = QFontMetrics(label.font()).boundingRect(
+                        QRect(0, 0, text_width, 4000),
+                        flags,
+                        label.text(),
+                    )
+                    text_height = max(1, rect.height())
+                    label.setMinimumHeight(text_height)
+                    label.setMaximumHeight(text_height)
+                height = max(36, int(text_height) + 16)
+                if self.rowHeight(row) != height:
+                    self.setRowHeight(row, height)
+                total += height
+            target = total + self.frameWidth() * 2
+            if self.minimumHeight() != target or self.maximumHeight() != target:
+                self.setMinimumHeight(target)
+                self.setMaximumHeight(target)
+        finally:
+            self._fitting = False
 
 
 class PartyTab(QWidget):
@@ -341,37 +434,7 @@ class PartyTab(QWidget):
         if not any(button.isChecked() for button in self.member_hit_buttons.values()):
             self.member_hit_buttons["immediate"].setChecked(True)
 
-        danger = card(host, self._tx("party_ui_hp_title", "파티원 체력 위험 시 긴급 지원"))
-        lay.addWidget(danger)
-        danger_lay = danger.layout()
-        assert isinstance(danger_lay, QVBoxLayout)
-        percent = self.bag.get_int("party", "hp_emergency_percent", 30)
-        if percent < 1 or percent > 100:
-            percent = 30
-        self.member_hp_emergency, self.member_hp_emergency_pct = add_check_spin(
-            danger_lay,
-            self.bag,
-            "hp_emergency_enabled",
-            False,
-            self._tx("party_ui_hp_enable", "체력 임계값 사용"),
-            "hp_emergency_percent",
-            percent,
-            1,
-            100,
-            "%",
-            section="party",
-        )
-        hp_note = QLabel(
-            self._tx(
-                "party_ui_hp_note",
-                "파티원 중 누구든지 HP가 설정한 임계값 이하로 내려가면 "
-                "모든 파티원이 해당 파티원을 공격하고 있는 몬스터를 즉시 공격한다. "
-                "이 긴급 지원은 일반 피격 대응보다 우선한다.",
-            )
-        )
-        hp_note.setWordWrap(True)
-        danger_lay.addWidget(hp_note)
-        self._build_member_heal(host, lay)
+        self._build_member_support_magic(host, lay)
         lay.addStretch(1)
         return host
 
@@ -379,76 +442,42 @@ class PartyTab(QWidget):
         if checked:
             self.bag.set("party", "hit_support", mode)
 
-    def _build_member_heal(self, host: QWidget, lay: QVBoxLayout) -> None:
-        """F06 settings. Live HP and cast results stay blank until the engine has them."""
-        box = card(host, self._tx("party_ui_heal_title", "파티원 힐 관리 (F06)"))
-        self.member_heal_box = box
+    def _build_member_support_magic(self, host: QWidget, lay: QVBoxLayout) -> None:
+        """Mage party support spells, including heal. Solo magic table stays separate."""
+        box = card(host, self._tx("party_ui_support_magic_title", "파티 지원 마법"))
+        self.member_support_magic_box = box
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-
-        self.member_heal_table = self._heal_table(
-            (
-                ("party_ui_heal_col_number", "번호"),
-                ("party_ui_heal_col_name", "캐릭터 이름"),
-                ("party_ui_heal_col_use", "힐 사용"),
-                ("party_ui_heal_col_hp", "HP 임계값(%)"),
-                ("party_ui_heal_col_priority", "치료 우선순위"),
+        note = QLabel(
+            self._tx(
+                "party_ui_support_magic_note",
+                "마법사 캐릭터의 파티원 화면에서만 고릅니다. "
+                "체크한 마법은 파티 설정에만 저장되고, 솔로 개별 마법 표는 바꾸지 않습니다.",
             )
         )
-        inner.addWidget(self.member_heal_table)
-
-        skill_row = QHBoxLayout()
-        skill_row.addWidget(QLabel(self._tx("party_ui_heal_skill", "힐 스킬")))
-        self.member_heal_skill = QComboBox()
-        skill_row.addWidget(self.member_heal_skill, stretch=1)
-        inner.addLayout(skill_row)
-
-        slot_row = QHBoxLayout()
-        slot_row.addWidget(QLabel(self._tx("party_ui_heal_slot", "스킬 슬롯")))
-        self.member_heal_slot_box = QComboBox()
-        self.member_heal_slot_key = QComboBox()
-        for box_no in (1, 2, 3):
-            self.member_heal_slot_box.addItem(f"F{box_no}", box_no)
-        for key in ("f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"):
-            self.member_heal_slot_key.addItem(key.upper(), key)
-        slot_row.addWidget(self.member_heal_slot_box)
-        slot_row.addWidget(self.member_heal_slot_key)
-        self.member_heal_reuse = QLabel("")
-        slot_row.addWidget(self.member_heal_reuse)
-        slot_row.addStretch(1)
-        inner.addLayout(slot_row)
-
-        self.member_heal_mp = QLabel("")
-        self.member_heal_mp.setWordWrap(True)
-        inner.addWidget(self.member_heal_mp)
-
-        self.member_heal_status = self._heal_table(
-            (
-                ("party_ui_heal_col_name", "캐릭터 이름"),
-                ("party_ui_heal_status_hp", "현재 HP"),
-                ("party_ui_heal_status_threshold", "설정된 HP 임계값"),
-                ("party_ui_heal_status_state", "치료 상태"),
-                ("party_ui_heal_status_result", "최근 힐 결과"),
-                ("party_ui_heal_status_reason", "실패 사유"),
-            )
-        )
-        inner.addWidget(self.member_heal_status)
-        self._refresh_party_heal()
-
-    def _heal_table(self, columns: tuple[tuple[str, str], ...]) -> QTableWidget:
-        table = QTableWidget(0, len(columns))
+        note.setWordWrap(True)
+        inner.addWidget(note)
+        table = _SupportMagicTable()
         table.setHorizontalHeaderLabels(
-            [self._tx(key, fallback) for key, fallback in columns]
+            [
+                self._tx("party_ui_support_magic_use", "사용"),
+                self._tx("party_ui_support_magic_group", "구분"),
+                self._tx("party_ui_support_magic_name", "마법"),
+                self._tx("party_ui_support_magic_detail", "설명"),
+            ]
         )
         table.verticalHeader().setVisible(False)
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        configure_table_fill(table, 1)
-        return table
+        table.setWordWrap(True)
+        table.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.member_support_magic_table = table
+        inner.addWidget(table)
+        self._fill_support_magic_table()
 
     def note_local_character(self, name: str) -> None:
-        """This PC's roster name. Used only to leave self off the heal target list."""
+        """This PC's roster name. Successor choices skip this character."""
         self._local_character_name = str(name or "").strip()
         self._refresh_party_heal()
         self._refresh_successor_choices()
@@ -456,196 +485,97 @@ class PartyTab(QWidget):
     def _local_character_name_text(self) -> str:
         return str(getattr(self, "_local_character_name", "") or "").strip()
 
-    def _heal_targets(self) -> list[dict[str, str]]:
-        self_name = self._local_character_name_text().casefold()
-        targets = []
-        for row in self._roster_rows():
-            name = str(row.get("name") or "").strip()
-            if not name or name.casefold() == self_name:
-                continue
-            targets.append(row)
-        return targets
+    def _refresh_party_heal(self) -> None:
+        self._fill_support_magic_table()
 
-    def _heal_target_saved(self) -> dict[str, dict[str, object]]:
-        raw = self.bag.get("party", "heal_targets", {})
+    def _mage_character(self) -> bool:
+        return self.bag.get_str("magic", "class", "") == "mage"
+
+    def _support_magic_saved(self) -> dict[str, bool]:
+        raw = self.bag.get("party", "mage_support_skills", {})
         if not isinstance(raw, dict):
             return {}
-        saved: dict[str, dict[str, object]] = {}
-        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
-        default_hp = min(100, max(1, default_hp or 50))
-        for name, item in raw.items():
-            key = str(name or "").strip()
-            if not key or not isinstance(item, dict):
-                continue
-            try:
-                hp = int(item.get("hp_percent", default_hp))
-            except (TypeError, ValueError):
-                hp = default_hp
-            if hp < 1 or hp > 100:
-                hp = default_hp
-            try:
-                priority = int(item.get("priority", 1))
-            except (TypeError, ValueError):
-                priority = 1
-            saved[key] = {
-                "enabled": bool(item.get("enabled", False)),
-                "hp_percent": hp,
-                "priority": max(1, priority),
-            }
+        saved: dict[str, bool] = {}
+        for key, value in raw.items():
+            text = str(key or "").strip()
+            if text:
+                saved[text] = bool(value)
         return saved
 
-    def _write_heal_target(self, name: str, **fields: object) -> None:
-        saved = self._heal_target_saved()
-        row = dict(saved.get(name) or {})
-        row.update(fields)
-        saved[name] = row
-        self.bag.set("party", "heal_targets", saved)
+    def _support_magic_checked(self, setting_key: str, saved: dict[str, bool]) -> bool:
+        """Heal starts on. A saved choice, including turning heal off, wins."""
+        if setting_key in saved:
+            return bool(saved[setting_key])
+        return setting_key == "mage_0"
 
-    def _registered_heal_skills(self) -> list[object]:
-        try:
-            from settings.skill_catalog import load_skill_catalog
-        except Exception:
-            return []
-        try:
-            catalog = load_skill_catalog()
-        except Exception:
-            return []
-        ui_class = str(self.bag.get_str("magic", "class", "elf") or "elf")
-        if ui_class not in ("elf", "mage", "knight", "royal"):
-            ui_class = "elf"
-        return [
-            skill
-            for skill in catalog.for_filter(ui_class, "recovery")
-            if str(getattr(skill, "ko", "") or "") == "힐"
-        ]
+    def _write_support_magic(self, setting_key: str, checked: bool) -> None:
+        saved = self._support_magic_saved()
+        saved[str(setting_key)] = bool(checked)
+        self.bag.set("party", "mage_support_skills", saved)
 
-    def _existing_heal_slot(self) -> tuple[int, str, float]:
-        from settings.spell_defaults import merge_spell_slots
+    def _support_group_label(self, group: str) -> str:
+        if group == "recovery":
+            return self._tx("party_ui_support_magic_recovery", "회복")
+        return self._tx("party_ui_support_magic_buff", "강화")
 
-        raw = self.bag.get("magic", "spell_slots", None)
-        if not isinstance(raw, dict) or not raw:
-            profile = getattr(self, "_profile", None)
-            raw = getattr(profile, "spell_slots", None) if profile is not None else None
-        merged = merge_spell_slots(raw if isinstance(raw, dict) else None)
-        spec = merged.get("heal") if isinstance(merged.get("heal"), dict) else {}
-        try:
-            box = int(spec.get("box") or 0)
-        except (TypeError, ValueError):
-            box = 0
-        key = str(spec.get("key") or "").strip().lower()
-        try:
-            reuse = float(spec.get("reuse_s") or 0)
-        except (TypeError, ValueError):
-            reuse = 0.0
-        return box, key, max(0.0, reuse)
-
-    def _selected_heal_slot(self) -> tuple[int, str]:
-        saved_box = self.bag.get_int("party", "heal_slot_box", 0)
-        saved_key = str(self.bag.get_str("party", "heal_slot_key", "") or "").strip().lower()
-        if saved_box in (1, 2, 3) and saved_key in (
-            "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"
-        ):
-            return saved_box, saved_key
-        box, key, _reuse = self._existing_heal_slot()
-        if box not in (1, 2, 3):
-            box = 1
-        if key not in ("f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"):
-            key = "f8"
-        return box, key
-
-    def _heal_fail_label(self, code: str) -> str:
-        labels = {
-            "mp": ("party_ui_heal_fail_mp", "MP 부족"),
-            "unusable": ("party_ui_heal_fail_unusable", "스킬 사용 불가"),
-            "cooldown": ("party_ui_heal_fail_cooldown", "재사용 대기"),
-            "target": ("party_ui_heal_fail_target", "대상 정보 확인 실패"),
-            "range": ("party_ui_heal_fail_range", "사거리 초과"),
-        }.get(str(code or "").strip())
-        if labels is None:
-            return self.t.get("value_empty", "—")
-        return self._tx(labels[0], labels[1])
-
-    def _refresh_party_heal(self) -> None:
-        if getattr(self, "member_heal_box", None) is None:
+    def _fill_support_magic_table(self) -> None:
+        box = getattr(self, "member_support_magic_box", None)
+        table = getattr(self, "member_support_magic_table", None)
+        if box is None or table is None:
             return
-        self._fill_heal_skill_choices()
-        self._fill_heal_slot_choices()
-        self._fill_heal_mp_line()
-        self._fill_heal_target_table()
-        self._fill_heal_status_table()
-
-    def _fill_heal_skill_choices(self) -> None:
-        combo = getattr(self, "member_heal_skill", None)
-        if combo is None:
+        mage = self._mage_character()
+        box.setVisible(mage)
+        if not mage:
             return
-        selected = str(self.bag.get_str("party", "heal_skill_key", "") or "")
-        combo.blockSignals(True)
-        combo.clear()
-        for skill in self._registered_heal_skills():
-            combo.addItem(skill.label(self.language), skill.setting_key)
-        index = combo.findData(selected)
-        if index < 0 and combo.count():
-            index = 0
-        if index >= 0:
-            combo.setCurrentIndex(index)
-        combo.blockSignals(False)
-        if not getattr(self, "_heal_skill_wired", False):
-            combo.currentIndexChanged.connect(self._on_heal_skill)
-            self._heal_skill_wired = True
+        from settings.party_mage_support import party_mage_support_rows
 
-    def _on_heal_skill(self) -> None:
-        combo = getattr(self, "member_heal_skill", None)
-        if combo is None:
-            return
-        self.bag.set("party", "heal_skill_key", str(combo.currentData() or ""))
-
-    def _fill_heal_slot_choices(self) -> None:
-        box_combo = getattr(self, "member_heal_slot_box", None)
-        key_combo = getattr(self, "member_heal_slot_key", None)
-        reuse = getattr(self, "member_heal_reuse", None)
-        if box_combo is None or key_combo is None:
-            return
-        box, key = self._selected_heal_slot()
-        _box, _key, seconds = self._existing_heal_slot()
-        box_combo.blockSignals(True)
-        key_combo.blockSignals(True)
-        box_index = box_combo.findData(box)
-        key_index = key_combo.findData(key)
-        if box_index >= 0:
-            box_combo.setCurrentIndex(box_index)
-        if key_index >= 0:
-            key_combo.setCurrentIndex(key_index)
-        box_combo.blockSignals(False)
-        key_combo.blockSignals(False)
-        if not getattr(self, "_heal_slot_wired", False):
-            box_combo.currentIndexChanged.connect(self._on_heal_slot)
-            key_combo.currentIndexChanged.connect(self._on_heal_slot)
-            self._heal_slot_wired = True
-        if reuse is not None:
-            shown = f"{seconds:g}"
-            reuse.setText(
-                self._tx("party_ui_heal_reuse", "재사용 {seconds}초").format(seconds=shown)
+        rows = party_mage_support_rows(self.language)
+        saved = self._support_magic_saved()
+        self._release_table_widgets(table)
+        table.blockSignals(True)
+        for index, row in enumerate(rows):
+            key = str(row["setting_key"])
+            table.insertRow(index)
+            check = QCheckBox()
+            check.blockSignals(True)
+            check.setChecked(self._support_magic_checked(key, saved))
+            check.blockSignals(False)
+            check.toggled.connect(
+                lambda checked, setting_key=key: self._write_support_magic(
+                    setting_key, bool(checked)
+                )
             )
-
-    def _on_heal_slot(self) -> None:
-        box_combo = getattr(self, "member_heal_slot_box", None)
-        key_combo = getattr(self, "member_heal_slot_key", None)
-        if box_combo is None or key_combo is None:
-            return
-        self.bag.set("party", "heal_slot_box", int(box_combo.currentData() or 0))
-        self.bag.set("party", "heal_slot_key", str(key_combo.currentData() or ""))
-
-    def _fill_heal_mp_line(self) -> None:
-        label = getattr(self, "member_heal_mp", None)
-        if label is None:
-            return
-        stop = self.bag.get_bool("magic", "stop_below_mp", False)
-        stop_pct = self.bag.get_int("magic", "stop_below_mp_pct", 20)
-        reserve = self.bag.get_int("magic", "spell_reserve_pct", 20)
-        stop_text = self.t.get("stop_mp", "Stop below MP")
-        reserve_text = self.t.get("reserve_mp", "Reserve MP")
-        state = self.t.get("summary_on", "ON") if stop else self.t.get("summary_off", "OFF")
-        label.setText(f"{stop_text} {stop_pct}% ({state}) · {reserve_text} {reserve}%")
+            table.setCellWidget(index, 0, wrap_cell_widget(check))
+            group = QTableWidgetItem(self._support_group_label(str(row["group"])))
+            group.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            table.setItem(index, 1, group)
+            name = QTableWidgetItem(str(row["name"]))
+            name.setTextAlignment(
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            )
+            table.setItem(index, 2, name)
+            detail = QLabel(str(row["detail"]))
+            detail.setWordWrap(True)
+            detail.setMinimumWidth(0)
+            detail.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
+            detail.setAlignment(
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            )
+            detail.setStyleSheet("background: transparent;")
+            host = QWidget()
+            host.setStyleSheet("background: transparent;")
+            column = QVBoxLayout(host)
+            column.setContentsMargins(4, 0, 4, 0)
+            column.setSpacing(0)
+            column.addStretch(1)
+            column.addWidget(detail)
+            column.addStretch(1)
+            table.setCellWidget(index, 3, host)
+        table.blockSignals(False)
+        if isinstance(table, _SupportMagicTable):
+            table.refit()
 
     def _release_table_widgets(self, table: QTableWidget) -> None:
         for row in range(table.rowCount()):
@@ -657,73 +587,6 @@ class PartyTab(QWidget):
                 widget.setParent(None)
                 widget.deleteLater()
         table.setRowCount(0)
-
-    def _fill_heal_target_table(self) -> None:
-        table = getattr(self, "member_heal_table", None)
-        if table is None:
-            return
-        targets = self._heal_targets()
-        saved = self._heal_target_saved()
-        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
-        default_hp = min(100, max(1, default_hp or 50))
-        self._release_table_widgets(table)
-        table.blockSignals(True)
-        for index, row in enumerate(targets):
-            name = str(row.get("name") or "")
-            item = saved.get(name) or {}
-            table.insertRow(index)
-            number = QTableWidgetItem(str(index + 1))
-            number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            table.setItem(index, 0, number)
-            table.setItem(index, 1, QTableWidgetItem(name))
-            check = QCheckBox()
-            check.setChecked(bool(item.get("enabled", False)))
-            check.toggled.connect(
-                lambda checked, who=name: self._write_heal_target(who, enabled=bool(checked))
-            )
-            table.setCellWidget(index, 2, wrap_cell_widget(check))
-            hp = StepSpinBox(compact=True)
-            hp.setRange(1, 100)
-            hp.setValue(int(item.get("hp_percent", default_hp)))
-            hp.valueChanged.connect(
-                lambda value, who=name: self._write_heal_target(who, hp_percent=int(value))
-            )
-            table.setCellWidget(index, 3, wrap_cell_widget(hp))
-            priority = StepSpinBox(compact=True)
-            priority.setRange(1, max(1, len(targets)))
-            priority.setValue(min(max(1, len(targets)), int(item.get("priority", index + 1))))
-            priority.valueChanged.connect(
-                lambda value, who=name: self._write_heal_target(who, priority=int(value))
-            )
-            table.setCellWidget(index, 4, wrap_cell_widget(priority))
-            table.setRowHeight(index, table_row_height_for_controls())
-        table.blockSignals(False)
-
-    def _fill_heal_status_table(self) -> None:
-        table = getattr(self, "member_heal_status", None)
-        if table is None:
-            return
-        empty = self.t.get("value_empty", "—")
-        saved = self._heal_target_saved()
-        default_hp = self.bag.get_int("magic", "heal_until_hp_pct", 50)
-        default_hp = min(100, max(1, default_hp or 50))
-        self._release_table_widgets(table)
-        for index, row in enumerate(self._heal_targets()):
-            name = str(row.get("name") or "")
-            item = saved.get(name) or {}
-            table.insertRow(index)
-            values = (
-                name,
-                empty,
-                str(item.get("hp_percent", default_hp)),
-                empty,
-                empty,
-                self._heal_fail_label(""),
-            )
-            for col, text in enumerate(values):
-                cell = QTableWidgetItem(text)
-                table.setItem(index, col, cell)
-        table.blockSignals(False)
 
     def _build_member_personal(self) -> QWidget:
         host, lay = self._section()
@@ -1045,67 +908,356 @@ class PartyTab(QWidget):
 
     def _build_leader_support(self) -> QWidget:
         host, lay = self._section()
-        lay.addStretch(1)
-        return host
-
-    def _build_leader_supply(self) -> QWidget:
-        host, lay = self._section()
-        box = card(host, self._tx("party_ui_supply_title", "마을 및 보급"))
+        box = card(host, self._tx("party_ui_care_title", "파티원 회복"))
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
         note = QLabel(
             self._tx(
-                "party_ui_supply_note",
-                "상점 역할이 화살을 채웁니다. 담당 자신의 화살이 기준 미만이면 "
-                "사는 화살만큼 기존 화살 상점을 가고, 다른 파티원이 기준 미만이면 "
-                "그 옆에 주는 화살만큼 떨어뜨립니다. 담당 기준 아래로는 주지 않습니다.",
+                "party_ui_care_note",
+                "파티에 들어가면 법사 본인과 파티장 자신을 포함해 이 칸의 값으로 "
+                "힐, 물약, 후퇴를 합니다. 정책이 오기 전에는 여기 적힌 기본값을 씁니다. "
+                "어머니 숲, 말하는 두루마리, 안전지대도 이 칸을 따릅니다. "
+                "회복이 끝나면 사냥터로 돌아가지 않고 파티장을 따라갑니다. "
+                "솔로 회복 탭은 그대로입니다.",
             )
         )
         note.setWordWrap(True)
         inner.addWidget(note)
-        self.party_member_arrow_min = add_spin_row(
+        self.party_member_heal_pct = add_spin_row(
             inner,
             self.bag,
             "party",
-            "member_arrow_min",
-            self._tx("party_ui_member_arrow", "파티원 화살"),
-            300,
-            0,
-            9999,
-        )
-        self.party_shopkeeper_arrow_min = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "shopkeeper_arrow_min",
-            self._tx("party_ui_keeper_arrow", "상점 담당 화살"),
-            300,
-            0,
-            9999,
-        )
-        self.party_member_arrow_give = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "member_arrow_give",
-            self._tx("party_ui_member_arrow_give", "주는 화살"),
+            "member_heal_pct",
+            self._tx("party_ui_care_heal", "힐"),
+            70,
+            1,
             100,
-            1,
-            9999,
+            "%",
         )
-        self.party_shopkeeper_arrow_buy = add_spin_row(
+        self.party_member_potion_pct = add_spin_row(
             inner,
             self.bag,
             "party",
-            "shopkeeper_arrow_buy",
-            self._tx("party_ui_keeper_arrow_buy", "사는 화살"),
-            200,
+            "member_potion_pct",
+            self._tx("party_ui_care_potion", "HP 물약"),
+            50,
             1,
-            999,
+            100,
+            "%",
+        )
+        self.party_mage_heal_pct = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "mage_heal_pct",
+            self._tx("party_ui_care_mage", "마법사가 다른 파티원을 힐"),
+            80,
+            1,
+            100,
+            "%",
+        )
+        self.party_retreat_pct = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "retreat_pct",
+            self._tx("party_ui_care_retreat", "후퇴"),
+            30,
+            1,
+            100,
+            "%",
+        )
+        self.party_mother_tree = add_check(
+            inner,
+            self.bag,
+            "party",
+            "mother_tree",
+            self._tx("party_ui_care_tree", "어머니 숲"),
+            True,
+        )
+        self.party_tree_hp_to_mp = add_check(
+            inner,
+            self.bag,
+            "party",
+            "tree_hp_to_mp",
+            self._tx("party_ui_care_tree_convert", "숲에서 체력을 마력으로"),
+            True,
+        )
+        self.party_tree_hp_to_mp_hp = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "tree_hp_to_mp_hp",
+            self._tx("party_ui_care_tree_hp_ge", "그때 HP ≥"),
+            85,
+            1,
+            100,
+            "%",
+        )
+        self.party_tree_hp_to_mp_mp = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "tree_hp_to_mp_mp",
+            self._tx("party_ui_care_tree_mp_le", "그때 MP ≤"),
+            80,
+            1,
+            100,
+            "%",
+        )
+        self.party_tree_heal = add_check(
+            inner,
+            self.bag,
+            "party",
+            "tree_heal",
+            self._tx("party_ui_care_tree_heal", "숲에서 힐"),
+            True,
+        )
+        self.party_tree_heal_hp = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "tree_heal_hp",
+            self._tx("party_ui_care_tree_heal_hp", "그때 HP ≤"),
+            40,
+            1,
+            100,
+            "%",
+        )
+        self.party_tree_heal_mp = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "tree_heal_mp",
+            self._tx("party_ui_care_tree_heal_mp", "그때 MP ≥"),
+            80,
+            1,
+            100,
+            "%",
+        )
+        self.party_talking_scroll = add_check(
+            inner,
+            self.bag,
+            "party",
+            "talking_scroll",
+            self._tx("party_ui_care_scroll", "말하는 두루마리"),
+            True,
+        )
+        self.party_safe_zone = add_check(
+            inner,
+            self.bag,
+            "party",
+            "safe_zone",
+            self._tx("party_ui_care_safe", "안전지대"),
+            True,
         )
         lay.addStretch(1)
         return host
+
+    def _build_leader_supply(self) -> QWidget:
+        host, lay = self._section()
+        self_box = card(host, self._tx("party_ui_supply_self_title", "본인이 사는 것"))
+        lay.addWidget(self_box)
+        self_inner = self_box.layout()
+        assert isinstance(self_inner, QVBoxLayout)
+        self_note = QLabel(
+            self._tx(
+                "party_ui_supply_self_note",
+                "상점 담당 자신의 가방입니다. "
+                "가진 수가 담당 유지보다 적으면 상점에 갑니다. "
+                "사는 수와, 담당 유지까지 채우는 수 중 큰 쪽을 삽니다. "
+                "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
+                "한 개 값도 안 되면 그 물건은 건너뜁니다. "
+                "체력, 해독, 화살 순으로 이어서 사고, "
+                "더 살 곳이 없으면 파티장에게 돌아옵니다. "
+                "마나 물약은 상점이 없어서 사지 않습니다.",
+            )
+        )
+        self_note.setWordWrap(True)
+        self_inner.addWidget(self_note)
+        self.supply_self_table = self._build_supply_self_table()
+        self_inner.addWidget(self.supply_self_table)
+
+        other_box = card(
+            host, self._tx("party_ui_supply_others_title", "다른 파티원에게 주는 것")
+        )
+        lay.addWidget(other_box)
+        other_inner = other_box.layout()
+        assert isinstance(other_inner, QVBoxLayout)
+        other_note = QLabel(
+            self._tx(
+                "party_ui_supply_others_note",
+                "다른 파티원 가방이 미만이면 줌보다 적으면, "
+                "그 옆에 주는 수만큼 떨어뜨립니다. "
+                "담당 유지보다 적게 주지는 않습니다. "
+                "사는 수는 최소 구매이고, 그 수를 사도 담당 유지보다 적으면 "
+                "한 번에 담당 유지 이상이 되게 삽니다. "
+                "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
+                "체력 다음에 해독, 그 다음에 화살을 이어서 사고 "
+                "더 갈 상점이 없으면 파티장에게 돌아옵니다.",
+            )
+        )
+        other_note.setWordWrap(True)
+        other_inner.addWidget(other_note)
+        self.supply_others_table = self._build_supply_others_table()
+        other_inner.addWidget(self.supply_others_table)
+        lay.addStretch(1)
+        return host
+
+    def _supply_table_rows(self) -> tuple[tuple, ...]:
+        """Item, who receives it, then member min / keeper keep / give / buy."""
+        return (
+            (
+                "체력 물약",
+                "전원 (담당 제외)",
+                ("party_member_hp_min", "member_hp_min", 10, 0, 9999),
+                ("party_shopkeeper_hp_min", "shopkeeper_hp_min", 20, 0, 9999),
+                ("party_member_hp_give", "member_hp_give", 10, 1, 9999),
+                ("party_shopkeeper_hp_buy", "shopkeeper_hp_buy", 20, 1, 999),
+            ),
+            (
+                "해독 물약",
+                "전원 (담당 제외)",
+                ("party_member_depoison_min", "member_depoison_min", 1, 0, 9999),
+                ("party_shopkeeper_depoison_min", "shopkeeper_depoison_min", 2, 0, 9999),
+                ("party_member_depoison_give", "member_depoison_give", 1, 1, 9999),
+                ("party_shopkeeper_depoison_buy", "shopkeeper_depoison_buy", 5, 1, 999),
+            ),
+            (
+                "마나 물약",
+                "마법사만",
+                ("party_member_mp_min", "member_mp_min", 5, 0, 9999),
+                ("party_shopkeeper_mp_min", "shopkeeper_mp_min", 10, 0, 9999),
+                ("party_member_mp_give", "member_mp_give", 5, 1, 9999),
+                None,
+            ),
+            (
+                "화살",
+                "마법사 제외",
+                ("party_member_arrow_min", "member_arrow_min", 300, 0, 9999),
+                ("party_shopkeeper_arrow_min", "shopkeeper_arrow_min", 300, 0, 9999),
+                ("party_member_arrow_give", "member_arrow_give", 100, 1, 9999),
+                ("party_shopkeeper_arrow_buy", "shopkeeper_arrow_buy", 200, 1, 999),
+            ),
+        )
+
+    def _new_supply_table(self, headers: list[str], tips: list[str]) -> QTableWidget:
+        table = QTableWidget(0, len(headers))
+        table.setHorizontalHeaderLabels(headers)
+        for index, tip in enumerate(tips):
+            item = table.horizontalHeaderItem(index)
+            if item is not None and tip:
+                item.setToolTip(tip)
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        table.setWordWrap(True)
+        table.setTextElideMode(Qt.TextElideMode.ElideNone)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        return table
+
+    def _fit_supply_table(self, table: QTableWidget) -> None:
+        row_h = table_row_height_for_controls()
+        for row in range(table.rowCount()):
+            table.setRowHeight(row, row_h)
+        height = (
+            row_h * table.rowCount()
+            + table.horizontalHeader().height()
+            + table.frameWidth() * 2
+            + 6
+        )
+        table.setMinimumHeight(height)
+        table.setMaximumHeight(height)
+
+    def _place_supply_field(self, table: QTableWidget, row: int, col: int, field) -> None:
+        if field is None:
+            self._supply_text_cell(table, row, col, self._tx("party_ui_supply_none", "없음"))
+            cell = table.item(row, col)
+            if cell is not None:
+                cell.setToolTip(
+                    self._tx(
+                        "party_ui_supply_no_shop",
+                        "마나 물약 상점은 없습니다. 가방에 있는 것만 줍니다.",
+                    )
+                )
+            return
+        attr, bag_key, default, low, high = field
+        spin = self._supply_spin(bag_key, default, low, high)
+        setattr(self, attr, spin)
+        table.setCellWidget(row, col, wrap_cell_widget(spin))
+
+    def _build_supply_self_table(self) -> QTableWidget:
+        table = self._new_supply_table(
+            [
+                self._tx("party_ui_supply_item", "물건"),
+                self._tx("party_ui_supply_keep", "담당 유지"),
+                self._tx("party_ui_supply_buy", "사는 수"),
+            ],
+            [
+                "",
+                "상점 담당이 자기 가방에 남기는 수입니다. 그보다 적으면 상점으로 갑니다.",
+                "상점에서 한 번에 사는 개수입니다.",
+            ],
+        )
+        for row_i, spec in enumerate(self._supply_table_rows()):
+            name, _who, _member_min, keeper_min, _give, buy = spec
+            table.insertRow(row_i)
+            self._supply_text_cell(table, row_i, 0, name)
+            self._place_supply_field(table, row_i, 1, keeper_min)
+            self._place_supply_field(table, row_i, 2, buy)
+        configure_table_fill(table, 0, fixed={1: 120, 2: 110})
+        self._fit_supply_table(table)
+        return table
+
+    def _build_supply_others_table(self) -> QTableWidget:
+        table = self._new_supply_table(
+            [
+                self._tx("party_ui_supply_item", "물건"),
+                self._tx("party_ui_supply_who", "받는 사람"),
+                self._tx("party_ui_supply_member", "미만이면 줌"),
+                self._tx("party_ui_supply_give", "주는 수"),
+            ],
+            [
+                "",
+                "이 물건을 받을 자리입니다.",
+                "그 가방이 이 수보다 적으면 보급합니다.",
+                "한 번에 떨어뜨리는 개수입니다. 남은 여유가 더 적으면 그 여유만 줍니다.",
+            ],
+        )
+        for row_i, spec in enumerate(self._supply_table_rows()):
+            name, who, member_min, _keeper_min, give, _buy = spec
+            table.insertRow(row_i)
+            self._supply_text_cell(table, row_i, 0, name)
+            self._supply_text_cell(table, row_i, 1, who)
+            self._place_supply_field(table, row_i, 2, member_min)
+            self._place_supply_field(table, row_i, 3, give)
+        configure_table_fill(table, 1, fixed={0: 92, 2: 120, 3: 110})
+        self._fit_supply_table(table)
+        return table
+
+    def _supply_text_cell(self, table: QTableWidget, row: int, col: int, text: str) -> None:
+        item = QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        item.setTextAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+        table.setItem(row, col, item)
+
+    def _supply_spin(self, bag_key: str, default: int, low: int, high: int) -> StepSpinBox:
+        spin = StepSpinBox(compact=True)
+        spin.setRange(low, high)
+        spin.setValue(self.bag.get_int("party", bag_key, default))
+
+        def _sync(value: int, key: str = bag_key) -> None:
+            self.bag.set("party", key, int(value))
+
+        spin.valueChanged.connect(_sync)
+        spin.editingFinished.connect(lambda key=bag_key, box=spin: self.bag.set("party", key, int(box.value())))
+        return spin
 
     def _build_leader_loot(self) -> QWidget:
         host, lay = self._section()
@@ -2356,6 +2508,55 @@ class PartyTab(QWidget):
                 self.bag.get_int("party", "shopkeeper_arrow_buy", 200)
             )
             self.party_shopkeeper_arrow_buy.blockSignals(False)
+        for attr, bag_key, default in (
+            ("party_member_hp_min", "member_hp_min", 10),
+            ("party_shopkeeper_hp_min", "shopkeeper_hp_min", 20),
+            ("party_member_hp_give", "member_hp_give", 10),
+            ("party_shopkeeper_hp_buy", "shopkeeper_hp_buy", 20),
+            ("party_member_depoison_min", "member_depoison_min", 1),
+            ("party_shopkeeper_depoison_min", "shopkeeper_depoison_min", 2),
+            ("party_member_depoison_give", "member_depoison_give", 1),
+            ("party_shopkeeper_depoison_buy", "shopkeeper_depoison_buy", 5),
+            ("party_member_mp_min", "member_mp_min", 5),
+            ("party_shopkeeper_mp_min", "shopkeeper_mp_min", 10),
+            ("party_member_mp_give", "member_mp_give", 5),
+            ("party_shopkeeper_mp_buy", "shopkeeper_mp_buy", 10),
+        ):
+            spin = getattr(self, attr, None)
+            if spin is None:
+                continue
+            spin.blockSignals(True)
+            spin.setValue(self.bag.get_int("party", bag_key, default))
+            spin.blockSignals(False)
+        for attr, bag_key, default in (
+            ("party_member_heal_pct", "member_heal_pct", 70),
+            ("party_member_potion_pct", "member_potion_pct", 50),
+            ("party_mage_heal_pct", "mage_heal_pct", 80),
+            ("party_retreat_pct", "retreat_pct", 30),
+            ("party_tree_hp_to_mp_hp", "tree_hp_to_mp_hp", 85),
+            ("party_tree_hp_to_mp_mp", "tree_hp_to_mp_mp", 80),
+            ("party_tree_heal_hp", "tree_heal_hp", 40),
+            ("party_tree_heal_mp", "tree_heal_mp", 80),
+        ):
+            spin = getattr(self, attr, None)
+            if spin is None:
+                continue
+            spin.blockSignals(True)
+            spin.setValue(self.bag.get_int("party", bag_key, default))
+            spin.blockSignals(False)
+        for attr, bag_key, default in (
+            ("party_mother_tree", "mother_tree", True),
+            ("party_talking_scroll", "talking_scroll", True),
+            ("party_safe_zone", "safe_zone", True),
+            ("party_tree_hp_to_mp", "tree_hp_to_mp", True),
+            ("party_tree_heal", "tree_heal", True),
+        ):
+            box = getattr(self, attr, None)
+            if box is None:
+                continue
+            box.blockSignals(True)
+            box.setChecked(self.bag.get_bool("party", bag_key, default))
+            box.blockSignals(False)
         if hasattr(self, "party_loot_weight_pct"):
             self.party_loot_weight_pct.blockSignals(True)
             self.party_loot_weight_pct.setValue(
@@ -2383,6 +2584,7 @@ class PartyTab(QWidget):
         self._apply_role(self._role())
         if self.routine_panel is not None:
             self.routine_panel.load_from_bag()
+        self._refresh_party_heal()
 
     def flush_routine(self) -> None:
         if self.routine_panel is not None:

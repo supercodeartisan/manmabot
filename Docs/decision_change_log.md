@@ -23,6 +23,61 @@ Shared: `farm_loot_or_combat` checks `party_help_open`, set only while this bot 
 Affects: party-member assist fallback and party-leader hunt after a kill.
 Consent: user (recognize the attacking monster and implement; help is below leader assist; the leader helps after its own fight).
 Result: not run in game. `PARTY_JOIN_ACTOR=1` is read by the existing `party.dll`; the DLL was not rebuilt.
+## 2026-11-09 — party recovery uses the party window, including before a policy
+
+Intent: While a character is in a party, heal, HP potion, retreat, mother tree, talking scroll, and safe zone follow the party support page. Before a leader policy arrives, the party defaults are used (heal 70, potion 50, mage list-heal 80, retreat 30, mother tree on with HP≥85/MP≤80 and heal HP≤40/MP≥80, talking scroll on, safe zone on). The mage's own heal and potion, and the leader's own character, use those same lines. After a member finishes recovery they follow the leader and do not walk back to the hunt. Solo recovery is unchanged when the party overlay is absent.
+Shared: `action_threshold`, `_hp_action_enabled`, `_hp_recovery_allowed`, heal/potion availability, `elf_uses_mother_tree`, `talking_scroll_available`, mother-tree HP/MP bands, and `_can_safe_now` read the overlay only while a party tick has installed it. Solo callers never install it. `party_critical_escape` still drops the post-retreat hunt return.
+Affects: party leader 지원 page, party-member self-heal, potion, and retreat, mage self-heal and list-heal, and the leader's own hunt recovery while party leader mode is on.
+Consent: user ("정책이 정식 오기전에는 파티전에서의 기정값들을 사용해야 해", "이들의 회복도 파티창의 설정값들을 써야 해", "파티 전용 칸을 만들어서 그 파티전용 설정값들에 의해 회복절차를 타야 해. 회복이 끝나면 사냥터로 돌아가지 않고 파티장 따라가는것은 좋아").
+Result: `Engine/app/_06_party/tests/test_leader_care.py` and the party workspace UI test. Not run in game.
+
+## 2026-11-09 — supply shops continue before the leader return
+
+Intent: After the shopkeeper buys one supply item, later rows are bought on the same outing when the keeper is still short and Adena covers at least one. Order stays HP, antidote, then arrows. A row whose remembered price is more than Adena is skipped. When no later row needs a visit, the shopkeeper returns to the leader. An in-progress shop is not replaced by a new choice. Solo shops still return to the farm.
+Shared: `next_supply_buy` and the party supply success path in `apply_cursor_verify_feedback`. Solo shop completion still calls `mark_post_shop_return`. Follow, heal, and combat are unchanged.
+Affects: shopkeeper HP, antidote, and arrow purchases.
+Consent: user (after HP, continue to later items when they must be bought and Adena allows; return to the leader when there is nowhere else to go).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-09 — one supply shop trip fills the keeper reserve
+
+Intent: A party supply buy no longer purchases only the boss "사는 수" and walks back to buy the same item again. One trip buys enough to reach the keeper reserve, and at least the boss buy count. The shop list price is read before the quantity is typed. Adena buys as many as it covers. A learned price blocks another walk while Adena cannot pay for one. Solo shop quantities are unchanged. The shop field still stops at 999.
+Shared: `supply_fill_qty` / `party_shop_buy_qty` for the party supply pin, and `execute_calibrated_buy` only while `party_shopkeeper_arrow` is set. Follow, heal, and solo buys are unchanged.
+Affects: shopkeeper HP, antidote, and arrow purchases.
+Consent: user (buy enough to reach the reserve on the first trip; if Adena is short, buy as many as the price allows).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-09 — leader sets party heal and potion lines
+
+Intent: The party leader support page sets three lines. Non-mage members self-heal and drink an HP potion at those percents. The mage list-heal uses the leader's line instead of a fixed 80. Until a policy arrives, each member keeps their solo lines and the mage list stays at 80. The unused "HP danger emergency assist" card is removed. Mage self-heal, solo recovery, and the retreat line stay as they are.
+Shared: `apply_party_support` and `_side_hp_potion` gain an optional ratio. Solo callers omit it, so solo heal and potion lines are unchanged. `party_critical_escape` is unchanged.
+Affects: party leader 지원 page, party-member self-heal and HP potion, and mage party-list heal.
+Consent: user ("좋다. 실현하자") after the leader-line proposal, then "긴급 지원은 필요없어" and the mage 80% line must be set by the leader. Defaults: member heal 70, potion 50, mage list heal 80.
+Result: `Engine/app/_06_party/tests/test_leader_care.py` and the party workspace UI test. Not run in game.
+
+## 2026-11-09 — shopkeeper also supplies three potions
+
+Intent: The shopkeeper still supplies arrows, and now also HP potions, antidote, and blue MP potions on the same 10-second report. Order is HP, antidote, MP, then arrows. A short shopkeeper buys one item and returns before the next. HP and antidote go to every seat except the shopkeeper. MP goes only to the roster mage and is not bought, because no shop behavior exists. Arrows still skip the mage. Each drop keeps the shopkeeper reserve and uses the boss give count. Solo shop quantities stay on solo trips.
+Shared: `choose_supply_duty`, `step_ground_drop` stack choice, and `_emit_shop_run` quantity only while `party_shopkeeper_arrow` is set. Follow, heal, combat, and solo buys are unchanged.
+Affects: party boss 마을 및 보급, the shopkeeper drop and shop pin, and the member pickup of that pile.
+Consent: user ("yes") after the potion-supply plan. Defaults: HP 10/20/10/20, antidote 1/2/1/5, MP 5/10/5/10.
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-09 — hunt item tab paints armor first
+
+Intent: Opening the hunt item list was decoding every catalog icon on the UI thread. The table now opens on the 갑옷 category. Names, allow flags, and categories for the whole catalog are filled before the first paint so a save still writes every pickup name. Icon decode runs off the UI thread, armor rows first, then the rest without adding those rows.
+Shared: hunt item table paint only. Pickup mode, `item_pickup_names`, and loot choice are unchanged.
+Affects: the hunt Items tab. Other categories show when the user changes the category filter. A category the user already picked is kept across reload.
+Consent: user ("yes") after the armor-first proposal.
+Result: not run in game.
+
+## 2026-11-09 — shopkeeper arrow drop skips the mage seat
+
+Intent: The shopkeeper still reads the 10-second party bag reports and drops arrows to the first member under the boss threshold. A roster row whose role is mage is no longer a drop target. The party boss is not on that roster, so the boss stays eligible. An unknown name is not treated as mage.
+Shared: `pick_arrow_duty` only. Buy quantity, follow, heal, and solo shop are unchanged.
+Affects: the shopkeeper's ground drop choice.
+Consent: user ("yes") after the mage-seat exclusion proposal.
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
 
 ## 2026-11-08 — party boss sets arrow give and buy counts
 

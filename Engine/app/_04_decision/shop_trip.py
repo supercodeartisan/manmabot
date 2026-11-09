@@ -524,7 +524,7 @@ def _emit_shop_run(
     qty = _shop_qty_for_emit(state, behavior_id)
     from app._06_party.arrow_policy import party_shop_buy_qty
 
-    qty = party_shop_buy_qty(blackboard.scratch, behavior_id, qty)
+    qty = party_shop_buy_qty(blackboard.scratch, behavior_id, qty, state)
     kind = str(getattr(behavior, "action", "") or "buy").strip().lower() or "buy"
     equip = _shop_equip_for_behavior(behavior_id)
     get_logger("shop").info(

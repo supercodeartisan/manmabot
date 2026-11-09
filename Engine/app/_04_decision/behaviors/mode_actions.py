@@ -165,15 +165,26 @@ def maybe_heal_mp_to_hp_at_tree(
     from app._04_decision import player_mode as pm
     from app._04_decision.mode_control import hp_ratio, mp_ratio
 
-    if not bool(pm.MP_TO_HP_ENABLED):
-        return None
+    from app._06_party.recovery import active
+
+    party = active()
+    if party is not None:
+        if not party.tree_heal:
+            return None
+        max_hp = float(party.tree_heal_hp) / 100.0
+        min_mp = float(party.tree_heal_mp) / 100.0
+    else:
+        if not bool(pm.MP_TO_HP_ENABLED):
+            return None
+        max_hp = float(pm.MP_TO_HP_MAX_HP_RATIO)
+        min_mp = float(pm.MP_TO_HP_MIN_MP_RATIO)
     ratio = hp_ratio(state)
     mpr = mp_ratio(state)
     if ratio is None or mpr is None:
         return None
-    if ratio > float(pm.MP_TO_HP_MAX_HP_RATIO):
+    if ratio > max_hp:
         return None
-    if mpr < float(pm.MP_TO_HP_MIN_MP_RATIO):
+    if mpr < min_mp:
         return None
     if heal_blocked_by_mana(state, blackboard, role="heal"):
         return None
@@ -346,7 +357,10 @@ def heal_blocked_by_mana(
 
 def _hp_recovery_allowed() -> bool:
     from app._04_decision import player_mode as pm
+    from app._06_party.recovery import party_on
 
+    if party_on():
+        return True
     return bool(pm.HP_RECOVER_ENABLED)
 
 
@@ -376,7 +390,9 @@ def should_drink_hp_potion(state: "GameState") -> bool:
     from app._04_decision.mode_control import is_critical_hp, is_low_hp
     from app._05_action.spell_box import slot_is_enabled
 
-    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
+    from app._06_party.recovery import party_on
+
+    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
         return False
     if not slot_is_enabled("hp_potion"):
         return False
@@ -534,7 +550,9 @@ def _can_heal_now(state: "GameState") -> bool:
     from app._04_decision import player_mode as pm
     from app._05_action.spell_box import slot_is_enabled
 
-    if not _hp_recovery_allowed() or not pm.USE_HEAL:
+    from app._06_party.recovery import party_on
+
+    if not _hp_recovery_allowed() or not (pm.USE_HEAL or party_on()):
         return False
     if not slot_is_enabled("heal"):
         return False
@@ -637,8 +655,9 @@ def _can_item_now(state: "GameState", item_key: str) -> bool:
         assigned_hotbar_slot,
         find_hp_restore_hotbar,
     )
+    from app._06_party.recovery import party_on
 
-    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
+    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -655,8 +674,9 @@ def _can_potion_now(state: "GameState") -> bool:
         assigned_hotbar_slot,
         hp_item_keys,
     )
+    from app._06_party.recovery import party_on
 
-    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
+    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -718,15 +738,21 @@ def _can_teleport_now(
 def _can_safe_now(blackboard: "Blackboard") -> bool:
     from app._04_decision.nav_config import get_home_tile, get_safe_areas, nearest_safe_area
     from app._04_decision.talking_scroll import talking_scroll_available
+    from app._06_party.recovery import active
 
-    if talking_scroll_available():
-        return True
+    scroll = talking_scroll_available()
     start = (blackboard.world_origin.x, blackboard.world_origin.y)
-    if nearest_safe_area(start) is not None:
+    dest = (
+        nearest_safe_area(start) is not None
+        or get_home_tile() is not None
+        or bool(get_safe_areas())
+    )
+    party = active()
+    if party is None:
+        return scroll or dest
+    if scroll:
         return True
-    if get_home_tile() is not None:
-        return True
-    return bool(get_safe_areas())
+    return bool(party.safe_zone and dest)
 
 
 def _player_level(state: "GameState | None") -> int | None:
@@ -973,9 +999,18 @@ def hp_spike_drop(blackboard: "Blackboard") -> bool:
 
 
 def _hp_action_enabled(actions: list, action_id: str) -> bool:
-    from app._04_decision.hp_actions import canonical_action_id
+    from app._04_decision.hp_actions import canonical_action_id, is_item_action
+    from app._06_party.recovery import active
 
     wanted = canonical_action_id(action_id)
+    party = active()
+    if party is not None:
+        if wanted in ("heal", "hp_potion", "retreat") or is_item_action(str(action_id or "")):
+            return True
+        if wanted == "safe_zone":
+            return bool(party.safe_zone or party.talking_scroll)
+        if wanted == "mother_tree":
+            return bool(party.mother_tree)
     for row in actions:
         if canonical_action_id(str(row.get("id") or "")) == wanted:
             return bool(row.get("enabled", True))

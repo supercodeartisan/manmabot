@@ -812,9 +812,14 @@ def talking_scroll_available() -> bool:
     """True when this run's startup hotbar scan placed the scroll on a slot.
 
     A binding saved from an earlier run does not count. Bag count is not read.
+    A party recovery overlay can turn the scroll off without changing solo.
     """
     from app._05_action.spell_box import slot_is_enabled
+    from app._06_party.recovery import active
 
+    party = active()
+    if party is not None and not party.talking_scroll:
+        return False
     return slot_is_enabled("talking_scroll")
 
 

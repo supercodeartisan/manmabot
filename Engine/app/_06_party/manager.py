@@ -235,6 +235,12 @@ class PartyMemberManager:
 
     def decide(self, game_state: Any) -> Any:
         """Same contract as ``DecisionManager.decide`` → one ActionIntent."""
+        from .recovery import bind, recovery_from_config
+
+        with bind(recovery_from_config(self.config)):
+            return self._decide_party(game_state)
+
+    def _decide_party(self, game_state: Any) -> Any:
         self.runtime.tick += 1
         self.runtime.duty_phase = "follow"
         cfg = self.config.clamped()
@@ -405,10 +411,13 @@ class PartyMemberManager:
                     self._record_decision(duty)
                     return duty
 
+            heal_below, potion_below = self._leader_self_care(game_state)
             support = apply_party_support(
                 game_state,
                 self._nav_blackboard,
                 allow_buffs=True,
+                heal_below=heal_below,
+                potion_below=potion_below,
             )
             # Side pickup waits until we know the leader is standing.
             # Potions stay on blackboard.side_intents for the executor.
@@ -1099,10 +1108,13 @@ class PartyMemberManager:
                 )
                 self._record_decision(escape)
                 return escape
+            heal_below, potion_below = self._leader_self_care(game_state)
             support = apply_party_support(
                 game_state,
                 self._nav_blackboard,
                 allow_buffs=True,
+                heal_below=heal_below,
+                potion_below=potion_below,
             )
             if support is not None:
                 _heal, need_buff = self._support_flags(support)
@@ -1143,6 +1155,18 @@ class PartyMemberManager:
         except (TypeError, ValueError):
             pass
         return False
+
+    def _leader_self_care(self, game_state: Any) -> tuple[float, float]:
+        """Party heal and potion lines. Mage and leader use the same lines."""
+        del game_state
+        return (
+            float(self.config.member_heal_pct) / 100.0,
+            float(self.config.member_potion_pct) / 100.0,
+        )
+
+    def _mage_list_heal_pct(self) -> int:
+        """Leader line for healing other members."""
+        return int(self.config.mage_heal_pct)
 
     @staticmethod
     def _support_flags(support: Any) -> tuple[bool, bool]:
@@ -1217,6 +1241,7 @@ class PartyMemberManager:
             party.get("members"),
             hud.get("slots"),
             self_name=self_name,
+            below=self._mage_list_heal_pct(),
             here=(
                 getattr(origin, "x", None),
                 getattr(origin, "y", None),
