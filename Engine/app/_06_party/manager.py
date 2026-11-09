@@ -958,10 +958,6 @@ class PartyMemberManager:
             self._join_nav.clear()
             self.runtime.last_kind = result.kind.value
             field_plan = None
-            pose_seq = int(getattr(game_state, "party_pose_seq", 0) or 0)
-            seen_seq = self.runtime.scratch.get("follow_pose_seq")
-            memory_fresh = pose_seq != seen_seq
-            self.runtime.scratch["follow_pose_seq"] = pose_seq
             if (
                 result.kind is MemberKind.FOLLOW
                 and slot_tile is not None
@@ -974,7 +970,6 @@ class PartyMemberManager:
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
                         kind=formed.kind,
-                        memory_fresh=memory_fresh,
                     )
                 except Exception as exc:
                     _log.debug("party slot hop failed: %s", exc)
@@ -992,7 +987,6 @@ class PartyMemberManager:
                         stop_steps=max(1, int(cfg.stop_tiles)),
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
-                        memory_fresh=memory_fresh,
                     )
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)

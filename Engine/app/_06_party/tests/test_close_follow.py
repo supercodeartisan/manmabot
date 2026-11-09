@@ -1,6 +1,6 @@
 """Close follow: stop at 2, start at 3, stale pose is not a walk goal."""
 from app._06_party.config import PartyMemberConfig
-from app._06_party.follow import FOLLOW_CLICK_TILES, follow_kind
+from app._06_party.follow import FOLLOW_CLICK_TILES, follow_hop_still_closes, follow_kind
 from app._06_party.policy import MemberKind, PolicyInput, decide_policy
 
 
@@ -68,10 +68,18 @@ def test_stale_pose_does_not_follow():
     assert assist.kind is MemberKind.ASSIST
 
 
+def test_same_delta_keeps_the_hop_and_a_turn_does_not():
+    assert follow_hop_still_closes((0, 0), (5, 0), (2, 0)) is True
+    assert follow_hop_still_closes((0, 0), (1, 0), (2, 0)) is False
+    assert follow_hop_still_closes((0, 0), (5, 1), (2, 0)) is False
+    assert follow_hop_still_closes((0, 0), (5, 0), None) is False
+
+
 if __name__ == "__main__":
     test_walk_starts_one_tile_outside_the_stop_band()
     test_follow_click_stays_short()
     test_offscreen_fresh_pose_uses_the_same_band()
     test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()
+    test_same_delta_keeps_the_hop_and_a_turn_does_not()
     print("OK")
