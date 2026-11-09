@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections import OrderedDict, deque
+from typing import Any, Callable, Iterable
 
-from PySide6.QtCore import QSize, Qt, QThread, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QObject, QRunnable, QSize, Qt, QThread, QThreadPool, QTimer, Signal
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -37,10 +38,189 @@ from ui_qt.editors.form_helpers import (
     configure_table_fill,
 )
 from ui_qt.facade.qt_bridge import QtBridge
-from ui_qt.icon_helpers import HUNT_ICON_SIZE, hunt_icon
+from ui_qt.icon_helpers import HUNT_ICON_SIZE, hunt_icon, hunt_qimage
 from ui_qt.theme import tokens
 from ui_qt.theme.apply import mark_accent
 from ui_qt.viewmodels.settings_bag import SettingsBag
+
+# First paint of the hunt item table. Other categories stay in memory and
+# their icons decode off the UI thread.
+_FIRST_ITEM_CATEGORY_KO = "갑옷"
+_ITEM_ICON_WORKERS = 2
+_ITEM_ICON_CACHE_MAX = 2048
+
+
+class _IconEpoch:
+    def __init__(self) -> None:
+        self.generation = 0
+        self.alive = True
+
+
+class _HuntItemIconBridge(QObject):
+    ready = Signal(int, str, bool, QImage)
+
+
+class _HuntItemIconTask(QRunnable):
+    def __init__(
+        self,
+        generation: int,
+        key: str,
+        allowed: bool,
+        names: tuple[str, ...],
+        ids: tuple[int, ...],
+        bridge: _HuntItemIconBridge,
+        epoch: _IconEpoch,
+    ) -> None:
+        super().__init__()
+        self.generation = int(generation)
+        self.key = str(key)
+        self.allowed = bool(allowed)
+        self.names = names
+        self.ids = ids
+        self.bridge = bridge
+        self.epoch = epoch
+        self.setAutoDelete(True)
+
+    def run(self) -> None:
+        if not self.epoch.alive or self.epoch.generation != self.generation:
+            return
+        try:
+            from ui_qt.editors.sell_icon_loader import resolve_sell_icon_path
+
+            path = resolve_sell_icon_path(self.names, self.ids)
+            image = hunt_qimage(path, enabled=self.allowed, size=HUNT_ICON_SIZE)
+        except Exception:
+            return
+        if not self.epoch.alive or self.epoch.generation != self.generation:
+            return
+        self.bridge.ready.emit(self.generation, self.key, self.allowed, image)
+
+
+class _HuntItemIconLoader(QObject):
+    """Decode hunt item thumbnails off the UI thread.
+
+    The table paints names first. Visible rows are queued ahead of the rest
+    of the catalog, which keeps loading without being inserted.
+    """
+
+    updated = Signal(str, bool, QPixmap)
+
+    def __init__(self, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._epoch = _IconEpoch()
+        self._bridge = _HuntItemIconBridge()
+        self._bridge.ready.connect(self._on_ready)
+        self._pool = QThreadPool(self)
+        self._pool.setMaxThreadCount(_ITEM_ICON_WORKERS)
+        self._cache: OrderedDict[tuple[str, bool], QPixmap] = OrderedDict()
+        self._jobs: dict[str, tuple[tuple[str, ...], tuple[int, ...]]] = {}
+        self._pending: deque[tuple[str, bool]] = deque()
+        self._pending_set: set[tuple[str, bool]] = set()
+        self._inflight: dict[tuple[str, bool], int] = {}
+        self.rest_queued = False
+        self._placeholder: QPixmap | None = None
+
+    def placeholder(self) -> QPixmap:
+        if self._placeholder is None:
+            self._placeholder = hunt_icon(None)
+        return self._placeholder
+
+    def remember(self, key: str, names: Iterable[str], ids: Iterable[int]) -> None:
+        text = str(key or "").strip()
+        if not text:
+            return
+        clean_names = tuple(str(name).strip() for name in names if str(name or "").strip())
+        clean_ids: list[int] = []
+        for raw in ids:
+            try:
+                clean_ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        self._jobs[text] = (clean_names, tuple(clean_ids))
+
+    def cached(self, key: str, allowed: bool) -> QPixmap | None:
+        token = (str(key or ""), bool(allowed))
+        pixmap = self._cache.get(token)
+        if pixmap is None:
+            return None
+        self._cache.move_to_end(token)
+        return pixmap
+
+    def cancel(self) -> None:
+        """Drop queued work. A finished job from the old pass is ignored."""
+        self._epoch.generation += 1
+        self._pending.clear()
+        self._pending_set.clear()
+        self._inflight.clear()
+        self.rest_queued = False
+
+    def shutdown(self) -> None:
+        self._epoch.alive = False
+        self.cancel()
+
+    def enqueue(self, jobs: Iterable[tuple[str, bool]], *, front: bool = False) -> None:
+        ordered = [(str(key), bool(allowed)) for key, allowed in jobs if str(key or "").strip()]
+        if front:
+            ordered.reverse()
+        for token in ordered:
+            key, _allowed = token
+            if token in self._inflight or self.cached(key, token[1]) is not None:
+                continue
+            if key not in self._jobs:
+                continue
+            if token in self._pending_set:
+                if not front:
+                    continue
+                self._pending.remove(token)
+            if front:
+                self._pending.appendleft(token)
+            else:
+                self._pending.append(token)
+            self._pending_set.add(token)
+        self._pump()
+
+    def _pump(self) -> None:
+        generation = self._epoch.generation
+        while len(self._inflight) < _ITEM_ICON_WORKERS and self._pending:
+            if generation != self._epoch.generation:
+                return
+            token = self._pending.popleft()
+            self._pending_set.discard(token)
+            if token in self._inflight or self.cached(token[0], token[1]) is not None:
+                continue
+            names, ids = self._jobs.get(token[0], ((), ()))
+            self._inflight[token] = generation
+            self._pool.start(
+                _HuntItemIconTask(
+                    generation,
+                    token[0],
+                    token[1],
+                    names,
+                    ids,
+                    self._bridge,
+                    self._epoch,
+                )
+            )
+
+    def _store(self, token: tuple[str, bool], pixmap: QPixmap) -> None:
+        self._cache[token] = pixmap
+        self._cache.move_to_end(token)
+        while len(self._cache) > _ITEM_ICON_CACHE_MAX:
+            self._cache.popitem(last=False)
+
+    def _on_ready(self, generation: int, key: str, allowed: bool, image: QImage) -> None:
+        token = (str(key), bool(allowed))
+        if self._inflight.get(token) == int(generation):
+            self._inflight.pop(token, None)
+        if not self._epoch.alive or int(generation) != self._epoch.generation:
+            self._pump()
+            return
+        pixmap = QPixmap.fromImage(image)
+        if pixmap.isNull():
+            pixmap = self.placeholder()
+        self._store(token, pixmap)
+        self.updated.emit(key, bool(allowed), pixmap)
+        self._pump()
 
 
 class _HotbarWorker(QThread):
@@ -98,6 +278,12 @@ class HuntTab(QWidget):
         self._item_labels: dict[str, str] = {}
         self._item_search: dict[str, str] = {}
         self._item_categories: dict[str, str] = {}
+        self._item_category_ko: dict[str, str] = {}
+        self._item_category_user_set = False
+        self._item_icon_rows: dict[str, list[int]] = {}
+        self._hunt_item_icons = _HuntItemIconLoader(self)
+        self._hunt_item_icons.updated.connect(self._apply_hunt_item_icon)
+        self.destroyed.connect(self._hunt_item_icons.shutdown)
         self._build()
 
     def _build(self) -> None:
@@ -1212,7 +1398,7 @@ class HuntTab(QWidget):
         filter_row.addWidget(QLabel(self.t.get("filter_category", "Category")))
         self.item_category = QComboBox()
         self.item_category.addItem(self.t.get("filter_all", "All"))
-        self.item_category.currentIndexChanged.connect(lambda _i: self._refresh_item_rows())
+        self.item_category.currentIndexChanged.connect(self._on_item_category_changed)
         filter_row.addWidget(self.item_category, stretch=1)
         col.addLayout(filter_row)
         mode_row = QHBoxLayout()
@@ -1271,6 +1457,16 @@ class HuntTab(QWidget):
         self.bag.set("other", "item_pickup_mode", mode)
         self._load_items()
 
+    def _on_item_category_changed(self, _index: int) -> None:
+        self._item_category_user_set = True
+        self._refresh_item_rows()
+
+    def _armor_category_label(self) -> str:
+        for key in self._item_order:
+            if self._item_category_ko.get(key) == _FIRST_ITEM_CATEGORY_KO:
+                return self._item_categories.get(key, "")
+        return ""
+
     def _load_items(self) -> None:
         selected = set(str(x) for x in (self.bag.get("other", "item_pickup_names", []) or []))
         mode = self.bag.get_str("other", "item_pickup_mode", "blacklist")
@@ -1286,7 +1482,6 @@ class HuntTab(QWidget):
                 radio.blockSignals(False)
         try:
             from app._03_world.catalog.game_catalog import (
-                item_category_labels,
                 list_item_rows,
                 resolve_item_key,
             )
@@ -1304,21 +1499,6 @@ class HuntTab(QWidget):
                     item_catalog_display_name(entry.name_ko, language) or entry.name_ko
                 ).lower()
             )
-            categories = [
-                self.t.get("filter_all", "All"),
-                *sorted(
-                    {
-                        item_category_display_name(name, language)
-                        for name in item_category_labels(language)
-                        if name
-                    }
-                ),
-            ]
-            self.item_category.blockSignals(True)
-            self.item_category.clear()
-            for name in categories:
-                self.item_category.addItem(name)
-            self.item_category.blockSignals(False)
         except Exception:
             entries = []
             selected_keys = selected
@@ -1332,7 +1512,8 @@ class HuntTab(QWidget):
         self._item_labels = {}
         self._item_search = {}
         self._item_categories = {}
-        self._item_icons: dict[str, object] = {}
+        self._item_category_ko = {}
+        self._hunt_item_icons.cancel()
         for entry in entries:
             if mode == "whitelist":
                 allowed = entry.key in selected_keys
@@ -1350,10 +1531,38 @@ class HuntTab(QWidget):
                 item_category_display_name(entry.category_ko, language)
                 or entry.display_category(language)
             )
-            try:
-                self._item_icons[entry.key] = entry.image_path()
-            except Exception:
-                self._item_icons[entry.key] = None
+            self._item_category_ko[entry.key] = str(entry.category_ko or "")
+            self._hunt_item_icons.remember(
+                entry.key,
+                (entry.name_ko, entry.name2, entry.name_zh, entry.name_zh_cn),
+                entry.ids,
+            )
+        all_label = self.t.get("filter_all", "All")
+        previous = self.item_category.currentText().strip()
+        categories = [
+            all_label,
+            *sorted(
+                {
+                    name
+                    for name in self._item_categories.values()
+                    if name and name != all_label
+                }
+            ),
+        ]
+        self.item_category.blockSignals(True)
+        self.item_category.clear()
+        for name in categories:
+            self.item_category.addItem(name)
+        if self._item_category_user_set:
+            index = self.item_category.findText(previous)
+            if index >= 0:
+                self.item_category.setCurrentIndex(index)
+        else:
+            armor = self._armor_category_label()
+            index = self.item_category.findText(armor) if armor else -1
+            if index >= 0:
+                self.item_category.setCurrentIndex(index)
+        self.item_category.blockSignals(False)
         self._refresh_item_rows()
 
     def _refresh_item_rows(self) -> None:
@@ -1363,8 +1572,8 @@ class HuntTab(QWidget):
         category = self.item_category.currentText().strip()
         needle = self.item_search.text().strip().lower()
         all_label = self.t.get("filter_all", "All")
-        self.item_table.setRowCount(0)
-        shown = allowed_count = 0
+        visible: list[tuple[str, bool, str]] = []
+        allowed_count = 0
         for key in self._item_order:
             allowed = bool(self._item_allowed.get(key, True))
             if allowed:
@@ -1378,14 +1587,19 @@ class HuntTab(QWidget):
                 continue
             if needle and needle not in self._item_search.get(key, "") and needle not in self._item_labels.get(key, "").lower():
                 continue
-            row = self.item_table.rowCount()
-            self.item_table.insertRow(row)
+            visible.append((key, allowed, item_cat))
+        shown = len(visible)
+        placeholder = QIcon(self._hunt_item_icons.placeholder())
+        self._item_icon_rows = {}
+        self.item_table.setUpdatesEnabled(False)
+        self.item_table.setRowCount(shown)
+        for row, (key, allowed, item_cat) in enumerate(visible):
             icon_item = QTableWidgetItem()
-            icon_item.setIcon(
-                QIcon(hunt_icon(self._item_icons.get(key), enabled=allowed))
-            )
+            cached = self._hunt_item_icons.cached(key, allowed)
+            icon_item.setIcon(QIcon(cached) if cached is not None else placeholder)
             icon_item.setData(Qt.ItemDataRole.UserRole, key)
             self.item_table.setItem(row, 0, icon_item)
+            self._item_icon_rows.setdefault(key, []).append(row)
             name_item = QTableWidgetItem(self._item_labels.get(key, key))
             name_item.setData(Qt.ItemDataRole.UserRole, key)
             self.item_table.setItem(row, 1, name_item)
@@ -1393,7 +1607,7 @@ class HuntTab(QWidget):
                 row, 2, QTableWidgetItem(self.t.get("yes", "Y") if allowed else self.t.get("no", "N"))
             )
             self.item_table.setItem(row, 3, QTableWidgetItem(item_cat))
-            shown += 1
+        self.item_table.setUpdatesEnabled(True)
         from ui_qt.editors.form_helpers import fit_table_columns
 
         fit_table_columns(self.item_table, stretch_last=False, min_width=48)
@@ -1409,6 +1623,44 @@ class HuntTab(QWidget):
             f"{self.t.get('filter_show', 'Show')}: {shown}\n"
             f"{self.t.get('filter_allowed', 'Allowed')}: {allowed_count}"
         )
+        QTimer.singleShot(0, self._queue_hunt_item_icons)
+
+    def _queue_hunt_item_icons(self) -> None:
+        if not hasattr(self, "item_table"):
+            return
+        visible: list[tuple[str, bool]] = []
+        for row in range(self.item_table.rowCount()):
+            item = self.item_table.item(row, 0)
+            if item is None:
+                continue
+            key = str(item.data(Qt.ItemDataRole.UserRole) or "")
+            if key:
+                visible.append((key, bool(self._item_allowed.get(key, True))))
+        self._hunt_item_icons.enqueue(visible, front=True)
+        if self._hunt_item_icons.rest_queued:
+            return
+        visible_keys = {key for key, _allowed in visible}
+        rest = [
+            (key, bool(self._item_allowed.get(key, True)))
+            for key in self._item_order
+            if key not in visible_keys
+        ]
+        self._hunt_item_icons.enqueue(rest, front=False)
+        self._hunt_item_icons.rest_queued = True
+
+    def _apply_hunt_item_icon(self, key: str, allowed: bool, pixmap: QPixmap) -> None:
+        if not hasattr(self, "item_table"):
+            return
+        if bool(self._item_allowed.get(key, True)) != bool(allowed):
+            return
+        icon = QIcon(pixmap)
+        for row in self._item_icon_rows.get(str(key), ()):
+            item = self.item_table.item(row, 0)
+            if item is None:
+                continue
+            if str(item.data(Qt.ItemDataRole.UserRole) or "") != str(key):
+                continue
+            item.setIcon(icon)
 
     def _toggle_items(self) -> None:
         rows = self.item_table.selectionModel().selectedRows()

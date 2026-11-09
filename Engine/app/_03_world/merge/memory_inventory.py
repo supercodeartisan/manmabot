@@ -15,6 +15,8 @@ HP_POTION_IDS = frozenset({14, 15, 80, 130, 279})
 ARROW_IDS = frozenset({7})
 SILVER_ARROW_IDS = frozenset({96})
 DEPOISON_IDS = frozenset({76, 126})
+# Catalog list/korean/item.json id 492, name 파란 물약, name2 마력 회복 물약.
+MP_POTION_IDS = frozenset({492})
 ADENA_IDS = frozenset({5})
 
 HP_POTION_NAMES = frozenset(
@@ -47,6 +49,9 @@ ARROW_NAMES = frozenset({"화살", "箭", "arrow", "arrows"})
 SILVER_ARROW_NAMES = frozenset({"은 화살", "銀箭", "银箭", "silver arrow", "silver arrows"})
 DEPOISON_NAMES = frozenset(
     {"해독제", "비취 물약", "解毒劑", "解毒剂", "翡翠藥水", "antidote", "depoison"}
+)
+MP_POTION_NAMES = frozenset(
+    {"파란 물약", "마력 회복 물약", "蓝色药水", "藍色藥水", "blue potion"}
 )
 ADENA_NAMES = frozenset({"아데나", "金幣", "金币", "adena"})
 
@@ -140,10 +145,11 @@ def inventory_state_from_snapshot(
     arrows = count_matching(raw_items, ids=ARROW_IDS, names=ARROW_NAMES)
     silver = count_matching(raw_items, ids=SILVER_ARROW_IDS, names=SILVER_ARROW_NAMES)
     depoison = count_matching(raw_items, ids=DEPOISON_IDS, names=DEPOISON_NAMES)
+    mp = count_matching(raw_items, ids=MP_POTION_IDS, names=MP_POTION_NAMES)
     adena = count_matching(raw_items, ids=ADENA_IDS, names=ADENA_NAMES)
     return InventoryState(
         hp_potion=hp,
-        mp_potion=getattr(base, "mp_potion", 0) if base else 0,
+        mp_potion=mp,
         weight_ratio=weight_ratio,
         items=parsed,
         arrows=arrows,

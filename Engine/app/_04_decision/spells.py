@@ -347,8 +347,19 @@ def maybe_hp_to_mp(
     from app._04_decision import player_mode as pm
     from app._04_decision.mode_control import hp_ratio, mp_ratio
 
-    if not bool(pm.HP_TO_MP_ENABLED):
-        return None
+    from app._06_party.recovery import active
+
+    party = active()
+    if party is not None:
+        if not party.tree_hp_to_mp:
+            return None
+        min_hp = float(party.tree_hp_to_mp_hp) / 100.0
+        max_mp = float(party.tree_hp_to_mp_mp) / 100.0
+    else:
+        if not bool(pm.HP_TO_MP_ENABLED):
+            return None
+        min_hp = float(pm.HP_TO_MP_MIN_RATIO)
+        max_mp = float(pm.HP_TO_MP_MAX_MP_RATIO)
     if not slot_is_enabled("hp_to_mp"):
         return None
     snap = _live_hotbar_snap(state, blackboard)
@@ -360,10 +371,10 @@ def maybe_hp_to_mp(
     if not world_tree_blessing_active(state):
         return None
     ratio = hp_ratio(state)
-    if ratio is None or ratio < float(pm.HP_TO_MP_MIN_RATIO):
+    if ratio is None or ratio < min_hp:
         return None
     mpr = mp_ratio(state)
-    if mpr is None or mpr > float(pm.HP_TO_MP_MAX_MP_RATIO):
+    if mpr is None or mpr > max_mp:
         return None
     if not slot_ready(blackboard, "hp_to_mp"):
         blackboard.current_goal = "hp_to_mp"

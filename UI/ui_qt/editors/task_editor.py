@@ -432,6 +432,10 @@ class TaskEditor(QWidget):
         if character not in ("elf", "mage", "knight", "royal") and self.task is not None:
             character = str(getattr(self.task, "character", "") or "")
         self.magic_tab.set_account_character(character)
+        party = getattr(self, "party_tab", None)
+        refresh = getattr(party, "_refresh_party_heal", None)
+        if callable(refresh):
+            refresh()
 
     def _primary_battle_map_id(self) -> str:
         if self.move_tab is None:
