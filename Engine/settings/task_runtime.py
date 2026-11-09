@@ -323,6 +323,30 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             9999,
         ),
     )
+    set_value(
+        "party_member_arrow_give",
+        _int_range(
+            party.get(
+                "member_arrow_give",
+                getattr(profile, "party_member_arrow_give", 100),
+            ),
+            100,
+            1,
+            9999,
+        ),
+    )
+    set_value(
+        "party_shopkeeper_arrow_buy",
+        _int_range(
+            party.get(
+                "shopkeeper_arrow_buy",
+                getattr(profile, "party_shopkeeper_arrow_buy", 200),
+            ),
+            200,
+            1,
+            999,
+        ),
+    )
     pickup = str(
         party.get("loot_pickup", getattr(profile, "party_loot_pickup", "all"))
         or "all"

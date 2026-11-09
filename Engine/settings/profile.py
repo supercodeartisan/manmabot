@@ -232,6 +232,8 @@ class Profile:
     # Party-boss supply. The shopkeeper reads these from the leader policy.
     party_member_arrow_min: int = 300
     party_shopkeeper_arrow_min: int = 300
+    party_member_arrow_give: int = 100
+    party_shopkeeper_arrow_buy: int = 200
     # all = items and adena until the weight line, then adena. adena = adena only.
     party_loot_pickup: str = "all"
     party_loot_weight_pct: int = 30
@@ -539,6 +541,14 @@ class Profile:
             kwargs["party_shopkeeper_arrow_min"] = _party_arrow_min(
                 kwargs.get("party_shopkeeper_arrow_min")
             )
+        if "party_member_arrow_give" in kwargs:
+            kwargs["party_member_arrow_give"] = _party_arrow_count(
+                kwargs.get("party_member_arrow_give"), 100, 1, 9999
+            )
+        if "party_shopkeeper_arrow_buy" in kwargs:
+            kwargs["party_shopkeeper_arrow_buy"] = _party_arrow_count(
+                kwargs.get("party_shopkeeper_arrow_buy"), 200, 1, 999
+            )
         if "party_loot_pickup" in kwargs:
             pickup = str(kwargs.get("party_loot_pickup") or "all").strip().lower()
             kwargs["party_loot_pickup"] = "adena" if pickup == "adena" else "all"
@@ -589,6 +599,14 @@ def _party_arrow_min(value: Any) -> int:
     except (TypeError, ValueError):
         count = 300
     return max(0, min(9999, count))
+
+
+def _party_arrow_count(value: Any, default: int, low: int, high: int) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = default
+    return max(low, min(high, count))
 
 
 def _party_weight_pct(value: Any) -> int:

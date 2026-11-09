@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — party boss sets arrow give and buy counts
+
+Intent: The party boss supply page already set when a member or the shopkeeper is short. It now also sets how many arrows are dropped to a short member, and how many the shopkeeper buys on one trip. A drop still leaves the shopkeeper reserve. Solo equipment arrow quantity stays the solo shop quantity.
+Shared: `pick_arrow_duty` drop size, and `_emit_shop_run` only while `party_shopkeeper_arrow` is set on an arrow behavior. Sell, potions, follow, assist, and solo arrow buy are unchanged.
+Affects: party boss 마을 및 보급, and the shopkeeper member that receives the policy.
+Consent: user ("yes") after the two-count proposal. Defaults: give 100, buy 200.
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
 ## 2026-11-09 — loot blink does not hand the tick to search
 
 Intent: A ground pile that drops out of one memory sweep and returns with a new track id used to clear loot, so the next farm tick clicked the search route the other way. The same GUID, item kind, and world cell now keep the loot walk for up to 2 seconds. A new track id replaces `current_item_id` only. The approach hop stays.

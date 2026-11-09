@@ -2150,6 +2150,12 @@ class BotController:
             "shopkeeper_arrow_min": int(
                 getattr(profile, "party_shopkeeper_arrow_min", 300) or 300
             ),
+            "member_arrow_give": int(
+                getattr(profile, "party_member_arrow_give", 100) or 100
+            ),
+            "shopkeeper_arrow_buy": int(
+                getattr(profile, "party_shopkeeper_arrow_buy", 200) or 200
+            ),
             "loot_pickup": str(getattr(profile, "party_loot_pickup", "all") or "all"),
             "loot_weight_pct": int(getattr(profile, "party_loot_weight_pct", 30) or 30),
         }
