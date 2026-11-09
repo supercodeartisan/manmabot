@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-09 — loot blink does not hand the tick to search
+
+Intent: A ground pile that drops out of one memory sweep and returns with a new track id used to clear loot, so the next farm tick clicked the search route the other way. The same GUID, item kind, and world cell now keep the loot walk for up to 2 seconds. A new track id replaces `current_item_id` only. The approach hop stays.
+Shared: `continue_or_start_loot` only. `TrackIds.prune`, `clear_search_hop`, adena-over-other-item, F4 await, combat sticky, attacks-me, and search route planning are unchanged. Search hop flags `search_hop_active` and `search_waypoint` are cleared without resetting the 5 s unstick sweep. A bag gain, a dead row, a deleted row with no twin, an F4 pause, or 2 seconds without the same pile releases immediately.
+Affects: field and dungeon loot when the locked pile blinks. Search runs again only after that release returns None.
+Consent: user agreed to the branch-only proposal and the eight extra constraints, then "응. 다시 진행해."
+Result: `Engine/app/_04_decision/tests/test_loot_track_hold.py` — 7 passed. Not run in game.
+
+## 2026-11-09 — respawn without Mother Tree heals at the spawn tile
+
+Intent: After revive, an elf with Teleport to Mother still goes to the tree, recovers, then world-navs back to the hunt. A character without that spell used to talking-scroll to a wheel-0 NPC and heal there, then scroll again to the hunt entrance. They now heal on the spawn tile until the existing 95% retreat exit, then the same `post_respawn` world nav runs.
+Shared: `arm_post_respawn_retreat` only. The Mother Tree branch and the no-scroll walk-to-safe branch are unchanged. `begin_retreat`, `apply_inplace_hp_support`, `finish_retreat`, field HP safe-zone scrolls, and login clicks are unchanged.
+Affects: death revive when Mother Tree is unavailable and a talking scroll is equipped. Field low-HP retreat still scrolls.
+Consent: user ("그대로 수정해줘") after the branch-only proposal.
+Result: not run in game.
+
 ## 2026-11-08 — party shopkeeper supplies arrows
 
 Intent: The roster shopkeeper buys arrows with the existing solo arrow shop when their own count is under the party boss threshold, and drops the shortfall beside a member who is under the member threshold. After the shop, world nav uses the leader's live tile as the goal, including on the same mainland or Talking Island map. The leader does not start an arrow shop while that shopkeeper socket is up, and does not count the shopkeeper as lagging during shop or supply. A dropped socket ends that exclusion immediately and lets the leader's existing arrow shop run. Random closest-member loot stays selectable. Party looters use the boss pickup mode and weight line. The short member picks up the dropped pile.

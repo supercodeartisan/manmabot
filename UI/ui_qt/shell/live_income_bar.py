@@ -5,6 +5,10 @@ project is running. Pause and stop keep the elapsed time and the gains so far,
 and the next start continues from those numbers. Closing the program drops
 them. A shop purchase is left out of the Adena gain; a shop sale is kept.
 Time to level uses that running-only exp rate.
+
+Exp and Adena keep separate gains and separate running clocks. The clocks stay
+in step until the user resets one card. A reset zeroes that card only and,
+while running, takes the current memory value as its new baseline.
 """
 
 from __future__ import annotations
@@ -13,9 +17,18 @@ import threading
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QIcon,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+)
+from PySide6.QtWidgets import QToolButton, QWidget
 
 _RATE_WAIT = 15.0
 _BAR_H = 88
@@ -70,6 +83,8 @@ _COPY = {
         "runtime_under_minute": "1분 미만",
         "hour": "시간",
         "minute": "분",
+        "reset_exp": "경험치 측정 초기화",
+        "reset_adena": "아데나 측정 초기화",
     },
     "zh": {
         "exp": "经验值",
@@ -85,8 +100,40 @@ _COPY = {
         "runtime_under_minute": "1分钟以内",
         "hour": "小时",
         "minute": "分",
+        "reset_exp": "重置经验值统计",
+        "reset_adena": "重置金币统计",
     },
 }
+
+
+def _refresh_icon() -> QIcon:
+    """Small circular arrow, drawn once and shared by both reset buttons."""
+    cached = getattr(_refresh_icon, "icon", None)
+    if isinstance(cached, QIcon):
+        return cached
+    pix = QPixmap(32, 32)
+    pix.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pix)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    pen = QPen(QColor("#6b7280"))
+    pen.setWidthF(2.6)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawArc(QRectF(6, 7, 20, 20), int(55 * 16), int(250 * 16))
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor("#6b7280"))
+    arrow = QPainterPath()
+    arrow.moveTo(21.0, 4.0)
+    arrow.lineTo(28.0, 10.0)
+    arrow.lineTo(18.5, 11.5)
+    arrow.closeSubpath()
+    painter.drawPath(arrow)
+    painter.end()
+    icon = QIcon(pix)
+    setattr(_refresh_icon, "icon", icon)
+    return icon
 
 
 def _copy(language: str) -> dict[str, str]:
@@ -154,16 +201,20 @@ def eta_phrase(
 class _Meter:
     """Gains and elapsed time for the current process only.
 
-    The clock runs while ``running`` is true. Pause or stop folds the open
-    segment into the saved totals and forgets the baseline, so manual play
-    in the gap is not part of the next delta. A negative Adena change during
-    a shop buy is ignored. Sales and other gains are kept.
+    Each card has its own gain and its own clock. Both clocks run while
+    ``running`` is true and stay equal until one card is reset. Pause or stop
+    folds the open segment into the saved totals and forgets the baseline, so
+    manual play in the gap is not part of the next delta. A negative Adena
+    change during a shop buy is ignored. Sales and other gains are kept.
     """
 
     def __init__(self) -> None:
-        self.elapsed = 0.0
-        self.segment_start: float | None = None
-        self.started = False
+        self.exp_elapsed = 0.0
+        self.adena_elapsed = 0.0
+        self.exp_segment_start: float | None = None
+        self.adena_segment_start: float | None = None
+        self.exp_started = False
+        self.adena_started = False
         self.adena_gain = 0
         self.exp_gain = 0.0
         self.last_adena: int | None = None
@@ -190,41 +241,115 @@ class _Meter:
             self.hold_adena = int(adena)
         moment = time.monotonic() if now is None else float(now)
         if running:
-            if self.segment_start is None:
-                self.segment_start = moment
-                self.started = True
-                self.last_adena = int(adena) if adena is not None else None
-                if level is not None and exp_percent is not None:
-                    self.last_exp = (int(level), float(exp_percent))
-                else:
-                    self.last_exp = None
-            else:
-                if adena is not None and self.last_adena is not None:
-                    delta = int(adena) - int(self.last_adena)
-                    if not (delta < 0 and buying):
-                        self.adena_gain += delta
-                if adena is not None:
-                    self.last_adena = int(adena)
-                self.exp_gain, self.last_exp = apply_exp(
-                    self.exp_gain, self.last_exp, level, exp_percent
-                )
-            elapsed = self.elapsed + max(0.0, moment - self.segment_start)
+            self._accumulate_exp(level, exp_percent, moment)
+            self._accumulate_adena(adena, buying, moment)
         else:
-            if self.segment_start is not None:
-                self.elapsed += max(0.0, moment - self.segment_start)
-                self.segment_start = None
+            self._close_exp(moment)
+            self._close_adena(moment)
             self.last_adena = None
             self.last_exp = None
-            elapsed = self.elapsed
-        show_rate = self.started
+        return self._publish(moment)
+
+    def reset_exp(
+        self,
+        *,
+        level: int | None,
+        exp_percent: float | None,
+        running: bool,
+        now: float,
+    ) -> dict:
+        """Zero the exp gain and clock. Adena is left as it is."""
+        if level is not None:
+            self.level = int(level)
+        if exp_percent is not None:
+            self.exp = float(exp_percent)
+        self.exp_gain = 0.0
+        self.exp_elapsed = 0.0
+        if running:
+            self.exp_started = True
+            self.exp_segment_start = float(now)
+            if level is not None and exp_percent is not None:
+                self.last_exp = (int(level), float(exp_percent))
+            else:
+                self.last_exp = None
+        else:
+            self.exp_segment_start = None
+            self.last_exp = None
+        return self._publish(float(now))
+
+    def reset_adena(self, *, adena: int | None, running: bool, now: float) -> dict:
+        """Zero the Adena gain and clock. Exp is left as it is."""
+        if adena is not None:
+            self.hold_adena = int(adena)
+        self.adena_gain = 0
+        self.adena_elapsed = 0.0
+        if running:
+            self.adena_started = True
+            self.adena_segment_start = float(now)
+            self.last_adena = int(adena) if adena is not None else None
+        else:
+            self.adena_segment_start = None
+            self.last_adena = None
+        return self._publish(float(now))
+
+    def _accumulate_exp(
+        self,
+        level: int | None,
+        exp_percent: float | None,
+        moment: float,
+    ) -> None:
+        self.exp_started = True
+        if self.exp_segment_start is None:
+            self.exp_segment_start = moment
+            if level is not None and exp_percent is not None:
+                self.last_exp = (int(level), float(exp_percent))
+            else:
+                self.last_exp = None
+            return
+        self.exp_gain, self.last_exp = apply_exp(
+            self.exp_gain, self.last_exp, level, exp_percent
+        )
+
+    def _accumulate_adena(self, adena: int | None, buying: bool, moment: float) -> None:
+        self.adena_started = True
+        if self.adena_segment_start is None:
+            self.adena_segment_start = moment
+            self.last_adena = int(adena) if adena is not None else None
+            return
+        if adena is not None and self.last_adena is not None:
+            delta = int(adena) - int(self.last_adena)
+            if not (delta < 0 and buying):
+                self.adena_gain += delta
+        if adena is not None:
+            self.last_adena = int(adena)
+
+    def _close_exp(self, moment: float) -> None:
+        if self.exp_segment_start is None:
+            return
+        self.exp_elapsed += max(0.0, moment - self.exp_segment_start)
+        self.exp_segment_start = None
+
+    def _close_adena(self, moment: float) -> None:
+        if self.adena_segment_start is None:
+            return
+        self.adena_elapsed += max(0.0, moment - self.adena_segment_start)
+        self.adena_segment_start = None
+
+    def _publish(self, now: float) -> dict:
+        exp_elapsed = self.exp_elapsed
+        adena_elapsed = self.adena_elapsed
+        if self.exp_segment_start is not None:
+            exp_elapsed += max(0.0, now - self.exp_segment_start)
+        if self.adena_segment_start is not None:
+            adena_elapsed += max(0.0, now - self.adena_segment_start)
         return {
             "level": self.level,
             "exp": self.exp,
-            "exp_rate": per_hour(self.exp_gain, elapsed) if show_rate else None,
+            "exp_rate": per_hour(self.exp_gain, exp_elapsed) if self.exp_started else None,
             "adena": self.hold_adena,
-            "adena_rate": per_hour(self.adena_gain, elapsed) if show_rate else None,
-            "adena_gained": self.adena_gain if show_rate else None,
-            "elapsed": elapsed if show_rate else None,
+            "adena_rate": per_hour(self.adena_gain, adena_elapsed) if self.adena_started else None,
+            "adena_gained": self.adena_gain if self.adena_started else None,
+            "elapsed": adena_elapsed if self.adena_started else None,
         }
 
 
@@ -289,6 +414,45 @@ class _IncomeSession:
         with self._lock:
             self._listeners = [item for item in self._listeners if item is not fn]
 
+    def reset_exp(self, level: int | None, exp_percent: float | None) -> dict:
+        """Start a new exp baseline. The Adena card is not touched."""
+        with self._lock:
+            view = self.meter.reset_exp(
+                level=level,
+                exp_percent=exp_percent,
+                running=self._running_now(),
+                now=time.monotonic(),
+            )
+            listeners = list(self._listeners)
+        self._emit(listeners, view)
+        return view
+
+    def reset_adena(self, adena: int | None) -> dict:
+        """Start a new Adena baseline. The exp card is not touched."""
+        with self._lock:
+            view = self.meter.reset_adena(
+                adena=adena,
+                running=self._running_now(),
+                now=time.monotonic(),
+            )
+            listeners = list(self._listeners)
+        self._emit(listeners, view)
+        return view
+
+    def _running_now(self) -> bool:
+        try:
+            return bool(self._running())
+        except Exception:
+            return False
+
+    @staticmethod
+    def _emit(listeners: list, view: dict) -> None:
+        for fn in listeners:
+            try:
+                fn(view)
+            except Exception:
+                pass
+
     def _loop(self) -> None:
         while True:
             adena, level, exp_percent = _read_sample()
@@ -309,11 +473,7 @@ class _IncomeSession:
                     level=level,
                     exp_percent=exp_percent,
                 )
-            for fn in listeners:
-                try:
-                    fn(view)
-                except Exception:
-                    pass
+            self._emit(listeners, view)
             time.sleep(1.0)
 
 
@@ -353,6 +513,12 @@ class LiveIncomeBar(QWidget):
             "adena_gained": None,
             "elapsed": None,
         }
+        self._exp_reset_at = (12.0, 32.0)
+        self._adena_reset_at = (12.0, 32.0)
+        self._placing_resets = False
+        self._exp_reset = self._make_reset_button("income_exp_reset", self._reset_exp)
+        self._adena_reset = self._make_reset_button("income_adena_reset", self._reset_adena)
+        self._sync_reset_tips()
         self._session = _session()
         self._session.bind(running or (lambda: False), buying or (lambda: False))
         self.sampleReady.connect(self._apply_sample)
@@ -391,6 +557,7 @@ class LiveIncomeBar(QWidget):
         self._paint_progress(painter, QRectF(left, 0, level_w, height))
         self._paint_adena(painter, QRectF(left + level_w + gap, 0, adena_w, height))
         painter.end()
+        self._apply_reset_buttons()
 
     def _paint_progress(self, painter: QPainter, rect: QRectF) -> None:
         text = _copy(self._language)
@@ -458,6 +625,7 @@ class LiveIncomeBar(QWidget):
         rate_color = "#e11d48" if isinstance(rate, (int, float)) and float(rate) < 0 else "#3b82f6"
         self._text(painter, rate_rect, 6, text["per_hour"], 11, "#6b7280", bold=False)
         self._text(painter, rate_rect.adjusted(0, 24, 0, 0), 0, rate_text, 15, rate_color, bold=True)
+        self._exp_reset_at = self._corner_reset(rect, self._exp_reset)
         painter.restore()
 
     def _paint_adena(self, painter: QPainter, rect: QRectF) -> None:
@@ -525,17 +693,74 @@ class LiveIncomeBar(QWidget):
             "#1f2937",
             bold=True,
         )
+        rate_text = self._adena_rate_value(rate)
         self._text(painter, rate_rect, 4, text["adena_rate_label"], 11, "#8a6a32", bold=False)
         self._text(
             painter,
             rate_rect.adjusted(0, 22, 0, 0),
             0,
-            self._adena_rate_value(rate),
+            rate_text,
             15,
             "#1f2937",
             bold=True,
         )
+        self._adena_reset_at = self._corner_reset(rect, self._adena_reset)
         painter.restore()
+
+    def _make_reset_button(self, name: str, handler) -> QToolButton:
+        button = QToolButton(self)
+        button.setObjectName(name)
+        button.setFixedSize(16, 16)
+        button.setIcon(_refresh_icon())
+        button.setIconSize(QSize(14, 14))
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.setAutoRaise(True)
+        button.setStyleSheet(
+            "QToolButton { background: transparent; border: none; padding: 0px; }"
+            "QToolButton:hover { background: rgba(31, 41, 55, 0.08); border-radius: 8px; }"
+        )
+        button.clicked.connect(handler)
+        return button
+
+    def _sync_reset_tips(self) -> None:
+        text = _copy(self._language)
+        self._exp_reset.setToolTip(text["reset_exp"])
+        self._adena_reset.setToolTip(text["reset_adena"])
+
+    def _corner_reset(self, card: QRectF, button: QToolButton) -> tuple[float, float]:
+        """Top-right corner of one card, 9px inside the top and right border."""
+        margin = 9.0
+        return (
+            card.right() - margin - float(button.width()),
+            card.top() + margin,
+        )
+
+    def _apply_reset_buttons(self) -> None:
+        if self._placing_resets:
+            return
+        self._placing_resets = True
+        try:
+            self._sync_reset_tips()
+            self._move_reset(self._exp_reset, self._exp_reset_at)
+            self._move_reset(self._adena_reset, self._adena_reset_at)
+        except RuntimeError:
+            return
+        finally:
+            self._placing_resets = False
+
+    def _move_reset(self, button: QToolButton, at: tuple[float, float]) -> None:
+        point = QPoint(int(round(at[0])), int(round(at[1])))
+        if button.pos() != point:
+            button.move(point)
+
+    def _reset_exp(self) -> None:
+        _adena, level, exp_percent = _read_sample()
+        self._session.reset_exp(level, exp_percent)
+
+    def _reset_adena(self) -> None:
+        adena, _level, _exp_percent = _read_sample()
+        self._session.reset_adena(adena)
 
     def _card(self, painter: QPainter, rect: QRectF, fill: QColor, border: QColor) -> None:
         painter.setPen(QPen(border))
