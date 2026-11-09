@@ -1985,6 +1985,153 @@ def continue_or_start_combat(
     return Status.SUCCESS
 
 
+_LOOT_TRACK_HOLD_S = 2.0
+_SCRATCH_LOOT_TRACK_GUID = "loot_track_guid"
+_SCRATCH_LOOT_TRACK_KIND = "loot_track_kind"
+_SCRATCH_LOOT_TRACK_CELL = "loot_track_cell"
+_SCRATCH_LOOT_TRACK_SINCE = "loot_track_since"
+_LOOT_TRACK_HOLD = "hold"
+_LOOT_TRACK_RELEASE = "release"
+
+
+def _quiet_search_click(blackboard: "Blackboard") -> None:
+    """Drop a search hop that would click the other way during loot.
+
+    Does not call ``clear_search_hop``. That helper resets the 5 s unstick sweep.
+    """
+    blackboard.search_hop_active = False
+    blackboard.search_waypoint = None
+
+
+def _loot_guid(obj: object) -> str:
+    return str(getattr(obj, "memory_guid", None) or "").strip()
+
+
+def _loot_kind(obj: object) -> str:
+    return str(getattr(obj, "species_name", None) or "").strip()
+
+
+def _loot_cell(obj: object) -> tuple[int, int] | None:
+    cx = getattr(obj, "world_cx", None)
+    cy = getattr(obj, "world_cy", None)
+    if cx is None or cy is None:
+        return None
+    try:
+        return (int(cx), int(cy))
+    except (TypeError, ValueError):
+        return None
+
+
+def _store_loot_identity(blackboard: "Blackboard", obj: object) -> None:
+    guid = _loot_guid(obj)
+    kind = _loot_kind(obj)
+    cell = _loot_cell(obj)
+    if not guid or not kind or cell is None:
+        return
+    blackboard.scratch[_SCRATCH_LOOT_TRACK_GUID] = guid
+    blackboard.scratch[_SCRATCH_LOOT_TRACK_KIND] = kind
+    blackboard.scratch[_SCRATCH_LOOT_TRACK_CELL] = cell
+
+
+def _clear_loot_track(blackboard: "Blackboard") -> None:
+    blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_GUID, None)
+    blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_KIND, None)
+    blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_CELL, None)
+    blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_SINCE, None)
+
+
+def _loot_identity_ready(blackboard: "Blackboard") -> bool:
+    guid = str(blackboard.scratch.get(_SCRATCH_LOOT_TRACK_GUID) or "").strip()
+    kind = str(blackboard.scratch.get(_SCRATCH_LOOT_TRACK_KIND) or "").strip()
+    cell = blackboard.scratch.get(_SCRATCH_LOOT_TRACK_CELL)
+    return bool(guid and kind and isinstance(cell, tuple) and len(cell) == 2)
+
+
+def _same_loot_pile(blackboard: "Blackboard", obj: object) -> bool:
+    if not _loot_identity_ready(blackboard):
+        return False
+    if _loot_guid(obj) != str(blackboard.scratch.get(_SCRATCH_LOOT_TRACK_GUID) or ""):
+        return False
+    if _loot_kind(obj) != str(blackboard.scratch.get(_SCRATCH_LOOT_TRACK_KIND) or ""):
+        return False
+    return _loot_cell(obj) == tuple(blackboard.scratch.get(_SCRATCH_LOOT_TRACK_CELL))
+
+
+def _find_same_loot(
+    state: "GameState",
+    blackboard: "Blackboard",
+    *,
+    skip: int | None,
+) -> object | None:
+    for obj in state.items():
+        tid = int(getattr(obj, "track_id", -1))
+        if skip is not None and tid == int(skip):
+            continue
+        if memory_target_gone(state, obj):
+            continue
+        if _same_loot_pile(blackboard, obj):
+            return obj
+    return None
+
+
+def _loot_row_missing(state: "GameState", sticky: object | None) -> bool:
+    if sticky is None or getattr(sticky, "object_type", None) is not ObjectType.ITEM:
+        return True
+    return memory_target_gone(state, sticky)
+
+
+def _resolve_loot_gap(
+    state: "GameState",
+    blackboard: "Blackboard",
+    sticky: object | None,
+    *,
+    f4_pause: bool,
+) -> object:
+    """Keep a blinked pile, rebind it, or release it.
+
+    A live row returns itself. ``hold`` means the same GUID, kind, and cell
+    are not in this sweep yet and the 2 s window is still open. ``release``
+    is an F4 pause, a finished pickup, a dead row, a deleted row with no
+    twin, an unverifiable pile, or a blink that lasted 2 s.
+    """
+    from app._02_state.objects import ObjectStatus
+    from app._04_decision.behaviors.loot_hop import _bag_rose
+
+    if (
+        sticky is not None
+        and not _loot_row_missing(state, sticky)
+        and not f4_pause
+    ):
+        return sticky
+    if f4_pause or _bag_rose(state, blackboard, sticky):
+        return _LOOT_TRACK_RELEASE
+    if sticky is not None and getattr(sticky, "status", None) is ObjectStatus.DEAD:
+        return _LOOT_TRACK_RELEASE
+    if sticky is not None:
+        _store_loot_identity(blackboard, sticky)
+    if not _loot_identity_ready(blackboard):
+        return _LOOT_TRACK_RELEASE
+    skip = int(getattr(sticky, "track_id", -1)) if sticky is not None else None
+    match = _find_same_loot(state, blackboard, skip=skip)
+    if match is not None:
+        blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_SINCE, None)
+        return match
+    if sticky is None:
+        return _LOOT_TRACK_RELEASE
+    since = blackboard.scratch.get(_SCRATCH_LOOT_TRACK_SINCE)
+    now = time.time()
+    if since is None:
+        blackboard.scratch[_SCRATCH_LOOT_TRACK_SINCE] = now
+        since = now
+    try:
+        elapsed = now - float(since)
+    except (TypeError, ValueError):
+        elapsed = _LOOT_TRACK_HOLD_S
+    if elapsed >= _LOOT_TRACK_HOLD_S:
+        return _LOOT_TRACK_RELEASE
+    return _LOOT_TRACK_HOLD
+
+
 def continue_or_start_loot(
     state: "GameState",
     blackboard: "Blackboard",
@@ -2010,15 +2157,37 @@ def continue_or_start_loot(
     origin = blackboard.world_origin
     if blackboard.current_item_id is not None:
         sticky = state.get_object(blackboard.current_item_id)
-        if (
-            sticky is None
-            or sticky.object_type is not ObjectType.ITEM
-            or memory_target_gone(state, sticky)
-            or recently_clicked_loot(blackboard, sticky.track_id)
-        ):
+        f4_pause = (
+            sticky is not None
+            and getattr(sticky, "object_type", None) is ObjectType.ITEM
+            and recently_clicked_loot(blackboard, sticky.track_id)
+        )
+        resolved = _resolve_loot_gap(
+            state, blackboard, sticky, f4_pause=f4_pause
+        )
+        if resolved == _LOOT_TRACK_HOLD:
+            _quiet_search_click(blackboard)
+            blackboard.current_goal = "loot"
+            blackboard.emit(
+                ActionType.IDLE,
+                priority=0.3,
+                reason="loot track hold",
+            )
+            return Status.SUCCESS
+        if resolved == _LOOT_TRACK_RELEASE:
             clear_loot_hop(blackboard)
             blackboard.current_item_id = None
+            _clear_loot_track(blackboard)
+            sticky = None
         else:
+            if int(getattr(resolved, "track_id", -1)) != int(
+                blackboard.current_item_id
+            ):
+                blackboard.current_item_id = int(resolved.track_id)
+            sticky = resolved
+            blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_SINCE, None)
+            _store_loot_identity(blackboard, sticky)
+        if sticky is not None and blackboard.current_item_id is not None:
             drop = False
             if loot_mode == LOOT_MODE_ADENA and not is_adena(sticky):
                 drop = True
@@ -2081,6 +2250,7 @@ def continue_or_start_loot(
                 clear_loot_hop(blackboard)
                 blackboard.current_item_id = None
             else:
+                _quiet_search_click(blackboard)
                 status = tick_loot_item(
                     state, blackboard, sticky, fresh=False
                 )
@@ -2108,6 +2278,7 @@ def continue_or_start_loot(
     if item is None:
         return None
     begin_loot_item(blackboard, item.track_id, item)
+    _quiet_search_click(blackboard)
     status = tick_loot_item(state, blackboard, item, fresh=True)
     if status is Status.SUCCESS:
         return Status.SUCCESS

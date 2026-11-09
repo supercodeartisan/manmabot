@@ -1,4 +1,4 @@
-﻿"""Persisted user profile for Version 1."""
+"""Persisted user profile for Version 1."""
 from __future__ import annotations
 
 import json
@@ -229,6 +229,12 @@ class Profile:
     # Area hunt: the leader waits briefly when half or more members are this far behind.
     # A party-map point is turret and does not use this.
     party_lag_tiles: int = 30
+    # Party-boss supply. The shopkeeper reads these from the leader policy.
+    party_member_arrow_min: int = 300
+    party_shopkeeper_arrow_min: int = 300
+    # all = items and adena until the weight line, then adena. adena = adena only.
+    party_loot_pickup: str = "all"
+    party_loot_weight_pct: int = 30
     # Leader stands when the nearest party member is farther than this.
     party_near_tiles: int = DEFAULT_PARTY_NEAR_TILES
     # member = existing follow/assist. leader = this PC hosts the party socket.
@@ -525,6 +531,21 @@ class Profile:
             except (TypeError, ValueError):
                 lag = 30
             kwargs["party_lag_tiles"] = max(5, min(100, lag))
+        if "party_member_arrow_min" in kwargs:
+            kwargs["party_member_arrow_min"] = _party_arrow_min(
+                kwargs.get("party_member_arrow_min")
+            )
+        if "party_shopkeeper_arrow_min" in kwargs:
+            kwargs["party_shopkeeper_arrow_min"] = _party_arrow_min(
+                kwargs.get("party_shopkeeper_arrow_min")
+            )
+        if "party_loot_pickup" in kwargs:
+            pickup = str(kwargs.get("party_loot_pickup") or "all").strip().lower()
+            kwargs["party_loot_pickup"] = "adena" if pickup == "adena" else "all"
+        if "party_loot_weight_pct" in kwargs:
+            kwargs["party_loot_weight_pct"] = _party_weight_pct(
+                kwargs.get("party_loot_weight_pct")
+            )
         if "party_near_tiles" in kwargs:
             kwargs["party_near_tiles"] = party_near_limit(kwargs.get("party_near_tiles"))
         if "party_role" in kwargs:
@@ -560,6 +581,22 @@ def _roster_on(item: dict, key: str, default: bool = True) -> bool:
     if isinstance(raw, bool):
         return raw
     return str(raw).strip().lower() not in ("0", "false", "no", "off")
+
+
+def _party_arrow_min(value: Any) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = 300
+    return max(0, min(9999, count))
+
+
+def _party_weight_pct(value: Any) -> int:
+    try:
+        pct = int(value)
+    except (TypeError, ValueError):
+        pct = 30
+    return max(1, min(100, pct))
 
 
 def normalize_party_roster(raw: Any) -> list[dict[str, str]]:

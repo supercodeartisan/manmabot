@@ -121,6 +121,10 @@ def needs_depoison_buy(blackboard: "Blackboard") -> bool:
 
 
 def needs_arrow_buy(blackboard: "Blackboard") -> bool:
+    # Party leader sets this while a shopkeeper socket is still up.
+    # Sell, potions, and depoison do not read it. Solo never sets it.
+    if blackboard.scratch.get("party_arrow_shop_covered"):
+        return False
     if not bool(getattr(blackboard, "needs_arrows", False)):
         return False
     return bool(shops_mod.BUY_NORMAL_ARROWS or shops_mod.BUY_SILVER_ARROWS)
@@ -250,6 +254,10 @@ def choose_shopping_behavior(
     sticky = str(blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip()
     if sticky:
         return sticky
+    # Shopkeeper arrow trip only. Absent on solo and on the party leader.
+    pinned = str(blackboard.scratch.get("party_pin_shop_behavior") or "").strip()
+    if pinned:
+        return pinned
     remaining = blackboard.scratch.get(SCRATCH_SELL_QUEUE)
     if isinstance(remaining, list) and remaining:
         # Resume a sell chain if sticky was lost mid-trip.

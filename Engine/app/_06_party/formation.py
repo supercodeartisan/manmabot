@@ -201,6 +201,7 @@ def followers_from_party(
     local_map_id: Optional[int],
     *,
     self_name: str = "",
+    omit_names: Any = (),
 ) -> list[Any]:
     """Non-leader party-memory rows → tile on this map, or ``OTHER_MAP``.
 
@@ -212,11 +213,19 @@ def followers_from_party(
     if not isinstance(snapshot, dict) or not snapshot.get("in_party"):
         return []
     me = str(self_name or "").strip().casefold()
+    skipped = {
+        str(name or "").strip().casefold()
+        for name in (omit_names or ())
+        if str(name or "").strip()
+    }
     out: list[Any] = []
     for row in snapshot.get("members") or []:
         if not isinstance(row, dict) or bool(row.get("is_leader")):
             continue
-        if me and str(row.get("name") or "").strip().casefold() == me:
+        row_name = str(row.get("name") or "").strip().casefold()
+        if me and row_name == me:
+            continue
+        if row_name and row_name in skipped:
             continue
         mid = _party_map_id(row)
         if local_map_id is not None and mid is not None and int(mid) != int(local_map_id):

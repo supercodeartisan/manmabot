@@ -146,6 +146,10 @@ def policy_message(
     party_size: int = 1,
     roster: Optional[list] = None,
     leader_name: str = "",
+    member_arrow_min: int = 300,
+    shopkeeper_arrow_min: int = 300,
+    loot_pickup: str = "all",
+    loot_weight_pct: int = 30,
 ) -> dict[str, Any]:
     """Global party farm knobs from the leader. Members merge into their config.
 
@@ -171,6 +175,12 @@ def policy_message(
         "yard_scale_with_roster": bool(yard_scale_with_roster),
         "party_size": max(1, int(party_size)),
         "roster": list(roster or []),
+        "member_arrow_min": max(0, min(9999, int(member_arrow_min))),
+        "shopkeeper_arrow_min": max(0, min(9999, int(shopkeeper_arrow_min))),
+        "loot_pickup": (
+            "adena" if str(loot_pickup or "").strip().lower() == "adena" else "all"
+        ),
+        "loot_weight_pct": max(1, min(100, int(loot_weight_pct))),
     }
     if str(leader_name or "").strip():
         knobs["leader_name"] = str(leader_name).strip()
@@ -505,6 +515,8 @@ class MemberOrders:
         self._beep: Optional[dict[str, Any]] = None
         # Latest ``party_reports`` bundle from the leader (shopkeeper mailbox).
         self.party_reports: list[dict[str, Any]] = []
+        # Ground arrow pile the leader told this member about. None = none.
+        self.supply_drop: Optional[dict[str, Any]] = None
 
     @property
     def order_kind(self) -> str:
@@ -519,6 +531,7 @@ class MemberOrders:
         self._report_pending = False
         self._policy_dirty = False
         self.party_reports = []
+        self.supply_drop = None
 
     def clear(self) -> None:
         self._drop_orders()
@@ -571,6 +584,12 @@ class MemberOrders:
             if kind == POLICY:
                 self.policy = dict(body)
                 self._policy_dirty = True
+                continue
+            if kind == "supply_drop":
+                if bool(body.get("clear")):
+                    self.supply_drop = None
+                else:
+                    self.supply_drop = dict(body)
                 continue
             if kind == "party_reports":
                 rows = body.get("reports")

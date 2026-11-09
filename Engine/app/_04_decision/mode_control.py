@@ -213,8 +213,9 @@ def arm_post_respawn_retreat(
     """After revive: RETREATING to recover, then world_nav back to the farm.
 
     Spawn is already off the combat map. Prefer Mother Tree when the elf
-    slot is available; otherwise talking-scroll to a wheel-0 HP-safe landing
-    (not 마법서 상인) until ``retreat_exit_ready``, then ``finish_retreat``.
+    slot is available. Without that spell, heal at the spawn tile until
+    ``retreat_exit_ready``, then ``finish_retreat``. A character with no
+    talking scroll still walks to the nearest safe.
     """
     from app.bot_log import get_logger
     from app._04_decision.talking_scroll import (
@@ -236,14 +237,24 @@ def arm_post_respawn_retreat(
         return
 
     if talking_scroll_available():
+        # No Mother Tree: stand on the spawn tile and heal. Do not scroll
+        # to a safe NPC first — that landing is what walked into the hunt
+        # still recovering. The tree branch above is unchanged.
         begin_retreat(
             blackboard,
             reason=RETREAT_FOR_HP,
-            prefer_scroll=True,
+            teleport=False,
             allow_teleport=False,
+            allow_scroll=False,
+            walk_to_safe=False,
         )
-        blackboard.scratch["hp_retreat_kind"] = "safe_zone"
-        get_logger("hp").info("post-respawn → retreating (hp-safe scroll)")
+        from app._04_decision.behaviors.travel import clear_travel
+
+        clear_travel(blackboard)
+        blackboard.travel_purpose = None
+        blackboard.retreat_teleport_pending = False
+        blackboard.scratch["hp_retreat_kind"] = "spawn_heal"
+        get_logger("hp").info("post-respawn → retreating (heal at spawn)")
         return
 
     begin_retreat(
