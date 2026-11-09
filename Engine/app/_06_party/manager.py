@@ -1082,28 +1082,47 @@ class PartyMemberManager:
             return True, False
         return False, False
 
+    def _note_list_heal(self, text: str) -> None:
+        """Write a party-log line when the list-heal note changes."""
+        prev = self.runtime.scratch.get("_list_heal_note")
+        if prev == text:
+            return
+        self.runtime.scratch["_list_heal_note"] = text
+        _log.info("list heal: %s", text)
+
     def _party_list_heal(self, game_state: Any, origin: Any) -> Any:
         """Click the lowest other member under 80% HP on the party list."""
         if game_state is None:
+            self._note_list_heal("skip no game")
             return None
         party = getattr(game_state, "last_party", None)
         hud = getattr(game_state, "last_party_hud", None)
         if not isinstance(party, dict) or not isinstance(hud, dict):
+            self._note_list_heal("skip no party memory")
             return None
         if hud.get("open") is False:
+            self._note_list_heal("skip party list closed")
             return None
         board = self._nav_blackboard
         try:
+            from app._04_decision.mode_control import mp_ratio
             from app._04_decision.spells import can_cast_spell, slot_ready
 
             if not can_cast_spell(game_state, role="heal", blackboard=board):
+                ratio = mp_ratio(game_state)
+                if ratio is None:
+                    self._note_list_heal("skip mp unknown")
+                else:
+                    self._note_list_heal(f"skip mp {int(float(ratio) * 100)}%")
                 return None
             if board is not None and not slot_ready(board, "heal", urgent=True):
+                self._note_list_heal("skip heal slot not ready")
                 return None
         except Exception as exc:
-            _log.debug("party list heal gate failed: %s", exc)
+            self._note_list_heal(f"skip heal gate {exc}")
             return None
         if origin is None or self.runtime.local_map_id is None:
+            self._note_list_heal("skip no pose")
             return None
         self_name = ""
         try:
@@ -1117,10 +1136,10 @@ class PartyMemberManager:
             )
         except Exception:
             self_name = ""
-        from .hud_heal import list_heal_click
+        from .hud_heal import assess_list_heal
         from .intents import list_heal
 
-        click = list_heal_click(
+        click, note = assess_list_heal(
             party.get("members"),
             hud.get("slots"),
             self_name=self_name,
@@ -1130,6 +1149,7 @@ class PartyMemberManager:
                 self.runtime.local_map_id,
             ),
         )
+        self._note_list_heal(note)
         if click is None:
             return None
         box: Any = None
@@ -1149,11 +1169,13 @@ class PartyMemberManager:
                 mark_slot_used(board, "heal")
             except Exception:
                 pass
+        dist = click.get("dist")
         return list_heal(
             str(click["name"]),
             int(click["click_x"]),
             int(click["click_y"]),
             hp_pct=int(click["hp_pct"]),
+            dist=int(dist) if dist is not None else None,
             hotbar_box=box,
             hotbar_key=key or None,
         )

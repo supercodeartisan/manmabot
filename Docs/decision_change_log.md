@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — party list heal uses nav tiles
+
+Intent: A mage heals another member, including the party boss, from the party list when that member's `hp_pct` is under 80. The distance check was comparing PartySubsystem world coordinates to the nav tile the follower already uses, so a neighbor looked farther than 9 tiles and the cast never started.
+Shared: `in_heal_reach` / `heal_targets` only. Self `apply_hp_actions`, follow, assist, and loot are unchanged. The party log records a `list heal:` line when that note changes (cast, closed list, mp, range, missing row).
+Affects: mage party-list heal. Solo heal is unchanged.
+Consent: user (resolve the missed heal and log the party decision).
+Result: unit check for a raw party position against a nav tile. Not run in game.
+
 ## 2026-11-08 — leader waits for the nearest member
 
 Intent: The party leader stands when the nearest same-map member is farther than the leader-page distance. That distance is the form value (`party.near_tiles` → `party_near_tiles`). 5 is only the value when the form is empty. Every known member on another map also waits. A failed party-memory read keeps the previous answer. No readable member does not start a wait.

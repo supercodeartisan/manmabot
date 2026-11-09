@@ -40,16 +40,18 @@ def list_heal(
     click_y: int,
     *,
     hp_pct: int,
+    dist: Optional[int] = None,
     hotbar_box: Optional[int] = None,
     hotbar_key: Optional[str] = None,
 ) -> Any:
     """Heal by clicking that member's party-list row, not their body."""
     from .types import ActionIntent, ActionType
 
+    dist_bit = f" dist={int(dist)}" if dist is not None else ""
     return ActionIntent(
         action=ActionType.HEAL,
         priority=0.88,
-        reason=f"party_member:list heal {name} hp={int(hp_pct)}",
+        reason=f"party_member:list heal {name} hp={int(hp_pct)}{dist_bit}",
         hotbar_box=hotbar_box,
         hotbar_key=hotbar_key,
         click_x=int(click_x),
