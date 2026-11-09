@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-08 — party list heal presses once, then clicks
+
+Intent: A party-list heal was pressing the heal key twice and only then clicking the member row. The second press clears the target cursor, so the other member's HP does not rise. A list heal now presses once and clicks that row. A self heal still double-presses.
+Shared: `ActionExecutor._heal` / `_press_assigned_skill` only. `apply_hp_actions`, follow, and assist are unchanged.
+Affects: mage party-list heal. Solo self heal is unchanged.
+Consent: user (the other member's HP did not rise after the heal attempt; resolve that).
+Result: not run in game.
+
 ## 2026-11-08 — party list heal uses nav tiles
 
 Intent: A mage heals another member, including the party boss, from the party list when that member's `hp_pct` is under 80. The distance check was comparing PartySubsystem world coordinates to the nav tile the follower already uses, so a neighbor looked farther than 9 tiles and the cast never started.
