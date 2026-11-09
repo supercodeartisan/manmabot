@@ -356,6 +356,26 @@ def choose_supply_duty(
     return None
 
 
+def supply_pile_qty_ok(item: Any, wanted: Any) -> bool:
+    """True when the ground count matches the notice.
+
+    A missing notice count or an unread ground count keeps the name match.
+    """
+    if wanted is None or str(wanted).strip() == "":
+        return True
+    try:
+        need = int(wanted)
+    except (TypeError, ValueError):
+        return True
+    raw = getattr(item, "loot_qty", None)
+    if raw is None:
+        return True
+    try:
+        return int(raw) == need
+    except (TypeError, ValueError):
+        return True
+
+
 def supply_pile_matches(item: Any, kind: str) -> bool:
     """True when a ground pile can be the supply claim.
 

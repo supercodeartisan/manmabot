@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-09 — supply pickup matches the notified count
+
+Intent: The member named on a supply drop picks up the pile only when its ground count equals the notified count. An unread ground count still uses the name and the tile. Other seats still leave that tile alone by location.
+Shared: `supply_pile_qty_ok` inside `_pickup_claim`. The drop, the leader relay, follow, and ordinary loot are unchanged.
+Affects: the named member and the leader when the leader is the recipient.
+Consent: user ("ye4s" after the pickup-count proposal).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-09 — a party mage steps into heal range on the same screen
+
+Intent: When another member is under the mage heal percent, on the same map, inside the clickable view, and farther than 9 tiles, the mage walks toward a stand 9 tiles from that member. Each click is the usual follow hop, at most two tiles. Once inside 9 tiles the existing list heal runs. A member outside the clickable view is left to follow. Self heal, self buff, a potion, and self-defense still come first.
+Shared: `heal_screen_step` chooses the stand. `PartyMemberManager._party_list_heal` emits `plan_slot_hop` with kind `heal_step` and clears an open map-join for that tick. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member mage ticks where the due member is on screen and out of heal range. Other classes and the party leader's farm columns are unchanged.
+Consent: user ("let's implement that then" — walk a little toward an on-screen member who is outside heal range).
+Result: unit check in `Engine/app/_06_party/tests/test_hud_heal.py`. Not run in game.
+
 ## 2026-11-09 — a one-tile leader step moves the member at once
 
 Intent: When the leader's party-memory tile changes by one tile, the member's side slot moves with it on that read, and a member one tile off that slot walks. The slot is no longer kept for a one-tile drift, and standing one tile off the slot is no longer a hold.

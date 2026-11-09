@@ -1221,8 +1221,8 @@ class PartyMemberManager:
             )
         except Exception:
             self_name = ""
-        from .hud_heal import assess_list_heal
-        from .intents import list_heal
+        from .hud_heal import assess_list_heal, heal_screen_step
+        from .intents import list_heal, plan_slot_hop
 
         click, note = assess_list_heal(
             party.get("members"),
@@ -1235,9 +1235,44 @@ class PartyMemberManager:
                 self.runtime.local_map_id,
             ),
         )
-        self._note_list_heal(note)
         if click is None:
-            return None
+            step = heal_screen_step(
+                party.get("members"),
+                hud.get("slots"),
+                self_name=self_name,
+                below=self._mage_list_heal_pct(),
+                here=(
+                    getattr(origin, "x", None),
+                    getattr(origin, "y", None),
+                    self.runtime.local_map_id,
+                ),
+            )
+            if step is None:
+                self._note_list_heal(note)
+                return None
+            self._note_list_heal(
+                f"step {step['name']} hp={step['hp_pct']} dist={step['dist']}"
+            )
+            try:
+                intent, goal, detail, hop = plan_slot_hop(
+                    origin,
+                    step["goal"],
+                    previous_goal=self.runtime.approach_goal,
+                    previous_hop=self.runtime.follow_hop,
+                    kind="heal_step",
+                )
+            except Exception as exc:
+                self._note_list_heal(f"skip step {exc}")
+                return None
+            self._join_nav.clear()
+            self.runtime.follow_hop = hop
+            self.runtime.approach_goal = goal
+            self.runtime.chasing = False
+            self.runtime.last_kind = "heal_step"
+            self.runtime.last_reason = str(detail or "heal_step")
+            self._record_decision(intent)
+            return intent
+        self._note_list_heal(note)
         box: Any = None
         key = ""
         try:
