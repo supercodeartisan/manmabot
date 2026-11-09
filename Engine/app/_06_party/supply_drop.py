@@ -10,20 +10,6 @@ from typing import Any, Optional
 
 from app._05_action.uidialog_gate import LABEL_INVENTORY, is_open
 
-_ARROW_IDS = frozenset({7, 96})
-_ARROW_NAMES = frozenset(
-    {
-        "화살",
-        "箭",
-        "arrow",
-        "arrows",
-        "은 화살",
-        "銀箭",
-        "银箭",
-        "silver arrow",
-        "silver arrows",
-    }
-)
 # Neighbor tiles, same order as the supply practice (left, right, down).
 _DROP_TILES = ((-1, -1), (1, 1), (-1, 1))
 _ROWS = 8
@@ -39,19 +25,24 @@ def step_ground_drop(
     state: Any,
     blackboard: Any,
     qty: int,
+    kind: str = "arrow",
 ) -> Optional[dict[str, Any]]:
     """Advance one drop step.
 
     Returns a tile dict when the drag has been sent, ``{"blocked": True}``
     when it cannot click, or None while still working.
     """
-    bag = _arrow_stack(state)
+    bag = _kind_stack(state, kind)
     if bag is None or int(getattr(bag, "slot", -1)) < 0:
-        return {"blocked": True, "reason": "no arrow slot"}
+        return {"blocked": True, "reason": f"no {kind} slot"}
     if not grid_path().is_file():
         return {"blocked": True, "reason": "inventory grid missing"}
 
     scratch = blackboard.scratch.setdefault("party_supply_drop", {})
+    if str(scratch.get("item") or "") != str(kind or "arrow"):
+        scratch.clear()
+        scratch["item"] = str(kind or "arrow")
+        scratch["stage"] = "open"
     stage = str(scratch.get("stage") or "open")
     if stage == "open":
         snap = getattr(state, "last_uidialog", None)
@@ -80,14 +71,14 @@ def step_ground_drop(
     return {"blocked": True, "reason": "drop stage"}
 
 
-def _arrow_stack(state: Any) -> Any:
+def _kind_stack(state: Any, kind: str) -> Any:
     player = getattr(state, "player", None)
     inv = getattr(player, "inventory", None)
     best = None
     for item in getattr(inv, "items", None) or []:
         if int(getattr(item, "slot", -1)) < 0:
             continue
-        if not _is_arrow(item):
+        if not _is_kind(item, kind):
             continue
         if best is None or int(getattr(item, "quantity", 0) or 0) > int(
             getattr(best, "quantity", 0) or 0
@@ -96,14 +87,39 @@ def _arrow_stack(state: Any) -> Any:
     return best
 
 
-def _is_arrow(item: Any) -> bool:
+def _kind_tables(kind: str) -> tuple[frozenset[int], frozenset[str]]:
+    from app._03_world.merge.memory_inventory import (
+        ARROW_IDS,
+        ARROW_NAMES,
+        DEPOISON_IDS,
+        DEPOISON_NAMES,
+        HP_POTION_IDS,
+        HP_POTION_NAMES,
+        MP_POTION_IDS,
+        MP_POTION_NAMES,
+        SILVER_ARROW_IDS,
+        SILVER_ARROW_NAMES,
+    )
+
+    tables = {
+        "hp": (HP_POTION_IDS, HP_POTION_NAMES),
+        "depoison": (DEPOISON_IDS, DEPOISON_NAMES),
+        "mp": (MP_POTION_IDS, MP_POTION_NAMES),
+        "arrow": (ARROW_IDS | SILVER_ARROW_IDS, ARROW_NAMES | SILVER_ARROW_NAMES),
+    }
+    return tables.get(str(kind or "arrow"), tables["arrow"])
+
+
+def _is_kind(item: Any, kind: str) -> bool:
+    ids, names = _kind_tables(kind)
     try:
-        if int(getattr(item, "item_id", 0) or 0) in _ARROW_IDS:
+        if int(getattr(item, "item_id", 0) or 0) in ids:
             return True
     except (TypeError, ValueError):
         pass
+    lowered = {str(name).strip().lower() for name in names}
     for attr in ("name", "name_en", "name_tw", "name_cn"):
-        if str(getattr(item, attr, "") or "").strip().lower() in _ARROW_NAMES:
+        if str(getattr(item, attr, "") or "").strip().lower() in lowered:
             return True
     return False
 

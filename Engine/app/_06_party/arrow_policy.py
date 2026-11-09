@@ -37,6 +37,25 @@ def bag_arrow_count(state: Any) -> Optional[int]:
         return None
 
 
+def mage_seat_names(roster: Any) -> set[str]:
+    """Roster names whose seat is mage. A missing row is not a mage.
+
+    ``seat_role_for_name`` defaults an unknown name to mage. The party boss is
+    not on the roster, so this list is the only skip set.
+    """
+    names: set[str] = set()
+    rows = roster if isinstance(roster, (list, tuple)) else []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("role") or "").strip().lower() != "mage":
+            continue
+        name = str(row.get("name") or "").strip().casefold()
+        if name:
+            names.add(name)
+    return names
+
+
 def pick_arrow_duty(
     own: Optional[int],
     rows: Any,
@@ -45,11 +64,13 @@ def pick_arrow_duty(
     keeper_min: int,
     give_qty: int = 100,
     self_name: str = "",
+    skip_names: Any = None,
 ) -> Optional[dict[str, Any]]:
     """Buy when the shopkeeper is short. Otherwise drop ``give_qty`` to the first short member.
 
     The shopkeeper keeps ``keeper_min`` arrows. A drop never spends that reserve,
-    so a short spare drops only what is left above it.
+    so a short spare drops only what is left above it. ``skip_names`` leaves the
+    mage seat out.
     """
     if own is None:
         return None
@@ -63,11 +84,18 @@ def pick_arrow_duty(
     except (TypeError, ValueError):
         give = 100
     me = str(self_name or "").strip().casefold()
+    blocked = {
+        str(name).strip().casefold()
+        for name in (skip_names or [])
+        if str(name).strip()
+    }
     for row in rows or []:
         if not isinstance(row, dict):
             continue
         who = str(row.get("from") or "").strip()
         if not who or (me and who.casefold() == me):
+            continue
+        if who.casefold() in blocked:
             continue
         count = report_arrow_count(row)
         if count is None or count >= int(member_min):
@@ -86,13 +114,319 @@ def pick_arrow_duty(
     return None
 
 
-def party_shop_buy_qty(scratch: Any, behavior_id: str, solo_qty: Optional[int]) -> Optional[int]:
-    """Party arrow shop uses the boss buy count. Every other shop keeps ``solo_qty``."""
+def report_supply_count(row: Any, item: str) -> Optional[int]:
+    """One reported stack. None when that item was not in the bag report."""
+    if item == "arrow":
+        return report_arrow_count(row)
+    key = {"hp": "hp_potion", "depoison": "depoison", "mp": "mp_potion"}.get(str(item))
+    if not key or not isinstance(row, dict):
+        return None
+    items = row.get("items")
+    if not isinstance(items, dict) or key not in items:
+        return None
+    try:
+        return max(0, int(items.get(key) or 0))
+    except (TypeError, ValueError):
+        return None
+
+
+def bag_supply_counts(state: Any) -> dict[str, Optional[int]]:
+    """Local bag counts. None until inventory_listen has filled the bag."""
+    empty: dict[str, Optional[int]] = {
+        "hp": None,
+        "depoison": None,
+        "mp": None,
+        "arrow": None,
+    }
+    player = getattr(state, "player", None)
+    inv = getattr(player, "inventory", None)
+    if inv is None or not bool(getattr(inv, "bag_ready", False)):
+        return empty
+
+    def _n(attr: str) -> Optional[int]:
+        try:
+            return max(0, int(getattr(inv, attr, 0) or 0))
+        except (TypeError, ValueError):
+            return None
+
+    arrows = _n("arrows")
+    silver = _n("silver_arrows")
+    if arrows is None or silver is None:
+        empty["arrow"] = None
+    else:
+        empty["arrow"] = arrows + silver
+    empty["hp"] = _n("hp_potion")
+    empty["depoison"] = _n("depoison")
+    empty["mp"] = _n("mp_potion")
+    return empty
+
+
+def supply_fill_qty(own: Optional[int], keeper_min: int, configured: int) -> int:
+    """One shop trip. At least the boss buy count, and enough to reach the reserve.
+
+    The shop quantity field stops at 999.
+    """
+    try:
+        buy = max(1, min(999, int(configured)))
+    except (TypeError, ValueError):
+        buy = 1
+    if own is None:
+        return buy
+    try:
+        gap = max(0, int(keeper_min) - int(own))
+    except (TypeError, ValueError):
+        return buy
+    if gap <= 0:
+        return buy
+    return max(1, min(999, max(buy, gap)))
+
+
+def affordable_supply_qty(
+    wanted: int,
+    adena: Optional[int],
+    unit_price: Optional[int],
+) -> int:
+    """Buy ``wanted`` when Adena covers it. Otherwise buy as many as the price allows.
+
+    Unknown Adena or an unknown price keeps ``wanted``. Zero means one unit
+    does not fit.
+    """
+    try:
+        want = max(0, min(999, int(wanted)))
+    except (TypeError, ValueError):
+        want = 0
+    if want <= 0:
+        return 0
+    if unit_price is None or adena is None:
+        return want
+    try:
+        price = int(unit_price)
+        have = int(adena)
+    except (TypeError, ValueError):
+        return want
+    if price <= 0:
+        return want
+    return max(0, min(want, have // price))
+
+
+def next_supply_buy(
+    counts: Any,
+    specs: Any,
+    *,
+    after_item: str,
+    skip_buys: Any = None,
+) -> Optional[dict[str, Any]]:
+    """The next keeper buy after ``after_item``. None means go back to the leader.
+
+    Earlier rows are not bought again on this outing. A remembered price the
+    bag cannot cover is skipped, and the row after that is considered.
+    """
+    bag = counts if isinstance(counts, dict) else {}
+    broke = {
+        str(name).strip()
+        for name in (skip_buys or [])
+        if str(name).strip()
+    }
+    seen = False
+    after = str(after_item or "")
+    for spec in specs or []:
+        if not isinstance(spec, dict):
+            continue
+        item = str(spec.get("item") or "")
+        if not seen:
+            if item == after:
+                seen = True
+            continue
+        if not bool(spec.get("can_buy", True)) or item in broke:
+            continue
+        own = bag.get(item)
+        if own is None:
+            continue
+        try:
+            keep = int(spec.get("keeper_min") or 0)
+            if int(own) < keep:
+                return {
+                    "kind": "buy",
+                    "item": item,
+                    "buy": max(1, int(spec.get("buy") or 1)),
+                    "keeper_min": keep,
+                    "own": int(own),
+                }
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def choose_supply_duty(
+    counts: Any,
+    rows: Any,
+    specs: Any,
+    *,
+    self_name: str = "",
+    held: Any = None,
+    skip_buys: Any = None,
+) -> Optional[dict[str, Any]]:
+    """First keeper shortage that can be bought, else the first short member drop.
+
+    ``specs`` is priority order. ``held`` is ``(name, item)`` already on the ground.
+    MP is ``can_buy`` false: a short keeper does not start a shop that does not exist.
+    """
+    bag = counts if isinstance(counts, dict) else {}
+    held_name = ""
+    held_item = ""
+    if isinstance(held, tuple) and len(held) == 2:
+        held_name = str(held[0] or "").strip().casefold()
+        held_item = str(held[1] or "").strip()
+    me = str(self_name or "").strip().casefold()
+    broke = {
+        str(name).strip()
+        for name in (skip_buys or [])
+        if str(name).strip()
+    }
+    for spec in specs or []:
+        if not isinstance(spec, dict) or not bool(spec.get("can_buy", True)):
+            continue
+        item = str(spec.get("item") or "")
+        if item in broke:
+            continue
+        own = bag.get(item)
+        if own is None:
+            continue
+        try:
+            keep = int(spec.get("keeper_min") or 0)
+            if int(own) < keep:
+                return {
+                    "kind": "buy",
+                    "item": item,
+                    "buy": max(1, int(spec.get("buy") or 1)),
+                    "keeper_min": keep,
+                    "own": int(own),
+                }
+        except (TypeError, ValueError):
+            continue
+    for spec in specs or []:
+        if not isinstance(spec, dict):
+            continue
+        item = str(spec.get("item") or "")
+        own = bag.get(item)
+        if own is None:
+            continue
+        try:
+            spare = int(own) - int(spec.get("keeper_min") or 0)
+            give = max(1, int(spec.get("give") or 1))
+            floor = int(spec.get("member_min") or 0)
+        except (TypeError, ValueError):
+            continue
+        if spare <= 0:
+            continue
+        blocked = {
+            str(name).strip().casefold()
+            for name in (spec.get("skip_names") or [])
+            if str(name).strip()
+        }
+        only = spec.get("only_names")
+        only_set = None
+        if only is not None:
+            only_set = {str(name).strip().casefold() for name in only if str(name).strip()}
+        for row in rows or []:
+            if not isinstance(row, dict):
+                continue
+            who = str(row.get("from") or "").strip()
+            if not who or (me and who.casefold() == me):
+                continue
+            if who.casefold() in blocked:
+                continue
+            if only_set is not None and who.casefold() not in only_set:
+                continue
+            if held_name and held_item == item and who.casefold() == held_name:
+                continue
+            count = report_supply_count(row, item)
+            if count is None or count >= floor:
+                continue
+            return {
+                "kind": "drop",
+                "item": item,
+                "name": who,
+                "qty": min(spare, give),
+                "min": floor,
+                "map_id": row.get("map_id"),
+                "x": row.get("x"),
+                "y": row.get("y"),
+            }
+    return None
+
+
+def supply_pile_matches(item: Any, kind: str) -> bool:
+    """True when a ground pile can be the supply claim.
+
+    A named pile must be that item. An unnamed pile is left alone: the ground
+    reader already treats a pile with no name as adena.
+    """
+    from app._03_world.merge.memory_inventory import (
+        ARROW_NAMES,
+        DEPOISON_NAMES,
+        HP_POTION_NAMES,
+        MP_POTION_NAMES,
+        SILVER_ARROW_NAMES,
+    )
+    from app._04_decision.combat_query import is_adena
+
+    if is_adena(item):
+        return False
+    want = str(kind or "").strip()
+    if not want:
+        return True
+    identity = getattr(item, "identity", None)
+    parts = [
+        getattr(item, "detail_classification", ""),
+        getattr(item, "species_name", ""),
+        getattr(identity, "name", "") if identity is not None else "",
+    ]
+    text = " ".join(str(part or "") for part in parts).casefold()
+    named = text.strip() not in ("", "item", "grounditem")
+    groups = (
+        ("mp", MP_POTION_NAMES),
+        ("depoison", DEPOISON_NAMES),
+        ("arrow", ARROW_NAMES | SILVER_ARROW_NAMES),
+        ("hp", HP_POTION_NAMES),
+    )
+    found = None
+    for label, names in groups:
+        if any(str(name).casefold() in text for name in names):
+            found = label
+            break
+    if found is None:
+        return not named
+    return found == want
+
+
+def party_shop_buy_qty(
+    scratch: Any,
+    behavior_id: str,
+    solo_qty: Optional[int],
+    state: Any = None,
+) -> Optional[int]:
+    """Party supply shop uses the boss buy count. Every other shop keeps ``solo_qty``."""
     if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
         return solo_qty
-    if "arrow" not in str(behavior_id or ""):
+    item = str(scratch.get("party_supply_item") or "arrow")
+    bid = str(behavior_id or "")
+    matches = (
+        (item == "arrow" and "arrow" in bid)
+        or (item == "hp" and "hp_potion" in bid)
+        or (item == "depoison" and "depoison" in bid)
+    )
+    if not matches:
         return solo_qty
     raw = scratch.get("party_arrow_buy_qty")
+    configured = scratch.get("party_supply_configured", raw)
+    keep = scratch.get("party_supply_keep")
+    if state is not None and keep is not None and configured is not None:
+        own = bag_supply_counts(state).get(item)
+        try:
+            return supply_fill_qty(own, int(keep), int(configured))
+        except (TypeError, ValueError):
+            pass
     if raw is None:
         return solo_qty
     try:

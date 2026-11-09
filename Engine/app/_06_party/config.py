@@ -61,9 +61,36 @@ class PartyMemberConfig:
     # Fixed drop to a short member, and arrows bought on one shopkeeper trip.
     member_arrow_give: int = 100
     shopkeeper_arrow_buy: int = 200
+    member_hp_min: int = 10
+    shopkeeper_hp_min: int = 20
+    member_hp_give: int = 10
+    shopkeeper_hp_buy: int = 20
+    member_depoison_min: int = 1
+    shopkeeper_depoison_min: int = 2
+    member_depoison_give: int = 1
+    shopkeeper_depoison_buy: int = 5
+    member_mp_min: int = 5
+    shopkeeper_mp_min: int = 10
+    member_mp_give: int = 5
+    shopkeeper_mp_buy: int = 10
     # all = items until the weight line, then adena. adena = adena only.
     loot_pickup: str = "all"
     loot_weight_pct: int = 30
+    # Party recovery. Used as soon as this character is in a party, including
+    # before a leader policy. A policy replaces these. Solo settings are not read.
+    member_heal_pct: int = 70
+    member_potion_pct: int = 50
+    mage_heal_pct: int = 80
+    retreat_pct: int = 30
+    mother_tree: bool = True
+    talking_scroll: bool = True
+    safe_zone: bool = True
+    tree_hp_to_mp: bool = True
+    tree_hp_to_mp_hp: int = 85
+    tree_hp_to_mp_mp: int = 80
+    tree_heal: bool = True
+    tree_heal_hp: int = 40
+    tree_heal_mp: int = 80
 
     @property
     def solo_farm(self) -> bool:
@@ -138,12 +165,37 @@ class PartyMemberConfig:
             shopkeeper_arrow_min=max(0, min(9999, int(self.shopkeeper_arrow_min))),
             member_arrow_give=max(1, min(9999, int(self.member_arrow_give))),
             shopkeeper_arrow_buy=max(1, min(999, int(self.shopkeeper_arrow_buy))),
+            member_hp_min=max(0, min(9999, int(self.member_hp_min))),
+            shopkeeper_hp_min=max(0, min(9999, int(self.shopkeeper_hp_min))),
+            member_hp_give=max(1, min(9999, int(self.member_hp_give))),
+            shopkeeper_hp_buy=max(1, min(999, int(self.shopkeeper_hp_buy))),
+            member_depoison_min=max(0, min(9999, int(self.member_depoison_min))),
+            shopkeeper_depoison_min=max(0, min(9999, int(self.shopkeeper_depoison_min))),
+            member_depoison_give=max(1, min(9999, int(self.member_depoison_give))),
+            shopkeeper_depoison_buy=max(1, min(999, int(self.shopkeeper_depoison_buy))),
+            member_mp_min=max(0, min(9999, int(self.member_mp_min))),
+            shopkeeper_mp_min=max(0, min(9999, int(self.shopkeeper_mp_min))),
+            member_mp_give=max(1, min(9999, int(self.member_mp_give))),
+            shopkeeper_mp_buy=max(1, min(999, int(self.shopkeeper_mp_buy))),
             loot_pickup=(
                 "adena"
                 if str(self.loot_pickup or "").strip().lower() == "adena"
                 else "all"
             ),
             loot_weight_pct=max(1, min(100, int(self.loot_weight_pct))),
+            member_heal_pct=_cfg_pct(self.member_heal_pct, 70),
+            member_potion_pct=_cfg_pct(self.member_potion_pct, 50),
+            mage_heal_pct=_cfg_pct(self.mage_heal_pct, 80),
+            retreat_pct=_cfg_pct(self.retreat_pct, 30),
+            mother_tree=_cfg_flag(self.mother_tree, True),
+            talking_scroll=_cfg_flag(self.talking_scroll, True),
+            safe_zone=_cfg_flag(self.safe_zone, True),
+            tree_hp_to_mp=_cfg_flag(self.tree_hp_to_mp, True),
+            tree_hp_to_mp_hp=_cfg_pct(self.tree_hp_to_mp_hp, 85),
+            tree_hp_to_mp_mp=_cfg_pct(self.tree_hp_to_mp_mp, 80),
+            tree_heal=_cfg_flag(self.tree_heal, True),
+            tree_heal_hp=_cfg_pct(self.tree_heal_hp, 40),
+            tree_heal_mp=_cfg_pct(self.tree_heal_mp, 80),
         )
 
     def merge_leader_policy(
@@ -208,8 +260,47 @@ class PartyMemberConfig:
             "shopkeeper_arrow_buy": policy.get(
                 "shopkeeper_arrow_buy", self.shopkeeper_arrow_buy
             ),
+            "member_hp_min": policy.get("member_hp_min", self.member_hp_min),
+            "shopkeeper_hp_min": policy.get("shopkeeper_hp_min", self.shopkeeper_hp_min),
+            "member_hp_give": policy.get("member_hp_give", self.member_hp_give),
+            "shopkeeper_hp_buy": policy.get("shopkeeper_hp_buy", self.shopkeeper_hp_buy),
+            "member_depoison_min": policy.get(
+                "member_depoison_min", self.member_depoison_min
+            ),
+            "shopkeeper_depoison_min": policy.get(
+                "shopkeeper_depoison_min", self.shopkeeper_depoison_min
+            ),
+            "member_depoison_give": policy.get(
+                "member_depoison_give", self.member_depoison_give
+            ),
+            "shopkeeper_depoison_buy": policy.get(
+                "shopkeeper_depoison_buy", self.shopkeeper_depoison_buy
+            ),
+            "member_mp_min": policy.get("member_mp_min", self.member_mp_min),
+            "shopkeeper_mp_min": policy.get("shopkeeper_mp_min", self.shopkeeper_mp_min),
+            "member_mp_give": policy.get("member_mp_give", self.member_mp_give),
+            "shopkeeper_mp_buy": policy.get("shopkeeper_mp_buy", self.shopkeeper_mp_buy),
             "loot_pickup": policy.get("loot_pickup", self.loot_pickup),
             "loot_weight_pct": policy.get("loot_weight_pct", self.loot_weight_pct),
+            "member_heal_pct": policy.get("member_heal_pct", self.member_heal_pct),
+            "member_potion_pct": policy.get(
+                "member_potion_pct", self.member_potion_pct
+            ),
+            "mage_heal_pct": policy.get("mage_heal_pct", self.mage_heal_pct),
+            "retreat_pct": policy.get("retreat_pct", self.retreat_pct),
+            "mother_tree": policy.get("mother_tree", self.mother_tree),
+            "talking_scroll": policy.get("talking_scroll", self.talking_scroll),
+            "safe_zone": policy.get("safe_zone", self.safe_zone),
+            "tree_hp_to_mp": policy.get("tree_hp_to_mp", self.tree_hp_to_mp),
+            "tree_hp_to_mp_hp": policy.get(
+                "tree_hp_to_mp_hp", self.tree_hp_to_mp_hp
+            ),
+            "tree_hp_to_mp_mp": policy.get(
+                "tree_hp_to_mp_mp", self.tree_hp_to_mp_mp
+            ),
+            "tree_heal": policy.get("tree_heal", self.tree_heal),
+            "tree_heal_hp": policy.get("tree_heal_hp", self.tree_heal_hp),
+            "tree_heal_mp": policy.get("tree_heal_mp", self.tree_heal_mp),
         }
         return self.from_mapping(raw)
 
@@ -301,9 +392,52 @@ class PartyMemberConfig:
             shopkeeper_arrow_min=_cfg_int(raw.get("shopkeeper_arrow_min"), 300),
             member_arrow_give=_cfg_int(raw.get("member_arrow_give"), 100),
             shopkeeper_arrow_buy=_cfg_int(raw.get("shopkeeper_arrow_buy"), 200),
+            member_hp_min=_cfg_int(raw.get("member_hp_min"), 10),
+            shopkeeper_hp_min=_cfg_int(raw.get("shopkeeper_hp_min"), 20),
+            member_hp_give=_cfg_int(raw.get("member_hp_give"), 10),
+            shopkeeper_hp_buy=_cfg_int(raw.get("shopkeeper_hp_buy"), 20),
+            member_depoison_min=_cfg_int(raw.get("member_depoison_min"), 1),
+            shopkeeper_depoison_min=_cfg_int(raw.get("shopkeeper_depoison_min"), 2),
+            member_depoison_give=_cfg_int(raw.get("member_depoison_give"), 1),
+            shopkeeper_depoison_buy=_cfg_int(raw.get("shopkeeper_depoison_buy"), 5),
+            member_mp_min=_cfg_int(raw.get("member_mp_min"), 5),
+            shopkeeper_mp_min=_cfg_int(raw.get("shopkeeper_mp_min"), 10),
+            member_mp_give=_cfg_int(raw.get("member_mp_give"), 5),
+            shopkeeper_mp_buy=_cfg_int(raw.get("shopkeeper_mp_buy"), 10),
             loot_pickup=str(raw.get("loot_pickup") or "all"),
             loot_weight_pct=_cfg_int(raw.get("loot_weight_pct"), 30),
+            member_heal_pct=_cfg_pct(raw.get("member_heal_pct"), 70),
+            member_potion_pct=_cfg_pct(raw.get("member_potion_pct"), 50),
+            mage_heal_pct=_cfg_pct(raw.get("mage_heal_pct"), 80),
+            retreat_pct=_cfg_pct(raw.get("retreat_pct"), 30),
+            mother_tree=_cfg_flag(raw.get("mother_tree", True), True),
+            talking_scroll=_cfg_flag(raw.get("talking_scroll", True), True),
+            safe_zone=_cfg_flag(raw.get("safe_zone", True), True),
+            tree_hp_to_mp=_cfg_flag(raw.get("tree_hp_to_mp", True), True),
+            tree_hp_to_mp_hp=_cfg_pct(raw.get("tree_hp_to_mp_hp"), 85),
+            tree_hp_to_mp_mp=_cfg_pct(raw.get("tree_hp_to_mp_mp"), 80),
+            tree_heal=_cfg_flag(raw.get("tree_heal", True), True),
+            tree_heal_hp=_cfg_pct(raw.get("tree_heal_hp"), 40),
+            tree_heal_mp=_cfg_pct(raw.get("tree_heal_mp"), 80),
         ).clamped()
+
+
+def _cfg_pct(value: Any, default: int) -> int:
+    """1–100. A missing value keeps the party default."""
+    if value is None or str(value).strip() == "":
+        return default
+    try:
+        return max(1, min(100, int(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _cfg_flag(value: Any, default: bool) -> bool:
+    if value is None or (isinstance(value, str) and not str(value).strip()):
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
 
 
 def _cfg_int(value: Any, default: int) -> int:

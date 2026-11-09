@@ -9,7 +9,18 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from .arrow_policy import DUTY_FOLLOW, DUTY_SHOP, DUTY_SUPPLY, bag_arrow_count, pick_arrow_duty
+from .arrow_policy import (
+    DUTY_FOLLOW,
+    DUTY_SHOP,
+    DUTY_SUPPLY,
+    bag_supply_counts,
+    choose_supply_duty,
+    mage_seat_names,
+    next_supply_buy,
+    report_supply_count,
+    supply_fill_qty,
+    supply_pile_matches,
+)
 
 _JOIN = "party_join_leader"
 _PIN = "party_pin_shop_behavior"
@@ -34,29 +45,53 @@ def tick_shopkeeper_duty(
         runtime.duty_phase = DUTY_SHOP
         return _tick_join(manager, state)
 
-    own = bag_arrow_count(state)
+    from app._04_decision.shop_trip import SCRATCH_SHOP_TRIP
+
+    if board.scratch.get(SCRATCH_SHOP_TRIP) and board.scratch.get(_FLAG):
+        return _tick_buy(manager, state, _current_buy_duty(board))
+
+    chain = board.scratch.get("party_supply_chain")
+    if board.scratch.get(_FLAG) and isinstance(chain, list) and chain:
+        from .comms.orders import member_orders
+
+        _expire_notice(runtime, member_orders.party_reports)
+        policy = getattr(manager, "leader_policy", None)
+        roster = policy.get("roster") if isinstance(policy, dict) else None
+        nxt = next_supply_buy(
+            bag_supply_counts(state),
+            _supply_specs(cfg, mage_seat_names(roster)),
+            after_item=str(chain[-1]),
+            skip_buys=_unaffordable_items(board, state),
+        )
+        if nxt is None:
+            board.scratch[_JOIN] = True
+            runtime.duty_phase = DUTY_SHOP
+            return _tick_join(manager, state)
+        return _tick_buy(manager, state, nxt)
+
     from .comms.orders import member_orders
 
-    _expire_notice(runtime, member_orders.party_reports, int(cfg.member_arrow_min))
-    duty = pick_arrow_duty(
-        own,
+    _expire_notice(runtime, member_orders.party_reports)
+    policy = getattr(manager, "leader_policy", None)
+    roster = policy.get("roster") if isinstance(policy, dict) else None
+    notice = getattr(runtime, "supply_notice", None)
+    held = None
+    if isinstance(notice, dict):
+        held = (notice.get("for"), notice.get("item") or "arrow")
+    duty = choose_supply_duty(
+        bag_supply_counts(state),
         member_orders.party_reports,
-        member_min=int(cfg.member_arrow_min),
-        keeper_min=int(cfg.shopkeeper_arrow_min),
-        give_qty=int(cfg.member_arrow_give),
+        _supply_specs(cfg, mage_seat_names(roster)),
         self_name=self_name,
+        held=held,
+        skip_buys=_unaffordable_items(board, state),
     )
     if duty is None:
         _clear_shop_flags(board)
         runtime.duty_phase = DUTY_FOLLOW
-        runtime.supply_notice = None
         return None
     if duty["kind"] == "buy":
-        return _tick_buy(manager, state)
-    notice = getattr(runtime, "supply_notice", None)
-    if isinstance(notice, dict) and str(notice.get("for") or "") == str(duty["name"]):
-        runtime.duty_phase = DUTY_FOLLOW
-        return None
+        return _tick_buy(manager, state, duty)
     return _tick_drop(manager, state, duty)
 
 
@@ -86,7 +121,110 @@ def leader_supply_pickup(state: Any, blackboard: Any, claim: Optional[dict]) -> 
     return _pickup_claim(state, blackboard, claim, None)
 
 
-def _tick_buy(manager: Any, state: Any) -> Any:
+def _bag_adena(state: Any) -> Optional[int]:
+    player = getattr(state, "player", None)
+    inv = getattr(player, "inventory", None)
+    if inv is None or not bool(getattr(inv, "bag_ready", False)):
+        return None
+    try:
+        return max(0, int(getattr(inv, "adena", 0) or 0))
+    except (TypeError, ValueError):
+        return None
+
+
+def _unaffordable_items(board: Any, state: Any) -> set[str]:
+    """Items whose last shop price is more than the Adena on hand."""
+    prices = board.scratch.get("party_supply_prices")
+    if not isinstance(prices, dict):
+        return set()
+    adena = _bag_adena(state)
+    if adena is None:
+        return set()
+    blocked: set[str] = set()
+    for item, price in prices.items():
+        try:
+            if int(price) > 0 and adena < int(price):
+                blocked.add(str(item))
+        except (TypeError, ValueError):
+            continue
+    return blocked
+
+
+def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
+    """HP, depoison, MP, then arrows. MP is a drop only."""
+    return [
+        {
+            "item": "hp",
+            "member_min": int(cfg.member_hp_min),
+            "keeper_min": int(cfg.shopkeeper_hp_min),
+            "give": int(cfg.member_hp_give),
+            "buy": int(cfg.shopkeeper_hp_buy),
+            "can_buy": True,
+        },
+        {
+            "item": "depoison",
+            "member_min": int(cfg.member_depoison_min),
+            "keeper_min": int(cfg.shopkeeper_depoison_min),
+            "give": int(cfg.member_depoison_give),
+            "buy": int(cfg.shopkeeper_depoison_buy),
+            "can_buy": True,
+        },
+        {
+            "item": "mp",
+            "member_min": int(cfg.member_mp_min),
+            "keeper_min": int(cfg.shopkeeper_mp_min),
+            "give": int(cfg.member_mp_give),
+            "buy": int(cfg.shopkeeper_mp_buy),
+            "only_names": mages,
+            "can_buy": False,
+        },
+        {
+            "item": "arrow",
+            "member_min": int(cfg.member_arrow_min),
+            "keeper_min": int(cfg.shopkeeper_arrow_min),
+            "give": int(cfg.member_arrow_give),
+            "buy": int(cfg.shopkeeper_arrow_buy),
+            "skip_names": mages,
+            "can_buy": True,
+        },
+    ]
+
+
+def note_supply_shop_finished(board: Any) -> bool:
+    """Remember the supply item just bought so the next row can be visited.
+
+    False means this success was not a party supply buy, so the caller joins
+    the leader immediately.
+    """
+    item = str(board.scratch.get("party_supply_item") or "").strip()
+    if not item:
+        return False
+    chain = board.scratch.get("party_supply_chain")
+    if not isinstance(chain, list):
+        chain = []
+    if item not in chain:
+        chain.append(item)
+    board.scratch["party_supply_chain"] = chain
+    board.scratch.pop(_PIN, None)
+    board.scratch.pop("party_supply_item", None)
+    board.scratch.pop("party_supply_keep", None)
+    board.scratch.pop("party_supply_configured", None)
+    board.scratch.pop("party_arrow_buy_qty", None)
+    return True
+
+
+def _current_buy_duty(board: Any) -> dict[str, Any]:
+    """The buy already in progress. Keeps a second shop from being restarted."""
+    return {
+        "kind": "buy",
+        "item": str(board.scratch.get("party_supply_item") or "arrow"),
+        "buy": board.scratch.get("party_supply_configured") or 1,
+        "keeper_min": board.scratch.get("party_supply_keep") or 0,
+        "own": None,
+    }
+
+
+def _tick_buy(manager: Any, state: Any, duty: Optional[dict] = None) -> Any:
     from app._04_decision.shop_trip import (
         SCRATCH_SHOP_BEHAVIOR,
         SCRATCH_SHOP_TRIP,
@@ -95,15 +233,32 @@ def _tick_buy(manager: Any, state: Any) -> Any:
 
     board = manager._nav_blackboard
     runtime = manager.runtime
+    item = str((duty or {}).get("item") or "arrow")
+    try:
+        buy = max(1, min(999, int((duty or {}).get("buy") or 1)))
+    except (TypeError, ValueError):
+        buy = 1
+    try:
+        keep = int((duty or {}).get("keeper_min") or 0)
+    except (TypeError, ValueError):
+        keep = 0
+    own = (duty or {}).get("own")
     runtime.duty_phase = DUTY_SHOP
     runtime.supply_notice = None
+    if str(board.scratch.get("party_supply_item") or "") not in ("", item):
+        board.scratch.pop(SCRATCH_SHOP_BEHAVIOR, None)
+        board.scratch.pop(_PIN, None)
     board.scratch[_FLAG] = True
-    board.scratch["party_arrow_buy_qty"] = max(1, min(999, int(cfg.shopkeeper_arrow_buy)))
+    board.scratch["party_supply_item"] = item
+    board.scratch["party_supply_keep"] = keep
+    board.scratch["party_supply_configured"] = buy
+    board.scratch["party_arrow_buy_qty"] = supply_fill_qty(own, keep, buy)
     if not str(board.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip():
-        if shops_arrow_id() is None:
+        shop_id = supply_shop_id(item)
+        if shop_id is None:
             runtime.duty_phase = DUTY_FOLLOW
             return None
-        board.scratch[_PIN] = shops_arrow_id()
+        board.scratch[_PIN] = shop_id
     status = tick_shop_trip(state, board)
     if status is None and not board.scratch.get(SCRATCH_SHOP_TRIP):
         board.scratch.pop(_PIN, None)
@@ -112,15 +267,30 @@ def _tick_buy(manager: Any, state: Any) -> Any:
         runtime.duty_phase = DUTY_FOLLOW
         return None
     intent = getattr(board, "intent", None)
+    reason = f"{item} shop"
     if intent is not None:
         runtime.last_kind = "shop"
-        runtime.last_reason = "arrow shop"
+        runtime.last_reason = reason
         return intent
     from .intents import idle
 
     runtime.last_kind = "shop"
-    runtime.last_reason = "arrow shop"
-    return idle("arrow shop")
+    runtime.last_reason = reason
+    return idle(reason)
+
+
+def supply_shop_id(item: str) -> Optional[str]:
+    """Existing shop behavior for one supply item. MP has none."""
+    from app._04_decision.shops import resolve_shopping_behavior_id
+
+    kind = str(item or "")
+    if kind == "hp":
+        return resolve_shopping_behavior_id("hp")
+    if kind == "depoison":
+        return resolve_shopping_behavior_id("depoison")
+    if kind == "arrow":
+        return shops_arrow_id()
+    return None
 
 
 def shops_arrow_id() -> Optional[str]:
@@ -140,12 +310,15 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
     runtime.duty_phase = DUTY_SUPPLY
     board.scratch.pop(_FLAG, None)
     board.scratch.pop(_PIN, None)
+    board.scratch.pop("party_supply_item", None)
+    board.scratch.pop("party_arrow_buy_qty", None)
     arrived = _beside_member(manager, state, duty)
     if arrived is not True:
         return arrived
     from .supply_drop import step_ground_drop
 
-    result = step_ground_drop(state, board, int(duty["qty"]))
+    item = str(duty.get("item") or "arrow")
+    result = step_ground_drop(state, board, int(duty["qty"]), kind=item)
     if result is None:
         runtime.last_kind = "supply"
         runtime.last_reason = "arrow drop"
@@ -157,8 +330,10 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         runtime.last_reason = str(result.get("reason") or "arrow drop blocked")
         return None
     runtime.supply_notice = {
-        "id": f"{duty['name']}:{int(time.time())}",
+        "id": f"{item}:{duty['name']}:{int(time.time())}",
         "for": str(duty["name"]),
+        "item": item,
+        "min": int(duty.get("min") or 0),
         "map_id": result.get("map_id"),
         "x": result.get("x"),
         "y": result.get("y"),
@@ -167,7 +342,7 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
     }
     runtime.duty_phase = DUTY_FOLLOW
     runtime.last_kind = "supply"
-    runtime.last_reason = "arrow dropped"
+    runtime.last_reason = f"{item} dropped"
     return None
 
 
@@ -212,11 +387,16 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
     return idle("arrow drop walk")
 
 
-def _expire_notice(runtime: Any, rows: Any, member_min: int) -> None:
+def _expire_notice(runtime: Any, rows: Any) -> None:
     notice = getattr(runtime, "supply_notice", None)
     if not isinstance(notice, dict):
         return
     who = str(notice.get("for") or "").casefold()
+    item = str(notice.get("item") or "arrow")
+    try:
+        floor = int(notice.get("min") or 0)
+    except (TypeError, ValueError):
+        floor = 0
     try:
         age = time.time() - float(notice.get("at") or 0.0)
     except (TypeError, ValueError):
@@ -224,11 +404,9 @@ def _expire_notice(runtime: Any, rows: Any, member_min: int) -> None:
     count = None
     for row in rows or []:
         if str(row.get("from") or "").strip().casefold() == who:
-            from .arrow_policy import report_arrow_count
-
-            count = report_arrow_count(row)
+            count = report_supply_count(row, item)
             break
-    if age > 90.0 or (count is not None and count >= int(member_min)):
+    if age > 90.0 or (count is not None and count >= floor):
         runtime.supply_notice = None
 
 
@@ -357,6 +535,8 @@ def _clear_shop_flags(board: Any) -> None:
     board.scratch.pop(_PIN, None)
     board.scratch.pop(_JOIN, None)
     board.scratch.pop("party_arrow_buy_qty", None)
+    board.scratch.pop("party_supply_item", None)
+    board.scratch.pop("party_supply_chain", None)
 
 
 def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any:
@@ -394,6 +574,8 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
                 continue
             if tile is None or is_adena(item):
                 continue
+            if not supply_pile_matches(item, str(claim.get("item") or "")):
+                continue
             if tile_chebyshev(int(tile[0]), int(tile[1]), tx, ty) <= 2:
                 pile = item
                 break
@@ -403,12 +585,12 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
 
         if runtime is not None:
             runtime.last_kind = "supply"
-            runtime.last_reason = "pick up arrows"
+            runtime.last_reason = f"pick up {claim.get('item') or 'supply'}"
         return ActionIntent(
             action=ActionType.PICKUP,
             target_id=int(getattr(pile, "track_id", 0)),
             priority=0.7,
-            reason="party_member:supply arrows",
+            reason=f"party_member:supply {claim.get('item') or 'arrows'}",
         )
     if dist <= _NEAR and pile is None:
         return None

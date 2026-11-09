@@ -28,7 +28,12 @@ def is_potion_action(action: ActionType | None) -> bool:
     return action in _POTION_ACTIONS
 
 
-def arm_potion_side_intents(state: "GameState", blackboard: "Blackboard") -> None:
+def arm_potion_side_intents(
+    state: "GameState",
+    blackboard: "Blackboard",
+    *,
+    hp_potion_below: float | None = None,
+) -> None:
     """Fill ``blackboard.side_intents`` for this tick (clears first)."""
     blackboard.side_intents.clear()
     # If the ladder still emitted a potion as primary, move it to the side
@@ -42,7 +47,7 @@ def arm_potion_side_intents(state: "GameState", blackboard: "Blackboard") -> Non
     if depoison is not None:
         blackboard.side_intents.append(depoison)
 
-    hp = _side_hp_potion(state, blackboard)
+    hp = _side_hp_potion(state, blackboard, hp_below=hp_potion_below)
     if hp is not None:
         blackboard.side_intents.append(hp)
 
@@ -101,7 +106,10 @@ def _side_depoison(
 
 
 def _side_hp_potion(
-    state: "GameState", blackboard: "Blackboard"
+    state: "GameState",
+    blackboard: "Blackboard",
+    *,
+    hp_below: float | None = None,
 ) -> ActionIntent | None:
     from app._04_decision import player_mode as pm
     from app._04_decision.behaviors.mode_actions import (
@@ -117,9 +125,11 @@ def _side_hp_potion(
     from app._04_decision.mode_control import hp_ratio, is_hp_zero
     from app._04_decision.spells import mark_slot_used, slot_ready
 
+    from app._06_party.recovery import party_on
+
     if is_hp_zero(state):
         return None
-    if not pm.USE_HP_POTION:
+    if not pm.USE_HP_POTION and not party_on():
         return None
     if any(s.action is ActionType.USE_HP_POTION for s in blackboard.side_intents):
         return None
@@ -139,7 +149,11 @@ def _side_hp_potion(
     from app._04_decision.behaviors.mode_actions import retreat_fill_until_ratio
 
     fill_until = retreat_fill_until_ratio(blackboard)
-    potion_th = action_threshold(actions, "hp_potion")
+    potion_th = (
+        float(hp_below)
+        if hp_below is not None
+        else action_threshold(actions, "hp_potion")
+    )
     if fill_until is not None:
         if ratio >= fill_until:
             return None
@@ -148,7 +162,7 @@ def _side_hp_potion(
             return None
     elif potion_th is None or ratio > potion_th:
         return None
-    if not any(
+    if not party_on() and not any(
         str(row.get("id") or "") == "hp_potion" and row.get("enabled", True)
         for row in actions
     ):

@@ -234,6 +234,32 @@ class Profile:
     party_shopkeeper_arrow_min: int = 300
     party_member_arrow_give: int = 100
     party_shopkeeper_arrow_buy: int = 200
+    party_member_hp_min: int = 10
+    party_shopkeeper_hp_min: int = 20
+    party_member_hp_give: int = 10
+    party_shopkeeper_hp_buy: int = 20
+    party_member_depoison_min: int = 1
+    party_shopkeeper_depoison_min: int = 2
+    party_member_depoison_give: int = 1
+    party_shopkeeper_depoison_buy: int = 5
+    party_member_mp_min: int = 5
+    party_shopkeeper_mp_min: int = 10
+    party_member_mp_give: int = 5
+    party_shopkeeper_mp_buy: int = 10
+    # Party recovery. The leader character and every member use these in party.
+    party_member_heal_pct: int = 70
+    party_member_potion_pct: int = 50
+    party_mage_heal_pct: int = 80
+    party_retreat_pct: int = 30
+    party_mother_tree: bool = True
+    party_talking_scroll: bool = True
+    party_safe_zone: bool = True
+    party_tree_hp_to_mp: bool = True
+    party_tree_hp_to_mp_hp: int = 85
+    party_tree_hp_to_mp_mp: int = 80
+    party_tree_heal: bool = True
+    party_tree_heal_hp: int = 40
+    party_tree_heal_mp: int = 80
     # all = items and adena until the weight line, then adena. adena = adena only.
     party_loot_pickup: str = "all"
     party_loot_weight_pct: int = 30
@@ -417,6 +443,11 @@ class Profile:
             "party_enabled",
             "party_member_enabled",
             "party_random_loot",
+            "party_mother_tree",
+            "party_talking_scroll",
+            "party_safe_zone",
+            "party_tree_hp_to_mp",
+            "party_tree_heal",
             "area_empty",
             "area_low_yield",
             "area_players",
@@ -549,6 +580,30 @@ class Profile:
             kwargs["party_shopkeeper_arrow_buy"] = _party_arrow_count(
                 kwargs.get("party_shopkeeper_arrow_buy"), 200, 1, 999
             )
+        for key, default, low, high in (
+            ("party_member_hp_min", 10, 0, 9999),
+            ("party_shopkeeper_hp_min", 20, 0, 9999),
+            ("party_member_hp_give", 10, 1, 9999),
+            ("party_shopkeeper_hp_buy", 20, 1, 999),
+            ("party_member_depoison_min", 1, 0, 9999),
+            ("party_shopkeeper_depoison_min", 2, 0, 9999),
+            ("party_member_depoison_give", 1, 1, 9999),
+            ("party_shopkeeper_depoison_buy", 5, 1, 999),
+            ("party_member_mp_min", 5, 0, 9999),
+            ("party_shopkeeper_mp_min", 10, 0, 9999),
+            ("party_member_mp_give", 5, 1, 9999),
+            ("party_shopkeeper_mp_buy", 10, 1, 999),
+            ("party_member_heal_pct", 70, 1, 100),
+            ("party_member_potion_pct", 50, 1, 100),
+            ("party_mage_heal_pct", 80, 1, 100),
+            ("party_retreat_pct", 30, 1, 100),
+            ("party_tree_hp_to_mp_hp", 85, 1, 100),
+            ("party_tree_hp_to_mp_mp", 80, 1, 100),
+            ("party_tree_heal_hp", 40, 1, 100),
+            ("party_tree_heal_mp", 80, 1, 100),
+        ):
+            if key in kwargs:
+                kwargs[key] = _party_arrow_count(kwargs.get(key), default, low, high)
         if "party_loot_pickup" in kwargs:
             pickup = str(kwargs.get("party_loot_pickup") or "all").strip().lower()
             kwargs["party_loot_pickup"] = "adena" if pickup == "adena" else "all"

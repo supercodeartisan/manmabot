@@ -1,7 +1,8 @@
 """Party self-support: heal + buff + potion sides.
 
-The retreat HP gate is the one exception: at that threshold the member calls
-the solo survival.hp line (mother tree, else talking scroll, else teleport).
+The retreat gate uses the party recovery lines (mother tree, talking scroll,
+safe zone). After HP recovers, a solo post_retreat walk back to the hunt is
+dropped so the member follows the leader.
 """
 from __future__ import annotations
 
@@ -13,12 +14,11 @@ _log = _party_logger("member")
 
 
 def party_critical_escape(game_state: Any, blackboard: Any) -> Optional[Any]:
-    """Solo retreat line, only at the retreat HP gate or while that trip runs.
+    """Party retreat line, only at the party retreat gate or while that trip runs.
 
-    Elf mother-tree, other classes' talking-scroll landing, and the teleport
-    fallback stay inside ``apply_hp_actions`` / ``tick_retreating``. After HP
-    recovers, a solo ``post_retreat`` world-nav back to the hunt map is dropped
-    so this member follows the party leader again.
+    Mother tree, talking scroll, and safe zone follow the party recovery
+    overlay. After HP recovers, a solo ``post_retreat`` world-nav back to the
+    hunt map is dropped so this member follows the party leader again.
     """
     if game_state is None or blackboard is None:
         return None
@@ -89,6 +89,8 @@ def apply_party_support(
     blackboard: Any,
     *,
     allow_buffs: bool = True,
+    heal_below: Optional[float] = None,
+    potion_below: Optional[float] = None,
 ) -> Optional[Any]:
     """Arm potion sides; optionally emit primary HEAL or BUFF.
 
@@ -111,7 +113,7 @@ def apply_party_support(
 
     primary = None
     try:
-        primary = _try_party_heal(game_state, blackboard)
+        primary = _try_party_heal(game_state, blackboard, heal_below=heal_below)
     except Exception as exc:
         _log.debug("party heal failed: %s", exc)
         primary = None
@@ -123,7 +125,9 @@ def apply_party_support(
             primary = None
 
     try:
-        arm_potion_side_intents(game_state, blackboard)
+        arm_potion_side_intents(
+            game_state, blackboard, hp_potion_below=potion_below
+        )
     except Exception as exc:
         _log.debug("party potion sides failed: %s", exc)
 
@@ -156,7 +160,12 @@ def apply_party_support(
     return None
 
 
-def _try_party_heal(game_state: Any, blackboard: Any) -> Optional[Any]:
+def _try_party_heal(
+    game_state: Any,
+    blackboard: Any,
+    *,
+    heal_below: Optional[float] = None,
+) -> Optional[Any]:
     """Same heal threshold as solo ``apply_hp_actions``, without retreat starters."""
     from app._04_decision import player_mode as pm
     from app._04_decision.behavior_tree import Status
@@ -178,7 +187,11 @@ def _try_party_heal(game_state: Any, blackboard: Any) -> Optional[Any]:
         blackboard,
         retreat_starters=False,
     )
-    heal_th = action_threshold(actions, "heal")
+    heal_th = (
+        float(heal_below)
+        if heal_below is not None
+        else action_threshold(actions, "heal")
+    )
     if heal_th is None or not can.get("heal") or float(ratio) > float(heal_th):
         # Still allow convert skill when configured (solo field path).
         try:

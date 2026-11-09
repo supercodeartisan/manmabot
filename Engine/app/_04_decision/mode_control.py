@@ -124,11 +124,13 @@ def elf_uses_mother_tree(
     from app._04_decision.spells import mother_tree_on_live_hotbar
     from app._05_action.spell_box import slot_is_enabled
 
-    if not (
-        bool(pm.ELF_MOTHER_TREE)
-        and is_elf(state)
-        and slot_is_enabled("mother_tree")
-    ):
+    from app._06_party.recovery import active
+
+    party = active()
+    if party is not None and not party.mother_tree:
+        return False
+    tree_on = True if party is not None else bool(pm.ELF_MOTHER_TREE)
+    if not (tree_on and is_elf(state) and slot_is_enabled("mother_tree")):
         return False
     snap = getattr(state, "last_hotbar", None)
     if not isinstance(snap, dict) and blackboard is not None:

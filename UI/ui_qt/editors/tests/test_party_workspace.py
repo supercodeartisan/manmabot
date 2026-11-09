@@ -376,27 +376,13 @@ def test_member_support_saves_hit_mode_and_hp_threshold() -> None:
     assert tab.bag.get_str("party", "hit_support", "") == "finish"
     tab.member_hit_buttons["immediate"].setChecked(True)
     assert tab.bag.get_str("party", "hit_support", "") == "immediate"
-
-    assert tab.member_hp_emergency.isChecked() is False
-    assert tab.member_hp_emergency_pct.value() == 30
-    assert tab.member_hp_emergency_pct.isEnabled() is False
-    tab.member_hp_emergency.setChecked(True)
-    assert tab.member_hp_emergency_pct.isEnabled() is True
-    tab.member_hp_emergency_pct.setValue(45)
-    assert tab.bag.get_bool("party", "hp_emergency_enabled", False) is True
-    assert tab.bag.get_int("party", "hp_emergency_percent", 0) == 45
-    tab.member_hp_emergency.setChecked(False)
-    assert tab.bag.get_bool("party", "hp_emergency_enabled", True) is False
-    assert tab.member_hp_emergency_pct.value() == 45
+    member_text = " ".join(label.text() for label in support.findChildren(QLabel))
+    assert "파티원 체력 위험 시 긴급 지원" not in member_text
 
     stored = normalize_settings({"party": dict(tab.bag.section("party"))})
     assert stored["party"]["hit_support"] == "immediate"
-    assert stored["party"]["hp_emergency_enabled"] is False
-    assert stored["party"]["hp_emergency_percent"] == 45
     reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
     assert reopened.member_hit_buttons["immediate"].isChecked()
-    assert reopened.member_hp_emergency.isChecked() is False
-    assert reopened.member_hp_emergency_pct.value() == 45
     follow_text = " ".join(
         label.text() for label in tab.member_sections["follow"].findChildren(QLabel)
     )
@@ -420,74 +406,119 @@ def test_party_heal_is_visible_for_every_member() -> None:
         box.title()
         for box in tab.member_sections["support"].findChildren(QGroupBox)
     ]
-    assert titles[:3] == [
+    assert titles[:2] == [
         "파티원 피격 시 지원",
-        "파티원 체력 위험 시 긴급 지원",
-        "파티원 힐 관리 (F06)",
+        "파티 지원 마법",
     ]
-    assert _self_hidden(tab.member_heal_box) is False
-    tab.bag.set("magic", "class", "mage")
-    tab._store_roster(
-        [
-            {"name": "힐러", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
-            {"name": "탱커", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
-        ]
-    )
-    tab.note_local_character("힐러")
-    assert _self_hidden(tab.member_heal_box) is False
+    assert "파티원 체력 위험 시 긴급 지원" not in titles
+    leader_titles = [
+        box.title()
+        for box in tab.leader_sections["support"].findChildren(QGroupBox)
+    ]
+    assert leader_titles == ["파티원 회복"]
+    assert tab.party_member_heal_pct.value() == 70
+    assert tab.party_member_potion_pct.value() == 50
+    assert tab.party_mage_heal_pct.value() == 80
+    assert tab.party_retreat_pct.value() == 30
+    assert tab.party_mother_tree.isChecked()
+    assert tab.party_talking_scroll.isChecked()
+    assert tab.party_safe_zone.isChecked()
+    assert tab.party_tree_hp_to_mp.isChecked()
+    assert tab.party_tree_hp_to_mp_hp.value() == 85
+    assert tab.party_tree_heal.isChecked()
+    assert tab.party_tree_heal_hp.value() == 40
+    assert "파티원 힐 관리 (F06)" not in titles
+    assert tab.member_support_magic_table.item(0, 2).text() == "힐"
 
-    tab._store_roster(
-        [
-            {"name": "힐러", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
-            {"name": "탱커", "role": "member", "loot": "none", "enabled": "1", "required": "1"},
-            {"name": "버퍼", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
-        ]
-    )
-    assert _self_hidden(tab.member_heal_box) is False
+
+def _support_row(tab: PartyTab, name: str) -> int:
+    table = tab.member_support_magic_table
+    for row in range(table.rowCount()):
+        item = table.item(row, 2)
+        if item is not None and item.text() == name:
+            return row
+    raise AssertionError(name)
+
+
+def test_mage_party_support_skills_are_selectable_without_touching_solo() -> None:
+    workspace = _workspace()
+    tab = workspace.tab
+    magic_before = copy.deepcopy(tab.bag.section("magic"))
+    assert tab.member_support_magic_box.title() == "파티 지원 마법"
+    assert _self_hidden(tab.member_support_magic_box) is False
     names = [
-        tab.member_heal_table.item(row, 1).text()
-        for row in range(tab.member_heal_table.rowCount())
+        tab.member_support_magic_table.item(row, 2).text()
+        for row in range(tab.member_support_magic_table.rowCount())
     ]
-    assert names == ["탱커", "버퍼"]
-    use = tab.member_heal_table.cellWidget(0, 2).findChild(QCheckBox)
-    hp = tab.member_heal_table.cellWidget(0, 3).findChild(StepSpinBox)
-    priority = tab.member_heal_table.cellWidget(0, 4).findChild(StepSpinBox)
-    assert use is not None and hp is not None and priority is not None
-    use.setChecked(True)
-    hp.setValue(40)
-    priority.setValue(2)
-    saved = tab.bag.get("party", "heal_targets", {})
-    assert saved["탱커"]["enabled"] is True
-    assert saved["탱커"]["hp_percent"] == 40
-    assert saved["탱커"]["priority"] == 2
-    slots_before = copy.deepcopy(tab.bag.get("magic", "spell_slots", None))
-    tab.member_heal_slot_box.setCurrentIndex(tab.member_heal_slot_box.findData(2))
-    tab.member_heal_slot_key.setCurrentIndex(tab.member_heal_slot_key.findData("f6"))
-    assert tab.bag.get_int("party", "heal_slot_box", 0) == 2
-    assert tab.bag.get_str("party", "heal_slot_key", "") == "f6"
-    assert tab.bag.get("magic", "spell_slots", None) == slots_before
-    assert tab.member_heal_skill.count() >= 1
-    tab.member_heal_skill.setCurrentIndex(0)
-    tab._on_heal_skill()
-    assert tab.bag.get_str("party", "heal_skill_key", "")
-    assert tab.member_heal_status.item(0, 1).text() == "—"
-    assert tab.member_heal_status.item(0, 4).text() == "—"
-    assert tab.member_heal_status.item(0, 5).text() == "—"
-    assert tab._heal_fail_label("mp") == "MP 부족"
-    assert tab._heal_fail_label("range") == "사거리 초과"
-    assert tab.leader_sections["support"].findChildren(QGroupBox) == []
+    assert names == [
+        "힐",
+        "익스트라 힐",
+        "그레이터 힐",
+        "풀 힐",
+        "힐 올",
+        "큐어 포이즌",
+        "리무브 커스",
+        "리절렉션",
+        "실드",
+        "홀리 웨폰",
+        "인챈트 웨폰",
+        "블레스 웨폰",
+        "블레스드 아머",
+        "인챈트 덱스터리티",
+        "인챈트 마이티",
+        "헤이스트",
+        "그레이터 헤이스트",
+        "버서커스",
+        "디크리즈 웨이트",
+    ]
+    heal = _support_row(tab, "힐")
+    heal_box = tab.member_support_magic_table.cellWidget(heal, 0).findChild(QCheckBox)
+    assert heal_box is not None and heal_box.isChecked() is True
+    heal_detail = tab.member_support_magic_table.cellWidget(heal, 3).findChild(QLabel)
+    assert isinstance(heal_detail, QLabel)
+    assert heal_detail.alignment() & Qt.AlignmentFlag.AlignVCenter
+    assert "HP를 조금 회복" in heal_detail.text()
+    extra = _support_row(tab, "익스트라 힐")
+    detail = tab.member_support_magic_table.cellWidget(extra, 3).findChild(QLabel)
+    assert isinstance(detail, QLabel)
+    assert "대상의 HP를 약간 회복" in detail.text()
+    assert "파티원 한 명" in detail.text()
+    haste = _support_row(tab, "헤이스트")
+    haste_detail = tab.member_support_magic_table.cellWidget(haste, 3).findChild(QLabel)
+    assert haste_detail is not None
+    assert "지속 시간" in haste_detail.text()
+    check = tab.member_support_magic_table.cellWidget(extra, 0).findChild(QCheckBox)
+    assert check is not None and check.isChecked() is False
+    check.setChecked(True)
+    saved = tab.bag.get("party", "mage_support_skills", {})
+    assert saved.get("mage_18") is True
+    assert tab.bag.section("magic") == magic_before
 
     reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
-    reopened.note_local_character("힐러")
-    assert _self_hidden(reopened.member_heal_box) is False
-    assert reopened.member_heal_table.item(0, 1).text() == "탱커"
-    assert reopened.member_heal_table.cellWidget(0, 2).findChild(QCheckBox).isChecked()
-    assert reopened.member_heal_table.cellWidget(0, 3).findChild(StepSpinBox).value() == 40
-    assert reopened.member_heal_table.cellWidget(0, 4).findChild(StepSpinBox).value() == 2
-    assert reopened.member_heal_slot_box.currentData() == 2
-    assert reopened.member_heal_slot_key.currentData() == "f6"
-    reopened.note_local_character("탱커")
-    assert _self_hidden(reopened.member_heal_box) is False
+    again = reopened.member_support_magic_table.cellWidget(
+        _support_row(reopened, "익스트라 힐"), 0
+    ).findChild(QCheckBox)
+    assert again is not None and again.isChecked() is True
+
+    tab.bag.set("magic", "class", "elf")
+    tab._refresh_party_heal()
+    assert _self_hidden(tab.member_support_magic_box) is True
+    assert tab.bag.get("party", "mage_support_skills", {}).get("mage_18") is True
+
+    wide = PartyTab(bag=SettingsBag(Profile()), strings={}, language="ko", profile=None)
+    table = wide.member_support_magic_table
+    row = _support_row(wide, "버서커스")
+    table.resize(920, 200)
+    table.apply_description_width()
+    table.refit()
+    wide_width = table.columnWidth(3)
+    wide_height = table.rowHeight(row)
+    table.resize(340, 200)
+    table.apply_description_width()
+    table.refit()
+    assert table.columnWidth(3) < wide_width
+    assert table.rowHeight(row) > wide_height
+    assert table.columnWidth(0) == 56
 
 
 def test_leader_succession_and_absence_settings() -> None:
@@ -688,3 +719,29 @@ def test_roster_name_role_and_loot_edit_in_place() -> None:
     assert saved[0]["enabled"] == "0"
     assert reopened.roster_table.item(0, 3).text() == "상점"
     assert reopened.roster_table.columnCount() == 7
+
+
+def test_supply_tables_split_self_shop_and_party_give() -> None:
+    workspace = _workspace("leader")
+    tab = workspace.tab
+    titles = [
+        box.title()
+        for box in tab.leader_sections["supply"].findChildren(QGroupBox)
+    ]
+    assert titles[:2] == ["본인이 사는 것", "다른 파티원에게 주는 것"]
+    assert tab.supply_self_table.columnCount() == 3
+    assert tab.supply_others_table.columnCount() == 4
+    assert [tab.supply_self_table.item(row, 0).text() for row in range(4)] == [
+        "체력 물약",
+        "해독 물약",
+        "마나 물약",
+        "화살",
+    ]
+    assert tab.supply_self_table.item(2, 2).text() == "없음"
+    assert tab.supply_others_table.item(0, 1).text() == "전원 (담당 제외)"
+    assert tab.supply_others_table.item(2, 1).text() == "마법사만"
+    assert tab.supply_others_table.item(3, 1).text() == "마법사 제외"
+    tab.party_shopkeeper_hp_buy.setValue(30)
+    tab.party_member_hp_min.setValue(7)
+    assert tab.bag.get_int("party", "shopkeeper_hp_buy", 0) == 30
+    assert tab.bag.get_int("party", "member_hp_min", 0) == 7

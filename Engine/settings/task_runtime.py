@@ -347,6 +347,48 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             999,
         ),
     )
+    for bag_key, profile_key, default, low, high in (
+        ("member_hp_min", "party_member_hp_min", 10, 0, 9999),
+        ("shopkeeper_hp_min", "party_shopkeeper_hp_min", 20, 0, 9999),
+        ("member_hp_give", "party_member_hp_give", 10, 1, 9999),
+        ("shopkeeper_hp_buy", "party_shopkeeper_hp_buy", 20, 1, 999),
+        ("member_depoison_min", "party_member_depoison_min", 1, 0, 9999),
+        ("shopkeeper_depoison_min", "party_shopkeeper_depoison_min", 2, 0, 9999),
+        ("member_depoison_give", "party_member_depoison_give", 1, 1, 9999),
+        ("shopkeeper_depoison_buy", "party_shopkeeper_depoison_buy", 5, 1, 999),
+        ("member_mp_min", "party_member_mp_min", 5, 0, 9999),
+        ("shopkeeper_mp_min", "party_shopkeeper_mp_min", 10, 0, 9999),
+        ("member_mp_give", "party_member_mp_give", 5, 1, 9999),
+        ("shopkeeper_mp_buy", "party_shopkeeper_mp_buy", 10, 1, 999),
+        ("member_heal_pct", "party_member_heal_pct", 70, 1, 100),
+        ("member_potion_pct", "party_member_potion_pct", 50, 1, 100),
+        ("mage_heal_pct", "party_mage_heal_pct", 80, 1, 100),
+        ("retreat_pct", "party_retreat_pct", 30, 1, 100),
+        ("tree_hp_to_mp_hp", "party_tree_hp_to_mp_hp", 85, 1, 100),
+        ("tree_hp_to_mp_mp", "party_tree_hp_to_mp_mp", 80, 1, 100),
+        ("tree_heal_hp", "party_tree_heal_hp", 40, 1, 100),
+        ("tree_heal_mp", "party_tree_heal_mp", 80, 1, 100),
+    ):
+        set_value(
+            profile_key,
+            _int_range(
+                party.get(bag_key, getattr(profile, profile_key, default)),
+                default,
+                low,
+                high,
+            ),
+        )
+    for bag_key, profile_key, default in (
+        ("mother_tree", "party_mother_tree", True),
+        ("talking_scroll", "party_talking_scroll", True),
+        ("safe_zone", "party_safe_zone", True),
+        ("tree_hp_to_mp", "party_tree_hp_to_mp", True),
+        ("tree_heal", "party_tree_heal", True),
+    ):
+        set_value(
+            profile_key,
+            bool(party.get(bag_key, getattr(profile, profile_key, default))),
+        )
     pickup = str(
         party.get("loot_pickup", getattr(profile, "party_loot_pickup", "all"))
         or "all"

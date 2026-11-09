@@ -367,6 +367,80 @@ def _type_qty(executor, qty: int, *, wait_s: float) -> None:
     time.sleep(wait_s)
 
 
+def _buy_list_price(behavior: ShoppingBehavior) -> Optional[int]:
+    """Unit price of the calibrated row on the open buy list."""
+    try:
+        from app._01_perception.fix_shop_listen_reader import shared_shop
+
+        snap = shared_shop().snapshot()
+    except Exception:
+        return None
+    rows = snap.get("buy") if isinstance(snap, dict) else None
+    if not isinstance(rows, list):
+        return None
+    index = max(0, int(getattr(behavior, "item_index", 0) or 0))
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            if int(row.get("idx", -1)) != index:
+                continue
+            price = int(row.get("price") or 0)
+        except (TypeError, ValueError):
+            return None
+        return price if price > 0 else None
+    return None
+
+
+def _party_supply_amount(executor, behavior: ShoppingBehavior, amount: int) -> int:
+    """Party supply buy: type only as many as live Adena can pay.
+
+    Solo buys keep ``amount``. A learned price is remembered so the next
+    decision does not walk back for an item that costs more than Adena.
+    """
+    board = getattr(executor, "_blackboard", None)
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
+        return int(amount)
+    from app._06_party.arrow_policy import affordable_supply_qty
+
+    world = getattr(executor, "_world", None)
+    player = getattr(world, "player", None)
+    inv = getattr(player, "inventory", None)
+    adena = None
+    if inv is not None and bool(getattr(inv, "bag_ready", False)):
+        try:
+            adena = max(0, int(getattr(inv, "adena", 0) or 0))
+        except (TypeError, ValueError):
+            adena = None
+    price = _buy_list_price(behavior)
+    item = str(scratch.get("party_supply_item") or "")
+    if price is None and item == "hp":
+        from app._04_decision.shops import HP_POTION_PRICE
+
+        price = int(HP_POTION_PRICE)
+    if price is not None and item:
+        prices = scratch.get("party_supply_prices")
+        if not isinstance(prices, dict):
+            prices = {}
+            scratch["party_supply_prices"] = prices
+        prices[item] = int(price)
+    bought = affordable_supply_qty(amount, adena, price)
+    try:
+        from app.bot_log import get_logger
+
+        get_logger("shop").info(
+            "party supply qty want=%s price=%s adena=%s buy=%s",
+            amount,
+            price,
+            adena,
+            bought,
+        )
+    except Exception:
+        pass
+    return int(bought)
+
+
 def execute_calibrated_buy(
     executor,
     bounds,
@@ -388,12 +462,19 @@ def execute_calibrated_buy(
     _scroll_list(
         executor, bounds, ui.list_scroll_point, behavior.scroll_steps_for_item()
     )
+    amount = int(qty) if qty is not None else int(behavior.default_qty)
+    amount = _party_supply_amount(executor, behavior, amount)
+    if amount <= 0:
+        try:
+            executor.keyboard.press("escape")
+        except Exception:
+            pass
+        return True
     row_i = behavior.visible_row_for_item()
     row_uv = ui.item_rows[row_i]
     if row_uv is None:
         return False
     _click_uv(executor, bounds, row_uv, wait_s=wait)
-    amount = int(qty) if qty is not None else int(behavior.default_qty)
     # Practice buy taps backspace once, then types the quantity.
     executor.keyboard.tap("backspace", count=1)
     for digit in str(max(1, min(999, amount))):
