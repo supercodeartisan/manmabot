@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from settings.profile import DEFAULT_PARTY_NEAR_TILES, normalize_party_roster
+from settings.profile import normalize_party_roster
 from ui_qt.editors.form_helpers import (
     add_check,
     add_check_spin,
@@ -845,7 +845,6 @@ class PartyTab(QWidget):
     def _build_leader_ops(self) -> QWidget:
         host, lay = self._section()
         self._leader_ops_host = host
-        self._build_leader_near_wait(host, lay)
         self._build_leader_absence(host, lay)
         self._add_attack_target_box(host, lay, editable=True)
         lay.addStretch(1)
@@ -859,37 +858,6 @@ class PartyTab(QWidget):
         ):
             self._fill_absence_places()
         return super().eventFilter(watched, event)
-
-    def _build_leader_near_wait(self, host: QWidget, lay: QVBoxLayout) -> None:
-        """Leader stands when the nearest member is farther than this."""
-        box = card(host, self._tx("party_near_tiles_title", "파티원 간격"))
-        lay.addWidget(box)
-        inner = box.layout()
-        assert isinstance(inner, QVBoxLayout)
-        self.party_near_tiles = add_spin_row(
-            inner,
-            self.bag,
-            "party",
-            "near_tiles",
-            self._tx("party_near_tiles", "가까운 파티원 대기 (칸)"),
-            DEFAULT_PARTY_NEAR_TILES,
-            1,
-            40,
-            on_change=self._publish_near_tiles,
-        )
-        self._publish_near_tiles()
-
-    def _publish_near_tiles(self) -> None:
-        """The leader form is the distance. 5 is only the empty-field default."""
-        if not hasattr(self, "party_near_tiles"):
-            return
-        from settings.profile import party_near_limit
-
-        tiles = party_near_limit(self.party_near_tiles.value())
-        self.bag.set("party", "near_tiles", tiles)
-        profile = getattr(self, "_profile", None)
-        if profile is not None:
-            profile.party_near_tiles = tiles
 
     def _build_leader_absence(self, host: QWidget, lay: QVBoxLayout) -> None:
         """F09 settings. Live action state stays blank until the engine reports it."""
@@ -2263,13 +2231,6 @@ class PartyTab(QWidget):
             self.bag.get_int("party", "follow_tiles", 8)
         )
         self.party_follow_tiles.blockSignals(False)
-        if hasattr(self, "party_near_tiles"):
-            self.party_near_tiles.blockSignals(True)
-            self.party_near_tiles.setValue(
-                self.bag.get_int("party", "near_tiles", DEFAULT_PARTY_NEAR_TILES)
-            )
-            self.party_near_tiles.blockSignals(False)
-            self._publish_near_tiles()
         self.party_stop_tiles.blockSignals(True)
         self.party_stop_tiles.setValue(
             self.bag.get_int("party", "stop_tiles", 2)

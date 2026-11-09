@@ -11,9 +11,18 @@ if str(ROOT) not in sys.path:
 from settings.profile import Profile, party_near_limit  # noqa: E402
 from app._06_party.formation import (  # noqa: E402
     OTHER_MAP,
+    near_wait_open,
     nearest_follower_gap,
     nearest_gap_hold,
 )
+
+
+def test_near_wait_starts_after_rally() -> None:
+    assert near_wait_open("done") is True
+    assert near_wait_open("off") is False
+    assert near_wait_open("await_mark") is False
+    assert near_wait_open("waiting") is False
+    assert near_wait_open("") is False
 
 
 def test_nearest_gap_hold() -> None:
@@ -55,5 +64,6 @@ def test_nearest_gap_hold() -> None:
 
 
 if __name__ == "__main__":
+    test_near_wait_starts_after_rally()
     test_nearest_gap_hold()
     print("ok")

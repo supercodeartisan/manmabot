@@ -698,12 +698,16 @@ def engage_like_solo(
     obj: Any,
     *,
     reason: str,
+    ignore_species: bool = False,
 ) -> Any:
     """Attack one already chosen monster with the solo combat tick.
 
     The caller picks the monster (the leader's target, or a self-defense
     target). Fence, closed tiles, and the wall detour are the same functions
     solo uses. A clear line clicks. A blocked line does not.
+
+    The leader's target ignores the solo species blacklist. Self-defense
+    still uses it.
     """
     from .intents import idle
 
@@ -712,19 +716,20 @@ def engage_like_solo(
     tid = int(getattr(obj, "track_id", 0) or 0)
     if tid <= 0:
         return idle("assist_incomplete")
-    try:
-        from app._04_decision.species_rules import is_avoided_for_state
+    if not ignore_species:
+        try:
+            from app._04_decision.species_rules import is_avoided_for_state
 
-        avoided = bool(is_avoided_for_state(game_state, obj))
-    except Exception:
-        avoided = False
-    if avoided:
-        if getattr(blackboard, "current_target_id", None) == tid:
-            from app._04_decision.behaviors.combat import clear_engage_state
+            avoided = bool(is_avoided_for_state(game_state, obj))
+        except Exception:
+            avoided = False
+        if avoided:
+            if getattr(blackboard, "current_target_id", None) == tid:
+                from app._04_decision.behaviors.combat import clear_engage_state
 
-            blackboard.current_target_id = None
-            clear_engage_state(blackboard)
-        return idle("assist_species")
+                blackboard.current_target_id = None
+                clear_engage_state(blackboard)
+            return idle("assist_species")
 
     from app._04_decision.behaviors.combat import begin_engage, clear_engage_state
     from app._04_decision.behaviors.mode_actions import continue_or_start_combat

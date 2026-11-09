@@ -1,10 +1,11 @@
 """Leader start rally: wait at the party schedule mark, then hunt.
 
-The party schedule walks to its own mark. This wait does not stop that walk
-at the current tile or at the first teleporter. When the leader is inside
-the mark, ``note_arrived`` starts the wait. Members are not sent the tile.
-Once party memory says they are in the party, they follow the leader's live
-tile. After the wait, the schedule stays on that mark and hunts.
+The party schedule walks to its own mark point. This wait does not stop that
+walk at the current tile or at the first teleporter. ``note_arrived`` starts
+the wait when the leader is on that point, not merely inside a hunt rectangle.
+Members are not sent the tile. Once party memory says they are in the party,
+they follow the leader's live tile. After the wait, the schedule stays on
+that mark and hunts.
 
 Waits for every roster member, then continues. With ``deadline`` (the leader
 start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
@@ -149,24 +150,24 @@ class LeaderStartRally:
             return
         del travel, pose
         self.state = "await_mark"
-        self._log("Party start rally waits at the party mark")
+        self._log("Party start rally walks to the party mark")
 
     def note_arrived(self, point: tuple[int, int, int]) -> None:
-        """The party schedule is inside its mark. Wait here."""
+        """The leader is on the mark. Hunt starts. Members are not waited on."""
         if self.state != "await_mark":
             return
-        self._arm(STAGE_START, (int(point[0]), int(point[1]), int(point[2])))
-        self._enter_waiting()
+        del point
+        self.state = "done"
+        self._log("Party start rally complete — at the mark, hunt")
 
     def on_plan(self, plan: Any) -> None:
         """Travel owns the route. A plan does not start this wait."""
         del plan
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
-        """World-nav hook before each step. True keeps the leader on the spot."""
-        if self.state == "hold_at" and self.hold_step is not None and step_i >= self.hold_step:
-            self._enter_waiting()
-        return self.state == "waiting"
+        """The leader does not stand for members. The walk to the mark continues."""
+        del step_i, pose
+        return False
 
     def update(self, connected: int, snapshot: Any) -> None:
         """Each tick: resend if needed, count arrivals, finish when all are in."""

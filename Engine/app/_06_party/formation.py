@@ -251,6 +251,11 @@ def nearest_follower_gap(
     return nearest, other
 
 
+def near_wait_open(rally_state: str) -> bool:
+    """The leader distance hold starts only after the start rally is finished."""
+    return str(rally_state or "") == "done"
+
+
 def nearest_gap_hold(
     nearest: Optional[int],
     other_map: int,
@@ -280,4 +285,5 @@ __all__ = [
     "followers_from_party",
     "nearest_follower_gap",
     "nearest_gap_hold",
+    "near_wait_open",
 ]

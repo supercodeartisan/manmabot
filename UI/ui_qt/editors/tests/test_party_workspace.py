@@ -276,8 +276,8 @@ def test_map_and_ops_pages_keep_existing_settings() -> None:
     ops_text = " ".join(label.text() for label in ops.findChildren(QLabel))
     assert "파티원 따라가기 거리" not in ops_text
     assert "뒤처짐 판단 거리" not in ops_text
-    assert tab.party_near_tiles.value() == 5
-    assert "가까운 파티원 대기" in ops_text
+    assert not hasattr(tab, "party_near_tiles")
+    assert "가까운 파티원 대기" not in ops_text
 
     before = copy.deepcopy(tab.bag.section("party") or {})
     ops.findChildren(QRadioButton)[0].setChecked(True)
