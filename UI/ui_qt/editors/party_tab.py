@@ -1058,8 +1058,8 @@ class PartyTab(QWidget):
             self._tx(
                 "party_ui_supply_note",
                 "상점 역할이 화살을 채웁니다. 담당 자신의 화살이 기준 미만이면 "
-                "기존 화살 상점을 가고, 다른 파티원이 기준 미만이면 그 옆에 "
-                "부족한 만큼을 떨어뜨립니다.",
+                "사는 화살만큼 기존 화살 상점을 가고, 다른 파티원이 기준 미만이면 "
+                "그 옆에 주는 화살만큼 떨어뜨립니다. 담당 기준 아래로는 주지 않습니다.",
             )
         )
         note.setWordWrap(True)
@@ -1083,6 +1083,26 @@ class PartyTab(QWidget):
             300,
             0,
             9999,
+        )
+        self.party_member_arrow_give = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "member_arrow_give",
+            self._tx("party_ui_member_arrow_give", "주는 화살"),
+            100,
+            1,
+            9999,
+        )
+        self.party_shopkeeper_arrow_buy = add_spin_row(
+            inner,
+            self.bag,
+            "party",
+            "shopkeeper_arrow_buy",
+            self._tx("party_ui_keeper_arrow_buy", "사는 화살"),
+            200,
+            1,
+            999,
         )
         lay.addStretch(1)
         return host
@@ -2324,6 +2344,18 @@ class PartyTab(QWidget):
                 self.bag.get_int("party", "shopkeeper_arrow_min", 300)
             )
             self.party_shopkeeper_arrow_min.blockSignals(False)
+        if hasattr(self, "party_member_arrow_give"):
+            self.party_member_arrow_give.blockSignals(True)
+            self.party_member_arrow_give.setValue(
+                self.bag.get_int("party", "member_arrow_give", 100)
+            )
+            self.party_member_arrow_give.blockSignals(False)
+        if hasattr(self, "party_shopkeeper_arrow_buy"):
+            self.party_shopkeeper_arrow_buy.blockSignals(True)
+            self.party_shopkeeper_arrow_buy.setValue(
+                self.bag.get_int("party", "shopkeeper_arrow_buy", 200)
+            )
+            self.party_shopkeeper_arrow_buy.blockSignals(False)
         if hasattr(self, "party_loot_weight_pct"):
             self.party_loot_weight_pct.blockSignals(True)
             self.party_loot_weight_pct.setValue(

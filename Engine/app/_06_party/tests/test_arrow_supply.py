@@ -5,6 +5,7 @@ from app._04_decision.player_mode import LOOT_MODE_ADENA
 from app._04_decision.shop_trip import needs_arrow_buy
 from app._06_party.arrow_policy import (
     line_omit_names,
+    party_shop_buy_qty,
     pick_arrow_duty,
     shopkeeper_socket_live,
 )
@@ -63,6 +64,43 @@ def test_drop_qty_keeps_the_shopkeeper_reserve() -> None:
     assert duty["qty"] == 100
 
 
+def test_drop_uses_the_boss_give_count() -> None:
+    duty = pick_arrow_duty(
+        500,
+        [{"from": "Elf", "items": {"arrows": 290}, "map_id": 4, "x": 3, "y": 4}],
+        member_min=300,
+        keeper_min=300,
+        give_qty=80,
+        self_name="Keeper",
+    )
+    assert duty is not None
+    assert duty["qty"] == 80
+    short = pick_arrow_duty(
+        320,
+        [{"from": "Elf", "items": {"arrows": 10}, "map_id": 4, "x": 3, "y": 4}],
+        member_min=300,
+        keeper_min=300,
+        give_qty=80,
+        self_name="Keeper",
+    )
+    assert short is not None
+    assert short["qty"] == 20
+
+
+def test_party_buy_qty_does_not_replace_solo() -> None:
+    assert party_shop_buy_qty({}, "silver_arrows", 40) == 40
+    assert party_shop_buy_qty(
+        {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 250},
+        "silver_arrows",
+        40,
+    ) == 250
+    assert party_shop_buy_qty(
+        {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 250},
+        "hp_potion",
+        10,
+    ) == 10
+
+
 def test_leader_skips_arrow_shop_only_while_the_socket_is_live() -> None:
     peers = {"shop": "peer-1"}
 
@@ -113,6 +151,8 @@ def test_policy_merge_keeps_arrow_and_pickup_knobs() -> None:
         {
             "member_arrow_min": 120,
             "shopkeeper_arrow_min": 800,
+            "member_arrow_give": 40,
+            "shopkeeper_arrow_buy": 150,
             "loot_pickup": "adena",
             "loot_weight_pct": 45,
             "random_loot": True,
@@ -120,6 +160,8 @@ def test_policy_merge_keeps_arrow_and_pickup_knobs() -> None:
     )
     assert cfg.member_arrow_min == 120
     assert cfg.shopkeeper_arrow_min == 800
+    assert cfg.member_arrow_give == 40
+    assert cfg.shopkeeper_arrow_buy == 150
     assert cfg.loot_pickup == "adena"
     assert cfg.loot_weight_pct == 45
     assert cfg.random_loot is True
@@ -130,6 +172,8 @@ if __name__ == "__main__":
     test_random_loot_still_available_for_a_normal_seat()
     test_short_shopkeeper_buys_before_dropping()
     test_drop_qty_keeps_the_shopkeeper_reserve()
+    test_drop_uses_the_boss_give_count()
+    test_party_buy_qty_does_not_replace_solo()
     test_leader_skips_arrow_shop_only_while_the_socket_is_live()
     test_line_hold_omits_only_a_live_shop_phase()
     test_party_loot_uses_the_boss_weight_line()

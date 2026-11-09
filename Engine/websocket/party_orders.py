@@ -148,6 +148,8 @@ def policy_message(
     leader_name: str = "",
     member_arrow_min: int = 300,
     shopkeeper_arrow_min: int = 300,
+    member_arrow_give: int = 100,
+    shopkeeper_arrow_buy: int = 200,
     loot_pickup: str = "all",
     loot_weight_pct: int = 30,
 ) -> dict[str, Any]:
@@ -177,6 +179,8 @@ def policy_message(
         "roster": list(roster or []),
         "member_arrow_min": max(0, min(9999, int(member_arrow_min))),
         "shopkeeper_arrow_min": max(0, min(9999, int(shopkeeper_arrow_min))),
+        "member_arrow_give": max(1, min(9999, int(member_arrow_give))),
+        "shopkeeper_arrow_buy": max(1, min(999, int(shopkeeper_arrow_buy))),
         "loot_pickup": (
             "adena" if str(loot_pickup or "").strip().lower() == "adena" else "all"
         ),

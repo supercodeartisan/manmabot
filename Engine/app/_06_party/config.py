@@ -55,9 +55,12 @@ class PartyMemberConfig:
     seat_role: str = "member"
     # Position in the leader roster (turret radial seat); None = unknown.
     seat_index: Optional[int] = None
-    # Leader supply. Arrow counts below these start a buy or a ground drop.
+    # Leader supply. Counts below the mins start a buy or a ground drop.
     member_arrow_min: int = 300
     shopkeeper_arrow_min: int = 300
+    # Fixed drop to a short member, and arrows bought on one shopkeeper trip.
+    member_arrow_give: int = 100
+    shopkeeper_arrow_buy: int = 200
     # all = items until the weight line, then adena. adena = adena only.
     loot_pickup: str = "all"
     loot_weight_pct: int = 30
@@ -133,6 +136,8 @@ class PartyMemberConfig:
             ),
             member_arrow_min=max(0, min(9999, int(self.member_arrow_min))),
             shopkeeper_arrow_min=max(0, min(9999, int(self.shopkeeper_arrow_min))),
+            member_arrow_give=max(1, min(9999, int(self.member_arrow_give))),
+            shopkeeper_arrow_buy=max(1, min(999, int(self.shopkeeper_arrow_buy))),
             loot_pickup=(
                 "adena"
                 if str(self.loot_pickup or "").strip().lower() == "adena"
@@ -198,6 +203,10 @@ class PartyMemberConfig:
             "member_arrow_min": policy.get("member_arrow_min", self.member_arrow_min),
             "shopkeeper_arrow_min": policy.get(
                 "shopkeeper_arrow_min", self.shopkeeper_arrow_min
+            ),
+            "member_arrow_give": policy.get("member_arrow_give", self.member_arrow_give),
+            "shopkeeper_arrow_buy": policy.get(
+                "shopkeeper_arrow_buy", self.shopkeeper_arrow_buy
             ),
             "loot_pickup": policy.get("loot_pickup", self.loot_pickup),
             "loot_weight_pct": policy.get("loot_weight_pct", self.loot_weight_pct),
@@ -290,6 +299,8 @@ class PartyMemberConfig:
             seat_index=si_i,
             member_arrow_min=_cfg_int(raw.get("member_arrow_min"), 300),
             shopkeeper_arrow_min=_cfg_int(raw.get("shopkeeper_arrow_min"), 300),
+            member_arrow_give=_cfg_int(raw.get("member_arrow_give"), 100),
+            shopkeeper_arrow_buy=_cfg_int(raw.get("shopkeeper_arrow_buy"), 200),
             loot_pickup=str(raw.get("loot_pickup") or "all"),
             loot_weight_pct=_cfg_int(raw.get("loot_weight_pct"), 30),
         ).clamped()

@@ -43,6 +43,7 @@ def tick_shopkeeper_duty(
         member_orders.party_reports,
         member_min=int(cfg.member_arrow_min),
         keeper_min=int(cfg.shopkeeper_arrow_min),
+        give_qty=int(cfg.member_arrow_give),
         self_name=self_name,
     )
     if duty is None:
@@ -97,6 +98,7 @@ def _tick_buy(manager: Any, state: Any) -> Any:
     runtime.duty_phase = DUTY_SHOP
     runtime.supply_notice = None
     board.scratch[_FLAG] = True
+    board.scratch["party_arrow_buy_qty"] = max(1, min(999, int(cfg.shopkeeper_arrow_buy)))
     if not str(board.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip():
         if shops_arrow_id() is None:
             runtime.duty_phase = DUTY_FOLLOW
@@ -354,6 +356,7 @@ def _clear_shop_flags(board: Any) -> None:
     board.scratch.pop(_FLAG, None)
     board.scratch.pop(_PIN, None)
     board.scratch.pop(_JOIN, None)
+    board.scratch.pop("party_arrow_buy_qty", None)
 
 
 def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any:

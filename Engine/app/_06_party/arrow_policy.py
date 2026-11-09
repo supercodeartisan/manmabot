@@ -43,11 +43,13 @@ def pick_arrow_duty(
     *,
     member_min: int,
     keeper_min: int,
+    give_qty: int = 100,
     self_name: str = "",
 ) -> Optional[dict[str, Any]]:
-    """Buy when the shopkeeper is short. Otherwise drop the first short member's gap.
+    """Buy when the shopkeeper is short. Otherwise drop ``give_qty`` to the first short member.
 
-    The shopkeeper keeps ``keeper_min`` arrows. A drop never spends that reserve.
+    The shopkeeper keeps ``keeper_min`` arrows. A drop never spends that reserve,
+    so a short spare drops only what is left above it.
     """
     if own is None:
         return None
@@ -56,6 +58,10 @@ def pick_arrow_duty(
     spare = int(own) - int(keeper_min)
     if spare <= 0:
         return None
+    try:
+        give = max(1, int(give_qty))
+    except (TypeError, ValueError):
+        give = 100
     me = str(self_name or "").strip().casefold()
     for row in rows or []:
         if not isinstance(row, dict):
@@ -66,7 +72,7 @@ def pick_arrow_duty(
         count = report_arrow_count(row)
         if count is None or count >= int(member_min):
             continue
-        qty = min(spare, int(member_min) - int(count))
+        qty = min(spare, give)
         if qty <= 0:
             continue
         return {
@@ -78,6 +84,21 @@ def pick_arrow_duty(
             "y": row.get("y"),
         }
     return None
+
+
+def party_shop_buy_qty(scratch: Any, behavior_id: str, solo_qty: Optional[int]) -> Optional[int]:
+    """Party arrow shop uses the boss buy count. Every other shop keeps ``solo_qty``."""
+    if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
+        return solo_qty
+    if "arrow" not in str(behavior_id or ""):
+        return solo_qty
+    raw = scratch.get("party_arrow_buy_qty")
+    if raw is None:
+        return solo_qty
+    try:
+        return max(1, min(999, int(raw)))
+    except (TypeError, ValueError):
+        return solo_qty
 
 
 def shopkeeper_socket_live(
