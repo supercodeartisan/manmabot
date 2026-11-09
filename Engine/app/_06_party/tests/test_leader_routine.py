@@ -125,9 +125,14 @@ def test_a_point_is_turret_and_a_rect_is_moving() -> None:
         ]
     )
     assert schedule.place_nav(7, 8) == "point"
+    assert schedule.place_nav(9, 10) == "point"
+    assert schedule.inside_nav(9, 10)
+    assert schedule.place_nav(10, 8) == "area"
+    assert not schedule.inside_nav(7, 11)
     assert schedule.place_nav(1, 1) == "area"
     assert schedule.place_nav(3, 3) == "area"
     assert schedule.place_nav(50, 50) == "none"
+    assert schedule.point_nav(9, 8) == (7, 8)
 
 
 def test_pinned_turret_anchor_is_the_point() -> None:
@@ -147,6 +152,127 @@ def test_pinned_turret_anchor_is_the_point() -> None:
     set_party_turret(board, False, map_id=4)
     assert board.scratch["party_turret"]["on"] is False
     assert board.scratch["party_turret"]["pinned"] is False
+
+
+def test_dot_anchor_is_nav_center_of_the_box() -> None:
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "areas": [{"name": "stake", "shape": "point", "x": 7, "y": 8}],
+            }
+        ]
+    )
+    manager._nav_xy = lambda pack_id, pose: (9, 8)  # type: ignore[method-assign]
+    manager._apply_place({"map_id": "talking_island"}, object())
+    assert manager.hunt_mode == "turret"
+    assert manager.turret_anchor == (7, 8)
+
+
+def test_outside_the_box_finishes_the_current_target() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "duration_minutes": 30,
+                "areas": [{"name": "stake", "shape": "point", "x": 7, "y": 8}],
+            }
+        ]
+    )
+    walked: list[int] = []
+    farmed: list[int] = []
+    manager._nav_xy = lambda pack_id, pose: (10, 8)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: True  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
+    real_pose = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = (
+        lambda state, fresh=False: SimpleNamespace(map_id=0, x=1, y=1)
+    )
+    try:
+        manager._hunt_target_alive = lambda world: True  # type: ignore[method-assign]
+        manager.prepare(object(), None)
+        assert manager.hunt_mode == "turret"
+        assert manager.turret_anchor == (7, 8)
+        assert farmed == [1]
+        assert walked == []
+
+        farmed.clear()
+        manager._hunt_target_alive = lambda world: False  # type: ignore[method-assign]
+        manager.prepare(object(), None)
+        assert manager.hunt_mode == "moving"
+        assert manager.turret_anchor is None
+        assert walked == [1]
+        assert farmed == []
+    finally:
+        nav_session.live_pose_from_state = real_pose
+
+
+def test_outside_the_box_keeps_the_current_target() -> None:
+    from types import SimpleNamespace
+
+    from app._03_world import ObjectStatus, ObjectType
+    from app._04_decision.behaviors.party_turret import (
+        set_party_turret,
+        step_party_turret_leash,
+    )
+
+    class _Mob:
+        def __init__(self, track_id: int) -> None:
+            self.track_id = track_id
+            self.object_type = ObjectType.MONSTER
+            self.status = ObjectStatus.ALIVE
+            self.bait = False
+            self.force_attacks_me = False
+
+    class _State:
+        def __init__(self) -> None:
+            self.last_print_state = {"entities": []}
+            self.mobs = [_Mob(5), _Mob(9)]
+
+        def get_object(self, track_id: int):
+            for mob in self.mobs:
+                if mob.track_id == int(track_id):
+                    return mob
+            return None
+
+        def objects(self, kind):
+            if kind is ObjectType.MONSTER:
+                return list(self.mobs)
+            return []
+
+        def missing_frames(self, track_id: int) -> int:
+            del track_id
+            return 0
+
+    class _Board:
+        def __init__(self) -> None:
+            self.scratch: dict = {}
+            self.world_origin = SimpleNamespace(x=13, y=10)
+            self.current_target_id: int | None = 5
+            self.current_item_id = None
+            self.current_goal = None
+            self.emitted: list = []
+
+        def emit(self, action, **kwargs) -> None:
+            self.emitted.append(action)
+
+    board = _Board()
+    set_party_turret(board, True, map_id=4, anchor=(10, 10))
+    step_party_turret_leash(_State(), board)  # type: ignore[arg-type]
+    assert board.current_target_id == 5
+    assert 9 in board.scratch["party_turret_exclude"]
+    assert 5 not in board.scratch["party_turret_exclude"]
+    assert board.emitted == []
 
 
 def test_hold_does_not_spend_the_row() -> None:
@@ -233,6 +359,9 @@ if __name__ == "__main__":
     test_stale_check_uses_the_saved_party_mark()
     test_matching_check_keeps_that_mark_only()
     test_a_point_is_turret_and_a_rect_is_moving()
+    test_dot_anchor_is_nav_center_of_the_box()
+    test_outside_the_box_finishes_the_current_target()
+    test_outside_the_box_keeps_the_current_target()
     test_pinned_turret_anchor_is_the_point()
     test_row_minutes_advance_to_the_next_party_row()
     test_hold_does_not_spend_the_row()

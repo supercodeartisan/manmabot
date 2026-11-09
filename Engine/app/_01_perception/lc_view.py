@@ -734,6 +734,9 @@ def party() -> Optional[dict[str, Any]]:
         pos_m = re.search(r"pos=(-?\d+),(-?\d+)", line)
         hp_m = re.search(r"hp%=(\d+)", line)
         mp_m = re.search(r"mp%=(\d+)", line)
+        type_m = re.search(r"type=(\S+)", line)
+        cls_m = re.search(r"cls=(\d+)", line)
+        atk_m = re.search(r"atk=(.*)\(([0-9A-Fa-f]+)\)\s*$", line)
         if not name_m:
             continue
         name = name_m.group(1).strip()
@@ -745,6 +748,16 @@ def party() -> Optional[dict[str, Any]]:
             "hp_pct": int(hp_m.group(1)) if hp_m else None,
             "mp_pct": int(mp_m.group(1)) if mp_m else None,
         }
+        if type_m:
+            row["type"] = type_m.group(1)
+        if cls_m:
+            row["cls"] = int(cls_m.group(1))
+        if atk_m:
+            atk_name = atk_m.group(1).strip()
+            atk_guid = atk_m.group(2)
+            if atk_name not in ("", "-") and int(atk_guid, 16) != 0:
+                row["atk_name"] = atk_name
+                row["atk_guid"] = atk_guid
         if map_m:
             row["map_id"] = int(map_m.group(1))
         if pos_m:

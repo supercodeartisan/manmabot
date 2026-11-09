@@ -2620,6 +2620,8 @@ def farm_loot_or_combat(
 ) -> Status | None:
     """Loot first; sticky kill and attacks_me force-engage beat loot.
 
+    While this bot is the party leader, a monster hitting a mage member
+    is taken before the sticky fight, attacks-me, loot, and other help.
     1. A living sticky target is finished before any new loot click, unless
        a monster that has attacked me should take the lock. The sticky
        yields when it has not attacked me. A living sticky that has
@@ -2665,6 +2667,36 @@ def farm_loot_or_combat(
         sync_attacks_me_force_targets(state)
     except Exception:
         pass
+    if blackboard.scratch.get("party_help_open"):
+        from app._06_party.assist import resolve_mage_member_threat
+
+        mage_threat = resolve_mage_member_threat(
+            state,
+            getattr(state, "last_party", None),
+            origin=origin,
+        )
+        if mage_threat is not None:
+            threat_id = int(mage_threat.track_id)
+            if blackboard.current_target_id != threat_id:
+                begin_engage(
+                    state,
+                    blackboard,
+                    threat_id,
+                    finish_kill=True,
+                )
+            event(
+                "combat",
+                "farm branch=mage_help id=%s dist=%s",
+                threat_id,
+                _dist(mage_threat),
+            )
+            return continue_or_start_combat(
+                state,
+                blackboard,
+                allow_new=True,
+                chosen=mage_threat,
+                reason="mage member under attack",
+            )
     sticky = rebind_sticky_target(state, blackboard)
     if prefer_attacked_me_sticky(state, blackboard, exclude=exclude):
         sticky = (
@@ -2736,6 +2768,29 @@ def farm_loot_or_combat(
         item_id = blackboard.current_item_id
         event("loot", "farm branch=loot item_id=%s", item_id)
         return loot
+
+    if blackboard.scratch.get("party_help_open"):
+        from app._06_party.assist import resolve_member_help_target
+
+        helped = resolve_member_help_target(
+            state,
+            getattr(state, "last_party", None),
+            origin=origin,
+        )
+        if helped is not None:
+            event(
+                "combat",
+                "farm branch=party_help id=%s dist=%s",
+                helped.track_id,
+                _dist(helped),
+            )
+            return continue_or_start_combat(
+                state,
+                blackboard,
+                allow_new=True,
+                chosen=helped,
+                reason="party member help",
+            )
 
     loot_click_missed = bool(blackboard.scratch.pop("loot_click_failed", False))
     if loot_click_missed:

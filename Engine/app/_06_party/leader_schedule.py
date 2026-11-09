@@ -77,19 +77,68 @@ def hunt_marks(row: dict[str, Any]) -> list[dict[str, int | str]]:
     return marks
 
 
+# Chebyshev radius around a map dot. 2 → a 5×5 box with the dot at the center.
+POINT_BOX_TILES = 2
+
+
 def mark_contains(mark: dict[str, int | str], x: int, y: int) -> bool:
     return int(mark["x0"]) <= int(x) <= int(mark["x1"]) and int(mark["y0"]) <= int(y) <= int(mark["y1"])
 
 
-def place_at(marks: list[dict[str, int | str]], x: int, y: int) -> str:
-    """``point`` on a map dot, ``area`` inside a rect, ``none`` elsewhere.
+def _chebyshev(ax: int, ay: int, bx: int, by: int) -> int:
+    return max(abs(int(ax) - int(bx)), abs(int(ay) - int(by)))
 
-    A dot wins when a rect also covers that tile. A one-tile rect is still
-    an area: only ``shape == point`` is a turret spot.
-    """
+
+def nearest_point_nav(
+    marks: list[dict[str, int | str]], x: int, y: int
+) -> Optional[tuple[int, int]]:
+    """Nav tile of the closest ``shape == point`` mark, or None."""
+    best: Optional[tuple[int, int]] = None
+    best_d: Optional[int] = None
     for mark in marks:
-        if str(mark.get("shape") or "") == "point" and mark_contains(mark, x, y):
-            return "point"
+        if str(mark.get("shape") or "") != "point":
+            continue
+        cx, cy = int(mark["x0"]), int(mark["y0"])
+        dist = _chebyshev(x, y, cx, cy)
+        if best_d is None or dist < best_d:
+            best = (cx, cy)
+            best_d = dist
+    return best
+
+
+def point_box_center(
+    marks: list[dict[str, int | str]],
+    x: int,
+    y: int,
+    *,
+    radius: int = POINT_BOX_TILES,
+) -> Optional[tuple[int, int]]:
+    """Center of the point whose 5×5 contains ``(x, y)``, else None."""
+    center = nearest_point_nav(marks, x, y)
+    if center is None:
+        return None
+    if _chebyshev(x, y, center[0], center[1]) > int(radius):
+        return None
+    return center
+
+
+def point_farm_bounds(mark: dict[str, int | str]) -> tuple[int, int, int, int]:
+    """Farm rect for one mark. A dot expands to its 5×5 box."""
+    if str(mark.get("shape") or "") == "point":
+        cx, cy = int(mark["x0"]), int(mark["y0"])
+        r = int(POINT_BOX_TILES)
+        return cx - r, cy - r, cx + r, cy + r
+    return int(mark["x0"]), int(mark["y0"]), int(mark["x1"]), int(mark["y1"])
+
+
+def place_at(marks: list[dict[str, int | str]], x: int, y: int) -> str:
+    """``point`` inside a dot's 5×5, ``area`` inside a rect, ``none`` elsewhere.
+
+    A dot's box wins when a rect also covers that tile. A one-tile rect is
+    still an area: only ``shape == point`` is a turret spot.
+    """
+    if point_box_center(marks, x, y) is not None:
+        return "point"
     for mark in marks:
         if str(mark.get("shape") or "") != "point" and mark_contains(mark, x, y):
             return "area"
@@ -135,14 +184,23 @@ class PartyLeaderSchedule:
         return str(row.get("map_id") or ""), x, y
 
     def place_nav(self, x: int, y: int) -> str:
-        """Nav tile: point (turret), area (moving hunt), or none."""
+        """Nav tile: point (turret box), area (moving hunt), or none."""
         return place_at(self.marks(), x, y)
 
+    def point_nav(self, x: int, y: int) -> Optional[tuple[int, int]]:
+        """Dot at the center of the 5×5 that contains this nav tile."""
+        return point_box_center(self.marks(), x, y)
+
+    def nearest_point_nav(self, x: int, y: int) -> Optional[tuple[int, int]]:
+        """Closest dot on this row, including when the player has left its box."""
+        return nearest_point_nav(self.marks(), x, y)
+
+    def has_point(self) -> bool:
+        return any(str(mark.get("shape") or "") == "point" for mark in self.marks())
+
     def inside_nav(self, x: int, y: int) -> bool:
-        marks = self.marks()
-        if not marks:
-            return False
-        return any(mark_contains(mark, x, y) for mark in marks)
+        """True inside a dot's 5×5 or inside an area rect."""
+        return place_at(self.marks(), x, y) != "none"
 
     def note_inside(self, now: float, inside: bool, *, holding: bool = False) -> None:
         """Add time spent inside the row. A hold or a step outside pauses it."""
@@ -180,8 +238,12 @@ class PartyLeaderSchedule:
 
 __all__ = [
     "PartyLeaderSchedule",
+    "POINT_BOX_TILES",
     "hunt_marks",
     "mark_center",
     "mark_contains",
+    "nearest_point_nav",
     "place_at",
+    "point_box_center",
+    "point_farm_bounds",
 ]
