@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — party members keep their solo recovery lines
+
+Intent: The party leader no longer has a support-and-protection page. Each character uses the heal, potion, retreat, mother tree, talking scroll, and safe-zone values already set on the solo screens. The mage line for healing other members stays, on the page now named 파티운영.
+Shared: party `decide` and the leader brain no longer install `PartyRecovery`. `apply_party_support` is called without a leader heal or potion ratio, so the solo threshold is used. Follow, combat, supply, and the mage party-list heal are unchanged.
+Affects: party leader menu, and every party seat's own recovery.
+Consent: user (remove the whole support section; members use solo settings; keep mage heal-others on the hunt page and rename that page).
+Result: `UI/ui_qt/editors/tests/test_party_workspace.py` and `Engine/app/_06_party/tests/test_leader_care.py`. Not run in game.
+
 ## 2026-11-09 — leader hunts in the 5×5 around a map dot
 
 Intent: On a party-map point, the leader hunts anywhere in the 5×5 centered on that dot and is not pulled back to the center. Stepping outside that box keeps the current monster until it is finished, then the leader walks back to the dot. A new monster outside the box is not started.

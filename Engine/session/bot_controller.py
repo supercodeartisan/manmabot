@@ -3715,10 +3715,7 @@ class BotController:
                     if pickup is not None:
                         action = pickup
                     else:
-                        from app._06_party.recovery import bind, recovery_from_profile
-
-                        with bind(recovery_from_profile(profile)):
-                            action = leader_brain.decide(world)
+                        action = leader_brain.decide(world)
                     try:
                         self._leader_party_tick(
                             world, decision.blackboard, last_logged_map_id
