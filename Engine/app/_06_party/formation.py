@@ -237,6 +237,50 @@ def followers_from_party(
     return out
 
 
+def nearest_follower_gap(
+    leader: Tile,
+    followers: Sequence[Any],
+) -> tuple[Optional[int], int]:
+    """Closest same-map follower, and how many followers are on another map.
+
+    The first value is ``None`` when no same-map tile was readable.
+    """
+    lx, ly = int(leader[0]), int(leader[1])
+    nearest: Optional[int] = None
+    other = 0
+    for follower in followers:
+        if follower == OTHER_MAP:
+            other += 1
+            continue
+        if not isinstance(follower, tuple) or len(follower) != 2:
+            continue
+        gap = cheb((lx, ly), (int(follower[0]), int(follower[1])))
+        if nearest is None or gap < nearest:
+            nearest = gap
+    return nearest, other
+
+
+def near_wait_open(rally_state: str) -> bool:
+    """The leader distance hold starts only after the start rally is finished."""
+    return str(rally_state or "") == "done"
+
+
+def nearest_gap_hold(
+    nearest: Optional[int],
+    other_map: int,
+    limit: int,
+) -> bool:
+    """True when the closest follower is farther than ``limit`` tiles.
+
+    A same-map distance wins. If every known follower is on another map,
+    that gap is already past the limit. No known follower does not wait.
+    """
+    cap = max(1, int(limit))
+    if nearest is not None:
+        return int(nearest) > cap
+    return int(other_map) > 0
+
+
 __all__ = [
     "NARROW",
     "OPEN",
@@ -248,4 +292,7 @@ __all__ = [
     "LineHold",
     "MemberFormation",
     "followers_from_party",
+    "nearest_follower_gap",
+    "nearest_gap_hold",
+    "near_wait_open",
 ]

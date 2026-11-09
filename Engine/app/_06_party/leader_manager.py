@@ -62,6 +62,11 @@ class PartyLeaderManager:
         if self._travel_active(scratch):
             return
         now = time.monotonic()
+        if self._rally_walk_pending(rally, row, pose):
+            schedule.note_inside(now, False)
+            self._set_place("moving")
+            self._arm_travel(blackboard, world, pose)
+            return
         if self._inside(row, pose):
             self._apply_place(row, pose)
             self._mount(blackboard, row)
@@ -80,6 +85,26 @@ class PartyLeaderManager:
             return
         schedule.note_inside(now, False)
         self._arm_travel(blackboard, world, pose)
+
+    def _rally_walk_pending(self, rally: Any, row: dict[str, Any], pose: Any) -> bool:
+        """Start-rally still owes the walk to the mark point."""
+        if rally is None or str(getattr(rally, "state", "") or "") != "await_mark":
+            return False
+        return not self._at_rally_point(row, pose)
+
+    def _at_rally_point(self, row: dict[str, Any], pose: Any) -> bool:
+        """True within one tile of the mark point. That matches the walk arrival."""
+        point = self._arrival_point(row, pose)
+        try:
+            if int(pose.map_id) != int(point[0]):
+                return False
+            gap = max(
+                abs(int(pose.x) - int(point[1])),
+                abs(int(pose.y) - int(point[2])),
+            )
+        except (TypeError, ValueError, AttributeError):
+            return False
+        return gap <= 1
 
     def _set_place(
         self,

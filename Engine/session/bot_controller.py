@@ -285,6 +285,7 @@ class BotController:
         self._party_line_info: dict = {}
         self._party_line_watch = None
         self._party_line_map: Optional[int] = None
+        self._party_near_hold = False
         self._party_policy_info: dict = {}
         self._member_policy_info: dict = {}
         self._party_brain_ref = None
@@ -2360,11 +2361,10 @@ class BotController:
         return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
 
     def _leader_may_begin_start_rally(self, world) -> bool:
-        """Rally is after connect / policy / invite, not on the first hunt tick.
+        """Rally starts with the party. The leader walks to the mark immediately.
 
-        Empty roster stays off (the leader still farms). A named roster waits
-        until a member socket is up and the start-wait invite window is over
-        or the in-game party is already formed.
+        Empty roster stays off (the leader still farms). A named roster does not
+        wait for the invite window or for a member socket.
         """
         if not self._party_leader_on():
             return False
@@ -2379,17 +2379,8 @@ class BotController:
         expected = set(roster_required_names(rows, _player_chat_name(world, snap)))
         if not expected:
             return False
-        server = getattr(getattr(self, "_party_comms", None), "server", None)
-        clients = int(server.client_count()) if server is not None else 0
-        if clients <= 0:
-            return False
         invites = getattr(self, "_party_invites", None)
-        if invites is None:
-            return False
-        inviter = getattr(invites, "inviter", None)
-        if inviter is not None and inviter.active:
-            return False
-        return True
+        return invites is not None
 
     def _begin_leader_start_rally(self, world, blackboard) -> None:
         """Party start: rally on this tile, or on the last teleport landing of the route."""
@@ -3622,34 +3613,13 @@ class BotController:
                         leader_brain.prepare(world, rally=start_rally)
                     except Exception as schedule_exc:
                         self.log(f"Party schedule prepare failed: {schedule_exc}")
-                rally_hold = start_rally is not None and start_rally.waiting
-                invites_now = getattr(self, "_party_invites", None)
-                inviter_now = (
-                    getattr(invites_now, "inviter", None)
-                    if invites_now is not None
-                    else None
-                )
-                forming_hold = bool(
-                    inviter_now is not None and inviter_now.active
-                )
-                organize_hold = rally_hold or forming_hold
-                line_hold = False
-                if self._party_leader_on() and not organize_hold:
-                    try:
-                        line_hold = self._leader_line_hold(
-                            world, decision.blackboard, last_logged_map_id
-                        )
-                    except Exception as line_exc:
-                        self.log(f"Party line watch failed: {line_exc}")
-                set_party_hold(decision.blackboard, organize_hold or line_hold)
-                if organize_hold:
-                    _freeze_stay_clocks(decision.blackboard)
+                set_party_hold(decision.blackboard, False)
                 turret_anchor = getattr(
                     getattr(self, "_party_leader_ref", None), "turret_anchor", None
                 )
                 set_party_turret(
                     decision.blackboard,
-                    self._leader_turret_on() and not organize_hold,
+                    self._leader_turret_on(),
                     map_id=last_logged_map_id,
                     anchor=turret_anchor,
                 )

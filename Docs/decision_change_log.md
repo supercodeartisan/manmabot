@@ -23,6 +23,84 @@ Shared: `needs_arrow_buy` returns false only when scratch `party_arrow_shop_cove
 Affects: party leader policy and the 마을 및 보급 / 아이템 및 루팅 pages, the shopkeeper member, party loot mode, and the area-hunt line watch. Solo without a party leader is unchanged.
 Consent: "좋다. 기능구현을 시작하자. 현재 존재하는 다른 로직과 워크플로는 모두 보존하여야 한다."
 Result: unit tests in `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game. A ground drop does not click when `Engine/data/supply/inventory_grid.json` is missing or the bag row has no slot.
+## 2026-11-08 — party list heal presses once, then clicks
+
+Intent: A party-list heal was pressing the heal key twice and only then clicking the member row. The second press clears the target cursor, so the other member's HP does not rise. A list heal now presses once and clicks that row. A self heal still double-presses.
+Shared: `ActionExecutor._heal` / `_press_assigned_skill` only. `apply_hp_actions`, follow, and assist are unchanged.
+Affects: mage party-list heal. Solo self heal is unchanged.
+Consent: user (the other member's HP did not rise after the heal attempt; resolve that).
+Result: not run in game.
+
+## 2026-11-08 — party assist ignores the solo species blacklist
+
+Intent: A party member attacks the monster the leader is attacking even when that species is on the solo blacklist. Self-defense still uses the list. Solo hunting is unchanged.
+Shared: `engage_like_solo` gains `ignore_species`. The party member calls it for assist only. `is_avoided_for_state`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member assist.
+Consent: user (remove the solo blacklist from party members; always attack the leader's monster).
+Result: not run in game.
+
+## 2026-11-08 — leader no longer waits for party members
+
+Intent: Remove every leader stand that exists only because a member has not arrived. The leader still walks to the rally mark, then hunts. Invites keep going.
+Shared: `set_party_hold` is cleared every leader tick. Rally arrival no longer enters `waiting`. `LeaderStartRally.should_hold` stays false. The leader-ops spin "가까운 파티원 대기" is gone. Line-lag and nearest-member holds are gone. Member follow, assist, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader hunt after Start, and the leader 사냥 운영 page.
+Consent: user (delete the wait-for-members logic from the UI through the decision).
+Result: the first start after the removal crashed (`organize_hold` was still read). That leftover read is gone. Not run in game after the fix.
+
+## 2026-11-08 — leader walks to the rally point as soon as the party starts
+
+Intent: Party start arms the rally immediately and the leader walks to the mark. The invite window no longer stands the leader before that walk finishes. The stand at the mark, after arrival, is unchanged.
+Shared: `_leader_may_begin_start_rally` and the forming half of `set_party_hold`. Rally wait after arrival, member follow, assist, the post-rally distance hold, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement from Start until the leader reaches the mark.
+Consent: user (on party start, go to the rally point first; checked against the live log).
+Result: not run in game.
+
+## 2026-11-08 — leader distance hold starts after the rally
+
+Intent: The nearest-member stand uses the leader form distance only after the start rally state is `done`. Before that, including the walk to the mark and the rally wait, that stand stays off.
+Shared: `_leader_near_hold` only. Rally wait, member follow, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement before the start rally finishes.
+Consent: user (distance keeping starts only once they have rallied; it must not run before that).
+Result: unit checks only. Not run in game.
+
+## 2026-11-08 — leader walks to the rally point before waiting
+
+Intent: During the start rally the leader keeps walking to the hunt mark's center. Entering the rectangle does not start the wait or cancel that walk. The wait starts when the leader is within one tile of that point. Members are still not sent the tile; they follow the leader.
+Shared: `PartyLeaderManager.prepare` only. `set_party_hold` still stands once the rally state is `waiting`. Member follow, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement from the moment the start rally is armed until the leader reaches the mark point.
+Consent: user (fix the rally so the leader goes to the rally point, then members follow).
+Result: unit checks only. Not run in game.
+## 2026-11-08 — party list heal uses nav tiles
+
+Intent: A mage heals another member, including the party boss, from the party list when that member's `hp_pct` is under 80. The distance check was comparing PartySubsystem world coordinates to the nav tile the follower already uses, so a neighbor looked farther than 9 tiles and the cast never started.
+Shared: `in_heal_reach` / `heal_targets` only. Self `apply_hp_actions`, follow, assist, and loot are unchanged. The party log records a `list heal:` line when that note changes (cast, closed list, mp, range, missing row).
+Affects: mage party-list heal. Solo heal is unchanged.
+Consent: user (resolve the missed heal and log the party decision).
+Result: unit check for a raw party position against a nav tile. Not run in game.
+
+## 2026-11-08 — leader waits for the nearest member
+
+Intent: The party leader stands when the nearest same-map member is farther than the leader-page distance. That distance is the form value (`party.near_tiles` → `party_near_tiles`). 5 is only the value when the form is empty. Every known member on another map also waits. A failed party-memory read keeps the previous answer. No readable member does not start a wait.
+Shared: existing `set_party_hold` only, OR'd with the area line-hold and rally/invite hold. `LeaderLineWatch`, member formation, assist, solo hunt, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-leader movement while the nearest member is past the setting. The half-party 30-tile area wait is unchanged.
+Consent: user (stand when the nearest member is about 5 tiles away; put the distance on the leader page; default 5; keep other behavior untouched).
+Result: unit checks only. Not run in game.
+
+## 2026-11-08 — party formation slots are the walk goal
+
+Intent: A moving member walks to a side-by-side slot (right, then left, then farther). A narrow trail tile replaces that line. A stopped leader, including a standing fight, uses a 3×3 grid for up to five followers and a 5×5 grid for more. The click is a hop of at most 2 tiles toward that absolute tile. Leader pose stays a successful memory read. No websocket pose.
+Shared: `choose_formation_goal`, `decide_policy` when `slot_dist` is set, `plan_slot_hop`. Distance-to-leader hold remains only when no slot is supplied. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Assist still fires when the leader's mob is in range.
+Affects: party member follow and hold. Solo hunt is unchanged.
+Consent: user (implement the guide's formations; memory pose, not websocket).
+Result: unit checks only. Not run in game.
+
+## 2026-11-08 — leader pose comes from this tick's memory read
+
+Intent: Follow and stop use the PartySubsystem pose only when this frame's memory read succeeded. A failed read keeps the old snapshot for diagnostics and does not refresh its time or sequence. No websocket leader pose.
+Shared: `apply_perception_buffer`, `resolve_leader`, `_apply_sticky_party_pose`, `_leader_is_moving`. The cached tile is not copied back onto the live view. An in-flight map join keeps its last armed destination across one missed read. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party member follow, leader moving/stopped, and join retarget. Solo hunt is unchanged.
+Consent: user (fix position judgment from memory; do not use the guide's websocket pose).
+Result: unit checks only. Not run in game.
 
 ## 2026-11-08 — leader forwards party reports to the shopkeeper
 

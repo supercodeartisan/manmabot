@@ -31,6 +31,8 @@ from i18n.strings import (
 )
 
 DEFAULT_MAP_ID = "talking_island"
+# Empty party-leader wait field only. The running distance is the form value.
+DEFAULT_PARTY_NEAR_TILES = 5
 CHARACTER_IDS = ("royal", "knight", "elf", "mage")
 
 
@@ -55,6 +57,22 @@ def attack_mode_for_character(character: str) -> str:
 RETURN_WEIGHT_PCT_CHOICES = (50, 60, 70)
 DEFAULT_RETURN_WEIGHT_ABOVE = 70
 _PROFILE_NAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$")
+
+
+def party_near_limit(value: Any = None, *, profile: Any = None) -> int:
+    """Tiles from the party-leader form. Missing or blank uses the default."""
+    raw = value
+    if raw is None and profile is not None:
+        raw = getattr(profile, "party_near_tiles", None)
+    if raw is None or raw == "":
+        raw = DEFAULT_PARTY_NEAR_TILES
+    try:
+        tiles = int(raw)
+    except (TypeError, ValueError):
+        tiles = DEFAULT_PARTY_NEAR_TILES
+    if tiles <= 0:
+        tiles = DEFAULT_PARTY_NEAR_TILES
+    return max(1, min(40, tiles))
 
 
 def snap_return_weight_above(value: Any, default: int = DEFAULT_RETURN_WEIGHT_ABOVE) -> int:
@@ -217,6 +235,8 @@ class Profile:
     # all = items and adena until the weight line, then adena. adena = adena only.
     party_loot_pickup: str = "all"
     party_loot_weight_pct: int = 30
+    # Leader stands when the nearest party member is farther than this.
+    party_near_tiles: int = DEFAULT_PARTY_NEAR_TILES
     # member = existing follow/assist. leader = this PC hosts the party socket.
     party_role: str = "member"
     party_ws_port: int = 8765
@@ -526,6 +546,8 @@ class Profile:
             kwargs["party_loot_weight_pct"] = _party_weight_pct(
                 kwargs.get("party_loot_weight_pct")
             )
+        if "party_near_tiles" in kwargs:
+            kwargs["party_near_tiles"] = party_near_limit(kwargs.get("party_near_tiles"))
         if "party_role" in kwargs:
             role = str(kwargs.get("party_role") or "member").strip().lower()
             kwargs["party_role"] = role if role in ("member", "leader") else "member"

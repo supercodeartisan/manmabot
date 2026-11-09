@@ -38,7 +38,7 @@ class MemberRuntime:
     tick: int = 0
     # Optional mapId from caller (MapSubsystem); None = unknown / skip check.
     local_map_id: Optional[int] = None
-    # Last good PartySubsystem pose (brief glitch / 0,0 read → keep following).
+    # Last live memory pose. Diagnostics only; a later tick does not follow it.
     sticky_leader_tile: Optional[tuple[int, int]] = None
     sticky_leader_map_id: Optional[int] = None
     sticky_leader_pose_at: float = 0.0

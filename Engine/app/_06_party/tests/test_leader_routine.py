@@ -165,6 +165,69 @@ def test_hold_does_not_spend_the_row() -> None:
     assert not schedule.due(120.0)
 
 
+def test_rally_walks_to_the_mark_before_waiting() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+    from app._06_party.leader_rally import LeaderStartRally
+    from websocket.party_orders import Rally
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "duration_minutes": 60,
+                "areas": [
+                    {
+                        "name": "field",
+                        "shape": "area",
+                        "x0": 1,
+                        "y0": 1,
+                        "x1": 50,
+                        "y1": 50,
+                    }
+                ],
+            }
+        ]
+    )
+    walked: list[int] = []
+    farmed: list[int] = []
+    manager._arrival_point = lambda row, pose: (4, 33198, 33435)  # type: ignore[method-assign]
+    manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
+    manager._inside = lambda row, pose: True  # type: ignore[method-assign]
+    manager._apply_place = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._clear_travel = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    real_pose = nav_session.live_pose_from_state
+
+    def _run(x: int, y: int, rally: LeaderStartRally) -> None:
+        nav_session.live_pose_from_state = (
+            lambda state, fresh=False: SimpleNamespace(map_id=4, x=x, y=y)
+        )
+        manager.prepare(object(), rally)
+
+    try:
+        rally = LeaderStartRally(Rally(), log=lambda _message: None)
+        rally.begin({"poorboy"}, travel=False, pose=None)
+        _run(33202, 33414, rally)
+        assert rally.state == "await_mark"
+        assert walked == [1]
+        assert farmed == []
+
+        walked.clear()
+        edge = LeaderStartRally(Rally(), log=lambda _message: None)
+        edge.begin({"poorboy"}, travel=False, pose=None)
+        _run(33199, 33435, edge)
+        assert edge.state == "done"
+        assert walked == []
+        assert farmed == [1]
+    finally:
+        nav_session.live_pose_from_state = real_pose
+
+
 if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
@@ -173,4 +236,5 @@ if __name__ == "__main__":
     test_pinned_turret_anchor_is_the_point()
     test_row_minutes_advance_to_the_next_party_row()
     test_hold_does_not_spend_the_row()
+    test_rally_walks_to_the_mark_before_waiting()
     print("OK")

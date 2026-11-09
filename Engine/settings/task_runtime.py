@@ -8,7 +8,12 @@ from settings.hp_actions import (
     normalize_hp_actions,
     sync_legacy_from_actions,
 )
-from settings.profile import Profile, normalize_party_roster
+from settings.profile import (
+    DEFAULT_PARTY_NEAR_TILES,
+    Profile,
+    normalize_party_roster,
+    party_near_limit,
+)
 from settings.schedule import ScheduleTask
 from i18n.strings import normalize_game_language
 
@@ -333,6 +338,15 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             30,
             1,
             100,
+        ),
+    )
+    set_value(
+        "party_near_tiles",
+        party_near_limit(
+            party.get(
+                "near_tiles",
+                getattr(profile, "party_near_tiles", DEFAULT_PARTY_NEAR_TILES),
+            )
         ),
     )
     set_value(

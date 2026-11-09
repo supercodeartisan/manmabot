@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Callable
 
-from settings.profile import Profile, save_profile
+from settings.profile import DEFAULT_PARTY_NEAR_TILES, Profile, save_profile
 from settings.schedule import ScheduleTask, profile_snapshot
 from settings.task_runtime import apply_runtime_settings
 
@@ -60,6 +60,7 @@ _PARTY_UI_DEFAULTS: dict[str, Any] = {
     "loot_role": "none",
     "farm_mode": "party",
     "lag_tiles": 30,
+    "near_tiles": DEFAULT_PARTY_NEAR_TILES,
     "role": "member",
     "ws_port": 8765,
     "leader_host": "",
