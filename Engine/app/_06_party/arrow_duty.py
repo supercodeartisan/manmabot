@@ -20,6 +20,7 @@ from .arrow_policy import (
     report_supply_count,
     supply_fill_qty,
     supply_pile_matches,
+    supply_pile_qty_ok,
 )
 
 _JOIN = "party_join_leader"
@@ -575,6 +576,8 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
             if tile is None or is_adena(item):
                 continue
             if not supply_pile_matches(item, str(claim.get("item") or "")):
+                continue
+            if not supply_pile_qty_ok(item, claim.get("qty")):
                 continue
             if tile_chebyshev(int(tile[0]), int(tile[1]), tx, ty) <= 2:
                 pile = item

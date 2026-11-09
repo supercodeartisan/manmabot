@@ -104,6 +104,40 @@ def test_raw_party_pos_reaches_nav_here():
     assert next_heal_target([far], slots, here=here, self_name="poorboy") is None
 
 
+def test_on_screen_past_9_steps_closer():
+    from app._03_world.merge.memory_sync import get_map_origin
+    from app._06_party.hud_heal import heal_screen_step
+
+    ox, oy = get_map_origin()
+    here = (700, 1200, 4)
+    slots = parse_party_hud_text(_SAMPLE)["slots"]
+    on_screen = {
+        "name": "매력여기사",
+        "guid": "0x08C6D8A3",
+        "hp_pct": 40,
+        "map_id": 4,
+        "x": ox + 712,
+        "y": oy + 1200,
+    }
+    off_screen = {
+        "name": "poorboy",
+        "guid": "0x08947B1F",
+        "hp_pct": 20,
+        "map_id": 4,
+        "x": ox + 700,
+        "y": oy + 1220,
+    }
+    step = heal_screen_step([off_screen, on_screen], slots, here=here, self_name="mage")
+    assert step["name"] == "매력여기사"
+    assert step["dist"] == 12
+    gx, gy = step["goal"]
+    assert max(abs(gx - 712), abs(gy - 1200)) == 9
+    assert max(abs(gx - 700), abs(gy - 1200)) == 3
+    assert heal_screen_step([off_screen], slots, here=here, self_name="mage") is None
+    close = dict(on_screen, x=ox + 704)
+    assert heal_screen_step([close], slots, here=here, self_name="mage") is None
+
+
 def test_closed_bar_has_no_rows():
     snap = parse_party_hud_text("# partyhud t=1ms  창 없음 ioctl=3\n")
     assert snap is not None
@@ -118,5 +152,6 @@ if __name__ == "__main__":
     test_click_is_the_row_center()
     test_dead_other_map_and_past_9_are_skipped()
     test_raw_party_pos_reaches_nav_here()
+    test_on_screen_past_9_steps_closer()
     test_closed_bar_has_no_rows()
     print("ok")

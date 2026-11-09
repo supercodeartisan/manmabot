@@ -15,6 +15,7 @@ from app._06_party.arrow_policy import (
     pick_arrow_duty,
     shopkeeper_socket_live,
     supply_pile_matches,
+    supply_pile_qty_ok,
 )
 from app._06_party.config import PartyMemberConfig
 from app._06_party.config import PartyMemberConfig
@@ -215,10 +216,11 @@ def test_potions_come_before_arrows_and_mp_stays_on_the_mage() -> None:
 
 
 class _Pile:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, loot_qty: int | None = None) -> None:
         self.detail_classification = ""
         self.species_name = "item"
         self.identity = type("I", (), {"name": name})()
+        self.loot_qty = loot_qty
 
 
 def test_named_supply_pile_must_match_the_claim() -> None:
@@ -226,6 +228,10 @@ def test_named_supply_pile_must_match_the_claim() -> None:
     assert supply_pile_matches(_Pile("빨간 물약"), "arrow") is False
     assert supply_pile_matches(_Pile("파란 물약"), "mp") is True
     assert supply_pile_matches(_Pile(""), "hp") is False
+    assert supply_pile_qty_ok(_Pile("빨간 물약", loot_qty=10), 10) is True
+    assert supply_pile_qty_ok(_Pile("빨간 물약", loot_qty=100), 10) is False
+    assert supply_pile_qty_ok(_Pile("빨간 물약", loot_qty=None), 10) is True
+    assert supply_pile_qty_ok(_Pile("빨간 물약", loot_qty=10), None) is True
 
 
 def test_blue_potion_count_comes_from_the_bag() -> None:

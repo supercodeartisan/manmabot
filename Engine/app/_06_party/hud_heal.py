@@ -4,6 +4,8 @@ Other members only. A member is due when party ``hp_pct`` is under 80,
 above 0, on the mage's map, and within ``HEAL_RANGE_TILES`` (Chebyshev).
 The lowest percent comes first. The aim point is that member's HUD row,
 matched by guid. The body on the ground is not a heal target.
+A due member inside the clickable view but past that reach is a short
+step: stand ``HEAL_RANGE_TILES`` from them, toward the mage.
 """
 from __future__ import annotations
 
@@ -52,6 +54,20 @@ def heal_nav_delta(
     here_map: Any,
 ) -> Optional[int]:
     """Chebyshev tiles after both sides are nav, or None when the pose is incomplete."""
+    pair = heal_nav_pair(member, here_x=here_x, here_y=here_y, here_map=here_map)
+    if pair is None:
+        return None
+    return int(pair[4])
+
+
+def heal_nav_pair(
+    member: dict[str, Any],
+    *,
+    here_x: Any,
+    here_y: Any,
+    here_map: Any,
+) -> Optional[tuple[int, int, int, int, int]]:
+    """``(member_x, member_y, here_x, here_y, chebyshev)`` in nav tiles."""
     mx = _tile_int(member.get("map_id"))
     x = _tile_int(member.get("x"))
     y = _tile_int(member.get("y"))
@@ -64,7 +80,35 @@ def heal_nav_delta(
         return None
     px, py = _nav_xy(int(x), int(y))
     qx, qy = _nav_xy(int(hx), int(hy))
-    return max(abs(px - qx), abs(py - qy))
+    return px, py, qx, qy, max(abs(px - qx), abs(py - qy))
+
+
+def _on_mage_screen(member_x: int, member_y: int, here_x: int, here_y: int) -> bool:
+    """True when the member tile is inside the clickable battle view."""
+    from app._03_world.space.world_coords import in_battle_click_region
+
+    return in_battle_click_region(member_x - here_x, member_y - here_y)
+
+
+def _stand_in_reach(
+    member_x: int,
+    member_y: int,
+    here_x: int,
+    here_y: int,
+    reach: int,
+) -> tuple[int, int]:
+    """Tile on the line to the member, ``reach`` tiles from that member."""
+    dist = max(abs(member_x - here_x), abs(member_y - here_y))
+    if dist <= 0:
+        return here_x, here_y
+    scale = int(reach) / float(dist)
+    gx = int(round(member_x + (here_x - member_x) * scale))
+    gy = int(round(member_y + (here_y - member_y) * scale))
+    if (gx, gy) == (here_x, here_y):
+        sx = 0 if member_x == here_x else (1 if member_x > here_x else -1)
+        sy = 0 if member_y == here_y else (1 if member_y > here_y else -1)
+        return here_x + sx, here_y + sy
+    return gx, gy
 
 
 def in_heal_reach(
@@ -149,6 +193,78 @@ def heal_targets(
         )
     found.sort(key=lambda row: (int(row["hp_pct"]), int(row["guid"])))
     return found
+
+
+def heal_screen_step(
+    members: Any,
+    slots: Any,
+    *,
+    self_guid: Any = None,
+    self_name: str = "",
+    below: int = HEAL_HP_BELOW,
+    here: Any = None,
+    reach: int = HEAL_RANGE_TILES,
+) -> Optional[dict[str, Any]]:
+    """Lowest on-screen member past heal range, and where to stand to cast.
+
+    The stand tile is ``reach`` tiles from that member, toward the mage.
+    A member outside the clickable view is left for follow.
+    """
+    if here is None or not isinstance(members, list):
+        return None
+    hx, hy, hm = here[0], here[1], here[2]
+    boxes: dict[int, dict[str, Any]] = {}
+    if isinstance(slots, list):
+        for slot in slots:
+            if not isinstance(slot, dict):
+                continue
+            gid = guid_int(slot.get("guid"))
+            row = slot.get("row")
+            if gid is None or not isinstance(row, dict):
+                continue
+            boxes[gid] = row
+    own = guid_int(self_guid)
+    own_name = str(self_name or "").strip()
+    found: list[dict[str, Any]] = []
+    for member in members:
+        if not isinstance(member, dict):
+            continue
+        gid = guid_int(member.get("guid"))
+        name = str(member.get("name") or "").strip()
+        if own is not None and gid == own:
+            continue
+        if own_name and name == own_name:
+            continue
+        if gid is None or gid not in boxes:
+            continue
+        try:
+            hp_pct = int(member.get("hp_pct"))
+        except (TypeError, ValueError):
+            continue
+        if hp_pct <= 0 or hp_pct >= int(below):
+            continue
+        pair = heal_nav_pair(member, here_x=hx, here_y=hy, here_map=hm)
+        if pair is None:
+            continue
+        mx, my, qx, qy, dist = pair
+        if dist <= int(reach):
+            continue
+        if not _on_mage_screen(mx, my, qx, qy):
+            continue
+        gx, gy = _stand_in_reach(mx, my, qx, qy, int(reach))
+        found.append(
+            {
+                "name": name,
+                "guid": gid,
+                "hp_pct": hp_pct,
+                "dist": dist,
+                "goal": (gx, gy),
+            }
+        )
+    if not found:
+        return None
+    found.sort(key=lambda row: (int(row["hp_pct"]), int(row["guid"])))
+    return found[0]
 
 
 def list_heal_click(
@@ -295,6 +411,8 @@ __all__ = [
     "HEAL_RANGE_TILES",
     "in_heal_reach",
     "heal_nav_delta",
+    "heal_nav_pair",
+    "heal_screen_step",
     "guid_int",
     "heal_targets",
     "list_heal_click",
