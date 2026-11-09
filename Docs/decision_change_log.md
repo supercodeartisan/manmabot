@@ -1,11 +1,11 @@
 # Decision change log
 
-## 2026-11-09 — follow clicks on each new party-memory sample
+## 2026-11-09 — follow click uses the member-to-slot delta
 
-Intent: A member follow click uses the formation tile from the latest party-memory read. The click rate is that read rate. There is no 0.5s reclick clock. A repeated sample while the body is still walking the same slot does not click again.
+Intent: On a party-memory read, the next click is a step from the member toward this read's formation slot. The slot is beside or behind the leader, never the leader tile. Delta zero does not click. A hop that still lies on that delta is kept while the body is walking. A delta whose direction changed, or a hop that would pass the slot, clicks the latest tile immediately. The hop stays at most two tiles.
 Shared: `plan_slot_hop` and `plan_field_follow` only. Leader loot, retreat, HP, and login clicks are unchanged.
-Affects: party-member local follow. A new `party_pose_seq` clicks the current slot. The same sequence keeps the step already in progress.
-Consent: user ("just keep the memory reading speed not 0.5s").
+Affects: party-member local follow. Repeated reads with the same delta do not restart the step. A leader turn starts a new click on that read.
+Consent: user ("implement" after the same-tick delta proposal).
 Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
 
 ## 2026-11-09 — a one-tile leader step moves the member at once
