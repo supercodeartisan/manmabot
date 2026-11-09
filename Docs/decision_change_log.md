@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-09 — a one-tile leader step moves the member at once
+
+Intent: When the leader's party-memory tile changes by one tile, the member's side slot moves with it on that read, and a member one tile off that slot walks. The slot is no longer kept for a one-tile drift, and standing one tile off the slot is no longer a hold.
+Shared: the side-slot sticky in `choose_formation_goal`, `ARRIVAL_TOLERANCE`, `_slot_hold`, and `plan_slot_hop`. Leader loot, retreat, HP, and login clicks are unchanged.
+Affects: party-member follow while a formation slot exists, including the stand grid after the leader has been still. A one-tile miss now clicks. The click is still at most two tiles.
+Consent: user ("리더가 1칸만 움직여도 그 즉시로 따라가게 해야해").
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
+## 2026-11-09 — moving hunt keeps the side line ahead of the trail
+
+Intent: While the leader is walking on a moving hunt, a member stands on the side line first. The single-file trail is used only when that member's side tiles are blocked.
+Shared: `choose_formation_goal` only. The stopped stand grid, turret yard, leader loot, retreat, HP, and login clicks are unchanged.
+Affects: party-member follow while the leader's tile is still changing. A free tile beside the leader keeps the member there. A one-tile corridor still falls back to the trail. A leader who turns around swaps left and right.
+Consent: user ("yes" — side line first, trail second, during moving-hunt walk).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
 ## 2026-11-09 — party members keep their solo recovery lines
 
 Intent: The party leader no longer has a support-and-protection page. Each character uses the heal, potion, retreat, mother tree, talking scroll, and safe-zone values already set on the solo screens. The mage line for healing other members stays, on the page now named 파티운영.
