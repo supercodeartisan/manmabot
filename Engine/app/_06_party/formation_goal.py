@@ -1,10 +1,11 @@
 """Walk goal for one member: side line, corridor trail, or standing grid.
 
 The leader tile comes from this tick's memory pose. Slots are local.
-Seat 0 stands on the leader's right; the next seat stands on the left.
-A narrow trail tile, when given, replaces the side line. A stopped leader
-uses a 3×3 grid for up to five followers and a 5×5 grid for more. The
-leader's own tile is never a slot.
+While the leader is moving, the side line comes first. Seat 0 stands on
+the leader's right; the next seat stands on the left. A trail tile is
+used only when that side has no free tile. A stopped leader uses a 3×3
+grid for up to five followers and a 5×5 grid for more. The leader's own
+tile is never a slot.
 """
 from __future__ import annotations
 
@@ -84,11 +85,6 @@ def choose_formation_goal(
             return FormationGoal("stand", None, "stand_full")
         return FormationGoal("stand", tile, f"stand_r{stand_radius(count)}")
 
-    if trail_tile is not None:
-        tile = (int(trail_tile[0]), int(trail_tile[1]))
-        if tile != leader_t and _free(terrain, tile, blocked):
-            return FormationGoal("trail", tile, f"trail_seat{seat_i}")
-
     tile = _side_tile(
         leader_t,
         forward,
@@ -98,9 +94,14 @@ def choose_formation_goal(
         blocked,
         sticky,
     )
-    if tile is None:
-        return FormationGoal("side", None, "side_blocked")
-    return FormationGoal("side", tile, f"side{primary_lateral(seat_i):+d}")
+    if tile is not None:
+        return FormationGoal("side", tile, f"side{primary_lateral(seat_i):+d}")
+
+    if trail_tile is not None:
+        trail = (int(trail_tile[0]), int(trail_tile[1]))
+        if trail != leader_t and _free(terrain, trail, blocked):
+            return FormationGoal("trail", trail, f"trail_seat{seat_i}")
+    return FormationGoal("side", None, "side_blocked")
 
 
 def _side_tile(

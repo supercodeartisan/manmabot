@@ -78,7 +78,7 @@ def test_blocked_side_steps_out_without_taking_the_other_seat():
     assert closed.tile is None
 
 
-def test_narrow_trail_replaces_the_side_line():
+def test_side_line_wins_while_a_trail_tile_exists():
     goal = choose_formation_goal(
         (10, 10),
         forward=(1, 0),
@@ -86,6 +86,21 @@ def test_narrow_trail_replaces_the_side_line():
         followers=2,
         stopped=False,
         trail_tile=(4, 4),
+    )
+    assert goal.kind == "side"
+    assert goal.tile == (10, 11)
+
+
+def test_trail_is_used_only_when_the_side_is_blocked():
+    closed = _Terrain({(11, 10), (11, 9), (11, 11)})
+    goal = choose_formation_goal(
+        (10, 10),
+        forward=(0, -1),
+        seat=0,
+        followers=2,
+        stopped=False,
+        trail_tile=(4, 4),
+        terrain=closed,
     )
     assert goal.kind == "trail"
     assert goal.tile == (4, 4)
@@ -131,7 +146,8 @@ def test_standing_fight_stays_stopped():
 if __name__ == "__main__":
     test_side_line_is_abreast_and_exclusive()
     test_blocked_side_steps_out_without_taking_the_other_seat()
-    test_narrow_trail_replaces_the_side_line()
+    test_side_line_wins_while_a_trail_tile_exists()
+    test_trail_is_used_only_when_the_side_is_blocked()
     test_stopped_grid_excludes_the_leader()
     test_slot_distance_replaces_the_leader_band()
     test_standing_fight_stays_stopped()

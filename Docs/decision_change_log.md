@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — moving hunt keeps the side line ahead of the trail
+
+Intent: While the leader is walking on a moving hunt, a member stands on the side line first. The single-file trail is used only when that member's side tiles are blocked.
+Shared: `choose_formation_goal` only. The stopped stand grid, turret yard, leader loot, retreat, HP, and login clicks are unchanged.
+Affects: party-member follow while the leader's tile is still changing. A free tile beside the leader keeps the member there. A one-tile corridor still falls back to the trail. A leader who turns around swaps left and right.
+Consent: user ("yes" — side line first, trail second, during moving-hunt walk).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
 ## 2026-11-09 — party members keep their solo recovery lines
 
 Intent: The party leader no longer has a support-and-protection page. Each character uses the heal, potion, retreat, mother tree, talking scroll, and safe-zone values already set on the solo screens. The mage line for healing other members stays, on the page now named 파티운영.
