@@ -54,7 +54,7 @@ def bag_arrow_count(state: Any) -> Optional[int]:
 def mage_seat_names(roster: Any) -> set[str]:
     """Roster names whose seat is mage. A missing row is not a mage.
 
-    ``seat_role_for_name`` defaults an unknown name to mage. The party boss is
+    ``seat_role_for_name`` leaves an unknown name as unknown. The party boss is
     not on the roster, so this list is the only skip set.
     """
     names: set[str] = set()

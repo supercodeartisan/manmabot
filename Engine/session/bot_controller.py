@@ -2258,7 +2258,7 @@ class BotController:
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
         self._publish_supply_hold()
-        self._publish_supply_stand(world, map_id)
+        self._publish_supply_stand(world, map_id, blackboard)
 
     def _leader_blackboard(self):
         board = getattr(getattr(self, "_party_leader_ref", None), "decision", None)
@@ -2509,41 +2509,38 @@ class BotController:
             self._party_hold_id = str(hold.get("id"))
             self._party_stand_key = None
 
-    def _publish_supply_stand(self, world, map_id) -> None:
+    def _publish_supply_stand(self, world, map_id, blackboard=None) -> None:
         hold = self._leader_supply_hold()
         if not isinstance(hold, dict) or not hold.get("id"):
             return
-        from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.publish import publish_body
         from app._06_party.leader import stand_from_party_memory
         from app._06_party.sync import member_states
 
         me = _player_chat_name(world, getattr(world, "last_party", None))
         who = str(hold.get("for") or "").strip()
+        leader_self = bool(me and who and me.casefold() == who.casefold())
         stand = None
-        for row in member_states.rows.values():
-            live = row.get("live") if isinstance(row, dict) else None
-            body = live.get("supply_stand") if isinstance(live, dict) else None
-            if not isinstance(body, dict):
-                continue
-            if str(body.get("id") or "") != str(hold.get("id")):
-                continue
-            stand = body
-            break
-        if stand is None:
-            stand = stand_from_party_memory(
-                getattr(world, "last_party", None), who, str(hold.get("id"))
+        if leader_self:
+            from app._06_party.arrow_duty import leader_supply_stand
+
+            stand = leader_supply_stand(
+                blackboard, getattr(world, "last_party", None), hold
             )
-        if stand is None and me and who and me.casefold() == who.casefold():
-            pose = live_pose_from_state(world)
-            if pose is not None:
-                stand = {
-                    "id": hold.get("id"),
-                    "for": who,
-                    "map_id": int(pose.map_id),
-                    "x": int(pose.x),
-                    "y": int(pose.y),
-                }
+        else:
+            for row in member_states.rows.values():
+                live = row.get("live") if isinstance(row, dict) else None
+                body = live.get("supply_stand") if isinstance(live, dict) else None
+                if not isinstance(body, dict):
+                    continue
+                if str(body.get("id") or "") != str(hold.get("id")):
+                    continue
+                stand = body
+                break
+            if stand is None:
+                stand = stand_from_party_memory(
+                    getattr(world, "last_party", None), who, str(hold.get("id"))
+                )
         if not isinstance(stand, dict):
             return
         key = (
@@ -2688,17 +2685,8 @@ class BotController:
         """
         import json
 
-        from app._04_decision.world_nav.session import live_pose_from_state
-        from app._06_party.comms.orders import self_name_from_party
-
         snap = getattr(world, "last_party", None)
-        pose = live_pose_from_state(world)
-        px = py = None
-        mid = map_id
-        if pose is not None:
-            px, py = int(pose.x), int(pose.y)
-            mid = int(pose.map_id)
-        name = self_name_from_party(snap, mid, px, py) or _player_chat_name(world, snap)
+        name = _player_chat_name(world, snap)
         body = {k: v for k, v in policy.items() if k not in ("ts", "sender")}
         sig = json.dumps(body, sort_keys=True, default=str) + "|" + str(name or "")
         if sig == getattr(self, "_member_policy_sig", ""):
@@ -4180,17 +4168,4 @@ def _player_chat_name(world, snapshot) -> str:
     name = str(getattr(player, "species_name", None) or "").strip()
     if name:
         return name
-    if not isinstance(snapshot, dict):
-        return ""
-    from app._04_decision.world_nav.session import live_pose_from_state
-    from app._06_party.comms.orders import self_name_from_party
-
-    try:
-        pose = live_pose_from_state(world)
-        if pose is None:
-            return ""
-        return str(
-            self_name_from_party(snapshot, pose.map_id, pose.x, pose.y) or ""
-        ).strip()
-    except Exception:
-        return ""
+    return ""

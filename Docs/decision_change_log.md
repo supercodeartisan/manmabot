@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — confirmed self name, and the leader stands before the supply tile
+
+Intent: A nearby party leader or another member is not this character's name. The print-state or client-memory name is used, and a name that is not on the roster is seat `unknown`, so shopkeeper, mage-list heal, assist, and loot do not run. A supply hold for the leader still lets critical retreat, a potion, and urgent self-heal go first. Only a hold requested after the shopkeeper is within 12 tiles stops new attacks and chase. The stand tile is the party-memory coordinate after the body has stopped, not the tile where the hold arrived. Walking before that stop updates the latest tile and does not cancel. After the stop, two tiles or a map change cancels as before, and one tile still retargets the drop. Cancel, a finished drop, or the stand timeout clears the hold and the hunt decision runs again. Hold ids and attempt numbers are unchanged.
+Shared: `self_name_from_party`, `seat_role_for_name`, `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo hunt, buy quantity, MP and arrow rules, other members' hold rules, and Brain wiring are unchanged.
+Affects: which seat a member applies from the leader policy, and a party leader who is the supply recipient.
+Consent: user ("두 문제를 함께 수정" — confirmed self name, unknown seat, leader stands only after a 12-tile hold, stand coordinates after the body stops).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a one-tile leader step retargets the drop
 
 Intent: A map change, or a move of two tiles or more, still clears the supply hold. A one-tile difference does not. Immediately before the drop, the stand tile is compared with the leader's live party-memory tile. When those differ by one tile, the drop is aimed at the live tile and the gesture does not run on the old square.

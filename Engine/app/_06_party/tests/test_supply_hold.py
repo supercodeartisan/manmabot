@@ -1060,31 +1060,44 @@ def test_a_moved_stand_cancels_without_a_pause() -> None:
 
 
 def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> None:
-    from app._06_party.arrow_duty import leader_supply_action
+    from app._06_party.arrow_duty import leader_supply_action, leader_supply_stand
 
     potion = type("I", (), {"reason": "hp potion"})()
+    pose = {"x": 10, "y": 10}
+    body = {"moving": True, "standing": False}
+    row = {
+        "name": "Boss",
+        "guid": "0x10",
+        "map_id": 4,
+        "x": 10,
+        "y": 10,
+        "is_leader": True,
+    }
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
     monkeypatch.setattr(
         "app._04_decision.world_nav.session.live_pose_from_state",
-        lambda _state, fresh=False: type("P", (), {"map_id": 4, "x": 10, "y": 10})(),
+        lambda _state, fresh=False: type(
+            "P", (), {"map_id": 4, "x": pose["x"], "y": pose["y"]}
+        )(),
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_moving", lambda: body["moving"]
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_standing", lambda: body["standing"]
     )
     world = type(
         "W",
         (),
         {
             "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
-            "last_party": {
-                "in_party": True,
-                "members": [
-                    {"name": "Boss", "guid": "0x10", "map_id": 4, "x": 10, "y": 10}
-                ],
-            },
+            "last_party": {"in_party": True, "members": [row]},
             "last_print_state": None,
         },
     )()
-    hold = {"id": "hold:arrow:Boss", "for": "Boss", "item": "arrow"}
+    hold = {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
     board = _Board()
     monkeypatch.setattr(
         "app._06_party.support.urgent_self_survival", lambda *_a, **_k: potion
@@ -1094,16 +1107,45 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
     monkeypatch.setattr(
         "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
     )
-    standing = leader_supply_action(world, board, hold, None)
-    assert standing is not None
-    assert "hold" in str(getattr(standing, "reason", ""))
+    pose["y"] = 40
+    row["y"] = 40
+    walking = leader_supply_action(world, board, hold, None)
+    assert walking is not None
+    assert "hold" in str(getattr(walking, "reason", ""))
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    assert board.scratch["party_leader_hold_pose"]["y"] == 40
+    assert leader_supply_stand(board, world.last_party, hold) is None
 
-    monkeypatch.setattr(
-        "app._04_decision.world_nav.session.live_pose_from_state",
-        lambda _state, fresh=False: type("P", (), {"map_id": 4, "x": 10, "y": 40})(),
-    )
+    body["moving"] = False
+    body["standing"] = True
+    stopped = leader_supply_action(world, board, hold, None)
+    assert stopped is not None
+    stand = leader_supply_stand(board, world.last_party, hold)
+    assert stand is not None
+    assert (stand["x"], stand["y"]) == (10, 40)
+    assert board.scratch["party_leader_hold_pose"]["stopped"] is True
+
+    pose["y"] = 41
+    row["y"] = 41
+    one = leader_supply_action(world, board, hold, None)
+    assert one is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    shifted = leader_supply_stand(board, world.last_party, hold)
+    assert shifted is not None
+    assert (shifted["x"], shifted["y"]) == (10, 41)
+
+    pose["y"] = 42
+    row["y"] = 42
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
+
+    assert leader_supply_action(world, board, None, None) is None
+    fresh = {"id": "hold:hp:Boss:1", "for": "Boss", "item": "hp"}
+    pose["y"] = 42
+    again = leader_supply_action(world, board, fresh, None)
+    assert again is not None
+    assert board.scratch["party_leader_hold_pose"]["id"] == "hold:hp:Boss:1"
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
 
 
 def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
@@ -1232,3 +1274,39 @@ def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) ->
         "app._06_party.manager.mage_skips_party_assist", lambda _state: False
     )
     assert manager._opening_shopkeeper_heal(state, origin) is None
+
+
+def test_same_tile_keeps_the_confirmed_name_and_unknown_is_not_mage() -> None:
+    from app._06_party.config import PartyMemberConfig
+    from websocket.party_orders import seat_role_for_name, self_name_from_party
+
+    snap = {
+        "in_party": True,
+        "members": [
+            {"name": "매력여기사", "is_leader": True, "map_id": 4, "x": 10, "y": 10},
+            {"name": "데컨큐인", "map_id": 4, "x": 10, "y": 10},
+        ],
+    }
+    assert self_name_from_party(snap, 4, 10, 10) == ""
+    assert self_name_from_party(snap, 4, 10, 10, confirmed="데컨큐인") == "데컨큐인"
+    assert self_name_from_party(snap, 4, 10, 10, confirmed="leader") == ""
+
+    roster = [{"name": "데컨큐인", "role": "shopkeeper", "loot": "responsible"}]
+    assert seat_role_for_name(roster, "매력여기사") == "unknown"
+    assert seat_role_for_name(roster, "") == "unknown"
+    assert seat_role_for_name(roster, "데컨큐인") == "shopkeeper"
+    own = PartyMemberConfig(seat_role="shopkeeper", loot_role="responsible")
+    missed = own.merge_leader_policy(
+        {"roster": roster, "loot_role": "none"},
+        self_name="매력여기사",
+        resolve_seat=True,
+    )
+    assert missed.seat_role == "unknown"
+    assert missed.loot_role == "responsible"
+    named = own.merge_leader_policy(
+        {"roster": roster, "loot_role": "none"},
+        self_name="데컨큐인",
+        resolve_seat=True,
+    )
+    assert named.seat_role == "shopkeeper"
+    assert named.loot_role == "responsible"

@@ -104,7 +104,9 @@ class PartyMemberManager:
 
     def apply_leader_policy(self, policy: dict[str, Any], *, self_name: str = "") -> None:
         """Overlay leader ``party_policy`` on the member's own knobs (temporary)."""
-        merged = self.base_config.merge_leader_policy(policy, self_name=self_name)
+        merged = self.base_config.merge_leader_policy(
+            policy, self_name=self_name, resolve_seat=True
+        )
         self.config = self.config.with_knobs_from(merged)
         self.leader_policy = dict(policy)
 
@@ -708,7 +710,16 @@ class PartyMemberManager:
         elif not cfg.turret_farm or cfg.solo_farm:
             self.runtime.own_hunt_id = None
 
-        if mage_skips_party_assist(game_state):
+        if str(cfg.seat_role or "") == "unknown":
+            assist_obj = None
+            assist_src = "none"
+            need_combat_step = False
+            self.runtime.assist_track_id = None
+            self.runtime.assist_src = "none"
+            self.runtime.assist_name = ""
+            self.runtime.own_hunt_id = None
+            self._turret_own_pending = None
+        elif mage_skips_party_assist(game_state):
             if self.runtime.scratch.get("_class_mage_note") != "class":
                 self.runtime.scratch["_class_mage_note"] = "class"
                 _log.info("assist skipped: class mage, seat is not used")
@@ -841,7 +852,8 @@ class PartyMemberManager:
         if result.kind is MemberKind.BUFF and support is not None:
             return self._return_support(support, MemberKind.BUFF)
         if (
-            mage_skips_party_assist(game_state)
+            str(cfg.seat_role or "") != "unknown"
+            and mage_skips_party_assist(game_state)
             and result.kind
             not in (MemberKind.STOP, MemberKind.DEFEND, MemberKind.POTION)
         ):
@@ -854,7 +866,11 @@ class PartyMemberManager:
         if view.source and result.kind is MemberKind.FOLLOW:
             reason = f"{reason} via={view.source}"
 
-        if leader_moving or loot_own is None:
+        if (
+            leader_moving
+            or loot_own is None
+            or str(cfg.seat_role or "") == "unknown"
+        ):
             can_loot_now = False
             loot_max_tiles = 0
         else:
@@ -1331,18 +1347,6 @@ class PartyMemberManager:
         except Exception:
             self_name = ""
             self_guid = ""
-        if not self_name:
-            try:
-                from websocket.party_orders import self_name_from_party
-
-                self_name = self_name_from_party(
-                    party,
-                    self.runtime.local_map_id,
-                    getattr(origin, "x", None),
-                    getattr(origin, "y", None),
-                )
-            except Exception:
-                self_name = ""
         from .hud_heal import assess_list_heal, heal_screen_step
         from .intents import list_heal, plan_slot_hop
 

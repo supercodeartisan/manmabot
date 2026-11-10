@@ -345,18 +345,24 @@ def member_state_message(
 
 
 def seat_role_for_name(roster: Any, name: str) -> str:
-    """Roster seat for ``name`` (member|mage|shopkeeper). Default mage."""
+    """Roster seat for ``name``. A missing or blank role is ``unknown``.
+
+    ``unknown`` does not run shopkeeper, mage, or member role actions.
+    The party boss is not a roster row, so a nearby boss name stays unknown.
+    """
     want = str(name or "").strip().casefold()
     if not want or not isinstance(roster, (list, tuple)):
-        return "mage"
+        return "unknown"
     for row in roster:
         if not isinstance(row, dict):
             continue
         if str(row.get("name") or "").strip().casefold() != want:
             continue
-        role = str(row.get("role") or "mage").strip().lower()
-        return role if role in ("member", "mage", "shopkeeper") else "mage"
-    return "mage"
+        role = str(row.get("role") or "").strip().lower()
+        if role in ("member", "mage", "shopkeeper"):
+            return role
+        return "unknown"
+    return "unknown"
 
 
 def seat_index_for_name(roster: Any, name: str) -> Optional[int]:
@@ -406,33 +412,24 @@ def party_member_names(snapshot: Any) -> set[str]:
     return names
 
 
-def self_name_from_party(snapshot: Any, map_id: Optional[int], x: Any, y: Any) -> str:
-    """Party-list name of the local character, matched by map and tile."""
-    if not isinstance(snapshot, dict):
+def self_name_from_party(
+    snapshot: Any,
+    map_id: Optional[int],
+    x: Any,
+    y: Any,
+    *,
+    confirmed: str = "",
+) -> str:
+    """The session's own name. A nearby party row is never this character.
+
+    ``confirmed`` is the print-state or client-memory name. Tile distance is
+    not used: the leader and other members can share this tile.
+    """
+    del snapshot, map_id, x, y
+    name = str(confirmed or "").strip()
+    if name.casefold() in ("", "member", "leader", "unknown", "server"):
         return ""
-    try:
-        px, py = int(x), int(y)
-        mid = int(map_id) if map_id is not None else None
-    except (TypeError, ValueError):
-        return ""
-    best = ""
-    best_d = ARRIVE_TILES + 1
-    for raw in snapshot.get("members") or []:
-        if not isinstance(raw, dict):
-            continue
-        name = str(raw.get("name") or "").strip()
-        if not name:
-            continue
-        try:
-            if mid is not None and int(raw.get("map_id")) != mid:
-                continue
-            dist = _chev(px, py, int(raw.get("x")), int(raw.get("y")))
-        except (TypeError, ValueError):
-            continue
-        if dist < best_d:
-            best = name
-            best_d = dist
-    return best if best_d <= ARRIVE_TILES else ""
+    return name
 
 
 def _order_key(body: Optional[dict[str, Any]]) -> Optional[tuple]:

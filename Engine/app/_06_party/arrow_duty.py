@@ -1706,11 +1706,23 @@ def release_finished_party_shop(board: Any) -> None:
         _log.info("party shop finished; join not blocked")
 
 
-def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
-    """True when this hold's recipient has left the tile it was anchored on.
+def _leader_body_stopped() -> bool:
+    """True only when the action slot says the body is not walking."""
+    try:
+        from app._05_action.body_pose import body_is_moving, body_is_standing
 
-    The same hold stays displaced until its id changes, so the leader hunts
-    again and the shopkeeper can publish a new hold.
+        if body_is_standing() is True:
+            return True
+        return body_is_moving() is False
+    except Exception:
+        return False
+
+
+def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
+    """True after a stopped leader then leaves by two tiles or a map change.
+
+    Steps taken while the body is still walking update the latest tile. They
+    do not clear the hold. The anchor is the tile where the body first stopped.
     """
     scratch = getattr(board, "scratch", None) if board is not None else None
     if not isinstance(scratch, dict) or not isinstance(hold, dict) or not hold.get("id"):
@@ -1720,7 +1732,11 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
     pose = live_pose_from_state(world)
     if pose is None:
         prev = scratch.get("party_leader_hold_pose")
-        return bool(isinstance(prev, dict) and prev.get("moved") and str(prev.get("id")) == str(hold.get("id")))
+        return bool(
+            isinstance(prev, dict)
+            and prev.get("moved")
+            and str(prev.get("id")) == str(hold.get("id"))
+        )
     here = (int(pose.map_id), int(pose.x), int(pose.y))
     key = str(hold.get("id"))
     prev = scratch.get("party_leader_hold_pose")
@@ -1731,10 +1747,16 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
             "x": here[1],
             "y": here[2],
             "moved": False,
+            "stopped": _leader_body_stopped(),
         }
         return False
     if prev.get("moved"):
         return True
+    if not prev.get("stopped"):
+        prev["map"], prev["x"], prev["y"] = here
+        if _leader_body_stopped():
+            prev["stopped"] = True
+        return False
     try:
         old = (int(prev["map"]), int(prev["x"]), int(prev["y"]))
     except (TypeError, ValueError, KeyError):
@@ -1751,6 +1773,38 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
     return True
 
 
+def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
+    """Party-memory stand once the leader has stopped for this hold id.
+
+    None while the body is still walking, so the request tile is not frozen.
+    ``0,0`` is not a stand. A later one-tile or two-tile change is published
+    by calling this again with the latest memory row.
+    """
+    if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
+        return None
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if (
+        not isinstance(prev, dict)
+        or not prev.get("stopped")
+        or str(prev.get("id") or "") != str(hold.get("id"))
+    ):
+        return None
+    from .leader import stand_from_party_memory
+
+    stand = stand_from_party_memory(
+        snapshot, str(hold.get("for") or ""), str(hold.get("id") or "")
+    )
+    if not isinstance(stand, dict):
+        return None
+    try:
+        if int(stand["x"]) == 0 and int(stand["y"]) == 0:
+            return None
+    except (TypeError, ValueError, KeyError):
+        return None
+    return stand
+
+
 def leader_supply_action(
     world: Any,
     blackboard: Any,
@@ -1760,8 +1814,9 @@ def leader_supply_action(
     """Leader tick before the hunt decision.
 
     Critical retreat, then the same urgent self care members use, then a
-    supply pickup or stand. A hold whose tile has moved returns None so the
-    hunt decision runs until a new hold arrives.
+    supply pickup or stand. A hold only stops new attacks and chase. Steps
+    before the body stops stay on the hold. After the stop, two tiles or a
+    map change returns None so the hunt decision runs again.
     """
     if world is None or blackboard is None:
         return None
@@ -1800,7 +1855,9 @@ def leader_supply_action(
     if claim_names_me(hold, name, guid):
         if leader_hold_displaced(blackboard, world, hold):
             return None
-        return supply_wait_intent(world, blackboard)
+        from .intents import idle
+
+        return idle("supply hold")
     return None
 
 

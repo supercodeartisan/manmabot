@@ -120,7 +120,7 @@ class PartyMemberConfig:
         if lead_mode not in LEADER_MODES:
             lead_mode = "moving"
         seat = str(self.seat_role or "member").strip().lower()
-        if seat not in ("member", "mage", "shopkeeper"):
+        if seat not in ("member", "mage", "shopkeeper", "unknown"):
             seat = "member"
         follow = max(1, min(40, int(self.follow_tiles)))
         stop = max(0, min(follow, int(self.stop_tiles)))
@@ -203,6 +203,7 @@ class PartyMemberConfig:
         policy: Any,
         *,
         self_name: str = "",
+        resolve_seat: bool = False,
     ) -> "PartyMemberConfig":
         """Overlay global knobs from a leader ``party_policy`` body."""
         if not isinstance(policy, dict):
@@ -217,11 +218,14 @@ class PartyMemberConfig:
         seat = self.seat_role
         seat_i = self.seat_index
         loot = str(policy.get("loot_role", self.loot_role) or self.loot_role)
-        if self_name:
-            seat = seat_role_for_name(roster, self_name)
-            seat_i = seat_index_for_name(roster, self_name)
-            if not bool(policy.get("random_loot", self.random_loot)):
-                loot = loot_role_for_name(roster, self_name, default=loot)
+        named = str(self_name or "").strip()
+        if resolve_seat or named:
+            seat = seat_role_for_name(roster, named)
+            seat_i = seat_index_for_name(roster, named) if named else None
+            if seat == "unknown":
+                loot = self.loot_role
+            elif not bool(policy.get("random_loot", self.random_loot)):
+                loot = loot_role_for_name(roster, named, default=loot)
         raw = {
             "enabled": self.enabled,
             "leader_name": self.leader_name,
