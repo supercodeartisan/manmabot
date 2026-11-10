@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a member stand keeps its confirmed flag
+
+Intent: The recipient's settled stop tile reaches the shopkeeper. `member_state` already carried the tile and now also carries `confirmed`, which the leader requires before it republishes `supply_stand`.
+Shared: `_member_live_view`. The stand wait, the drop, follow, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party member who is told to stand for a supply drop. The leader's own stand still comes from the local pose.
+Consent: user ("how to resolve it?" after the mage stand never reached the shopkeeper).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — hunt loot stays inside the active farm
 
 Intent: While hunting, do not walk to adena whose tile is outside the active farm. The same rule applies to every farm area, using whichever rect is current. A pile inside the rect, within 3 tiles of its edge, or already within 2 tiles of the character is still taken. The walk back into the rect no longer starts that outside pile again.
