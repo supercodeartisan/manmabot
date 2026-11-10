@@ -48,6 +48,34 @@ def test_an_unknown_read_keeps_the_join():
     assert memory_in_party(None) is None
 
 
+def test_start_waits_for_a_sample_after_the_reset(monkeypatch):
+    from app._01_perception.party_listen_reader import PartyListenReader
+
+    seqs = {"n": 3}
+
+    def sample_seq(_name: str) -> int:
+        return seqs["n"]
+
+    monkeypatch.setattr(
+        "app._01_perception.lc_session.session.sample_seq", sample_seq
+    )
+    reader = PartyListenReader.__new__(PartyListenReader)
+    reader._closed = False
+    reader._loaded = True
+    seen: list[int] = []
+
+    def snapshot() -> dict:
+        seen.append(seqs["n"])
+        return {"subs_ok": True, "in_party": False, "members": []}
+
+    reader.snapshot = snapshot  # type: ignore[method-assign]
+    assert reader.snapshot_after(3, timeout=0.2) is None
+    assert seen == []
+    seqs["n"] = 4
+    assert reader.snapshot_after(3, timeout=0.2)["members"] == []
+    assert seen == [4]
+
+
 def test_a_blind_sample_is_not_an_empty_party(monkeypatch):
     monkeypatch.setattr(lc_view.session, "text", lambda _name: "party_verify=blind\n")
     snap = lc_view.party()

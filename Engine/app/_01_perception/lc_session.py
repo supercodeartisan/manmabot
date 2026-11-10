@@ -38,6 +38,7 @@ class _Slot:
         self.lock = threading.Lock()
         self.text = ""
         self.error = ""
+        self.seq = 0
         self.ready = threading.Event()
         self.waited = False
 
@@ -98,6 +99,15 @@ class LcSession:
         with slot.lock:
             return slot.text
 
+    def sample_seq(self, name: str) -> int:
+        """How many samples this module has pushed. 0 until the first one."""
+        self.ensure(name)
+        slot = self._slots.get(name)
+        if slot is None:
+            return 0
+        with slot.lock:
+            return int(slot.seq)
+
     def peek(self, name: str) -> str:
         """Latest sample without starting a module."""
         slot = self._slots.get(name)
@@ -155,6 +165,7 @@ class LcSession:
             with slot.lock:
                 slot.text = decoded
                 slot.error = ""
+                slot.seq += 1
             slot.ready.set()
             return 0 if self._run_id == run_id else 1
 

@@ -107,6 +107,22 @@ class PartyListenReader:
     def dll_loaded(self) -> bool:
         return self._loaded and not self._closed
 
+    def snapshot_after(self, seq: int, timeout: float = 1.5) -> Optional[dict[str, Any]]:
+        """The next sample after ``seq``. None when no new read arrives.
+
+        The sample already in the slot is not reused.
+        """
+        import time
+
+        from app._01_perception.lc_session import session
+
+        deadline = time.monotonic() + max(0.2, float(timeout))
+        while time.monotonic() < deadline:
+            if session.sample_seq("party") != int(seq):
+                return self.snapshot()
+            time.sleep(0.05)
+        return None
+
     def snapshot(self) -> Optional[dict[str, Any]]:
         if not self.dll_loaded:
             return None

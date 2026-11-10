@@ -34,28 +34,22 @@ int main(int argc,char**argv){
     if(lc_attach()) return 1;
     lcreg_poll P=lcreg_poll_load("PARTY");
 
-    uint64_t cbase=0,psub=0,party=0; lp_cache_load(&cbase,&psub,&party);
-    const char*how="cache";
-    if(!(cbase==g_base && lp_verify_subs(psub) && lp_verify(party))){ psub=lp_discover_subs(); party=lp_resolve_from(psub); how="discover"; lp_cache_save(g_base,psub,party); }
+    /* No party_cache.txt. Each sample walks PartySubsystem again. */
+    const char*how="discover";
     lcreg_mkdir_for(outp);
     FILE*f=fopen(outp,"w"); if(!f)return 4;
-    fprintf(f,"# registry=%s sub=%016llX rc=%08X how=%s join=%d\n",regdisp,(unsigned long long)psub,P_VFT_RC,how,dojoin);
-    if(!psub){ fprintf(f,"PartySubsystem not found\n"); fclose(f); SignedClose(); printf("sub fail\n"); return 3; }
+    fprintf(f,"# registry=%s sub=%016llX rc=%08X how=%s join=%d\n",regdisp,0ull,P_VFT_RC,how,dojoin);
 
-    DWORD t0=GetTickCount(); uint64_t mem_party=party; uint64_t nm=0; PMem mem[64]; int nmc=0, plen=0; DWORD lastResolve=0;
+    DWORD t0=GetTickCount(); PMem mem[64]; int nmc=0, plen=0;
     do{
         LARGE_INTEGER fr,q0,q1; QueryPerformanceFrequency(&fr); QueryPerformanceCounter(&q0);
         unsigned long long io0=g_sd_ioctls;
         DWORD now=GetTickCount();
-        { int ok = (mem_party!=0) ? lp_verify(mem_party) : 0;
-          if(!ok){
-              mem_party = lp_resolve_from(psub);
-              if(!mem_party && (int)(now-lastResolve)>=(int)P_RESCAN){
-                  lastResolve=now; psub=lp_discover_subs(); mem_party=lp_resolve_from(psub);
-              }
-          } }
+        uint64_t psub=lp_discover_subs();
+        uint64_t mem_party=psub?lp_resolve_from(psub):0;
         int n=0, blind=0; char leader[128]={0}; uint32_t lf28=0,cnt=0;
-        if(mem_party){ rm(mem_party+P_LLVL,&lf28,4); n=lp_read_batch(mem_party,mem,64,leader,sizeof leader,&cnt);
+        if(!psub) blind=1;
+        else if(mem_party){ rm(mem_party+P_LLVL,&lf28,4); n=lp_read_batch(mem_party,mem,64,leader,sizeof leader,&cnt);
             if(n<0){ blind=1; n=0; }
             else if(dojoin){ lc_collect(); lc_pick_self(); join_actors(mem,n); } }
         nmc=n;

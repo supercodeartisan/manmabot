@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a party start forgets the saved party pointer and reads again
+
+Intent: Party start does not keep the previous Party object or the previous member list. Each sample walks PartySubsystem again, and the start itself waits for a sample that arrives after that reset. No new sample leaves membership unknown, so a name from the sample already in the slot is not joined.
+Shared: `lp_discover_subs` each sample, `PartyListenReader.snapshot_after`, `_fresh_party_at_start`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Follow, hunt, retreat, loot, and HP are unchanged.
+Affects: the party monitor JOINED mark and whether `/초대` is skipped at start. Both clients need the rebuilt `party.dll` and a bot restart.
+Consent: user ("파티를 시작할때 모든것을 초기화하고 다시 처음부터 읽으면서 확인해라").
+Result: not run in game.
+
 ## 2026-11-10 — a party member is whoever this read's control block confirms
 
 Intent: A name left in a Party vector slot is not a member. The slot counts only when this read's `_Rep` vft is `PARTY_VFT_RC_PLAYER`. A failed read of the header or of a slot stays unknown: no leave and no `/초대`. A confirmed read that does not list a name drops that name after the existing 10 second leave confirm. While the leader read is unknown, the monitor may still show the previous join or the member's own fresh report.

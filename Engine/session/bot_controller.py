@@ -1876,6 +1876,46 @@ class BotController:
         except Exception as exc:
             self.log(f"Party log open failed: {exc}")
 
+    def _fresh_party_at_start(self, world):
+        """Drop the saved party pointer and the previous snapshot, then read again.
+
+        The sample already sitting in the reader is not the start read. No new
+        sample means unknown, so nobody is marked joined from the old one.
+        """
+        from pathlib import Path
+
+        from app._01_perception.lc_session import session
+        from app._01_perception.party_listen_reader import PartyListenReader
+        from app._06_party.sync import invite_accepts, member_states
+
+        member_states.clear()
+        invite_accepts.clear()
+        if world is not None:
+            world.last_party = None
+            world.party_read_ok = False
+        engine = Path(__file__).resolve().parents[1]
+        for rel in ("analysis/dll/out/party_cache.txt", "analysis/out/party_cache.txt"):
+            try:
+                (engine / rel).unlink(missing_ok=True)
+            except OSError:
+                pass
+        seq = session.sample_seq("party")
+        snap = PartyListenReader().snapshot_after(seq)
+        if not isinstance(snap, dict):
+            self.log("Party start reread: no new sample — membership unknown")
+            return None
+        names = [
+            str(m.get("name") or "").strip()
+            for m in (snap.get("members") or [])
+            if isinstance(m, dict) and str(m.get("name") or "").strip()
+        ]
+        self.log(
+            "Party start reread: "
+            f"subs_ok={snap.get('subs_ok')} in_party={bool(snap.get('in_party'))} "
+            f"members={', '.join(names) or '—'}"
+        )
+        return snap
+
     def _run_leader_party_setup(self, world) -> None:
         """Once after Start: policy first, leave if needed, then arm the inviter.
 
@@ -1894,19 +1934,7 @@ class BotController:
         if not any(names):
             self.log("Party roster empty — party not started")
             return
-        snap = None
-        try:
-            from session.party_probe import probe_party_live
-
-            probed = probe_party_live().get("party")
-            if isinstance(probed, dict) and probed.get("subs_ok") is not False:
-                snap = probed
-        except Exception:
-            snap = None
-        if snap is None:
-            from app._06_party.invite import action_party_snapshot
-
-            snap = action_party_snapshot(world)
+        snap = self._fresh_party_at_start(world)
         self_name = _player_chat_name(world, snap)
 
         def _setup_log(msg: str) -> None:
