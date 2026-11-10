@@ -25,9 +25,10 @@ _CURE = 8
 _CURSE = 36
 _RESURRECT = 60
 # One spell per group, strongest first. The others stack.
+# Shield, greater haste, and decrease weight are self-only and stay off this list.
 _WEAPON = (47, 11, 7)
-_HASTE = (53, 42)
-_OWN_BUFFS = (2, 20, 25, 41, 13, 54)
+_HASTE = (42,)
+_OWN_BUFFS = (20, 25, 41, 54)
 _BUFF_IDS = _WEAPON + _HASTE + _OWN_BUFFS
 # Same window solo buffs use before a recast.
 _RECAST_S = 10.0

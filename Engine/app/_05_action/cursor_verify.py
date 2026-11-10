@@ -230,6 +230,40 @@ def verify_mage_cast_aim(executor: "ActionExecutor", x: float, y: float) -> bool
     )
 
 
+PARTY_LIST_AIM_WAIT_S = 1.0
+PARTY_LIST_AIM_POLL_S = 0.05
+
+
+def wait_party_spell_aim(
+    executor: "ActionExecutor" | None = None,
+    *,
+    reason: str = "",
+    wait_s: float | None = None,
+    poll_s: float | None = None,
+) -> bool:
+    """True once the spell cursor is up. False when the wait elapses.
+
+    A party-list cast clicks only after this. A click before the circle
+    selects the row and leaves the cursor for the next ground hop.
+    """
+    budget = PARTY_LIST_AIM_WAIT_S if wait_s is None else float(wait_s)
+    step = PARTY_LIST_AIM_POLL_S if poll_s is None else float(poll_s)
+    deadline = time.perf_counter() + max(0.0, budget)
+    while True:
+        if cursor_is_spell_aim(executor):
+            return True
+        now = time.perf_counter()
+        if now >= deadline:
+            from app.bot_log import get_logger
+
+            get_logger("action").info(
+                "party list aim missed reason=%s",
+                str(reason or "party").strip() or "party",
+            )
+            return False
+        time.sleep(min(max(0.0, step), max(0.0, deadline - now)))
+
+
 def cursor_is_spell_aim(executor: "ActionExecutor" | None = None) -> bool:
     """True when the live cursor is still in cast-target (spell) mode.
 
@@ -1272,6 +1306,9 @@ __all__ = [
     "verified_click",
     "verify_attack_aim",
     "verify_mage_cast_aim",
+    "PARTY_LIST_AIM_WAIT_S",
+    "PARTY_LIST_AIM_POLL_S",
+    "wait_party_spell_aim",
     "cursor_is_spell_aim",
     "cancel_spell_aim",
     "verify_loot_aim",

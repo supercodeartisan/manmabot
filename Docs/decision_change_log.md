@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — a party leader starts as the account class
+
+Intent: A party-leader start copies the selected account's class onto the profile before the bot runs. Elf hunts ranged, mage hunts with magic, and knight or royal hunts in melee. The schedule row for that same account stores the same class. A party member start does not do this. The roster seat the leader assigns stays a seat, not a character class.
+Shared: `apply_account_character`, `_sync_party_leader_character`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo start, party-member start, follow, and HP lines are unchanged.
+Affects: the party leader's hunt attack mode and whether that PC is treated as a mage.
+Consent: user ("yes" — party boss task character follows that account's character type).
+Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
+## 2026-11-10 — a party-list cast waits for the spell cursor
+
+Intent: A party-list heal or buff presses its key once, then clicks the member row only after the spell cursor is up. The wait is at most one second. If the cursor never appears, that click is skipped so the row select does not leave the circle for the next ground hop. Shield, greater haste, and decrease weight are no longer party-support spells. A saved check for one of those three is ignored. Haste, weapon buffs, blessed armor, dexterity, might, berserker, and the recovery spells stay. Solo self-buffs still cast shield, greater haste, and decrease weight on the mage.
+Shared: `wait_party_spell_aim`, `_party_list_buff`, `_heal`, `choose_party_support`, `_buff_ids`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `due_buff`, `maybe_cast_buff`, `cancel_spell_aim`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: a class mage in party-member mode, on a party-list heal and on a party-list buff.
+Consent: user ("yes" — click the party row only after the spell cursor is up, and drop shield, greater haste, and decrease weight from party support).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`, `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+
 ## 2026-11-10 — a leftover party row is not a follow goal
 
 Intent: Join and follow use the party-memory leader only when that name is the connected leader's policy `leader_name`. An empty policy name does not match, so the member waits instead of scrolling toward the row that is already in the Party vector at startup. While an invite popup is open, or Y was sent and memory still names someone else, same-map follow waits too. A confirmed name still joins that pose, including a scroll hop when the maps differ.

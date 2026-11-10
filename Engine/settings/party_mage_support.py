@@ -23,8 +23,9 @@ class _SupportSpec:
     note_zh: str
 
 
-# Party-target support, including heal. Self-only spells
-# (이뮨 투 함, 어드밴스 스피릿, 카운터 매직, 홀리 워크, 인비지블리티) stay out.
+# Party-target support, including heal. Self-only spells stay out:
+# 실드, 그레이터 헤이스트, 디크리즈 웨이트, 이뮨 투 함, 어드밴스 스피릿,
+# 카운터 매직, 홀리 워크, 인비지블리티.
 _SPECS: tuple[_SupportSpec, ...] = (
     _SupportSpec(
         0,
@@ -75,12 +76,6 @@ _SPECS: tuple[_SupportSpec, ...] = (
         "復活已死亡隊員的屍體。不能用來補活人的體力。",
     ),
     _SupportSpec(
-        2,
-        "buff",
-        "대상의 방어력을 올립니다. 파티원 한 명에게 겁니다.",
-        "提升對象的防禦力。可施放在一名隊員身上。",
-    ),
-    _SupportSpec(
         7,
         "buff",
         "대상의 무기에 겁니다. 추가 대미지와 근거리 명중이 오르고, 언데드에게 추가 피해가 있습니다.",
@@ -123,22 +118,10 @@ _SPECS: tuple[_SupportSpec, ...] = (
         "提升對象的移動速度與攻擊速度。可施放在一名隊員身上。",
     ),
     _SupportSpec(
-        53,
-        "buff",
-        "이동 속도와 공격 속도를 올립니다. 헤이스트보다 오래 갑니다.",
-        "提升移動速度與攻擊速度。持續時間比加速術更長。",
-    ),
-    _SupportSpec(
         54,
         "buff",
         "대상을 광전사화합니다. 근거리 대미지가 오르고, 방어는 나빠지며, 체력 자연 회복이 멈춥니다.",
         "使對象陷入狂戰士狀態。近距離傷害上升，防禦變差，且無法自然恢復體力。",
-    ),
-    _SupportSpec(
-        13,
-        "buff",
-        "대상이 들고 있는 아이템 무게를 줄입니다. 파티원 한 명에게 겁니다.",
-        "降低對象所持道具的重量。可施放在一名隊員身上。",
     ),
 )
 
