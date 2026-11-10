@@ -8,6 +8,62 @@ Affects: party leader and party member HP potion. Party leader turret after a fi
 Consent: user ("Fix" — party uses the solo HP potion setting and pattern; turret may walk inside the 5×5, and with no target idles on the pointed dot).
 Result: `Engine/app/_06_party/tests/test_leader_care.py` and `test_leader_routine.py`. Not run in game.
 
+## 2026-11-09 — supply waits out a join, and the stand tile is the live one
+
+Intent: While a world-nav join is still walking off a scroll, the shopkeeper does not start a buy or a drop. A failed approach click hands the tick back to follow. A new leader session closes supply. The hunt map follows the leader while they are hunting. The stand sent with the hold is the recipient's current party-memory tile; their own stopped tile replaces it when it arrives. The approach walks to that live tile when party memory has it.
+Shared: `tick_shopkeeper_duty`, `_approach_until_close`, `MemberOrders._drop_orders`, `_party_hunt_open`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: shopkeeper supply during and after a map join, and the stand the leader publishes.
+Consent: user ("yes" — the four edges plus an instant stand tile).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-09 — shopkeeper reads hunt_open from party_reports
+
+Intent: A `party_reports` frame sets `MemberOrders.supply_open` from the leader's `hunt_open`. The shopkeeper supply tick stays closed until that flag is true.
+Shared: `MemberOrders.ingest` for `party_reports` only. `tick_shopkeeper_duty` already returns None while the flag is false, so the join walk continues. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: shopkeeper supply after the leader publishes `hunt_open`.
+Consent: user ("yes" — move the `supply_open` assignment above `continue`).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-09 — a recipient stands only when the shopkeeper is close
+
+Intent: On the hunt map the recipient keeps hunting and following while the shopkeeper is farther than 12 tiles. The stand notice is sent only inside that distance. The shopkeeper walks toward the latest report until then, and does not chase another map.
+Shared: `tick_shopkeeper_duty` and `_approach_until_close`. The hold, the empty-neighbor drop, and pickup after the notice are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party supply approach on the hunt map.
+Consent: user ("yes" — do not stand while the shopkeeper is far; stand only when close).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-09 — supply waits until the hunt mark, and skips anyone who has left
+
+Intent: The shopkeeper does not buy, hold, or drop until the leader start rally is done. A recipient who is retreating or whose map is not the hunt map is left out, and an open hold for them is cleared. On the hunt map, distance does not change the stand: the recipient waits and the shopkeeper walks.
+Shared: `tick_shopkeeper_duty` reads `supply_open` and `supply_ok`. The leader stamps those on `party_reports`. The leader tick and member `decide` skip supply while leaving the hunt. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party supply before the mark, and any recipient on a retreat or another map.
+Consent: user ("예" — close supply before rally and while retreating or off the hunt map).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-09 — a supply recipient stands beside the drop
+
+Intent: When the shopkeeper has stock and chooses who to supply, that person stops on the tile they are on when the notice arrives. The drop lands on an empty neighbor, not on the body. Until the drop notice arrives they attack only a monster already in reach. The drop notice stops that attack and picks the pile up. After the pile is taken, or the shopkeeper cancels, hunt and search run as before.
+Shared: `tick_shopkeeper_duty` publishes `supply_hold` and walks to the confirmed stand. `supply_wait_intent` and `_pickup_claim` run before hunt on the leader tick and in member `decide`. `choose_drop_stand` picks the neighbor. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader and any member named on a supply hold, and the shopkeeper walking to that stand.
+Consent: user ("yes" after the empty-neighbor stand and immediate pickup).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — shopkeeper drop waits for each gesture before the next
+
+Intent: Beside the leader, the shopkeeper opens the inventory, re-reads the already chosen arrow slot, Shift-drags, and types the give count only after the quantity prompt is visible. A supply notice is published only after that arrow's bag count falls by the requested amount. The same failure does not repeat without a pause, and follow does not resume until the drop is confirmed.
+Shared: `_maybe_dismiss_ui` allows `Inventory` only while `party_supply_drop.active` is set. Solo and every other party action still pass an empty allow list. Shop buy, the approach, item-id choice, give count, drop-tile formula, and the notice fields are unchanged.
+Affects: the shopkeeper's ground drop after it is already next to the short member.
+Consent: user (the supply-drop stabilization task).
+Result: `Engine/app/_06_party/tests/test_supply_drop_flow.py`. Not run in game.
+
+## 2026-11-10 — shopkeeper drop walk converts report xy to nav tiles
+
+Intent: A same-map arrow drop walks to the short member's nav tile. Report xy stays game coordinates for a different-map world-nav walk.
+Shared: `game_to_nav` inside `_beside_member` after the other-map branch. Follow, pickup claims (already nav), shortage math, unstick, and solo travel are unchanged.
+Affects: shopkeeper drop approach on the member's map. An off-map goal no longer reaches `start_travel`.
+Consent: user (the coordinate-conversion task, apply if no side effect).
+Result: `test_same_map_drop_converts_game_xy_before_travel` passed with the existing arrow-supply tests. Not run in game.
+
 ## 2026-11-09 — supply pickup matches the notified count
 
 Intent: The member named on a supply drop picks up the pile only when its ground count equals the notified count. An unread ground count still uses the name and the tile. Other seats still leave that tile alone by location.
@@ -23,6 +79,14 @@ Shared: `heal_screen_step` chooses the stand. `PartyMemberManager._party_list_he
 Affects: party-member mage ticks where the due member is on screen and out of heal range. Other classes and the party leader's farm columns are unchanged.
 Consent: user ("let's implement that then" — walk a little toward an on-screen member who is outside heal range).
 Result: unit check in `Engine/app/_06_party/tests/test_hud_heal.py`. Not run in game.
+
+## 2026-11-09 — follow click uses the member-to-slot delta
+
+Intent: On a party-memory read, the next click is a step from the member toward this read's formation slot. The slot is beside or behind the leader, never the leader tile. Delta zero does not click. A hop that still lies on that delta is kept while the body is walking. A delta whose direction changed, or a hop that would pass the slot, clicks the latest tile immediately. The hop stays at most two tiles.
+Shared: `plan_slot_hop` and `plan_field_follow` only. Leader loot, retreat, HP, and login clicks are unchanged.
+Affects: party-member local follow. Repeated reads with the same delta do not restart the step. A leader turn starts a new click on that read.
+Consent: user ("implement" after the same-tick delta proposal).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
 
 ## 2026-11-09 — a one-tile leader step moves the member at once
 

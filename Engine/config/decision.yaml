@@ -89,7 +89,7 @@ decision:
     near_monster_height_tiles: 5
     loot_danger_tiles: 3       # leftover Chebyshev alias; live path uses the box
     arrive_tiles: 1            # Chebyshev distance to count as "arrived" at a goal (field)
-    search_leg_ticks: 30       # decision ticks before rolling a new search hop
+    search_leg_ticks: 60       # decision ticks before rolling a new search hop
 
   # Lineage client language (not Version 1 operator UI).
   # ko = Korean (default). zh = Chinese. Shop / some dialog clicks differ.

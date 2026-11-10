@@ -81,7 +81,28 @@ def party_member_block(
             continue
         if bool(raw.get("is_leader")) and str(raw.get("name") or "").strip():
             return raw
-    return None
+        return None
+
+
+def stand_from_party_memory(
+    snapshot: Optional[dict[str, Any]],
+    name: str,
+    hold_id: str,
+) -> Optional[dict[str, Any]]:
+    """Current party-memory tile for ``name``. The leader sends this with the hold."""
+    row = party_member_block(snapshot, name)
+    if not isinstance(row, dict) or not str(hold_id or "").strip():
+        return None
+    try:
+        return {
+            "id": str(hold_id),
+            "for": str(name or "").strip(),
+            "map_id": int(row["map_id"]),
+            "x": int(row["x"]),
+            "y": int(row["y"]),
+        }
+    except (TypeError, ValueError, KeyError):
+        return None
 
 
 def find_leader(

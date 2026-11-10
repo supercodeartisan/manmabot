@@ -589,7 +589,12 @@ class ActionExecutor:
                 snap = shared_sensors().capture_uidialog()
             except Exception:
                 return
-        if not unexpected_open_labels(snap, allowed=()):
+        # Solo and every other party action still pass an empty allow list.
+        # Inventory is spared only while a party supply drop gesture is active.
+        from app._06_party.supply_drop import dismiss_allowed_labels
+
+        allowed = dismiss_allowed_labels(getattr(self, "_blackboard", None))
+        if not unexpected_open_labels(snap, allowed=allowed):
             return
         now = time.time()
         if now - self._last_dismiss_ui < self._dismiss_ui_gap:

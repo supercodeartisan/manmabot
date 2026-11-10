@@ -64,6 +64,7 @@ class PartyLeaderManager:
         now = time.monotonic()
         if self._rally_walk_pending(rally, row, pose):
             schedule.note_inside(now, False)
+            schedule.note_mark(now, False)
             self._set_place("moving")
             self._arm_travel(blackboard, world, pose)
             return
@@ -74,8 +75,14 @@ class PartyLeaderManager:
                 rally.note_arrived(self._arrival_point(row, pose))
             holding = rally is not None and getattr(rally, "state", "") == "waiting"
             schedule.note_inside(now, True, holding=holding)
+            schedule.note_mark(now, True, holding=holding)
             if not holding and schedule.due(now) and schedule.advance():
                 self._mounted = None
+                self._set_place("moving")
+                self._clear_travel(scratch)
+                self._arm_travel(blackboard, world, pose)
+                return
+            if not holding and schedule.mark_due(now) and schedule.advance_mark():
                 self._set_place("moving")
                 self._clear_travel(scratch)
                 self._arm_travel(blackboard, world, pose)
@@ -88,10 +95,12 @@ class PartyLeaderManager:
             self._pin_point_anchor(row, pose)
             self._mount(blackboard, row)
             schedule.note_inside(now, False)
+            schedule.note_mark(now, False)
             self._clear_travel(scratch)
             self._farm(blackboard)
             return
         schedule.note_inside(now, False)
+        schedule.note_mark(now, False)
         self._arm_travel(blackboard, world, pose)
 
     def _rally_walk_pending(self, rally: Any, row: dict[str, Any], pose: Any) -> bool:
@@ -131,25 +140,34 @@ class PartyLeaderManager:
         if nav is None:
             self._set_place("moving")
             return
-        place = self.schedule.place_nav(nav[0], nav[1])
-        if place == "point":
-            center = self.schedule.point_nav(nav[0], nav[1])
-            self._set_place("turret", anchor=center)
+        mark = self.schedule.current_mark()
+        if mark is not None and str(mark.get("shape") or "") == "point":
+            from app._06_party.leader_schedule import mark_center
+
+            self._set_place("turret", anchor=mark_center(mark))
             return
-        self._set_place("moving", on_area=place == "area")
+        self._set_place("moving", on_area=True)
 
     def _pin_point_anchor(self, row: dict[str, Any], pose: Any) -> None:
-        """Keep the dot as the turret center while a fight outside the box ends."""
-        nav = self._nav_xy(str(row.get("map_id") or ""), pose)
-        center = None if nav is None else self.schedule.nearest_point_nav(nav[0], nav[1])
-        self._set_place("turret", anchor=center)
+        """Keep the current dot as the turret center while a fight outside its box ends."""
+        del row, pose
+        from app._06_party.leader_schedule import mark_center
+
+        mark = self.schedule.current_mark()
+        if mark is None:
+            self._set_place("moving")
+            return
+        self._set_place("turret", anchor=mark_center(mark))
 
     def _finish_point_target(self, world: Any, row: dict[str, Any], pose: Any) -> bool:
-        """True when this row has a dot and the current monster is still alive."""
-        if not self.schedule.has_point() or not self._on_row_map(row, pose):
+        """True when the current mark is a dot and its monster is still alive."""
+        mark = self.schedule.current_mark()
+        if mark is None or str(mark.get("shape") or "") != "point":
+            return False
+        if not self._on_row_map(row, pose):
             return False
         nav = self._nav_xy(str(row.get("map_id") or ""), pose)
-        if nav is None or self.schedule.point_nav(nav[0], nav[1]) is not None:
+        if nav is None or self.schedule.inside_current_nav(nav[0], nav[1]):
             return False
         return self._hunt_target_alive(world)
 
@@ -162,7 +180,7 @@ class PartyLeaderManager:
         nav = self._nav_xy(str(row.get("map_id") or ""), pose)
         if nav is None:
             return False
-        return self.schedule.inside_nav(nav[0], nav[1])
+        return self.schedule.inside_current_nav(nav[0], nav[1])
 
     def _on_row_map(self, row: dict[str, Any], pose: Any) -> bool:
         from app._04_decision.world_nav import pack_ids
@@ -200,7 +218,9 @@ class PartyLeaderManager:
         key = (
             str(row.get("id") or ""),
             tuple(str(mark["name"]) for mark in marks),
+            int(self.schedule.mark_index),
         )
+        blackboard.farm_area_index = int(self.schedule.mark_index)
         if self._mounted == key:
             return
         from app._06_party.leader_schedule import point_farm_bounds
@@ -234,17 +254,23 @@ class PartyLeaderManager:
             from app._04_decision.nav_config import _load_farms_and_home
 
             _load_farms_and_home(nav)
+        from app._04_decision.behaviors.search_hop import clear_search_hop
+
+        clear_search_hop(blackboard)
         from app._04_decision import player_mode as pm
 
         pm.HUNT_MAP_ID = str(row.get("map_id") or "")
         scratch["routine_kind"] = str(row.get("kind") or "battle")
-        blackboard.farm_area_index = 0
+        blackboard.farm_area_index = int(self.schedule.mark_index)
         self._mounted = key
+        mark = self.schedule.current_mark()
         _log.info(
-            "party schedule row=%s map=%s marks=%s",
+            "party schedule row=%s map=%s mark=%s/%s name=%s",
             self.schedule.index,
             row.get("map_id"),
+            self.schedule.mark_index,
             len(rects),
+            "" if mark is None else mark.get("name"),
         )
 
     def _arm_travel(self, blackboard: Any, world: Any, pose: Any) -> None:
@@ -283,9 +309,12 @@ class PartyLeaderManager:
         scratch["world_nav_session"] = session
         scratch.pop("need_world_nav", None)
         ensure_world_nav_mode(blackboard)
+        mark = self.schedule.current_mark()
         _log.info(
-            "party schedule walk row=%s steps=%s",
+            "party schedule walk row=%s mark=%s name=%s steps=%s",
             self.schedule.index,
+            self.schedule.mark_index,
+            "" if mark is None else mark.get("name"),
             len(session.plan.steps) if session.plan else 0,
         )
 

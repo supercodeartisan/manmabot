@@ -61,6 +61,10 @@ class MemberRuntime:
     duty_phase: str = "follow"
     # Last ground drop this shopkeeper made. The leader broadcasts it.
     supply_notice: Optional[dict[str, Any]] = None
+    # Shopkeeper: the recipient who must stand still for this drop.
+    supply_hold: Optional[dict[str, Any]] = None
+    # Recipient: the tile they stopped on for that hold.
+    supply_stand: Optional[dict[str, Any]] = None
     # Extra bag for debug / UI.
     scratch: dict[str, Any] = field(default_factory=dict)
 

@@ -47,7 +47,7 @@ from ui_qt.dialogs.map_editor_dialog import open_map_editor as launch_map_editor
 from ui_qt.dialogs.setup_wizard import SetupWizard
 from ui_qt.editors.task_editor import TaskEditor
 from ui_qt.facade.qt_bridge import QtBridge
-from ui_qt.shell.schedule_list import ScheduleListPane
+from ui_qt.shell.schedule_list import ScheduleListPane, _PANE_WIDTH
 from ui_qt.theme import tokens
 from ui_qt.theme.apply import (
     apply_classic_qt_theme,
@@ -293,6 +293,7 @@ class ScheduleShell(QMainWindow):
         self.schedule_list.newRequested.connect(self._begin_new)
         self.schedule_list.editRequested.connect(self._edit_selected)
         left_col.addWidget(self.schedule_list, stretch=1)
+        left_pane.setFixedWidth(_PANE_WIDTH)
         splitter.addWidget(left_pane)
 
         self.editor = TaskEditor(
@@ -328,8 +329,8 @@ class ScheduleShell(QMainWindow):
         splitter.addWidget(self.editor)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        # Classic: sash locked to randomize row; placeholder until first lock.
-        splitter.setSizes([314, max(400, tokens.DEFAULT_WIDTH - 75 - 314)])
+        # Sash stays on the fixed schedule pane. Language text does not move it.
+        splitter.setSizes([_PANE_WIDTH, max(400, tokens.DEFAULT_WIDTH - 75 - _PANE_WIDTH)])
         splitter.setHandleWidth(0)
         splitter.handle(1).setEnabled(False)
         layout.addWidget(splitter, stretch=1)
@@ -340,7 +341,7 @@ class ScheduleShell(QMainWindow):
         status.showMessage(self.t.get("console_title", "ZF"))
 
     def _lock_pane_split(self) -> None:
-        """Pin the schedule pane to the randomize control (classic sash lock)."""
+        """Keep the schedule pane on its fixed width after layout or language changes."""
         splitter = self._main_splitter
         if splitter is None:
             return
@@ -1037,6 +1038,7 @@ class ScheduleShell(QMainWindow):
                 party._refresh_personal_summary()
         self._sync_party_role_chrome()
         self._refresh_operator(force=True)
+        self._lock_pane_split()
 
     def _on_topmost(self, checked: bool) -> None:
         self.profile.always_on_top = bool(checked)
