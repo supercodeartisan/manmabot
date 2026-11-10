@@ -27,6 +27,237 @@ _JOIN = "party_join_leader"
 _PIN = "party_pin_shop_behavior"
 _FLAG = "party_shopkeeper_arrow"
 _NEAR = 3
+_SEEN = "party_supply_seen"
+# Neighbors tried for the empty drop tile, beside the standing recipient.
+_DROP_NEIGHBORS = ((1, 1), (-1, 1), (1, -1), (1, 0), (0, 1), (0, -1), (-1, 0))
+
+
+def supply_hold_for(duty: dict) -> dict[str, Any]:
+    """Stable hold id for one recipient and one item."""
+    item = str(duty.get("item") or "arrow")
+    name = str(duty.get("name") or "")
+    return {
+        "id": f"hold:{item}:{name}",
+        "for": name,
+        "item": item,
+        "qty": int(duty.get("qty") or 0),
+        "min": int(duty.get("min") or 0),
+    }
+
+
+def claim_names_me(claim: Any, self_name: str) -> bool:
+    if not isinstance(claim, dict) or bool(claim.get("clear")):
+        return False
+    who = str(claim.get("for") or "").strip()
+    me = str(self_name or "").strip()
+    return bool(who and me and who.casefold() == me.casefold())
+
+
+def choose_drop_stand(
+    member_x: int,
+    member_y: int,
+    walkable: Any = None,
+) -> Optional[dict[str, int]]:
+    """Empty neighbor of the stand tile, and where the shopkeeper must stand.
+
+    The ground drag always lands one tile at ``(-1, -1)`` from the shopkeeper.
+    The shopkeeper stand is that drop tile shifted back by the same offset, and
+    it is never the recipient's tile.
+    """
+    from .supply_drop import _DROP_TILES
+
+    dx, dy = int(_DROP_TILES[0][0]), int(_DROP_TILES[0][1])
+    member = (int(member_x), int(member_y))
+    fallback = None
+    for ox, oy in _DROP_NEIGHBORS:
+        drop = (member[0] + int(ox), member[1] + int(oy))
+        stand = (drop[0] - dx, drop[1] - dy)
+        if drop == member or stand == member:
+            continue
+        spot = {
+            "stand_x": stand[0],
+            "stand_y": stand[1],
+            "drop_x": drop[0],
+            "drop_y": drop[1],
+        }
+        if fallback is None:
+            fallback = spot
+        if walkable is not None and (
+            not walkable(drop) or not walkable(stand)
+        ):
+            continue
+        return spot
+    return fallback
+
+
+def plan_supply_drop(
+    duty: dict,
+    stand: Any,
+    walkable: Any = None,
+) -> Optional[dict]:
+    """Shopkeeper travel duty once the recipient has reported a stop tile."""
+    if not isinstance(stand, dict):
+        return None
+    hold_id = supply_hold_for(duty)["id"]
+    if str(stand.get("id") or "") != hold_id:
+        return None
+    if str(stand.get("for") or "").strip().casefold() != str(
+        duty.get("name") or ""
+    ).strip().casefold():
+        return None
+    try:
+        mx = int(stand["x"])
+        my = int(stand["y"])
+        mid = int(stand["map_id"])
+    except (TypeError, ValueError, KeyError):
+        return None
+    spot = choose_drop_stand(mx, my, walkable)
+    if spot is None:
+        return None
+    planned = dict(duty)
+    planned["map_id"] = mid
+    planned["x"] = spot["stand_x"]
+    planned["y"] = spot["stand_y"]
+    planned["exact"] = True
+    planned["drop_x"] = spot["drop_x"]
+    planned["drop_y"] = spot["drop_y"]
+    return planned
+
+
+def remember_supply_stand(runtime: Any, hold: dict, origin: Any, map_id: Any) -> None:
+    """The recipient's current tile is the stand. The drop is beside it."""
+    if runtime is None or origin is None or not hasattr(origin, "x"):
+        return
+    try:
+        runtime.supply_stand = {
+            "id": hold.get("id"),
+            "for": hold.get("for"),
+            "map_id": None if map_id is None else int(map_id),
+            "x": int(origin.x),
+            "y": int(origin.y),
+        }
+    except (TypeError, ValueError):
+        return
+
+
+def _tile_open(tile: tuple[int, int]) -> bool:
+    try:
+        from app._04_decision.nav_config import get_terrain_map
+
+        terrain = get_terrain_map()
+    except Exception:
+        return True
+    if terrain is None:
+        return True
+    try:
+        return bool(terrain.is_walkable(int(tile[0]), int(tile[1])))
+    except Exception:
+        return True
+
+
+def _claim_key(claim: dict) -> tuple:
+    return (
+        str(claim.get("id") or ""),
+        str(claim.get("item") or ""),
+        claim.get("x"),
+        claim.get("y"),
+    )
+
+
+def _supply_seen(blackboard: Any, claim: dict) -> bool:
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return False
+    return scratch.get(_SEEN) == _claim_key(claim)
+
+
+def _mark_supply_seen(blackboard: Any, claim: dict) -> None:
+    scratch = getattr(blackboard, "scratch", None)
+    if isinstance(scratch, dict):
+        scratch[_SEEN] = _claim_key(claim)
+
+
+def _drop_combat_lock(blackboard: Any) -> None:
+    """Stop the swing that was in progress so pickup or the stand can own the tick."""
+    if blackboard is None:
+        return
+    if getattr(blackboard, "current_target_id", None) is not None:
+        blackboard.current_target_id = None
+    try:
+        from app._04_decision.behaviors.combat import clear_engage_state
+
+        clear_engage_state(blackboard)
+    except Exception:
+        return
+
+
+def supply_wait_intent(state: Any, blackboard: Any) -> Any:
+    """Stand still. Attack only a monster already inside reach."""
+    from .intents import attack, idle
+
+    if blackboard is not None:
+        try:
+            from app._04_decision.behaviors.search_hop import clear_search_hop
+
+            clear_search_hop(blackboard)
+        except Exception:
+            pass
+    monster = None
+    reach = 1
+    if state is not None and blackboard is not None:
+        try:
+            from app._04_decision.behaviors.hold_ground import hold_ground_reach
+            from app._04_decision.combat_query import (
+                can_engage_target,
+                nearest_attackable,
+                tile_distance_from_player,
+            )
+
+            reach = int(hold_ground_reach(state))
+            origin = getattr(blackboard, "world_origin", None)
+            monster = nearest_attackable(
+                state,
+                origin=origin,
+                check_path=False,
+                near_tiles=reach,
+                screen_only=False,
+            )
+            if monster is not None and (
+                tile_distance_from_player(monster) > reach
+                or (origin is not None and not can_engage_target(monster, origin))
+            ):
+                monster = None
+        except Exception:
+            monster = None
+    if monster is not None:
+        tid = int(getattr(monster, "track_id", 0))
+        mid = getattr(blackboard, "current_target_id", None) == tid
+        try:
+            from app._04_decision.behaviors.combat import begin_engage, note_attack_attempt
+
+            if mid:
+                note_attack_attempt(blackboard, monster)
+            else:
+                begin_engage(state, blackboard, tid, finish_kill=True)
+        except Exception:
+            pass
+        if hasattr(blackboard, "emit"):
+            from app._02_state.enums import ActionType
+
+            blackboard.current_goal = "combat"
+            blackboard.emit(
+                ActionType.ATTACK,
+                target_id=tid,
+                priority=0.5,
+                reason="supply hold: in range",
+                mid_act=mid,
+            )
+            intent = getattr(blackboard, "intent", None)
+            if intent is not None:
+                return intent
+        return attack(tid, "supply hold", mid_act=mid)
+    _drop_combat_lock(blackboard)
+    return idle("supply hold")
 
 
 def tick_shopkeeper_duty(
@@ -88,12 +319,25 @@ def tick_shopkeeper_duty(
         skip_buys=_unaffordable_items(board, state),
     )
     if duty is None:
+        runtime.supply_hold = None
         _clear_shop_flags(board)
         runtime.duty_phase = DUTY_FOLLOW
         return None
     if duty["kind"] == "buy":
+        runtime.supply_hold = None
         return _tick_buy(manager, state, duty)
-    return _tick_drop(manager, state, duty)
+    runtime.supply_hold = supply_hold_for(duty)
+    planned = plan_supply_drop(
+        duty, getattr(member_orders, "supply_stand", None), _tile_open
+    )
+    if planned is None:
+        runtime.duty_phase = DUTY_SUPPLY
+        runtime.last_kind = "supply"
+        runtime.last_reason = "wait for stand"
+        from .intents import idle
+
+        return idle("supply hold")
+    return _tick_drop(manager, state, planned)
 
 
 def tick_supply_pickup(
@@ -347,6 +591,7 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         "qty": int(duty["qty"]),
         "at": time.time(),
     }
+    runtime.supply_hold = None
     runtime.duty_phase = DUTY_FOLLOW
     runtime.last_kind = "supply"
     runtime.last_reason = f"{item} dropped"
@@ -381,7 +626,9 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
     # game_to_nav leaves an already-nav pair unchanged.
     mx, my = game_to_nav(mx, my)
     dist = tile_chebyshev(int(origin.x), int(origin.y), mx, my)
-    if dist <= _NEAR:
+    # exact: stand on the tile that makes the drag land on the empty neighbor.
+    limit = 0 if bool(duty.get("exact")) else _NEAR
+    if dist <= limit:
         return True
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
@@ -597,6 +844,8 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
         from app._02_state.enums import ActionType
         from .types import ActionIntent
 
+        _drop_combat_lock(blackboard)
+        _mark_supply_seen(blackboard, claim)
         if runtime is not None:
             runtime.last_kind = "supply"
             runtime.last_reason = f"pick up {claim.get('item') or 'supply'}"
@@ -607,7 +856,17 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
             reason=f"party_member:supply {claim.get('item') or 'arrows'}",
         )
     if dist <= _NEAR and pile is None:
-        return None
+        # Stay only until the pile appears. Once it has been picked up, hunt resumes.
+        if _supply_seen(blackboard, claim):
+            return None
+        _drop_combat_lock(blackboard)
+        from .intents import idle
+
+        if runtime is not None:
+            runtime.last_kind = "supply"
+            runtime.last_reason = "supply pickup"
+        return idle("supply pickup")
+    _drop_combat_lock(blackboard)
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
     goal = (tx, ty)
@@ -622,4 +881,9 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
                 runtime.last_kind = "supply"
                 runtime.last_reason = "walk to arrows"
             return intent
-    return None
+    from .intents import idle
+
+    if runtime is not None:
+        runtime.last_kind = "supply"
+        runtime.last_reason = "supply pickup"
+    return idle("supply pickup")

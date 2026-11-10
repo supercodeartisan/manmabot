@@ -571,6 +571,10 @@ class MemberOrders:
         self.party_reports: list[dict[str, Any]] = []
         # Ground arrow pile the leader told this member about. None = none.
         self.supply_drop: Optional[dict[str, Any]] = None
+        # Stop on the current tile until this drop lands. None = not waiting.
+        self.supply_hold: Optional[dict[str, Any]] = None
+        # Tile the recipient stopped on. The shopkeeper drops beside it.
+        self.supply_stand: Optional[dict[str, Any]] = None
 
     @property
     def order_kind(self) -> str:
@@ -586,6 +590,8 @@ class MemberOrders:
         self._policy_dirty = False
         self.party_reports = []
         self.supply_drop = None
+        self.supply_hold = None
+        self.supply_stand = None
 
     def clear(self) -> None:
         self._drop_orders()
@@ -644,6 +650,18 @@ class MemberOrders:
                     self.supply_drop = None
                 else:
                     self.supply_drop = dict(body)
+                continue
+            if kind == "supply_hold":
+                if bool(body.get("clear")):
+                    self.supply_hold = None
+                else:
+                    self.supply_hold = dict(body)
+                continue
+            if kind == "supply_stand":
+                if bool(body.get("clear")):
+                    self.supply_stand = None
+                else:
+                    self.supply_stand = dict(body)
                 continue
             if kind == "party_reports":
                 rows = body.get("reports")

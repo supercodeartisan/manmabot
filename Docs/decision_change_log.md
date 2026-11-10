@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — a supply recipient stands beside the drop
+
+Intent: When the shopkeeper has stock and chooses who to supply, that person stops on the tile they are on when the notice arrives. The drop lands on an empty neighbor, not on the body. Until the drop notice arrives they attack only a monster already in reach. The drop notice stops that attack and picks the pile up. After the pile is taken, or the shopkeeper cancels, hunt and search run as before.
+Shared: `tick_shopkeeper_duty` publishes `supply_hold` and walks to the confirmed stand. `supply_wait_intent` and `_pickup_claim` run before hunt on the leader tick and in member `decide`. `choose_drop_stand` picks the neighbor. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader and any member named on a supply hold, and the shopkeeper walking to that stand.
+Consent: user ("yes" after the empty-neighbor stand and immediate pickup).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — shopkeeper drop waits for each gesture before the next
 
 Intent: Beside the leader, the shopkeeper opens the inventory, re-reads the already chosen arrow slot, Shift-drags, and types the give count only after the quantity prompt is visible. A supply notice is published only after that arrow's bag count falls by the requested amount. The same failure does not repeat without a pause, and follow does not resume until the drop is confirmed.
