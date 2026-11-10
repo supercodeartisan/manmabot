@@ -1,14 +1,13 @@
 # Decision change log
 
-<<<<<<< Updated upstream
-## 2026-11-09 — search hop waits 60 ticks before a new click
+## 2026-11-09 — party leader rotates checked marks in order
 
-Intent: A hunting search click is kept until the body is on that tile, or 60 decision ticks pass. 30 ticks (~1.9s) was cutting a 5-tile walk after 3–4 tiles and picking a nearby cell.
-Shared: `search_leg_ticks` in `Engine/config/decision.yaml` and the `LEG_TICKS` default. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
-Affects: farming search hops only. World-nav walks, combat, and loot hops are unchanged. A blocked hop now waits about 4 seconds before "stuck, jumping elsewhere".
-Consent: user ("두배로 늘이라" after the 30-vs-60 disclosure).
-Result: config and default only. Not run in game.
-=======
+Intent: On one party row, the leader hunts the checked marks in check order. Each mark keeps its saved stay. When that stay ends, the leader walks to the next mark. The last mark wraps to the first. The row's own minutes still move to the next row.
+Shared: `PartyLeaderSchedule.goal_nav`, `inside_current_nav`, `note_mark`, `advance_mark`, and `PartyLeaderManager.prepare`. A dot's finish-the-fight behavior applies only to the current mark. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader while a row has more than one checked area or point. Solo farm rotation is unchanged. One checked mark stays on that mark and restarts its stay clock.
+Consent: user ("수정하라, 솔로봇과 같이 여러개의 지역이 다 순서대로 돌아야").
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-09 — supply waits out a join, and the stand tile is the live one
 
 Intent: While a world-nav join is still walking off a scroll, the shopkeeper does not start a buy or a drop. A failed approach click hands the tick back to follow. A new leader session closes supply. The hunt map follows the leader while they are hunting. The stand sent with the hold is the recipient's current party-memory tile; their own stopped tile replaces it when it arrives. The approach walks to that live tile when party memory has it.
@@ -40,7 +39,14 @@ Shared: `tick_shopkeeper_duty` reads `supply_open` and `supply_ok`. The leader s
 Affects: party supply before the mark, and any recipient on a retreat or another map.
 Consent: user ("예" — close supply before rally and while retreating or off the hunt map).
 Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
->>>>>>> Stashed changes
+
+## 2026-11-09 — search hop waits 60 ticks before a new click
+
+Intent: A hunting search click is kept until the body is on that tile, or 60 decision ticks pass. 30 ticks (~1.9s) was cutting a 5-tile walk after 3–4 tiles and picking a nearby cell.
+Shared: `search_leg_ticks` in `Engine/config/decision.yaml` and the `LEG_TICKS` default. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: farming search hops only. World-nav walks, combat, and loot hops are unchanged. A blocked hop now waits about 4 seconds before "stuck, jumping elsewhere".
+Consent: user ("두배로 늘이라" after the 30-vs-60 disclosure).
+Result: config and default only. Not run in game.
 
 ## 2026-11-09 — a supply recipient stands beside the drop
 

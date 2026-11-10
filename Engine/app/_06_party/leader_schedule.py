@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from settings.farm_schedule import DEFAULT_FARM_STAY_S, stay_seconds_for
 from settings.party_routine import normalize_party_routine
 
 
@@ -158,6 +159,9 @@ class PartyLeaderSchedule:
         self.elapsed = 0.0
         self.finished = False
         self._inside_since: Optional[float] = None
+        self.mark_index = 0
+        self.mark_elapsed = 0.0
+        self._mark_since: Optional[float] = None
 
     @classmethod
     def from_routine(cls, raw: Any) -> "PartyLeaderSchedule":
@@ -174,14 +178,73 @@ class PartyLeaderSchedule:
             return []
         return hunt_marks(row)
 
-    def goal_nav(self) -> Optional[tuple[str, int, int]]:
-        """Nav-space center of the first mark. None when the row is map-only."""
-        row = self.current()
+    def current_mark(self) -> Optional[dict[str, int | str]]:
+        """The checked mark this row is hunting now, in check order."""
         marks = self.marks()
-        if row is None or not marks:
+        if not marks:
             return None
-        x, y = mark_center(marks[0])
+        self.mark_index = int(self.mark_index) % len(marks)
+        return marks[self.mark_index]
+
+    def goal_nav(self) -> Optional[tuple[str, int, int]]:
+        """Nav-space center of the current mark. None when the row is map-only."""
+        row = self.current()
+        mark = self.current_mark()
+        if row is None or mark is None:
+            return None
+        x, y = mark_center(mark)
         return str(row.get("map_id") or ""), x, y
+
+    def inside_current_nav(self, x: int, y: int) -> bool:
+        """True inside the current mark only. A later mark does not count."""
+        mark = self.current_mark()
+        if mark is None:
+            return False
+        return place_at([mark], x, y) != "none"
+
+    def mark_stay_s(self) -> float:
+        """Seconds saved for the current mark. A missing stay uses the solo default."""
+        row = self.current()
+        mark = self.current_mark()
+        if row is None or mark is None:
+            return float(DEFAULT_FARM_STAY_S)
+        stays = row.get("farm_stays_s")
+        if not isinstance(stays, dict):
+            stays = {}
+        return stay_seconds_for(str(mark.get("name") or ""), stays, DEFAULT_FARM_STAY_S)
+
+    def note_mark(self, now: float, inside: bool, *, holding: bool = False) -> None:
+        """Add time spent inside the current mark. A hold or a step outside pauses it."""
+        if self.finished or holding or not inside:
+            self._mark_since = None
+            return
+        if self._mark_since is None:
+            self._mark_since = float(now)
+            return
+        self.mark_elapsed += float(now) - self._mark_since
+        self._mark_since = float(now)
+
+    def mark_due(self, now: float) -> bool:
+        mark = self.current_mark()
+        if mark is None or self.finished:
+            return False
+        elapsed = self.mark_elapsed
+        if self._mark_since is not None:
+            elapsed += float(now) - self._mark_since
+        return elapsed >= self.mark_stay_s()
+
+    def advance_mark(self) -> bool:
+        """Move to the next checked mark. The last mark wraps to the first.
+
+        One mark stays put and its stay clock restarts. The row clock is unchanged.
+        """
+        marks = self.marks()
+        self.mark_elapsed = 0.0
+        self._mark_since = None
+        if len(marks) < 2:
+            return False
+        self.mark_index = (int(self.mark_index) + 1) % len(marks)
+        return True
 
     def place_nav(self, x: int, y: int) -> str:
         """Nav tile: point (turret box), area (moving hunt), or none."""
@@ -232,6 +295,9 @@ class PartyLeaderSchedule:
         self.index += 1
         self.elapsed = 0.0
         self._inside_since = None
+        self.mark_index = 0
+        self.mark_elapsed = 0.0
+        self._mark_since = None
         self.finished = False
         return True
 
