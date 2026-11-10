@@ -202,6 +202,7 @@ def test_failed_drop_does_not_notify_or_follow() -> None:
         "reason": "qty prompt failed",
     }
     manager = _Manager()
+    manager._nav_blackboard.scratch["party_supply_attempt"] = {"dropping": True}
     try:
         action = _tick_drop(manager, object(), _duty())
     finally:
@@ -224,6 +225,7 @@ def test_verified_drop_notifies_and_resumes_follow() -> None:
     arrow_duty._beside_member = lambda manager, state, duty: True  # type: ignore[method-assign]
     supply_drop.step_ground_drop = _ok  # type: ignore[method-assign]
     manager = _Manager()
+    manager._nav_blackboard.scratch["party_supply_attempt"] = {"dropping": True}
     try:
         action = _tick_drop(manager, object(), _duty())
     finally:

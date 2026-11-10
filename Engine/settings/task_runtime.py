@@ -389,6 +389,17 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             profile_key,
             bool(party.get(bag_key, getattr(profile, profile_key, default))),
         )
+    from settings.party_mage_support import normalize_saved
+
+    set_value(
+        "party_mage_support_skills",
+        normalize_saved(
+            party.get(
+                "mage_support_skills",
+                getattr(profile, "party_mage_support_skills", {}),
+            )
+        ),
+    )
     pickup = str(
         party.get("loot_pickup", getattr(profile, "party_loot_pickup", "all"))
         or "all"

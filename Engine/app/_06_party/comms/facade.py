@@ -260,8 +260,19 @@ class PartyComms:
         log: Optional[LogFn] = None,
     ) -> None:
         note = log or (lambda _m: None)
+        from app._06_party.member_identity import my_player_name
+
+        player = getattr(world, "player", None)
+        identity = getattr(player, "identity", None)
+        confirmed = my_player_name(getattr(world, "last_print_state", None)) or str(
+            getattr(identity, "name", "") or ""
+        ).strip()
         name = self_name_from_party(
-            getattr(world, "last_party", None), map_id, x, y
+            getattr(world, "last_party", None),
+            map_id,
+            x,
+            y,
+            confirmed=confirmed,
         )
         try:
             if member_orders.take_report():

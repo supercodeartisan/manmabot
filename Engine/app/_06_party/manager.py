@@ -104,7 +104,9 @@ class PartyMemberManager:
 
     def apply_leader_policy(self, policy: dict[str, Any], *, self_name: str = "") -> None:
         """Overlay leader ``party_policy`` on the member's own knobs (temporary)."""
-        merged = self.base_config.merge_leader_policy(policy, self_name=self_name)
+        merged = self.base_config.merge_leader_policy(
+            policy, self_name=self_name, resolve_seat=True
+        )
         self.config = self.config.with_knobs_from(merged)
         self.leader_policy = dict(policy)
 
@@ -352,14 +354,16 @@ class PartyMemberManager:
                 )
                 from .arrow_policy import pile_reserved
                 from .comms.orders import member_orders
-                from .loot import _self_row_name
+                from .loot import stable_self_identity
 
                 me = ""
                 if origin_ok:
-                    me = _self_row_name(
+                    me, _me_guid = stable_self_identity(
                         getattr(game_state, "last_party", None),
                         (int(origin.x), int(origin.y)),
                         self.runtime.local_map_id,
+                        player=getattr(game_state, "player", None),
+                        print_state=getattr(game_state, "last_print_state", None),
                     )
                 claim = member_orders.supply_drop
                 if isinstance(claim, dict):
@@ -392,45 +396,103 @@ class PartyMemberManager:
                 self._record_decision(escape)
                 return escape
 
+            from .arrow_duty import expire_supply_hold, note_care_pose, release_care_pose
+            from .support import urgent_self_survival
+
+            release_care_pose(self._nav_blackboard, game_state)
+            care = urgent_self_survival(
+                game_state,
+                self._nav_blackboard,
+                origin if origin_ok else None,
+            )
+            if care is not None:
+                note_care_pose(self._nav_blackboard, game_state)
+                expire_supply_hold(self)
+                self.runtime.last_kind = "support"
+                self.runtime.last_reason = str(
+                    getattr(care, "reason", "") or "self care"
+                )
+                _log.info(
+                    "care before supply action=%s reason=%s",
+                    getattr(getattr(care, "action", None), "value", None)
+                    or getattr(care, "action", None)
+                    or "—",
+                    self.runtime.last_reason,
+                )
+                self._record_decision(care)
+                return care
+
             from .arrow_duty import (
                 claim_names_me,
+                recipient_hold_intent,
                 remember_supply_stand,
-                supply_wait_intent,
                 tick_shopkeeper_duty,
                 tick_supply_pickup,
             )
             from .comms.orders import member_orders
-            from .loot import _self_row_name
+            from .loot import stable_self_identity
 
             seat_name = ""
+            seat_guid = ""
             if origin_ok:
-                seat_name = _self_row_name(
+                seat_name, seat_guid = stable_self_identity(
                     getattr(game_state, "last_party", None),
                     (int(origin.x), int(origin.y)),
                     self.runtime.local_map_id,
+                    player=getattr(game_state, "player", None),
+                    print_state=getattr(game_state, "last_print_state", None),
                 )
             leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
             hold = None if leaving else member_orders.supply_hold
-            if claim_names_me(hold, seat_name):
-                remember_supply_stand(
-                    self.runtime, hold, origin, self.runtime.local_map_id
+            if claim_names_me(hold, seat_name, seat_guid):
+                from .arrow_duty import _hold_confirmed, leader_hold_displaced
+
+                left = leader_hold_displaced(
+                    self._nav_blackboard, game_state, hold
                 )
+                if _hold_confirmed(self._nav_blackboard, hold):
+                    remember_supply_stand(
+                        self.runtime, hold, origin, self.runtime.local_map_id
+                    )
+                else:
+                    self.runtime.supply_stand = None
+                if left:
+                    hold = None
             else:
                 self.runtime.supply_stand = None
             picked = None if leaving else tick_supply_pickup(
-                self, game_state, self_name=seat_name
+                self, game_state, self_name=seat_name, self_guid=seat_guid
             )
             if picked is not None:
                 self._record_decision(picked)
                 return picked
             drop = member_orders.supply_drop
-            if claim_names_me(hold, seat_name) and not claim_names_me(drop, seat_name):
-                waited = supply_wait_intent(game_state, self._nav_blackboard)
+            if claim_names_me(hold, seat_name, seat_guid) and not claim_names_me(
+                drop, seat_name, seat_guid
+            ):
+                waited = recipient_hold_intent(
+                    game_state, self._nav_blackboard, hold, tracked=True
+                )
                 self.runtime.last_kind = "supply"
                 self.runtime.last_reason = "supply hold"
                 self._record_decision(waited)
                 return waited
             if str(cfg.seat_role or "") == "shopkeeper":
+                party_heal = self._opening_shopkeeper_heal(
+                    game_state, origin if origin_ok else None
+                )
+                if party_heal is not None:
+                    expire_supply_hold(self)
+                    self.runtime.last_kind = "support"
+                    self.runtime.last_reason = str(
+                        getattr(party_heal, "reason", "") or "urgent party heal"
+                    )
+                    _log.info(
+                        "urgent party heal before supply reason=%s",
+                        self.runtime.last_reason,
+                    )
+                    self._record_decision(party_heal)
+                    return party_heal
                 duty = tick_shopkeeper_duty(self, game_state, self_name=seat_name)
                 if duty is not None:
                     self._record_decision(duty)
@@ -892,7 +954,14 @@ class PartyMemberManager:
         ):
             listed = self._party_list_heal(game_state, origin if origin_ok else None)
             if listed is not None:
-                return self._return_support(listed, MemberKind.HEAL)
+                from app._02_state.enums import ActionType
+
+                kind = (
+                    MemberKind.BUFF
+                    if getattr(listed, "action", None) is ActionType.BUFF
+                    else MemberKind.HEAL
+                )
+                return self._return_support(listed, kind)
         reason = result.reason
         if returning and result.kind is MemberKind.FOLLOW:
             reason = f"catch_up {reason}"
@@ -1304,8 +1373,41 @@ class PartyMemberManager:
         self.runtime.scratch["_list_heal_note"] = text
         _log.info("list heal: %s", text)
 
-    def _party_list_heal(self, game_state: Any, origin: Any) -> Any:
-        """Click the lowest other member under 80% HP on the party list."""
+    def _opening_shopkeeper_heal(self, game_state: Any, origin: Any) -> Any:
+        """In-range urgent party heal for a mage who is also the shopkeeper.
+
+        A walk toward the patient, a buff, and a routine list heal stay on
+        the later tick. Town, a scroll, and a stall keep the shop trip.
+        """
+        if str(self.config.seat_role or "") != "shopkeeper":
+            return None
+        try:
+            mage = mage_skips_party_assist(game_state)
+        except Exception:
+            mage = False
+        if not mage:
+            return None
+        from .support import shop_floor_blocks_party_heal, urgent_list_heal_pct
+
+        if shop_floor_blocks_party_heal(self._nav_blackboard):
+            return None
+        pct = urgent_list_heal_pct()
+        if pct is None:
+            return None
+        return self._party_list_heal(
+            game_state, origin, cast_only=True, below=pct, heals_only=True
+        )
+
+    def _party_list_heal(
+        self,
+        game_state: Any,
+        origin: Any,
+        *,
+        cast_only: bool = False,
+        below: Optional[int] = None,
+        heals_only: bool = False,
+    ) -> Any:
+        """Checked support for another member: heal, cure, resurrection, or a buff."""
         if game_state is None:
             self._note_list_heal("skip no game")
             return None
@@ -1318,6 +1420,7 @@ class PartyMemberManager:
             self._note_list_heal("skip party list closed")
             return None
         board = self._nav_blackboard
+        heal_ready = True
         try:
             from app._04_decision.mode_control import mp_ratio
             from app._04_decision.spells import can_cast_spell, slot_ready
@@ -1330,62 +1433,75 @@ class PartyMemberManager:
                     self._note_list_heal(f"skip mp {int(float(ratio) * 100)}%")
                 return None
             if board is not None and not slot_ready(board, "heal", urgent=True):
-                self._note_list_heal("skip heal slot not ready")
-                return None
+                heal_ready = False
         except Exception as exc:
             self._note_list_heal(f"skip heal gate {exc}")
+            return None
+        if heals_only and not heal_ready:
+            self._note_list_heal("skip heal slot not ready")
             return None
         if origin is None or self.runtime.local_map_id is None:
             self._note_list_heal("skip no pose")
             return None
         self_name = ""
+        self_guid = ""
         try:
-            from websocket.party_orders import self_name_from_party
+            from .loot import stable_self_identity
 
-            self_name = self_name_from_party(
+            self_name, self_guid = stable_self_identity(
                 party,
+                (int(origin.x), int(origin.y)),
                 self.runtime.local_map_id,
-                getattr(origin, "x", None),
-                getattr(origin, "y", None),
+                player=getattr(game_state, "player", None),
+                print_state=getattr(game_state, "last_print_state", None),
             )
         except Exception:
             self_name = ""
-        from .hud_heal import assess_list_heal, heal_screen_step
-        from .intents import list_heal, plan_slot_hop
+            self_guid = ""
+        from settings.party_mage_support import checked_skill_ids
 
-        click, note = assess_list_heal(
+        from .intents import list_support, plan_slot_hop
+        from .mage_support import choose_party_support, remember_cast
+
+        ledger = self.runtime.scratch.get("party_mage_ledger")
+        if not isinstance(ledger, dict):
+            ledger = {"maps": {}, "spells": {}}
+            self.runtime.scratch["party_mage_ledger"] = ledger
+        try:
+            from .comms.orders import member_orders
+
+            reports = list(getattr(member_orders, "party_buffs", None) or [])
+        except Exception:
+            reports = []
+        heal_line = int(below) if below is not None else self._mage_list_heal_pct()
+        choice, note = choose_party_support(
             party.get("members"),
             hud.get("slots"),
+            self_guid=self_guid or None,
             self_name=self_name,
-            below=self._mage_list_heal_pct(),
             here=(
                 getattr(origin, "x", None),
                 getattr(origin, "y", None),
                 self.runtime.local_map_id,
             ),
+            checked=checked_skill_ids(self.config.mage_support_skills),
+            hotbar=getattr(game_state, "last_hotbar", None),
+            reports=reports,
+            ledger=ledger,
+            below=heal_line,
+            cast_only=bool(cast_only),
+            heals_only=bool(heals_only),
+            allow_heals=bool(heal_ready),
         )
-        if click is None:
-            step = heal_screen_step(
-                party.get("members"),
-                hud.get("slots"),
-                self_name=self_name,
-                below=self._mage_list_heal_pct(),
-                here=(
-                    getattr(origin, "x", None),
-                    getattr(origin, "y", None),
-                    self.runtime.local_map_id,
-                ),
-            )
-            if step is None:
-                self._note_list_heal(note)
-                return None
-            self._note_list_heal(
-                f"step {step['name']} hp={step['hp_pct']} dist={step['dist']}"
-            )
+        if choice is None:
+            self._note_list_heal(note or "skip support")
+            return None
+        if choice.get("kind") == "step":
+            self._note_list_heal(note)
             try:
                 intent, goal, detail, hop = plan_slot_hop(
                     origin,
-                    step["goal"],
+                    choice["goal"],
                     previous_goal=self.runtime.approach_goal,
                     previous_hop=self.runtime.follow_hop,
                     kind="heal_step",
@@ -1402,32 +1518,52 @@ class PartyMemberManager:
             self._record_decision(intent)
             return intent
         self._note_list_heal(note)
-        box: Any = None
-        key = ""
-        try:
-            from app._04_decision.behaviors.mode_actions import heal_press_slot
-
-            slot = heal_press_slot(game_state)
-            if slot is not None:
-                box, key = int(slot[0]), str(slot[1])
-        except Exception:
-            box, key = None, ""
-        if board is not None:
+        spell = str(choice.get("spell") or "")
+        if spell in ("heal", "heal_all") and board is not None:
             try:
                 from app._04_decision.spells import mark_slot_used
 
                 mark_slot_used(board, "heal")
             except Exception:
                 pass
-        dist = click.get("dist")
-        return list_heal(
-            str(click["name"]),
-            int(click["click_x"]),
-            int(click["click_y"]),
-            hp_pct=int(click["hp_pct"]),
-            dist=int(dist) if dist is not None else None,
-            hotbar_box=box,
-            hotbar_key=key or None,
+        if spell == "buff":
+            try:
+                remember_cast(
+                    ledger,
+                    int(choice.get("guid") or 0),
+                    int(choice.get("skill_id") or 0),
+                    time.time(),
+                )
+            except Exception:
+                pass
+        if board is not None:
+            try:
+                board.magic_last_cast = time.time()
+            except Exception:
+                pass
+        from app._02_state.enums import ActionType
+
+        action = ActionType.BUFF if spell == "buff" else ActionType.HEAL
+        if spell == "heal_all":
+            text = "heal all"
+        elif spell == "heal":
+            dist = choice.get("dist")
+            dist_bit = f" dist={int(dist)}" if dist is not None else ""
+            text = (
+                f"list heal {choice.get('name')} hp={int(choice.get('hp_pct') or 0)}"
+                f"{dist_bit}"
+            )
+        else:
+            dist = choice.get("dist")
+            dist_bit = f" dist={int(dist)}" if dist is not None else ""
+            text = f"{spell} {choice.get('label')} {choice.get('name')}{dist_bit}"
+        return list_support(
+            text,
+            action=action,
+            click_x=choice.get("click_x"),
+            click_y=choice.get("click_y"),
+            hotbar_box=choice.get("box"),
+            hotbar_key=choice.get("key") or None,
         )
 
     def _return_support(self, support: Any, kind: MemberKind) -> Any:

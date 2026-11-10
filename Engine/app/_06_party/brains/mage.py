@@ -1,26 +1,35 @@
 """Mage brain (마법사).
 
-Seat for a spell caster in the party. Later this adopts buff, heal, and
-spell-range steps. It does not emit an intent yet, and it does not change
-the member assist path.
+Adopts the decision ``PartyMemberManager`` already made. Class-mage heal and
+the assist skip stay in that manager. The live session still calls it directly.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
+from ..config import PartyMemberConfig
+from ..manager import PartyMemberManager
 from .base import AdoptedDecision, BrainRole, DecisionBrain
 
 
 class MageBrain(DecisionBrain):
     role = BrainRole.MAGE
 
+    def __init__(
+        self,
+        manager: Optional[PartyMemberManager] = None,
+        config: PartyMemberConfig | dict | None = None,
+    ) -> None:
+        self.manager = manager if manager is not None else PartyMemberManager(config)
+
     def adopt(self, game_state: Any) -> AdoptedDecision:
-        del game_state
+        intent = self.manager.decide(game_state)
+        reason = str(getattr(intent, "reason", "") or "") if intent is not None else "idle"
         return AdoptedDecision(
             role=self.role,
-            intent=None,
-            reason="mage_brain_unwired",
-            ready=False,
+            intent=intent,
+            reason=reason,
+            ready=True,
         )
 
 

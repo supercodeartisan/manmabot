@@ -183,6 +183,117 @@ Shared: `line_for` no longer returns a potion ratio. Potion enable, hotbar, and 
 Affects: party leader and party member HP potion. Party leader turret after a fight ends. Area marks and solo hunt search are unchanged.
 Consent: user ("Fix" — party uses the solo HP potion setting and pattern; turret may walk inside the 5×5, and with no target idles on the pointed dot).
 Result: `Engine/app/_06_party/tests/test_leader_care.py` and `test_leader_routine.py`. Not run in game.
+## 2026-11-10 — a supply buy is the configured shop count
+
+Intent: A party supply purchase buys the UI buy count for that item. The sum of each member's shortage does not raise it, and a bag under the shopkeeper reserve does not raise it either. Spare above the reserve is still dropped first. A bag under the reserve, or a reserve with nothing left while someone is short, is what starts the shop. Adena still limits the count, and MP is still not bought. The per-person drop count and solo shop quantities stay as they are.
+Shared: `planned_buy_qty`, `supply_fill_qty`, `party_shop_buy_qty`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, the drop gesture, Esc, the stop check, MP and arrow rules, solo hunt, and Brain wiring are unchanged.
+Affects: how many HP potions, depoison potions, or arrows the shopkeeper types at the party supply shop.
+Consent: user ("예" — buy the UI amount, do not add up party shortages or fill the reserve in that same count).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-10 — a party mage casts checked support spells on other members
+
+Intent: The party-screen checks are the only spells this mage casts on other members. An empty save keeps heal. Single-target heals use the strongest checked spell on the hotbar (full, greater, extra, heal). Heal all is used only when two or more other members are under the heal line and inside 9 tiles; one member uses a single heal, and heal all alone does not cover that one member. Cure and remove curse run only when a fresh buff report shows poison or a curse. Resurrection clicks a 0% row. Buffs recast when the remain is missing or at or under 10 seconds. A report newer than 20 seconds is the remain. Otherwise the mage counts from the click plus the catalog duration. Three reports after a cast that still lack the buff park that pair for 30 seconds. Death or a map change clears that member's clock. Weapon spells keep bless, then enchant, then holy. Speed keeps greater haste, then haste. Shield, blessed armor, dexterity, might, decrease weight, and berserker each stand alone. One cast per tick, after self retreat, potion, self heal, in-range defense, and self buff. The leader sends buff and ailment rows to every connected member. The shopkeeper supply bundle stays with the shopkeeper. A mage shopkeeper still interrupts a shop only for an in-range heal at the character's own heal line.
+Shared: `choose_party_support`, `_party_list_heal`, `publish_party_buffs`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo magic, self buffs, assist, and other classes are unchanged.
+Affects: a class mage in party-member mode, and the leader's 10-second buff forward.
+Consent: user ("ok, great, let's implement" after the checked-spell, remain, heal-order, and leader-relay plan).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
+
+## 2026-11-10 — a supply drop is planned on the map pack's nav tile
+
+Intent: `supply_stand` keeps the coordinates it received. Those coordinates become a nav tile only when this map's pack says so: a point on the nav grid is already nav, and a point that lands on that grid after subtracting the pack origin is a game tile. Both readings, or neither, do not pick a tile. The drop neighbor is chosen on that nav tile. The party-list recheck no longer cancels only because its map number differs. The same map confirms the tile: the same tile drops, one tile retargets, two or more tiles cancel. A party row that is a real tile on another map, and not on the stand map, cancels. Anything else waits, and the hold stays.
+Shared: `plan_supply_drop`, `_leader_drop_recheck`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, Esc, the stop check, the 8-second timeout, the 6-second pause, MP and arrow rules, solo hunt, and Brain wiring are unchanged.
+Affects: the shopkeeper's drop tile for a confirmed stand, including a leader stand on Talking Island.
+Consent: user (convert the received stand with that map's pack, do not trust a differing party map by itself, defer when the latest tile is not confirmed, cancel a confirmed map change or a two-tile move, retarget only a one-tile move on the same map).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — Talking Island map 0 is a real supply stand
+
+Intent: Map id 0 is the Talking Island map, so a stopped live tile there is confirmed and sent. A pose that was not read is still not a stand, and tile `0,0` is still not a stand. The half-second settle, Esc retries, 8-second timeout, 6-second pause, two-tile cancel, and 12-tile approach stay as they are. The shopkeeper already accepts map 0 on the drop tile.
+Shared: `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, the drop gesture, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: a supply stand while the recipient is on Talking Island.
+Consent: user (keep map id 0 as a real map, still drop tile 0,0 and an unread map, and do not change Esc, the settle time, the timeout, the pause, the two-tile cancel, or the 12-tile approach).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — a supply stand waits until the live tile has been still
+
+Intent: While a hold is unconfirmed and the body is still walking, Esc is pressed again only at a half-second gap, and at most three times. A stop or a survival action sends no further Esc. The party log records each press, the stop that follows, and a walk that is still moving after the last press. The stand is confirmed only when the live map is not 0 and that live tile has stayed still, with the body not walking, for half a second. One stopped sample does not confirm. `supply_stand` carries that live map and tile. Party memory and `map_id` 0 are not sent. Before confirmation a coordinate change only updates the latest tile. After confirmation, two tiles or a map change cancels even if the drop was announced. One tile still retargets at drop time. The 8-second timeout and the 6-second pause stay.
+Shared: `recipient_hold_intent`, `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, the drop gesture, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: the party member, including the leader, who receives a supply hold, from the moment the hold starts until `supply_stand` is sent.
+Consent: user (limited Esc retries only while still moving, half-second live-tile confirmation, send the live map and tile, keep the post-stop two-tile cancel and the one-tile drop retarget, keep the 8s timeout and 6s pause).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — a supply stand is sent only after the walk has stopped
+
+Intent: A hold stops the ground click already in progress, and `supply_stand` is sent only after the body is stopped on the same tile a second time. Until that confirmation, a two-tile change updates the latest coordinate and does not cancel. After confirmation, two tiles or a map change still cancels. The shopkeeper drops only from a confirmed stand for the current attempt id. A stand-moved cancel and a stand timeout both wait out the existing short pause before the same person and item are tried again. Critical retreat, a potion, and urgent self-heal stay first, and a survival action that changes the tile still cancels the hold.
+Shared: `leader_hold_displaced`, `leader_supply_stand`, `recipient_hold_intent`, `_stand_left`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: the party member, including the leader, who receives a supply hold, and the shopkeeper's drop anchor.
+Consent: user (halt the in-progress ground move, send supply_stand only after a real stop, update coordinates before confirmation, apply the two-tile and map cancel only after confirmation, use only a confirmed stand for the current attempt, and pause a retry after stand moved or a failed stop).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — a supply hold stays up, and the recipient hunts in place until the drop
+
+Intent: Once the shopkeeper is within 12 tiles, that hold stays for the same person and item even if the next step is outside 12 again. The recipient stops new search and chase, and attacks only a monster already in reach, until the shopkeeper announces the drop. The announce is one tick beside the recipient before the ground gesture, and it is published on the same hold id with `dropping`. That tick clears combat so they can receive. A finished drop, the 8-second stand timeout, a two-tile departure after the body stops, or a map change returns the hunt to normal. Critical retreat, a potion, and urgent self-heal still come first.
+Shared: `tick_shopkeeper_duty`, `_tick_drop`, `recipient_hold_intent`, `leader_supply_action`, `_publish_supply_hold`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo hunt, buy quantity, MP and arrow rules, and Brain wiring are unchanged.
+Affects: a party member, including the leader, who is the recipient of a supply drop.
+Consent: user (keep the hold and supply the short member; while waiting, hunt in place without moving; stop hunting when the drop starts; return to normal when the supply ends).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — confirmed self name, and the leader stands before the supply tile
+
+Intent: A nearby party leader or another member is not this character's name. The print-state or client-memory name is used, and a name that is not on the roster is seat `unknown`, so shopkeeper, mage-list heal, assist, and loot do not run. A supply hold for the leader still lets critical retreat, a potion, and urgent self-heal go first. Only a hold requested after the shopkeeper is within 12 tiles stops new attacks and chase. The stand tile is the party-memory coordinate after the body has stopped, not the tile where the hold arrived. Walking before that stop updates the latest tile and does not cancel. After the stop, two tiles or a map change cancels as before, and one tile still retargets the drop. Cancel, a finished drop, or the stand timeout clears the hold and the hunt decision runs again. Hold ids and attempt numbers are unchanged.
+Shared: `self_name_from_party`, `seat_role_for_name`, `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo hunt, buy quantity, MP and arrow rules, other members' hold rules, and Brain wiring are unchanged.
+Affects: which seat a member applies from the leader policy, and a party leader who is the supply recipient.
+Consent: user ("두 문제를 함께 수정" — confirmed self name, unknown seat, leader stands only after a 12-tile hold, stand coordinates after the body stops).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — a one-tile leader step retargets the drop
+
+Intent: A map change, or a move of two tiles or more, still clears the supply hold. A one-tile difference does not. Immediately before the drop, the stand tile is compared with the leader's live party-memory tile. When those differ by one tile, the drop is aimed at the live tile and the gesture does not run on the old square.
+Shared: `_leader_drop_recheck`, `_tick_drop`, `plan_supply_drop`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The two-tile hold cancel, solo hunt, solo shop, buy quantity, MP and arrow rules, and Brain wiring are unchanged.
+Affects: a supply drop whose recipient is the party leader and whose live tile is one step off the confirmed stand.
+Consent: user ("두 칸 기준은 홀드 취소 조건으로 유지하더라도, 실제 드롭 좌표는 최신 위치와 일치해야 합니다").
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-10 — role priority clashes, without a new party architecture
+
+Intent: The leader's critical retreat stays first. Urgent self care (potion, self heal, in-range defense) runs before a supply hold or pickup, and a hold whose tile moves is cleared so a new hold can be taken. A class mage who is also the shopkeeper casts an in-range urgent party heal before a buy or a drop; routine heals, buffs, town, and the scroll stay on the existing shop trip. A purchase that is still buying keeps going. Once that purchase is finished, leftover shop travel does not block the walk back to the leader. A supply target is chosen by guid when one exists. A duplicated name, or two nearby rows and no name, is not guessed from coordinates. The start rally already opens the hunt when the leader reaches the mark, so the old "wait for members" tests now expect that.
+Shared: `leader_supply_action`, `cancel_supply_delivery`, `_opening_shopkeeper_heal`, `release_finished_party_shop`, `stable_self_identity`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo hunt, solo shop quantities, the 10s report, MP and arrow rules, and Brain wiring are unchanged.
+Affects: the leader while named on a supply hold, a mage shopkeeper, the shopkeeper after a finished buy, and who a supply hold is allowed to name.
+Consent: user ("역할별 행동 우선순위에서 발생하는 충돌만 먼저 수정" — leader survival before hold, urgent party heal only, finished shop must not block join, stable supply identity, and judge the rally tests).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`, `test_leader_rally.py`, and `test_leader_pose_fresh.py`. Not run in game.
+
+## 2026-11-09 — a hold still expires during survival, and a blocked drop can end
+
+Intent: While the shopkeeper repeats a survival action, the stand wait keeps its clock. At 8 seconds the existing hold clear runs, so the recipient is released, and the survival action still owns the tick. A blocked ground drop retries a few times. After that the same clear releases the hold, skips that member briefly, and follow runs again.
+Shared: `expire_supply_hold`, `_tick_drop`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 10s report, buy quantity, MP and arrow rules, mage class versus seat, and Brain wiring are unchanged.
+Affects: a shopkeeper who is waiting on a stand and then drinks, heals, or defends, and a drop gesture that stays blocked.
+Consent: user ("두 가지 예외만 먼저 보완" — hold expiry during survival, and limited recovery for arrow drop blocked).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py` and `Engine/app/_06_party/tests/test_supply_drop_flow.py`. Not run in game.
+
+## 2026-11-09 — one town trip covers the party shortfall
+
+Intent: Spare above the reserve is still dropped before another town trip. A buy that refills an empty reserve also includes the party's shortage, and a bag with no spare left buys that shortage in one trip, capped at 999. MP stays a drop because no shop behavior exists. ShopkeeperBrain and MageBrain return the manager's existing decision. The session still calls PartyMemberManager.decide. Solo shop quantities stay on the solo path.
+Shared: `planned_buy_qty`, `party_supply_need`, `choose_supply_duty`, `next_supply_buy`, `ShopkeeperBrain.adopt`, `MageBrain.adopt`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the shopkeeper's next buy size when the party is short. Follow, assist, heal, and solo shops are unchanged.
+Consent: user ("yes, let's proceed" — phase 3, and keep working solo and party logic working).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py` and `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-09 — supply counts and roles stay current, and the party log says so
+
+Intent: MP still goes to the roster mage seat, and also to a class mage whose seat is not mage. Arrows skip that same set. Party heal and melee assist stay on the character class. After a drop, the shopkeeper adds that quantity onto the count the current report still shows, until a different report arrives. While walking to a recipient, a changed live tile replaces the previous goal. The same party log records the phase-1 care, stand timeout, drop shift, and shop-approach reset.
+Shared: `mp_recipient_names`, `remember_delivered`, `rows_with_expected`, `_approach_until_close`, `release_care_pose`, `cancel_supply_delivery`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 10s report interval, buy quantity, MP shop purchase, and Brain wiring are unchanged.
+Affects: who receives MP and arrows, the next supply choice after a drop, and the shopkeeper's approach tile.
+Consent: user ("okay, let's implement 2차기능들 too" and add logs for phase 1 and phase 2).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py` and `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-09 — survival before supply, and a delivery that can end
+
+Intent: Urgent self care (HP potion, self heal, in-range defense) runs before a supply hold, a shop buy, or a drop. Buffs and party heals stay where they were. A survival action does not delete the shop trip. If that action moved or teleported the body, the shop NPC approach and the drop tile are checked again. Waiting for a stop tile times out, the existing hold clear tells the other side, and that member is skipped briefly. The next attempt has its own hold id, so the old stop tile cannot open it. When the stand has no empty neighbor, the shopkeeper steps to a safe adjacent tile and measures again, a few times, then clears the hold and goes back to hunting.
+Shared: `urgent_self_survival`, `tick_shopkeeper_duty`, `release_care_pose`, `cancel_supply_delivery`, `choose_drop_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 10s report, MP and arrow rules, mage class versus seat, buy quantity, and Brain wiring are unchanged.
+Affects: every party member's self care before supply, and the shopkeeper's wait, shift, and cancel.
+Consent: user ("네, 제안한 1차 범위로 진행해 주세요" — survival first, resume the shop, stand timeout, per-attempt state, limited empty-tile retries).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
 
 ## 2026-11-09 — supply waits out a join, and the stand tile is the live one
 

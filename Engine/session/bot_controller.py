@@ -2216,7 +2216,7 @@ class BotController:
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
         self._publish_supply_hold()
-        self._publish_supply_stand(world, map_id)
+        self._publish_supply_stand(world, map_id, blackboard)
 
     def _leader_blackboard(self):
         board = getattr(getattr(self, "_party_leader_ref", None), "decision", None)
@@ -2448,67 +2448,69 @@ class BotController:
             publish_body({"type": "supply_hold", "from": "leader", "clear": True})
             publish_body({"type": "supply_stand", "from": "leader", "clear": True})
             self._party_hold_id = ""
+            self._party_hold_drop = False
             self._party_stand_key = None
             return
-        if str(hold.get("id")) != sent_id:
-            publish_body(
-                {
-                    "type": "supply_hold",
-                    "from": "leader",
-                    "clear": False,
-                    "id": hold.get("id"),
-                    "for": hold.get("for"),
-                    "item": hold.get("item") or "arrow",
-                    "qty": hold.get("qty"),
-                    "min": hold.get("min"),
-                }
-            )
+        dropping = bool(hold.get("dropping"))
+        sent_drop = bool(getattr(self, "_party_hold_drop", False))
+        if str(hold.get("id")) != sent_id or sent_drop != dropping:
+            body = {
+                "type": "supply_hold",
+                "from": "leader",
+                "clear": False,
+                "id": hold.get("id"),
+                "for": hold.get("for"),
+                "item": hold.get("item") or "arrow",
+                "qty": hold.get("qty"),
+                "min": hold.get("min"),
+                "dropping": dropping,
+            }
+            if str(hold.get("guid") or "").strip():
+                body["guid"] = hold.get("guid")
+            publish_body(body)
             self._party_hold_id = str(hold.get("id"))
+            self._party_hold_drop = dropping
             self._party_stand_key = None
 
-    def _publish_supply_stand(self, world, map_id) -> None:
+    def _publish_supply_stand(self, world, map_id, blackboard=None) -> None:
+        del map_id
         hold = self._leader_supply_hold()
         if not isinstance(hold, dict) or not hold.get("id"):
             return
-        from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.publish import publish_body
-        from app._06_party.leader import stand_from_party_memory
         from app._06_party.sync import member_states
 
         me = _player_chat_name(world, getattr(world, "last_party", None))
         who = str(hold.get("for") or "").strip()
+        leader_self = bool(me and who and me.casefold() == who.casefold())
         stand = None
-        for row in member_states.rows.values():
-            live = row.get("live") if isinstance(row, dict) else None
-            body = live.get("supply_stand") if isinstance(live, dict) else None
-            if not isinstance(body, dict):
-                continue
-            if str(body.get("id") or "") != str(hold.get("id")):
-                continue
-            stand = body
-            break
-        if stand is None:
-            stand = stand_from_party_memory(
-                getattr(world, "last_party", None), who, str(hold.get("id"))
+        if leader_self:
+            from app._06_party.arrow_duty import leader_supply_stand
+
+            stand = leader_supply_stand(
+                blackboard, getattr(world, "last_party", None), hold
             )
-        if stand is None and me and who and me.casefold() == who.casefold():
-            pose = live_pose_from_state(world)
-            if pose is not None:
-                stand = {
-                    "id": hold.get("id"),
-                    "for": who,
-                    "map_id": int(pose.map_id),
-                    "x": int(pose.x),
-                    "y": int(pose.y),
-                }
-        if not isinstance(stand, dict):
+        else:
+            for row in member_states.rows.values():
+                live = row.get("live") if isinstance(row, dict) else None
+                body = live.get("supply_stand") if isinstance(live, dict) else None
+                if not isinstance(body, dict):
+                    continue
+                if str(body.get("id") or "") != str(hold.get("id")):
+                    continue
+                stand = body
+                break
+        if not isinstance(stand, dict) or stand.get("confirmed") is not True:
             return
-        key = (
-            str(stand.get("id") or ""),
-            stand.get("map_id"),
-            stand.get("x"),
-            stand.get("y"),
-        )
+        try:
+            mid = int(stand["map_id"])
+            sx = int(stand["x"])
+            sy = int(stand["y"])
+        except (TypeError, ValueError, KeyError):
+            return
+        if sx == 0 and sy == 0:
+            return
+        key = (str(stand.get("id") or ""), mid, sx, sy)
         if key == getattr(self, "_party_stand_key", None):
             return
         publish_body(
@@ -2518,9 +2520,10 @@ class BotController:
                 "clear": False,
                 "id": stand.get("id"),
                 "for": stand.get("for") or who,
-                "map_id": stand.get("map_id") if stand.get("map_id") is not None else map_id,
-                "x": stand.get("x"),
-                "y": stand.get("y"),
+                "map_id": mid,
+                "x": sx,
+                "y": sy,
+                "confirmed": True,
             }
         )
         self._party_stand_key = key
@@ -2645,17 +2648,8 @@ class BotController:
         """
         import json
 
-        from app._04_decision.world_nav.session import live_pose_from_state
-        from app._06_party.comms.orders import self_name_from_party
-
         snap = getattr(world, "last_party", None)
-        pose = live_pose_from_state(world)
-        px = py = None
-        mid = map_id
-        if pose is not None:
-            px, py = int(pose.x), int(pose.y)
-            mid = int(pose.map_id)
-        name = self_name_from_party(snap, mid, px, py) or _player_chat_name(world, snap)
+        name = _player_chat_name(world, snap)
         body = {k: v for k, v in policy.items() if k not in ("ts", "sender")}
         sig = json.dumps(body, sort_keys=True, default=str) + "|" + str(name or "")
         if sig == getattr(self, "_member_policy_sig", ""):
@@ -2933,13 +2927,16 @@ class BotController:
                 }
             hold = getattr(runtime, "supply_hold", None)
             if isinstance(hold, dict) and hold.get("id"):
-                out["supply_hold"] = {
+                reported = {
                     "id": hold.get("id"),
                     "for": hold.get("for"),
                     "item": hold.get("item") or "arrow",
                     "qty": hold.get("qty"),
                     "min": hold.get("min"),
                 }
+                if str(hold.get("guid") or "").strip():
+                    reported["guid"] = hold.get("guid")
+                out["supply_hold"] = reported
             stand = getattr(runtime, "supply_stand", None)
             if isinstance(stand, dict) and stand.get("id"):
                 out["supply_stand"] = {
@@ -3157,6 +3154,9 @@ class BotController:
                     if str(getattr(profile, "character", "") or "").strip().lower()
                     == "mage"
                     else "member"
+                ),
+                "mage_support_skills": dict(
+                    getattr(profile, "party_mage_support_skills", None) or {}
                 ),
             }
         )
@@ -3916,7 +3916,6 @@ class BotController:
                             self._drain_party_reports(world)
                         except Exception as drain_exc:
                             self.log(f"Party leader drain failed: {drain_exc}")
-                    me = _player_chat_name(world, getattr(world, "last_party", None))
                     supply_here = (
                         self._party_leader_on()
                         and self._party_hunt_open(world)
@@ -3924,19 +3923,12 @@ class BotController:
                     )
                     hold = self._leader_supply_hold() if supply_here else None
                     claim = self._leader_supply_claim() if supply_here else None
-                    from app._06_party.arrow_duty import claim_names_me, supply_wait_intent
+                    from app._06_party.arrow_duty import leader_supply_action
 
-                    if claim_names_me(claim, me):
-                        pickup = self._leader_arrow_pickup(world, decision.blackboard)
-                        if pickup is not None:
-                            action = pickup
-                        elif claim_names_me(hold, me):
-                            action = supply_wait_intent(world, decision.blackboard)
-                        else:
-                            action = leader_brain.decide(world)
-                    elif claim_names_me(hold, me):
-                        action = supply_wait_intent(world, decision.blackboard)
-                    else:
+                    action = leader_supply_action(
+                        world, decision.blackboard, hold, claim
+                    )
+                    if action is None:
                         action = leader_brain.decide(world)
                     try:
                         self._leader_party_tick(
@@ -4141,17 +4133,4 @@ def _player_chat_name(world, snapshot) -> str:
     name = str(getattr(player, "species_name", None) or "").strip()
     if name:
         return name
-    if not isinstance(snapshot, dict):
-        return ""
-    from app._04_decision.world_nav.session import live_pose_from_state
-    from app._06_party.comms.orders import self_name_from_party
-
-    try:
-        pose = live_pose_from_state(world)
-        if pose is None:
-            return ""
-        return str(
-            self_name_from_party(snapshot, pose.map_id, pose.x, pose.y) or ""
-        ).strip()
-    except Exception:
-        return ""
+    return ""

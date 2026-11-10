@@ -453,7 +453,7 @@ class ActionExecutor:
                 self._heal(bounds, action)
 
             elif action.action == ActionType.BUFF:
-                self._buff(action.reason, action)
+                self._buff(action.reason, action, bounds)
 
             elif action.action == ActionType.TELEPORT:
                 self._teleport()
@@ -1285,8 +1285,11 @@ class ActionExecutor:
         cx = getattr(intent, "click_x", None) if intent is not None else None
         cy = getattr(intent, "click_y", None) if intent is not None else None
         list_target = cx is not None and cy is not None and bounds.valid
+        heal_all = "heal all" in str(getattr(intent, "reason", "") or "")
         before = float(self._last_magic_at or 0.0)
-        self._press_assigned_skill("heal", forced_slot=forced, once=list_target)
+        self._press_assigned_skill(
+            "heal", forced_slot=forced, once=list_target or heal_all
+        )
         if not list_target:
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
@@ -1304,9 +1307,20 @@ class ActionExecutor:
         )
         self.mouse.click(screen_x, screen_y, snap=True)
 
-    def _buff(self, which: str, intent: ActionIntent | None = None) -> None:
-        """Self buff: checked catalog buff, or haste / legacy role slot."""
+    def _buff(
+        self,
+        which: str,
+        intent: ActionIntent | None = None,
+        bounds: WindowBounds | None = None,
+    ) -> None:
+        """Self buff: checked catalog buff, or haste / legacy role slot.
+
+        A party-list buff presses the chosen key once, then clicks that row.
+        A second press would clear the target cursor.
+        """
         name = str(which or "")
+        if intent is not None and self._party_list_buff(intent, bounds):
+            return
         if name.startswith("buff:") and intent is not None:
             box = int(intent.hotbar_box or 0)
             key = str(intent.hotbar_key or "").strip().lower()
@@ -1356,6 +1370,49 @@ class ActionExecutor:
                 key,
             )
         self._last_magic_at = time.time()
+
+    def _party_list_buff(self, intent: ActionIntent, bounds: WindowBounds | None = None) -> bool:
+        """True when this buff aims at a party-list row and the press was handled."""
+        cx = getattr(intent, "click_x", None)
+        cy = getattr(intent, "click_y", None)
+        if cx is None or cy is None:
+            return False
+        box = int(getattr(intent, "hotbar_box", 0) or 0)
+        key = str(getattr(intent, "hotbar_key", "") or "").strip().lower()
+        if box not in (1, 2, 3) or not key:
+            return True
+        from app._04_decision.spells import can_cast_spell
+
+        world = getattr(self, "_world", None)
+        if world is not None and not can_cast_spell(world):
+            return True
+        if self._last_magic_at > 0:
+            wait = sb.MAGIC_COOLDOWN_S - (time.time() - self._last_magic_at)
+            if wait > 0:
+                time.sleep(wait)
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "skill press name=%s box=%s key=%s double=0",
+            str(getattr(intent, "reason", "") or "party buff"),
+            int(box),
+            key,
+        )
+        self._press_box_skill(box, key)
+        self._last_magic_at = time.time()
+        if bounds is None or not bounds.valid:
+            return True
+        screen_x = float(bounds.left) + int(cx)
+        screen_y = float(bounds.top) + int(cy)
+        get_logger("action").info(
+            "party list buff click client=(%s,%s) screen=(%s,%s)",
+            int(cx),
+            int(cy),
+            int(screen_x),
+            int(screen_y),
+        )
+        self.mouse.click(screen_x, screen_y, snap=True)
+        return True
 
     def _catalog_buff_is_double(self, buff) -> bool:
         """Weapon buffs use the existing power_up double press. Armor stays one press."""

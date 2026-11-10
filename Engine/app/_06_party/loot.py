@@ -145,6 +145,109 @@ def _self_row_name(
     return best
 
 
+def _identity_rows(snapshot: Any) -> list[dict]:
+    """Party rows plus the leader block, without the same guid twice."""
+    from .follow import guid_key
+
+    raw: list[dict] = []
+    if isinstance(snapshot, dict):
+        leader = snapshot.get("leader")
+        if isinstance(leader, dict):
+            raw.append(leader)
+        raw.extend(_party_rows(snapshot))
+    seen: list[dict] = []
+    keys: set[tuple] = set()
+    for row in raw:
+        gid = guid_key(row.get("guid"))
+        name = str(row.get("name") or "").strip().casefold()
+        if gid is not None:
+            key: tuple = ("g", gid)
+        else:
+            key = ("n", name, row.get("map_id"), row.get("x"), row.get("y"))
+        if key in keys:
+            continue
+        keys.add(key)
+        seen.append(row)
+    return seen
+
+
+def _my_print_identity(print_state: Any) -> tuple[str, str]:
+    """``(name, guid)`` from the MyPlayer row. Empty when that row is absent."""
+    if not isinstance(print_state, dict):
+        return "", ""
+    rows = print_state.get("entities") or print_state.get("ents") or []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        cls = str(row.get("class") or row.get("cls") or "")
+        if not (row.get("self") or cls in ("MyPlayer", "SELF")):
+            continue
+        name = str(row.get("name") or "").strip()
+        guid = str(row.get("guid") or row.get("ent") or "").strip()
+        return name, guid
+    return "", ""
+
+
+def stable_self_identity(
+    snapshot: Any,
+    me: tuple[int, int],
+    local_map_id: Optional[int],
+    *,
+    player: Any = None,
+    print_state: Any = None,
+) -> tuple[str, str]:
+    """``(name, guid)`` for supply claims.
+
+    A party guid wins. A unique character name is next. Coordinates are used
+    only when nothing else identifies the body, and only when exactly one row
+    is close. Two close rows return no identity.
+    """
+    from .follow import guid_key
+    from .leader import _guids_match
+
+    rows = _identity_rows(snapshot)
+    print_name, print_guid = _my_print_identity(print_state)
+    player_guid = str(getattr(player, "memory_guid", None) or "").strip()
+    identity = getattr(player, "identity", None)
+    player_name = str(getattr(identity, "name", None) or "").strip()
+    if not player_name:
+        player_name = str(getattr(player, "species_name", None) or "").strip()
+    guid = print_guid or player_guid
+    if guid_key(guid) is not None:
+        matched = [row for row in rows if _guids_match(row.get("guid"), guid)]
+        if len(matched) == 1:
+            name = str(matched[0].get("name") or "").strip() or print_name or player_name
+            return name, guid
+        if len(matched) > 1:
+            return "", ""
+    name = print_name or player_name
+    if name:
+        named = [
+            row
+            for row in rows
+            if str(row.get("name") or "").strip().casefold() == name.casefold()
+        ]
+        if len(named) > 1 and guid_key(guid) is None:
+            return "", ""
+        if len(named) == 1:
+            found = str(named[0].get("guid") or "").strip()
+            return name, found or guid
+        if not rows:
+            return name, guid
+        return name, guid
+    near: list[dict] = []
+    for row in rows:
+        tile = _row_tile_on_map(row, local_map_id)
+        if tile is None:
+            continue
+        if _cheb(me, tile) <= _SELF_ROW_TILES:
+            near.append(row)
+    if len(near) != 1:
+        return "", ""
+    row = near[0]
+    return str(row.get("name") or "").strip(), str(row.get("guid") or "").strip()
+
+
 def _other_looter_tiles(
     snapshot: Any,
     me: tuple[int, int],

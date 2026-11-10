@@ -250,6 +250,8 @@ class Profile:
     party_member_heal_pct: int = 70
     party_member_potion_pct: int = 50
     party_mage_heal_pct: int = 80
+    # Party-screen support checks (mage_<id> → bool). Empty means heal only.
+    party_mage_support_skills: dict = field(default_factory=dict)
     party_retreat_pct: int = 30
     party_mother_tree: bool = True
     party_talking_scroll: bool = True
@@ -579,6 +581,12 @@ class Profile:
         if "party_shopkeeper_arrow_buy" in kwargs:
             kwargs["party_shopkeeper_arrow_buy"] = _party_arrow_count(
                 kwargs.get("party_shopkeeper_arrow_buy"), 200, 1, 999
+            )
+        if "party_mage_support_skills" in kwargs:
+            from settings.party_mage_support import normalize_saved
+
+            kwargs["party_mage_support_skills"] = normalize_saved(
+                kwargs.get("party_mage_support_skills")
             )
         for key, default, low, high in (
             ("party_member_hp_min", 10, 0, 9999),

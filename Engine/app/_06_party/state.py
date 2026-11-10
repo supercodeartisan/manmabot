@@ -61,6 +61,8 @@ class MemberRuntime:
     duty_phase: str = "follow"
     # Last ground drop this shopkeeper made. The leader broadcasts it.
     supply_notice: Optional[dict[str, Any]] = None
+    # Counts added onto a report that has not caught up with a drop yet.
+    supply_expected: dict[tuple[str, str], dict[str, int]] = field(default_factory=dict)
     # Shopkeeper: the recipient who must stand still for this drop.
     supply_hold: Optional[dict[str, Any]] = None
     # Recipient: the tile they stopped on for that hold.

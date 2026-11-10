@@ -1,16 +1,9 @@
-"""Leader start rally: wait at the party schedule mark, then hunt.
+"""Leader start rally: reach the party schedule mark, then hunt.
 
-The party schedule walks to its own mark point. This wait does not stop that
-walk at the current tile or at the first teleporter. ``note_arrived`` starts
-the wait when the leader is on that point, not merely inside a hunt rectangle.
-Members are not sent the tile. Once party memory says they are in the party,
-they follow the leader's live tile. After the wait, the schedule stays on
-that mark and hunts.
-
-Waits for every roster member, then continues. With ``deadline`` (the leader
-start wait, ``invite.START_WAIT_S`` from Start) it gives up at that time in any
-state; without it, ``WAIT_TIMEOUT_S`` after the wait starts. Members still out
-then join later by following the leader. Used once per Start.
+The walk to the mark is not paused at the current tile or the first teleporter.
+``note_arrived`` opens the hunt when the leader is on that mark. Members are
+not waited on and are not sent the tile. Once party memory shows them in the
+party, they follow the leader's live tile.
 """
 from __future__ import annotations
 
@@ -78,7 +71,7 @@ def plan_start(plan: Any) -> Optional[tuple[int, int, int]]:
 
 
 class LeaderStartRally:
-    """off → await_mark → waiting → done."""
+    """off → await_mark → done. Arriving at the mark opens the hunt."""
 
     def __init__(
         self,

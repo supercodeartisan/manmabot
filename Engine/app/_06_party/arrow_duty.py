@@ -16,12 +16,18 @@ from .arrow_policy import (
     bag_supply_counts,
     choose_supply_duty,
     mage_seat_names,
+    mp_recipient_names,
     next_supply_buy,
+    remember_delivered,
     report_supply_count,
+    rows_with_expected,
     supply_fill_qty,
     supply_pile_matches,
     supply_pile_qty_ok,
 )
+from .party_log import get_logger as _party_logger
+
+_log = _party_logger("member")
 
 _JOIN = "party_join_leader"
 _PIN = "party_pin_shop_behavior"
@@ -29,22 +35,184 @@ _FLAG = "party_shopkeeper_arrow"
 _NEAR = 3
 # Recipient keeps hunting until the shopkeeper is this close, then stands.
 SUPPLY_HOLD_TILES = 12
+# How long a close shopkeeper waits for this attempt's stop tile.
+STAND_WAIT_S = 8.0
+# After a timeout or a failed drop search, leave that member alone this long.
+SUPPLY_PAUSE_S = 6.0
+# The stop tile is real only after the body has stayed there this long.
+HOLD_SETTLE_S = 0.5
+# Esc again only while the body is still walking, and only this often.
+HOLD_HALT_GAP_S = 0.5
+HOLD_HALT_MAX = 3
+# Moves to a neighboring tile when the stand has no empty drop tile.
+DROP_SHIFT_MAX = 4
 _SEEN = "party_supply_seen"
+_ATTEMPT = "party_supply_attempt"
+_PAUSE = "party_supply_pause"
+_CARE_POSE = "party_care_pose"
 # Neighbors tried for the empty drop tile, beside the standing recipient.
 _DROP_NEIGHBORS = ((1, 1), (-1, 1), (1, -1), (1, 0), (0, 1), (0, -1), (-1, 0))
+_SHIFT_STEPS = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1))
 
 
 def supply_hold_for(duty: dict) -> dict[str, Any]:
-    """Stable hold id for one recipient and one item."""
+    """Hold id for one recipient, one item, and one delivery attempt.
+
+    Attempt 0 keeps the original id. A later attempt adds the attempt number
+    so a stop tile from the previous try cannot open the drop.
+    """
     item = str(duty.get("item") or "arrow")
     name = str(duty.get("name") or "")
-    return {
-        "id": f"hold:{item}:{name}",
+    try:
+        attempt = int(duty.get("attempt") or 0)
+    except (TypeError, ValueError):
+        attempt = 0
+    ident = f"hold:{item}:{name}" if attempt <= 0 else f"hold:{item}:{name}:{attempt}"
+    hold = {
+        "id": ident,
         "for": name,
         "item": item,
         "qty": int(duty.get("qty") or 0),
         "min": int(duty.get("min") or 0),
     }
+    guid = str(duty.get("guid") or "").strip()
+    if guid:
+        hold["guid"] = guid
+    return hold
+
+
+def _hold_with_phase(board: Any, duty: dict) -> dict[str, Any]:
+    """The hold for this attempt. ``dropping`` is set once the gesture is announced."""
+    hold = supply_hold_for(duty)
+    if _attempt(board).get("dropping"):
+        hold["dropping"] = True
+    return hold
+
+
+def _hold_confirmed(board: Any, hold: Any) -> bool:
+    """True after this hold's body has stopped on one tile."""
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if not isinstance(prev, dict) or not isinstance(hold, dict):
+        return False
+    return bool(prev.get("confirmed")) and str(prev.get("id") or "") == str(hold.get("id") or "")
+
+
+def _stop_ground_move(board: Any) -> None:
+    """Drop the planned search or travel hop. The click already sent needs Esc."""
+    if board is None:
+        return
+    try:
+        from app._04_decision.behaviors.search_hop import clear_search_hop
+
+        clear_search_hop(board)
+    except Exception:
+        pass
+    try:
+        from app._04_decision.behaviors.travel import clear_travel
+
+        clear_travel(board)
+    except Exception:
+        pass
+
+
+def _hold_pose(board: Any, hold: Any) -> Optional[dict]:
+    """Pose row for this hold id. A different attempt does not share it."""
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if not isinstance(prev, dict) or not isinstance(hold, dict):
+        return None
+    if str(prev.get("id") or "") != str(hold.get("id") or ""):
+        return None
+    return prev
+
+
+def _halt_walk_again(prev: Optional[dict]) -> bool:
+    """True when another Esc is still allowed.
+
+    The press is skipped once the retry count is used or the last press was
+    a moment ago. The caller has already checked that the body is walking
+    and that no survival action took this tick.
+    """
+    if not isinstance(prev, dict):
+        return False
+    try:
+        sent = int(prev.get("halt_n") or 0)
+    except (TypeError, ValueError):
+        sent = 0
+    if sent >= HOLD_HALT_MAX:
+        if not prev.get("halt_gave_up"):
+            prev["halt_gave_up"] = True
+            _log.info("supply hold halt still moving n=%s", sent)
+        return False
+    now = time.time()
+    try:
+        last = float(prev.get("halt_at") or 0.0)
+    except (TypeError, ValueError):
+        last = 0.0
+    if sent > 0 and now - last < HOLD_HALT_GAP_S:
+        return False
+    prev["halt_n"] = sent + 1
+    prev["halt_at"] = now
+    _log.info("supply hold halt esc n=%s moving=1", sent + 1)
+    return True
+
+
+def recipient_hold_intent(
+    state: Any,
+    blackboard: Any,
+    hold: Any,
+    *,
+    tracked: bool = False,
+) -> Any:
+    """Stop the current walk, then hunt in place until the drop starts.
+
+    Esc is sent only while the body is still walking, at a short interval,
+    and only a few times. A stop or a survival action sends no further Esc.
+    The stand is not confirmed while the body is still walking, so this does
+    not start a new search or chase. Once the shopkeeper has announced the
+    drop, combat is cleared so the recipient can take the pile.
+    """
+    if not tracked and leader_hold_displaced(blackboard, state, hold):
+        return None
+    if isinstance(hold, dict) and hold.get("dropping"):
+        if blackboard is not None:
+            try:
+                from app._04_decision.behaviors.search_hop import clear_search_hop
+
+                clear_search_hop(blackboard)
+            except Exception:
+                pass
+        _drop_combat_lock(blackboard)
+        from .intents import idle
+
+        return idle("supply receive")
+    if isinstance(hold, dict) and not _hold_confirmed(blackboard, hold):
+        _stop_ground_move(blackboard)
+        prev = _hold_pose(blackboard, hold)
+        moving = not _leader_body_stopped()
+        if moving:
+            if _halt_walk_again(prev):
+                from .intents import supply_halt
+
+                return supply_halt()
+            from .intents import idle
+
+            return idle("supply hold")
+        if (
+            isinstance(prev, dict)
+            and int(prev.get("halt_n") or 0) > 0
+            and not prev.get("halt_seen_stop")
+        ):
+            prev["halt_seen_stop"] = True
+            _log.info(
+                "supply hold halt stopped n=%s",
+                int(prev.get("halt_n") or 0),
+            )
+        from .intents import idle
+
+        return idle("supply hold")
+    return supply_wait_intent(state, blackboard)
 
 
 def supply_rows(rows: Any) -> list:
@@ -57,65 +225,193 @@ def supply_rows(rows: Any) -> list:
     return kept
 
 
-def claim_names_me(claim: Any, self_name: str) -> bool:
+def claim_names_me(claim: Any, self_name: str, self_guid: str = "") -> bool:
+    """True when this claim is for the local character.
+
+    When both sides carry a guid, the guid decides. A name match is used
+    only when a guid was not published.
+    """
     if not isinstance(claim, dict) or bool(claim.get("clear")):
         return False
+    from .follow import guid_key
+    from .leader import _guids_match
+
+    claim_guid = str(claim.get("guid") or "").strip()
+    mine = str(self_guid or "").strip()
+    if guid_key(claim_guid) is not None and guid_key(mine) is not None:
+        return _guids_match(claim_guid, mine)
     who = str(claim.get("for") or "").strip()
     me = str(self_name or "").strip()
     return bool(who and me and who.casefold() == me.casefold())
+
+
+def _ring_offsets(ring: int) -> tuple:
+    """Chebyshev ring around the recipient. Ring 0 is the original neighbor list."""
+    dist = int(ring) + 1
+    if dist <= 1:
+        return _DROP_NEIGHBORS
+    spots = []
+    for ox in range(-dist, dist + 1):
+        for oy in range(-dist, dist + 1):
+            if max(abs(ox), abs(oy)) != dist:
+                continue
+            spots.append((ox, oy))
+    return tuple(spots)
 
 
 def choose_drop_stand(
     member_x: int,
     member_y: int,
     walkable: Any = None,
+    ring: int = 0,
 ) -> Optional[dict[str, int]]:
     """Empty neighbor of the stand tile, and where the shopkeeper must stand.
 
     The ground drag always lands one tile at ``(-1, -1)`` from the shopkeeper.
     The shopkeeper stand is that drop tile shifted back by the same offset, and
-    it is never the recipient's tile.
+    it is never the recipient's tile. A blocked ring returns nothing so the
+    shopkeeper can step aside and try the next ring.
     """
     from .supply_drop import _DROP_TILES
 
     dx, dy = int(_DROP_TILES[0][0]), int(_DROP_TILES[0][1])
     member = (int(member_x), int(member_y))
-    fallback = None
-    for ox, oy in _DROP_NEIGHBORS:
+    for ox, oy in _ring_offsets(ring):
         drop = (member[0] + int(ox), member[1] + int(oy))
         stand = (drop[0] - dx, drop[1] - dy)
         if drop == member or stand == member:
             continue
-        spot = {
+        if walkable is not None and (
+            not walkable(drop) or not walkable(stand)
+        ):
+            continue
+        return {
             "stand_x": stand[0],
             "stand_y": stand[1],
             "drop_x": drop[0],
             "drop_y": drop[1],
         }
-        if fallback is None:
-            fallback = spot
-        if walkable is not None and (
-            not walkable(drop) or not walkable(stand)
-        ):
-            continue
-        return spot
-    return fallback
+    return None
+
+
+def _stand_ready(duty: dict, stand: Any) -> bool:
+    """True when this attempt's stop tile has been confirmed."""
+    if not isinstance(stand, dict) or stand.get("confirmed") is not True:
+        return False
+    if str(stand.get("id") or "") != supply_hold_for(duty)["id"]:
+        return False
+    if str(stand.get("for") or "").strip().casefold() != str(
+        duty.get("name") or ""
+    ).strip().casefold():
+        return False
+    try:
+        int(stand["x"])
+        int(stand["y"])
+        int(stand["map_id"])
+    except (TypeError, ValueError, KeyError):
+        return False
+    return True
+
+
+_NAV_FRAME: dict[int, Optional[tuple[int, int, int, int]]] = {}
+
+
+def _map_nav_frame(map_id: int) -> Optional[tuple[int, int, int, int]]:
+    """``(origin_x, origin_y, width, height)`` for this map's nav grid.
+
+    The loaded terrain is that grid when it is this map. Otherwise the pack
+    image and its origin are the grid. The result is not a magnitude guess.
+    """
+    from app._04_decision.nav_config import get_terrain_map
+    from app._04_decision.world_nav.pack_ids import map_id_to_pack_id, pack_for_map_id
+
+    pack_id = map_id_to_pack_id(int(map_id))
+    terrain = get_terrain_map()
+    if (
+        terrain is not None
+        and pack_id
+        and str(getattr(terrain, "pack_id", "") or "") == str(pack_id)
+    ):
+        return (
+            int(terrain.origin_x),
+            int(terrain.origin_y),
+            int(terrain.width),
+            int(terrain.height),
+        )
+    mid = int(map_id)
+    if mid in _NAV_FRAME:
+        return _NAV_FRAME[mid]
+    pack = pack_for_map_id(mid)
+    frame = None if pack is None else _pack_nav_frame(pack)
+    _NAV_FRAME[mid] = frame
+    return frame
+
+
+def _pack_nav_frame(pack: Any) -> Optional[tuple[int, int, int, int]]:
+    """Nav tiles from the pack image size and ``pixel_scale``."""
+    path = getattr(pack, "nav_path", None) or getattr(pack, "image_path", None)
+    if path is None:
+        return None
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(24)
+    except OSError:
+        return None
+    if len(head) < 24 or head[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    import struct
+
+    width, height = struct.unpack(">II", head[16:24])
+    scale = max(1, int(getattr(pack, "pixel_scale", 1) or 1))
+    tw, th = int(width) // scale, int(height) // scale
+    if tw < 1 or th < 1:
+        return None
+    return (int(pack.origin_x), int(pack.origin_y), tw, th)
+
+
+def _on_grid(x: int, y: int, width: int, height: int) -> bool:
+    return 0 <= int(x) < int(width) and 0 <= int(y) < int(height)
+
+
+def _coord_on_map(map_id: int, x: int, y: int) -> Optional[tuple[int, int]]:
+    """Nav tile for a point whose source is this map's pack.
+
+    A point on the nav grid is a nav tile. A point that lands on that grid
+    only after subtracting the pack origin is a game tile. Both at once, and
+    neither, stay unread.
+    """
+    frame = _map_nav_frame(int(map_id))
+    if frame is None:
+        return None
+    ox, oy, width, height = frame
+    as_nav = _on_grid(x, y, width, height)
+    gx, gy = int(x) - int(ox), int(y) - int(oy)
+    as_game = _on_grid(gx, gy, width, height)
+    if as_nav and as_game and (gx, gy) != (int(x), int(y)):
+        return None
+    if as_nav:
+        return (int(x), int(y))
+    if as_game:
+        return (gx, gy)
+    return None
+
+
+def _tile_gap(left: tuple[int, int], right: tuple[int, int]) -> int:
+    return max(abs(int(left[0]) - int(right[0])), abs(int(left[1]) - int(right[1])))
 
 
 def plan_supply_drop(
     duty: dict,
     stand: Any,
     walkable: Any = None,
+    ring: int = 0,
 ) -> Optional[dict]:
-    """Shopkeeper travel duty once the recipient has reported a stop tile."""
-    if not isinstance(stand, dict):
-        return None
-    hold_id = supply_hold_for(duty)["id"]
-    if str(stand.get("id") or "") != hold_id:
-        return None
-    if str(stand.get("for") or "").strip().casefold() != str(
-        duty.get("name") or ""
-    ).strip().casefold():
+    """Shopkeeper travel duty once the recipient has reported a stop tile.
+
+    ``stand`` x,y stay on the duty as received. The walk and the drop use the
+    nav tile that map's pack assigns to those coordinates.
+    """
+    if not _stand_ready(duty, stand):
         return None
     try:
         mx = int(stand["x"])
@@ -123,7 +419,10 @@ def plan_supply_drop(
         mid = int(stand["map_id"])
     except (TypeError, ValueError, KeyError):
         return None
-    spot = choose_drop_stand(mx, my, walkable)
+    nav = _coord_on_map(mid, mx, my)
+    if nav is None:
+        return None
+    spot = choose_drop_stand(nav[0], nav[1], walkable, ring=ring)
     if spot is None:
         return None
     planned = dict(duty)
@@ -133,6 +432,9 @@ def plan_supply_drop(
     planned["exact"] = True
     planned["drop_x"] = spot["drop_x"]
     planned["drop_y"] = spot["drop_y"]
+    planned["member_map"] = mid
+    planned["member_x"] = mx
+    planned["member_y"] = my
     return planned
 
 
@@ -147,6 +449,7 @@ def remember_supply_stand(runtime: Any, hold: dict, origin: Any, map_id: Any) ->
             "map_id": None if map_id is None else int(map_id),
             "x": int(origin.x),
             "y": int(origin.y),
+            "confirmed": True,
         }
     except (TypeError, ValueError):
         return
@@ -272,6 +575,391 @@ def supply_wait_intent(state: Any, blackboard: Any) -> Any:
     return idle("supply hold")
 
 
+def _pair_key(duty: dict) -> tuple[str, str]:
+    return (
+        str(duty.get("name") or "").strip().casefold(),
+        str(duty.get("item") or "arrow").strip(),
+    )
+
+
+def _attempt(board: Any) -> dict:
+    raw = board.scratch.get(_ATTEMPT) if board is not None else None
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def _bind_attempt(board: Any, duty: dict) -> dict:
+    """Keep the attempt counter for this recipient and item."""
+    key = _pair_key(duty)
+    st = _attempt(board)
+    if st.get("key") != key:
+        st = {"key": key, "n": 0, "since": 0.0, "shifts": 0}
+    duty = dict(duty)
+    duty["attempt"] = int(st.get("n") or 0)
+    board.scratch[_ATTEMPT] = st
+    return duty
+
+
+def _rows_without_pause(board: Any, rows: list) -> list:
+    """Drop members a failed delivery is leaving alone for a few seconds."""
+    pauses = board.scratch.get(_PAUSE) if board is not None else None
+    if not isinstance(pauses, dict) or not pauses:
+        return rows
+    now = time.time()
+    held: set[str] = set()
+    for key, until in pauses.items():
+        try:
+            if float(until) <= now or not isinstance(key, tuple) or not key:
+                continue
+        except (TypeError, ValueError):
+            continue
+        held.add(str(key[0]))
+    if not held:
+        return rows
+    kept = []
+    for row in rows:
+        who = str(row.get("from") or "").strip().casefold() if isinstance(row, dict) else ""
+        if who and who in held:
+            continue
+        kept.append(row)
+    return kept
+
+
+def cancel_supply_delivery(
+    board: Any,
+    runtime: Any,
+    duty: dict,
+    *,
+    now: float | None = None,
+    reason: str = "supply cancel",
+    pause: bool = True,
+) -> None:
+    """Clear the hold and start a new attempt that ignores the old stop tile.
+
+    ``runtime.supply_hold`` going empty is the existing clear: the leader
+    publishes ``supply_hold`` and ``supply_stand`` with ``clear``.
+    """
+    if runtime is not None:
+        runtime.supply_hold = None
+        runtime.duty_phase = DUTY_FOLLOW
+    if board is None:
+        return
+    key = _pair_key(duty)
+    st = _attempt(board)
+    st["key"] = key
+    st["n"] = int(st.get("n") or 0) + 1
+    st["since"] = 0.0
+    st["shifts"] = 0
+    st["blocks"] = 0
+    st.pop("stand_at", None)
+    board.scratch[_ATTEMPT] = st
+    if pause:
+        pauses = dict(board.scratch.get(_PAUSE) or {})
+        pauses[key] = float(time.time() if now is None else now) + SUPPLY_PAUSE_S
+        board.scratch[_PAUSE] = pauses
+    board.scratch.pop("party_supply_drop", None)
+    _log.info(
+        "supply cancel reason=%s for=%s item=%s next_attempt=%s",
+        reason,
+        key[0] or "—",
+        key[1],
+        st["n"],
+    )
+
+
+def _wait_for_stand(manager: Any, duty: dict) -> Any:
+    """Hold until this attempt's stop tile arrives, then cancel and step back."""
+    board = manager._nav_blackboard
+    runtime = manager.runtime
+    st = _attempt(board)
+    now = time.time()
+    since = float(st.get("since") or 0.0)
+    if since > 0.0 and now - since >= STAND_WAIT_S:
+        cancel_supply_delivery(board, runtime, duty, now=now, reason="stand timeout")
+        runtime.last_kind = "supply"
+        runtime.last_reason = "stand timeout"
+        return None
+    if since <= 0.0:
+        st["since"] = now
+        board.scratch[_ATTEMPT] = st
+    runtime.supply_hold = _hold_with_phase(board, duty)
+    runtime.duty_phase = DUTY_SUPPLY
+    runtime.last_kind = "supply"
+    runtime.last_reason = "wait for stand"
+    from .intents import idle
+
+    return idle("supply hold")
+
+
+def expire_supply_hold(manager: Any) -> bool:
+    """Run the stand timeout while this tick is already spent on survival.
+
+    The survival intent still owns the tick. A due hold is cleared on the
+    existing cancel path so the leader tells the recipient to move again.
+    """
+    runtime = getattr(manager, "runtime", None)
+    board = getattr(manager, "_nav_blackboard", None)
+    if runtime is None or board is None:
+        return False
+    hold = getattr(runtime, "supply_hold", None)
+    if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
+        return False
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict):
+        return False
+    st = _attempt(board)
+    try:
+        since = float(st.get("since") or 0.0)
+    except (TypeError, ValueError):
+        since = 0.0
+    if since <= 0.0 or time.time() - since < STAND_WAIT_S:
+        return False
+    cancel_supply_delivery(
+        board,
+        runtime,
+        {"name": hold.get("for") or "", "item": hold.get("item") or "arrow"},
+        reason="stand timeout",
+    )
+    return True
+
+
+def _shift_goal(origin: Any, stand: dict) -> Optional[tuple[int, int]]:
+    """One walkable tile beside the shopkeeper, never the recipient's tile."""
+    try:
+        ox = int(origin.x)
+        oy = int(origin.y)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    try:
+        from app._03_world.merge.memory_sync import game_to_nav
+
+        rx, ry = game_to_nav(int(stand["x"]), int(stand["y"]))
+        recipient = (int(rx), int(ry))
+    except (TypeError, ValueError, KeyError):
+        recipient = None
+    for dx, dy in _SHIFT_STEPS:
+        tile = (ox + int(dx), oy + int(dy))
+        if recipient is not None and tile == recipient:
+            continue
+        if not _tile_open(tile):
+            continue
+        return tile
+    return None
+
+
+def _shift_drop_search(manager: Any, state: Any, duty: dict, stand: dict) -> Any:
+    """Step to a safe neighbor and let the next tick measure the drop again."""
+    board = manager._nav_blackboard
+    runtime = manager.runtime
+    st = _attempt(board)
+    shifts = int(st.get("shifts") or 0)
+    if shifts >= DROP_SHIFT_MAX:
+        cancel_supply_delivery(board, runtime, duty, reason="no drop tile")
+        runtime.last_kind = "supply"
+        runtime.last_reason = "no drop tile"
+        return None
+    st["shifts"] = shifts + 1
+    board.scratch[_ATTEMPT] = st
+    runtime.supply_hold = _hold_with_phase(board, duty)
+    runtime.duty_phase = DUTY_SUPPLY
+    runtime.last_kind = "supply"
+    runtime.last_reason = "shift for drop"
+    origin = getattr(board, "world_origin", None)
+    goal = None if origin is None else _shift_goal(origin, stand)
+    if goal is None:
+        if int(st["shifts"]) >= DROP_SHIFT_MAX:
+            cancel_supply_delivery(board, runtime, duty, reason="no drop tile")
+            runtime.last_kind = "supply"
+            runtime.last_reason = "no drop tile"
+        return None
+    _log.info(
+        "supply shift for=%s to=%s,%s try=%s",
+        str(duty.get("name") or ""),
+        goal[0],
+        goal[1],
+        st["shifts"],
+    )
+    from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
+
+    if getattr(board, "nav_goal", None) != goal:
+        start_travel(board, goal, reason="party supply shift")
+    if emit_travel_hop(board, reason="party supply shift", priority=0.6, state=state):
+        intent = getattr(board, "intent", None)
+        if intent is not None:
+            return intent
+    return None
+
+
+def note_care_pose(board: Any, state: Any) -> None:
+    """Remember the tile a survival action started from."""
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    try:
+        pose = live_pose_from_state(state)
+    except Exception:
+        return
+    if pose is None:
+        return
+    try:
+        scratch[_CARE_POSE] = (int(pose.map_id), int(pose.x), int(pose.y))
+    except (TypeError, ValueError):
+        return
+
+
+def release_care_pose(board: Any, state: Any) -> None:
+    """After survival, re-check shop and drop tiles only if the body moved."""
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    prev = scratch.pop(_CARE_POSE, None)
+    if prev is None:
+        return
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    try:
+        pose = live_pose_from_state(state)
+    except Exception:
+        return
+    if pose is None:
+        return
+    try:
+        key = (int(pose.map_id), int(pose.x), int(pose.y))
+    except (TypeError, ValueError):
+        return
+    anchored = bool(
+        scratch.get("shop_trip")
+        or scratch.get(_FLAG)
+        or scratch.get("party_supply_drop")
+    )
+    if not isinstance(prev, tuple) or len(prev) != 3:
+        if key != prev and anchored:
+            _invalidate_anchored_steps(board)
+        return
+    if key == prev:
+        if anchored:
+            _log.info(
+                "care in place, shop trip kept at %s,%s map=%s",
+                key[1],
+                key[2],
+                key[0],
+            )
+        return
+    if anchored:
+        _log.info(
+            "care moved %s,%s map=%s -> %s,%s map=%s, shop approach reset",
+            prev[1],
+            prev[2],
+            prev[0],
+            key[1],
+            key[2],
+            key[0],
+        )
+    _invalidate_anchored_steps(board)
+
+
+def _invalidate_anchored_steps(board: Any) -> None:
+    """Drop NPC-approach and drop-tile progress. The shop trip itself stays."""
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    from app._04_decision.shop_trip import (
+        PURPOSE_SHOP,
+        SCRATCH_SHOP_HALTED,
+        SCRATCH_SHOP_SCROLLED,
+        SCRATCH_SHOP_SCROLLED_AT,
+        SCRATCH_SHOP_TRIP,
+    )
+
+    if not (
+        scratch.get(SCRATCH_SHOP_TRIP)
+        or scratch.get(_FLAG)
+        or scratch.get("party_supply_drop")
+    ):
+        return
+    scratch.pop(SCRATCH_SHOP_SCROLLED, None)
+    scratch.pop(SCRATCH_SHOP_SCROLLED_AT, None)
+    scratch.pop(SCRATCH_SHOP_HALTED, None)
+    scratch.pop("party_supply_drop", None)
+    if getattr(board, "travel_purpose", None) != PURPOSE_SHOP:
+        return
+    try:
+        from app._04_decision.behaviors.travel import clear_travel
+
+        clear_travel(board)
+    except Exception:
+        try:
+            board.nav_goal = None
+        except Exception:
+            pass
+        board.travel_purpose = None
+
+
+def _tile_space(x: int, y: int) -> str:
+    """Game coordinates sit near 32k. Nav tiles do not."""
+    return "game" if max(abs(int(x)), abs(int(y))) >= 20000 else "nav"
+
+
+def _pose_moved(old: tuple, here: tuple) -> bool:
+    """True when the body left the anchored tile.
+
+    A map change counts. The same map in a different coordinate encoding does
+    not: party memory and the local pose sometimes use different scales.
+    """
+    if int(old[0]) != int(here[0]):
+        return True
+    if _tile_space(old[1], old[2]) != _tile_space(here[1], here[2]):
+        return False
+    return max(abs(int(old[1]) - int(here[1])), abs(int(old[2]) - int(here[2]))) >= 2
+
+
+def _stand_left(board: Any, stand: dict) -> bool:
+    """True once a confirmed stand tile has moved. The first confirmed tile is the anchor.
+
+    A stand that is not confirmed only refreshes the latest coordinate.
+    A different attempt id does not inherit the previous anchor.
+    """
+    try:
+        here = (int(stand["map_id"]), int(stand["x"]), int(stand["y"]))
+    except (TypeError, ValueError, KeyError):
+        return False
+    st = _attempt(board)
+    stand_id = str(stand.get("id") or "")
+    if stand_id and str(st.get("stand_id") or "") != stand_id:
+        st["stand_id"] = stand_id
+        st["stand_confirmed"] = False
+        st.pop("stand_at", None)
+        board.scratch[_ATTEMPT] = st
+    if stand.get("confirmed") is not True:
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    if not st.get("stand_confirmed"):
+        st["stand_confirmed"] = True
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    prev = st.get("stand_at")
+    if not isinstance(prev, (list, tuple)) or len(prev) != 3:
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    try:
+        old = (int(prev[0]), int(prev[1]), int(prev[2]))
+    except (TypeError, ValueError):
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    if _tile_space(old[1], old[2]) != _tile_space(here[1], here[2]) and old[0] == here[0]:
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    if not _pose_moved(old, here):
+        return False
+    return True
+
+
 def tick_shopkeeper_duty(
     manager: Any,
     state: Any,
@@ -285,32 +973,46 @@ def tick_shopkeeper_duty(
     if board is None:
         runtime.duty_phase = DUTY_FOLLOW
         return None
+    from .comms.orders import member_orders
+    from app._04_decision.shop_trip import SCRATCH_SHOP_TRIP
+
+    supply_open = bool(getattr(member_orders, "supply_open", False))
+    in_progress = bool(
+        board.scratch.get(SCRATCH_SHOP_TRIP)
+        and board.scratch.get(_FLAG)
+        and board.scratch.get("party_supply_item")
+    )
+    if in_progress and supply_open:
+        return _tick_buy(manager, state, _current_buy_duty(board))
+
     if board.scratch.get(_JOIN):
+        release_finished_party_shop(board)
         runtime.duty_phase = DUTY_SHOP
         return _tick_join(manager, state)
 
-    from .comms.orders import member_orders
-
-    if not bool(getattr(member_orders, "supply_open", False)):
+    if not supply_open:
         runtime.supply_hold = None
         runtime.duty_phase = DUTY_FOLLOW
         return None
 
-    from app._04_decision.shop_trip import SCRATCH_SHOP_TRIP
-
-    if board.scratch.get(SCRATCH_SHOP_TRIP) and board.scratch.get(_FLAG):
-        return _tick_buy(manager, state, _current_buy_duty(board))
+    release_finished_party_shop(board)
 
     chain = board.scratch.get("party_supply_chain")
     if board.scratch.get(_FLAG) and isinstance(chain, list) and chain:
         _expire_notice(runtime, member_orders.party_reports)
         policy = getattr(manager, "leader_policy", None)
         roster = policy.get("roster") if isinstance(policy, dict) else None
+        report_rows = bind_supply_identity(
+            _supply_report_rows(board, runtime, member_orders.party_reports),
+            getattr(state, "last_party", None),
+        )
         nxt = next_supply_buy(
             bag_supply_counts(state),
-            _supply_specs(cfg, mage_seat_names(roster)),
+            _supply_specs(cfg, _mp_names(board, roster, state)),
             after_item=str(chain[-1]),
             skip_buys=_unaffordable_items(board, state),
+            rows=report_rows,
+            self_name=self_name,
         )
         if nxt is None:
             board.scratch[_JOIN] = True
@@ -330,10 +1032,14 @@ def tick_shopkeeper_duty(
     held = None
     if isinstance(notice, dict):
         held = (notice.get("for"), notice.get("item") or "arrow")
+    _note_mp_buy(board)
     duty = choose_supply_duty(
         bag_supply_counts(state),
-        supply_rows(member_orders.party_reports),
-        _supply_specs(cfg, mage_seat_names(roster)),
+        bind_supply_identity(
+            _supply_report_rows(board, runtime, member_orders.party_reports),
+            getattr(state, "last_party", None),
+        ),
+        _supply_specs(cfg, _mp_names(board, roster, state)),
         self_name=self_name,
         held=held,
         skip_buys=_unaffordable_items(board, state),
@@ -346,22 +1052,58 @@ def tick_shopkeeper_duty(
     if duty["kind"] == "buy":
         runtime.supply_hold = None
         return _tick_buy(manager, state, duty)
+    duty = _bind_attempt(board, duty)
     stand = getattr(member_orders, "supply_stand", None)
-    planned = plan_supply_drop(duty, stand, _tile_open)
+    if (
+        isinstance(stand, dict)
+        and str(stand.get("id") or "") == supply_hold_for(duty)["id"]
+        and _stand_left(board, stand)
+    ):
+        cancel_supply_delivery(
+            board, runtime, duty, reason="stand moved"
+        )
+        runtime.last_kind = "supply"
+        runtime.last_reason = "stand moved"
+        return None
+    shifts = int(_attempt(board).get("shifts") or 0)
+    planned = plan_supply_drop(duty, stand, _tile_open, ring=shifts)
     if planned is not None:
-        runtime.supply_hold = supply_hold_for(duty)
+        st = _attempt(board)
+        st["shifts"] = 0
+        st["since"] = 0.0
+        st["latched"] = True
+        board.scratch[_ATTEMPT] = st
+        runtime.supply_hold = _hold_with_phase(board, duty)
         return _tick_drop(manager, state, planned)
     close = _approach_until_close(manager, state, duty)
+    if close is True:
+        st = _attempt(board)
+        st["latched"] = True
+        board.scratch[_ATTEMPT] = st
     if close is not True:
+        st = _attempt(board)
+        if st.get("latched"):
+            now = time.time()
+            since = float(st.get("since") or 0.0)
+            if since <= 0.0:
+                st["since"] = now
+            elif now - since >= STAND_WAIT_S:
+                cancel_supply_delivery(
+                    board, runtime, duty, now=now, reason="stand timeout"
+                )
+                runtime.last_kind = "supply"
+                runtime.last_reason = "stand timeout"
+                return None
+            board.scratch[_ATTEMPT] = st
+            runtime.supply_hold = _hold_with_phase(board, duty)
+            return close
+        st["since"] = 0.0
+        board.scratch[_ATTEMPT] = st
         runtime.supply_hold = None
         return close
-    runtime.supply_hold = supply_hold_for(duty)
-    runtime.duty_phase = DUTY_SUPPLY
-    runtime.last_kind = "supply"
-    runtime.last_reason = "wait for stand"
-    from .intents import idle
-
-    return idle("supply hold")
+    if _stand_ready(duty, stand):
+        return _shift_drop_search(manager, state, duty, stand)
+    return _wait_for_stand(manager, duty)
 
 
 def tick_supply_pickup(
@@ -369,16 +1111,13 @@ def tick_supply_pickup(
     state: Any,
     *,
     self_name: str,
+    self_guid: str = "",
 ) -> Any:
     """The named member walks to the dropped arrows and picks them up."""
     from .comms.orders import member_orders
 
     claim = member_orders.supply_drop
-    if not isinstance(claim, dict) or bool(claim.get("clear")):
-        return None
-    who = str(claim.get("for") or "").strip()
-    me = str(self_name or "").strip()
-    if not who or not me or who.casefold() != me.casefold():
+    if not claim_names_me(claim, self_name, self_guid):
         return None
     return _pickup_claim(state, manager._nav_blackboard, claim, manager.runtime)
 
@@ -419,8 +1158,88 @@ def _unaffordable_items(board: Any, state: Any) -> set[str]:
     return blocked
 
 
+def _expected_book(runtime: Any) -> dict:
+    book = getattr(runtime, "supply_expected", None)
+    if isinstance(book, dict):
+        return book
+    book = {}
+    try:
+        runtime.supply_expected = book
+    except Exception:
+        return {}
+    return book
+
+
+def _mp_names(board: Any, roster: Any, state: Any) -> set[str]:
+    """Roster mage seats plus class mages. Log only when the set changes."""
+    seats = mage_seat_names(roster)
+    party = getattr(state, "last_party", None)
+    names = mp_recipient_names(roster, party)
+    scratch = getattr(board, "scratch", None)
+    if isinstance(scratch, dict):
+        key = (tuple(sorted(seats)), tuple(sorted(names)))
+        if scratch.get("_mp_name_key") != key:
+            scratch["_mp_name_key"] = key
+            _log.info(
+                "supply roles mp_seat=%s mp_class_added=%s",
+                ",".join(sorted(seats)) or "—",
+                ",".join(sorted(names - seats)) or "—",
+            )
+    return names
+
+
+def _remember_drop(runtime: Any, duty: dict) -> None:
+    from .comms.orders import member_orders
+
+    item = str(duty.get("item") or "arrow")
+    name = str(duty.get("name") or "")
+    reported = None
+    for row in member_orders.party_reports or []:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("from") or "").strip().casefold() != name.strip().casefold():
+            continue
+        reported = report_supply_count(row, item)
+        break
+    try:
+        qty = int(duty.get("qty") or 0)
+    except (TypeError, ValueError):
+        qty = 0
+    expected = remember_delivered(_expected_book(runtime), name, item, reported, qty)
+    if expected is None:
+        return
+    _log.info(
+        "supply expected %s %s reported=%s qty=%s count=%s",
+        name,
+        item,
+        reported,
+        qty,
+        expected,
+    )
+
+
+def _supply_report_rows(board: Any, runtime: Any, reports: Any) -> list:
+    return _rows_without_pause(
+        board,
+        rows_with_expected(supply_rows(reports), _expected_book(runtime)),
+    )
+
+
+def _note_mp_buy(board: Any) -> None:
+    """Say once that MP has no shop behavior, so it stays a drop."""
+    scratch = getattr(board, "scratch", None)
+    if not isinstance(scratch, dict) or scratch.get("_mp_buy_note"):
+        return
+    if supply_shop_id("mp") is not None:
+        scratch["_mp_buy_note"] = "on"
+        return
+    scratch["_mp_buy_note"] = "off"
+    _log.info("mp buy unavailable: no shop behavior")
+
+
 def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
-    """HP, depoison, MP, then arrows. MP is a drop only."""
+    """HP, depoison, MP, then arrows. MP is bought only when a shop behavior exists."""
+    mp_can_buy = supply_shop_id("mp") is not None
     return [
         {
             "item": "hp",
@@ -445,7 +1264,7 @@ def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
             "give": int(cfg.member_mp_give),
             "buy": int(cfg.shopkeeper_mp_buy),
             "only_names": mages,
-            "can_buy": False,
+            "can_buy": mp_can_buy,
         },
         {
             "item": "arrow",
@@ -522,6 +1341,17 @@ def _tick_buy(manager: Any, state: Any, duty: Optional[dict] = None) -> Any:
     board.scratch["party_supply_keep"] = keep
     board.scratch["party_supply_configured"] = buy
     board.scratch["party_arrow_buy_qty"] = supply_fill_qty(own, keep, buy)
+    try:
+        party_need = int((duty or {}).get("party_need") or 0)
+    except (TypeError, ValueError):
+        party_need = 0
+    if party_need > 0:
+        _log.info(
+            "supply buy %s qty=%s party_need=%s",
+            item,
+            board.scratch.get("party_arrow_buy_qty"),
+            party_need,
+        )
     if not str(board.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip():
         shop_id = supply_shop_id(item)
         if shop_id is None:
@@ -573,7 +1403,135 @@ def shops_arrow_id() -> Optional[str]:
     return resolve_shopping_behavior_id("normal_arrows")
 
 
+def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
+    """True when this party row is the leader block."""
+    if not isinstance(row, dict):
+        return False
+    if bool(row.get("is_leader")):
+        return True
+    leader = snapshot.get("leader") if isinstance(snapshot, dict) else None
+    if not isinstance(leader, dict):
+        return False
+    if row is leader:
+        return True
+    from .leader import _guids_match
+
+    if _guids_match(row.get("guid"), leader.get("guid")):
+        return True
+    row_name = str(row.get("name") or "").strip().casefold()
+    leader_name = str(leader.get("name") or "").strip().casefold()
+    return bool(row_name and row_name == leader_name)
+
+
+def _leader_drop_recheck(state: Any, duty: dict) -> Any:
+    """Refresh a leader drop when the party row confirms a one-tile step.
+
+    None means the planned tile still matches, or this recipient is not the
+    leader. ``"cancel"`` means the party row confirms a map change or a move
+    of two or more tiles. ``"defer"`` means the latest tile is not confirmed,
+    so the drop waits and the hold stays. A dict is a stand rebuilt on the
+    live tile.
+    """
+    from .leader import supply_member_row
+
+    snapshot = getattr(state, "last_party", None)
+    row = supply_member_row(
+        snapshot,
+        str(duty.get("name") or ""),
+        str(duty.get("guid") or ""),
+    )
+    if not _is_party_leader_row(snapshot, row):
+        return None
+    try:
+        live = (int(row["map_id"]), int(row["x"]), int(row["y"]))
+    except (TypeError, ValueError, KeyError):
+        return "defer"
+    if live[1] == 0 and live[2] == 0:
+        return "defer"
+    try:
+        planned = (
+            int(duty["member_map"]),
+            int(duty["member_x"]),
+            int(duty["member_y"]),
+        )
+    except (TypeError, ValueError, KeyError):
+        return "defer"
+    stand_nav = _coord_on_map(planned[0], planned[1], planned[2])
+    if stand_nav is None:
+        return "defer"
+    on_stand = _coord_on_map(planned[0], live[1], live[2])
+    if int(planned[0]) == int(live[0]):
+        if on_stand is None:
+            return "defer"
+        if on_stand == stand_nav:
+            return None
+        if _tile_gap(stand_nav, on_stand) >= 2:
+            return "cancel"
+        if _tile_gap(stand_nav, on_stand) == 1:
+            return {
+                "id": supply_hold_for(duty)["id"],
+                "for": str(duty.get("name") or ""),
+                "map_id": live[0],
+                "x": live[1],
+                "y": live[2],
+                "confirmed": True,
+            }
+        return "defer"
+    on_party = _coord_on_map(live[0], live[1], live[2])
+    if on_party is not None and on_stand is None:
+        return "cancel"
+    if on_stand is not None and _tile_gap(stand_nav, on_stand) >= 2:
+        return "cancel"
+    return "defer"
+
+
+def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
+    """Aim the drop at the leader's live tile. None means the hold was cleared."""
+    recheck = _leader_drop_recheck(state, duty)
+    if recheck is None:
+        return duty
+    runtime = manager.runtime
+    board = manager._nav_blackboard
+    if recheck == "defer":
+        if str(getattr(runtime, "last_reason", "") or "") != "supply drop held":
+            _log.info(
+                "supply drop held for=%s map=%s",
+                duty.get("name"),
+                duty.get("member_map"),
+            )
+        runtime.supply_hold = _hold_with_phase(board, duty)
+        runtime.duty_phase = DUTY_SUPPLY
+        runtime.last_kind = "supply"
+        runtime.last_reason = "supply drop held"
+        from .intents import idle
+
+        return idle("supply drop held")
+    if recheck == "cancel":
+        cancel_supply_delivery(
+            board, runtime, duty, reason="stand moved"
+        )
+        runtime.last_kind = "supply"
+        runtime.last_reason = "stand moved"
+        return None
+    shifts = int(_attempt(board).get("shifts") or 0)
+    replanned = plan_supply_drop(duty, recheck, _tile_open, ring=shifts)
+    _log.info(
+        "supply drop recheck %s,%s -> %s,%s",
+        duty.get("member_x"),
+        duty.get("member_y"),
+        recheck.get("x"),
+        recheck.get("y"),
+    )
+    if replanned is None:
+        return _shift_drop_search(manager, state, duty, recheck)
+    return replanned
+
+
 def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
+    checked = _apply_leader_drop_recheck(manager, state, duty)
+    if checked is None or not isinstance(checked, dict):
+        return checked
+    duty = checked
     runtime = manager.runtime
     board = manager._nav_blackboard
     runtime.duty_phase = DUTY_SUPPLY
@@ -587,6 +1545,16 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         if isinstance(job, dict):
             job["active"] = False
         return arrived
+    st = _attempt(board)
+    if not st.get("dropping"):
+        st["dropping"] = True
+        board.scratch[_ATTEMPT] = st
+        runtime.supply_hold = _hold_with_phase(board, duty)
+        runtime.last_kind = "supply"
+        runtime.last_reason = "supply drop"
+        from .intents import idle
+
+        return idle("supply drop")
     from .supply_drop import step_ground_drop
 
     item = str(duty.get("item") or "arrow")
@@ -598,12 +1566,30 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
 
         return idle("arrow drop")
     if result.get("blocked") or not result.get("ok"):
+        reason = str(result.get("reason") or "arrow drop blocked")
+        st = _attempt(board)
+        blocks = int(st.get("blocks") or 0) + 1
+        st["blocks"] = blocks
+        if st.get("key") is None:
+            st["key"] = _pair_key(duty)
+        board.scratch[_ATTEMPT] = st
+        _log.info(
+            "supply drop blocked for=%s try=%s reason=%s",
+            str(duty.get("name") or ""),
+            blocks,
+            reason,
+        )
+        if blocks >= DROP_SHIFT_MAX:
+            cancel_supply_delivery(board, runtime, duty, reason="arrow drop blocked")
+            runtime.last_kind = "supply"
+            runtime.last_reason = reason
+            return None
         runtime.duty_phase = DUTY_SUPPLY
         runtime.last_kind = "supply"
-        runtime.last_reason = str(result.get("reason") or "arrow drop blocked")
+        runtime.last_reason = reason
         from .intents import idle
 
-        return idle(str(result.get("reason") or "arrow drop blocked"))
+        return idle(reason)
     runtime.supply_notice = {
         "id": f"{item}:{duty['name']}:{int(time.time())}",
         "for": str(duty["name"]),
@@ -615,6 +1601,11 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         "qty": int(duty["qty"]),
         "at": time.time(),
     }
+    _remember_drop(runtime, duty)
+    done = _attempt(board)
+    if done.get("key") is not None:
+        done["blocks"] = 0
+        board.scratch[_ATTEMPT] = done
     runtime.supply_hold = None
     runtime.duty_phase = DUTY_FOLLOW
     runtime.last_kind = "supply"
@@ -628,20 +1619,33 @@ def _party_join_active(manager: Any) -> bool:
     return bool(getattr(nav, "active", False))
 
 
-def _memory_game_xy(state: Any, name: Any) -> Optional[tuple[int, int, int]]:
-    """Live party-memory map and game xy. None when that row has no tile."""
-    who = str(name or "").strip()
-    if not who or state is None:
-        return None
-    from .leader import party_member_block
+def _memory_game_xy(
+    state: Any,
+    name: Any,
+    guid: str = "",
+) -> Optional[tuple[int, int, int]]:
+    """Live party-memory map and game xy. None when that row has no tile.
 
-    row = party_member_block(getattr(state, "last_party", None), who)
+    The row is chosen by guid, or by a unique name. Coordinates are not used
+    to pick which person this is.
+    """
+    who = str(name or "").strip()
+    if (not who and not str(guid or "").strip()) or state is None:
+        return None
+    from .leader import supply_member_row
+
+    row = supply_member_row(getattr(state, "last_party", None), who, str(guid or ""))
     if not isinstance(row, dict):
         return None
     try:
-        return int(row["map_id"]), int(row["x"]), int(row["y"])
+        mx = int(row["x"])
+        my = int(row["y"])
+        mid = int(row["map_id"])
     except (TypeError, ValueError, KeyError):
         return None
+    if mx == 0 and my == 0:
+        return None
+    return mid, mx, my
 
 
 def _approach_until_close(manager: Any, state: Any, duty: dict) -> Any:
@@ -651,7 +1655,7 @@ def _approach_until_close(manager: Any, state: Any, duty: dict) -> Any:
     """
     board = manager._nav_blackboard
     origin = getattr(board, "world_origin", None)
-    live = _memory_game_xy(state, duty.get("name"))
+    live = _memory_game_xy(state, duty.get("name"), str(duty.get("guid") or ""))
     if live is not None:
         mid, mx, my = live
     else:
@@ -678,6 +1682,29 @@ def _approach_until_close(manager: Any, state: Any, duty: dict) -> Any:
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
     goal = (int(mx), int(my))
+    source = "memory" if live is not None else "report"
+    goal_key = (str(duty.get("name") or ""), source, int(mid), goal[0], goal[1])
+    prev_goal = board.scratch.get("party_approach_goal")
+    if prev_goal != goal_key:
+        board.scratch["party_approach_goal"] = goal_key
+        if (
+            isinstance(prev_goal, tuple)
+            and len(prev_goal) == 5
+            and prev_goal[0] == goal_key[0]
+            and prev_goal[2:] != goal_key[2:]
+        ):
+            _log.info(
+                "approach retarget %s %s,%s map=%s via %s -> %s,%s map=%s via %s",
+                goal_key[0],
+                prev_goal[3],
+                prev_goal[4],
+                prev_goal[2],
+                prev_goal[1],
+                goal[0],
+                goal[1],
+                mid,
+                source,
+            )
     if getattr(board, "nav_goal", None) != goal:
         start_travel(board, goal, reason="party supply approach")
     if emit_travel_hop(
@@ -880,6 +1907,312 @@ def _finish_join(manager: Any) -> None:
             board.scratch.pop(SCRATCH_WORLD_NAV, None)
         board.scratch.pop("party_nav_goal", None)
     manager.runtime.duty_phase = DUTY_FOLLOW
+
+
+def bind_supply_identity(rows: Any, snapshot: Any) -> list:
+    """Copy a unique party guid onto each report. Skip a duplicated name.
+
+    With no party snapshot the reports are unchanged. Coordinates never choose
+    which row a name belongs to.
+    """
+    from .leader import supply_member_row
+    from .loot import _identity_rows
+
+    if not isinstance(snapshot, dict) or not snapshot.get("in_party"):
+        return [row for row in (rows or []) if isinstance(row, dict)]
+    kept: list = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        who = str(row.get("from") or "").strip()
+        if not who:
+            continue
+        named = [
+            member
+            for member in _identity_rows(snapshot)
+            if str(member.get("name") or "").strip().casefold() == who.casefold()
+        ]
+        guid = str(row.get("guid") or "").strip()
+        if len(named) > 1 and not guid:
+            _log.info("supply target ambiguous name=%s", who)
+            continue
+        if guid and supply_member_row(snapshot, who, guid) is None and named:
+            _log.info("supply target ambiguous name=%s", who)
+            continue
+        copied = dict(row)
+        if not guid and len(named) == 1:
+            found = str(named[0].get("guid") or "").strip()
+            if found:
+                copied["guid"] = found
+        kept.append(copied)
+    return kept
+
+
+def release_finished_party_shop(board: Any) -> None:
+    """Drop a completed party shop's leftover travel so the join can start.
+
+    An in-progress buy still has ``party_supply_item`` and is left alone.
+    Solo shop trips, which never set the party flag, are left alone.
+    """
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    if not isinstance(scratch, dict):
+        return
+    if scratch.get("shop_trip") and scratch.get("party_supply_item"):
+        return
+    if not (
+        scratch.get(_FLAG)
+        or scratch.get("party_supply_chain")
+        or scratch.get(_JOIN)
+    ):
+        return
+    changed = False
+    if scratch.get("shop_trip"):
+        from app._04_decision.shop_trip import clear_shop_trip
+
+        clear_shop_trip(board)
+        changed = True
+    else:
+        for key in (
+            "shop_scrolled",
+            "shop_scrolled_at",
+            "shop_halted",
+            "shop_scroll_retries",
+        ):
+            if scratch.pop(key, None) is not None:
+                changed = True
+        if getattr(board, "travel_purpose", None) == "shop":
+            try:
+                from app._04_decision.behaviors.travel import clear_travel
+
+                clear_travel(board)
+            except Exception:
+                try:
+                    board.nav_goal = None
+                except Exception:
+                    pass
+                board.travel_purpose = None
+            changed = True
+    if scratch.pop("post_shop_return", None) is not None:
+        changed = True
+    session = scratch.get("world_nav_session")
+    reason = str(getattr(session, "reason", "") or "")
+    need = str(scratch.get("need_world_nav") or "")
+    if need == "after_shop" or reason in ("after_shop", "post_shop"):
+        try:
+            from app._04_decision.world_nav.hooks import clear_world_nav_run
+
+            clear_world_nav_run(board)
+        except Exception:
+            scratch.pop("need_world_nav", None)
+            scratch.pop("world_nav_session", None)
+        try:
+            from app._04_decision.mode_control import set_mode
+            from app._04_decision.player_mode import PlayerMode
+
+            if getattr(board, "player_mode", None) is PlayerMode.WORLD_NAV:
+                set_mode(board, PlayerMode.FARMING)
+        except Exception:
+            pass
+        changed = True
+    if changed:
+        _log.info("party shop finished; join not blocked")
+
+
+def _leader_body_stopped() -> bool:
+    """True only when the action slot says the body is not walking."""
+    try:
+        from app._05_action.body_pose import body_is_moving, body_is_standing
+
+        if body_is_standing() is True:
+            return True
+        return body_is_moving() is False
+    except Exception:
+        return False
+
+
+def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
+    """True after a settled stop, then a two-tile step or a map change.
+
+    Steps taken before that stop update the latest tile and do not cancel.
+    The stop counts only when the body is not walking and the live map and
+    tile stay put for ``HOLD_SETTLE_S``. One stopped sample is not enough.
+    Map id 0 is Talking Island and is a real map. A pose that could not be
+    read is not. Tile ``0,0`` is not a stop. After the stop, two tiles or a
+    map change cancels whether or not the drop has been announced. One tile
+    does not.
+    """
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    if not isinstance(scratch, dict) or not isinstance(hold, dict) or not hold.get("id"):
+        return False
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(world)
+    if pose is None:
+        prev = scratch.get("party_leader_hold_pose")
+        return bool(
+            isinstance(prev, dict)
+            and prev.get("moved")
+            and str(prev.get("id")) == str(hold.get("id"))
+        )
+    here = (int(pose.map_id), int(pose.x), int(pose.y))
+    key = str(hold.get("id"))
+    prev = scratch.get("party_leader_hold_pose")
+    if not isinstance(prev, dict) or str(prev.get("id") or "") != key:
+        scratch["party_leader_hold_pose"] = {
+            "id": key,
+            "map": here[0],
+            "x": here[1],
+            "y": here[2],
+            "moved": False,
+            "stopped": _leader_body_stopped(),
+        }
+        return False
+    if prev.get("moved"):
+        prev["map"], prev["x"], prev["y"] = here
+        return True
+    if not prev.get("confirmed"):
+        prev_map = prev.get("map")
+        same = (
+            prev_map is not None
+            and int(prev_map) == here[0]
+            and int(prev.get("x") or 0) == here[1]
+            and int(prev.get("y") or 0) == here[2]
+        )
+        prev["map"], prev["x"], prev["y"] = here
+        stopped = _leader_body_stopped()
+        prev["stopped"] = stopped
+        if stopped and same and not (here[1] == 0 and here[2] == 0):
+            try:
+                since = float(prev.get("settle_at") or 0.0)
+            except (TypeError, ValueError):
+                since = 0.0
+            now = time.time()
+            if since <= 0.0:
+                prev["settle_at"] = now
+            elif now - since >= HOLD_SETTLE_S:
+                prev["confirmed"] = True
+                prev["anchor_map"], prev["anchor_x"], prev["anchor_y"] = here
+                _log.info(
+                    "supply hold settled id=%s map=%s xy=(%s,%s)",
+                    key,
+                    here[0],
+                    here[1],
+                    here[2],
+                )
+        else:
+            prev["settle_at"] = 0.0
+        return False
+    try:
+        anchor = (
+            int(prev["anchor_map"]),
+            int(prev["anchor_x"]),
+            int(prev["anchor_y"]),
+        )
+    except (TypeError, ValueError, KeyError):
+        anchor = (int(prev.get("map") or 0), int(prev.get("x") or 0), int(prev.get("y") or 0))
+    prev["map"], prev["x"], prev["y"] = here
+    if (
+        _tile_space(anchor[1], anchor[2]) != _tile_space(here[1], here[2])
+        and anchor[0] == here[0]
+    ):
+        prev["anchor_map"], prev["anchor_x"], prev["anchor_y"] = here
+        return False
+    if not _pose_moved(anchor, here):
+        return False
+    prev["moved"] = True
+    _log.info("supply hold moved id=%s", key)
+    return True
+
+
+def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
+    """Live stop tile once the body has stayed there.
+
+    Party memory is not the source. Map id 0 is Talking Island and is sent.
+    A missing map is not. Tile ``0,0`` is not sent. After confirmation the
+    latest live tile is returned, including a later departure, so a two-tile
+    or map change can cancel the hold.
+    """
+    del snapshot
+    if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
+        return None
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if (
+        not isinstance(prev, dict)
+        or not prev.get("confirmed")
+        or str(prev.get("id") or "") != str(hold.get("id"))
+    ):
+        return None
+    try:
+        mid = int(prev["map"])
+        x = int(prev["x"])
+        y = int(prev["y"])
+    except (TypeError, ValueError, KeyError):
+        return None
+    if x == 0 and y == 0:
+        return None
+    return {
+        "id": str(hold.get("id")),
+        "for": str(hold.get("for") or ""),
+        "map_id": mid,
+        "x": x,
+        "y": y,
+        "confirmed": True,
+    }
+
+
+def leader_supply_action(
+    world: Any,
+    blackboard: Any,
+    hold: Any,
+    claim: Any,
+) -> Any:
+    """Leader tick before the hunt decision.
+
+    Critical retreat, then the same urgent self care members use, then a
+    supply pickup or stand. A hold only stops new attacks and chase. Steps
+    before the body stops stay on the hold. After the stop, two tiles or a
+    map change returns None so the hunt decision runs again.
+    """
+    if world is None or blackboard is None:
+        return None
+    from .loot import stable_self_identity
+    from .support import party_critical_escape, urgent_self_survival
+
+    escape = party_critical_escape(world, blackboard)
+    if escape is not None:
+        return escape
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(world)
+    origin = getattr(blackboard, "world_origin", None)
+    xy = (int(pose.x), int(pose.y)) if pose is not None else (
+        int(getattr(origin, "x", 0) or 0),
+        int(getattr(origin, "y", 0) or 0),
+    )
+    map_id = int(pose.map_id) if pose is not None else None
+    name, guid = stable_self_identity(
+        getattr(world, "last_party", None),
+        xy,
+        map_id,
+        player=getattr(world, "player", None),
+        print_state=getattr(world, "last_print_state", None),
+    )
+    care = urgent_self_survival(world, blackboard, origin)
+    if care is not None:
+        note_care_pose(blackboard, world)
+        if claim_names_me(hold, name, guid):
+            leader_hold_displaced(blackboard, world, hold)
+        return care
+    if claim_names_me(claim, name, guid):
+        pickup = leader_supply_pickup(world, blackboard, claim if isinstance(claim, dict) else None)
+        if pickup is not None:
+            return pickup
+    if claim_names_me(hold, name, guid):
+        if leader_hold_displaced(blackboard, world, hold):
+            return None
+        return recipient_hold_intent(world, blackboard, hold, tracked=True)
+    return None
 
 
 def _clear_shop_flags(board: Any) -> None:

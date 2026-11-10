@@ -191,6 +191,10 @@ class MemberStates:
     def name_for_peer(self, peer: str) -> str:
         return str(self._peers.get(str(peer or "").strip()) or "")
 
+    def peer_ids(self) -> list[str]:
+        """Socket ids that have spoken as a roster member."""
+        return [str(peer) for peer in self._peers if str(peer).strip()]
+
     def peer_for(self, name: str) -> str:
         """Socket id that last spoke as ``name``. Empty when none is known."""
         key = _key(name)
