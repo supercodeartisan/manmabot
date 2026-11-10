@@ -91,6 +91,8 @@ class PartyMemberConfig:
     tree_heal: bool = True
     tree_heal_hp: int = 40
     tree_heal_mp: int = 80
+    # This mage's own party-screen checks. Leader policy does not replace them.
+    mage_support_skills: dict | None = None
 
     @property
     def solo_farm(self) -> bool:
@@ -120,7 +122,7 @@ class PartyMemberConfig:
         if lead_mode not in LEADER_MODES:
             lead_mode = "moving"
         seat = str(self.seat_role or "member").strip().lower()
-        if seat not in ("member", "mage", "shopkeeper"):
+        if seat not in ("member", "mage", "shopkeeper", "unknown"):
             seat = "member"
         follow = max(1, min(40, int(self.follow_tiles)))
         stop = max(0, min(follow, int(self.stop_tiles)))
@@ -196,6 +198,7 @@ class PartyMemberConfig:
             tree_heal=_cfg_flag(self.tree_heal, True),
             tree_heal_hp=_cfg_pct(self.tree_heal_hp, 40),
             tree_heal_mp=_cfg_pct(self.tree_heal_mp, 80),
+            mage_support_skills=_cfg_support(self.mage_support_skills),
         )
 
     def merge_leader_policy(
@@ -203,6 +206,7 @@ class PartyMemberConfig:
         policy: Any,
         *,
         self_name: str = "",
+        resolve_seat: bool = False,
     ) -> "PartyMemberConfig":
         """Overlay global knobs from a leader ``party_policy`` body."""
         if not isinstance(policy, dict):
@@ -217,11 +221,14 @@ class PartyMemberConfig:
         seat = self.seat_role
         seat_i = self.seat_index
         loot = str(policy.get("loot_role", self.loot_role) or self.loot_role)
-        if self_name:
-            seat = seat_role_for_name(roster, self_name)
-            seat_i = seat_index_for_name(roster, self_name)
-            if not bool(policy.get("random_loot", self.random_loot)):
-                loot = loot_role_for_name(roster, self_name, default=loot)
+        named = str(self_name or "").strip()
+        if resolve_seat or named:
+            seat = seat_role_for_name(roster, named)
+            seat_i = seat_index_for_name(roster, named) if named else None
+            if seat == "unknown":
+                loot = self.loot_role
+            elif not bool(policy.get("random_loot", self.random_loot)):
+                loot = loot_role_for_name(roster, named, default=loot)
         raw = {
             "enabled": self.enabled,
             "leader_name": self.leader_name,
@@ -301,6 +308,7 @@ class PartyMemberConfig:
             "tree_heal": policy.get("tree_heal", self.tree_heal),
             "tree_heal_hp": policy.get("tree_heal_hp", self.tree_heal_hp),
             "tree_heal_mp": policy.get("tree_heal_mp", self.tree_heal_mp),
+            "mage_support_skills": self.mage_support_skills,
         }
         return self.from_mapping(raw)
 
@@ -419,6 +427,7 @@ class PartyMemberConfig:
             tree_heal=_cfg_flag(raw.get("tree_heal", True), True),
             tree_heal_hp=_cfg_pct(raw.get("tree_heal_hp"), 40),
             tree_heal_mp=_cfg_pct(raw.get("tree_heal_mp"), 80),
+            mage_support_skills=_cfg_support(raw.get("mage_support_skills")),
         ).clamped()
 
 
@@ -430,6 +439,15 @@ def _cfg_pct(value: Any, default: int) -> int:
         return max(1, min(100, int(value)))
     except (TypeError, ValueError):
         return default
+
+
+def _cfg_support(value: Any) -> dict:
+    """Normalized party-screen checks. None stays None so an empty save is heal."""
+    if value is None:
+        return {}
+    from settings.party_mage_support import normalize_saved
+
+    return normalize_saved(value)
 
 
 def _cfg_flag(value: Any, default: bool) -> bool:

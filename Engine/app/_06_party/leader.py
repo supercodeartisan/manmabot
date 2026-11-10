@@ -84,6 +84,41 @@ def party_member_block(
         return None
 
 
+def supply_member_row(
+    snapshot: Optional[dict[str, Any]],
+    wanted_name: str = "",
+    wanted_guid: str = "",
+) -> Optional[dict[str, Any]]:
+    """The supply recipient's party row.
+
+    Guid matches first. A name matches only when exactly one row has it.
+    Coordinates are not used to choose between rows.
+    """
+    if not isinstance(snapshot, dict) or not bool(snapshot.get("in_party")):
+        return None
+    from .loot import _identity_rows
+
+    rows = _identity_rows(snapshot)
+    guid = str(wanted_guid or "").strip()
+    if guid:
+        matched = [row for row in rows if _guids_match(row.get("guid"), guid)]
+        if len(matched) == 1:
+            return matched[0]
+        if len(matched) > 1:
+            return None
+    wanted = str(wanted_name or "").strip().casefold()
+    if not wanted:
+        return None
+    named = [
+        row
+        for row in rows
+        if str(row.get("name") or "").strip().casefold() == wanted
+    ]
+    if len(named) == 1:
+        return named[0]
+    return None
+
+
 def stand_from_party_memory(
     snapshot: Optional[dict[str, Any]],
     name: str,

@@ -15,6 +15,17 @@ from .follow import (
 from .policy import MemberKind
 
 
+def supply_halt(reason: str = "supply hold halt") -> Any:
+    """Esc once, the same cancel a shop uses to stop an auto-walk."""
+    from .types import ActionIntent, ActionType
+
+    return ActionIntent(
+        action=ActionType.SHOP_STOP,
+        priority=0.5,
+        reason=f"party_member:{reason}",
+    )
+
+
 def idle(reason: str, *, priority: float = 0.0) -> Any:
     from .types import ActionIntent, ActionType
 
@@ -57,6 +68,29 @@ def list_heal(
         hotbar_key=hotbar_key,
         click_x=int(click_x),
         click_y=int(click_y),
+    )
+
+
+def list_support(
+    reason: str,
+    *,
+    action: Any,
+    click_x: Optional[int] = None,
+    click_y: Optional[int] = None,
+    hotbar_box: Optional[int] = None,
+    hotbar_key: Optional[str] = None,
+) -> Any:
+    """One party-list spell. A missing click is a no-target cast such as heal all."""
+    from .types import ActionIntent
+
+    return ActionIntent(
+        action=action,
+        priority=0.88,
+        reason=f"party_member:{reason}",
+        hotbar_box=hotbar_box,
+        hotbar_key=hotbar_key,
+        click_x=None if click_x is None else int(click_x),
+        click_y=None if click_y is None else int(click_y),
     )
 
 
@@ -471,6 +505,7 @@ __all__ = [
     "idle",
     "intent_for_kind",
     "list_heal",
+    "list_support",
     "pick_settle_stand",
     "plan_field_follow",
     "plan_follow_intent",

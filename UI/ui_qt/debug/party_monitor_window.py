@@ -170,7 +170,7 @@ class PartyMonitorPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        self.headline = QLabel("Party")
+        self.headline = QLabel(self.t.get("party_monitor_title", "Party"))
         font = QFont(self.headline.font())
         font.setBold(True)
         self.headline.setFont(font)
@@ -193,7 +193,16 @@ class PartyMonitorPanel(QWidget):
 
         self.members = QTableWidget(0, 8)
         self.members.setHorizontalHeaderLabels(
-            ["Name", "Leader", "HP", "MP", "Lv", "XY", "Map", "GUID"]
+            [
+                self.t.get("party_mon_col_name", "Name"),
+                self.t.get("party_mon_col_leader", "Leader"),
+                self.t.get("party_mon_col_hp", "HP"),
+                self.t.get("party_mon_col_mp", "MP"),
+                self.t.get("party_mon_col_lv", "Lv"),
+                self.t.get("party_mon_col_xy", "XY"),
+                self.t.get("party_mon_col_map", "Map"),
+                self.t.get("party_mon_col_guid", "GUID"),
+            ]
         )
         self.members.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
@@ -461,7 +470,7 @@ class PartyMonitorWindow(QMainWindow):
         main = QSplitter(Qt.Orientation.Horizontal)
 
         # ---- left: role-aware dashboard ----
-        self.dashboard = PartyDashboard()
+        self.dashboard = PartyDashboard(t=self.t)
         self.dashboard.member_picked.connect(self.manual_name.setText)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)

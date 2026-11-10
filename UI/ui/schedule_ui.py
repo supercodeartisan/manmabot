@@ -8090,9 +8090,10 @@ class UnifiedTaskEditor(ttk.Frame):
             self._item_search[entry.key] = " ".join(
                 item_search_names(entry.name_ko, row=entry)
             ).lower()
+            shown_category = entry.display_category(language)
             self._item_categories[entry.key] = (
-                item_category_display_name(entry.category_ko, language)
-                or entry.display_category(language)
+                item_category_display_name(shown_category, language)
+                or shown_category
             )
             self._item_icons[entry.key] = entry.image_path()
         self._items_view_loaded = True

@@ -84,6 +84,83 @@ def party_critical_escape(game_state: Any, blackboard: Any) -> Optional[Any]:
     return idle("critical retreat")
 
 
+def urgent_self_survival(
+    game_state: Any,
+    blackboard: Any,
+    origin: Any = None,
+) -> Optional[Any]:
+    """HP potion, self heal, then an in-range defense. No buffs and no party heal.
+
+    Does not clear a shop trip. Buffs and party-list heals stay on their
+    later tick. An in-place result leaves the shop approach where it is.
+    """
+    if game_state is None or blackboard is None:
+        return None
+    sides = getattr(blackboard, "side_intents", None)
+    if sides is None:
+        try:
+            blackboard.side_intents = []
+        except Exception:
+            return None
+
+    potion = None
+    try:
+        from app._04_decision.potion_sides import _side_hp_potion
+
+        potion = _side_hp_potion(game_state, blackboard)
+    except Exception as exc:
+        _log.debug("urgent potion failed: %s", exc)
+        potion = None
+    if potion is not None:
+        return potion
+
+    saved = getattr(blackboard, "intent", None)
+    heal = None
+    try:
+        heal = _try_party_heal(game_state, blackboard)
+    except Exception as exc:
+        _log.debug("urgent heal failed: %s", exc)
+        heal = None
+    from app._02_state.enums import ActionType
+
+    if heal is not None and getattr(heal, "action", None) is ActionType.HEAL:
+        return heal
+    if getattr(blackboard, "intent", None) is not saved:
+        blackboard.intent = saved
+    return _immediate_defense(game_state, blackboard, origin)
+
+
+def _immediate_defense(game_state: Any, blackboard: Any, origin: Any) -> Optional[Any]:
+    """Attack only a threat already inside reach. A chase waits for the later tick."""
+    try:
+        from app._02_state.enums import ActionType
+        from app._04_decision.behaviors.hold_ground import hold_ground_reach
+        from app._04_decision.combat_query import (
+            can_engage_target,
+            tile_distance_from_player,
+        )
+
+        from .assist import engage_like_solo, resolve_self_defender
+
+        threat = resolve_self_defender(game_state, origin=origin)
+        if threat is None:
+            return None
+        reach = int(hold_ground_reach(game_state))
+        if tile_distance_from_player(threat) > reach:
+            return None
+        if origin is not None and not can_engage_target(threat, origin):
+            return None
+        intent = engage_like_solo(
+            game_state, blackboard, threat, reason="self defense"
+        )
+    except Exception as exc:
+        _log.debug("urgent defense failed: %s", exc)
+        return None
+    if getattr(intent, "action", None) is not ActionType.ATTACK:
+        return None
+    return intent
+
+
 def apply_party_support(
     game_state: Any,
     blackboard: Any,
@@ -209,6 +286,36 @@ def _try_party_heal(
     return getattr(blackboard, "intent", None)
 
 
+def urgent_list_heal_pct() -> Optional[int]:
+    """Party-list heal line for a cast that may interrupt a shop trip.
+
+    This is the character's own heal threshold, stricter than the routine
+    party-list percent. None means that heal action is off.
+    """
+    from app._04_decision import player_mode as pm
+    from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
+
+    actions = pm.HP_ACTIONS or normalize_hp_actions(None)
+    threshold = action_threshold(actions, "heal")
+    if threshold is None:
+        return None
+    return max(1, min(99, int(round(float(threshold) * 100))))
+
+
+def shop_floor_blocks_party_heal(blackboard: Any) -> bool:
+    """True while the shopkeeper is on the town side of a purchase.
+
+    A walk that has not scrolled yet can still be interrupted by an in-range
+    heal. The stall, the scroll, and the landing wait keep the trip.
+    """
+    if blackboard is None:
+        return False
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return False
+    return bool(scratch.get("shop_halted") or scratch.get("shop_scrolled"))
+
+
 def _try_party_buff(game_state: Any, blackboard: Any) -> Optional[Any]:
     from app._04_decision.behavior_tree import Status
     from app._04_decision.spells import maybe_cast_buff
@@ -223,4 +330,10 @@ def _try_party_buff(game_state: Any, blackboard: Any) -> Optional[Any]:
     return getattr(blackboard, "intent", None)
 
 
-__all__ = ["apply_party_support", "party_critical_escape"]
+__all__ = [
+    "apply_party_support",
+    "party_critical_escape",
+    "shop_floor_blocks_party_heal",
+    "urgent_list_heal_pct",
+    "urgent_self_survival",
+]

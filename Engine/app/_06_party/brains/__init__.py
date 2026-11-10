@@ -1,7 +1,7 @@
 """Party decision brains — one seat, one adopted decision per tick.
 
-Live session still calls ``PartyMemberManager.decide``. These types are the
-seats (팀장 / 팀원 / 마법사 / 상점담당자) to wire later.
+Live session still calls ``PartyMemberManager.decide``. Shopkeeper and mage
+brains adopt that same decision and do not replace the session caller.
 """
 from __future__ import annotations
 

@@ -97,7 +97,9 @@ def _report(
     return {
         "type": REPORT,
         "from": name,
-        "buffs": _buffs(player),
+        "buffs": _effects(getattr(player, "buffs", None)),
+        "debuffs": _effects(getattr(player, "debuffs", None)),
+        "poisoned": bool(getattr(player, "poisoned", False)),
         "items": _items(player),
         "map_id": map_id,
         "x": x,
@@ -107,9 +109,9 @@ def _report(
     }
 
 
-def _buffs(player: Any) -> list[dict[str, Any]]:
+def _effects(effects: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for buff in getattr(player, "buffs", None) or []:
+    for buff in effects or []:
         rows.append(
             {
                 "name": str(getattr(buff, "name", "") or ""),
@@ -118,6 +120,10 @@ def _buffs(player: Any) -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _buffs(player: Any) -> list[dict[str, Any]]:
+    return _effects(getattr(player, "buffs", None))
 
 
 def _items(player: Any) -> dict[str, Any]:
@@ -180,7 +186,9 @@ class ReportBook:
     def note(self, body: dict[str, Any]) -> None:
         who = str((body or {}).get("from") or "").strip()
         if who:
-            self.rows[who.casefold()] = dict(body)
+            row = dict(body)
+            row["noted_at"] = time.time()
+            self.rows[who.casefold()] = row
 
     def snapshot(self) -> list[dict[str, Any]]:
         return [dict(row) for row in self.rows.values()]

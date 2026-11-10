@@ -590,6 +590,19 @@ def test_leader_succession_and_absence_settings() -> None:
     assert tab.absence_state.text() == "행동 상태: —"
     assert tab._absence_state_label("fail") == "행동 전환 실패"
     assert "행동 전환 실패" not in tab.absence_state.text()
+    tab.t = {
+        "party_ui_absence_state": "行动状态",
+        "party_ui_fail_reason": "失败原因",
+        "party_ui_succession_state": "交接状态",
+    }
+    tab.refresh_status_lines()
+    assert tab.absence_state.text() == "行动状态: —"
+    assert tab.absence_reason.text() == "失败原因: —"
+    tab.t = {}
+    tab.refresh_status_lines()
+    assert tab.absence_state.text() == "행동 상태: —"
+    assert tab.absence_reason.text() == "실패 사유: —"
+    assert tab.succession_state.text() == "인계 상태: —"
 
     for section in tab.member_sections.values():
         text = " ".join(box.title() for box in section.findChildren(QGroupBox))
