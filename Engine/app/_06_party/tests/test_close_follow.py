@@ -1,6 +1,12 @@
 """Close follow: stop at 2, start at 3, stale pose is not a walk goal."""
 from app._06_party.config import PartyMemberConfig
-from app._06_party.follow import FOLLOW_CLICK_TILES, follow_hop_still_closes, follow_kind
+from app._06_party.follow import (
+    FOLLOW_CLICK_TILES,
+    follow_extend_hop,
+    follow_hop_still_closes,
+    follow_kind,
+    hold_follow_click,
+)
 from app._06_party.policy import MemberKind, PolicyInput, decide_policy
 
 
@@ -68,6 +74,51 @@ def test_stale_pose_does_not_follow():
     assert assist.kind is MemberKind.ASSIST
 
 
+def test_straight_line_chains_one_tile_and_a_trail_does_not():
+    assert follow_extend_hop((0, 0), (2, 0), (8, 0), kind="side") == (3, 0)
+    assert follow_extend_hop((0, 0), (2, 0), (8, 0), kind="trail") is None
+    assert follow_extend_hop((0, 0), (2, 0), (2, 1), kind="side") is None
+    assert follow_extend_hop((0, 0), (3, 0), (8, 0), kind="side") is None
+
+
+def test_catch_up_defers_a_new_hunt_until_the_seat():
+    far = decide_policy(_policy(assist_ready=True, slot_dist=5, slot_arrive=0))
+    assert far.kind is MemberKind.FOLLOW
+    moving = decide_policy(
+        _policy(assist_ready=True, slot_dist=2, slot_arrive=0, leader_moving=True)
+    )
+    assert moving.kind is MemberKind.FOLLOW
+    stopped = decide_policy(
+        _policy(assist_ready=True, slot_dist=2, slot_arrive=0, leader_moving=False)
+    )
+    assert stopped.kind is MemberKind.ASSIST
+    latched = decide_policy(
+        _policy(assist_ready=True, slot_dist=2, catch_up=True, leader_moving=False)
+    )
+    assert latched.kind is MemberKind.FOLLOW
+    back = decide_policy(
+        _policy(assist_ready=True, slot_dist=1, catch_up=True, leader_moving=False)
+    )
+    assert back.kind is MemberKind.ASSIST
+
+
+def test_catch_up_keeps_potion_heal_and_defend():
+    common = dict(slot_dist=6, assist_ready=True)
+    assert decide_policy(_policy(need_potion=True, **common)).kind is MemberKind.POTION
+    assert decide_policy(_policy(need_heal=True, **common)).kind is MemberKind.HEAL
+    assert decide_policy(_policy(self_threat=True, **common)).kind is MemberKind.DEFEND
+    assert decide_policy(_policy(need_buff=True, **common)).kind is not MemberKind.BUFF
+
+
+def test_a_leader_step_drops_the_held_click():
+    assert hold_follow_click(
+        (0, 0), (5, 0), (2, 0), body_moving=True, leader_moved=False
+    )
+    assert not hold_follow_click(
+        (0, 0), (6, 0), (2, 0), body_moving=True, leader_moved=True
+    )
+
+
 def test_same_delta_keeps_the_hop_and_a_turn_does_not():
     assert follow_hop_still_closes((0, 0), (5, 0), (2, 0)) is True
     assert follow_hop_still_closes((0, 0), (1, 0), (2, 0)) is False
@@ -81,5 +132,9 @@ if __name__ == "__main__":
     test_offscreen_fresh_pose_uses_the_same_band()
     test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()
+    test_a_leader_step_drops_the_held_click()
     test_same_delta_keeps_the_hop_and_a_turn_does_not()
+    test_straight_line_chains_one_tile_and_a_trail_does_not()
+    test_catch_up_defers_a_new_hunt_until_the_seat()
+    test_catch_up_keeps_potion_heal_and_defend()
     print("OK")

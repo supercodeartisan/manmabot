@@ -37,14 +37,27 @@ class PartyMemberConfig:
     assist_leader_strikes: bool = True
     external_target_id: Optional[int] = None
     external_target_ent: str = ""
-    # Loot comes from the leader policy. Random ON: closest eligible member
-    # takes party drops. Random OFF: roster ``responsible`` takes own drops,
-    # ``none`` takes nothing. Members do not loot while the leader is moving.
+    # Loot comes from the leader policy. The near radius is
+    # ``farm.loot_max_tiles``: the leader walks that far, and every other
+    # member loots their own piles inside it. Hunt and assist stay first.
+    # Random ON: closest eligible member takes party drops.
+    # Random OFF: ``responsible`` uses the wider engage radius and takes
+    # every party pile, including a colleague's.
+    # Members do not loot while the leader is moving.
     random_loot: bool = False
     loot_role: str = "none"
     farm_mode: str = "party"
     # From the leader policy. Turret only while the leader stands on a point.
     leader_mode: str = "moving"
+    # Leader is standing only to wait for a seat. Keep the walking side line.
+    formation_hold: bool = False
+    # One leader tick: drop the sticky slot and pick a free seat again.
+    formation_reform: bool = False
+    # Confirmed leader stop for this wait. Empty until the leader has stood.
+    formation_anchor_x: Optional[int] = None
+    formation_anchor_y: Optional[int] = None
+    formation_anchor_dx: Optional[int] = None
+    formation_anchor_dy: Optional[int] = None
     # Turret yard half-extents (None = derive from party_size).
     yard_half_w: Optional[int] = None
     yard_half_h: Optional[int] = None
@@ -153,6 +166,12 @@ class PartyMemberConfig:
             loot_role=role,
             farm_mode=mode,
             leader_mode=lead_mode,
+            formation_hold=bool(self.formation_hold),
+            formation_reform=bool(self.formation_reform),
+            formation_anchor_x=self.formation_anchor_x,
+            formation_anchor_y=self.formation_anchor_y,
+            formation_anchor_dx=self.formation_anchor_dx,
+            formation_anchor_dy=self.formation_anchor_dy,
             yard_half_w=hw,
             yard_half_h=hh,
             yard_scale_with_roster=bool(self.yard_scale_with_roster),
@@ -251,6 +270,12 @@ class PartyMemberConfig:
             # Party / solo farm stays this member's own setting.
             "farm_mode": self.farm_mode,
             "leader_mode": policy.get("leader_mode", self.leader_mode),
+            "formation_hold": bool(policy.get("formation_hold", self.formation_hold)),
+            "formation_reform": bool(policy.get("formation_reform", self.formation_reform)),
+            "formation_anchor_x": _coord(policy.get("formation_anchor_x", self.formation_anchor_x)),
+            "formation_anchor_y": _coord(policy.get("formation_anchor_y", self.formation_anchor_y)),
+            "formation_anchor_dx": _coord(policy.get("formation_anchor_dx", self.formation_anchor_dx)),
+            "formation_anchor_dy": _coord(policy.get("formation_anchor_dy", self.formation_anchor_dy)),
             "yard_half_w": policy.get("yard_half_w", self.yard_half_w),
             "yard_half_h": policy.get("yard_half_h", self.yard_half_h),
             "yard_scale_with_roster": policy.get(
@@ -333,6 +358,15 @@ class PartyMemberConfig:
             return raw.clamped()
         if not isinstance(raw, dict):
             return cls().clamped()
+
+        def _coord(value: Any) -> Optional[int]:
+            if value is None or value == "":
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
         tid = raw.get("leader_track_id")
         try:
             tid_i = int(tid) if tid is not None and str(tid).strip() != "" else None
@@ -390,6 +424,12 @@ class PartyMemberConfig:
             loot_role=str(raw.get("loot_role") or "none"),
             farm_mode=str(raw.get("farm_mode") or "party"),
             leader_mode=str(raw.get("leader_mode") or "moving"),
+            formation_hold=bool(raw.get("formation_hold", False)),
+            formation_reform=bool(raw.get("formation_reform", False)),
+            formation_anchor_x=_coord(raw.get("formation_anchor_x")),
+            formation_anchor_y=_coord(raw.get("formation_anchor_y")),
+            formation_anchor_dx=_coord(raw.get("formation_anchor_dx")),
+            formation_anchor_dy=_coord(raw.get("formation_anchor_dy")),
             yard_half_w=hw_i,
             yard_half_h=hh_i,
             yard_scale_with_roster=bool(raw.get("yard_scale_with_roster", True)),

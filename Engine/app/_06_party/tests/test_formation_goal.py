@@ -107,8 +107,8 @@ def test_trail_is_used_only_when_the_side_is_blocked():
 
 
 def test_stopped_grid_excludes_the_leader():
-    assert stand_radius(5) == 1
-    assert stand_radius(6) == 2
+    assert stand_radius(5) == 2
+    assert stand_radius(6) == 3
     leader = (20, 20)
     seats = [
         choose_formation_goal(
@@ -118,12 +118,12 @@ def test_stopped_grid_excludes_the_leader():
     ]
     assert all(tile is not None and tile != leader for tile in seats)
     assert len(set(seats)) == 5
-    assert all(max(abs(t[0] - 20), abs(t[1] - 20)) <= 1 for t in seats)
+    assert all(max(abs(t[0] - 20), abs(t[1] - 20)) <= 2 for t in seats)
     wide = choose_formation_goal(
         leader, forward=(1, 0), seat=0, followers=6, stopped=True, trail_tile=None
     )
     assert wide.kind == "stand"
-    assert max(abs(wide.tile[0] - 20), abs(wide.tile[1] - 20)) <= 2
+    assert max(abs(wide.tile[0] - 20), abs(wide.tile[1] - 20)) <= 3
 
 
 def test_slot_distance_replaces_the_leader_band():
@@ -133,6 +133,10 @@ def test_slot_distance_replaces_the_leader_band():
     follow = decide_policy(_policy(leader_dist=1, slot_dist=1))
     assert follow.kind is MemberKind.FOLLOW
     assert follow.reason.startswith("follow_slot")
+    stand = decide_policy(_policy(leader_dist=1, slot_dist=1, slot_arrive=1))
+    assert stand.kind is MemberKind.HOLD
+    outside = decide_policy(_policy(leader_dist=1, slot_dist=2, slot_arrive=1))
+    assert outside.kind is MemberKind.FOLLOW
 
 
 def test_one_leader_step_moves_the_side_slot():

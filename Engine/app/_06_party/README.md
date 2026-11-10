@@ -183,11 +183,11 @@ LeaderStartRally.begin(deadline=시작 대기 끝) → (travel 시) on_plan / sh
 | `assist` / `loot` / `support` | 전투·루팅·물약 |
 | `join_map` | 리더 맵 합류 내비 |
 | `invite` | 초대 전부: 채팅 문구(`/초대 `, `파티탈퇴`), 로스터 이름·탈퇴 판정, `PartyInviter`(멤버별·시작 대기 10분·20s 간격·마감 없음·이탈 재초대·late), `LeaderInvites`(정책 먼저·새 소켓 재전송·위험/전투 행동 회피·틱 진행), `deliver_chat` |
-| `leader_rally` | 첫 사냥 집결 FSM, WorldNav `hold_at_step` |
+| `leader_rally` | 첫 사냥 집결 FSM. 표식에 도착하면 사냥을 시작한다. 멤버를 기다려 서지 않는다 |
 | `party_log` | `Engine/logs/party-*.log` 채널 |
 | `brains/*` | `make_brain(role)` 스텁 — **세션 미사용** |
 | `turret_seat` | 터렛 멤버 링 자리 (`tactics.radial` 사용) — **배선됨** |
-| `formation` | `MemberFormation` (리더 발자국 기록 + 개활지/통로 판별 → 통로면 자리 번호별 trail 타일), `LeaderLineWatch` (알려진 멤버 절반 이상이 `lag_tiles` 넘게 뒤처지면 정지 — 뒤처짐 = 직선거리와 trail 걸음 중 큰 값, 다른 맵 = 뒤처짐; 최대 8초 후 6초 쿨다운), `followers_from_party` — 멤버: `manager._formation_trail_tile`, 리더: `bot_controller._leader_line_hold` → `set_party_hold` |
+| `formation` | `MemberFormation` (리더 발자국 기록 + 개활지/통로 판별 → 통로면 자리 번호별 trail 타일), `LeaderLineWatch`, `followers_from_party`. 멤버 trail은 `manager._formation_trail_tile`. 리더는 자리 간격으로 서지 않는다 |
 | `tactics/terrain_kind` | 반경 6 창의 보행 비율·통로 비율 + 히스테리시스 → `open`/`narrow` |
 | `tactics/radial` | 링/부채꼴 자리, 시야선 보정 |
 | `tactics/trail` | `LeaderTrail`, `leader_hold` (None = 위치 모름, 건너뜀) |

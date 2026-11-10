@@ -283,7 +283,12 @@ class BotController:
         self._party_socket_wait_note_at = 0.0
         self._party_turret_info: dict = {}
         self._party_line_info: dict = {}
+        self._formation_hold = False
+        self._formation_reform = False
+        self._reform_published = False
+        self._formation_anchor = None
         self._party_line_watch = None
+        self._party_slot_formation = None
         self._party_line_map: Optional[int] = None
         self._party_near_hold = False
         self._party_policy_info: dict = {}
@@ -1682,64 +1687,6 @@ class BotController:
         brain = getattr(self, "_party_leader_ref", None)
         return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
 
-    def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
-        """Area hunt: brief wait when half or more members lag ``party_lag_tiles``."""
-        profile = self._profile
-        brain = getattr(self, "_party_leader_ref", None)
-        if not (self._party_leader_on() and bool(getattr(brain, "on_area", False))):
-            self._party_line_watch = None
-            self._party_line_info = {}
-            return False
-        from app._06_party.formation import LeaderLineWatch, followers_from_party
-
-        try:
-            lag = max(5, min(100, int(getattr(profile, "party_lag_tiles", 30) or 30)))
-        except (TypeError, ValueError):
-            lag = 30
-        watch = self._party_line_watch
-        if watch is None:
-            watch = self._party_line_watch = LeaderLineWatch(lag_tiles=lag)
-        watch.lag_tiles = lag
-        if map_id != self._party_line_map:
-            watch.reset()
-            self._party_line_map = map_id
-        origin = getattr(blackboard, "world_origin", None)
-        if origin is None:
-            return False
-        watch.observe((int(origin.x), int(origin.y)))
-        snap = getattr(world, "last_party", None)
-        from app._06_party.arrow_policy import line_omit_names
-        from app._06_party.sync import member_states
-
-        omit = line_omit_names(
-            member_states.rows,
-            member_states.peer_for,
-            member_states.awaiting_fresh,
-        )
-        followers = followers_from_party(
-            snap,
-            map_id,
-            self_name=_player_chat_name(world, snap),
-            omit_names=omit,
-        )
-        res = watch.check(followers)
-        was = bool(self._party_line_info.get("hold"))
-        if res.hold and not was:
-            msg = f"Party: waiting for members ({res.behind}/{res.known} > {lag} tiles behind)"
-            self.log(msg)
-            self._party_event("line_wait", msg)
-        elif was and not res.hold:
-            self.log(f"Party: moving on ({res.reason})")
-        self._party_line_info = {
-            "hold": res.hold,
-            "reason": res.reason,
-            "behind": res.behind,
-            "known": res.known,
-            "held_s": round(res.held_s, 1),
-            "lag_tiles": lag,
-        }
-        return res.hold
-
     def _party_socket_note(self, msg: str) -> None:
         self.log(msg)
         self._party_event("socket", msg)
@@ -1834,14 +1781,12 @@ class BotController:
 
         self._start_rally = LeaderStartRally(rally, log=_note)
         WorldNavHooks.on_plan = self._start_rally.on_plan
-        WorldNavHooks.hold_at_step = self._start_rally.should_hold
 
     def _clear_party_nav_hooks(self) -> None:
         from app._04_decision.world_nav.session import WorldNavHooks
         from app._06_party.comms.orders import reset_orders
 
         WorldNavHooks.on_plan = None
-        WorldNavHooks.hold_at_step = None
         self._start_rally = None
         reset_orders()
         self._party_tree_trip = ""
@@ -2137,8 +2082,21 @@ class BotController:
         mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
         if mode not in ("turret", "moving"):
             mode = "moving"
+        anchor = getattr(self, "_formation_anchor", None)
+
+        def _anchor_coord(index: int):
+            if not isinstance(anchor, tuple) or len(anchor) <= index:
+                return None
+            return int(anchor[index])
+
         return {
             "leader_mode": mode,
+            "formation_hold": bool(getattr(self, "_formation_hold", False)),
+            "formation_reform": bool(getattr(self, "_formation_reform", False)),
+            "formation_anchor_x": _anchor_coord(0),
+            "formation_anchor_y": _anchor_coord(1),
+            "formation_anchor_dx": _anchor_coord(2),
+            "formation_anchor_dy": _anchor_coord(3),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
             "yard_scale_with_roster": True,
@@ -3152,7 +3110,6 @@ class BotController:
         from app._02_state import ActionType, CharacterType
         from app._03_world.merge.track import create_game_state
         from app._03_world.merge.memory_sync import world_origin_from_snapshot
-        from app._04_decision.behaviors.hold_ground import set_party_hold
         from app._04_decision.behaviors.party_turret import (
             set_party_turret,
             turret_status,
@@ -3202,7 +3159,7 @@ class BotController:
                     getattr(profile, "party_approach_tiles", 2)
                 ),
                 "potion_hp_ratio": float(
-                    getattr(profile, "party_potion_hp_ratio", 0.45)
+                    getattr(profile, "hp_potion_ratio", 0.50) or 0.50
                 ),
                 "random_loot": bool(
                     getattr(profile, "party_random_loot", False)
@@ -3915,7 +3872,7 @@ class BotController:
                         leader_brain.prepare(world, rally=start_rally)
                     except Exception as schedule_exc:
                         self.log(f"Party schedule prepare failed: {schedule_exc}")
-                set_party_hold(decision.blackboard, False)
+                self._formation_hold = False
                 help_scratch = getattr(decision.blackboard, "scratch", None)
                 if isinstance(help_scratch, dict):
                     if self._party_leader_on():

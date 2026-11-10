@@ -390,9 +390,7 @@ def should_drink_hp_potion(state: "GameState") -> bool:
     from app._04_decision.mode_control import is_critical_hp, is_low_hp
     from app._05_action.spell_box import slot_is_enabled
 
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if not slot_is_enabled("hp_potion"):
         return False
@@ -655,9 +653,7 @@ def _can_item_now(state: "GameState", item_key: str) -> bool:
         assigned_hotbar_slot,
         find_hp_restore_hotbar,
     )
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -674,9 +670,7 @@ def _can_potion_now(state: "GameState") -> bool:
         assigned_hotbar_slot,
         hp_item_keys,
     )
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -999,13 +993,13 @@ def hp_spike_drop(blackboard: "Blackboard") -> bool:
 
 
 def _hp_action_enabled(actions: list, action_id: str) -> bool:
-    from app._04_decision.hp_actions import canonical_action_id, is_item_action
+    from app._04_decision.hp_actions import canonical_action_id
     from app._06_party.recovery import active
 
     wanted = canonical_action_id(action_id)
     party = active()
     if party is not None:
-        if wanted in ("heal", "hp_potion", "retreat") or is_item_action(str(action_id or "")):
+        if wanted in ("heal", "retreat"):
             return True
         if wanted == "safe_zone":
             return bool(party.safe_zone or party.talking_scroll)
@@ -2167,6 +2161,27 @@ def _resolve_loot_gap(
     return _LOOT_TRACK_HOLD
 
 
+def party_leader_pile_ok(blackboard: "Blackboard", obj: object | None) -> bool:
+    """Solo loot is unchanged. A party leader keeps an on-screen pile inside the near radius.
+
+    The radius is ``LOOT_MAX_TILES`` (``farm.loot_max_tiles``). That same
+    value is how far the leader walks to the pile.
+    """
+    if not blackboard.scratch.get("party_leader_no_loot"):
+        return obj is not None
+    if obj is None:
+        return False
+    from app._04_decision import player_mode as pm
+    from app._04_decision.combat_query import object_on_screen, tile_distance_from_player
+
+    if not object_on_screen(obj):
+        return False
+    try:
+        return int(tile_distance_from_player(obj)) <= max(1, int(pm.LOOT_MAX_TILES))
+    except (TypeError, ValueError):
+        return False
+
+
 def continue_or_start_loot(
     state: "GameState",
     blackboard: "Blackboard",
@@ -2175,11 +2190,11 @@ def continue_or_start_loot(
     restrict_to_farm: bool = True,
     screen_only: bool = True,
 ) -> Status | None:
-    """Sticky loot as walk-to-item then pickup; None if no loot this tick."""
-    if blackboard.scratch.get("party_leader_no_loot"):
-        clear_loot_hop(blackboard)
-        blackboard.current_item_id = None
-        return None
+    """Sticky loot as walk-to-item then pickup; None if no loot this tick.
+
+    A party leader loots only an on-screen pile within ``LOOT_MAX_TILES``.
+    """
+    leader_near = bool(blackboard.scratch.get("party_leader_no_loot"))
     # Clicked pile still in memory: re-click / walk back — do not roam away.
     pending = try_finish_pending_pickup(state, blackboard)
     if pending is not None:
@@ -2187,7 +2202,9 @@ def continue_or_start_loot(
 
     loot_mode = _effective_loot_mode(state)
     farm, _farm_origin = (
-        _farm_loot_bounds(blackboard) if restrict_to_farm else (None, None)
+        (None, None)
+        if leader_near
+        else (_farm_loot_bounds(blackboard) if restrict_to_farm else (None, None))
     )
     origin = blackboard.world_origin
     if blackboard.current_item_id is not None:
@@ -2236,11 +2253,13 @@ def continue_or_start_loot(
 
                 if not _loot_in_farm(sticky, farm, origin):
                     drop = True
-            if not drop:
+            if not drop and not leader_near:
                 from app._04_decision.ground_loot import loot_ownership_allowed
 
                 if not loot_ownership_allowed(sticky):
                     drop = True
+            if not drop and not party_leader_pile_ok(blackboard, sticky):
+                drop = True
             if not drop:
                 from app._04_decision.behaviors.loot_hop import _in_pickup_range
                 from app._04_decision.combat_query import (
@@ -2277,8 +2296,9 @@ def continue_or_start_loot(
                     origin=origin,
                     exclude=preview_skip,
                     screen_only=screen_only,
+                    ownership_filter=not leader_near,
                 ):
-                    if is_adena(cand):
+                    if is_adena(cand) and party_leader_pile_ok(blackboard, cand):
                         drop = True
                         break
             if drop:
@@ -2302,14 +2322,42 @@ def continue_or_start_loot(
         for tid in blackboard.loot_clicked_ids
         if recently_clicked_loot(blackboard, tid)
     )
-    item = nearest_lootable(
-        state,
-        loot_mode=loot_mode,
-        farm=farm,
-        origin=origin,
-        exclude=skip,
-        screen_only=screen_only,
-    )
+    if leader_near:
+        from app._04_decision.combat_query import list_lootable, tile_distance_from_player
+
+        near = [
+            obj
+            for obj in list_lootable(
+                state,
+                loot_mode=loot_mode,
+                farm=None,
+                origin=origin,
+                exclude=skip,
+                screen_only=True,
+                ownership_filter=False,
+            )
+            if party_leader_pile_ok(blackboard, obj)
+        ]
+        item = (
+            min(
+                near,
+                key=lambda obj: (
+                    tile_distance_from_player(obj),
+                    int(getattr(obj, "track_id", 0) or 0),
+                ),
+            )
+            if near
+            else None
+        )
+    else:
+        item = nearest_lootable(
+            state,
+            loot_mode=loot_mode,
+            farm=farm,
+            origin=origin,
+            exclude=skip,
+            screen_only=screen_only,
+        )
     if item is None:
         return None
     begin_loot_item(blackboard, item.track_id, item)
@@ -2656,7 +2704,8 @@ def farm_loot_or_combat(
     """Loot first; sticky kill and attacks_me force-engage beat loot.
 
     While this bot is the party leader, a monster hitting a mage member
-    is taken before the sticky fight, attacks-me, loot, and other help.
+    replaces the current fight. After that fight ends, a monster hitting
+    any other member is taken before attacks-me, loot, and other help.
     1. A living sticky target is finished before any new loot click, unless
        a monster that has attacked me should take the lock. The sticky
        yields when it has not attacked me. A living sticky that has
@@ -2702,36 +2751,6 @@ def farm_loot_or_combat(
         sync_attacks_me_force_targets(state)
     except Exception:
         pass
-    if blackboard.scratch.get("party_help_open"):
-        from app._06_party.assist import resolve_mage_member_threat
-
-        mage_threat = resolve_mage_member_threat(
-            state,
-            getattr(state, "last_party", None),
-            origin=origin,
-        )
-        if mage_threat is not None:
-            threat_id = int(mage_threat.track_id)
-            if blackboard.current_target_id != threat_id:
-                begin_engage(
-                    state,
-                    blackboard,
-                    threat_id,
-                    finish_kill=True,
-                )
-            event(
-                "combat",
-                "farm branch=mage_help id=%s dist=%s",
-                threat_id,
-                _dist(mage_threat),
-            )
-            return continue_or_start_combat(
-                state,
-                blackboard,
-                allow_new=True,
-                chosen=mage_threat,
-                reason="mage member under attack",
-            )
     sticky = rebind_sticky_target(state, blackboard)
     if prefer_attacked_me_sticky(state, blackboard, exclude=exclude):
         sticky = (
@@ -2745,6 +2764,49 @@ def farm_loot_or_combat(
             getattr(sticky, "track_id", None),
             _dist(sticky),
         )
+
+    fight_open = sticky is not None or continue_sticky_combat(state, blackboard)
+    if blackboard.scratch.get("party_help_open"):
+        from app._06_party.assist import choose_help_target
+
+        helped, help_src = choose_help_target(
+            state,
+            getattr(state, "last_party", None),
+            origin=origin,
+            current=sticky,
+            fight_open=fight_open,
+        )
+        if help_src in ("mage_help", "member_under_attack") and helped is not None:
+            threat_id = int(helped.track_id)
+            if blackboard.current_target_id != threat_id:
+                begin_engage(
+                    state,
+                    blackboard,
+                    threat_id,
+                    finish_kill=True,
+                )
+            branch = (
+                "mage_help" if help_src == "mage_help" else "member_under_attack"
+            )
+            reason = (
+                "mage member under attack"
+                if help_src == "mage_help"
+                else "party member under attack"
+            )
+            event(
+                "combat",
+                "farm branch=%s id=%s dist=%s",
+                branch,
+                threat_id,
+                _dist(helped),
+            )
+            return continue_or_start_combat(
+                state,
+                blackboard,
+                allow_new=True,
+                chosen=helped,
+                reason=reason,
+            )
 
     if sticky is not None or continue_sticky_combat(state, blackboard):
         tid = getattr(sticky, "track_id", None) or blackboard.current_target_id

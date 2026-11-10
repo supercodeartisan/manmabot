@@ -25,10 +25,11 @@ from app._04_decision.behaviors.mode_actions import (
     retreat_loot_if_clear,
 )
 from app._04_decision.behaviors import search as search_beh
-from app._04_decision.behaviors.hold_ground import step_party_hold_ground
 from app._04_decision.behaviors.party_turret import (
+    party_turret_active,
     step_party_turret_idle,
     step_party_turret_leash,
+    turret_routine_held,
 )
 from app._04_decision.behaviors.search_hop import emit_search_hop
 from app._04_decision.behaviors.travel import (
@@ -990,15 +991,18 @@ def _maybe_confined_escape(
 
     Movement / search / loot-walk only. Attacking a living sticky target
     clears the bubble clock so fight time does not count toward 13 s, and
-    must not fire TP or talking scroll mid-fight.
+    must not fire TP or talking scroll mid-fight. After a party point
+    arrival, the same clock stays off until that mark's time ends, including
+    the walk back onto the dot.
     """
-    from app._04_decision.behaviors.combat import continue_sticky_combat
-    from app._04_decision.behaviors.unstick import (
-        reset_confined_progress,
-        try_confined_escape,
-    )
-    from app._04_decision.shop_trip import shopping_blocks_teleport
+    from app._04_decision.behaviors.unstick import reset_confined_progress
 
+    if party_turret_active(blackboard) or turret_routine_held(blackboard):
+        reset_confined_progress(blackboard)
+        return None
+    from app._04_decision.behaviors.combat import continue_sticky_combat
+    from app._04_decision.behaviors.unstick import try_confined_escape
+    from app._04_decision.shop_trip import shopping_blocks_teleport
     if shopping_blocks_teleport(blackboard):
         reset_confined_progress(blackboard)
         return None
@@ -1373,7 +1377,6 @@ def _handlers_traveling() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "routine.duration": _maybe_routine_duration,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),
@@ -1669,6 +1672,8 @@ def _enter_farm_if_needed(
     Never returns ``None`` while outside the farm so farming does not fall
     through to in-farm search with clamp-invented destinations.
     """
+    if party_turret_active(blackboard):
+        return None
     farm = get_active_farm(blackboard.farm_area_index)
     terrain = get_terrain_map()
     if farm is None or terrain is None:
@@ -1734,7 +1739,9 @@ def _enter_farm_if_needed(
     return Status.SUCCESS
 
 
-def _search_inside_farm(state: "GameState", blackboard: "Blackboard") -> Status:
+def _search_inside_farm(state: "GameState", blackboard: "Blackboard") -> Status | None:
+    if party_turret_active(blackboard):
+        return None
     player = state.player
     if player is None:
         blackboard.note_no_intent("search_inside_farm: no player")
@@ -2282,7 +2289,6 @@ def _handlers_farming_island() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
@@ -2314,7 +2320,6 @@ def _handlers_farming_dungeon() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
@@ -2403,7 +2408,6 @@ def _handlers_world_nav() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "shop.trip": _shop_before_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),

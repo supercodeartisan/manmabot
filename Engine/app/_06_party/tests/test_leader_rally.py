@@ -74,8 +74,8 @@ def test_teleport_plan_does_not_move_the_wait():
     assert start.hold_step is None
     assert start.state == "await_mark"
     start.note_arrived((0, 3, 4))
-    assert rally.body is None
     assert start.state == "done"
+    assert rally.body is None
 
 
 def test_rally_point_is_not_sent_to_members():

@@ -3,8 +3,8 @@
 The leader tile comes from this tick's memory pose. Slots are local.
 While the leader is moving, the side line comes first. Seat 0 stands on
 the leader's right; the next seat stands on the left. A trail tile is
-used only when that side has no free tile. A stopped leader uses a 3×3
-grid for up to five followers and a 5×5 grid for more. The leader's own
+used only when that side has no free tile. A stopped leader uses a 5×5
+grid for up to five people and a 7×7 grid for more. The leader's own
 tile is never a slot.
 """
 from __future__ import annotations
@@ -46,8 +46,8 @@ def primary_lateral(seat: int) -> int:
 
 
 def stand_radius(followers: int) -> int:
-    """1 → 3×3, 2 → 5×5."""
-    return 1 if int(followers) <= 5 else 2
+    """2 → 5×5 for up to five people. 3 → 7×7 when there are more."""
+    return 2 if int(followers) <= 5 else 3
 
 
 def choose_formation_goal(
@@ -106,18 +106,8 @@ def choose_formation_goal(
     return FormationGoal("side", None, "side_blocked")
 
 
-def _side_tile(
-    leader: Tile,
-    forward: Optional[tuple[int, int]],
-    seat: int,
-    followers: int,
-    terrain: Any,
-    blocked: set[Tile],
-    previous: Optional[Tile],
-) -> Optional[Tile]:
-    facing = unit8(forward)
-    if facing == (0, 0):
-        facing = (0, -1)
+def _side_offsets(seat: int, followers: int) -> list[tuple[int, int]]:
+    """Lateral, longitudinal offsets for this seat, nearest first."""
     lat = primary_lateral(seat)
     owned = {primary_lateral(i) for i in range(max(1, followers))}
     step = 1 if lat > 0 else -1
@@ -127,6 +117,25 @@ def _side_tile(
         if extra not in owned:
             candidates.append((extra, 0))
         extra += step
+    return candidates
+
+
+def _facing(forward: Optional[tuple[int, int]]) -> tuple[int, int]:
+    facing = unit8(forward)
+    return facing if facing != (0, 0) else (0, -1)
+
+
+def _side_tile(
+    leader: Tile,
+    forward: Optional[tuple[int, int]],
+    seat: int,
+    followers: int,
+    terrain: Any,
+    blocked: set[Tile],
+    previous: Optional[Tile],
+) -> Optional[Tile]:
+    facing = _facing(forward)
+    candidates = _side_offsets(seat, followers)
     ideal = _offset_tile(leader, facing, candidates[0][0], candidates[0][1])
     if (
         previous is not None

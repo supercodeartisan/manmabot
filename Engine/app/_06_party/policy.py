@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Optional
 
 from .config import PartyMemberConfig
-from .follow import ARRIVAL_TOLERANCE, follow_kind
+from .follow import follow_kind
 
 
 class MemberKind(str, Enum):
@@ -66,6 +66,32 @@ class PolicyInput:
     # Chebyshev steps to this member's formation slot. None keeps the old
     # distance-to-leader band for callers that have no slot yet.
     slot_dist: Optional[int] = None
+    # Hold when the member is inside this many tiles of the slot.
+    # Stand passes 1 (a 3×3). A walking side slot stays at 0.
+    slot_arrive: int = 0
+    # Leader tile changed within the still window. Off-slot follow beats a new assist.
+    leader_moving: bool = False
+    # Already returning to the slot. Stays on until the member is within one tile.
+    catch_up: bool = False
+
+
+# Off the slot by this many tiles: defer a new hunt until back within one tile.
+CATCH_UP_ENTER_TILES = 4
+CATCH_UP_EXIT_TILES = 1
+
+
+def formation_returning(slot_dist: Optional[int], *, latched: bool) -> bool:
+    """True while this member should walk back before a new hunt or loot.
+
+    Enter at ``CATCH_UP_ENTER_TILES``. Stay until the slot is within
+    ``CATCH_UP_EXIT_TILES``. No slot keeps the previous latch.
+    """
+    if slot_dist is None:
+        return bool(latched)
+    dist = int(slot_dist)
+    if latched:
+        return dist > CATCH_UP_EXIT_TILES
+    return dist >= CATCH_UP_ENTER_TILES
 
 
 @dataclass(frozen=True)
@@ -85,7 +111,7 @@ def _slot_hold(inp: PolicyInput) -> Optional[PolicyResult]:
         return None
     slot = int(inp.slot_dist)
     dist = int(inp.leader_dist or 0)
-    if slot <= ARRIVAL_TOLERANCE:
+    if slot <= max(0, int(inp.slot_arrive)):
         return PolicyResult(
             MemberKind.HOLD,
             False,
@@ -105,10 +131,11 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         return PolicyResult(MemberKind.STOP, False, "paused")
     if inp.dead:
         return PolicyResult(MemberKind.STOP, False, "dead")
-    # In-place HP before origin/travel: matches the old support early-return.
+    returning = formation_returning(inp.slot_dist, latched=bool(inp.catch_up))
+    # Potion and self heal stay ahead of the walk back. A buff waits.
     if inp.need_heal:
         return PolicyResult(MemberKind.HEAL, False, "self_heal")
-    if inp.need_buff:
+    if inp.need_buff and not returning:
         return PolicyResult(MemberKind.BUFF, False, "self_buff")
     if inp.need_potion:
         return PolicyResult(MemberKind.POTION, False, "self_potion")
@@ -126,7 +153,14 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
     dist = int(inp.leader_dist)
 
     # In the solo hunt range: attack from here. Out of range: follow the leader.
-    if inp.assist_ready and not inp.need_combat_step:
+    # A new hunt waits while this member is catching the slot, and while the
+    # leader is walking and this member is off the allowed seat.
+    off_slot = (
+        inp.slot_dist is not None
+        and int(inp.slot_dist) > max(0, int(inp.slot_arrive))
+    )
+    defer_hunt = returning or (bool(inp.leader_moving) and off_slot)
+    if inp.assist_ready and not inp.need_combat_step and not defer_hunt:
         yard = "turret_" if cfg.turret_farm else ""
         out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
         what = "solo_farm" if inp.solo_farm else "assist"
@@ -210,4 +244,12 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
     )
 
 
-__all__ = ["MemberKind", "PolicyInput", "PolicyResult", "decide_policy"]
+__all__ = [
+    "CATCH_UP_ENTER_TILES",
+    "CATCH_UP_EXIT_TILES",
+    "MemberKind",
+    "PolicyInput",
+    "PolicyResult",
+    "decide_policy",
+    "formation_returning",
+]

@@ -1,17 +1,20 @@
-"""Party leader turret: hunt inside the 5×5 around one map dot.
+"""Party leader turret: the hunt for one map dot.
 
-The session arms this while the leader's nav tile is within two tiles of a
-party-map point. The anchor is that point, in the same nav tiles as
-``world_origin``. A saved turret/moving choice is not read. An area mark
-does not arm this.
+The anchor is that dot, in the same nav tiles as ``world_origin``. A saved
+turret/moving choice is not read. An area mark does not arm this. After the
+point routine has started, the schedule keeps this module on, including a
+step outside the box. That step does not open a world-nav route.
 
-- Inside the box the leader hunts and does not walk back to the center.
-- Outside the box a fight already in progress is finished. Other monsters
-  and loot are excluded. When that target is gone, the leader walks back
-  to the dot.
-- ``party.turret_leash`` (before ``farm.engage``) applies that filter.
-- ``party.turret_idle`` (after ``farm.engage``): nothing to fight → idle
-  inside the box, or walk back to the dot from outside it.
+- The leader stands inside the 3×3. A pile is taken only inside the 5×5.
+  A monster uses the solo hunt distance: on screen, or off screen within
+  the solo click range. A mage in spell aim also stays inside the solo
+  spell range. The 5×5 limits walking, not that shot.
+- Outside the 5×5 the leader walks back to the dot. Fights and piles past
+  the box are excluded, so the moving hunt does not take that tick.
+- ``party.turret_leash`` (before ``farm.engage``) applies the box.
+- ``party.turret_idle`` (after ``farm.engage``): nothing to fight and
+  already inside the 3×3 → stand. Outside that 3×3, walk back to the dot.
+  Search hops do not run.
 
 Solo bots never set the flag, so every step is a no-op for them.
 """
@@ -28,9 +31,15 @@ if TYPE_CHECKING:  # pragma: no cover
 
 SCRATCH_TURRET = "party_turret"
 SCRATCH_TURRET_EXCLUDE = "party_turret_exclude"
+# Set on arrival at a point. Stays set while that mark's time is still running,
+# including a walk back onto the dot. Cleared when the schedule leaves the mark.
+SCRATCH_TURRET_ROUTINE = "party_turret_routine"
 
 # 5×5 box: the dot, plus two tiles each way. Same radius as POINT_BOX_TILES.
 LEASH_TILES = 2
+# 3×3 around the dot. Already inside this, the leader stands and does not
+# click the center tile.
+STAND_TILES = 1
 # Anchor farther than this (after a long trip) is dropped and re-picked.
 ANCHOR_FORGET_TILES = 40
 
@@ -82,6 +91,21 @@ def clear_party_turret(blackboard: "Blackboard") -> None:
 def party_turret_active(blackboard: "Blackboard") -> bool:
     st = blackboard.scratch.get(SCRATCH_TURRET)
     return isinstance(st, dict) and bool(st.get("on"))
+
+
+def hold_turret_routine(blackboard: "Blackboard") -> None:
+    """Remember that this point's hunt has started. The 13 s pocket stays off."""
+    blackboard.scratch[SCRATCH_TURRET_ROUTINE] = True
+
+
+def release_turret_routine(blackboard: "Blackboard") -> None:
+    """The schedule left this mark. The next walk may use the 13 s pocket again."""
+    blackboard.scratch.pop(SCRATCH_TURRET_ROUTINE, None)
+
+
+def turret_routine_held(blackboard: "Blackboard") -> bool:
+    """True from point arrival until that mark's time ends."""
+    return bool(blackboard.scratch.get(SCRATCH_TURRET_ROUTINE))
 
 
 def turret_excluded_ids(blackboard: "Blackboard") -> set[int]:
@@ -149,44 +173,78 @@ def _ensure_anchor(blackboard: "Blackboard") -> Optional[Tile]:
     return me
 
 
-def _reach(state: "GameState") -> int:
-    from app._04_decision.behaviors.hold_ground import hold_ground_reach
+def _object_tile(obj: object, origin: Any) -> Optional[Tile]:
+    """Nav tile of one monster or pile. Unknown tiles stay out of the box."""
+    from app._04_decision.combat_query import object_absolute_tile, relative_tile_xy
+
+    rel = relative_tile_xy(obj)
+    if rel is not None and origin is not None:
+        try:
+            return (int(origin.x) + int(rel[0]), int(origin.y) + int(rel[1]))
+        except (TypeError, ValueError, AttributeError):
+            return None
+    try:
+        tile = object_absolute_tile(obj, origin)
+    except Exception:
+        return None
+    return (int(tile[0]), int(tile[1]))
+
+
+def _distance(obj: object) -> Optional[int]:
+    from app._04_decision.combat_query import tile_distance_from_player
 
     try:
-        return int(hold_ground_reach(state))
-    except Exception:
-        return 1
+        return int(tile_distance_from_player(obj))
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
+def _solo_hunt_distance(state: "GameState", obj: object) -> bool:
+    """Same distance gate the solo farm uses for a new attack."""
+    from app._03_world.space.world_coords import in_mage_spell_range
+    from app._04_decision.combat_query import _uses_spell_range, in_attack_click_range
+
+    if not in_attack_click_range(obj):
+        return False
+    if not _uses_spell_range(state):
+        return True
+    pos = getattr(obj, "position", None)
+    if pos is None:
+        return False
+    try:
+        return bool(in_mage_spell_range(float(pos.x), float(pos.y)))
+    except (TypeError, ValueError, AttributeError):
+        return False
 
 
 def _zone_exclusions(
     state: "GameState", blackboard: "Blackboard", anchor: Tile, leash: int
 ) -> set[int]:
-    """Monsters / items the leader would have to leave the anchor zone for."""
-    from app._04_decision.combat_query import (
-        object_absolute_tile,
-        tile_distance_from_player,
-    )
+    """Piles outside the 5×5. Monsters use the solo hunt distance.
 
+    A monster inside the 5×5 stays, so a melee step inside the box still
+    happens. While the body is inside that box, any monster the solo hunt
+    would click from here also stays. The box does not shorten that click.
+    """
     origin = blackboard.world_origin
-    reach = _reach(state)
-    # Ranged hits from inside the zone; melee walks next to the target.
-    mob_zone = leash + (reach if reach > 1 else 0)
-    item_zone = leash
+    inside = _cheb(_me(blackboard), anchor) <= int(leash)
+    span = int(leash) * 2
     out: set[int] = set()
-    for kind, zone in ((ObjectType.MONSTER, mob_zone), (ObjectType.ITEM, item_zone)):
+    for kind in (ObjectType.MONSTER, ObjectType.ITEM):
         for obj in state.objects(kind):
-            try:
-                tile = object_absolute_tile(obj, origin)
-            except Exception:
+            tile = _object_tile(obj, origin)
+            dist = _distance(obj)
+            in_box = tile is not None and _cheb(tile, anchor) <= int(leash)
+            if dist is not None and dist > span:
+                in_box = False
+            if kind is ObjectType.ITEM:
+                if not in_box:
+                    out.add(int(obj.track_id))
                 continue
-            if _cheb(tile, anchor) <= zone:
+            if in_box:
                 continue
-            if kind is ObjectType.MONSTER:
-                try:
-                    if int(tile_distance_from_player(obj)) <= reach:
-                        continue
-                except (TypeError, ValueError):
-                    pass
+            if inside and _solo_hunt_distance(state, obj):
+                continue
             out.add(int(obj.track_id))
     return out
 
@@ -216,35 +274,14 @@ def _walk_to(blackboard: "Blackboard", goal: Tile, reason: str) -> Optional[Stat
     return Status.SUCCESS
 
 
-def _hunt_target_alive(state: "GameState", blackboard: "Blackboard") -> bool:
-    """True while the leader's current monster is still the fight to finish."""
-    tid = getattr(blackboard, "current_target_id", None)
-    if tid is None:
-        return False
-    try:
-        from app._04_decision.behaviors.combat import sticky_target_alive
-
-        return bool(sticky_target_alive(state, int(tid)))
-    except (TypeError, ValueError):
-        return False
-
-
-def _outside_ids(state: "GameState", keep: Optional[int]) -> set[int]:
-    """Every monster except the fight in progress, plus every ground item."""
-    out: set[int] = set()
-    for kind in (ObjectType.MONSTER, ObjectType.ITEM):
-        for obj in state.objects(kind):
-            tid = int(obj.track_id)
-            if keep is not None and tid == int(keep) and kind is ObjectType.MONSTER:
-                continue
-            out.add(tid)
-    return out
-
-
 def step_party_turret_leash(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Column step ``party.turret_leash``: zone filter + pull back to the anchor."""
+    """Column step ``party.turret_leash``: the 5×5 is the whole hunt.
+
+    Inside the box, ``farm.engage`` runs on what this step left in. Outside
+    it, this step walks back to the dot and the moving hunt does not run.
+    """
     if not party_turret_active(blackboard):
         blackboard.scratch.pop(SCRATCH_TURRET_EXCLUDE, None)
         return None
@@ -254,13 +291,6 @@ def step_party_turret_leash(
         return None
     st = blackboard.scratch[SCRATCH_TURRET]
     leash = int(st.get("leash", LEASH_TILES))
-    me = _me(blackboard)
-    outside = _cheb(me, anchor) > leash
-    if outside and _hunt_target_alive(state, blackboard):
-        keep = int(blackboard.current_target_id)
-        blackboard.scratch[SCRATCH_TURRET_EXCLUDE] = _outside_ids(state, keep)
-        return None
-
     excluded = _zone_exclusions(state, blackboard, anchor, leash)
     blackboard.scratch[SCRATCH_TURRET_EXCLUDE] = excluded
 
@@ -279,7 +309,7 @@ def step_party_turret_leash(
         clear_loot_hop(blackboard)
         blackboard.current_item_id = None
 
-    if not outside:
+    if _cheb(_me(blackboard), anchor) <= leash:
         return None
     return _walk_to(
         blackboard,
@@ -291,19 +321,26 @@ def step_party_turret_leash(
 def step_party_turret_idle(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Column step ``party.turret_idle``: stay on the anchor instead of searching."""
+    """Column step ``party.turret_idle``: no target → stand inside the 3×3.
+
+    ``farm.engage`` already took this tick when a monster is in the 5×5.
+    Search does not run after this step returns. A body already inside the
+    3×3 does not click the center tile.
+    """
     del state
     if not party_turret_active(blackboard):
         return None
     anchor = turret_anchor(blackboard)
     if anchor is None:
         return None
-    leash = int(blackboard.scratch[SCRATCH_TURRET].get("leash", LEASH_TILES))
-    if _cheb(_me(blackboard), anchor) > leash:
+    from app._04_decision.behaviors.search_hop import clear_search_hop
+
+    clear_search_hop(blackboard)
+    if _cheb(_me(blackboard), anchor) > STAND_TILES:
         return _walk_to(
             blackboard,
             anchor,
-            f"party turret settle on anchor {anchor[0]},{anchor[1]}",
+            f"party turret idle on dot {anchor[0]},{anchor[1]}",
         )
     blackboard.current_goal = "party_turret"
     blackboard.emit(
@@ -317,11 +354,16 @@ def step_party_turret_idle(
 __all__ = [
     "ANCHOR_FORGET_TILES",
     "LEASH_TILES",
+    "STAND_TILES",
     "SCRATCH_TURRET",
     "SCRATCH_TURRET_EXCLUDE",
+    "SCRATCH_TURRET_ROUTINE",
     "clear_party_turret",
+    "hold_turret_routine",
     "party_turret_active",
+    "release_turret_routine",
     "set_party_turret",
+    "turret_routine_held",
     "step_party_turret_idle",
     "step_party_turret_leash",
     "turret_anchor",

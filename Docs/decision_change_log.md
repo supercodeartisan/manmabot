@@ -1,5 +1,188 @@
 # Decision change log
 
+## 2026-11-10 — follow clicks again when the leader tile changes
+
+Intent: On the party-memory read where the leader tile changes, the member clicks toward the new slot even while already walking. The click stays at most 2 tiles. The same leader tile still keeps a click that aims at the slot and is more than one tile ahead.
+Shared: `hold_follow_click` in `plan_slot_hop` and `plan_field_follow`. A mage heal step does not pass the leader-step flag, so that walk is unchanged. Formation seats, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow while the leader is walking.
+Consent: user (apply that update).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — party follow click returns to two tiles
+
+Intent: Put the party follow click back to 2 tiles. A straight open line may still chain one tile, and that chain stops at 3.
+Shared: `FOLLOW_CLICK_TILES` and `FOLLOW_EXTEND_TILES`. The mage heal step uses the same hop, so it is 2 tiles again. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow, and a mage walking toward an on-screen member who is outside heal range.
+Consent: user (change it back to 2 tiles).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — party follow click is four tiles
+
+Intent: A party member's follow click walks up to 4 tiles. Two tiles was too short. A straight open line may chain one more tile only while the click stays inside those 4.
+Shared: `FOLLOW_CLICK_TILES` in `plan_slot_hop`, `plan_field_follow`, and the settle/approach hops. The mage's on-screen heal step uses the same slot hop, so that walk is also 4 tiles. Dungeon travel keeps its own 3-tile hop. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow, and a mage walking toward an on-screen member who is outside heal range.
+Consent: user (make the follow click 4 tiles; 2 is too short).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — seat-wait leftovers removed
+
+Intent: Delete the unused seat wait. The leader tick already never turned it on.
+Shared: `FormationLagWatch`, `test_formation_lag.py`, `ideal_side_tile`, `allowed_side_tiles`, and the `party.hold_ground` step (`party rally wait members`) are gone. `hold_ground_reach` stays for a standing shot. The 5×5 / 7×7 stand, the side-line walk, turret hunting, and the enter-chat DLL are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt. Nothing in the running bot called this wait.
+Consent: user (delete the leftovers; they are unused).
+Result: not run in game. Restart the bot to load it.
+
+## 2026-11-10 — leader does not stand for a member seat
+
+Intent: Remove the seat wait that stopped the leader while members were off their side tiles. Arrival at the mark still starts the hunt. A member stands in the 5×5, or the 7×7 from six people, once the leader has been still for the usual 0.7 seconds, including turret. Walking follow stays the side line.
+Shared: the leader tick no longer calls the seat watch. `set_party_hold` stays off. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt. The leader no longer idles with `party rally wait members` for a seat gap. Member seats and turret hunting are unchanged.
+Consent: user (remove that wait; it is not main's; keep the 5×5 / 7×7 stand).
+Result: not run in game.
+
+## 2026-11-10 — turret uses the solo hunt distance
+
+Intent: A monster at a party point uses the solo farm's click distance. On screen is in range. Off screen uses the solo click tiles. A mage in spell aim also uses the solo spell range. The 5×5 still limits walking and piles. It does not cut an on-screen shot down to 8 tiles.
+Shared: `step_party_turret_leash` calls `in_attack_click_range`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: which monsters a party leader shoots from a point. Solo hunt is unchanged.
+Consent: user (use the solo bot's hunt distance as-is).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — turret shot from the stand
+
+Intent: An elf or mage who is already inside the turret box hunts a monster within the standing shot, even when that monster's tile is outside the 5×5. A monster past that shot stays out. Piles stay inside the 5×5. A party member's attack is not treated as another player having claimed the monster. A stranger's attack still is.
+Shared: `step_party_turret_leash`, `contested_mob_guids`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party leader standing on a point, and new engages while a party member is already hitting a monster. Solo hunt without a party roster is unchanged.
+Consent: user (the leader is not hunting while monsters are nearby).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — arrived turret is the hunt
+
+Intent: After a party point is arrived, the turret module is the hunt. The 5×5 is the farthest a monster or a pile may be, for every class, including an elf mob that is on screen. A step outside that box walks back through the turret. It does not open a world-nav route, and that route's loot does not run. The 3×3 is still the stand. The walk to the point, before arrival, still uses world nav.
+Shared: `step_party_turret_leash`, `PartyLeaderManager.prepare`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 13 s pocket stays off for that same routine.
+Affects: a party leader who has arrived at a point, including an elf, a fight that would leave the 5×5, and ground loot past the box. Solo hunt and an area mark are unchanged. Before arrival, a fight outside the box still finishes and then the route to the point starts.
+Consent: user ("완벽하게 해결하고" — use the turret module for the hunt; the 5×5 is the maximum move, not a moving hunt).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — turret routine turns off the 13 s pocket
+
+Intent: After the leader arrives at a party point, loot and the walk back onto that dot must not fire the 13 s confined scroll. The pocket stays off until that mark's time ends and the schedule leaves it. The walk to the point, before arrival, still uses the pocket.
+Shared: `_maybe_confined_escape` reads `party_turret_routine`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Emergency HP teleport is unchanged.
+Affects: a party leader who has already arrived at a point, including the short world-nav walk back onto that dot. Solo hunt and an area mark are unchanged.
+Consent: user (once the turret area is arrived, unlock the 13 s stuck for that routine time, then fix).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — seat, route, and the leader's real stop
+
+Intent: A member is on the seat only on this tick's reading: inside 1 tile, and still inside 2. Past 2 tiles, or a missing pose, is scored again. The party walks only when every companion in the wait has that fresh reading. Two seconds without getting closer is not blocked by itself. Blocked means a measured route is not getting shorter. The leader's in-flight step is allowed to finish. The seat center locks once, on the tile where the leader has actually stood, and the facing from the start of the wait stays. Members use that same center. Ten seconds still does not start the walk, and a seat is re-picked at most twice.
+Shared: `FormationLagWatch`, `route_steps`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: when a party wait ends, and which tile the side seats use after the leader stops. Turret is unchanged.
+Consent: user ("보완하세요" — do not latch READY for the whole wait, do not call a detour blocked, and lock the anchor on the confirmed stop).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — a party wait ends when the formation is back
+
+Intent: One late member no longer starts their own 10 second give-up. The leader opens one wait for the companions who are already walking together, and walks only when each of them has a fresh reading inside the allowed seat. A pose that drops stays unknown. Ten seconds, or a member who is not actually closing, starts a short seat re-pick. If that still fails, the leader keeps standing and shows that a hand is needed. Survival actions stay in front of that hold. At 4 tiles the next leader hop that would widen the gap is withheld. The member click stays 2 tiles, or 3 on a straight line.
+Shared: `FormationLagWatch`, `emit_travel_hop`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt, and one member seat re-pick while the leader is recovering the line. Turret is unchanged. A shopkeeper, a confirmed shop visit, and another map stay out of the wait.
+Consent: user ("이 대로 구현하라" — party-level departure, 10 seconds as recovery rather than abandonment, keep an unread companion, and limit the leader's next hop from 4 tiles).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — one member is waited for at most ten seconds
+
+Intent: The leader stands for one late member for at most 10 seconds. There is no second or third wait. Another member still has their own 10 seconds. Reaching 1 tile still clears that member. The side line stays through that wait, and a hunt stop uses the standing grid only after the same 10 seconds.
+Shared: `FormationLagWatch` only. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: how long a party leader stands for one member who is off their seat.
+Consent: user (the three 8-second waits are too long; the maximum is 10 seconds per player).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — a missed seat can be waited for again
+
+Intent: One failed 8 second wait does not close the seat. That member gets two more waits, 2 seconds apart, while they are still off the seat. Another member keeps their own waits. Reaching 1 tile clears that member. After three tries only that member is left behind. While a wait is on, the side line stays the side line, and members hear that on the party policy. A hunt stop that lasts 8 seconds still uses the standing grid. The first hold tick, if the body is still walking, clicks the current tile once and drops the open hop.
+Shared: `FormationLagWatch`, `set_party_hold`, `step_party_hold_ground`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 6, 4, 1, and 2–3 tile numbers stay.
+Affects: party leader waits on the way to a hunt and during a moving hunt, and the member formation during that wait. Turret is unchanged.
+Consent: user ("검사해보고 수정하라" — keep a limited retry after 8 seconds, do not change the walking formation into the standing grid during the wait, and check that the hold actually stops the body).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — formation wait and catch-up before a new hunt
+
+Intent: While the party is walking together, one required member off their own seat holds the leader. Before the seats have closed, that hold starts immediately. After they have closed, it starts when a member stays at least 6 tiles off the seat for 0.3 seconds. Eight seconds without a return lets the leader walk, marked degraded, until the seats close again. A member 4 tiles off their seat walks back before a new hunt, loot, or buff, and stays on that walk until within 1 tile. A potion, self heal, and self-defense still come first. While the leader is moving, being off the allowed seat also waits on a new assist. A follow click stays 2 tiles. On an open straight line it chains one tile farther before that click ends. A trail seat does not chain.
+Shared: `set_party_hold`, `FormationLagWatch`, `decide_policy`, `plan_slot_hop`, `plan_field_follow`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Turret hunting does not use this hold. A shopkeeper and a member on another map are not required.
+Affects: party leader travel and moving hunt, and member follow versus a new attack or loot. Solo hunt is unchanged.
+Consent: user ("check and implement this" — early leader wait on seat error, member return ahead of a new hunt, and chain the follow click before it ends).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py` and `test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — one near radius for leader loot and member self loot
+
+Intent: `farm.loot_max_tiles` is the distance a party leader notices an on-screen pile and the distance that leader walks to it. Every other member loots their own piles inside that same radius. Hunt, assist, heal, and defend stay ahead of that loot. The responsible member uses `farm.loot_engage_max_tiles` and also picks up a colleague's pile.
+Shared: `party_leader_pile_ok`, `party_loot_radius`, `party_loot_ownership_filter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader farm loot, and member loot while the leader is standing. Solo engage range stays `loot_engage_max_tiles`. Members still do not loot while the leader is moving.
+Consent: user ("하라" — link the hardcoded leader loot range and the move range into one flexible value; other members self-loot inside it under hunt and assist; the responsible member is wider and takes colleagues' piles).
+Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
+## 2026-11-10 — leader loots 7 tiles; responsible takes party piles
+
+Intent: A party leader picks up an on-screen pile within 7 tiles, after the current fight and a member who is being hit, and before a new hunt. A member whose loot role is responsible picks up every party pile, including a colleague's, not only a pile this character claimed. Random loot still goes to the closest eligible member. Standing F4 side loot stays off for the leader.
+Shared: `continue_or_start_loot`, `party_loot_ownership_filter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader farm loot, and a responsible member while the leader is standing. Solo loot range is unchanged. Members still do not loot while the leader is moving.
+Consent: user ("하라" — leader loots on-screen within 7 tiles; the responsible member loots colleagues' piles too).
+Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
+## 2026-11-10 — point arrival arms turret before enter-farm
+
+Intent: When a party-point walk ends and the body is inside that dot's 5×5, turret turns on before the same tick's farming column. The previous mark's enter-farm click does not run. An area arrival, and a landing outside the 5×5, stay on the old path.
+Shared: `_on_world_nav_arrived`, `_on_point_arrival`, `set_party_turret`. `farm.enter` already returns when turret is on. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader tick that arrives on a map point. Area marks, solo world nav, and the 13 s escape outside turret are unchanged.
+Consent: user ("그렇게 해라" — arm turret on point arrival inside the 5×5, before the farming handoff).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — mage hit jumps the queue; other hits wait
+
+Intent: A monster hitting a mage member replaces the fight already in progress, for the leader and for a member. A monster hitting any other member waits until that fight ends, then is taken before a new hunt. The leader still finishes through the sticky lock. A member keeps the mob already started, then helps the colleague.
+Shared: `choose_help_target`, `farm_loot_or_combat`, member target pick in `PartyMemberManager`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader hunt order, and party member assist when a colleague is being hit. Mage members still do not take an assist target. Helping the monster a member is attacking stays after this.
+Consent: user ("그대로 적용해서 깨끗하게 구현하라" — finish the current mob, then help a member who is hit; a mage who is hit comes before that hunt).
+Result: `Engine/app/_06_party/tests/test_colleague_help.py`. Not run in game.
+
+## 2026-11-10 — stand hold is a 3×3; leader finishes then helps
+
+Intent: A member standing near the leader holds anywhere inside the 3×3 around their seat. A walking side slot still moves when it is one tile off. When a party member is being hit, the leader finishes the monster already in the fight, then attacks the monster that is hitting that member. Mage-only help no longer cuts the current fight short.
+Shared: `_slot_hold`, `plan_slot_hop`, `farm_loot_or_combat`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: member stand while the leader is still or in turret. Leader help after the current kill ends.
+Consent: user ("고치라" — the exact seat becomes a 3×3; the leader finishes the current monster, then helps a member who is under attack).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
+## 2026-11-10 — party elf hunts at the solo click range
+
+Intent: An elf in a party, leader turret or member assist, keeps a monster when the solo attack-click range does. The turret box does not add two tiles on top of that range. Melee and mage turret boxes stay as they are.
+Shared: `in_attack_click_range`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: elf leader turret target filter, and elf member assist range while spell aim is the global attack mode.
+Consent: user ("수정하라" — party elf hunt range matches solo, reuse that check).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — stand grid is 5×5, or 7×7 from six people
+
+Intent: When the leader is standing, and during turret, members take seats in a 5×5 around the leader. From six people, including the leader, that box is a 7×7. The walking side line is unchanged.
+Shared: `stand_radius`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The turret 13 s skip already returns before that escape.
+Affects: member stand while the leader is still, and member seats during turret.
+Consent: user ("let's redefine" — minimum 5×5, maximum 7×7 by member count).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
+## 2026-11-09 — turret stands inside the 3×3 and skips the 13 s scroll
+
+Intent: On a turret dot, a leader already inside the 3×3 around that tile stands there. The center tile is not clicked again. The 13 s / 3-tile talking-scroll escape does not run while turret is on. Area hunts, world-nav walks, and every other confined escape stay as they are.
+Shared: `party.turret_idle` and `_maybe_confined_escape`. `farm.enter` does not pull a turret leader off the point. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader turret after the fight ends, and the confined scroll only while that turret flag is on.
+Consent: user ("check and fix" — inside the 3×3 do not walk onto the one tile; the 13 s escape is off for turret only).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-09 — party HP potion uses the solo row; turret waits on the dot
+
+Intent: A party leader and a party member drink the HP potion on the same recovery row the solo bot uses. The party 50% potion line is not a drink threshold. On a turret dot, the leader may walk inside the 5×5 to a live monster. With no target, the leader stands on that dot and does not search tile to tile.
+Shared: `line_for` no longer returns a potion ratio. Potion enable, hotbar, and the no-blackboard member check read the solo HP-potion row. `party.turret_idle` walks to the dot when the tile is not the anchor, and farm search does not run while turret is on. Heal, retreat, `try_unstick_escape`, `begin_retreat`, and login clicks are unchanged.
+Affects: party leader and party member HP potion. Party leader turret after a fight ends. Area marks and solo hunt search are unchanged.
+Consent: user ("Fix" — party uses the solo HP potion setting and pattern; turret may walk inside the 5×5, and with no target idles on the pointed dot).
+Result: `Engine/app/_06_party/tests/test_leader_care.py` and `test_leader_routine.py`. Not run in game.
 ## 2026-11-10 — a party member is whoever this read's control block confirms
 
 Intent: A name left in a Party vector slot is not a member. The slot counts only when this read's `_Rep` vft is `PARTY_VFT_RC_PLAYER`. A failed read of the header or of a slot stays unknown: no leave and no `/초대`. A confirmed read that does not list a name drops that name after the existing 10 second leave confirm. While the leader read is unknown, the monitor may still show the previous join or the member's own fresh report.

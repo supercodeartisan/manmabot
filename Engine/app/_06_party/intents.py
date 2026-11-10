@@ -10,11 +10,50 @@ from .follow import (
     FOLLOW_CLICK_TILES,
     choose_approach_tile,
     choose_settle_stand,
-    follow_hop_still_closes,
+    follow_extend_hop,
+    hold_follow_click,
 )
 from .policy import MemberKind
 
 
+def _body_moving() -> bool:
+    try:
+        from app._05_action.body_pose import body_is_moving
+
+        return body_is_moving() is True
+    except Exception:
+        return False
+
+
+def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
+    from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
+    from app._04_decision.nav_config import get_terrain_map
+
+    terrain = get_terrain_map()
+    if terrain is None or not terrain.is_walkable(int(hop[0]), int(hop[1])):
+        return False
+    rx, ry = absolute_to_relative(int(hop[0]), int(hop[1]), origin)
+    return bool(in_battle_click_region(rx, ry))
+
+
+def _emit_follow_hop(
+    origin: Any,
+    hop: tuple[int, int],
+    goal: tuple[int, int],
+    kind: str,
+) -> tuple[Any, tuple[int, int], str, tuple[int, int]]:
+    from app._04_decision.pathfinding import waypoint_to_content
+
+    from .types import ActionIntent, ActionType
+
+    intent = ActionIntent(
+        action=ActionType.TRAVELING,
+        destination=waypoint_to_content(hop, origin),
+        priority=0.55,
+        reason=f"party_member:{kind} {goal[0]},{goal[1]}",
+    )
+    detail = f"{kind} hop {hop[0]},{hop[1]} → {goal[0]},{goal[1]}"
+    return intent, goal, detail, hop
 def supply_halt(reason: str = "supply hold halt") -> Any:
     """Esc once, the same cancel a shop uses to stop an auto-walk."""
     from .types import ActionIntent, ActionType
@@ -280,6 +319,7 @@ def plan_field_follow(
     stop_steps: int,
     previous_goal: Optional[tuple[int, int]],
     previous_hop: Optional[tuple[int, int]],
+    leader_moved: bool = False,
 ) -> Optional[tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]]:
     """TRAVELING click down the leader walk field (no A*).
 
@@ -297,25 +337,24 @@ def plan_field_follow(
     goal = path[-1]
     if goal == (ox, oy):
         return idle("at_approach"), goal, "at_approach", None
-    # Same delta and the hop is still on the way: let that step finish.
-    # A new member-to-slot direction clicks the latest tile on this read.
-    if (
-        previous_hop is not None
-        and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
-        and follow_hop_still_closes((ox, oy), goal, previous_hop)
+    # Same leader tile: keep a click that still aims at the goal.
+    # A leader step, a turn, or a hop that would pass the goal clicks now.
+    if hold_follow_click(
+        (ox, oy),
+        goal,
+        previous_hop,
+        body_moving=_body_moving(),
+        leader_moved=leader_moved,
     ):
-        try:
-            from app._05_action.body_pose import body_is_moving
-
-            if body_is_moving():
-                return (
-                    idle("follow_in_transit"),
-                    goal,
-                    "follow_in_transit",
-                    previous_hop,
-                )
-        except Exception:
-            pass
+        extended = follow_extend_hop((ox, oy), previous_hop, goal, kind="field")
+        if extended is not None and _follow_hop_clickable(origin, extended):
+            return _emit_follow_hop(origin, extended, goal, "field")
+        return (
+            idle("follow_in_transit"),
+            goal,
+            "follow_in_transit",
+            previous_hop,
+        )
     hop = select_click_waypoint(
         path,
         origin,
@@ -341,6 +380,7 @@ def plan_slot_hop(
     previous_goal: Optional[tuple[int, int]],
     previous_hop: Optional[tuple[int, int]],
     kind: str,
+    leader_moved: bool = False,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
     """Short hop toward an absolute formation tile. Does not aim at the leader."""
     from app._04_decision.nav_config import get_terrain_map
@@ -348,24 +388,26 @@ def plan_slot_hop(
 
     from .types import ActionIntent, ActionType
 
+    from .follow import STAND_ARRIVE_TILES
+
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(slot[0]), int(slot[1]))
-    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= ARRIVAL_TOLERANCE:
+    arrive = STAND_ARRIVE_TILES if kind == "stand" else ARRIVAL_TOLERANCE
+    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= arrive:
         return idle("at_slot"), goal, "at_slot", None
-    # Same delta and the hop is still on the way: let that step finish.
-    # A changed member-to-slot direction clicks this latest tile now.
-    if (
-        previous_hop is not None
-        and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
-        and follow_hop_still_closes((ox, oy), goal, previous_hop)
+    # Same leader tile: keep a click that still aims at the slot.
+    # A leader step, a turn, or a hop that would pass the slot clicks now.
+    if hold_follow_click(
+        (ox, oy),
+        goal,
+        previous_hop,
+        body_moving=_body_moving(),
+        leader_moved=leader_moved,
     ):
-        try:
-            from app._05_action.body_pose import body_is_moving
-
-            if body_is_moving():
-                return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
-        except Exception:
-            pass
+        extended = follow_extend_hop((ox, oy), previous_hop, goal, kind=kind)
+        if extended is not None and _follow_hop_clickable(origin, extended):
+            return _emit_follow_hop(origin, extended, goal, kind)
+        return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
     terrain = get_terrain_map()
     if terrain is None:
         return idle("no_terrain"), goal, "no_terrain", None
