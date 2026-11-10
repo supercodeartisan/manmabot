@@ -993,8 +993,12 @@ def assist_in_attack_range(game_state: Any, obj: Any) -> bool:
     spell_aim = True
     try:
         from app._04_decision import player_mode as pm
+        from app._04_decision.mode_control import is_elf
 
-        spell_aim = bool(pm.uses_spell_aim())
+        if is_elf(game_state):
+            spell_aim = False
+        else:
+            spell_aim = bool(pm.uses_spell_aim())
     except Exception:
         spell_aim = True
     if spell_aim:

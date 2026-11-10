@@ -1000,6 +1000,9 @@ def _maybe_confined_escape(
     )
     from app._04_decision.shop_trip import shopping_blocks_teleport
 
+    if party_turret_active(blackboard):
+        reset_confined_progress(blackboard)
+        return None
     if shopping_blocks_teleport(blackboard):
         reset_confined_progress(blackboard)
         return None
@@ -1670,6 +1673,8 @@ def _enter_farm_if_needed(
     Never returns ``None`` while outside the farm so farming does not fall
     through to in-farm search with clamp-invented destinations.
     """
+    if party_turret_active(blackboard):
+        return None
     farm = get_active_farm(blackboard.farm_area_index)
     terrain = get_terrain_map()
     if farm is None or terrain is None:

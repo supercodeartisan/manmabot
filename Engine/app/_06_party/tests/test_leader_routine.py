@@ -275,6 +275,65 @@ def test_outside_the_box_keeps_the_current_target() -> None:
     assert board.emitted == []
 
 
+def test_elf_turret_uses_the_solo_click_range() -> None:
+    from types import SimpleNamespace
+
+    from app._03_world import CharacterType, ObjectStatus, ObjectType
+    from app._04_decision.behaviors.party_turret import (
+        set_party_turret,
+        step_party_turret_leash,
+    )
+
+    class _Mob:
+        def __init__(self, track_id: int, rx: int, ry: int, on_screen: bool) -> None:
+            self.track_id = track_id
+            self.object_type = ObjectType.MONSTER
+            self.status = ObjectStatus.ALIVE
+            self.world_rx = rx
+            self.world_ry = ry
+            self.position = SimpleNamespace(x=0.5, y=0.5) if on_screen else None
+
+    class _State:
+        def __init__(self) -> None:
+            self.player = SimpleNamespace(character_type=CharacterType.ELF)
+            self.mobs = [
+                _Mob(1, 9, 0, False),
+                _Mob(2, 8, 0, False),
+                _Mob(3, 40, 0, True),
+            ]
+
+        def get_object(self, track_id: int):
+            for mob in self.mobs:
+                if mob.track_id == int(track_id):
+                    return mob
+            return None
+
+        def objects(self, kind):
+            if kind is ObjectType.MONSTER:
+                return list(self.mobs)
+            return []
+
+    class _Board:
+        def __init__(self) -> None:
+            self.scratch: dict = {}
+            self.world_origin = SimpleNamespace(x=10, y=10)
+            self.current_target_id = None
+            self.current_item_id = None
+            self.current_goal = None
+            self.emitted: list = []
+
+        def emit(self, action, **kwargs) -> None:
+            self.emitted.append(action)
+
+    board = _Board()
+    set_party_turret(board, True, map_id=4, anchor=(10, 10))
+    step_party_turret_leash(_State(), board)  # type: ignore[arg-type]
+    excluded = set(board.scratch["party_turret_exclude"])
+    assert 1 in excluded
+    assert 2 not in excluded
+    assert 3 not in excluded
+
+
 def test_no_target_idles_on_the_dot() -> None:
     from types import SimpleNamespace
 
@@ -305,12 +364,17 @@ def test_no_target_idles_on_the_dot() -> None:
         def emit(self, action, **kwargs) -> None:
             self.emitted.append((action, kwargs.get("reason")))
 
-    off = _Board(11, 10)
+    near = _Board(11, 10)
+    set_party_turret(near, True, map_id=4, anchor=(10, 10))
+    step_party_turret_idle(object(), near)  # type: ignore[arg-type]
+    assert near.emitted == [(ActionType.IDLE, "party turret wait on anchor")]
+    assert near.search_hop_active is False
+
+    off = _Board(13, 10)
     set_party_turret(off, True, map_id=4, anchor=(10, 10))
     step_party_turret_idle(object(), off)  # type: ignore[arg-type]
     assert off.emitted
     assert off.emitted[0][0] is ActionType.TRAVELING
-    assert off.search_hop_active is False
 
     on = _Board(10, 10)
     set_party_turret(on, True, map_id=4, anchor=(10, 10))
@@ -508,6 +572,7 @@ if __name__ == "__main__":
     test_dot_anchor_is_nav_center_of_the_box()
     test_outside_the_box_finishes_the_current_target()
     test_outside_the_box_keeps_the_current_target()
+    test_elf_turret_uses_the_solo_click_range()
     test_pinned_turret_anchor_is_the_point()
     test_no_target_idles_on_the_dot()
     test_row_minutes_advance_to_the_next_party_row()

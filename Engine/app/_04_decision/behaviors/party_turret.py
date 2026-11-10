@@ -10,8 +10,8 @@ does not arm this.
   and loot are excluded. When that target is gone, the leader walks back
   to the dot.
 - ``party.turret_leash`` (before ``farm.engage``) applies that filter.
-- ``party.turret_idle`` (after ``farm.engage``): nothing to fight → stand
-  on the dot. Anywhere else, including inside the 5×5, walks back to it.
+- ``party.turret_idle`` (after ``farm.engage``): nothing to fight and
+  already inside the 3×3 → stand. Outside that 3×3, walk back to the dot.
 
 Solo bots never set the flag, so every step is a no-op for them.
 """
@@ -31,6 +31,9 @@ SCRATCH_TURRET_EXCLUDE = "party_turret_exclude"
 
 # 5×5 box: the dot, plus two tiles each way. Same radius as POINT_BOX_TILES.
 LEASH_TILES = 2
+# 3×3 around the dot. Already inside this, the leader stands and does not
+# click the center tile.
+STAND_TILES = 1
 # Anchor farther than this (after a long trip) is dropped and re-picked.
 ANCHOR_FORGET_TILES = 40
 
@@ -158,23 +161,45 @@ def _reach(state: "GameState") -> int:
         return 1
 
 
+def _elf_click_hunt(state: "GameState") -> bool:
+    """Elf turret uses the solo attack-click range, not a dot-sized box."""
+    try:
+        from app._04_decision.mode_control import is_elf
+
+        return bool(is_elf(state))
+    except Exception:
+        return False
+
+
 def _zone_exclusions(
     state: "GameState", blackboard: "Blackboard", anchor: Tile, leash: int
 ) -> set[int]:
-    """Monsters / items the leader would have to leave the anchor zone for."""
+    """Monsters / items the leader would have to leave the anchor zone for.
+
+    An elf keeps a monster only when ``in_attack_click_range`` says the solo
+    hunt would. Melee and mage stay on the anchor box.
+    """
     from app._04_decision.combat_query import (
+        in_attack_click_range,
         object_absolute_tile,
         tile_distance_from_player,
     )
 
     origin = blackboard.world_origin
-    reach = _reach(state)
-    # Ranged hits from inside the zone; melee walks next to the target.
-    mob_zone = leash + (reach if reach > 1 else 0)
+    elf = _elf_click_hunt(state)
+    reach = 1 if elf else _reach(state)
+    # Melee walks next to the target inside the leash. Mage adds its cast
+    # range onto that box. Elf does not: the solo click range is the hunt.
+    mob_zone = leash if elf else leash + (reach if reach > 1 else 0)
     item_zone = leash
     out: set[int] = set()
     for kind, zone in ((ObjectType.MONSTER, mob_zone), (ObjectType.ITEM, item_zone)):
         for obj in state.objects(kind):
+            if kind is ObjectType.MONSTER and elf:
+                if in_attack_click_range(obj):
+                    continue
+                out.add(int(obj.track_id))
+                continue
             try:
                 tile = object_absolute_tile(obj, origin)
             except Exception:
@@ -291,10 +316,11 @@ def step_party_turret_leash(
 def step_party_turret_idle(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Column step ``party.turret_idle``: no target → stand on the dot.
+    """Column step ``party.turret_idle``: no target → stand inside the 3×3.
 
     ``farm.engage`` already took this tick when a monster is in the 5×5.
-    Search does not run after this step returns.
+    Search does not run after this step returns. A body already inside the
+    3×3 does not click the center tile.
     """
     del state
     if not party_turret_active(blackboard):
@@ -305,7 +331,7 @@ def step_party_turret_idle(
     from app._04_decision.behaviors.search_hop import clear_search_hop
 
     clear_search_hop(blackboard)
-    if _cheb(_me(blackboard), anchor) > 0:
+    if _cheb(_me(blackboard), anchor) > STAND_TILES:
         return _walk_to(
             blackboard,
             anchor,
@@ -323,6 +349,7 @@ def step_party_turret_idle(
 __all__ = [
     "ANCHOR_FORGET_TILES",
     "LEASH_TILES",
+    "STAND_TILES",
     "SCRATCH_TURRET",
     "SCRATCH_TURRET_EXCLUDE",
     "clear_party_turret",

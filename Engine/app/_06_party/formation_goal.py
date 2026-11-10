@@ -3,8 +3,8 @@
 The leader tile comes from this tick's memory pose. Slots are local.
 While the leader is moving, the side line comes first. Seat 0 stands on
 the leader's right; the next seat stands on the left. A trail tile is
-used only when that side has no free tile. A stopped leader uses a 3×3
-grid for up to five followers and a 5×5 grid for more. The leader's own
+used only when that side has no free tile. A stopped leader uses a 5×5
+grid for up to five people and a 7×7 grid for more. The leader's own
 tile is never a slot.
 """
 from __future__ import annotations
@@ -46,8 +46,8 @@ def primary_lateral(seat: int) -> int:
 
 
 def stand_radius(followers: int) -> int:
-    """1 → 3×3, 2 → 5×5."""
-    return 1 if int(followers) <= 5 else 2
+    """2 → 5×5 for up to five people. 3 → 7×7 when there are more."""
+    return 2 if int(followers) <= 5 else 3
 
 
 def choose_formation_goal(

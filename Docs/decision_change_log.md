@@ -1,5 +1,29 @@
 # Decision change log
 
+## 2026-11-10 — party elf hunts at the solo click range
+
+Intent: An elf in a party, leader turret or member assist, keeps a monster when the solo attack-click range does. The turret box does not add two tiles on top of that range. Melee and mage turret boxes stay as they are.
+Shared: `in_attack_click_range`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: elf leader turret target filter, and elf member assist range while spell aim is the global attack mode.
+Consent: user ("수정하라" — party elf hunt range matches solo, reuse that check).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — stand grid is 5×5, or 7×7 from six people
+
+Intent: When the leader is standing, and during turret, members take seats in a 5×5 around the leader. From six people, including the leader, that box is a 7×7. The walking side line is unchanged.
+Shared: `stand_radius`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The turret 13 s skip already returns before that escape.
+Affects: member stand while the leader is still, and member seats during turret.
+Consent: user ("let's redefine" — minimum 5×5, maximum 7×7 by member count).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
+## 2026-11-09 — turret stands inside the 3×3 and skips the 13 s scroll
+
+Intent: On a turret dot, a leader already inside the 3×3 around that tile stands there. The center tile is not clicked again. The 13 s / 3-tile talking-scroll escape does not run while turret is on. Area hunts, world-nav walks, and every other confined escape stay as they are.
+Shared: `party.turret_idle` and `_maybe_confined_escape`. `farm.enter` does not pull a turret leader off the point. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader turret after the fight ends, and the confined scroll only while that turret flag is on.
+Consent: user ("check and fix" — inside the 3×3 do not walk onto the one tile; the 13 s escape is off for turret only).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-09 — party HP potion uses the solo row; turret waits on the dot
 
 Intent: A party leader and a party member drink the HP potion on the same recovery row the solo bot uses. The party 50% potion line is not a drink threshold. On a turret dot, the leader may walk inside the 5×5 to a live monster. With no target, the leader stands on that dot and does not search tile to tile.
