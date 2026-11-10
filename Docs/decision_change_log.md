@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a leftover party row is not a follow goal
+
+Intent: Join and follow use the party-memory leader only when that name is the connected leader's policy `leader_name`. An empty policy name does not match, so the member waits instead of scrolling toward the row that is already in the Party vector at startup. While an invite popup is open, or Y was sent and memory still names someone else, same-map follow waits too. A confirmed name still joins that pose, including a scroll hop when the maps differ.
+Shared: `memory_leader_confirmed`, `suppress_unconfirmed_leader`, `suppress_join_while_invite`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: party-member follow and cross-map join.
+Consent: user ("yes" — do not join or follow until the memory leader matches the policy name, and also stop same-map follow while the invite is unresolved).
+Result: `Engine/app/_06_party/tests/test_invite_accept.py`. Not run in game.
+
 ## 2026-11-10 — an open party invite is answered, and join waits for that inviter
 
 Intent: An open party-invite confirm gets Y even when party memory already says this character is in a party. The join is confirmed only after the popup has closed and the memory leader name is the inviter on that popup. Until then the member does not start or continue a cross-map join, so a leftover leader pose is not a scroll goal. Invites from someone other than the connected leader's policy name are still left alone.

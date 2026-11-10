@@ -1,6 +1,10 @@
 """An open invite is answered from the popup, not from leftover party memory."""
 from app._06_party.accept import InviteAccepter
-from app._06_party.join_map import suppress_join_while_invite
+from app._06_party.join_map import (
+    memory_leader_confirmed,
+    suppress_join_while_invite,
+    suppress_unconfirmed_leader,
+)
 from app._06_party.policy import MemberKind, PolicyResult
 
 
@@ -99,6 +103,42 @@ def test_hold_clears_an_in_flight_join():
         hold=False,
     )
     assert kept.kind is MemberKind.JOIN_MAP
+    walking = _Nav()
+    held = suppress_join_while_invite(
+        PolicyResult(MemberKind.FOLLOW, True, "follow_far"),
+        walking,
+        hold=True,
+    )
+    assert walking.cleared is True
+    assert held.kind is MemberKind.WAIT
+    assert held.reason == "invite_before_join"
+
+
+def test_leftover_party_row_is_not_a_walk_goal():
+    assert memory_leader_confirmed("", "Old") is False
+    assert memory_leader_confirmed("Boss", "Old") is False
+    assert memory_leader_confirmed("Boss", "Boss") is True
+    nav = _Nav()
+    result = suppress_unconfirmed_leader(
+        PolicyResult(MemberKind.JOIN_MAP, False, "leader_other_map"),
+        nav,
+        confirmed=False,
+    )
+    assert nav.cleared is True
+    assert result.kind is MemberKind.WAIT
+    assert result.reason == "party_leader_unconfirmed"
+    follow = suppress_unconfirmed_leader(
+        PolicyResult(MemberKind.FOLLOW, True, "follow_far"),
+        _Nav(),
+        confirmed=False,
+    )
+    assert follow.kind is MemberKind.WAIT
+    kept = suppress_unconfirmed_leader(
+        PolicyResult(MemberKind.JOIN_MAP, False, "leader_other_map"),
+        _Nav(),
+        confirmed=True,
+    )
+    assert kept.kind is MemberKind.JOIN_MAP
 
 
 if __name__ == "__main__":
@@ -108,4 +148,5 @@ if __name__ == "__main__":
     test_other_inviter_does_not_press_y()
     test_idle_member_is_not_held()
     test_hold_clears_an_in_flight_join()
+    test_leftover_party_row_is_not_a_walk_goal()
     print("ok")
