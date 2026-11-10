@@ -409,14 +409,17 @@ class PartyMemberManager:
                     (int(origin.x), int(origin.y)),
                     self.runtime.local_map_id,
                 )
-            hold = member_orders.supply_hold
+            leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
+            hold = None if leaving else member_orders.supply_hold
             if claim_names_me(hold, seat_name):
                 remember_supply_stand(
                     self.runtime, hold, origin, self.runtime.local_map_id
                 )
             else:
                 self.runtime.supply_stand = None
-            picked = tick_supply_pickup(self, game_state, self_name=seat_name)
+            picked = None if leaving else tick_supply_pickup(
+                self, game_state, self_name=seat_name
+            )
             if picked is not None:
                 self._record_decision(picked)
                 return picked

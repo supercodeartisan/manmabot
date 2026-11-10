@@ -27,6 +27,8 @@ _JOIN = "party_join_leader"
 _PIN = "party_pin_shop_behavior"
 _FLAG = "party_shopkeeper_arrow"
 _NEAR = 3
+# Recipient keeps hunting until the shopkeeper is this close, then stands.
+SUPPLY_HOLD_TILES = 12
 _SEEN = "party_supply_seen"
 # Neighbors tried for the empty drop tile, beside the standing recipient.
 _DROP_NEIGHBORS = ((1, 1), (-1, 1), (1, -1), (1, 0), (0, 1), (0, -1), (-1, 0))
@@ -43,6 +45,16 @@ def supply_hold_for(duty: dict) -> dict[str, Any]:
         "qty": int(duty.get("qty") or 0),
         "min": int(duty.get("min") or 0),
     }
+
+
+def supply_rows(rows: Any) -> list:
+    """Reports the shopkeeper may supply. An explicit ``supply_ok`` false is away."""
+    kept: list = []
+    for row in rows or []:
+        if isinstance(row, dict) and row.get("supply_ok") is False:
+            continue
+        kept.append(row)
+    return kept
 
 
 def claim_names_me(claim: Any, self_name: str) -> bool:
@@ -277,6 +289,13 @@ def tick_shopkeeper_duty(
         runtime.duty_phase = DUTY_SHOP
         return _tick_join(manager, state)
 
+    from .comms.orders import member_orders
+
+    if not bool(getattr(member_orders, "supply_open", False)):
+        runtime.supply_hold = None
+        runtime.duty_phase = DUTY_FOLLOW
+        return None
+
     from app._04_decision.shop_trip import SCRATCH_SHOP_TRIP
 
     if board.scratch.get(SCRATCH_SHOP_TRIP) and board.scratch.get(_FLAG):
@@ -284,8 +303,6 @@ def tick_shopkeeper_duty(
 
     chain = board.scratch.get("party_supply_chain")
     if board.scratch.get(_FLAG) and isinstance(chain, list) and chain:
-        from .comms.orders import member_orders
-
         _expire_notice(runtime, member_orders.party_reports)
         policy = getattr(manager, "leader_policy", None)
         roster = policy.get("roster") if isinstance(policy, dict) else None
@@ -301,7 +318,10 @@ def tick_shopkeeper_duty(
             return _tick_join(manager, state)
         return _tick_buy(manager, state, nxt)
 
-    from .comms.orders import member_orders
+    if _party_join_active(manager):
+        runtime.supply_hold = None
+        runtime.duty_phase = DUTY_FOLLOW
+        return None
 
     _expire_notice(runtime, member_orders.party_reports)
     policy = getattr(manager, "leader_policy", None)
@@ -312,7 +332,7 @@ def tick_shopkeeper_duty(
         held = (notice.get("for"), notice.get("item") or "arrow")
     duty = choose_supply_duty(
         bag_supply_counts(state),
-        member_orders.party_reports,
+        supply_rows(member_orders.party_reports),
         _supply_specs(cfg, mage_seat_names(roster)),
         self_name=self_name,
         held=held,
@@ -326,18 +346,22 @@ def tick_shopkeeper_duty(
     if duty["kind"] == "buy":
         runtime.supply_hold = None
         return _tick_buy(manager, state, duty)
+    stand = getattr(member_orders, "supply_stand", None)
+    planned = plan_supply_drop(duty, stand, _tile_open)
+    if planned is not None:
+        runtime.supply_hold = supply_hold_for(duty)
+        return _tick_drop(manager, state, planned)
+    close = _approach_until_close(manager, state, duty)
+    if close is not True:
+        runtime.supply_hold = None
+        return close
     runtime.supply_hold = supply_hold_for(duty)
-    planned = plan_supply_drop(
-        duty, getattr(member_orders, "supply_stand", None), _tile_open
-    )
-    if planned is None:
-        runtime.duty_phase = DUTY_SUPPLY
-        runtime.last_kind = "supply"
-        runtime.last_reason = "wait for stand"
-        from .intents import idle
+    runtime.duty_phase = DUTY_SUPPLY
+    runtime.last_kind = "supply"
+    runtime.last_reason = "wait for stand"
+    from .intents import idle
 
-        return idle("supply hold")
-    return _tick_drop(manager, state, planned)
+    return idle("supply hold")
 
 
 def tick_supply_pickup(
@@ -595,6 +619,75 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
     runtime.duty_phase = DUTY_FOLLOW
     runtime.last_kind = "supply"
     runtime.last_reason = f"{item} dropped"
+    return None
+
+
+def _party_join_active(manager: Any) -> bool:
+    """True while the member's world-nav join still owns the scroll and the walk."""
+    nav = getattr(manager, "_join_nav", None)
+    return bool(getattr(nav, "active", False))
+
+
+def _memory_game_xy(state: Any, name: Any) -> Optional[tuple[int, int, int]]:
+    """Live party-memory map and game xy. None when that row has no tile."""
+    who = str(name or "").strip()
+    if not who or state is None:
+        return None
+    from .leader import party_member_block
+
+    row = party_member_block(getattr(state, "last_party", None), who)
+    if not isinstance(row, dict):
+        return None
+    try:
+        return int(row["map_id"]), int(row["x"]), int(row["y"])
+    except (TypeError, ValueError, KeyError):
+        return None
+
+
+def _approach_until_close(manager: Any, state: Any, duty: dict) -> Any:
+    """True when close enough for the recipient to stand. Else a same-map walk.
+
+    Another map is left alone. The recipient keeps hunting until this is true.
+    """
+    board = manager._nav_blackboard
+    origin = getattr(board, "world_origin", None)
+    live = _memory_game_xy(state, duty.get("name"))
+    if live is not None:
+        mid, mx, my = live
+    else:
+        try:
+            mx = int(duty.get("x"))
+            my = int(duty.get("y"))
+            mid = int(duty.get("map_id"))
+        except (TypeError, ValueError):
+            return None
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(state)
+    if pose is None or origin is None:
+        return None
+    if int(pose.map_id) != mid:
+        return None
+    from app._03_world.merge.memory_sync import game_to_nav
+    from app._03_world.space.world_coords import tile_chebyshev
+
+    mx, my = game_to_nav(mx, my)
+    dist = tile_chebyshev(int(origin.x), int(origin.y), mx, my)
+    if dist <= SUPPLY_HOLD_TILES:
+        return True
+    from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
+
+    goal = (int(mx), int(my))
+    if getattr(board, "nav_goal", None) != goal:
+        start_travel(board, goal, reason="party supply approach")
+    if emit_travel_hop(
+        board, reason="party supply approach", priority=0.6, state=state
+    ):
+        intent = getattr(board, "intent", None)
+        if intent is not None:
+            manager.runtime.last_kind = "supply"
+            manager.runtime.last_reason = "walk to member"
+            return intent
     return None
 
 

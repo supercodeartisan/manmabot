@@ -51,6 +51,9 @@ def publish_shop_reports(
     map_id: Optional[int],
     x: Any,
     y: Any,
+    *,
+    hunt_open: bool = False,
+    away: Any = None,
 ) -> int:
     """Send every stored member report plus the leader's own report.
 
@@ -89,9 +92,20 @@ def publish_shop_reports(
     reports.append(
         build_report(world, map_id, name=leader, x=x, y=y, arrived=False, order="")
     )
+    blocked = {
+        str(name).strip().casefold()
+        for name in (away or [])
+        if str(name).strip()
+    }
+    open_hunt = bool(hunt_open)
+    for row in reports:
+        who = str(row.get("from") or "").strip().casefold()
+        row["supply_ok"] = bool(open_hunt and who not in blocked)
+        row["hunt_open"] = open_hunt
     body: dict[str, Any] = {
         "type": "party_reports",
         "from": "leader",
+        "hunt_open": open_hunt,
         "reports": reports,
     }
     session = leader_session()

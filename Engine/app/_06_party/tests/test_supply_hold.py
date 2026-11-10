@@ -99,6 +99,24 @@ def test_leader_frames_carry_the_hold_and_the_stand() -> None:
     assert orders.supply_hold["for"] == "Elf"
     orders.ingest([_Frame({"from": "leader", "type": "supply_hold", "clear": True})])
     assert orders.supply_hold is None
+    orders.ingest(
+        [
+            _Frame(
+                {
+                    "from": "leader",
+                    "type": "party_reports",
+                    "hunt_open": True,
+                    "reports": [{"from": "Elf"}],
+                }
+            )
+        ]
+    )
+    assert orders.supply_open is True
+    assert orders.party_reports[0]["from"] == "Elf"
+    orders.ingest(
+        [_Frame({"from": "leader", "type": "party_reports", "hunt_open": False, "reports": []})]
+    )
+    assert orders.supply_open is False
 
 
 class _Inv:
@@ -139,6 +157,8 @@ class _Manager:
 def test_shopkeeper_holds_until_the_recipient_reports_the_stop_tile() -> None:
     saved_reports = list(member_orders.party_reports)
     saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
     member_orders.party_reports = [
         {
             "from": "Elf",
@@ -149,13 +169,188 @@ def test_shopkeeper_holds_until_the_recipient_reports_the_stop_tile() -> None:
         }
     ]
     member_orders.supply_stand = None
+    manager = _Manager()
+    manager._nav_blackboard.world_origin = type("O", (), {"x": 100, "y": 100})()
+    import app._04_decision.world_nav.session as session
+
+    real_pose = session.live_pose_from_state
+    session.live_pose_from_state = lambda _state, fresh=False: type(
+        "P", (), {"map_id": 4, "x": 100, "y": 100}
+    )()
     try:
-        action = tick_shopkeeper_duty(_Manager(), _State(), self_name="Keeper")
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
     finally:
+        session.live_pose_from_state = real_pose
         member_orders.party_reports = saved_reports
         member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
     assert action is not None
     assert "supply hold" in str(getattr(action, "reason", ""))
+    assert manager.runtime.supply_hold is not None
+
+
+def test_a_far_recipient_keeps_moving_until_the_shopkeeper_is_close() -> None:
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
+    member_orders.supply_stand = None
+    member_orders.party_reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    manager = _Manager()
+    manager._nav_blackboard.world_origin = type("O", (), {"x": 10, "y": 10})()
+    manager._nav_blackboard.nav_goal = None
+    manager._nav_blackboard.intent = None
+    import app._04_decision.world_nav.session as session
+    import app._04_decision.behaviors.travel as travel
+
+    real_pose = session.live_pose_from_state
+    real_start = travel.start_travel
+    real_emit = travel.emit_travel_hop
+    session.live_pose_from_state = lambda _state, fresh=False: type(
+        "P", (), {"map_id": 4, "x": 10, "y": 10}
+    )()
+    travel.start_travel = lambda board, goal, reason="": setattr(
+        board, "nav_goal", (int(goal[0]), int(goal[1]))
+    )
+    travel.emit_travel_hop = lambda *args, **kwargs: False
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        session.live_pose_from_state = real_pose
+        travel.start_travel = real_start
+        travel.emit_travel_hop = real_emit
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert manager.runtime.supply_hold is None
+    assert manager._nav_blackboard.nav_goal == (100, 100)
+    assert action is None
+
+
+def test_a_new_leader_session_closes_supply() -> None:
+    orders = MemberOrders()
+    orders.session = "old"
+    orders.supply_open = True
+    orders.ingest([_Frame({"from": "leader", "type": "beep", "session": "new"})])
+    assert orders.supply_open is False
+
+
+def test_an_open_join_keeps_the_shopkeeper_off_the_tick() -> None:
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
+    manager = _Manager()
+    manager.runtime.supply_hold = {"id": "hold:arrow:Elf", "for": "Elf"}
+    manager._join_nav = type("Nav", (), {"active": True})()
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        member_orders.supply_open = saved_open
+    assert action is None
+    assert manager.runtime.supply_hold is None
+
+
+def test_approach_uses_the_live_party_tile() -> None:
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
+    member_orders.supply_stand = None
+    member_orders.party_reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    state = _State()
+    state.last_party = {
+        "in_party": True,
+        "members": [{"name": "Elf", "map_id": 4, "x": 40, "y": 40}],
+    }
+    manager = _Manager()
+    manager._nav_blackboard.world_origin = type("O", (), {"x": 10, "y": 10})()
+    manager._nav_blackboard.nav_goal = None
+    manager._nav_blackboard.intent = None
+    import app._04_decision.world_nav.session as session
+    import app._04_decision.behaviors.travel as travel
+
+    real_pose = session.live_pose_from_state
+    real_start = travel.start_travel
+    real_emit = travel.emit_travel_hop
+    session.live_pose_from_state = lambda _state, fresh=False: type(
+        "P", (), {"map_id": 4, "x": 10, "y": 10}
+    )()
+    travel.start_travel = lambda board, goal, reason="": setattr(
+        board, "nav_goal", (int(goal[0]), int(goal[1]))
+    )
+    travel.emit_travel_hop = lambda *args, **kwargs: False
+    try:
+        action = tick_shopkeeper_duty(manager, state, self_name="Keeper")
+    finally:
+        session.live_pose_from_state = real_pose
+        travel.start_travel = real_start
+        travel.emit_travel_hop = real_emit
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert action is None
+    assert manager._nav_blackboard.nav_goal == (40, 40)
+
+
+def test_stand_uses_party_memory_and_the_hunt_map_follows() -> None:
+    from app._06_party.arrow_policy import hunt_map_after_pose
+    from app._06_party.leader import stand_from_party_memory
+
+    snap = {
+        "in_party": True,
+        "members": [{"name": "Elf", "map_id": 4, "x": 12, "y": 13}],
+    }
+    stand = stand_from_party_memory(snap, "Elf", "hold:arrow:Elf")
+    assert stand == {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 12,
+        "y": 13,
+    }
+    assert hunt_map_after_pose(4, 15, leaving=False) == 15
+    assert hunt_map_after_pose(4, 15, leaving=True) == 4
+
+
+def test_supply_stays_closed_until_the_hunt_starts() -> None:
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = False
+    manager = _Manager()
+    manager.runtime.supply_hold = {"id": "hold:hp:Elf", "for": "Elf"}
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        member_orders.supply_open = saved_open
+    assert action is None
+    assert manager.runtime.supply_hold is None
+
+
+def test_an_away_member_is_not_a_drop_target() -> None:
+    from app._06_party.arrow_duty import supply_rows
+
+    rows = supply_rows(
+        [
+            {"from": "Elf", "supply_ok": False, "map_id": 4},
+            {"from": "Mage", "supply_ok": True, "map_id": 4},
+            {"from": "Boss"},
+        ]
+    )
+    assert [row["from"] for row in rows] == ["Mage", "Boss"]
 
 
 def test_close_claim_without_a_pile_does_not_hand_the_tick_back() -> None:
