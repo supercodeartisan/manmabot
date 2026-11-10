@@ -519,16 +519,18 @@ def _member_is_mage(raw: dict[str, Any]) -> bool:
         return False
 
 
-def resolve_mage_member_threat(
+def resolve_member_under_attack(
     game_state: Any,
     snapshot: Any,
     *,
     self_name: str = "",
     origin: Any = None,
+    mages_only: bool = False,
 ) -> Any:
-    """Nearest monster whose attack target is a mage party member.
+    """Nearest monster whose attack target is a party member.
 
-    The leader row is skipped. Empty when no mage member is being hit.
+    The leader row is skipped. ``mages_only`` keeps the old mage gate.
+    Empty when nobody else is being hit.
     """
     if game_state is None or not isinstance(snapshot, dict):
         return None
@@ -537,7 +539,7 @@ def resolve_mage_member_threat(
     for raw in snapshot.get("members") or []:
         if not isinstance(raw, dict) or raw.get("is_leader"):
             continue
-        if not _member_is_mage(raw):
+        if mages_only and not _member_is_mage(raw):
             continue
         name = str(raw.get("name") or "").strip()
         if me and name.casefold() == me:
@@ -567,6 +569,79 @@ def resolve_mage_member_threat(
         seen.add(tid)
         found.append(obj)
     return _nearest_monster(origin, found)
+
+
+def resolve_mage_member_threat(
+    game_state: Any,
+    snapshot: Any,
+    *,
+    self_name: str = "",
+    origin: Any = None,
+) -> Any:
+    """Nearest monster whose attack target is a mage party member."""
+    return resolve_member_under_attack(
+        game_state,
+        snapshot,
+        self_name=self_name,
+        origin=origin,
+        mages_only=True,
+    )
+
+
+def _same_track(a: Any, b: Any) -> bool:
+    if a is None or b is None:
+        return False
+    left = int(getattr(a, "track_id", 0) or 0)
+    right = int(getattr(b, "track_id", 0) or 0)
+    return left > 0 and left == right
+
+
+def choose_help_target(
+    game_state: Any,
+    snapshot: Any,
+    *,
+    self_name: str = "",
+    origin: Any = None,
+    current: Any = None,
+    fight_open: bool = False,
+    pending: Any = None,
+    pending_src: str = "none",
+) -> tuple[Any, str]:
+    """Who to fight this tick when a party member is being hit.
+
+    A monster hitting a mage replaces the open fight. Any other member
+    waits until that fight is over, and then comes before ``pending``.
+    ``("own_finish", ...)`` means keep the fight already started.
+    ``pending`` is used when nobody else is being hit.
+    """
+    fighting = bool(fight_open) or _assist_target_live(game_state, current)
+    mage = resolve_mage_member_threat(
+        game_state,
+        snapshot,
+        self_name=self_name,
+        origin=origin,
+    )
+    if mage is not None and _assist_target_live(game_state, mage):
+        return mage, "mage_help"
+    under = resolve_member_under_attack(
+        game_state,
+        snapshot,
+        self_name=self_name,
+        origin=origin,
+    )
+    if under is not None and _assist_target_live(game_state, under):
+        if fighting:
+            if _assist_target_live(game_state, current) and not _same_track(
+                current, pending
+            ):
+                return current, "own_finish"
+            if pending is not None:
+                return pending, pending_src or "own_finish"
+            return current, "own_finish"
+        return under, "member_under_attack"
+    if pending is not None:
+        return pending, pending_src or "none"
+    return None, "none"
 
 
 def resolve_leader_strike_target(
@@ -1054,4 +1129,8 @@ __all__ = [
     "resolve_leader_attack_target",
     "resolve_leader_strike_target",
     "resolve_self_defender",
+    "resolve_member_help_target",
+    "resolve_member_under_attack",
+    "resolve_mage_member_threat",
+    "choose_help_target",
 ]

@@ -314,9 +314,12 @@ def plan_slot_hop(
 
     from .types import ActionIntent, ActionType
 
+    from .follow import STAND_ARRIVE_TILES
+
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(slot[0]), int(slot[1]))
-    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= ARRIVAL_TOLERANCE:
+    arrive = STAND_ARRIVE_TILES if kind == "stand" else ARRIVAL_TOLERANCE
+    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= arrive:
         return idle("at_slot"), goal, "at_slot", None
     # Same delta and the hop is still on the way: let that step finish.
     # A changed member-to-slot direction clicks this latest tile now.

@@ -660,6 +660,80 @@ class PartyMemberManager:
         elif not cfg.turret_farm or cfg.solo_farm:
             self.runtime.own_hunt_id = None
 
+        if game_state is not None:
+            from .assist import _assist_target_live, choose_help_target
+            from .loot import _self_row_name
+
+            current_fight = None
+            for tid in (prev_assist_id, self.runtime.own_hunt_id):
+                if tid is None:
+                    continue
+                try:
+                    obj = game_state.get_object(int(tid))
+                except Exception:
+                    obj = None
+                if _assist_target_live(game_state, obj):
+                    current_fight = obj
+                    break
+            seat_name = ""
+            if origin_ok and origin is not None:
+                seat_name = _self_row_name(
+                    getattr(game_state, "last_party", None),
+                    (int(origin.x), int(origin.y)),
+                    self.runtime.local_map_id,
+                )
+            helped, help_src = choose_help_target(
+                game_state,
+                getattr(game_state, "last_party", None),
+                self_name=seat_name,
+                origin=origin,
+                current=current_fight,
+                pending=assist_obj,
+                pending_src=assist_src,
+            )
+            switched = helped is not assist_obj or help_src != assist_src
+            if switched:
+                assist_obj = helped
+                assist_src = help_src
+                if help_src in ("mage_help", "member_under_attack"):
+                    self.runtime.own_hunt_id = None
+                    self._turret_own_pending = None
+                self.runtime.assist_track_id = (
+                    int(getattr(assist_obj, "track_id", 0) or 0)
+                    if assist_obj is not None
+                    else None
+                )
+                self.runtime.assist_src = assist_src
+                if assist_obj is not None:
+                    self.runtime.assist_name = str(
+                        getattr(assist_obj, "species_name", None)
+                        or getattr(
+                            getattr(assist_obj, "identity", None), "name", None
+                        )
+                        or getattr(assist_obj, "label", None)
+                        or ""
+                    )
+                    need_combat_step = not assist_in_attack_range(
+                        game_state, assist_obj
+                    )
+                    if cfg.turret_farm and leader_tile is not None:
+                        tgt_tile = tile_from_obj(assist_obj, origin)
+                        if tgt_tile is None:
+                            tgt_tile = assist_monster_tile(assist_obj, origin)
+                        target_in_yard = (
+                            True
+                            if tgt_tile is None
+                            else in_yard(
+                                tgt_tile,
+                                leader_tile,
+                                half_w=half_w,
+                                half_h=half_h,
+                            )
+                        )
+                else:
+                    need_combat_step = False
+                    self.runtime.assist_name = ""
+
         if mage_skips_party_assist(game_state):
             assist_obj = None
             assist_src = "none"
@@ -782,6 +856,7 @@ class PartyMemberManager:
                 off_turret_seat=off_turret_seat,
                 leader_pose_stale=bool(leader_tile is not None and not view.fresh),
                 slot_dist=slot_dist,
+                slot_arrive=1 if formed.kind == "stand" else 0,
             )
         )
         self.runtime.chasing = result.chasing

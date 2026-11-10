@@ -12,6 +12,8 @@ CLOSE_RESTART_GAP = 1
 FOLLOW_CLICK_TILES = 2
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
+# A stand seat is a 3×3. The member holds on the center tile or any neighbor.
+STAND_ARRIVE_TILES = 1
 # Keep the absolute click goal while the ideal slot drifts within this Chebyshev.
 STICKY_GOAL_SLACK = 2
 
@@ -284,6 +286,7 @@ def follow_hop_still_closes(
 
 __all__ = [
     "ARRIVAL_TOLERANCE",
+    "STAND_ARRIVE_TILES",
     "STICKY_GOAL_SLACK",
     "CLOSE_RESTART_GAP",
     "FOLLOW_CLICK_TILES",

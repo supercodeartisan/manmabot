@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Optional
 
 from .config import PartyMemberConfig
-from .follow import ARRIVAL_TOLERANCE, follow_kind
+from .follow import follow_kind
 
 
 class MemberKind(str, Enum):
@@ -66,6 +66,9 @@ class PolicyInput:
     # Chebyshev steps to this member's formation slot. None keeps the old
     # distance-to-leader band for callers that have no slot yet.
     slot_dist: Optional[int] = None
+    # Hold when the member is inside this many tiles of the slot.
+    # Stand passes 1 (a 3×3). A walking side slot stays at 0.
+    slot_arrive: int = 0
 
 
 @dataclass(frozen=True)
@@ -85,7 +88,7 @@ def _slot_hold(inp: PolicyInput) -> Optional[PolicyResult]:
         return None
     slot = int(inp.slot_dist)
     dist = int(inp.leader_dist or 0)
-    if slot <= ARRIVAL_TOLERANCE:
+    if slot <= max(0, int(inp.slot_arrive)):
         return PolicyResult(
             MemberKind.HOLD,
             False,

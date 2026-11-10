@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — mage hit jumps the queue; other hits wait
+
+Intent: A monster hitting a mage member replaces the fight already in progress, for the leader and for a member. A monster hitting any other member waits until that fight ends, then is taken before a new hunt. The leader still finishes through the sticky lock. A member keeps the mob already started, then helps the colleague.
+Shared: `choose_help_target`, `farm_loot_or_combat`, member target pick in `PartyMemberManager`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader hunt order, and party member assist when a colleague is being hit. Mage members still do not take an assist target. Helping the monster a member is attacking stays after this.
+Consent: user ("그대로 적용해서 깨끗하게 구현하라" — finish the current mob, then help a member who is hit; a mage who is hit comes before that hunt).
+Result: `Engine/app/_06_party/tests/test_colleague_help.py`. Not run in game.
+
+## 2026-11-10 — stand hold is a 3×3; leader finishes then helps
+
+Intent: A member standing near the leader holds anywhere inside the 3×3 around their seat. A walking side slot still moves when it is one tile off. When a party member is being hit, the leader finishes the monster already in the fight, then attacks the monster that is hitting that member. Mage-only help no longer cuts the current fight short.
+Shared: `_slot_hold`, `plan_slot_hop`, `farm_loot_or_combat`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: member stand while the leader is still or in turret. Leader help after the current kill ends.
+Consent: user ("고치라" — the exact seat becomes a 3×3; the leader finishes the current monster, then helps a member who is under attack).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
 ## 2026-11-10 — party elf hunts at the solo click range
 
 Intent: An elf in a party, leader turret or member assist, keeps a monster when the solo attack-click range does. The turret box does not add two tiles on top of that range. Melee and mage turret boxes stay as they are.

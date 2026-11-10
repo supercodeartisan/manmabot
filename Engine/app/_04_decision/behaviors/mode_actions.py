@@ -2650,7 +2650,8 @@ def farm_loot_or_combat(
     """Loot first; sticky kill and attacks_me force-engage beat loot.
 
     While this bot is the party leader, a monster hitting a mage member
-    is taken before the sticky fight, attacks-me, loot, and other help.
+    replaces the current fight. After that fight ends, a monster hitting
+    any other member is taken before attacks-me, loot, and other help.
     1. A living sticky target is finished before any new loot click, unless
        a monster that has attacked me should take the lock. The sticky
        yields when it has not attacked me. A living sticky that has
@@ -2696,36 +2697,6 @@ def farm_loot_or_combat(
         sync_attacks_me_force_targets(state)
     except Exception:
         pass
-    if blackboard.scratch.get("party_help_open"):
-        from app._06_party.assist import resolve_mage_member_threat
-
-        mage_threat = resolve_mage_member_threat(
-            state,
-            getattr(state, "last_party", None),
-            origin=origin,
-        )
-        if mage_threat is not None:
-            threat_id = int(mage_threat.track_id)
-            if blackboard.current_target_id != threat_id:
-                begin_engage(
-                    state,
-                    blackboard,
-                    threat_id,
-                    finish_kill=True,
-                )
-            event(
-                "combat",
-                "farm branch=mage_help id=%s dist=%s",
-                threat_id,
-                _dist(mage_threat),
-            )
-            return continue_or_start_combat(
-                state,
-                blackboard,
-                allow_new=True,
-                chosen=mage_threat,
-                reason="mage member under attack",
-            )
     sticky = rebind_sticky_target(state, blackboard)
     if prefer_attacked_me_sticky(state, blackboard, exclude=exclude):
         sticky = (
@@ -2739,6 +2710,49 @@ def farm_loot_or_combat(
             getattr(sticky, "track_id", None),
             _dist(sticky),
         )
+
+    fight_open = sticky is not None or continue_sticky_combat(state, blackboard)
+    if blackboard.scratch.get("party_help_open"):
+        from app._06_party.assist import choose_help_target
+
+        helped, help_src = choose_help_target(
+            state,
+            getattr(state, "last_party", None),
+            origin=origin,
+            current=sticky,
+            fight_open=fight_open,
+        )
+        if help_src in ("mage_help", "member_under_attack") and helped is not None:
+            threat_id = int(helped.track_id)
+            if blackboard.current_target_id != threat_id:
+                begin_engage(
+                    state,
+                    blackboard,
+                    threat_id,
+                    finish_kill=True,
+                )
+            branch = (
+                "mage_help" if help_src == "mage_help" else "member_under_attack"
+            )
+            reason = (
+                "mage member under attack"
+                if help_src == "mage_help"
+                else "party member under attack"
+            )
+            event(
+                "combat",
+                "farm branch=%s id=%s dist=%s",
+                branch,
+                threat_id,
+                _dist(helped),
+            )
+            return continue_or_start_combat(
+                state,
+                blackboard,
+                allow_new=True,
+                chosen=helped,
+                reason=reason,
+            )
 
     if sticky is not None or continue_sticky_combat(state, blackboard):
         tid = getattr(sticky, "track_id", None) or blackboard.current_target_id

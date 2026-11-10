@@ -133,6 +133,10 @@ def test_slot_distance_replaces_the_leader_band():
     follow = decide_policy(_policy(leader_dist=1, slot_dist=1))
     assert follow.kind is MemberKind.FOLLOW
     assert follow.reason.startswith("follow_slot")
+    stand = decide_policy(_policy(leader_dist=1, slot_dist=1, slot_arrive=1))
+    assert stand.kind is MemberKind.HOLD
+    outside = decide_policy(_policy(leader_dist=1, slot_dist=2, slot_arrive=1))
+    assert outside.kind is MemberKind.FOLLOW
 
 
 def test_one_leader_step_moves_the_side_slot():
