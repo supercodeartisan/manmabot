@@ -2836,12 +2836,31 @@ class BotController:
 
         snap = action_party_snapshot(world)
         info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        from app._06_party.sync import party_view
+
         self._invite_accepter.tick(
             party_invite(getattr(world, "last_uidialog", None)),
             leader_name=str((member_orders.policy or {}).get("leader_name") or ""),
             name=str(info.get("as_name") or "") or _player_chat_name(world, snap) or "member",
             session=member_orders.session,
             in_party=memory_in_party(snap),
+            memory_leader=str(party_view(snap).get("leader") or ""),
+        )
+
+    def _set_invite_join_hold(self, world, party_brain) -> None:
+        """Keep join-map off while the invite popup is open or memory is the old party."""
+        runtime = getattr(party_brain, "runtime", None) if party_brain is not None else None
+        if runtime is None:
+            return
+        accepter = getattr(self, "_invite_accepter", None)
+        leader = ""
+        if accepter is not None and world is not None:
+            from app._06_party.invite import action_party_snapshot
+            from app._06_party.sync import party_view
+
+            leader = str(party_view(action_party_snapshot(world)).get("leader") or "")
+        runtime.hold_join_map = bool(
+            accepter is not None and accepter.blocks_join_map(leader)
         )
 
     def _member_on_leader_roster(self, world, policy: dict) -> bool:
@@ -3002,6 +3021,8 @@ class BotController:
             # Once per loop (the send=False pass). A manual Y this tick wins.
             if not send and not skip_accept:
                 self._member_invite_accept(world)
+            if not send:
+                self._set_invite_join_hold(world, party_brain)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.orders import member_orders
@@ -3047,6 +3068,7 @@ class BotController:
             self._member_hello_tick(world)
             if not skip_accept:
                 self._member_invite_accept(world)
+            self._set_invite_join_hold(world, party_brain)
             self._member_beep_if_already_in(world)
             self._member_state_report(world)
             return

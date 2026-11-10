@@ -4,11 +4,23 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .party_log import get_logger as _party_logger
+from .policy import MemberKind, PolicyResult
 
 _log = _party_logger("join")
 
 # Re-arm if leader pose drifts this far (Chebyshev) while joining.
 _REPLAN_TILES = 24
+
+
+def suppress_join_while_invite(result: PolicyResult, join_nav: Any, *, hold: bool) -> PolicyResult:
+    """Drop an in-flight cross-map join and do not start another while ``hold``."""
+    if not hold:
+        return result
+    if join_nav is not None and bool(getattr(join_nav, "active", False)):
+        join_nav.clear()
+    if result.kind is MemberKind.JOIN_MAP:
+        return PolicyResult(MemberKind.WAIT, False, "invite_before_join")
+    return result
 
 
 class PartyJoinNav:
@@ -189,4 +201,4 @@ class PartyJoinNav:
         )
 
 
-__all__ = ["PartyJoinNav"]
+__all__ = ["PartyJoinNav", "suppress_join_while_invite"]

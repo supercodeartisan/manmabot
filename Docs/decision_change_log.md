@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — an open party invite is answered, and join waits for that inviter
+
+Intent: An open party-invite confirm gets Y even when party memory already says this character is in a party. The join is confirmed only after the popup has closed and the memory leader name is the inviter on that popup. Until then the member does not start or continue a cross-map join, so a leftover leader pose is not a scroll goal. Invites from someone other than the connected leader's policy name are still left alone.
+Shared: `InviteAccepter.tick`, `blocks_join_map`, `suppress_join_while_invite`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: party-member invite accept, and cross-map join toward the party leader.
+Consent: user ("yes" after the plan: Y from the open popup, policy leader name only for who is ours, no join_map until memory leader matches that inviter).
+Result: `Engine/app/_06_party/tests/test_invite_accept.py`. Not run in game.
+
+## 2026-11-10 — party arrow supply counts silver arrows only
+
+Intent: The existing arrow supply row is silver arrows. A member's normal arrows do not fill that row, a normal-arrow pile does not satisfy the claim, and the drop takes a silver-arrow stack. The shop for that row is the silver-arrow shop. The UI buy count, the per-person give count, who is skipped, and the order after MP stay as they are. Solo arrow restock still follows the solo buy checkboxes.
+Shared: `report_arrow_count`, `bag_supply_counts`, `rows_with_expected`, `supply_pile_matches`, `shops_arrow_id`, `party_shop_buy_qty`, `supply_drop._kind_tables`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. HP, depoison, MP, the configured buy count, the 12-tile approach, Esc, the stop check, the nav stand, and solo shop quantities are unchanged.
+Affects: party supply of the arrow row, including the shop the shopkeeper opens for it and the stack they drop. The party supply table labels that row 은화살.
+Consent: user ("일반화살, 은화살 두개로 가를 필요 없이 은화살만 보는걸로 하자. 일반화살은 무시하고.").
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`, `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a supply buy is the configured shop count
 
 Intent: A party supply purchase buys the UI buy count for that item. The sum of each member's shortage does not raise it, and a bag under the shopkeeper reserve does not raise it either. Spare above the reserve is still dropped first. A bag under the reserve, or a reserve with nothing left while someone is short, is what starts the shop. Adena still limits the count, and MP is still not bought. The per-person drop count and solo shop quantities stay as they are.

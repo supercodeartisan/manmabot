@@ -20,7 +20,7 @@ from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
 from .formation_goal import choose_formation_goal
 from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
-from .join_map import PartyJoinNav
+from .join_map import PartyJoinNav, suppress_join_while_invite
 from .leader import (
     LeaderView,
     _party_game_xy,
@@ -1010,8 +1010,17 @@ class PartyMemberManager:
 
         use_world_nav = False
         route_detail = ""
+        hold_join = bool(getattr(self.runtime, "hold_join_map", False))
+        result = suppress_join_while_invite(
+            result, self._join_nav, hold=hold_join
+        )
+        if hold_join and result.kind is MemberKind.WAIT and result.reason == "invite_before_join":
+            reason = result.reason
         # Continue an in-flight WORLD_NAV follow/join until it finishes.
-        if self._join_nav.active and result.kind in (
+        # An open invite, or a Y still waiting for that inviter, does not scroll.
+        if hold_join:
+            pass
+        elif self._join_nav.active and result.kind in (
             MemberKind.FOLLOW,
             MemberKind.JOIN_MAP,
             MemberKind.WAIT,

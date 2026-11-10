@@ -59,6 +59,8 @@ class MemberRuntime:
     formation: str = ""
     # follow | shop | supply. The leader omits shop and supply from the line watch.
     duty_phase: str = "follow"
+    # Invite popup is open, or Y was sent and party memory still names someone else.
+    hold_join_map: bool = False
     # Last ground drop this shopkeeper made. The leader broadcasts it.
     supply_notice: Optional[dict[str, Any]] = None
     # Counts added onto a report that has not caught up with a drop yet.
