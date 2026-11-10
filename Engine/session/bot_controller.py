@@ -798,19 +798,18 @@ class BotController:
 
             pid = str(getattr(self, "_party_policy_id", "") or "")
             out["party_mem"] = "ok" if party_raw is not None else "blind"
+            leader_known = party_raw is not None and party.get("subs_ok") is not False
             out["roster"] = []
             for row in roster:
                 key = row["name"].casefold()
                 irow = invite_rows.get(key) or {}
                 mstate = member_states.row(row["name"])
                 iacc = invite_accepts.row(row["name"])
-                if key in in_party_names and party.get("subs_ok") is not False:
+                if leader_known and key in in_party_names:
                     joined, joined_src = True, "leader memory"
-                elif reported_joined(row["name"], self._party_leader_name):
+                elif not leader_known and reported_joined(row["name"], self._party_leader_name):
                     joined, joined_src = True, "member memory"
-                elif irow.get("joined") and mstate.get("fresh"):
-                    joined, joined_src = True, "member report"
-                elif irow.get("joined"):
+                elif not leader_known and irow.get("joined"):
                     joined, joined_src = True, "seen joined"
                 else:
                     joined, joined_src = False, ""

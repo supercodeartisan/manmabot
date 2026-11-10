@@ -17,10 +17,10 @@
   popup is open (other names are not frozen), and no line is typed right
   after an NPC dialog, teleport, or combat action (unless combat has held a
   due invite for ``COMBAT_HOLD_MAX_S``). Joined = this leader's party memory
-  lists the name, or a fresh member report whose own memory says so.
-  ``invite_accept`` is not a join. Left = the member reports out and the
-  leader memory does not list them, for ``LEFT_CONFIRM_S`` of confirmed
-  reads. The 10 minute forming clock starts once and is not reset when a
+  lists the name. A fresh member report counts only while this read is
+  unknown. ``invite_accept`` is not a join. Left = a confirmed read does not
+  list them, for ``LEFT_CONFIRM_S``. An unknown read does not start that
+  timer. The 10 minute forming clock starts once and is not reset when a
   member reconnects. Hunt waits only for required roster names.
 
 Chat delivery defaults to ``app._05_action.chat.send_chat_line``; the session
@@ -387,11 +387,11 @@ class PartyInviter:
     ) -> None:
         """Mark joins and confirmed leaves.
 
-        Joined: this leader's party memory lists the name, or ``reported(name)``
-        (fresh member party memory). ``invite_accept`` is not a join. Left: a
-        joined member reports ``reported_out`` and this read does not list
-        them, for ``left_confirm_s`` of confirmed reads. An unknown read does
-        not start or advance a leave, and does not clear a confirmed join.
+        Joined: this leader's party memory lists the name. ``reported(name)``
+        counts only while this read is unknown. ``invite_accept`` is not a
+        join. Left: a confirmed read does not list them, for
+        ``left_confirm_s``. An unknown read does not start or advance a
+        leave, and does not clear a confirmed join.
         """
         from app._06_party.sync import memory_in_party
 
@@ -407,18 +407,16 @@ class PartyInviter:
             return
         self.last_memory = "in" if known else "out"
         present = _member_names(snapshot) if known else set()
+        del reported_out
         for row in self.rows:
             in_leader = row.name.casefold() in present
-            if row.joined_at is None:
-                if in_leader:
-                    how = "leader memory"
+            if in_leader:
+                if row.joined_at is None:
+                    self._mark_joined(row, now, "leader memory")
                 else:
-                    how = "member memory" if _safe(reported, row.name) else ""
-                if how:
-                    self._mark_joined(row, now, how)
+                    row.out_since = None
                 continue
-            if in_leader or not _safe(reported_out, row.name):
-                row.out_since = None
+            if row.joined_at is None:
                 continue
             if row.out_since is None:
                 row.out_since = now

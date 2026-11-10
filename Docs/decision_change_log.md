@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a party member is whoever this read's control block confirms
+
+Intent: A name left in a Party vector slot is not a member. The slot counts only when this read's `_Rep` vft is `PARTY_VFT_RC_PLAYER`. A failed read of the header or of a slot stays unknown: no leave and no `/초대`. A confirmed read that does not list a name drops that name after the existing 10 second leave confirm. While the leader read is unknown, the monitor may still show the previous join or the member's own fresh report.
+Shared: `lp_slot_live`, `lp_read_batch`, `LeaderInvites.observe`, `_party_session_snapshot`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Follow, hunt, retreat, loot, and HP are unchanged.
+Affects: party invite skip, the monitor JOINED mark, and leave. Both clients need the rebuilt `party.dll`.
+Consent: user ("안전하게 수정하라" — count only a slot whose `_Rep` vft matches, and do not treat a failed read as "not in a party").
+Result: `Engine/app/_06_party/tests/test_party_membership.py`. Not run in game.
+
 ## 2026-11-10 — a party leader starts as the account class
 
 Intent: A party-leader start copies the selected account's class onto the profile before the bot runs. Elf hunts ranged, mage hunts with magic, and knight or royal hunts in melee. The schedule row for that same account stores the same class. A party member start does not do this. The roster seat the leader assigns stays a seat, not a character class.
