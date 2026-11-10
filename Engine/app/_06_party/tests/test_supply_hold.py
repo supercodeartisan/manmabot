@@ -1020,6 +1020,127 @@ def test_a_finished_shop_does_not_block_the_join(monkeypatch) -> None:
     assert board.scratch.get("need_world_nav") is None
 
 
+def test_finished_shopping_joins_a_leader_on_any_map(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _tick_join
+
+    seen = {}
+
+    def _nav(_manager, _state, map_id, x, y, *, reason):
+        seen["goal"] = (map_id, x, y, reason)
+        return type("I", (), {"reason": reason})()
+
+    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    manager = _Manager()
+    manager.config = PartyMemberConfig(
+        seat_role="shopkeeper", leader_name="매력여기사"
+    )
+    manager.runtime.leader_same_map = False
+    manager.runtime.sticky_leader_tile = None
+    state = _State()
+    state.party_read_ok = True
+    state.last_party = {
+        "in_party": True,
+        "leader": {"name": "매력여기사", "map_id": 0, "x": 32607, "y": 33134},
+    }
+    action = _tick_join(manager, state)
+    assert seen["goal"] == (0, 32607, 33134, "party_join_leader")
+    assert getattr(action, "reason", "") == "party_join_leader"
+
+
+def test_a_short_leader_step_keeps_the_join_route(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _tick_join
+
+    seen = {}
+
+    def _nav(_manager, _state, map_id, x, y, *, reason):
+        seen["goal"] = (map_id, x, y)
+        return type("I", (), {"reason": reason})()
+
+    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    manager = _Manager()
+    manager.config = PartyMemberConfig(
+        seat_role="shopkeeper", leader_name="매력여기사"
+    )
+    manager.runtime.leader_same_map = False
+    manager._nav_blackboard.scratch["party_nav_goal"] = (
+        "party_join_leader",
+        4,
+        33400,
+        32800,
+    )
+    state = _State()
+    state.party_read_ok = True
+    state.last_party = {
+        "in_party": True,
+        "leader": {"name": "매력여기사", "map_id": 4, "x": 33410, "y": 32808},
+    }
+    _tick_join(manager, state)
+    assert seen["goal"] == (4, 33400, 32800)
+
+
+def test_a_missed_party_read_keeps_the_join_walk(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _tick_join
+
+    seen = {}
+
+    def _nav(_manager, _state, map_id, x, y, *, reason):
+        seen["goal"] = (map_id, x, y, reason)
+        return type("I", (), {"reason": reason})()
+
+    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    manager = _Manager()
+    manager.runtime.leader_same_map = False
+    manager._nav_blackboard.scratch["party_nav_goal"] = (
+        "party_join_leader",
+        0,
+        32607,
+        33134,
+    )
+    state = _State()
+    state.party_read_ok = False
+    state.last_party = {
+        "in_party": True,
+        "leader": {"name": "매력여기사", "map_id": 4, "x": 1, "y": 1},
+    }
+    _tick_join(manager, state)
+    assert seen["goal"] == (0, 32607, 33134, "party_join_leader")
+
+
+def test_join_waits_without_a_leader_pose() -> None:
+    from app._06_party.arrow_duty import _tick_join
+
+    manager = _Manager()
+    manager.runtime.leader_same_map = False
+    state = _State()
+    state.party_read_ok = False
+    action = _tick_join(manager, state)
+    assert getattr(action, "reason", "") == "party_member:join leader no pose"
+    assert "party_join_leader" not in manager._nav_blackboard.scratch
+
+
+def test_join_ends_when_already_beside_the_leader(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _tick_join
+
+    def _nav(*_args, **_kwargs):
+        raise AssertionError("already beside the leader")
+
+    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    manager = _Manager()
+    manager.runtime.leader_same_map = True
+    manager.runtime.leader_dist = 2
+    manager._nav_blackboard.scratch["party_join_leader"] = True
+    manager._nav_blackboard.scratch["party_supply_chain"] = ["hp"]
+    state = _State()
+    state.party_read_ok = True
+    state.last_party = {
+        "in_party": True,
+        "leader": {"name": "매력여기사", "map_id": 0, "x": 32607, "y": 33134},
+    }
+    assert _tick_join(manager, state) is None
+    assert "party_join_leader" not in manager._nav_blackboard.scratch
+    assert "party_supply_chain" not in manager._nav_blackboard.scratch
+
+
 def test_a_moved_stand_pauses_before_the_next_try() -> None:
     saved_reports = list(member_orders.party_reports)
     saved_stand = member_orders.supply_stand

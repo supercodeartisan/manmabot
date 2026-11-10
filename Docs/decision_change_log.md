@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — shopkeeper joins the leader after the buy list
+
+Intent: After the supply buy list finishes, the shopkeeper walks to the leader's party-memory map and game coordinate. That pose is used on any map. A same-map body within 3 tiles ends the join. A missed read keeps the route already started. The route holds while the leader stays inside 24 tiles, then aims at the new coordinate.
+Shared: `_tick_join`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Buys, drops, follow, and solo shops are unchanged.
+Affects: the shopkeeper's walk back to the leader after a finished party supply purchase.
+Consent: user ("yes" — return to the leader wherever they are after successful shopping).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a party start forgets the saved party pointer and reads again
 
 Intent: Party start does not keep the previous Party object or the previous member list. Each sample walks PartySubsystem again, and the start itself waits for a sample that arrives after that reset. No new sample leaves membership unknown, so a name from the sample already in the slot is not joined.
