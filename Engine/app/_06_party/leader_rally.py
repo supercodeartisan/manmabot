@@ -1,9 +1,9 @@
-"""Leader start rally: reach the party schedule mark, then hunt.
+"""Leader start rally: reach the party schedule mark, wait, then hunt.
 
 The walk to the mark is not paused at the current tile or the first teleporter.
-``note_arrived`` opens the hunt when the leader is on that mark. Members are
-not waited on and are not sent the tile. Once party memory shows them in the
-party, they follow the leader's live tile.
+``note_arrived`` stands the leader on that mark. The stand ends when every
+expected member is at the mark, or after 3 minutes. Members are not sent the
+tile. Once party memory shows them in the party, they follow the leader's live tile.
 """
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from app._06_party.comms.orders import (
 TELEPORT_OPS = ("npc_teleporter", "talking_scroll")
 WAIT_LOG_EVERY_S = 5.0
 WAIT_TIMEOUT_S = 10 * 60
+# Stand on the rally mark for members, then walk into the farm.
+MEMBER_WAIT_S = 3 * 60
 
 
 def _steps(plan: Any) -> list:
@@ -71,7 +73,7 @@ def plan_start(plan: Any) -> Optional[tuple[int, int, int]]:
 
 
 class LeaderStartRally:
-    """off → await_mark → done. Arriving at the mark opens the hunt."""
+    """off → await_mark → waiting → done. The mark opens a 3 minute stand."""
 
     def __init__(
         self,
@@ -116,6 +118,8 @@ class LeaderStartRally:
         self._log(f"Party start rally skipped — {why}")
 
     def remaining_s(self) -> Optional[float]:
+        if self.state == "waiting" and self._wait_started is not None:
+            return max(0.0, self._wait_started + MEMBER_WAIT_S - self._clock())
         if self.deadline is not None:
             return max(0.0, self.deadline - self._clock())
         if self._wait_started is not None:
@@ -146,12 +150,14 @@ class LeaderStartRally:
         self._log("Party start rally walks to the party mark")
 
     def note_arrived(self, point: tuple[int, int, int]) -> None:
-        """The leader is on the mark. Hunt starts. Members are not waited on."""
+        """The leader is on the mark. Stand until the roster is here, or 3 minutes."""
         if self.state != "await_mark":
             return
-        del point
-        self.state = "done"
-        self._log("Party start rally complete — at the mark, hunt")
+        self._arm(STAGE_START, point)
+        self._enter_waiting()
+        self._log(
+            "Party start rally at the mark — wait up to 3 min for members"
+        )
 
     def on_plan(self, plan: Any) -> None:
         """Travel owns the route. A plan does not start this wait."""
@@ -166,7 +172,7 @@ class LeaderStartRally:
         """Each tick: resend if needed, count arrivals, finish when all are in."""
         if (
             self.deadline is not None
-            and self.state not in ("off", "done")
+            and self.state not in ("off", "done", "waiting")
             and self._clock() >= self.deadline
         ):
             self.left_behind = self._rally.missing(self.expected)
@@ -184,13 +190,17 @@ class LeaderStartRally:
             return
         if self._rally.armed and self._rally.ready(connected, self.expected):
             self.state = "done"
-            self._log("Party start rally complete — continue to the hunt")
+            self._log("Party start rally complete — all members here, continue to the hunt")
             return
         now = self._clock()
         started = self._wait_started
-        if self.deadline is None and started is not None and now - started >= WAIT_TIMEOUT_S:
-            mins = int(WAIT_TIMEOUT_S // 60)
-            self.skip(f"wait timed out ({mins} min)")
+        if started is not None and now - started >= MEMBER_WAIT_S:
+            self.left_behind = self._rally.missing(self.expected)
+            missing = ", ".join(self.left_behind) or "—"
+            self.skip(
+                f"3 min wait over, not arrived: {missing} — continue to the hunt "
+                "(late members follow the leader)"
+            )
             return
         if now - self._log_at >= WAIT_LOG_EVERY_S:
             self._log_at = now
@@ -212,6 +222,7 @@ class LeaderStartRally:
 
 __all__ = [
     "LeaderStartRally",
+    "MEMBER_WAIT_S",
     "TELEPORT_OPS",
     "WAIT_TIMEOUT_S",
     "departure_point",

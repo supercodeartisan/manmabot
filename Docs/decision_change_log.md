@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — party leader stands at the rally until the roster is there
+
+Intent: After the party leader reaches the rally mark, stand there. If every expected member is at that mark, walk into the farming area immediately. If someone is still missing, leave when 3 minutes have passed. The invite window does not cut this stand short. Members are not sent the rally tile.
+Shared: `LeaderStartRally.note_arrived` / `update`, `PartyLeaderManager.prepare`, and the new `party.rally_wait` step on the world-nav and farming columns. Survival, potions, and retreat still run. The stand stops the column before the hunt walk and the confined scroll. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's start, between arriving at the rally mark and entering the farm.
+Consent: user (전원이 모이면 그 즉시로 이동하라. 우의 기능을 구현하라).
+Result: `Engine/app/_06_party/tests/test_leader_rally.py`, `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-10 — hunt loot stays inside the active farm
 
 Intent: While hunting, do not walk to adena whose tile is outside the active farm. The same rule applies to every farm area, using whichever rect is current. A pile inside the rect, within 3 tiles of its edge, or already within 2 tiles of the character is still taken. The walk back into the rect no longer starts that outside pile again.

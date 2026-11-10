@@ -18,6 +18,7 @@ WORLD_NAV: tuple[str, ...] = (
     "survival.hp",
     "survival.mp_safe",
     "survival.return_vitals",
+    "party.rally_wait",
     "shop.trip",  # handoff → SHOPPING (may clear+re-request world nav)
     "spell.support",
     "spell.buffs",
@@ -43,6 +44,7 @@ FARMING_ISLAND: tuple[str, ...] = (
     "survival.mp_safe",
     "survival.return_vitals",
     "survival.return_idle",
+    "party.rally_wait",
     "shop.before_world_nav",
     "nav.world",
     "spell.support",
@@ -66,6 +68,7 @@ FARMING_DUNGEON: tuple[str, ...] = (
     "survival.mp_safe",
     "survival.return_vitals",
     "survival.return_idle",
+    "party.rally_wait",
     "shop.before_world_nav",
     "nav.world",
     "spell.support",
