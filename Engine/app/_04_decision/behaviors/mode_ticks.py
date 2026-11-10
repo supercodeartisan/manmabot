@@ -784,7 +784,7 @@ def _step_farm_engage(
         if result is not None:
             _refresh_combat_activity(state, blackboard)
         return result
-    result = farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
+    result = farm_loot_or_combat(state, blackboard, restrict_to_farm=True)
     if result is not None:
         _refresh_combat_activity(state, blackboard)
     return result
@@ -1246,7 +1246,13 @@ def _step_travel_engage(
             state, blackboard
         ):
             return approach_counterattack(state, blackboard)
-        return farm_loot_or_combat(state, blackboard, restrict_to_farm=False)
+        # Field enter and patrol stay inside the active rect. A dungeon
+        # floor has no field farm, so that walk keeps open loot.
+        return farm_loot_or_combat(
+            state,
+            blackboard,
+            restrict_to_farm=not _dungeon_floor_travel(blackboard),
+        )
     return None
 
 
@@ -1708,7 +1714,7 @@ def _enter_farm_if_needed(
         loot = approach_counterattack(state, blackboard)
     else:
         loot = continue_or_start_loot(
-            state, blackboard, allow_new=True, restrict_to_farm=False
+            state, blackboard, allow_new=True, restrict_to_farm=True
         )
     if loot is not None:
         return loot
