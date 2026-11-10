@@ -508,11 +508,15 @@ def contested_mob_guids(game_state: GameState) -> set[int]:
     Built from print_state rows: another Player, or a summon whose owner is
     not me, with AttackAction tgt equal to a Monster ``guid``. That guid is
     the same id handoff stores as ``memory_guid``. Empty means free to engage.
-    World cells are not used.
+    A party member's attack is not a claim. World cells are not used.
     """
     from app._03_world.merge.memory_entities import contested_monster_guids
+    from websocket.party_orders import party_member_names
 
-    return contested_monster_guids(getattr(game_state, "last_print_state", None))
+    return contested_monster_guids(
+        getattr(game_state, "last_print_state", None),
+        ignore_names=party_member_names(getattr(game_state, "last_party", None)),
+    )
 
 
 def is_contested_monster(game_state: GameState, obj: WorldObject) -> bool:

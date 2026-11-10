@@ -1,5 +1,37 @@
 # Decision change log
 
+## 2026-11-10 — turret uses the solo hunt distance
+
+Intent: A monster at a party point uses the solo farm's click distance. On screen is in range. Off screen uses the solo click tiles. A mage in spell aim also uses the solo spell range. The 5×5 still limits walking and piles. It does not cut an on-screen shot down to 8 tiles.
+Shared: `step_party_turret_leash` calls `in_attack_click_range`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: which monsters a party leader shoots from a point. Solo hunt is unchanged.
+Consent: user (use the solo bot's hunt distance as-is).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — turret shot from the stand
+
+Intent: An elf or mage who is already inside the turret box hunts a monster within the standing shot, even when that monster's tile is outside the 5×5. A monster past that shot stays out. Piles stay inside the 5×5. A party member's attack is not treated as another player having claimed the monster. A stranger's attack still is.
+Shared: `step_party_turret_leash`, `contested_mob_guids`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party leader standing on a point, and new engages while a party member is already hitting a monster. Solo hunt without a party roster is unchanged.
+Consent: user (the leader is not hunting while monsters are nearby).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — arrived turret is the hunt
+
+Intent: After a party point is arrived, the turret module is the hunt. The 5×5 is the farthest a monster or a pile may be, for every class, including an elf mob that is on screen. A step outside that box walks back through the turret. It does not open a world-nav route, and that route's loot does not run. The 3×3 is still the stand. The walk to the point, before arrival, still uses world nav.
+Shared: `step_party_turret_leash`, `PartyLeaderManager.prepare`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 13 s pocket stays off for that same routine.
+Affects: a party leader who has arrived at a point, including an elf, a fight that would leave the 5×5, and ground loot past the box. Solo hunt and an area mark are unchanged. Before arrival, a fight outside the box still finishes and then the route to the point starts.
+Consent: user ("완벽하게 해결하고" — use the turret module for the hunt; the 5×5 is the maximum move, not a moving hunt).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-10 — turret routine turns off the 13 s pocket
+
+Intent: After the leader arrives at a party point, loot and the walk back onto that dot must not fire the 13 s confined scroll. The pocket stays off until that mark's time ends and the schedule leaves it. The walk to the point, before arrival, still uses the pocket.
+Shared: `_maybe_confined_escape` reads `party_turret_routine`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Emergency HP teleport is unchanged.
+Affects: a party leader who has already arrived at a point, including the short world-nav walk back onto that dot. Solo hunt and an area mark are unchanged.
+Consent: user (once the turret area is arrived, unlock the 13 s stuck for that routine time, then fix).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-10 — seat, route, and the leader's real stop
 
 Intent: A member is on the seat only on this tick's reading: inside 1 tile, and still inside 2. Past 2 tiles, or a missing pose, is scored again. The party walks only when every companion in the wait has that fresh reading. Two seconds without getting closer is not blocked by itself. Blocked means a measured route is not getting shorter. The leader's in-flight step is allowed to finish. The seat center locks once, on the tile where the leader has actually stood, and the facing from the start of the wait stays. Members use that same center. Ten seconds still does not start the walk, and a seat is re-picked at most twice.

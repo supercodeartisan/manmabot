@@ -30,6 +30,7 @@ from app._04_decision.behaviors.party_turret import (
     party_turret_active,
     step_party_turret_idle,
     step_party_turret_leash,
+    turret_routine_held,
 )
 from app._04_decision.behaviors.search_hop import emit_search_hop
 from app._04_decision.behaviors.travel import (
@@ -991,18 +992,18 @@ def _maybe_confined_escape(
 
     Movement / search / loot-walk only. Attacking a living sticky target
     clears the bubble clock so fight time does not count toward 13 s, and
-    must not fire TP or talking scroll mid-fight.
+    must not fire TP or talking scroll mid-fight. After a party point
+    arrival, the same clock stays off until that mark's time ends, including
+    the walk back onto the dot.
     """
-    from app._04_decision.behaviors.combat import continue_sticky_combat
-    from app._04_decision.behaviors.unstick import (
-        reset_confined_progress,
-        try_confined_escape,
-    )
-    from app._04_decision.shop_trip import shopping_blocks_teleport
+    from app._04_decision.behaviors.unstick import reset_confined_progress
 
-    if party_turret_active(blackboard):
+    if party_turret_active(blackboard) or turret_routine_held(blackboard):
         reset_confined_progress(blackboard)
         return None
+    from app._04_decision.behaviors.combat import continue_sticky_combat
+    from app._04_decision.behaviors.unstick import try_confined_escape
+    from app._04_decision.shop_trip import shopping_blocks_teleport
     if shopping_blocks_teleport(blackboard):
         reset_confined_progress(blackboard)
         return None

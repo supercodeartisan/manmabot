@@ -43,28 +43,37 @@ class PartyLeaderManager:
             scratch.pop("routine_cursor", None)
             scratch.pop("need_world_nav", None)
             scratch["party_point_arrival"] = self._on_point_arrival
+            from app._04_decision.behaviors.party_turret import release_turret_routine
+
+            release_turret_routine(blackboard)
         return len(self.schedule.rows)
 
     def prepare(self, world: Any, rally: Any = None) -> None:
         """Walk to the current party mark, then count the row's minutes there."""
         self._set_place("moving")
         schedule = self.schedule
+        blackboard = self.decision.blackboard
         row = schedule.current()
         if row is None:
+            self._release_turret_routine(blackboard)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
 
         pose = live_pose_from_state(world)
         if pose is None:
             return
-        blackboard = self.decision.blackboard
         scratch = blackboard.scratch
         scratch.pop("routine_cursor", None)
         scratch["party_point_arrival"] = self._on_point_arrival
-        if self._travel_active(scratch):
+        # Arrived turret stays the hunt. A step outside the 5×5 walks back
+        # through that module. It does not open another world-nav route.
+        point_held = self._point_routine_held(blackboard)
+        if point_held:
+            self._drop_open_travel(scratch)
+        if not point_held and self._travel_active(scratch):
             return
         now = time.monotonic()
-        if self._rally_walk_pending(rally, row, pose):
+        if not point_held and self._rally_walk_pending(rally, row, pose):
             schedule.note_inside(now, False)
             schedule.note_mark(now, False)
             self._set_place("moving")
@@ -72,6 +81,8 @@ class PartyLeaderManager:
             return
         if self._inside(row, pose):
             self._apply_place(row, pose)
+            if self.hunt_mode == "turret":
+                self._hold_turret_routine(blackboard)
             self._mount(blackboard, row)
             if rally is not None and getattr(rally, "state", "") == "await_mark":
                 rally.note_arrived(self._arrival_point(row, pose))
@@ -82,17 +93,27 @@ class PartyLeaderManager:
                 self._mounted = None
                 self._set_place("moving")
                 self._clear_travel(scratch)
+                self._release_turret_routine(blackboard)
                 self._arm_travel(blackboard, world, pose)
                 return
             if not holding and schedule.mark_due(now) and schedule.advance_mark():
                 self._set_place("moving")
                 self._clear_travel(scratch)
+                self._release_turret_routine(blackboard)
                 self._arm_travel(blackboard, world, pose)
                 return
             self._clear_travel(scratch)
             self._farm(blackboard)
             return
-        # Left the dot's 5×5 with a fight still going: finish it, then walk back.
+        if point_held:
+            self._pin_point_anchor(row, pose)
+            self._mount(blackboard, row)
+            schedule.note_inside(now, False)
+            schedule.note_mark(now, False)
+            self._farm(blackboard)
+            return
+        # Still on the way to the dot. A fight outside the 5×5 finishes, then
+        # the route to the point starts.
         if self._finish_point_target(world, row, pose):
             self._pin_point_anchor(row, pose)
             self._mount(blackboard, row)
@@ -124,6 +145,31 @@ class PartyLeaderManager:
         except (TypeError, ValueError, AttributeError):
             return False
         return gap <= 1
+
+    def _hold_turret_routine(self, blackboard: Any) -> None:
+        from app._04_decision.behaviors.party_turret import hold_turret_routine
+
+        hold_turret_routine(blackboard)
+
+    def _point_routine_held(self, blackboard: Any) -> bool:
+        """True after this point was arrived, until its time ends."""
+        mark = self.schedule.current_mark()
+        if mark is None or str(mark.get("shape") or "") != "point":
+            return False
+        from app._04_decision.behaviors.party_turret import turret_routine_held
+
+        return turret_routine_held(blackboard)
+
+    @staticmethod
+    def _drop_open_travel(scratch: dict) -> None:
+        """Drop a route that the arrived turret must not keep walking."""
+        scratch.pop("world_nav_session", None)
+        scratch.pop("need_world_nav", None)
+
+    def _release_turret_routine(self, blackboard: Any) -> None:
+        from app._04_decision.behaviors.party_turret import release_turret_routine
+
+        release_turret_routine(blackboard)
 
     def _set_place(
         self,
@@ -173,6 +219,7 @@ class PartyLeaderManager:
             map_id=int(mid),
             anchor=(ax, ay),
         )
+        self._hold_turret_routine(blackboard)
         return True
 
     def _apply_place(self, row: dict[str, Any], pose: Any) -> None:

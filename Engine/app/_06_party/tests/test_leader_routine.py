@@ -217,7 +217,7 @@ def test_outside_the_box_finishes_the_current_target() -> None:
         nav_session.live_pose_from_state = real_pose
 
 
-def test_outside_the_box_keeps_the_current_target() -> None:
+def test_outside_the_box_walks_back_to_the_dot() -> None:
     from types import SimpleNamespace
 
     from app._03_world import ObjectStatus, ObjectType
@@ -261,6 +261,9 @@ def test_outside_the_box_keeps_the_current_target() -> None:
             self.current_target_id: int | None = 5
             self.current_item_id = None
             self.current_goal = None
+            self.current_target_species = None
+            self.current_target_world = None
+            self.target_engage_started = 1.0
             self.emitted: list = []
 
         def emit(self, action, **kwargs) -> None:
@@ -269,10 +272,10 @@ def test_outside_the_box_keeps_the_current_target() -> None:
     board = _Board()
     set_party_turret(board, True, map_id=4, anchor=(10, 10))
     step_party_turret_leash(_State(), board)  # type: ignore[arg-type]
-    assert board.current_target_id == 5
+    assert board.current_target_id is None
     assert 9 in board.scratch["party_turret_exclude"]
-    assert 5 not in board.scratch["party_turret_exclude"]
-    assert board.emitted == []
+    assert 5 in board.scratch["party_turret_exclude"]
+    assert board.emitted
 
 
 def test_elf_turret_uses_the_solo_click_range() -> None:
@@ -300,6 +303,7 @@ def test_elf_turret_uses_the_solo_click_range() -> None:
                 _Mob(1, 9, 0, False),
                 _Mob(2, 8, 0, False),
                 _Mob(3, 40, 0, True),
+                _Mob(4, 1, 0, True),
             ]
 
         def get_object(self, track_id: int):
@@ -332,6 +336,8 @@ def test_elf_turret_uses_the_solo_click_range() -> None:
     assert 1 in excluded
     assert 2 not in excluded
     assert 3 not in excluded
+    assert 4 not in excluded
+    assert board.emitted == []
 
 
 def test_no_target_idles_on_the_dot() -> None:
@@ -592,7 +598,11 @@ def _point_leader():
 def test_point_arrival_arms_turret_inside_the_box() -> None:
     from types import SimpleNamespace
 
-    from app._04_decision.behaviors.party_turret import party_turret_active, turret_anchor
+    from app._04_decision.behaviors.party_turret import (
+        party_turret_active,
+        turret_anchor,
+        turret_routine_held,
+    )
     from app._04_decision.world_nav import pack_ids
 
     manager = _point_leader()
@@ -609,12 +619,16 @@ def test_point_arrival_arms_turret_inside_the_box() -> None:
     assert manager.turret_anchor == (966, 366)
     assert party_turret_active(board)
     assert turret_anchor(board) == (966, 366)
+    assert turret_routine_held(board)
 
 
 def test_point_arrival_stays_off_outside_the_box() -> None:
     from types import SimpleNamespace
 
-    from app._04_decision.behaviors.party_turret import party_turret_active
+    from app._04_decision.behaviors.party_turret import (
+        party_turret_active,
+        turret_routine_held,
+    )
 
     manager = _point_leader()
     manager.schedule.mark_index = 1
@@ -623,6 +637,104 @@ def test_point_arrival_stays_off_outside_the_box() -> None:
     assert manager._on_point_arrival(board, "party_schedule") is False
     assert manager.hunt_mode == "moving"
     assert not party_turret_active(board)
+    assert not turret_routine_held(board)
+
+
+def test_arrived_point_stays_on_turret_outside_the_box() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.behaviors.party_turret import hold_turret_routine
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "duration_minutes": 30,
+                "areas": [{"name": "stake", "shape": "point", "x": 7, "y": 8}],
+            }
+        ]
+    )
+    hold_turret_routine(decision.blackboard)
+    decision.blackboard.scratch["world_nav_session"] = object()
+    decision.blackboard.scratch["need_world_nav"] = True
+    walked: list[int] = []
+    farmed: list[int] = []
+    manager._nav_xy = lambda pack_id, pose: (10, 8)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: True  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
+    manager._hunt_target_alive = lambda world: False  # type: ignore[method-assign]
+    real_pose = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = (
+        lambda state, fresh=False: SimpleNamespace(map_id=0, x=1, y=1)
+    )
+    try:
+        manager.prepare(object(), None)
+    finally:
+        nav_session.live_pose_from_state = real_pose
+    assert manager.hunt_mode == "turret"
+    assert manager.turret_anchor == (7, 8)
+    assert walked == []
+    assert farmed == [1]
+    assert "world_nav_session" not in decision.blackboard.scratch
+    assert "need_world_nav" not in decision.blackboard.scratch
+
+
+def test_party_member_attack_is_not_a_claim() -> None:
+    from app._03_world.merge.memory_entities import contested_monster_guids
+
+    snapshot = {
+        "entities": [
+            {"class": "MyPlayer", "guid": "0x10"},
+            {"class": "Player", "guid": "0x20", "name": "포보이", "atk": 1, "tgt": "0x99"},
+            {"class": "Player", "guid": "0x30", "name": "남", "atk": 1, "tgt": "0x98"},
+            {"class": "Monster", "guid": "0x99"},
+            {"class": "Monster", "guid": "0x98"},
+        ]
+    }
+    claimed = contested_monster_guids(snapshot, ignore_names={"포보이"})
+    assert 0x99 not in claimed
+    assert 0x98 in claimed
+
+
+def test_arrived_point_routine_skips_the_confined_escape() -> None:
+    import time
+
+    from app._02_state.enums import CharacterType
+    from app._02_state.objects import Position
+    from app._02_state.player import PlayerState
+    from app._03_world import GameState
+    from app._04_decision.behaviors.mode_ticks import _maybe_confined_escape
+    from app._04_decision.behaviors.party_turret import (
+        SCRATCH_TURRET_ROUTINE,
+        hold_turret_routine,
+    )
+    from app._04_decision.behaviors.unstick import (
+        SCRATCH_CONFINED_ORIGIN,
+        SCRATCH_CONFINED_SINCE,
+    )
+    from app._04_decision.blackboard import Blackboard
+
+    board = Blackboard()
+    hold_turret_routine(board)
+    board.scratch[SCRATCH_CONFINED_ORIGIN] = [969, 369]
+    board.scratch[SCRATCH_CONFINED_SINCE] = time.time() - 20.0
+    state = GameState(
+        player=PlayerState(
+            track_id=1,
+            position=Position(x=0.5, y=0.5),
+            character_type=CharacterType.ELF,
+            level=19,
+        )
+    )
+    assert _maybe_confined_escape(state, board) is None
+    assert SCRATCH_CONFINED_ORIGIN not in board.scratch
+    assert SCRATCH_CONFINED_SINCE not in board.scratch
+    assert board.scratch.get(SCRATCH_TURRET_ROUTINE) is True
 
 
 def test_area_arrival_does_not_arm_turret() -> None:
@@ -653,7 +765,7 @@ if __name__ == "__main__":
     test_a_point_is_turret_and_a_rect_is_moving()
     test_dot_anchor_is_nav_center_of_the_box()
     test_outside_the_box_finishes_the_current_target()
-    test_outside_the_box_keeps_the_current_target()
+    test_outside_the_box_walks_back_to_the_dot()
     test_elf_turret_uses_the_solo_click_range()
     test_pinned_turret_anchor_is_the_point()
     test_no_target_idles_on_the_dot()
@@ -662,6 +774,8 @@ if __name__ == "__main__":
     test_rally_walks_to_the_mark_before_waiting()
     test_checked_marks_rotate_in_order()
     test_prepare_walks_to_the_next_mark_when_the_stay_ends()
+    test_arrived_point_stays_on_turret_outside_the_box()
+    test_party_member_attack_is_not_a_claim()
     test_point_arrival_arms_turret_inside_the_box()
     test_point_arrival_stays_off_outside_the_box()
     test_area_arrival_does_not_arm_turret()

@@ -168,14 +168,30 @@ def player_targeting_me(snapshot: dict[str, Any] | None) -> dict[str, Any] | Non
     return None
 
 
-def contested_monster_guids(snapshot: dict[str, Any] | None) -> set[int]:
+def contested_monster_guids(
+    snapshot: dict[str, Any] | None,
+    *,
+    ignore_names: set[str] | None = None,
+) -> set[int]:
     """Monster guids targeted by another Player, or a summon not owned by me.
 
     The claim is the monster's ``guid``, the same id handoff stores as
-    ``memory_guid``. My own attacks and my summons are not claims.
+    ``memory_guid``. My own attacks and my summons are not claims. A name in
+    ``ignore_names`` is a party member: their attack is not a claim either.
     """
     me = me_guid_from_print_state(snapshot)
     entities = _print_entities(snapshot)
+    ignored = {_fold_name(name) for name in (ignore_names or set()) if str(name).strip()}
+    allies: set[int] = set()
+    if ignored:
+        for row in entities:
+            if str(row.get("class") or "") != "Player":
+                continue
+            if _fold_name(str(row.get("name") or "")) not in ignored:
+                continue
+            key = _row_guid(row.get("guid"))
+            if key is not None:
+                allies.add(key)
     monsters: set[int] = set()
     for row in entities:
         if str(row.get("class") or "") != "Monster":
@@ -187,11 +203,16 @@ def contested_monster_guids(snapshot: dict[str, Any] | None) -> set[int]:
     for row in entities:
         cls = str(row.get("class") or "")
         if cls == "Player":
-            if me is not None and _row_guid(row.get("guid")) == me:
+            guid = _row_guid(row.get("guid"))
+            if me is not None and guid == me:
+                continue
+            if guid is not None and guid in allies:
                 continue
         elif cls == "SummonedMonster":
             owner = _row_guid(row.get("owner"))
             if owner is None or (me is not None and owner == me):
+                continue
+            if owner is not None and owner in allies:
                 continue
         else:
             continue
