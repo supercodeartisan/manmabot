@@ -9,9 +9,9 @@ from typing import Callable, Iterable, Optional
 TRAVEL_LEAD_TILES = 2
 CLOSE_RESTART_GAP = 1
 # A follow click stays inside this many tiles so the hop cannot walk past the leader.
-FOLLOW_CLICK_TILES = 4
-# Open straight ground only: one tile past the current hop, still inside the click.
-FOLLOW_EXTEND_TILES = 4
+FOLLOW_CLICK_TILES = 2
+# Open straight ground only: one tile past the current hop, still short of a long click.
+FOLLOW_EXTEND_TILES = 3
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
 # A stand seat is a 3×3. The member holds on the center tile or any neighbor.
@@ -316,6 +316,28 @@ def follow_hop_still_closes(
     return max(abs(hx - mx), abs(hy - my)) <= max(abs(sx - mx), abs(sy - my))
 
 
+def hold_follow_click(
+    member: tuple[int, int],
+    slot: tuple[int, int],
+    hop: Optional[tuple[int, int]],
+    *,
+    body_moving: bool,
+    leader_moved: bool,
+) -> bool:
+    """Keep the click only while this read's leader tile is unchanged.
+
+    A leader step clicks again on that read. The same tile keeps a hop that
+    still closes and is more than one tile ahead.
+    """
+    if leader_moved or not body_moving or hop is None:
+        return False
+    mx, my = int(member[0]), int(member[1])
+    hx, hy = int(hop[0]), int(hop[1])
+    if max(abs(hx - mx), abs(hy - my)) <= 1:
+        return False
+    return follow_hop_still_closes(member, slot, hop)
+
+
 __all__ = [
     "ARRIVAL_TOLERANCE",
     "STAND_ARRIVE_TILES",
@@ -329,6 +351,7 @@ __all__ = [
     "choose_approach_tile",
     "choose_settle_stand",
     "follow_hop_still_closes",
+    "hold_follow_click",
     "follow_kind",
     "formation_slot_offset",
     "guid_key",

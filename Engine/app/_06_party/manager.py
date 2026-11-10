@@ -1097,6 +1097,7 @@ class PartyMemberManager:
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
                         kind=formed.kind,
+                        leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
                     )
                 except Exception as exc:
                     _log.debug("party slot hop failed: %s", exc)
@@ -1114,6 +1115,7 @@ class PartyMemberManager:
                         stop_steps=max(1, int(cfg.stop_tiles)),
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
+                        leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
                     )
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)
@@ -1629,10 +1631,12 @@ class PartyMemberManager:
         if leader_tile is None:
             scratch.pop("leader_walk_tile", None)
             scratch.pop("leader_walk_at", None)
+            scratch["leader_stepped"] = False
             return False
         now = time.monotonic()
         tile = (int(leader_tile[0]), int(leader_tile[1]))
         prev = scratch.get("leader_walk_tile")
+        scratch["leader_stepped"] = prev != tile
         if prev != tile:
             scratch["leader_walk_tile"] = tile
             scratch["leader_walk_at"] = now

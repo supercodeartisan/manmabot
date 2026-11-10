@@ -11,7 +11,7 @@ from .follow import (
     choose_approach_tile,
     choose_settle_stand,
     follow_extend_hop,
-    follow_hop_still_closes,
+    hold_follow_click,
 )
 from .policy import MemberKind
 
@@ -287,6 +287,7 @@ def plan_field_follow(
     stop_steps: int,
     previous_goal: Optional[tuple[int, int]],
     previous_hop: Optional[tuple[int, int]],
+    leader_moved: bool = False,
 ) -> Optional[tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]]:
     """TRAVELING click down the leader walk field (no A*).
 
@@ -304,13 +305,14 @@ def plan_field_follow(
     goal = path[-1]
     if goal == (ox, oy):
         return idle("at_approach"), goal, "at_approach", None
-    # Keep the click while it still aims at the goal and is not about to end.
-    # A straight open line chains one tile farther before that click finishes.
-    if (
-        previous_hop is not None
-        and _body_moving()
-        and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
-        and follow_hop_still_closes((ox, oy), goal, previous_hop)
+    # Same leader tile: keep a click that still aims at the goal.
+    # A leader step, a turn, or a hop that would pass the goal clicks now.
+    if hold_follow_click(
+        (ox, oy),
+        goal,
+        previous_hop,
+        body_moving=_body_moving(),
+        leader_moved=leader_moved,
     ):
         extended = follow_extend_hop((ox, oy), previous_hop, goal, kind="field")
         if extended is not None and _follow_hop_clickable(origin, extended):
@@ -346,6 +348,7 @@ def plan_slot_hop(
     previous_goal: Optional[tuple[int, int]],
     previous_hop: Optional[tuple[int, int]],
     kind: str,
+    leader_moved: bool = False,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
     """Short hop toward an absolute formation tile. Does not aim at the leader."""
     from app._04_decision.nav_config import get_terrain_map
@@ -360,14 +363,14 @@ def plan_slot_hop(
     arrive = STAND_ARRIVE_TILES if kind == "stand" else ARRIVAL_TOLERANCE
     if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= arrive:
         return idle("at_slot"), goal, "at_slot", None
-    # Keep the click while it still aims at the slot and is not about to end.
-    # A turn, or a hop that would pass the slot, clicks this read's tile.
-    # A straight open line chains one tile farther before the click finishes.
-    if (
-        previous_hop is not None
-        and _body_moving()
-        and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
-        and follow_hop_still_closes((ox, oy), goal, previous_hop)
+    # Same leader tile: keep a click that still aims at the slot.
+    # A leader step, a turn, or a hop that would pass the slot clicks now.
+    if hold_follow_click(
+        (ox, oy),
+        goal,
+        previous_hop,
+        body_moving=_body_moving(),
+        leader_moved=leader_moved,
     ):
         extended = follow_extend_hop((ox, oy), previous_hop, goal, kind=kind)
         if extended is not None and _follow_hop_clickable(origin, extended):

@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — follow clicks again when the leader tile changes
+
+Intent: On the party-memory read where the leader tile changes, the member clicks toward the new slot even while already walking. The click stays at most 2 tiles. The same leader tile still keeps a click that aims at the slot and is more than one tile ahead.
+Shared: `hold_follow_click` in `plan_slot_hop` and `plan_field_follow`. A mage heal step does not pass the leader-step flag, so that walk is unchanged. Formation seats, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow while the leader is walking.
+Consent: user (apply that update).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — party follow click returns to two tiles
+
+Intent: Put the party follow click back to 2 tiles. A straight open line may still chain one tile, and that chain stops at 3.
+Shared: `FOLLOW_CLICK_TILES` and `FOLLOW_EXTEND_TILES`. The mage heal step uses the same hop, so it is 2 tiles again. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow, and a mage walking toward an on-screen member who is outside heal range.
+Consent: user (change it back to 2 tiles).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-10 — party follow click is four tiles
 
 Intent: A party member's follow click walks up to 4 tiles. Two tiles was too short. A straight open line may chain one more tile only while the click stays inside those 4.
