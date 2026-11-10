@@ -718,7 +718,7 @@ def party() -> Optional[dict[str, Any]]:
     text = session.text("party")
     if not text:
         return None
-    if "PartySubsystem not found" in text:
+    if "PartySubsystem not found" in text or "party_verify=blind" in text:
         return {"leader": None, "members": [], "in_party": False, "subs_ok": False}
     members: list[dict[str, Any]] = []
     leader_name = ""

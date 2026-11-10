@@ -54,15 +54,18 @@ int main(int argc,char**argv){
                   lastResolve=now; psub=lp_discover_subs(); mem_party=lp_resolve_from(psub);
               }
           } }
-        int n=0; char leader[128]={0}; uint32_t lf28=0,cnt=0;
-        if(mem_party){ rm(mem_party+P_LLVL,&lf28,4); n=lp_read_batch(mem_party,mem,64,leader,sizeof leader,&cnt); nmc=n;
-            if(dojoin){ lc_collect(); lc_pick_self(); join_actors(mem,n); } }
+        int n=0, blind=0; char leader[128]={0}; uint32_t lf28=0,cnt=0;
+        if(mem_party){ rm(mem_party+P_LLVL,&lf28,4); n=lp_read_batch(mem_party,mem,64,leader,sizeof leader,&cnt);
+            if(n<0){ blind=1; n=0; }
+            else if(dojoin){ lc_collect(); lc_pick_self(); join_actors(mem,n); } }
+        nmc=n;
         QueryPerformanceCounter(&q1);
         unsigned long long rc=g_sd_ioctls-io0;
         fprintf(f,"# party t=%ums how=%s leader=%s lf28=%u cnt=%u members=%d driver_calls=%llu time=%.4fms%s\n",
             (unsigned)(now-t0),how,leader[0]?leader:"(?)",lf28,cnt,n,rc,(q1.QuadPart-q0.QuadPart)*1000.0/fr.QuadPart,
-            n? "":"  (no active party / 0 members)");
-        for(int i=0;i<n;i++){ PMem*m=&mem[i];
+            blind ? "  (party verify blind)" : (n? "":"  (no active party / 0 members)"));
+        if(blind) fprintf(f,"party_verify=blind\n");
+        for(int i=0; !blind && i<n; i++){ PMem*m=&mem[i];
             if(showmap){ char rg[96],sg[96]; lp_regionTwo(m->mapId,m->x,m->y,rg,sizeof rg,sg,sizeof sg);
                 fprintf(f,"  [%d]%s name=%-16s guid=%08llX type=%s cls=%u map=%d region=%-20s subregion=%-20s hp%%=%u mp%%=%u pos=%d,%d lvl=%d dead=%d atk=%s(%08llX)\n",
                     i,m->isLeader?" [LEADER]":"         ",m->name,(unsigned long long)m->guid,lp_className(m->cls),m->cls,m->mapId,rg,sg,m->hp,m->mp,m->x,m->y,m->lvlJoin,m->dead,
