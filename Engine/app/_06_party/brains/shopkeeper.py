@@ -1,26 +1,35 @@
 """Shop-keeper brain (상점담당자).
 
-Seat for the party member who runs town shops (buy, sell, store). Later this
-adopts shop runs when the leader asks. It does not emit an intent yet, and
-it does not change solo ``shop_run``.
+Adopts the decision ``PartyMemberManager`` already made, including the supply
+tick. The live session still calls the manager directly.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
+from ..config import PartyMemberConfig
+from ..manager import PartyMemberManager
 from .base import AdoptedDecision, BrainRole, DecisionBrain
 
 
 class ShopkeeperBrain(DecisionBrain):
     role = BrainRole.SHOPKEEPER
 
+    def __init__(
+        self,
+        manager: Optional[PartyMemberManager] = None,
+        config: PartyMemberConfig | dict | None = None,
+    ) -> None:
+        self.manager = manager if manager is not None else PartyMemberManager(config)
+
     def adopt(self, game_state: Any) -> AdoptedDecision:
-        del game_state
+        intent = self.manager.decide(game_state)
+        reason = str(getattr(intent, "reason", "") or "") if intent is not None else "idle"
         return AdoptedDecision(
             role=self.role,
-            intent=None,
-            reason="shopkeeper_brain_unwired",
-            ready=False,
+            intent=intent,
+            reason=reason,
+            ready=True,
         )
 
 

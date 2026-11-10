@@ -2493,18 +2493,19 @@ class BotController:
             self._party_stand_key = None
             return
         if str(hold.get("id")) != sent_id:
-            publish_body(
-                {
-                    "type": "supply_hold",
-                    "from": "leader",
-                    "clear": False,
-                    "id": hold.get("id"),
-                    "for": hold.get("for"),
-                    "item": hold.get("item") or "arrow",
-                    "qty": hold.get("qty"),
-                    "min": hold.get("min"),
-                }
-            )
+            body = {
+                "type": "supply_hold",
+                "from": "leader",
+                "clear": False,
+                "id": hold.get("id"),
+                "for": hold.get("for"),
+                "item": hold.get("item") or "arrow",
+                "qty": hold.get("qty"),
+                "min": hold.get("min"),
+            }
+            if str(hold.get("guid") or "").strip():
+                body["guid"] = hold.get("guid")
+            publish_body(body)
             self._party_hold_id = str(hold.get("id"))
             self._party_stand_key = None
 
@@ -2975,13 +2976,16 @@ class BotController:
                 }
             hold = getattr(runtime, "supply_hold", None)
             if isinstance(hold, dict) and hold.get("id"):
-                out["supply_hold"] = {
+                reported = {
                     "id": hold.get("id"),
                     "for": hold.get("for"),
                     "item": hold.get("item") or "arrow",
                     "qty": hold.get("qty"),
                     "min": hold.get("min"),
                 }
+                if str(hold.get("guid") or "").strip():
+                    reported["guid"] = hold.get("guid")
+                out["supply_hold"] = reported
             stand = getattr(runtime, "supply_stand", None)
             if isinstance(stand, dict) and stand.get("id"):
                 out["supply_stand"] = {
@@ -3959,7 +3963,6 @@ class BotController:
                             self._drain_party_reports(world)
                         except Exception as drain_exc:
                             self.log(f"Party leader drain failed: {drain_exc}")
-                    me = _player_chat_name(world, getattr(world, "last_party", None))
                     supply_here = (
                         self._party_leader_on()
                         and self._party_hunt_open(world)
@@ -3967,19 +3970,12 @@ class BotController:
                     )
                     hold = self._leader_supply_hold() if supply_here else None
                     claim = self._leader_supply_claim() if supply_here else None
-                    from app._06_party.arrow_duty import claim_names_me, supply_wait_intent
+                    from app._06_party.arrow_duty import leader_supply_action
 
-                    if claim_names_me(claim, me):
-                        pickup = self._leader_arrow_pickup(world, decision.blackboard)
-                        if pickup is not None:
-                            action = pickup
-                        elif claim_names_me(hold, me):
-                            action = supply_wait_intent(world, decision.blackboard)
-                        else:
-                            action = leader_brain.decide(world)
-                    elif claim_names_me(hold, me):
-                        action = supply_wait_intent(world, decision.blackboard)
-                    else:
+                    action = leader_supply_action(
+                        world, decision.blackboard, hold, claim
+                    )
+                    if action is None:
                         action = leader_brain.decide(world)
                     try:
                         self._leader_party_tick(

@@ -592,11 +592,15 @@ class DecisionManager:
                     clear_shop_trip(self.blackboard)
                 elif self.blackboard.scratch.get("party_shopkeeper_arrow"):
                     clear_shop_trip(self.blackboard)
-                    from app._06_party.arrow_duty import note_supply_shop_finished
+                    from app._06_party.arrow_duty import (
+                        note_supply_shop_finished,
+                        release_finished_party_shop,
+                    )
 
                     if not note_supply_shop_finished(self.blackboard):
                         self.blackboard.scratch["party_join_leader"] = True
                         self.blackboard.scratch.pop("party_pin_shop_behavior", None)
+                    release_finished_party_shop(self.blackboard)
                 else:
                     clear_shop_trip(self.blackboard)
                     from app._04_decision.talking_scroll import mark_post_shop_return

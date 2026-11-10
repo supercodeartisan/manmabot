@@ -352,14 +352,16 @@ class PartyMemberManager:
                 )
                 from .arrow_policy import pile_reserved
                 from .comms.orders import member_orders
-                from .loot import _self_row_name
+                from .loot import stable_self_identity
 
                 me = ""
                 if origin_ok:
-                    me = _self_row_name(
+                    me, _me_guid = stable_self_identity(
                         getattr(game_state, "last_party", None),
                         (int(origin.x), int(origin.y)),
                         self.runtime.local_map_id,
+                        player=getattr(game_state, "player", None),
+                        print_state=getattr(game_state, "last_print_state", None),
                     )
                 claim = member_orders.supply_drop
                 if isinstance(claim, dict):
@@ -392,6 +394,32 @@ class PartyMemberManager:
                 self._record_decision(escape)
                 return escape
 
+            from .arrow_duty import expire_supply_hold, note_care_pose, release_care_pose
+            from .support import urgent_self_survival
+
+            release_care_pose(self._nav_blackboard, game_state)
+            care = urgent_self_survival(
+                game_state,
+                self._nav_blackboard,
+                origin if origin_ok else None,
+            )
+            if care is not None:
+                note_care_pose(self._nav_blackboard, game_state)
+                expire_supply_hold(self)
+                self.runtime.last_kind = "support"
+                self.runtime.last_reason = str(
+                    getattr(care, "reason", "") or "self care"
+                )
+                _log.info(
+                    "care before supply action=%s reason=%s",
+                    getattr(getattr(care, "action", None), "value", None)
+                    or getattr(care, "action", None)
+                    or "—",
+                    self.runtime.last_reason,
+                )
+                self._record_decision(care)
+                return care
+
             from .arrow_duty import (
                 claim_names_me,
                 remember_supply_stand,
@@ -400,37 +428,57 @@ class PartyMemberManager:
                 tick_supply_pickup,
             )
             from .comms.orders import member_orders
-            from .loot import _self_row_name
+            from .loot import stable_self_identity
 
             seat_name = ""
+            seat_guid = ""
             if origin_ok:
-                seat_name = _self_row_name(
+                seat_name, seat_guid = stable_self_identity(
                     getattr(game_state, "last_party", None),
                     (int(origin.x), int(origin.y)),
                     self.runtime.local_map_id,
+                    player=getattr(game_state, "player", None),
+                    print_state=getattr(game_state, "last_print_state", None),
                 )
             leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
             hold = None if leaving else member_orders.supply_hold
-            if claim_names_me(hold, seat_name):
+            if claim_names_me(hold, seat_name, seat_guid):
                 remember_supply_stand(
                     self.runtime, hold, origin, self.runtime.local_map_id
                 )
             else:
                 self.runtime.supply_stand = None
             picked = None if leaving else tick_supply_pickup(
-                self, game_state, self_name=seat_name
+                self, game_state, self_name=seat_name, self_guid=seat_guid
             )
             if picked is not None:
                 self._record_decision(picked)
                 return picked
             drop = member_orders.supply_drop
-            if claim_names_me(hold, seat_name) and not claim_names_me(drop, seat_name):
+            if claim_names_me(hold, seat_name, seat_guid) and not claim_names_me(
+                drop, seat_name, seat_guid
+            ):
                 waited = supply_wait_intent(game_state, self._nav_blackboard)
                 self.runtime.last_kind = "supply"
                 self.runtime.last_reason = "supply hold"
                 self._record_decision(waited)
                 return waited
             if str(cfg.seat_role or "") == "shopkeeper":
+                party_heal = self._opening_shopkeeper_heal(
+                    game_state, origin if origin_ok else None
+                )
+                if party_heal is not None:
+                    expire_supply_hold(self)
+                    self.runtime.last_kind = "support"
+                    self.runtime.last_reason = str(
+                        getattr(party_heal, "reason", "") or "urgent party heal"
+                    )
+                    _log.info(
+                        "urgent party heal before supply reason=%s",
+                        self.runtime.last_reason,
+                    )
+                    self._record_decision(party_heal)
+                    return party_heal
                 duty = tick_shopkeeper_duty(self, game_state, self_name=seat_name)
                 if duty is not None:
                     self._record_decision(duty)
@@ -661,6 +709,9 @@ class PartyMemberManager:
             self.runtime.own_hunt_id = None
 
         if mage_skips_party_assist(game_state):
+            if self.runtime.scratch.get("_class_mage_note") != "class":
+                self.runtime.scratch["_class_mage_note"] = "class"
+                _log.info("assist skipped: class mage, seat is not used")
             assist_obj = None
             assist_src = "none"
             need_combat_step = False
@@ -1199,8 +1250,40 @@ class PartyMemberManager:
         self.runtime.scratch["_list_heal_note"] = text
         _log.info("list heal: %s", text)
 
-    def _party_list_heal(self, game_state: Any, origin: Any) -> Any:
-        """Click the lowest other member under 80% HP on the party list."""
+    def _opening_shopkeeper_heal(self, game_state: Any, origin: Any) -> Any:
+        """In-range urgent party heal for a mage who is also the shopkeeper.
+
+        A walk toward the patient, a buff, and a routine list heal stay on
+        the later tick. Town, a scroll, and a stall keep the shop trip.
+        """
+        if str(self.config.seat_role or "") != "shopkeeper":
+            return None
+        try:
+            mage = mage_skips_party_assist(game_state)
+        except Exception:
+            mage = False
+        if not mage:
+            return None
+        from .support import shop_floor_blocks_party_heal, urgent_list_heal_pct
+
+        if shop_floor_blocks_party_heal(self._nav_blackboard):
+            return None
+        pct = urgent_list_heal_pct()
+        if pct is None:
+            return None
+        return self._party_list_heal(
+            game_state, origin, cast_only=True, below=pct
+        )
+
+    def _party_list_heal(
+        self,
+        game_state: Any,
+        origin: Any,
+        *,
+        cast_only: bool = False,
+        below: Optional[int] = None,
+    ) -> Any:
+        """Click the lowest other member under the heal line on the party list."""
         if game_state is None:
             self._note_list_heal("skip no game")
             return None
@@ -1234,25 +1317,42 @@ class PartyMemberManager:
             self._note_list_heal("skip no pose")
             return None
         self_name = ""
+        self_guid = ""
         try:
-            from websocket.party_orders import self_name_from_party
+            from .loot import stable_self_identity
 
-            self_name = self_name_from_party(
+            self_name, self_guid = stable_self_identity(
                 party,
+                (int(origin.x), int(origin.y)),
                 self.runtime.local_map_id,
-                getattr(origin, "x", None),
-                getattr(origin, "y", None),
+                player=getattr(game_state, "player", None),
+                print_state=getattr(game_state, "last_print_state", None),
             )
         except Exception:
             self_name = ""
+            self_guid = ""
+        if not self_name:
+            try:
+                from websocket.party_orders import self_name_from_party
+
+                self_name = self_name_from_party(
+                    party,
+                    self.runtime.local_map_id,
+                    getattr(origin, "x", None),
+                    getattr(origin, "y", None),
+                )
+            except Exception:
+                self_name = ""
         from .hud_heal import assess_list_heal, heal_screen_step
         from .intents import list_heal, plan_slot_hop
 
+        heal_line = int(below) if below is not None else self._mage_list_heal_pct()
         click, note = assess_list_heal(
             party.get("members"),
             hud.get("slots"),
+            self_guid=self_guid or None,
             self_name=self_name,
-            below=self._mage_list_heal_pct(),
+            below=heal_line,
             here=(
                 getattr(origin, "x", None),
                 getattr(origin, "y", None),
@@ -1260,11 +1360,15 @@ class PartyMemberManager:
             ),
         )
         if click is None:
+            if cast_only:
+                self._note_list_heal(note or "urgent heal not in range")
+                return None
             step = heal_screen_step(
                 party.get("members"),
                 hud.get("slots"),
+                self_guid=self_guid or None,
                 self_name=self_name,
-                below=self._mage_list_heal_pct(),
+                below=heal_line,
                 here=(
                     getattr(origin, "x", None),
                     getattr(origin, "y", None),

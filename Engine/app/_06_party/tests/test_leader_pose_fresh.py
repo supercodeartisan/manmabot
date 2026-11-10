@@ -23,6 +23,8 @@ class _Buf:
         self.uidialog_ok = False
         self.party_ok = party_ok
         self.party = party
+        self.party_hud_ok = False
+        self.party_hud = None
 
 
 def _world() -> GameState:
