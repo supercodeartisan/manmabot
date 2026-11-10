@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — party HP potion uses the solo row; turret waits on the dot
+
+Intent: A party leader and a party member drink the HP potion on the same recovery row the solo bot uses. The party 50% potion line is not a drink threshold. On a turret dot, the leader may walk inside the 5×5 to a live monster. With no target, the leader stands on that dot and does not search tile to tile.
+Shared: `line_for` no longer returns a potion ratio. Potion enable, hotbar, and the no-blackboard member check read the solo HP-potion row. `party.turret_idle` walks to the dot when the tile is not the anchor, and farm search does not run while turret is on. Heal, retreat, `try_unstick_escape`, `begin_retreat`, and login clicks are unchanged.
+Affects: party leader and party member HP potion. Party leader turret after a fight ends. Area marks and solo hunt search are unchanged.
+Consent: user ("Fix" — party uses the solo HP potion setting and pattern; turret may walk inside the 5×5, and with no target idles on the pointed dot).
+Result: `Engine/app/_06_party/tests/test_leader_care.py` and `test_leader_routine.py`. Not run in game.
+
 ## 2026-11-09 — supply pickup matches the notified count
 
 Intent: The member named on a supply drop picks up the pile only when its ground count equals the notified count. An unread ground count still uses the name and the tile. Other seats still leave that tile alone by location.

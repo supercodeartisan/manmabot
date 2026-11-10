@@ -41,15 +41,16 @@ def party_on() -> bool:
 
 
 def line_for(action_id: str) -> float | None:
-    """Party HP ratio for heal, potion, retreat, and the safe-zone gate."""
+    """Party HP ratio for heal, retreat, and the safe-zone gate.
+
+    HP potion stays on the solo recovery row. ``potion_pct`` is not a drink line.
+    """
     party = _current.get()
     if party is None:
         return None
     key = str(action_id or "")
     if key == "heal":
         return float(party.heal_pct) / 100.0
-    if key == "hp_potion" or key.startswith("item:"):
-        return float(party.potion_pct) / 100.0
     if key in ("retreat", "safe_zone"):
         return float(party.retreat_pct) / 100.0
     return None

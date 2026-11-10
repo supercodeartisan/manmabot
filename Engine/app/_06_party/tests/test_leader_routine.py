@@ -275,6 +275,49 @@ def test_outside_the_box_keeps_the_current_target() -> None:
     assert board.emitted == []
 
 
+def test_no_target_idles_on_the_dot() -> None:
+    from types import SimpleNamespace
+
+    from app._03_world import ActionType
+    from app._04_decision.behaviors.party_turret import (
+        set_party_turret,
+        step_party_turret_idle,
+    )
+
+    class _Board:
+        def __init__(self, x: int, y: int) -> None:
+            self.scratch: dict = {}
+            self.world_origin = SimpleNamespace(x=x, y=y)
+            self.current_goal = None
+            self.emitted: list = []
+            self.search_leg_ticks = 4
+            self.search_destination = (1, 1)
+            self.search_waypoint = (1, 1)
+            self.search_leg_goal = (1, 1)
+            self.search_hop_active = True
+            self.search_click_at = 1.0
+            self.search_stuck_tile = None
+            self.search_stuck_since_tick = 0
+            self.search_stuck_since_time = 0.0
+            self.search_unstick_active = False
+            self.unstick_tries = 0
+
+        def emit(self, action, **kwargs) -> None:
+            self.emitted.append((action, kwargs.get("reason")))
+
+    off = _Board(11, 10)
+    set_party_turret(off, True, map_id=4, anchor=(10, 10))
+    step_party_turret_idle(object(), off)  # type: ignore[arg-type]
+    assert off.emitted
+    assert off.emitted[0][0] is ActionType.TRAVELING
+    assert off.search_hop_active is False
+
+    on = _Board(10, 10)
+    set_party_turret(on, True, map_id=4, anchor=(10, 10))
+    step_party_turret_idle(object(), on)  # type: ignore[arg-type]
+    assert on.emitted == [(ActionType.IDLE, "party turret wait on anchor")]
+
+
 def test_hold_does_not_spend_the_row() -> None:
     schedule = PartyLeaderSchedule.from_routine(
         [
@@ -363,6 +406,7 @@ if __name__ == "__main__":
     test_outside_the_box_finishes_the_current_target()
     test_outside_the_box_keeps_the_current_target()
     test_pinned_turret_anchor_is_the_point()
+    test_no_target_idles_on_the_dot()
     test_row_minutes_advance_to_the_next_party_row()
     test_hold_does_not_spend_the_row()
     test_rally_walks_to_the_mark_before_waiting()

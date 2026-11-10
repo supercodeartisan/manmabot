@@ -125,11 +125,9 @@ def _side_hp_potion(
     from app._04_decision.mode_control import hp_ratio, is_hp_zero
     from app._04_decision.spells import mark_slot_used, slot_ready
 
-    from app._06_party.recovery import party_on
-
     if is_hp_zero(state):
         return None
-    if not pm.USE_HP_POTION and not party_on():
+    if not pm.USE_HP_POTION:
         return None
     if any(s.action is ActionType.USE_HP_POTION for s in blackboard.side_intents):
         return None
@@ -162,7 +160,7 @@ def _side_hp_potion(
             return None
     elif potion_th is None or ratio > potion_th:
         return None
-    if not party_on() and not any(
+    if not any(
         str(row.get("id") or "") == "hp_potion" and row.get("enabled", True)
         for row in actions
     ):

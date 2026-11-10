@@ -72,3 +72,15 @@ def test_a_stored_party_recovery_does_not_replace_solo_lines() -> None:
     )
     assert action_threshold(disabled, "heal") is None
     assert _hp_action_enabled(disabled, "heal") is False
+
+
+def test_party_recovery_does_not_replace_the_solo_potion_line() -> None:
+    from app._06_party.recovery import bind
+
+    solo = [{"id": "hp_potion", "enabled": True, "hp_below": 0.35}]
+    with bind(PartyRecovery(potion_pct=50)):
+        assert action_threshold(solo, "hp_potion") == 0.35
+        assert _hp_action_enabled(
+            [{"id": "hp_potion", "enabled": False, "hp_below": 0.35}],
+            "hp_potion",
+        ) is False

@@ -2944,7 +2944,7 @@ class BotController:
                     getattr(profile, "party_approach_tiles", 2)
                 ),
                 "potion_hp_ratio": float(
-                    getattr(profile, "party_potion_hp_ratio", 0.45)
+                    getattr(profile, "hp_potion_ratio", 0.50) or 0.50
                 ),
                 "random_loot": bool(
                     getattr(profile, "party_random_loot", False)

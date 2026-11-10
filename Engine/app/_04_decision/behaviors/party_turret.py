@@ -5,13 +5,13 @@ party-map point. The anchor is that point, in the same nav tiles as
 ``world_origin``. A saved turret/moving choice is not read. An area mark
 does not arm this.
 
-- Inside the box the leader hunts and does not walk back to the center.
+- A live target inside the 5×5 is walked to. Search hops do not run.
 - Outside the box a fight already in progress is finished. Other monsters
   and loot are excluded. When that target is gone, the leader walks back
   to the dot.
 - ``party.turret_leash`` (before ``farm.engage``) applies that filter.
-- ``party.turret_idle`` (after ``farm.engage``): nothing to fight → idle
-  inside the box, or walk back to the dot from outside it.
+- ``party.turret_idle`` (after ``farm.engage``): nothing to fight → stand
+  on the dot. Anywhere else, including inside the 5×5, walks back to it.
 
 Solo bots never set the flag, so every step is a no-op for them.
 """
@@ -291,19 +291,25 @@ def step_party_turret_leash(
 def step_party_turret_idle(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Column step ``party.turret_idle``: stay on the anchor instead of searching."""
+    """Column step ``party.turret_idle``: no target → stand on the dot.
+
+    ``farm.engage`` already took this tick when a monster is in the 5×5.
+    Search does not run after this step returns.
+    """
     del state
     if not party_turret_active(blackboard):
         return None
     anchor = turret_anchor(blackboard)
     if anchor is None:
         return None
-    leash = int(blackboard.scratch[SCRATCH_TURRET].get("leash", LEASH_TILES))
-    if _cheb(_me(blackboard), anchor) > leash:
+    from app._04_decision.behaviors.search_hop import clear_search_hop
+
+    clear_search_hop(blackboard)
+    if _cheb(_me(blackboard), anchor) > 0:
         return _walk_to(
             blackboard,
             anchor,
-            f"party turret settle on anchor {anchor[0]},{anchor[1]}",
+            f"party turret idle on dot {anchor[0]},{anchor[1]}",
         )
     blackboard.current_goal = "party_turret"
     blackboard.emit(

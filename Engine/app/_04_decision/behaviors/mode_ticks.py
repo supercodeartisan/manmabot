@@ -27,6 +27,7 @@ from app._04_decision.behaviors.mode_actions import (
 from app._04_decision.behaviors import search as search_beh
 from app._04_decision.behaviors.hold_ground import step_party_hold_ground
 from app._04_decision.behaviors.party_turret import (
+    party_turret_active,
     step_party_turret_idle,
     step_party_turret_leash,
 )
@@ -1734,7 +1735,9 @@ def _enter_farm_if_needed(
     return Status.SUCCESS
 
 
-def _search_inside_farm(state: "GameState", blackboard: "Blackboard") -> Status:
+def _search_inside_farm(state: "GameState", blackboard: "Blackboard") -> Status | None:
+    if party_turret_active(blackboard):
+        return None
     player = state.player
     if player is None:
         blackboard.note_no_intent("search_inside_farm: no player")

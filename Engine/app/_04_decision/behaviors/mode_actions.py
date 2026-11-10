@@ -390,9 +390,7 @@ def should_drink_hp_potion(state: "GameState") -> bool:
     from app._04_decision.mode_control import is_critical_hp, is_low_hp
     from app._05_action.spell_box import slot_is_enabled
 
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if not slot_is_enabled("hp_potion"):
         return False
@@ -655,9 +653,7 @@ def _can_item_now(state: "GameState", item_key: str) -> bool:
         assigned_hotbar_slot,
         find_hp_restore_hotbar,
     )
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -674,9 +670,7 @@ def _can_potion_now(state: "GameState") -> bool:
         assigned_hotbar_slot,
         hp_item_keys,
     )
-    from app._06_party.recovery import party_on
-
-    if not _hp_recovery_allowed() or not (pm.USE_HP_POTION or party_on()):
+    if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
     if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
         return True
@@ -999,13 +993,13 @@ def hp_spike_drop(blackboard: "Blackboard") -> bool:
 
 
 def _hp_action_enabled(actions: list, action_id: str) -> bool:
-    from app._04_decision.hp_actions import canonical_action_id, is_item_action
+    from app._04_decision.hp_actions import canonical_action_id
     from app._06_party.recovery import active
 
     wanted = canonical_action_id(action_id)
     party = active()
     if party is not None:
-        if wanted in ("heal", "hp_potion", "retreat") or is_item_action(str(action_id or "")):
+        if wanted in ("heal", "retreat"):
             return True
         if wanted == "safe_zone":
             return bool(party.safe_zone or party.talking_scroll)

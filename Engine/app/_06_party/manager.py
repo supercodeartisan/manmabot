@@ -1313,13 +1313,22 @@ class PartyMemberManager:
 
     @staticmethod
     def _need_potion(player: Any, cfg: PartyMemberConfig) -> bool:
-        if not cfg.use_hp_potion or player is None:
+        """Same drink line as solo: the recovery HP-potion row, not the party 50%."""
+        del cfg
+        from app._04_decision import player_mode as pm
+        from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
+
+        if not pm.USE_HP_POTION or player is None:
             return False
         try:
             ratio = float(getattr(player, "hp_ratio", 1.0) or 1.0)
         except (TypeError, ValueError):
             return False
-        return ratio <= float(cfg.potion_hp_ratio)
+        actions = pm.HP_ACTIONS or normalize_hp_actions(None)
+        threshold = action_threshold(actions, "hp_potion")
+        if threshold is None:
+            return False
+        return ratio <= float(threshold)
 
     def _follow_field(
         self,
