@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a supply drop is planned on the map pack's nav tile
+
+Intent: `supply_stand` keeps the coordinates it received. Those coordinates become a nav tile only when this map's pack says so: a point on the nav grid is already nav, and a point that lands on that grid after subtracting the pack origin is a game tile. Both readings, or neither, do not pick a tile. The drop neighbor is chosen on that nav tile. The party-list recheck no longer cancels only because its map number differs. The same map confirms the tile: the same tile drops, one tile retargets, two or more tiles cancel. A party row that is a real tile on another map, and not on the stand map, cancels. Anything else waits, and the hold stays.
+Shared: `plan_supply_drop`, `_leader_drop_recheck`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, Esc, the stop check, the 8-second timeout, the 6-second pause, MP and arrow rules, solo hunt, and Brain wiring are unchanged.
+Affects: the shopkeeper's drop tile for a confirmed stand, including a leader stand on Talking Island.
+Consent: user (convert the received stand with that map's pack, do not trust a differing party map by itself, defer when the latest tile is not confirmed, cancel a confirmed map change or a two-tile move, retarget only a one-tile move on the same map).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — Talking Island map 0 is a real supply stand
 
 Intent: Map id 0 is the Talking Island map, so a stopped live tile there is confirmed and sent. A pose that was not read is still not a stand, and tile `0,0` is still not a stand. The half-second settle, Esc retries, 8-second timeout, 6-second pause, two-tile cancel, and 12-tile approach stay as they are. The shopkeeper already accepts map 0 on the drop tile.

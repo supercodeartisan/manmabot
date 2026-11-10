@@ -313,13 +313,104 @@ def _stand_ready(duty: dict, stand: Any) -> bool:
     return True
 
 
+_NAV_FRAME: dict[int, Optional[tuple[int, int, int, int]]] = {}
+
+
+def _map_nav_frame(map_id: int) -> Optional[tuple[int, int, int, int]]:
+    """``(origin_x, origin_y, width, height)`` for this map's nav grid.
+
+    The loaded terrain is that grid when it is this map. Otherwise the pack
+    image and its origin are the grid. The result is not a magnitude guess.
+    """
+    from app._04_decision.nav_config import get_terrain_map
+    from app._04_decision.world_nav.pack_ids import map_id_to_pack_id, pack_for_map_id
+
+    pack_id = map_id_to_pack_id(int(map_id))
+    terrain = get_terrain_map()
+    if (
+        terrain is not None
+        and pack_id
+        and str(getattr(terrain, "pack_id", "") or "") == str(pack_id)
+    ):
+        return (
+            int(terrain.origin_x),
+            int(terrain.origin_y),
+            int(terrain.width),
+            int(terrain.height),
+        )
+    mid = int(map_id)
+    if mid in _NAV_FRAME:
+        return _NAV_FRAME[mid]
+    pack = pack_for_map_id(mid)
+    frame = None if pack is None else _pack_nav_frame(pack)
+    _NAV_FRAME[mid] = frame
+    return frame
+
+
+def _pack_nav_frame(pack: Any) -> Optional[tuple[int, int, int, int]]:
+    """Nav tiles from the pack image size and ``pixel_scale``."""
+    path = getattr(pack, "nav_path", None) or getattr(pack, "image_path", None)
+    if path is None:
+        return None
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(24)
+    except OSError:
+        return None
+    if len(head) < 24 or head[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    import struct
+
+    width, height = struct.unpack(">II", head[16:24])
+    scale = max(1, int(getattr(pack, "pixel_scale", 1) or 1))
+    tw, th = int(width) // scale, int(height) // scale
+    if tw < 1 or th < 1:
+        return None
+    return (int(pack.origin_x), int(pack.origin_y), tw, th)
+
+
+def _on_grid(x: int, y: int, width: int, height: int) -> bool:
+    return 0 <= int(x) < int(width) and 0 <= int(y) < int(height)
+
+
+def _coord_on_map(map_id: int, x: int, y: int) -> Optional[tuple[int, int]]:
+    """Nav tile for a point whose source is this map's pack.
+
+    A point on the nav grid is a nav tile. A point that lands on that grid
+    only after subtracting the pack origin is a game tile. Both at once, and
+    neither, stay unread.
+    """
+    frame = _map_nav_frame(int(map_id))
+    if frame is None:
+        return None
+    ox, oy, width, height = frame
+    as_nav = _on_grid(x, y, width, height)
+    gx, gy = int(x) - int(ox), int(y) - int(oy)
+    as_game = _on_grid(gx, gy, width, height)
+    if as_nav and as_game and (gx, gy) != (int(x), int(y)):
+        return None
+    if as_nav:
+        return (int(x), int(y))
+    if as_game:
+        return (gx, gy)
+    return None
+
+
+def _tile_gap(left: tuple[int, int], right: tuple[int, int]) -> int:
+    return max(abs(int(left[0]) - int(right[0])), abs(int(left[1]) - int(right[1])))
+
+
 def plan_supply_drop(
     duty: dict,
     stand: Any,
     walkable: Any = None,
     ring: int = 0,
 ) -> Optional[dict]:
-    """Shopkeeper travel duty once the recipient has reported a stop tile."""
+    """Shopkeeper travel duty once the recipient has reported a stop tile.
+
+    ``stand`` x,y stay on the duty as received. The walk and the drop use the
+    nav tile that map's pack assigns to those coordinates.
+    """
     if not _stand_ready(duty, stand):
         return None
     try:
@@ -328,7 +419,10 @@ def plan_supply_drop(
         mid = int(stand["map_id"])
     except (TypeError, ValueError, KeyError):
         return None
-    spot = choose_drop_stand(mx, my, walkable, ring=ring)
+    nav = _coord_on_map(mid, mx, my)
+    if nav is None:
+        return None
+    spot = choose_drop_stand(nav[0], nav[1], walkable, ring=ring)
     if spot is None:
         return None
     planned = dict(duty)
@@ -1330,12 +1424,13 @@ def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
 
 
 def _leader_drop_recheck(state: Any, duty: dict) -> Any:
-    """Refresh a leader drop when the live tile is one step off the stand.
+    """Refresh a leader drop when the party row confirms a one-tile step.
 
     None means the planned tile still matches, or this recipient is not the
-    leader. ``"cancel"`` means the live tile left by a map change or two or
-    more tiles, which is the existing hold-cancel rule. A dict is a stand
-    rebuilt on the live tile so the drop is not aimed at the old square.
+    leader. ``"cancel"`` means the party row confirms a map change or a move
+    of two or more tiles. ``"defer"`` means the latest tile is not confirmed,
+    so the drop waits and the hold stays. A dict is a stand rebuilt on the
+    live tile.
     """
     from .leader import supply_member_row
 
@@ -1350,9 +1445,9 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
     try:
         live = (int(row["map_id"]), int(row["x"]), int(row["y"]))
     except (TypeError, ValueError, KeyError):
-        return None
+        return "defer"
     if live[1] == 0 and live[2] == 0:
-        return None
+        return "defer"
     try:
         planned = (
             int(duty["member_map"]),
@@ -1360,25 +1455,34 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
             int(duty["member_y"]),
         )
     except (TypeError, ValueError, KeyError):
-        return None
-    if planned[0] != live[0]:
+        return "defer"
+    stand_nav = _coord_on_map(planned[0], planned[1], planned[2])
+    if stand_nav is None:
+        return "defer"
+    on_stand = _coord_on_map(planned[0], live[1], live[2])
+    if int(planned[0]) == int(live[0]):
+        if on_stand is None:
+            return "defer"
+        if on_stand == stand_nav:
+            return None
+        if _tile_gap(stand_nav, on_stand) >= 2:
+            return "cancel"
+        if _tile_gap(stand_nav, on_stand) == 1:
+            return {
+                "id": supply_hold_for(duty)["id"],
+                "for": str(duty.get("name") or ""),
+                "map_id": live[0],
+                "x": live[1],
+                "y": live[2],
+                "confirmed": True,
+            }
+        return "defer"
+    on_party = _coord_on_map(live[0], live[1], live[2])
+    if on_party is not None and on_stand is None:
         return "cancel"
-    from app._03_world.merge.memory_sync import game_to_nav
-
-    px, py = game_to_nav(planned[1], planned[2])
-    lx, ly = game_to_nav(live[1], live[2])
-    if (px, py) == (lx, ly):
-        return None
-    if max(abs(int(px) - int(lx)), abs(int(py) - int(ly))) >= 2:
+    if on_stand is not None and _tile_gap(stand_nav, on_stand) >= 2:
         return "cancel"
-    return {
-        "id": supply_hold_for(duty)["id"],
-        "for": str(duty.get("name") or ""),
-        "map_id": live[0],
-        "x": live[1],
-        "y": live[2],
-        "confirmed": True,
-    }
+    return "defer"
 
 
 def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
@@ -1388,6 +1492,20 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
         return duty
     runtime = manager.runtime
     board = manager._nav_blackboard
+    if recheck == "defer":
+        if str(getattr(runtime, "last_reason", "") or "") != "supply drop held":
+            _log.info(
+                "supply drop held for=%s map=%s",
+                duty.get("name"),
+                duty.get("member_map"),
+            )
+        runtime.supply_hold = _hold_with_phase(board, duty)
+        runtime.duty_phase = DUTY_SUPPLY
+        runtime.last_kind = "supply"
+        runtime.last_reason = "supply drop held"
+        from .intents import idle
+
+        return idle("supply drop held")
     if recheck == "cancel":
         cancel_supply_delivery(
             board, runtime, duty, reason="stand moved"

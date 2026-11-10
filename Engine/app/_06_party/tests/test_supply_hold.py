@@ -1820,3 +1820,118 @@ def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None
         )
         is False
     )
+
+
+def _leader_party(map_id: int, x: int, y: int) -> dict:
+    return {
+        "in_party": True,
+        "members": [
+            {
+                "name": "poorboy",
+                "guid": "0x10",
+                "is_leader": True,
+                "map_id": map_id,
+                "x": x,
+                "y": y,
+            }
+        ],
+    }
+
+
+def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
+    """Game (32624,33148) on map 0 is nav (368,444). A bad map waits."""
+    from app._06_party.arrow_duty import (
+        _apply_leader_drop_recheck,
+        _leader_drop_recheck,
+        _tick_drop,
+    )
+
+    stand = {
+        "id": "hold:hp:poorboy",
+        "for": "poorboy",
+        "map_id": 0,
+        "x": 32624,
+        "y": 33148,
+        "confirmed": True,
+    }
+    duty = {"name": "poorboy", "item": "hp", "guid": "0x10", "qty": 10, "min": 1}
+
+    def _near_stand(tile: tuple[int, int]) -> bool:
+        return max(abs(int(tile[0]) - 368), abs(int(tile[1]) - 444)) <= 4
+
+    planned = plan_supply_drop(duty, stand, _near_stand)
+    assert planned is not None
+    assert planned["member_map"] == 0
+    assert (planned["member_x"], planned["member_y"]) == (32624, 33148)
+    assert (planned["drop_x"], planned["drop_y"]) == (369, 445)
+    assert (planned["x"], planned["y"]) == (370, 446)
+    assert max(planned["drop_x"], planned["drop_y"], planned["x"], planned["y"]) < 1000
+
+    same = type("S", (), {"last_party": _leader_party(0, 32624, 33148)})()
+    assert _leader_drop_recheck(same, planned) is None
+
+    wrong_map = type("S", (), {"last_party": _leader_party(4, 32624, 33148)})()
+    assert _leader_drop_recheck(wrong_map, planned) == "defer"
+    held = _Manager()
+    held.runtime.supply_hold = {"id": "hold:hp:poorboy", "for": "poorboy"}
+    waiting = _tick_drop(held, wrong_map, planned)
+    assert getattr(waiting, "reason", "") == "party_member:supply drop held"
+    assert held.runtime.supply_hold is not None
+    assert held.runtime.last_reason == "supply drop held"
+
+    moved_map = type("S", (), {"last_party": _leader_party(4, 33154, 33401)})()
+    assert _leader_drop_recheck(moved_map, planned) == "cancel"
+    cancelled = _Manager()
+    cancelled.runtime.supply_hold = {"id": "hold:hp:poorboy", "for": "poorboy"}
+    assert _tick_drop(cancelled, moved_map, planned) is None
+    assert cancelled.runtime.supply_hold is None
+    assert cancelled.runtime.last_reason == "stand moved"
+
+    one = type("S", (), {"last_party": _leader_party(0, 32625, 33148)})()
+    stepped = _leader_drop_recheck(one, planned)
+    assert isinstance(stepped, dict)
+    assert stepped["map_id"] == 0
+    assert (stepped["x"], stepped["y"]) == (32625, 33148)
+    retargeted = plan_supply_drop(duty, stepped, _near_stand)
+    assert retargeted is not None
+    assert (retargeted["member_x"], retargeted["member_y"]) == (32625, 33148)
+    assert max(
+        abs(retargeted["drop_x"] - 369),
+        abs(retargeted["drop_y"] - 444),
+    ) == 1
+
+    two = type("S", (), {"last_party": _leader_party(0, 32626, 33148)})()
+    assert _leader_drop_recheck(two, planned) == "cancel"
+
+    finished = _Manager()
+    finished.runtime.supply_hold = {"id": "hold:hp:poorboy", "for": "poorboy"}
+    drops = {"n": 0}
+
+    def _beside(_manager, _state, _duty):
+        return True
+
+    def _step(*_args, **_kwargs):
+        drops["n"] += 1
+        return {"ok": True, "map_id": 0, "x": 369, "y": 445}
+
+    import app._06_party.arrow_duty as arrow_duty
+    import app._06_party.supply_drop as supply_drop
+
+    real_beside = arrow_duty._beside_member
+    real_step = supply_drop.step_ground_drop
+    arrow_duty._beside_member = _beside
+    supply_drop.step_ground_drop = _step
+    try:
+        announced = _tick_drop(finished, same, planned)
+        assert getattr(announced, "reason", "") == "party_member:supply drop"
+        assert finished.runtime.supply_hold is not None
+        assert drops["n"] == 0
+        done = _tick_drop(finished, same, planned)
+    finally:
+        arrow_duty._beside_member = real_beside
+        supply_drop.step_ground_drop = real_step
+    assert done is None
+    assert drops["n"] == 1
+    assert finished.runtime.supply_hold is None
+    assert finished.runtime.last_reason == "hp dropped"
+    assert _apply_leader_drop_recheck(finished, two, planned) is None
