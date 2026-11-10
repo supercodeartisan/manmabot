@@ -359,14 +359,6 @@ class PartyMemberConfig:
         if not isinstance(raw, dict):
             return cls().clamped()
 
-        def _coord(value: Any) -> Optional[int]:
-            if value is None or value == "":
-                return None
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                return None
-
         tid = raw.get("leader_track_id")
         try:
             tid_i = int(tid) if tid is not None and str(tid).strip() != "" else None
@@ -496,6 +488,16 @@ def _cfg_flag(value: Any, default: bool) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in ("1", "true", "yes", "on")
     return bool(value)
+
+
+def _coord(value: Any) -> Optional[int]:
+    """Formation anchor. Missing or non-numeric stays empty."""
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _cfg_int(value: Any, default: int) -> int:
