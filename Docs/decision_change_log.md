@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-09 — search hop waits 60 ticks before a new click
+
+Intent: A hunting search click is kept until the body is on that tile, or 60 decision ticks pass. 30 ticks (~1.9s) was cutting a 5-tile walk after 3–4 tiles and picking a nearby cell.
+Shared: `search_leg_ticks` in `Engine/config/decision.yaml` and the `LEG_TICKS` default. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: farming search hops only. World-nav walks, combat, and loot hops are unchanged. A blocked hop now waits about 4 seconds before "stuck, jumping elsewhere".
+Consent: user ("두배로 늘이라" after the 30-vs-60 disclosure).
+Result: config and default only. Not run in game.
+
 ## 2026-11-09 — a supply recipient stands beside the drop
 
 Intent: When the shopkeeper has stock and chooses who to supply, that person stops on the tile they are on when the notice arrives. The drop lands on an empty neighbor, not on the body. Until the drop notice arrives they attack only a monster already in reach. The drop notice stops that attack and picks the pile up. After the pile is taken, or the shopkeeper cancels, hunt and search run as before.
