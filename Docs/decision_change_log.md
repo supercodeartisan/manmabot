@@ -7,6 +7,13 @@ Shared: `_step_farm_engage`, `_enter_farm_if_needed`, and field enter/patrol in 
 Affects: farming on every active area, and the return walk after stepping outside that area. A party leader's on-screen radius is unchanged.
 Consent: user (do not pick adena outside the farming area; all areas).
 Result: `Engine/app/_04_decision/tests/test_farm_loot_bounds.py`. Not run in game.
+## 2026-11-10 — shopkeeper joins the leader after the buy list
+
+Intent: After the supply buy list finishes, the shopkeeper walks to the leader's party-memory map and game coordinate. That pose is used on any map. A same-map body within 3 tiles ends the join. A missed read keeps the route already started. The route holds while the leader stays inside 24 tiles, then aims at the new coordinate.
+Shared: `_tick_join`. `try_unstuck_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Buys, drops, follow, and solo shops are unchanged.
+Affects: the shopkeeper's walk back to the leader after a finished party supply purchase.
+Consent: user ("yes" — return to the leader wherever they are after successful shopping).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
 
 ## 2026-11-10 — follow clicks again when the leader tile changes
 
