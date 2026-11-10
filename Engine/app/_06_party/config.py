@@ -53,6 +53,11 @@ class PartyMemberConfig:
     formation_hold: bool = False
     # One leader tick: drop the sticky slot and pick a free seat again.
     formation_reform: bool = False
+    # Confirmed leader stop for this wait. Empty until the leader has stood.
+    formation_anchor_x: Optional[int] = None
+    formation_anchor_y: Optional[int] = None
+    formation_anchor_dx: Optional[int] = None
+    formation_anchor_dy: Optional[int] = None
     # Turret yard half-extents (None = derive from party_size).
     yard_half_w: Optional[int] = None
     yard_half_h: Optional[int] = None
@@ -161,6 +166,10 @@ class PartyMemberConfig:
             leader_mode=lead_mode,
             formation_hold=bool(self.formation_hold),
             formation_reform=bool(self.formation_reform),
+            formation_anchor_x=self.formation_anchor_x,
+            formation_anchor_y=self.formation_anchor_y,
+            formation_anchor_dx=self.formation_anchor_dx,
+            formation_anchor_dy=self.formation_anchor_dy,
             yard_half_w=hw,
             yard_half_h=hh,
             yard_scale_with_roster=bool(self.yard_scale_with_roster),
@@ -232,6 +241,15 @@ class PartyMemberConfig:
             seat_i = seat_index_for_name(roster, self_name)
             if not bool(policy.get("random_loot", self.random_loot)):
                 loot = loot_role_for_name(roster, self_name, default=loot)
+
+        def _coord(value: Any) -> Optional[int]:
+            if value is None or value == "":
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
         raw = {
             "enabled": self.enabled,
             "leader_name": self.leader_name,
@@ -256,6 +274,10 @@ class PartyMemberConfig:
             "leader_mode": policy.get("leader_mode", self.leader_mode),
             "formation_hold": bool(policy.get("formation_hold", self.formation_hold)),
             "formation_reform": bool(policy.get("formation_reform", self.formation_reform)),
+            "formation_anchor_x": _coord(policy.get("formation_anchor_x", self.formation_anchor_x)),
+            "formation_anchor_y": _coord(policy.get("formation_anchor_y", self.formation_anchor_y)),
+            "formation_anchor_dx": _coord(policy.get("formation_anchor_dx", self.formation_anchor_dx)),
+            "formation_anchor_dy": _coord(policy.get("formation_anchor_dy", self.formation_anchor_dy)),
             "yard_half_w": policy.get("yard_half_w", self.yard_half_w),
             "yard_half_h": policy.get("yard_half_h", self.yard_half_h),
             "yard_scale_with_roster": policy.get(
@@ -337,6 +359,15 @@ class PartyMemberConfig:
             return raw.clamped()
         if not isinstance(raw, dict):
             return cls().clamped()
+
+        def _coord(value: Any) -> Optional[int]:
+            if value is None or value == "":
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
         tid = raw.get("leader_track_id")
         try:
             tid_i = int(tid) if tid is not None and str(tid).strip() != "" else None
@@ -396,6 +427,10 @@ class PartyMemberConfig:
             leader_mode=str(raw.get("leader_mode") or "moving"),
             formation_hold=bool(raw.get("formation_hold", False)),
             formation_reform=bool(raw.get("formation_reform", False)),
+            formation_anchor_x=_coord(raw.get("formation_anchor_x")),
+            formation_anchor_y=_coord(raw.get("formation_anchor_y")),
+            formation_anchor_dx=_coord(raw.get("formation_anchor_dx")),
+            formation_anchor_dy=_coord(raw.get("formation_anchor_dy")),
             yard_half_w=hw_i,
             yard_half_h=hh_i,
             yard_scale_with_roster=bool(raw.get("yard_scale_with_roster", True)),

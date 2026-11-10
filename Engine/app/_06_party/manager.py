@@ -782,9 +782,21 @@ class PartyMemberManager:
         from .follow import tile_chebyshev
         from .intents import _occupied_tiles
 
-        trail_tile = self._formation_trail_tile(
-            cfg, leader_tile=leader_tile if leader_present else None
-        )
+        form_leader = leader_tile if leader_present else None
+        form_forward = self._leader_move_dir()
+        if (
+            cfg.formation_hold
+            and cfg.formation_anchor_x is not None
+            and cfg.formation_anchor_y is not None
+            and cfg.formation_anchor_dx is not None
+            and cfg.formation_anchor_dy is not None
+        ):
+            form_leader = (int(cfg.formation_anchor_x), int(cfg.formation_anchor_y))
+            form_forward = (
+                int(cfg.formation_anchor_dx),
+                int(cfg.formation_anchor_dy),
+            )
+        trail_tile = self._formation_trail_tile(cfg, leader_tile=form_leader)
         from .formation import FORMATION_HOLD_MAX_S
 
         still_age = self._leader_still_age(
@@ -809,8 +821,8 @@ class PartyMemberManager:
         if cfg.formation_reform:
             self.runtime.scratch.pop("formation_slot", None)
         formed = choose_formation_goal(
-            leader_tile if leader_present else None,
-            forward=self._leader_move_dir(),
+            form_leader,
+            forward=form_forward,
             seat=cfg.seat_index,
             followers=max(1, int(cfg.party_size)),
             stopped=held,

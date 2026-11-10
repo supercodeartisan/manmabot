@@ -5,6 +5,7 @@ from app._06_party.formation import (
     FormationLagWatch,
     SeatSample,
     hop_widens_gap,
+    route_steps,
 )
 
 
@@ -45,7 +46,7 @@ def test_a_new_member_does_not_extend_this_wait():
     assert watch.update([SeatSample("a", 8)], 0.0).hold
     released = watch.update([SeatSample("a", 1), SeatSample("b", 9)], 3.0)
     assert not released.hold and released.reason == "together"
-    nxt = watch.update([SeatSample("b", 9)], 4.0)
+    nxt = watch.update([SeatSample("a", 1), SeatSample("b", 9)], 4.0)
     assert nxt.hold and nxt.reason == "depart:b"
     assert "b" in watch.session_names
     assert nxt.behind == 1
@@ -107,6 +108,66 @@ def test_shop_and_empty_party_do_not_wait():
     assert not left.hold and left.reason == "excluded"
 
 
+def test_a_ready_member_is_checked_again_when_the_pose_drops():
+    watch = FormationLagWatch()
+    assert watch.update([SeatSample("a", 8), SeatSample("b", 8)], 0.0).hold
+    assert watch.update([SeatSample("a", 8), SeatSample("b", 1)], 1.0).hold
+    assert watch.member_state("b") == READY
+    missed = watch.update([SeatSample("a", 8), SeatSample("b")], 1.5)
+    assert missed.hold
+    assert watch.member_state("b") != READY
+
+
+def test_a_detour_that_shortens_the_route_is_not_blocked():
+    watch = FormationLagWatch()
+    assert watch.update(
+        [SeatSample("a", 8, (0, 0), path_left=12, path_measured=True)], 0.0
+    ).hold
+    later = watch.update(
+        [SeatSample("a", 10, (1, 1), path_left=9, path_measured=True)], 2.0
+    )
+    assert later.hold
+    assert watch.member_state("a") != BLOCKED
+
+
+def test_pacing_without_route_progress_is_blocked():
+    watch = FormationLagWatch()
+    watch.update([SeatSample("a", 8, (0, 0), path_left=12, path_measured=True)], 0.0)
+    watch.update([SeatSample("a", 7, (1, 0), path_left=10, path_measured=True)], 0.5)
+    watch.update([SeatSample("a", 8, (0, 0), path_left=12, path_measured=True)], 1.5)
+    watch.update([SeatSample("a", 8, (1, 1), path_left=11, path_measured=True)], 2.6)
+    assert watch.member_state("a") == BLOCKED
+
+
+def test_the_stop_tile_locks_once_and_keeps_the_facing():
+    watch = FormationLagWatch()
+    watch.note_leader((0, 0), 0.0)
+    watch.note_leader((0, -1), 0.2)
+    assert watch.update([SeatSample("a", 8, (4, 0))], 0.2).hold
+    watch.note_leader((1, -1), 0.4)
+    assert watch.locked_tile is None
+    assert watch.locked_forward == (0, -1)
+    coast = watch.update([SeatSample("a", 1, (1, 0))], 0.4)
+    assert coast.hold and watch.member_state("a") != READY
+    watch.note_leader((1, -1), 1.2)
+    assert watch.locked_tile == (1, -1)
+    assert watch.locked_forward == (0, -1)
+    assert watch.update([SeatSample("a", 1, (1, 0))], 1.2).reason == "together"
+
+
+def test_route_steps_go_around_a_wall():
+    class Terrain:
+        def __init__(self, blocked):
+            self.blocked = set(blocked)
+
+        def is_walkable(self, x, y):
+            return (int(x), int(y)) not in self.blocked
+
+    steps = route_steps(Terrain({(1, -1), (1, 0), (1, 1)}), (0, 0), (2, 0))
+    assert steps is not None and steps > 2
+    assert route_steps(None, (0, 0), (2, 0)) is None
+
+
 def test_hop_that_increases_a_gap_is_withheld():
     assert hop_widens_gap((0, 0), (5, 0), [(-3, 0)])
     assert not hop_widens_gap((0, 0), (-1, 0), [(-3, 0)])
@@ -122,5 +183,10 @@ if __name__ == "__main__":
     test_four_tiles_yields_the_next_hop_before_the_stop()
     test_a_seat_flicker_does_not_drop_a_member_who_arrived()
     test_shop_and_empty_party_do_not_wait()
+    test_a_ready_member_is_checked_again_when_the_pose_drops()
+    test_a_detour_that_shortens_the_route_is_not_blocked()
+    test_pacing_without_route_progress_is_blocked()
+    test_the_stop_tile_locks_once_and_keeps_the_facing()
+    test_route_steps_go_around_a_wall()
     test_hop_that_increases_a_gap_is_withheld()
     print("OK")

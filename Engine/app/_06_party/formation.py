@@ -16,6 +16,7 @@ decision-layer imports; the caller passes the terrain and tiles.
 from __future__ import annotations
 
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
 
@@ -206,7 +207,7 @@ SLOT_REJOIN_TILES = 1
 RELEASE_SLOP_TILES = 2
 # Same 4-tile return the member already uses. The leader withholds the next hop.
 YIELD_TILES = 4
-# No closer reading for this long, with a fresh tile, is blocked.
+# No route progress for this long, on fresh tiles, is blocked.
 PROGRESS_STALE_S = 2.0
 # A companion already in this wait keeps this long when the pose drops.
 UNKNOWN_GRACE_S = 2.0
@@ -235,6 +236,8 @@ class SeatSample:
     tile: Optional[Tile] = None
     seat: Optional[int] = None
     excluded: bool = False
+    path_left: Optional[int] = None
+    path_measured: bool = False
 
 
 def hop_widens_gap(
@@ -254,6 +257,47 @@ def hop_widens_gap(
     return False
 
 
+def route_steps(
+    terrain: Any,
+    start: Tile,
+    goal: Tile,
+    blocked: Sequence[Tile] = (),
+    limit: int = 40,
+) -> Optional[int]:
+    """Walk steps from ``start`` to ``goal``. ``None`` if there is no route.
+
+    ``None`` when ``terrain`` itself is missing, so the caller can tell
+    "not measured" from "no route".
+    """
+    if terrain is None:
+        return None
+    from .tactics._grid import N8, walkable
+
+    origin = (int(start[0]), int(start[1]))
+    end = (int(goal[0]), int(goal[1]))
+    if origin == end:
+        return 0
+    walls = {(int(tile[0]), int(tile[1])) for tile in blocked}
+    seen = {origin}
+    wave: deque[tuple[Tile, int]] = deque([(origin, 0)])
+    cap = max(1, int(limit))
+    while wave:
+        (x, y), dist = wave.popleft()
+        if dist >= cap:
+            continue
+        for dx, dy in N8:
+            nxt = (x + dx, y + dy)
+            if nxt in seen or nxt in walls:
+                continue
+            if nxt != end and not walkable(terrain, nxt[0], nxt[1]):
+                continue
+            if nxt == end:
+                return dist + 1
+            seen.add(nxt)
+            wave.append((nxt, dist + 1))
+    return None
+
+
 @dataclass
 class _Companion:
     state: str = UNKNOWN
@@ -263,7 +307,9 @@ class _Companion:
     last_error: Optional[int] = None
     last_tile: Optional[Tile] = None
     best_error: Optional[int] = None
+    best_path: Optional[int] = None
     progress_at: Optional[float] = None
+    fresh_at: Optional[float] = None
     behind_since: Optional[float] = None
     unknown_since: Optional[float] = None
 
@@ -294,8 +340,10 @@ class FormationLagWatch:
         self._tile: Optional[Tile] = None
         self._forward: Optional[tuple[int, int]] = None
         self._still_since: Optional[float] = None
+        self._leader_noted = False
         self._locked_tile: Optional[Tile] = None
         self._locked_forward: Optional[tuple[int, int]] = None
+        self._opened_tile: Optional[Tile] = None
 
     def reset(self) -> None:
         self.aligned = False
@@ -313,8 +361,10 @@ class FormationLagWatch:
         self._tile = None
         self._forward = None
         self._still_since = None
+        self._leader_noted = False
         self._locked_tile = None
         self._locked_forward = None
+        self._opened_tile = None
 
     @property
     def session_names(self) -> tuple[str, ...]:
@@ -328,6 +378,17 @@ class FormationLagWatch:
     def locked_forward(self) -> Optional[tuple[int, int]]:
         return self._locked_forward
 
+    @property
+    def opened_tile(self) -> Optional[Tile]:
+        return self._opened_tile
+
+    @property
+    def anchor_locked(self) -> bool:
+        """The stop tile is fixed. Tests that never report the leader skip this."""
+        if not self.session_on or not self._leader_noted:
+            return True
+        return self._locked_tile is not None
+
     def seat_for(self, name: str) -> Optional[int]:
         comp = self._companions.get(str(name))
         if comp is None or not self.session_on:
@@ -340,6 +401,7 @@ class FormationLagWatch:
 
     def note_leader(self, tile: Tile, now: float) -> tuple[Optional[tuple[int, int]], bool]:
         """Return the last step and whether the leader has stood for ``LEADER_STILL_S``."""
+        self._leader_noted = True
         current = (int(tile[0]), int(tile[1]))
         if self._tile is None or current != self._tile:
             if self._tile is not None and current != self._tile:
@@ -358,7 +420,11 @@ class FormationLagWatch:
             stood = self.still_age >= LEADER_STILL_S
         if self.session_on and stood and self._locked_tile is None:
             self._locked_tile = current
-            self._locked_forward = self._forward
+            stamped = float(now)
+            for comp in self._companions.values():
+                comp.progress_at = stamped
+                comp.best_path = None
+                comp.best_error = comp.last_error
         return self._forward, stood
 
     def consume_reform(self, now: float) -> bool:
@@ -372,6 +438,7 @@ class FormationLagWatch:
             if comp is None or comp.state != BLOCKED:
                 continue
             comp.best_error = comp.last_error
+            comp.best_path = None
             comp.progress_at = float(now)
         return True
 
@@ -397,7 +464,8 @@ class FormationLagWatch:
         self._reform_tries = 0
         self.reform_pending = False
         self._locked_tile = None
-        self._locked_forward = self._forward
+        self._locked_forward = self._forward if self._forward is not None else (0, -1)
+        self._opened_tile = self._tile
         self._session = {
             name
             for name, comp in self._companions.items()
@@ -414,6 +482,7 @@ class FormationLagWatch:
         self._reform_tries = 0
         self._locked_tile = None
         self._locked_forward = None
+        self._opened_tile = None
         for comp in self._companions.values():
             comp.joining = False
 
@@ -427,16 +496,27 @@ class FormationLagWatch:
             comp.seat = int(sample.seat)
         if sample.error is None:
             comp.last_error = None
-            if in_session:
+            comp.fresh_at = None
+            if in_session or comp.state == READY:
                 if comp.unknown_since is None:
                     comp.unknown_since = float(now)
                 comp.state = UNKNOWN
             return
         comp.unknown_since = None
+        comp.fresh_at = float(now)
         error = int(sample.error)
         comp.last_error = error
-        if sample.tile is not None:
-            comp.last_tile = (int(sample.tile[0]), int(sample.tile[1]))
+        tile = None if sample.tile is None else (int(sample.tile[0]), int(sample.tile[1]))
+        if in_session and not self.anchor_locked:
+            if tile is not None:
+                comp.last_tile = tile
+            comp.state = APPROACHING
+            return
+        if tile is not None:
+            previous_tile = comp.last_tile
+            comp.last_tile = tile
+        else:
+            previous_tile = comp.last_tile
         ready = error <= SLOT_REJOIN_TILES or (
             comp.state == READY and error <= RELEASE_SLOP_TILES
         )
@@ -447,11 +527,55 @@ class FormationLagWatch:
             comp.progress_at = float(now)
             comp.behind_since = None
             return
-        if comp.best_error is None or error < comp.best_error:
+        if comp.state == READY:
+            comp.progress_at = float(now)
+            comp.best_error = error
+            comp.best_path = (
+                int(sample.path_left)
+                if sample.path_measured and sample.path_left is not None
+                else None
+            )
+            comp.state = APPROACHING
+            return
+        if self._route_progressed(comp, sample, error, previous_tile, tile):
             comp.best_error = error
             comp.progress_at = float(now)
         age = 0.0 if comp.progress_at is None else float(now) - comp.progress_at
         comp.state = BLOCKED if age >= PROGRESS_STALE_S else APPROACHING
+
+    def _route_progressed(
+        self,
+        comp: _Companion,
+        sample: SeatSample,
+        error: int,
+        previous_tile: Optional[Tile],
+        tile: Optional[Tile],
+    ) -> bool:
+        """Route length shrinking counts. A straight gap growing does not fail a moving body."""
+        if sample.path_measured:
+            if sample.path_left is None:
+                return False
+            path = int(sample.path_left)
+            if comp.best_path is None or path < comp.best_path:
+                comp.best_path = path
+                return True
+            return False
+        if comp.best_error is None or error < int(comp.best_error):
+            return True
+        return (
+            tile is not None
+            and previous_tile is not None
+            and tile != previous_tile
+        )
+
+    def _fresh_ready(self, comp: _Companion, now: float) -> bool:
+        """This tick's reading is inside the seat band. A latched flag does not count."""
+        return (
+            comp.state == READY
+            and comp.fresh_at == float(now)
+            and comp.last_error is not None
+            and int(comp.last_error) <= RELEASE_SLOP_TILES
+        )
 
     def _ensure_recovery(self, now: float) -> None:
         if self._recovery_since is None:
@@ -505,6 +629,7 @@ class FormationLagWatch:
                 if comp.unknown_since is None:
                     comp.unknown_since = float(now)
                 comp.last_error = None
+                comp.fresh_at = None
                 comp.state = UNKNOWN
 
         if not self.session_on:
@@ -560,7 +685,11 @@ class FormationLagWatch:
 
         held = 0.0 if self._session_since is None else float(now) - self._session_since
         pending = sorted(
-            (name for name in self._session if self._companions[name].state != READY),
+            (
+                name
+                for name in self._session
+                if not self._fresh_ready(self._companions[name], now)
+            ),
             key=lambda name: (self._companions[name].seen_in_slot, name),
         )
         behind = len(pending)
@@ -719,6 +848,7 @@ __all__ = [
     "SeatSample",
     "YIELD_TILES",
     "hop_widens_gap",
+    "route_steps",
     "FormationTarget",
     "LeaderLineWatch",
     "SLOT_LAG_TILES",

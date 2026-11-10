@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — seat, route, and the leader's real stop
+
+Intent: A member is on the seat only on this tick's reading: inside 1 tile, and still inside 2. Past 2 tiles, or a missing pose, is scored again. The party walks only when every companion in the wait has that fresh reading. Two seconds without getting closer is not blocked by itself. Blocked means a measured route is not getting shorter. The leader's in-flight step is allowed to finish. The seat center locks once, on the tile where the leader has actually stood, and the facing from the start of the wait stays. Members use that same center. Ten seconds still does not start the walk, and a seat is re-picked at most twice.
+Shared: `FormationLagWatch`, `route_steps`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: when a party wait ends, and which tile the side seats use after the leader stops. Turret is unchanged.
+Consent: user ("보완하세요" — do not latch READY for the whole wait, do not call a detour blocked, and lock the anchor on the confirmed stop).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
 ## 2026-11-10 — a party wait ends when the formation is back
 
 Intent: One late member no longer starts their own 10 second give-up. The leader opens one wait for the companions who are already walking together, and walks only when each of them has a fresh reading inside the allowed seat. A pose that drops stays unknown. Ten seconds, or a member who is not actually closing, starts a short seat re-pick. If that still fails, the leader keeps standing and shows that a hand is needed. Survival actions stay in front of that hold. At 4 tiles the next leader hop that would widen the gap is withheld. The member click stays 2 tiles, or 3 on a straight line.

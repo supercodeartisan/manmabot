@@ -286,6 +286,7 @@ class BotController:
         self._formation_hold = False
         self._formation_reform = False
         self._reform_published = False
+        self._formation_anchor = None
         self._party_line_watch = None
         self._party_slot_formation = None
         self._party_line_map: Optional[int] = None
@@ -1704,6 +1705,7 @@ class BotController:
             self._party_line_info = {}
             self._formation_reform = False
             self._reform_published = False
+            self._formation_anchor = None
             blackboard.scratch.pop("party_yield_tiles", None)
             return False
         from app._04_decision.nav_config import get_terrain_map
@@ -1714,6 +1716,7 @@ class BotController:
             FormationLagWatch,
             MemberFormation,
             SeatSample,
+            route_steps,
         )
         from app._06_party.formation_goal import (
             allowed_side_tiles,
@@ -1759,6 +1762,11 @@ class BotController:
         forward_goal = forward
         if watch.session_on and watch.locked_tile is not None:
             leader_goal = watch.locked_tile
+            forward_goal = watch.locked_forward or forward
+            stopped = False
+            shape = "side"
+        elif watch.session_on and watch.opened_tile is not None:
+            leader_goal = watch.opened_tile
             forward_goal = watch.locked_forward or forward
             stopped = False
             shape = "side"
@@ -1848,9 +1856,32 @@ class BotController:
                 if target.kind == NARROW and target.tile is not None:
                     options.append((int(target.tile[0]), int(target.tile[1])))
             err = min(cheb(tile, opt) for opt in options)
+            goal_tile = min(options, key=lambda opt: (cheb(tile, opt), opt))
+            steps = route_steps(terrain, tile, goal_tile, occupied)
             errors.append(err)
-            samples.append(SeatSample(name, err, tile, seat, False))
+            samples.append(
+                SeatSample(
+                    name,
+                    err,
+                    tile,
+                    seat,
+                    False,
+                    steps,
+                    terrain is not None,
+                )
+            )
         res = watch.update(samples, now)
+        if watch.session_on and watch.locked_tile is not None and watch.locked_forward is not None:
+            locked = watch.locked_tile
+            facing = watch.locked_forward
+            self._formation_anchor = (
+                int(locked[0]),
+                int(locked[1]),
+                int(facing[0]),
+                int(facing[1]),
+            )
+        else:
+            self._formation_anchor = None
         if watch.session_on:
             shape = "side"
         watch.line_shape = shape if res.hold else None
@@ -2289,10 +2320,21 @@ class BotController:
         mode = str(getattr(brain, "hunt_mode", "moving") or "moving")
         if mode not in ("turret", "moving"):
             mode = "moving"
+        anchor = getattr(self, "_formation_anchor", None)
+
+        def _anchor_coord(index: int):
+            if not isinstance(anchor, tuple) or len(anchor) <= index:
+                return None
+            return int(anchor[index])
+
         return {
             "leader_mode": mode,
             "formation_hold": bool(getattr(self, "_formation_hold", False)),
             "formation_reform": bool(getattr(self, "_formation_reform", False)),
+            "formation_anchor_x": _anchor_coord(0),
+            "formation_anchor_y": _anchor_coord(1),
+            "formation_anchor_dx": _anchor_coord(2),
+            "formation_anchor_dy": _anchor_coord(3),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
             "yard_scale_with_roster": True,
