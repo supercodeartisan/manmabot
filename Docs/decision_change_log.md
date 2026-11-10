@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a supply stand waits until the live tile has been still
+
+Intent: While a hold is unconfirmed and the body is still walking, Esc is pressed again only at a half-second gap, and at most three times. A stop or a survival action sends no further Esc. The party log records each press, the stop that follows, and a walk that is still moving after the last press. The stand is confirmed only when the live map is not 0 and that live tile has stayed still, with the body not walking, for half a second. One stopped sample does not confirm. `supply_stand` carries that live map and tile. Party memory and `map_id` 0 are not sent. Before confirmation a coordinate change only updates the latest tile. After confirmation, two tiles or a map change cancels even if the drop was announced. One tile still retargets at drop time. The 8-second timeout and the 6-second pause stay.
+Shared: `recipient_hold_intent`, `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, the drop gesture, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: the party member, including the leader, who receives a supply hold, from the moment the hold starts until `supply_stand` is sent.
+Consent: user (limited Esc retries only while still moving, half-second live-tile confirmation, send the live map and tile, keep the post-stop two-tile cancel and the one-tile drop retarget, keep the 8s timeout and 6s pause).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a supply stand is sent only after the walk has stopped
 
 Intent: A hold stops the ground click already in progress, and `supply_stand` is sent only after the body is stopped on the same tile a second time. Until that confirmation, a two-tile change updates the latest coordinate and does not cancel. After confirmation, two tiles or a map change still cancels. The shopkeeper drops only from a confirmed stand for the current attempt id. A stand-moved cancel and a stand timeout both wait out the existing short pause before the same person and item are tried again. Critical retreat, a potion, and urgent self-heal stay first, and a survival action that changes the tile still cancels the hold.

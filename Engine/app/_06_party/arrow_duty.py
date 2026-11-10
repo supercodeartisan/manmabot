@@ -39,6 +39,11 @@ SUPPLY_HOLD_TILES = 12
 STAND_WAIT_S = 8.0
 # After a timeout or a failed drop search, leave that member alone this long.
 SUPPLY_PAUSE_S = 6.0
+# The stop tile is real only after the body has stayed there this long.
+HOLD_SETTLE_S = 0.5
+# Esc again only while the body is still walking, and only this often.
+HOLD_HALT_GAP_S = 0.5
+HOLD_HALT_MAX = 3
 # Moves to a neighboring tile when the stand has no empty drop tile.
 DROP_SHIFT_MAX = 4
 _SEEN = "party_supply_seen"
@@ -111,6 +116,48 @@ def _stop_ground_move(board: Any) -> None:
         pass
 
 
+def _hold_pose(board: Any, hold: Any) -> Optional[dict]:
+    """Pose row for this hold id. A different attempt does not share it."""
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if not isinstance(prev, dict) or not isinstance(hold, dict):
+        return None
+    if str(prev.get("id") or "") != str(hold.get("id") or ""):
+        return None
+    return prev
+
+
+def _halt_walk_again(prev: Optional[dict]) -> bool:
+    """True when another Esc is still allowed.
+
+    The press is skipped once the retry count is used or the last press was
+    a moment ago. The caller has already checked that the body is walking
+    and that no survival action took this tick.
+    """
+    if not isinstance(prev, dict):
+        return False
+    try:
+        sent = int(prev.get("halt_n") or 0)
+    except (TypeError, ValueError):
+        sent = 0
+    if sent >= HOLD_HALT_MAX:
+        if not prev.get("halt_gave_up"):
+            prev["halt_gave_up"] = True
+            _log.info("supply hold halt still moving n=%s", sent)
+        return False
+    now = time.time()
+    try:
+        last = float(prev.get("halt_at") or 0.0)
+    except (TypeError, ValueError):
+        last = 0.0
+    if sent > 0 and now - last < HOLD_HALT_GAP_S:
+        return False
+    prev["halt_n"] = sent + 1
+    prev["halt_at"] = now
+    _log.info("supply hold halt esc n=%s moving=1", sent + 1)
+    return True
+
+
 def recipient_hold_intent(
     state: Any,
     blackboard: Any,
@@ -120,7 +167,9 @@ def recipient_hold_intent(
 ) -> Any:
     """Stop the current walk, then hunt in place until the drop starts.
 
-    The stand is not confirmed while the body is still moving, so this does
+    Esc is sent only while the body is still walking, at a short interval,
+    and only a few times. A stop or a survival action sends no further Esc.
+    The stand is not confirmed while the body is still walking, so this does
     not start a new search or chase. Once the shopkeeper has announced the
     drop, combat is cleared so the recipient can take the pile.
     """
@@ -140,14 +189,26 @@ def recipient_hold_intent(
         return idle("supply receive")
     if isinstance(hold, dict) and not _hold_confirmed(blackboard, hold):
         _stop_ground_move(blackboard)
-        scratch = getattr(blackboard, "scratch", None) if blackboard is not None else None
-        prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+        prev = _hold_pose(blackboard, hold)
         moving = not _leader_body_stopped()
-        if moving and isinstance(prev, dict) and not prev.get("halted"):
-            prev["halted"] = True
-            from .intents import supply_halt
+        if moving:
+            if _halt_walk_again(prev):
+                from .intents import supply_halt
 
-            return supply_halt()
+                return supply_halt()
+            from .intents import idle
+
+            return idle("supply hold")
+        if (
+            isinstance(prev, dict)
+            and int(prev.get("halt_n") or 0) > 0
+            and not prev.get("halt_seen_stop")
+        ):
+            prev["halt_seen_stop"] = True
+            _log.info(
+                "supply hold halt stopped n=%s",
+                int(prev.get("halt_n") or 0),
+            )
         from .intents import idle
 
         return idle("supply hold")
@@ -1852,10 +1913,13 @@ def _leader_body_stopped() -> bool:
 
 
 def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
-    """True after a stopped leader then leaves by two tiles or a map change.
+    """True after a settled stop, then a two-tile step or a map change.
 
-    Steps taken while the body is still walking update the latest tile. They
-    do not clear the hold. The anchor is the tile where the body first stopped.
+    Steps taken before that stop update the latest tile and do not cancel.
+    The stop counts only when the body is not walking and the live map and
+    tile stay put for ``HOLD_SETTLE_S``. One stopped sample is not enough.
+    A map id of 0 is not a stop. After the stop, two tiles or a map change
+    cancels whether or not the drop has been announced. One tile does not.
     """
     scratch = getattr(board, "scratch", None) if board is not None else None
     if not isinstance(scratch, dict) or not isinstance(hold, dict) or not hold.get("id"):
@@ -1884,6 +1948,7 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
         }
         return False
     if prev.get("moved"):
+        prev["map"], prev["x"], prev["y"] = here
         return True
     if not prev.get("confirmed"):
         same = (
@@ -1892,33 +1957,59 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
             and int(prev.get("y") or 0) == here[2]
         )
         prev["map"], prev["x"], prev["y"] = here
-        prev["stopped"] = _leader_body_stopped()
-        if prev["stopped"] and same:
-            prev["confirmed"] = True
+        stopped = _leader_body_stopped()
+        prev["stopped"] = stopped
+        if stopped and same and here[0] != 0:
+            try:
+                since = float(prev.get("settle_at") or 0.0)
+            except (TypeError, ValueError):
+                since = 0.0
+            now = time.time()
+            if since <= 0.0:
+                prev["settle_at"] = now
+            elif now - since >= HOLD_SETTLE_S:
+                prev["confirmed"] = True
+                prev["anchor_map"], prev["anchor_x"], prev["anchor_y"] = here
+                _log.info(
+                    "supply hold settled id=%s map=%s xy=(%s,%s)",
+                    key,
+                    here[0],
+                    here[1],
+                    here[2],
+                )
+        else:
+            prev["settle_at"] = 0.0
         return False
     try:
-        old = (int(prev["map"]), int(prev["x"]), int(prev["y"]))
+        anchor = (
+            int(prev["anchor_map"]),
+            int(prev["anchor_x"]),
+            int(prev["anchor_y"]),
+        )
     except (TypeError, ValueError, KeyError):
-        prev["map"], prev["x"], prev["y"] = here
+        anchor = (int(prev.get("map") or 0), int(prev.get("x") or 0), int(prev.get("y") or 0))
+    prev["map"], prev["x"], prev["y"] = here
+    if (
+        _tile_space(anchor[1], anchor[2]) != _tile_space(here[1], here[2])
+        and anchor[0] == here[0]
+    ):
+        prev["anchor_map"], prev["anchor_x"], prev["anchor_y"] = here
         return False
-    if _tile_space(old[1], old[2]) != _tile_space(here[1], here[2]) and old[0] == here[0]:
-        prev["map"], prev["x"], prev["y"] = here
-        return False
-    if not _pose_moved(old, here):
+    if not _pose_moved(anchor, here):
         return False
     prev["moved"] = True
-    prev["map"], prev["x"], prev["y"] = here
     _log.info("supply hold moved id=%s", key)
     return True
 
 
 def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
-    """Party-memory stand once the stop tile has been confirmed.
+    """Live stop tile once the body has stayed there.
 
-    None until the body has stopped and the same tile was seen again.
-    ``0,0`` is not a stand. After confirmation, a later tile is published
-    so a two-tile departure can cancel the hold.
+    Party memory is not the source. ``map_id`` 0 and tile ``0,0`` are not
+    sent. After confirmation the latest live tile is returned, including a
+    later departure, so a two-tile or map change can cancel the hold.
     """
+    del snapshot
     if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
         return None
     scratch = getattr(board, "scratch", None) if board is not None else None
@@ -1929,20 +2020,22 @@ def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
         or str(prev.get("id") or "") != str(hold.get("id"))
     ):
         return None
-    from .leader import stand_from_party_memory
-
-    stand = stand_from_party_memory(
-        snapshot, str(hold.get("for") or ""), str(hold.get("id") or "")
-    )
-    if not isinstance(stand, dict):
-        return None
     try:
-        if int(stand["x"]) == 0 and int(stand["y"]) == 0:
-            return None
+        mid = int(prev["map"])
+        x = int(prev["x"])
+        y = int(prev["y"])
     except (TypeError, ValueError, KeyError):
         return None
-    stand["confirmed"] = True
-    return stand
+    if mid == 0 or (x == 0 and y == 0):
+        return None
+    return {
+        "id": str(hold.get("id")),
+        "for": str(hold.get("for") or ""),
+        "map_id": mid,
+        "x": x,
+        "y": y,
+        "confirmed": True,
+    }
 
 
 def leader_supply_action(

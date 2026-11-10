@@ -1079,6 +1079,7 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
     potion = type("I", (), {"reason": "hp potion"})()
     pose = {"x": 10, "y": 10}
     body = {"moving": True, "standing": False}
+    clock = {"t": 1000.0}
     row = {
         "name": "Boss",
         "guid": "0x10",
@@ -1087,6 +1088,7 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
         "y": 10,
         "is_leader": True,
     }
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
@@ -1122,7 +1124,6 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
         "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
     )
     pose["y"] = 40
-    row["y"] = 40
     walking = leader_supply_action(world, board, hold, None)
     assert walking is not None
     assert "hold" in str(getattr(walking, "reason", ""))
@@ -1134,22 +1135,28 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
     body["standing"] = True
     stopped = leader_supply_action(world, board, hold, None)
     assert stopped is not None
+    assert leader_supply_stand(board, world.last_party, hold) is None
+    assert board.scratch["party_leader_hold_pose"].get("confirmed") is not True
+    clock["t"] += 0.5
+    settled = leader_supply_action(world, board, hold, None)
+    assert settled is not None
     stand = leader_supply_stand(board, world.last_party, hold)
     assert stand is not None
+    assert stand["map_id"] == 4
     assert (stand["x"], stand["y"]) == (10, 40)
     assert board.scratch["party_leader_hold_pose"]["stopped"] is True
 
     pose["y"] = 41
-    row["y"] = 41
     one = leader_supply_action(world, board, hold, None)
     assert one is not None
     assert board.scratch["party_leader_hold_pose"]["moved"] is False
     shifted = leader_supply_stand(board, world.last_party, hold)
     assert shifted is not None
+    assert shifted["map_id"] == 4
     assert (shifted["x"], shifted["y"]) == (10, 41)
 
     pose["y"] = 42
-    row["y"] = 42
+    hold["dropping"] = True
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
 
@@ -1432,14 +1439,16 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
 
     pose = {"x": 10, "y": 10}
     body = {"moving": True, "standing": False}
+    clock = {"t": 2000.0}
     row = {
         "name": "Boss",
         "guid": "0x10",
-        "map_id": 4,
-        "x": 10,
-        "y": 10,
+        "map_id": 0,
+        "x": 1,
+        "y": 1,
         "is_leader": True,
     }
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
@@ -1473,7 +1482,6 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
     assert walking.action is ActionType.SHOP_STOP
     assert "hold" in str(walking.reason)
     pose["y"] = 40
-    row["y"] = 40
     body["moving"] = False
     body["standing"] = True
     jumped = leader_supply_action(world, board, hold, None)
@@ -1481,15 +1489,154 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
     assert board.scratch["party_leader_hold_pose"]["moved"] is False
     assert board.scratch["party_leader_hold_pose"].get("confirmed") is not True
     assert leader_supply_stand(board, world.last_party, hold) is None
+    parked = leader_supply_action(world, board, hold, None)
+    assert parked is not None
+    assert leader_supply_stand(board, world.last_party, hold) is None
+    clock["t"] += 0.5
     settled = leader_supply_action(world, board, hold, None)
     assert settled is not None
     stand = leader_supply_stand(board, world.last_party, hold)
     assert stand is not None and stand.get("confirmed") is True
+    assert stand["map_id"] == 4
     assert (stand["x"], stand["y"]) == (10, 40)
     pose["y"] = 42
-    row["y"] = 42
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
+
+
+def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
+    import logging
+
+    from app._02_state.enums import ActionType
+    from app._06_party.arrow_duty import HOLD_HALT_MAX, leader_supply_action
+
+    caplog.set_level(logging.INFO, logger="manmabot.party")
+    pose = {"map": 4, "x": 10, "y": 10}
+    body = {"moving": True, "standing": False}
+    clock = {"t": 3000.0}
+    care = {"intent": None}
+    row = {
+        "name": "Boss",
+        "guid": "0x10",
+        "map_id": 0,
+        "x": 1,
+        "y": 1,
+        "is_leader": True,
+    }
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival",
+        lambda *_a, **_k: care["intent"],
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type(
+            "P", (), {"map_id": pose["map"], "x": pose["x"], "y": pose["y"]}
+        )(),
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_moving", lambda: body["moving"]
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_standing", lambda: body["standing"]
+    )
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
+            "last_party": {"in_party": True, "members": [row]},
+            "last_print_state": None,
+        },
+    )()
+    hold = {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
+    board = _Board()
+    first = leader_supply_action(world, board, hold, None)
+    assert first.action is ActionType.SHOP_STOP
+    assert board.scratch["party_leader_hold_pose"]["halt_n"] == 1
+    second = leader_supply_action(world, board, hold, None)
+    assert second.action is not ActionType.SHOP_STOP
+    assert board.scratch["party_leader_hold_pose"]["halt_n"] == 1
+
+    clock["t"] += 0.5
+    retried = leader_supply_action(world, board, hold, None)
+    assert retried.action is ActionType.SHOP_STOP
+    assert board.scratch["party_leader_hold_pose"]["halt_n"] == 2
+
+    care["intent"] = type("I", (), {"reason": "hp potion"})()
+    clock["t"] += 0.5
+    assert leader_supply_action(world, board, hold, None) is care["intent"]
+    assert board.scratch["party_leader_hold_pose"]["halt_n"] == 2
+
+    care["intent"] = None
+    body["moving"] = False
+    body["standing"] = True
+    stopped = leader_supply_action(world, board, hold, None)
+    assert stopped.action is not ActionType.SHOP_STOP
+    assert "supply hold halt stopped n=2" in caplog.text
+    pose["y"] = 18
+    body["moving"] = True
+    body["standing"] = False
+    leader_supply_action(world, board, hold, None)
+    assert board.scratch["party_leader_hold_pose"].get("confirmed") is not True
+    assert board.scratch["party_leader_hold_pose"]["settle_at"] == 0.0
+
+    for _ in range(HOLD_HALT_MAX):
+        clock["t"] += 0.5
+        leader_supply_action(world, board, hold, None)
+    assert board.scratch["party_leader_hold_pose"]["halt_n"] == HOLD_HALT_MAX
+    clock["t"] += 0.5
+    gave_up = leader_supply_action(world, board, hold, None)
+    assert gave_up.action is not ActionType.SHOP_STOP
+    assert "supply hold halt still moving n=3" in caplog.text
+
+
+def test_a_zero_map_stand_is_not_published(monkeypatch) -> None:
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        "app._06_party.comms.publish.publish_body",
+        lambda body: sent.append(dict(body)) or 1,
+    )
+    from session.bot_controller import BotController
+
+    class _Leader:
+        _party_hold_id = "hold:hp:Boss"
+        _party_hold_drop = False
+        _party_stand_key = None
+
+        def _leader_supply_hold(self):
+            return {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
+
+    board = _Board()
+    board.scratch["party_leader_hold_pose"] = {
+        "id": "hold:hp:Boss",
+        "confirmed": True,
+        "map": 0,
+        "x": 10,
+        "y": 40,
+    }
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
+            "last_party": {
+                "in_party": True,
+                "members": [{"name": "Boss", "map_id": 0, "x": 1, "y": 1}],
+            },
+            "last_print_state": None,
+        },
+    )()
+    BotController._publish_supply_stand(_Leader(), world, 99, board)
+    assert sent == []
+    board.scratch["party_leader_hold_pose"]["map"] = 4
+    BotController._publish_supply_stand(_Leader(), world, 99, board)
+    assert sent[0]["map_id"] == 4
+    assert (sent[0]["x"], sent[0]["y"]) == (10, 40)
+    assert sent[0]["confirmed"] is True
 
 
 def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None:

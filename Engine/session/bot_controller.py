@@ -2515,6 +2515,7 @@ class BotController:
             self._party_stand_key = None
 
     def _publish_supply_stand(self, world, map_id, blackboard=None) -> None:
+        del map_id
         hold = self._leader_supply_hold()
         if not isinstance(hold, dict) or not hold.get("id"):
             return
@@ -2543,12 +2544,15 @@ class BotController:
                 break
         if not isinstance(stand, dict) or stand.get("confirmed") is not True:
             return
-        key = (
-            str(stand.get("id") or ""),
-            stand.get("map_id"),
-            stand.get("x"),
-            stand.get("y"),
-        )
+        try:
+            mid = int(stand["map_id"])
+            sx = int(stand["x"])
+            sy = int(stand["y"])
+        except (TypeError, ValueError, KeyError):
+            return
+        if mid == 0 or (sx == 0 and sy == 0):
+            return
+        key = (str(stand.get("id") or ""), mid, sx, sy)
         if key == getattr(self, "_party_stand_key", None):
             return
         publish_body(
@@ -2558,9 +2562,9 @@ class BotController:
                 "clear": False,
                 "id": stand.get("id"),
                 "for": stand.get("for") or who,
-                "map_id": stand.get("map_id") if stand.get("map_id") is not None else map_id,
-                "x": stand.get("x"),
-                "y": stand.get("y"),
+                "map_id": mid,
+                "x": sx,
+                "y": sy,
                 "confirmed": True,
             }
         )
