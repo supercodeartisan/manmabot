@@ -1,5 +1,12 @@
 # Decision change log
 
+## 2026-11-10 — hunt loot stays inside the active farm
+
+Intent: While hunting, do not walk to adena whose tile is outside the active farm. The same rule applies to every farm area, using whichever rect is current. A pile inside the rect, within 3 tiles of its edge, or already within 2 tiles of the character is still taken. The walk back into the rect no longer starts that outside pile again.
+Shared: `_step_farm_engage`, `_enter_farm_if_needed`, and field enter/patrol in `_step_travel_engage`. World-nav walks, dungeon-floor travel, newbie training, retreat loot, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: farming on every active area, and the return walk after stepping outside that area. A party leader's on-screen radius is unchanged.
+Consent: user (do not pick adena outside the farming area; all areas).
+Result: `Engine/app/_04_decision/tests/test_farm_loot_bounds.py`. Not run in game.
 ## 2026-11-10 — shopkeeper joins the leader after the buy list
 
 Intent: After the supply buy list finishes, the shopkeeper walks to the leader's party-memory map and game coordinate. That pose is used on any map. A same-map body within 3 tiles ends the join. A missed read keeps the route already started. The route holds while the leader stays inside 24 tiles, then aims at the new coordinate.
