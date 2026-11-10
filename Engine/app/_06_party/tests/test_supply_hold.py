@@ -894,8 +894,8 @@ def test_a_blocked_drop_retries_then_releases_the_hold() -> None:
     try:
         first = _tick_drop(manager, object(), duty)
         assert first is not None
-        assert "arrow drop blocked" in str(getattr(first, "reason", ""))
-        assert manager.runtime.supply_hold is not None
+        assert "supply drop" in str(getattr(first, "reason", ""))
+        assert manager.runtime.supply_hold.get("dropping") is True
         assert manager.runtime.duty_phase == "supply"
         action = first
         for _ in range(DROP_SHIFT_MAX):
@@ -938,6 +938,9 @@ def test_a_finished_drop_returns_to_follow() -> None:
     arrow_duty._beside_member = lambda *_a, **_k: True
     supply_drop.step_ground_drop = _ok
     try:
+        announced = _tick_drop(manager, _State(), duty)
+        assert "supply drop" in str(getattr(announced, "reason", ""))
+        assert manager.runtime.supply_hold.get("dropping") is True
         action = _tick_drop(manager, _State(), duty)
     finally:
         arrow_duty._beside_member = real_beside
@@ -1310,3 +1313,103 @@ def test_same_tile_keeps_the_confirmed_name_and_unknown_is_not_mage() -> None:
     )
     assert named.seat_role == "shopkeeper"
     assert named.loot_role == "responsible"
+
+
+def test_a_latched_hold_stays_when_the_recipient_steps_outside_12() -> None:
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
+    member_orders.supply_stand = None
+    member_orders.party_reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    manager = _Manager()
+    origin = type("O", (), {"x": 100, "y": 100})()
+    manager._nav_blackboard.world_origin = origin
+    manager._nav_blackboard.nav_goal = None
+    manager._nav_blackboard.intent = None
+    pose = {"x": 100, "y": 100}
+    import app._04_decision.behaviors.travel as travel
+    import app._04_decision.world_nav.session as session
+
+    real_pose = session.live_pose_from_state
+    real_start = travel.start_travel
+    real_emit = travel.emit_travel_hop
+    session.live_pose_from_state = lambda _state, fresh=False: type(
+        "P", (), {"map_id": 4, "x": pose["x"], "y": pose["y"]}
+    )()
+    travel.start_travel = lambda board, goal, reason="": setattr(
+        board, "nav_goal", (int(goal[0]), int(goal[1]))
+    )
+    travel.emit_travel_hop = lambda *args, **kwargs: False
+    try:
+        near = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+        assert manager.runtime.supply_hold is not None
+        assert "supply hold" in str(getattr(near, "reason", ""))
+        origin.x, origin.y = 10, 10
+        pose["x"], pose["y"] = 10, 10
+        far = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        session.live_pose_from_state = real_pose
+        travel.start_travel = real_start
+        travel.emit_travel_hop = real_emit
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.supply_hold.get("dropping") is not True
+    assert manager._nav_blackboard.scratch["party_supply_attempt"]["latched"] is True
+    assert manager._nav_blackboard.nav_goal == (100, 100)
+    assert far is None or getattr(far, "reason", "") != "supply receive"
+
+
+def test_the_recipient_hunts_in_place_until_the_drop_is_announced() -> None:
+    from app._06_party.arrow_duty import recipient_hold_intent
+
+    board = _Board()
+    board.current_target_id = 7
+    waiting = recipient_hold_intent(object(), board, {"id": "hold:hp:Boss", "for": "Boss"})
+    assert "supply hold" in str(getattr(waiting, "reason", ""))
+    board.current_target_id = 7
+    receiving = recipient_hold_intent(
+        object(),
+        board,
+        {"id": "hold:hp:Boss", "for": "Boss", "dropping": True},
+    )
+    assert "supply receive" in str(getattr(receiving, "reason", ""))
+    assert board.current_target_id is None
+
+
+def test_a_dropping_hold_is_published_again(monkeypatch) -> None:
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        "app._06_party.comms.publish.publish_body",
+        lambda body: sent.append(dict(body)) or 1,
+    )
+    from session.bot_controller import BotController
+
+    class _Leader:
+        _party_hold_id = ""
+        _party_hold_drop = False
+        _party_stand_key = None
+        hold = {"id": "hold:hp:Boss", "for": "Boss", "item": "hp", "qty": 5, "min": 10}
+
+        def _leader_supply_hold(self):
+            return dict(self.hold)
+
+    leader = _Leader()
+    BotController._publish_supply_hold(leader)
+    assert sent[0]["dropping"] is False
+    leader.hold["dropping"] = True
+    BotController._publish_supply_hold(leader)
+    assert sent[1]["id"] == "hold:hp:Boss"
+    assert sent[1]["dropping"] is True
+    BotController._publish_supply_hold(leader)
+    assert len(sent) == 2

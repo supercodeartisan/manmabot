@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a supply hold stays up, and the recipient hunts in place until the drop
+
+Intent: Once the shopkeeper is within 12 tiles, that hold stays for the same person and item even if the next step is outside 12 again. The recipient stops new search and chase, and attacks only a monster already in reach, until the shopkeeper announces the drop. The announce is one tick beside the recipient before the ground gesture, and it is published on the same hold id with `dropping`. That tick clears combat so they can receive. A finished drop, the 8-second stand timeout, a two-tile departure after the body stops, or a map change returns the hunt to normal. Critical retreat, a potion, and urgent self-heal still come first.
+Shared: `tick_shopkeeper_duty`, `_tick_drop`, `recipient_hold_intent`, `leader_supply_action`, `_publish_supply_hold`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo hunt, buy quantity, MP and arrow rules, and Brain wiring are unchanged.
+Affects: a party member, including the leader, who is the recipient of a supply drop.
+Consent: user (keep the hold and supply the short member; while waiting, hunt in place without moving; stop hunting when the drop starts; return to normal when the supply ends).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — confirmed self name, and the leader stands before the supply tile
 
 Intent: A nearby party leader or another member is not this character's name. The print-state or client-memory name is used, and a name that is not on the roster is seat `unknown`, so shopkeeper, mage-list heal, assist, and loot do not run. A supply hold for the leader still lets critical retreat, a potion, and urgent self-heal go first. Only a hold requested after the shopkeeper is within 12 tiles stops new attacks and chase. The stand tile is the party-memory coordinate after the body has stopped, not the tile where the hold arrived. Walking before that stop updates the latest tile and does not cancel. After the stop, two tiles or a map change cancels as before, and one tile still retargets the drop. Cancel, a finished drop, or the stand timeout clears the hold and the hunt decision runs again. Hold ids and attempt numbers are unchanged.

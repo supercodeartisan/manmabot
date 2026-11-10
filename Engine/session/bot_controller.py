@@ -2490,9 +2490,12 @@ class BotController:
             publish_body({"type": "supply_hold", "from": "leader", "clear": True})
             publish_body({"type": "supply_stand", "from": "leader", "clear": True})
             self._party_hold_id = ""
+            self._party_hold_drop = False
             self._party_stand_key = None
             return
-        if str(hold.get("id")) != sent_id:
+        dropping = bool(hold.get("dropping"))
+        sent_drop = bool(getattr(self, "_party_hold_drop", False))
+        if str(hold.get("id")) != sent_id or sent_drop != dropping:
             body = {
                 "type": "supply_hold",
                 "from": "leader",
@@ -2502,11 +2505,13 @@ class BotController:
                 "item": hold.get("item") or "arrow",
                 "qty": hold.get("qty"),
                 "min": hold.get("min"),
+                "dropping": dropping,
             }
             if str(hold.get("guid") or "").strip():
                 body["guid"] = hold.get("guid")
             publish_body(body)
             self._party_hold_id = str(hold.get("id"))
+            self._party_hold_drop = dropping
             self._party_stand_key = None
 
     def _publish_supply_stand(self, world, map_id, blackboard=None) -> None:

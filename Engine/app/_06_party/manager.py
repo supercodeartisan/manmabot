@@ -424,8 +424,8 @@ class PartyMemberManager:
 
             from .arrow_duty import (
                 claim_names_me,
+                recipient_hold_intent,
                 remember_supply_stand,
-                supply_wait_intent,
                 tick_shopkeeper_duty,
                 tick_supply_pickup,
             )
@@ -460,7 +460,9 @@ class PartyMemberManager:
             if claim_names_me(hold, seat_name, seat_guid) and not claim_names_me(
                 drop, seat_name, seat_guid
             ):
-                waited = supply_wait_intent(game_state, self._nav_blackboard)
+                waited = recipient_hold_intent(
+                    game_state, self._nav_blackboard, hold
+                )
                 self.runtime.last_kind = "supply"
                 self.runtime.last_reason = "supply hold"
                 self._record_decision(waited)

@@ -76,6 +76,36 @@ def supply_hold_for(duty: dict) -> dict[str, Any]:
     return hold
 
 
+def _hold_with_phase(board: Any, duty: dict) -> dict[str, Any]:
+    """The hold for this attempt. ``dropping`` is set once the gesture is announced."""
+    hold = supply_hold_for(duty)
+    if _attempt(board).get("dropping"):
+        hold["dropping"] = True
+    return hold
+
+
+def recipient_hold_intent(state: Any, blackboard: Any, hold: Any) -> Any:
+    """Hunt in place until the drop starts, then stand and receive.
+
+    Before the drop, a monster already in reach is attacked and no new
+    search or chase is started. Once the shopkeeper has announced the
+    drop, combat is cleared so the recipient can take the pile.
+    """
+    if isinstance(hold, dict) and hold.get("dropping"):
+        if blackboard is not None:
+            try:
+                from app._04_decision.behaviors.search_hop import clear_search_hop
+
+                clear_search_hop(blackboard)
+            except Exception:
+                pass
+        _drop_combat_lock(blackboard)
+        from .intents import idle
+
+        return idle("supply receive")
+    return supply_wait_intent(state, blackboard)
+
+
 def supply_rows(rows: Any) -> list:
     """Reports the shopkeeper may supply. An explicit ``supply_ok`` false is away."""
     kept: list = []
@@ -447,7 +477,7 @@ def _wait_for_stand(manager: Any, duty: dict) -> Any:
     if since <= 0.0:
         st["since"] = now
         board.scratch[_ATTEMPT] = st
-    runtime.supply_hold = supply_hold_for(duty)
+    runtime.supply_hold = _hold_with_phase(board, duty)
     runtime.duty_phase = DUTY_SUPPLY
     runtime.last_kind = "supply"
     runtime.last_reason = "wait for stand"
@@ -525,7 +555,7 @@ def _shift_drop_search(manager: Any, state: Any, duty: dict, stand: dict) -> Any
         return None
     st["shifts"] = shifts + 1
     board.scratch[_ATTEMPT] = st
-    runtime.supply_hold = supply_hold_for(duty)
+    runtime.supply_hold = _hold_with_phase(board, duty)
     runtime.duty_phase = DUTY_SUPPLY
     runtime.last_kind = "supply"
     runtime.last_reason = "shift for drop"
@@ -814,12 +844,32 @@ def tick_shopkeeper_duty(
         st = _attempt(board)
         st["shifts"] = 0
         st["since"] = 0.0
+        st["latched"] = True
         board.scratch[_ATTEMPT] = st
-        runtime.supply_hold = supply_hold_for(duty)
+        runtime.supply_hold = _hold_with_phase(board, duty)
         return _tick_drop(manager, state, planned)
     close = _approach_until_close(manager, state, duty)
+    if close is True:
+        st = _attempt(board)
+        st["latched"] = True
+        board.scratch[_ATTEMPT] = st
     if close is not True:
         st = _attempt(board)
+        if st.get("latched"):
+            now = time.time()
+            since = float(st.get("since") or 0.0)
+            if since <= 0.0:
+                st["since"] = now
+            elif now - since >= STAND_WAIT_S:
+                cancel_supply_delivery(
+                    board, runtime, duty, now=now, reason="stand timeout"
+                )
+                runtime.last_kind = "supply"
+                runtime.last_reason = "stand timeout"
+                return None
+            board.scratch[_ATTEMPT] = st
+            runtime.supply_hold = _hold_with_phase(board, duty)
+            return close
         st["since"] = 0.0
         board.scratch[_ATTEMPT] = st
         runtime.supply_hold = None
@@ -1243,6 +1293,16 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         if isinstance(job, dict):
             job["active"] = False
         return arrived
+    st = _attempt(board)
+    if not st.get("dropping"):
+        st["dropping"] = True
+        board.scratch[_ATTEMPT] = st
+        runtime.supply_hold = _hold_with_phase(board, duty)
+        runtime.last_kind = "supply"
+        runtime.last_reason = "supply drop"
+        from .intents import idle
+
+        return idle("supply drop")
     from .supply_drop import step_ground_drop
 
     item = str(duty.get("item") or "arrow")
@@ -1855,9 +1915,7 @@ def leader_supply_action(
     if claim_names_me(hold, name, guid):
         if leader_hold_displaced(blackboard, world, hold):
             return None
-        from .intents import idle
-
-        return idle("supply hold")
+        return recipient_hold_intent(world, blackboard, hold)
     return None
 
 
