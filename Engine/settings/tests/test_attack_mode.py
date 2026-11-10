@@ -1,7 +1,7 @@
 """Account class chooses hunt attack mode. A saved ranged value does not."""
 from __future__ import annotations
 
-from settings.profile import Profile, attack_mode_for_character
+from settings.profile import Profile, apply_account_character, attack_mode_for_character
 from settings.schedule import ScheduleTask, profile_snapshot
 from settings.task_runtime import apply_runtime_settings
 
@@ -36,6 +36,16 @@ def test_elf_stays_ranged() -> None:
     assert profile.attack_mode == "ranged"
 
 
+def test_account_class_sets_the_profile() -> None:
+    profile = Profile(character="mage", attack_mode="magic")
+    account = type("A", (), {"character_type": "elf"})()
+    assert apply_account_character(profile, account) == "elf"
+    assert profile.character == "elf"
+    assert profile.attack_mode == "ranged"
+    assert apply_account_character(profile, type("A", (), {"character_type": ""})()) is None
+    assert profile.character == "elf"
+
+
 def test_snapshot_follows_class() -> None:
     snap = profile_snapshot(Profile(character="mage", attack_mode="ranged"))
     assert snap["hunt"]["attack_mode"] == "magic"
@@ -47,5 +57,6 @@ if __name__ == "__main__":
     test_class_map()
     test_stale_hunt_value_does_not_override_mage()
     test_elf_stays_ranged()
+    test_account_class_sets_the_profile()
     test_snapshot_follows_class()
     print("attack mode tests ok")

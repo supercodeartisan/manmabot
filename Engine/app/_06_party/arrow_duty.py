@@ -1238,7 +1238,7 @@ def _note_mp_buy(board: Any) -> None:
 
 
 def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
-    """HP, depoison, MP, then arrows. MP is bought only when a shop behavior exists."""
+    """HP, depoison, MP, then silver arrows. MP is bought only when a shop exists."""
     mp_can_buy = supply_shop_id("mp") is not None
     return [
         {
@@ -1393,14 +1393,10 @@ def supply_shop_id(item: str) -> Optional[str]:
 
 
 def shops_arrow_id() -> Optional[str]:
-    from app._04_decision import shops as shops_mod
+    """Party supply buys silver arrows. Normal arrows are not a supply shop."""
     from app._04_decision.shops import resolve_shopping_behavior_id
 
-    if not (shops_mod.BUY_NORMAL_ARROWS or shops_mod.BUY_SILVER_ARROWS):
-        return None
-    if shops_mod.BUY_SILVER_ARROWS and not shops_mod.BUY_NORMAL_ARROWS:
-        return resolve_shopping_behavior_id("silver_arrows")
-    return resolve_shopping_behavior_id("normal_arrows")
+    return resolve_shopping_behavior_id("silver_arrows")
 
 
 def _is_party_leader_row(snapshot: Any, row: Any) -> bool:

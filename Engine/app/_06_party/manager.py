@@ -20,7 +20,12 @@ from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
 from .formation_goal import choose_formation_goal
 from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
-from .join_map import PartyJoinNav
+from .join_map import (
+    PartyJoinNav,
+    memory_leader_confirmed,
+    suppress_join_while_invite,
+    suppress_unconfirmed_leader,
+)
 from .leader import (
     LeaderView,
     _party_game_xy,
@@ -1010,8 +1015,26 @@ class PartyMemberManager:
 
         use_world_nav = False
         route_detail = ""
+        hold_join = bool(getattr(self.runtime, "hold_join_map", False))
+        policy_name = ""
+        if isinstance(self.leader_policy, dict):
+            policy_name = str(self.leader_policy.get("leader_name") or "")
+        confirmed = memory_leader_confirmed(policy_name, view.name)
+        if hold_join:
+            result = suppress_join_while_invite(
+                result, self._join_nav, hold=True
+            )
+        elif not confirmed:
+            result = suppress_unconfirmed_leader(
+                result, self._join_nav, confirmed=False
+            )
+        if result.reason in ("invite_before_join", "party_leader_unconfirmed"):
+            reason = result.reason
         # Continue an in-flight WORLD_NAV follow/join until it finishes.
-        if self._join_nav.active and result.kind in (
+        # An open invite, or a party row that is not the policy leader, does not scroll.
+        if hold_join or not confirmed:
+            pass
+        elif self._join_nav.active and result.kind in (
             MemberKind.FOLLOW,
             MemberKind.JOIN_MAP,
             MemberKind.WAIT,

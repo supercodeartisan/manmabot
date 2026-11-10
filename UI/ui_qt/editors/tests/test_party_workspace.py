@@ -735,7 +735,7 @@ def test_supply_tables_split_self_shop_and_party_give() -> None:
         "체력 물약",
         "해독 물약",
         "마나 물약",
-        "화살",
+        "은화살",
     ]
     assert tab.supply_self_table.item(2, 2).text() == "없음"
     assert tab.supply_others_table.item(0, 1).text() == "전원 (담당 제외)"

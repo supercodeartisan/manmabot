@@ -947,7 +947,7 @@ class PartyTab(QWidget):
                 "가진 수가 담당 유지보다 적으면 상점에 가서 사는 수만큼 삽니다. "
                 "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
                 "한 개 값도 안 되면 그 물건은 건너뜁니다. "
-                "체력, 해독, 화살 순으로 이어서 사고, "
+                "체력, 해독, 은화살 순으로 이어서 사고, "
                 "더 살 곳이 없으면 파티장에게 돌아옵니다. "
                 "마나 물약은 상점이 없어서 사지 않습니다.",
             )
@@ -971,7 +971,7 @@ class PartyTab(QWidget):
                 "담당 유지보다 적게 주지는 않습니다. "
                 "여분이 없으면 사는 수만큼 삽니다. "
                 "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
-                "체력 다음에 해독, 그 다음에 화살을 이어서 사고 "
+                "체력 다음에 해독, 그 다음에 은화살을 이어서 사고 "
                 "더 갈 상점이 없으면 파티장에게 돌아옵니다.",
             )
         )
@@ -1010,7 +1010,7 @@ class PartyTab(QWidget):
                 None,
             ),
             (
-                self._tx("party_ui_supply_arrow", "화살"),
+                self._tx("party_ui_supply_arrow", "은화살"),
                 self._tx("party_ui_supply_not_mage", "마법사 제외"),
                 ("party_member_arrow_min", "member_arrow_min", 300, 0, 9999),
                 ("party_shopkeeper_arrow_min", "shopkeeper_arrow_min", 300, 0, 9999),

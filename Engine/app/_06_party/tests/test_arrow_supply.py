@@ -66,7 +66,7 @@ def test_short_shopkeeper_buys_before_dropping() -> None:
 def test_drop_qty_keeps_the_shopkeeper_reserve() -> None:
     duty = pick_arrow_duty(
         400,
-        [{"from": "Elf", "items": {"arrows": 50, "silver_arrows": 0}, "map_id": 4, "x": 3, "y": 4}],
+        [{"from": "Elf", "items": {"arrows": 900, "silver_arrows": 50}, "map_id": 4, "x": 3, "y": 4}],
         member_min=300,
         keeper_min=300,
         self_name="Keeper",
@@ -80,7 +80,7 @@ def test_drop_qty_keeps_the_shopkeeper_reserve() -> None:
 def test_drop_uses_the_boss_give_count() -> None:
     duty = pick_arrow_duty(
         500,
-        [{"from": "Elf", "items": {"arrows": 290}, "map_id": 4, "x": 3, "y": 4}],
+        [{"from": "Elf", "items": {"arrows": 900, "silver_arrows": 290}, "map_id": 4, "x": 3, "y": 4}],
         member_min=300,
         keeper_min=300,
         give_qty=80,
@@ -90,7 +90,7 @@ def test_drop_uses_the_boss_give_count() -> None:
     assert duty["qty"] == 80
     short = pick_arrow_duty(
         320,
-        [{"from": "Elf", "items": {"arrows": 10}, "map_id": 4, "x": 3, "y": 4}],
+        [{"from": "Elf", "items": {"arrows": 900, "silver_arrows": 10}, "map_id": 4, "x": 3, "y": 4}],
         member_min=300,
         keeper_min=300,
         give_qty=80,
@@ -107,8 +107,8 @@ def test_mage_seat_is_not_an_arrow_target() -> None:
     ]
     assert mage_seat_names(roster) == {"mage"}
     rows = [
-        {"from": "Mage", "items": {"arrows": 0}, "map_id": 4, "x": 1, "y": 1},
-        {"from": "Boss", "items": {"arrows": 10}, "map_id": 4, "x": 2, "y": 2},
+        {"from": "Mage", "items": {"arrows": 900, "silver_arrows": 0}, "map_id": 4, "x": 1, "y": 1},
+        {"from": "Boss", "items": {"arrows": 900, "silver_arrows": 10}, "map_id": 4, "x": 2, "y": 2},
     ]
     duty = pick_arrow_duty(
         500,
@@ -136,6 +136,11 @@ def test_party_buy_qty_does_not_replace_solo() -> None:
         "hp_potion",
         10,
     ) == 10
+    assert party_shop_buy_qty(
+        {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 250},
+        "buy_normal_arrows_talking",
+        40,
+    ) == 40
 
 
 def _supply_rows() -> list[dict]:
@@ -229,9 +234,56 @@ class _Pile:
         self.loot_qty = loot_qty
 
 
+def test_party_supply_reads_silver_arrows_only() -> None:
+    from app._03_world.merge.memory_inventory import ARROW_IDS, SILVER_ARROW_IDS
+    from app._06_party.arrow_duty import supply_shop_id
+    from app._06_party.arrow_policy import bag_supply_counts
+    from app._06_party.supply_drop import _kind_tables
+
+    row = {"from": "Elf", "items": {"arrows": 500, "silver_arrows": 40}}
+    assert report_supply_count(row, "arrow") == 40
+    assert report_supply_count({"from": "Elf", "items": {"arrows": 10}}, "arrow") is None
+    state = type(
+        "S",
+        (),
+        {
+            "player": type(
+                "P",
+                (),
+                {
+                    "inventory": type(
+                        "I",
+                        (),
+                        {
+                            "bag_ready": True,
+                            "arrows": 500,
+                            "silver_arrows": 40,
+                            "hp_potion": 0,
+                            "depoison": 0,
+                            "mp_potion": 0,
+                        },
+                    )()
+                },
+            )()
+        },
+    )()
+    assert bag_supply_counts(state)["arrow"] == 40
+    ids, names = _kind_tables("arrow")
+    assert SILVER_ARROW_IDS <= ids
+    assert not (ARROW_IDS & ids)
+    assert "은 화살" in names
+    assert "화살" not in names
+    shop = str(supply_shop_id("arrow") or "")
+    assert "silver" in shop
+    assert "normal" not in shop
+
+
 def test_named_supply_pile_must_match_the_claim() -> None:
     assert supply_pile_matches(_Pile("빨간 물약"), "hp") is True
     assert supply_pile_matches(_Pile("빨간 물약"), "arrow") is False
+    assert supply_pile_matches(_Pile("은 화살"), "arrow") is True
+    assert supply_pile_matches(_Pile("화살"), "arrow") is False
+    assert supply_pile_matches(_Pile("silver arrow"), "arrow") is True
     assert supply_pile_matches(_Pile("파란 물약"), "mp") is True
     assert supply_pile_matches(_Pile(""), "hp") is False
     assert supply_pile_qty_ok(_Pile("빨간 물약", loot_qty=10), 10) is True
@@ -562,8 +614,8 @@ def test_a_class_mage_keeps_mp_when_the_seat_is_not_mage() -> None:
                 "hp_potion": 40,
                 "depoison": 5,
                 "mp_potion": mp,
-                "arrows": arrows,
-                "silver_arrows": 0,
+                "arrows": 900,
+                "silver_arrows": arrows,
             },
             "map_id": 4,
             "x": 1,
@@ -596,8 +648,8 @@ def test_a_drop_updates_the_count_until_the_report_changes() -> None:
     row = {
         "from": "Elf",
         "items": {
-            "arrows": 250,
-            "silver_arrows": 0,
+            "arrows": 900,
+            "silver_arrows": 250,
             "hp_potion": 40,
             "depoison": 5,
             "mp_potion": 20,
@@ -605,12 +657,13 @@ def test_a_drop_updates_the_count_until_the_report_changes() -> None:
     }
     adjusted = rows_with_expected([row], book)
     assert report_supply_count(adjusted[0], "arrow") == 350
-    assert row["items"]["arrows"] == 250
+    assert adjusted[0]["items"]["arrows"] == 900
+    assert row["items"]["silver_arrows"] == 250
     again = rows_with_expected([row], book)
     assert report_supply_count(again[0], "arrow") == 350
     caught = {
         "from": "Elf",
-        "items": dict(row["items"], arrows=260),
+        "items": dict(row["items"], silver_arrows=260),
     }
     fresh = rows_with_expected([caught], book)
     assert report_supply_count(fresh[0], "arrow") == 260
@@ -732,6 +785,7 @@ if __name__ == "__main__":
     test_mage_seat_is_not_an_arrow_target()
     test_party_buy_qty_does_not_replace_solo()
     test_potions_come_before_arrows_and_mp_stays_on_the_mage()
+    test_party_supply_reads_silver_arrows_only()
     test_named_supply_pile_must_match_the_claim()
     test_blue_potion_count_comes_from_the_bag()
     test_later_supply_rows_are_bought_before_returning()

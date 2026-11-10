@@ -1274,8 +1274,10 @@ class ActionExecutor:
     def _heal(self, bounds: WindowBounds, intent: ActionIntent | None = None) -> None:
         """Press the heal key decision already chose. No second veto.
 
-        A party-list heal presses the key once, then clicks that member's row.
-        A second press before the click clears the target cursor. A self heal
+        A party-list heal presses the key once, waits until the spell cursor
+        is up, then clicks that member's row. A click before the cursor
+        selects the row and leaves the circle for the next ground hop. A
+        second press before the click clears the target cursor. A self heal
         keeps the double press. The point is client pixels; the window origin
         turns it into a desktop click.
         """
@@ -1293,6 +1295,10 @@ class ActionExecutor:
         if not list_target:
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
+            return
+        from app._05_action.cursor_verify import wait_party_spell_aim
+
+        if not wait_party_spell_aim(self, reason="heal"):
             return
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)
@@ -1315,8 +1321,9 @@ class ActionExecutor:
     ) -> None:
         """Self buff: checked catalog buff, or haste / legacy role slot.
 
-        A party-list buff presses the chosen key once, then clicks that row.
-        A second press would clear the target cursor.
+        A party-list buff presses the chosen key once, waits until the spell
+        cursor is up, then clicks that row. A second press would clear the
+        target cursor.
         """
         name = str(which or "")
         if intent is not None and self._party_list_buff(intent, bounds):
@@ -1401,6 +1408,13 @@ class ActionExecutor:
         self._press_box_skill(box, key)
         self._last_magic_at = time.time()
         if bounds is None or not bounds.valid:
+            return True
+        from app._05_action.cursor_verify import wait_party_spell_aim
+
+        if not wait_party_spell_aim(
+            self,
+            reason=str(getattr(intent, "reason", "") or "party buff"),
+        ):
             return True
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)

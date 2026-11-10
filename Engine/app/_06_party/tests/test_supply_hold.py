@@ -128,8 +128,8 @@ def test_leader_frames_carry_the_hold_and_the_stand() -> None:
 
 class _Inv:
     bag_ready = True
-    arrows = 500
-    silver_arrows = 0
+    arrows = 0
+    silver_arrows = 500
     hp_potion = 50
     depoison = 5
     mp_potion = 20
@@ -169,7 +169,7 @@ def test_shopkeeper_holds_until_the_recipient_reports_the_stop_tile() -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -205,7 +205,7 @@ def test_a_far_recipient_keeps_moving_until_the_shopkeeper_is_close() -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -273,7 +273,7 @@ def test_approach_uses_the_live_party_tile() -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -326,7 +326,7 @@ def test_approach_follows_a_tile_that_moves(caplog) -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -637,7 +637,7 @@ def test_stand_timeout_cancels_and_the_old_tile_does_not_apply(caplog) -> None:
     reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -698,7 +698,7 @@ def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
     reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -1028,7 +1028,7 @@ def test_a_moved_stand_pauses_before_the_next_try() -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -1342,7 +1342,7 @@ def test_a_latched_hold_stays_when_the_recipient_steps_outside_12() -> None:
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,
@@ -1731,7 +1731,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 0,
             "x": 100,
             "y": 100,
@@ -1774,7 +1774,7 @@ def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None
     member_orders.party_reports = [
         {
             "from": "Elf",
-            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
             "map_id": 4,
             "x": 100,
             "y": 100,

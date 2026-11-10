@@ -1,5 +1,45 @@
 # Decision change log
 
+## 2026-11-10 — a party leader starts as the account class
+
+Intent: A party-leader start copies the selected account's class onto the profile before the bot runs. Elf hunts ranged, mage hunts with magic, and knight or royal hunts in melee. The schedule row for that same account stores the same class. A party member start does not do this. The roster seat the leader assigns stays a seat, not a character class.
+Shared: `apply_account_character`, `_sync_party_leader_character`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo start, party-member start, follow, and HP lines are unchanged.
+Affects: the party leader's hunt attack mode and whether that PC is treated as a mage.
+Consent: user ("yes" — party boss task character follows that account's character type).
+Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
+## 2026-11-10 — a party-list cast waits for the spell cursor
+
+Intent: A party-list heal or buff presses its key once, then clicks the member row only after the spell cursor is up. The wait is at most one second. If the cursor never appears, that click is skipped so the row select does not leave the circle for the next ground hop. Shield, greater haste, and decrease weight are no longer party-support spells. A saved check for one of those three is ignored. Haste, weapon buffs, blessed armor, dexterity, might, berserker, and the recovery spells stay. Solo self-buffs still cast shield, greater haste, and decrease weight on the mage.
+Shared: `wait_party_spell_aim`, `_party_list_buff`, `_heal`, `choose_party_support`, `_buff_ids`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, `due_buff`, `maybe_cast_buff`, `cancel_spell_aim`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: a class mage in party-member mode, on a party-list heal and on a party-list buff.
+Consent: user ("yes" — click the party row only after the spell cursor is up, and drop shield, greater haste, and decrease weight from party support).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`, `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+
+## 2026-11-10 — a leftover party row is not a follow goal
+
+Intent: Join and follow use the party-memory leader only when that name is the connected leader's policy `leader_name`. An empty policy name does not match, so the member waits instead of scrolling toward the row that is already in the Party vector at startup. While an invite popup is open, or Y was sent and memory still names someone else, same-map follow waits too. A confirmed name still joins that pose, including a scroll hop when the maps differ.
+Shared: `memory_leader_confirmed`, `suppress_unconfirmed_leader`, `suppress_join_while_invite`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: party-member follow and cross-map join.
+Consent: user ("yes" — do not join or follow until the memory leader matches the policy name, and also stop same-map follow while the invite is unresolved).
+Result: `Engine/app/_06_party/tests/test_invite_accept.py`. Not run in game.
+
+## 2026-11-10 — an open party invite is answered, and join waits for that inviter
+
+Intent: An open party-invite confirm gets Y even when party memory already says this character is in a party. The join is confirmed only after the popup has closed and the memory leader name is the inviter on that popup. Until then the member does not start or continue a cross-map join, so a leftover leader pose is not a scroll goal. Invites from someone other than the connected leader's policy name are still left alone.
+Shared: `InviteAccepter.tick`, `blocks_join_map`, `suppress_join_while_invite`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Hunt, retreat, loot, and HP potion order are unchanged.
+Affects: party-member invite accept, and cross-map join toward the party leader.
+Consent: user ("yes" after the plan: Y from the open popup, policy leader name only for who is ours, no join_map until memory leader matches that inviter).
+Result: `Engine/app/_06_party/tests/test_invite_accept.py`. Not run in game.
+
+## 2026-11-10 — party arrow supply counts silver arrows only
+
+Intent: The existing arrow supply row is silver arrows. A member's normal arrows do not fill that row, a normal-arrow pile does not satisfy the claim, and the drop takes a silver-arrow stack. The shop for that row is the silver-arrow shop. The UI buy count, the per-person give count, who is skipped, and the order after MP stay as they are. Solo arrow restock still follows the solo buy checkboxes.
+Shared: `report_arrow_count`, `bag_supply_counts`, `rows_with_expected`, `supply_pile_matches`, `shops_arrow_id`, `party_shop_buy_qty`, `supply_drop._kind_tables`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. HP, depoison, MP, the configured buy count, the 12-tile approach, Esc, the stop check, the nav stand, and solo shop quantities are unchanged.
+Affects: party supply of the arrow row, including the shop the shopkeeper opens for it and the stack they drop. The party supply table labels that row 은화살.
+Consent: user ("일반화살, 은화살 두개로 가를 필요 없이 은화살만 보는걸로 하자. 일반화살은 무시하고.").
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`, `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a supply buy is the configured shop count
 
 Intent: A party supply purchase buys the UI buy count for that item. The sum of each member's shortage does not raise it, and a bag under the shopkeeper reserve does not raise it either. Spare above the reserve is still dropped first. A bag under the reserve, or a reserve with nothing left while someone is short, is what starts the shop. Adena still limits the count, and MP is still not bought. The per-person drop count and solo shop quantities stay as they are.
