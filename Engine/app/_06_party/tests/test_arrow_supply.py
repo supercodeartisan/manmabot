@@ -199,9 +199,9 @@ def test_potions_come_before_arrows_and_mp_stays_on_the_mage() -> None:
     )
     assert buy["kind"] == "buy"
     assert buy["item"] == "hp"
-    # Reserve is 15 short and the two low reports add 18, so one buy covers both.
+    # Two short reports still add 18. The buy is the configured 20, not that sum.
     assert buy["party_need"] == 18
-    assert buy["buy"] == 33
+    assert buy["buy"] == 20
     assert buy["keeper_min"] == 20
     rows = _supply_rows()
     for row in rows:
@@ -280,11 +280,11 @@ def test_later_supply_rows_are_bought_before_returning() -> None:
     assert "party_supply_item" not in board.scratch
 
 
-def test_one_trip_buys_enough_to_reach_the_reserve() -> None:
-    assert supply_fill_qty(5, 20, 10) == 15
+def test_one_trip_buys_the_configured_count() -> None:
+    assert supply_fill_qty(5, 20, 10) == 10
     assert supply_fill_qty(5, 20, 30) == 30
     assert supply_fill_qty(18, 20, 10) == 10
-    assert supply_fill_qty(0, 1500, 10) == 999
+    assert supply_fill_qty(0, 1500, 10) == 10
     assert affordable_supply_qty(15, 100, 52) == 1
     assert affordable_supply_qty(15, 40, 52) == 0
     assert affordable_supply_qty(15, None, 52) == 15
@@ -314,6 +314,42 @@ def test_party_hp_buy_qty_stays_off_solo_shops() -> None:
         10,
     ) == 20
     assert party_shop_buy_qty({}, "buy_hp_potions_mainland", 10) == 10
+    low = type(
+        "S",
+        (),
+        {
+            "player": type(
+                "P",
+                (),
+                {
+                    "inventory": type(
+                        "I",
+                        (),
+                        {
+                            "bag_ready": True,
+                            "hp_potion": 5,
+                            "depoison": 0,
+                            "mp_potion": 0,
+                            "arrows": 0,
+                            "silver_arrows": 0,
+                        },
+                    )()
+                },
+            )()
+        },
+    )()
+    assert party_shop_buy_qty(
+        {
+            "party_shopkeeper_arrow": True,
+            "party_supply_item": "hp",
+            "party_supply_configured": 20,
+            "party_supply_keep": 50,
+            "party_arrow_buy_qty": 45,
+        },
+        "buy_hp_potions_mainland",
+        10,
+        low,
+    ) == 20
 
 
 def test_leader_skips_arrow_shop_only_while_the_socket_is_live() -> None:
@@ -699,7 +735,7 @@ if __name__ == "__main__":
     test_named_supply_pile_must_match_the_claim()
     test_blue_potion_count_comes_from_the_bag()
     test_later_supply_rows_are_bought_before_returning()
-    test_one_trip_buys_enough_to_reach_the_reserve()
+    test_one_trip_buys_the_configured_count()
     test_a_broke_item_is_skipped_for_the_next_buy()
     test_party_hp_buy_qty_stays_off_solo_shops()
     test_leader_skips_arrow_shop_only_while_the_socket_is_live()

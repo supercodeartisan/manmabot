@@ -871,7 +871,14 @@ class PartyMemberManager:
         ):
             listed = self._party_list_heal(game_state, origin if origin_ok else None)
             if listed is not None:
-                return self._return_support(listed, MemberKind.HEAL)
+                from app._02_state.enums import ActionType
+
+                kind = (
+                    MemberKind.BUFF
+                    if getattr(listed, "action", None) is ActionType.BUFF
+                    else MemberKind.HEAL
+                )
+                return self._return_support(listed, kind)
         reason = result.reason
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
@@ -1300,7 +1307,7 @@ class PartyMemberManager:
         if pct is None:
             return None
         return self._party_list_heal(
-            game_state, origin, cast_only=True, below=pct
+            game_state, origin, cast_only=True, below=pct, heals_only=True
         )
 
     def _party_list_heal(
@@ -1310,8 +1317,9 @@ class PartyMemberManager:
         *,
         cast_only: bool = False,
         below: Optional[int] = None,
+        heals_only: bool = False,
     ) -> Any:
-        """Click the lowest other member under the heal line on the party list."""
+        """Checked support for another member: heal, cure, resurrection, or a buff."""
         if game_state is None:
             self._note_list_heal("skip no game")
             return None
@@ -1324,6 +1332,7 @@ class PartyMemberManager:
             self._note_list_heal("skip party list closed")
             return None
         board = self._nav_blackboard
+        heal_ready = True
         try:
             from app._04_decision.mode_control import mp_ratio
             from app._04_decision.spells import can_cast_spell, slot_ready
@@ -1336,10 +1345,12 @@ class PartyMemberManager:
                     self._note_list_heal(f"skip mp {int(float(ratio) * 100)}%")
                 return None
             if board is not None and not slot_ready(board, "heal", urgent=True):
-                self._note_list_heal("skip heal slot not ready")
-                return None
+                heal_ready = False
         except Exception as exc:
             self._note_list_heal(f"skip heal gate {exc}")
+            return None
+        if heals_only and not heal_ready:
+            self._note_list_heal("skip heal slot not ready")
             return None
         if origin is None or self.runtime.local_map_id is None:
             self._note_list_heal("skip no pose")
@@ -1359,48 +1370,50 @@ class PartyMemberManager:
         except Exception:
             self_name = ""
             self_guid = ""
-        from .hud_heal import assess_list_heal, heal_screen_step
-        from .intents import list_heal, plan_slot_hop
+        from settings.party_mage_support import checked_skill_ids
 
+        from .intents import list_support, plan_slot_hop
+        from .mage_support import choose_party_support, remember_cast
+
+        ledger = self.runtime.scratch.get("party_mage_ledger")
+        if not isinstance(ledger, dict):
+            ledger = {"maps": {}, "spells": {}}
+            self.runtime.scratch["party_mage_ledger"] = ledger
+        try:
+            from .comms.orders import member_orders
+
+            reports = list(getattr(member_orders, "party_buffs", None) or [])
+        except Exception:
+            reports = []
         heal_line = int(below) if below is not None else self._mage_list_heal_pct()
-        click, note = assess_list_heal(
+        choice, note = choose_party_support(
             party.get("members"),
             hud.get("slots"),
             self_guid=self_guid or None,
             self_name=self_name,
-            below=heal_line,
             here=(
                 getattr(origin, "x", None),
                 getattr(origin, "y", None),
                 self.runtime.local_map_id,
             ),
+            checked=checked_skill_ids(self.config.mage_support_skills),
+            hotbar=getattr(game_state, "last_hotbar", None),
+            reports=reports,
+            ledger=ledger,
+            below=heal_line,
+            cast_only=bool(cast_only),
+            heals_only=bool(heals_only),
+            allow_heals=bool(heal_ready),
         )
-        if click is None:
-            if cast_only:
-                self._note_list_heal(note or "urgent heal not in range")
-                return None
-            step = heal_screen_step(
-                party.get("members"),
-                hud.get("slots"),
-                self_guid=self_guid or None,
-                self_name=self_name,
-                below=heal_line,
-                here=(
-                    getattr(origin, "x", None),
-                    getattr(origin, "y", None),
-                    self.runtime.local_map_id,
-                ),
-            )
-            if step is None:
-                self._note_list_heal(note)
-                return None
-            self._note_list_heal(
-                f"step {step['name']} hp={step['hp_pct']} dist={step['dist']}"
-            )
+        if choice is None:
+            self._note_list_heal(note or "skip support")
+            return None
+        if choice.get("kind") == "step":
+            self._note_list_heal(note)
             try:
                 intent, goal, detail, hop = plan_slot_hop(
                     origin,
-                    step["goal"],
+                    choice["goal"],
                     previous_goal=self.runtime.approach_goal,
                     previous_hop=self.runtime.follow_hop,
                     kind="heal_step",
@@ -1417,32 +1430,52 @@ class PartyMemberManager:
             self._record_decision(intent)
             return intent
         self._note_list_heal(note)
-        box: Any = None
-        key = ""
-        try:
-            from app._04_decision.behaviors.mode_actions import heal_press_slot
-
-            slot = heal_press_slot(game_state)
-            if slot is not None:
-                box, key = int(slot[0]), str(slot[1])
-        except Exception:
-            box, key = None, ""
-        if board is not None:
+        spell = str(choice.get("spell") or "")
+        if spell in ("heal", "heal_all") and board is not None:
             try:
                 from app._04_decision.spells import mark_slot_used
 
                 mark_slot_used(board, "heal")
             except Exception:
                 pass
-        dist = click.get("dist")
-        return list_heal(
-            str(click["name"]),
-            int(click["click_x"]),
-            int(click["click_y"]),
-            hp_pct=int(click["hp_pct"]),
-            dist=int(dist) if dist is not None else None,
-            hotbar_box=box,
-            hotbar_key=key or None,
+        if spell == "buff":
+            try:
+                remember_cast(
+                    ledger,
+                    int(choice.get("guid") or 0),
+                    int(choice.get("skill_id") or 0),
+                    time.time(),
+                )
+            except Exception:
+                pass
+        if board is not None:
+            try:
+                board.magic_last_cast = time.time()
+            except Exception:
+                pass
+        from app._02_state.enums import ActionType
+
+        action = ActionType.BUFF if spell == "buff" else ActionType.HEAL
+        if spell == "heal_all":
+            text = "heal all"
+        elif spell == "heal":
+            dist = choice.get("dist")
+            dist_bit = f" dist={int(dist)}" if dist is not None else ""
+            text = (
+                f"list heal {choice.get('name')} hp={int(choice.get('hp_pct') or 0)}"
+                f"{dist_bit}"
+            )
+        else:
+            dist = choice.get("dist")
+            dist_bit = f" dist={int(dist)}" if dist is not None else ""
+            text = f"{spell} {choice.get('label')} {choice.get('name')}{dist_bit}"
+        return list_support(
+            text,
+            action=action,
+            click_x=choice.get("click_x"),
+            click_y=choice.get("click_y"),
+            hotbar_box=choice.get("box"),
+            hotbar_key=choice.get("key") or None,
         )
 
     def _return_support(self, support: Any, kind: MemberKind) -> Any:

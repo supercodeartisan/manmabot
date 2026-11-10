@@ -944,8 +944,7 @@ class PartyTab(QWidget):
             self._tx(
                 "party_ui_supply_self_note",
                 "상점 담당 자신의 가방입니다. "
-                "가진 수가 담당 유지보다 적으면 상점에 갑니다. "
-                "사는 수와, 담당 유지까지 채우는 수 중 큰 쪽을 삽니다. "
+                "가진 수가 담당 유지보다 적으면 상점에 가서 사는 수만큼 삽니다. "
                 "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
                 "한 개 값도 안 되면 그 물건은 건너뜁니다. "
                 "체력, 해독, 화살 순으로 이어서 사고, "
@@ -970,8 +969,7 @@ class PartyTab(QWidget):
                 "다른 파티원 가방이 미만이면 줌보다 적으면, "
                 "그 옆에 주는 수만큼 떨어뜨립니다. "
                 "담당 유지보다 적게 주지는 않습니다. "
-                "사는 수는 최소 구매이고, 그 수를 사도 담당 유지보다 적으면 "
-                "한 번에 담당 유지 이상이 되게 삽니다. "
+                "여분이 없으면 사는 수만큼 삽니다. "
                 "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
                 "체력 다음에 해독, 그 다음에 화살을 이어서 사고 "
                 "더 갈 상점이 없으면 파티장에게 돌아옵니다.",
@@ -988,32 +986,32 @@ class PartyTab(QWidget):
         """Item, who receives it, then member min / keeper keep / give / buy."""
         return (
             (
-                "체력 물약",
-                "전원 (담당 제외)",
+                self._tx("party_ui_supply_hp", "체력 물약"),
+                self._tx("party_ui_supply_all_but_keeper", "전원 (담당 제외)"),
                 ("party_member_hp_min", "member_hp_min", 10, 0, 9999),
                 ("party_shopkeeper_hp_min", "shopkeeper_hp_min", 20, 0, 9999),
                 ("party_member_hp_give", "member_hp_give", 10, 1, 9999),
                 ("party_shopkeeper_hp_buy", "shopkeeper_hp_buy", 20, 1, 999),
             ),
             (
-                "해독 물약",
-                "전원 (담당 제외)",
+                self._tx("party_ui_supply_cure", "해독 물약"),
+                self._tx("party_ui_supply_all_but_keeper", "전원 (담당 제외)"),
                 ("party_member_depoison_min", "member_depoison_min", 1, 0, 9999),
                 ("party_shopkeeper_depoison_min", "shopkeeper_depoison_min", 2, 0, 9999),
                 ("party_member_depoison_give", "member_depoison_give", 1, 1, 9999),
                 ("party_shopkeeper_depoison_buy", "shopkeeper_depoison_buy", 5, 1, 999),
             ),
             (
-                "마나 물약",
-                "마법사만",
+                self._tx("party_ui_supply_mp", "마나 물약"),
+                self._tx("party_ui_supply_mage_only", "마법사만"),
                 ("party_member_mp_min", "member_mp_min", 5, 0, 9999),
                 ("party_shopkeeper_mp_min", "shopkeeper_mp_min", 10, 0, 9999),
                 ("party_member_mp_give", "member_mp_give", 5, 1, 9999),
                 None,
             ),
             (
-                "화살",
-                "마법사 제외",
+                self._tx("party_ui_supply_arrow", "화살"),
+                self._tx("party_ui_supply_not_mage", "마법사 제외"),
                 ("party_member_arrow_min", "member_arrow_min", 300, 0, 9999),
                 ("party_shopkeeper_arrow_min", "shopkeeper_arrow_min", 300, 0, 9999),
                 ("party_member_arrow_give", "member_arrow_give", 100, 1, 9999),
@@ -1078,8 +1076,14 @@ class PartyTab(QWidget):
             ],
             [
                 "",
-                "상점 담당이 자기 가방에 남기는 수입니다. 그보다 적으면 상점으로 갑니다.",
-                "상점에서 한 번에 사는 개수입니다.",
+                self._tx(
+                    "party_ui_supply_keep_tip",
+                    "상점 담당이 자기 가방에 남기는 수입니다. 그보다 적으면 상점으로 갑니다.",
+                ),
+                self._tx(
+                    "party_ui_supply_buy_tip",
+                    "상점에서 한 번에 사는 개수입니다.",
+                ),
             ],
         )
         for row_i, spec in enumerate(self._supply_table_rows()):
@@ -1102,9 +1106,15 @@ class PartyTab(QWidget):
             ],
             [
                 "",
-                "이 물건을 받을 자리입니다.",
-                "그 가방이 이 수보다 적으면 보급합니다.",
-                "한 번에 떨어뜨리는 개수입니다. 남은 여유가 더 적으면 그 여유만 줍니다.",
+                self._tx("party_ui_supply_who_tip", "이 물건을 받을 자리입니다."),
+                self._tx(
+                    "party_ui_supply_member_tip",
+                    "그 가방이 이 수보다 적으면 보급합니다.",
+                ),
+                self._tx(
+                    "party_ui_supply_give_tip",
+                    "한 번에 떨어뜨리는 개수입니다. 남은 여유가 더 적으면 그 여유만 줍니다.",
+                ),
             ],
         )
         for row_i, spec in enumerate(self._supply_table_rows()):
@@ -1488,6 +1498,7 @@ class PartyTab(QWidget):
         return self._tx(labels[0], labels[1])
 
     def _show_succession_result(self, code: str, reason: str) -> None:
+        self._succession_shown = (str(code or ""), str(reason or ""))
         state = getattr(self, "succession_state", None)
         reason_label = getattr(self, "succession_reason", None)
         if state is not None:
@@ -1503,6 +1514,13 @@ class PartyTab(QWidget):
                 + ": "
                 + (text if code == "fail" and text else self.t.get("value_empty", "—"))
             )
+
+    def refresh_status_lines(self) -> None:
+        """Rewrite composed status lines in the current language."""
+        code, reason = getattr(self, "_succession_shown", ("", ""))
+        self._show_succession_result(code, reason)
+        code, reason = getattr(self, "_absence_shown", ("", ""))
+        self._show_absence_result(code, reason)
 
     def _absence_action(self) -> str:
         mode = str(self.bag.get_str("party", "absence_action", "hunt") or "hunt")
@@ -1604,6 +1622,7 @@ class PartyTab(QWidget):
         return self._tx(labels[0], labels[1])
 
     def _show_absence_result(self, code: str, reason: str) -> None:
+        self._absence_shown = (str(code or ""), str(reason or ""))
         state = getattr(self, "absence_state", None)
         reason_label = getattr(self, "absence_reason", None)
         if state is not None:

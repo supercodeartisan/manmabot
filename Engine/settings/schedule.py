@@ -190,6 +190,9 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
+            "mage_support_skills": dict(
+                getattr(profile, "party_mage_support_skills", None) or {}
+            ),
             "roster": [
                 {
                     "name": str(row.get("name") or ""),

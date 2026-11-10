@@ -566,6 +566,8 @@ class MemberOrders:
         self._beep: Optional[dict[str, Any]] = None
         # Latest ``party_reports`` bundle from the leader (shopkeeper mailbox).
         self.party_reports: list[dict[str, Any]] = []
+        # Buff and ailment rows for a party mage. Not a supply mailbox.
+        self.party_buffs: list[dict[str, Any]] = []
         # Ground arrow pile the leader told this member about. None = none.
         self.supply_drop: Optional[dict[str, Any]] = None
         # Stop on the current tile until this drop lands. None = not waiting.
@@ -588,6 +590,7 @@ class MemberOrders:
         self._report_pending = False
         self._policy_dirty = False
         self.party_reports = []
+        self.party_buffs = []
         self.supply_drop = None
         self.supply_hold = None
         self.supply_stand = None
@@ -669,6 +672,12 @@ class MemberOrders:
                     dict(row) for row in rows if isinstance(row, dict)
                 ] if isinstance(rows, list) else []
                 self.supply_open = bool(body.get("hunt_open"))
+                continue
+            if kind == "party_buffs":
+                rows = body.get("rows")
+                self.party_buffs = [
+                    dict(row) for row in rows if isinstance(row, dict)
+                ] if isinstance(rows, list) else []
                 continue
             if kind == RALLY:
                 # A rally pin is not a walk goal. Follow uses party memory.

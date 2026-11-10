@@ -37,26 +37,32 @@ TONES = {
 }
 
 
-_SUCCESSION_STATES = {
-    "wait": "인계 대기",
-    "running": "인계 진행 중",
-    "ok": "인계 성공",
-    "fail": "인계 실패",
+_SUCCESSION_KEYS = {
+    "wait": ("party_ui_succession_wait", "인계 대기"),
+    "running": ("party_ui_succession_running", "인계 진행 중"),
+    "ok": ("party_ui_succession_ok", "인계 성공"),
+    "fail": ("party_ui_succession_fail", "인계 실패"),
 }
-_ABSENCE_STATES = {
-    "hunt": "사냥 계속 중",
-    "hold": "제자리 대기 중",
-    "move": "지정 장소 이동 중",
-    "fail": "행동 전환 실패",
+_ABSENCE_KEYS = {
+    "hunt": ("party_ui_absence_state_hunt", "사냥 계속 중"),
+    "hold": ("party_ui_absence_state_hold", "제자리 대기 중"),
+    "move": ("party_ui_absence_state_move", "지정 장소 이동 중"),
+    "fail": ("party_ui_absence_state_fail", "행동 전환 실패"),
 }
 
 
-def monitor_state_text(raw: object, kind: str) -> str:
+def monitor_state_text(raw: object, kind: str, strings: dict | None = None) -> str:
     """Show an engine state only when the snapshot carries a known code."""
-    labels = _SUCCESSION_STATES if kind == "succession" else _ABSENCE_STATES
+    labels = _SUCCESSION_KEYS if kind == "succession" else _ABSENCE_KEYS
     if not isinstance(raw, dict):
         return "—"
-    return labels.get(str(raw.get("state") or "").strip(), "—")
+    pair = labels.get(str(raw.get("state") or "").strip())
+    if pair is None:
+        return "—"
+    key, fallback = pair
+    if isinstance(strings, dict) and strings.get(key):
+        return str(strings[key])
+    return fallback
 
 
 def monitor_failure_reason(raw: object) -> str:
@@ -412,8 +418,14 @@ class PartyDashboard(QWidget):
 
     member_picked = Signal(str)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        t: dict | None = None,
+    ) -> None:
         super().__init__(parent)
+        self.t = t or {}
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(8)
@@ -425,25 +437,25 @@ class PartyDashboard(QWidget):
         self.note.setStyleSheet("color:#9ca3af;")
         root.addWidget(self.note)
 
-        self.flow_box, flow_lay = card("Workflow")
+        self.flow_box, flow_lay = card(self._phrase("party_dash_workflow", "Workflow"))
         self.workflow = WorkflowSteps()
         flow_lay.addWidget(self.workflow)
         root.addWidget(self.flow_box)
 
-        comm_box, comm_lay = card("Communication")
+        comm_box, comm_lay = card(self._phrase("party_dash_comm", "Communication"))
         self.comm = Metrics(columns=2)
         comm_lay.addWidget(self.comm)
         root.addWidget(comm_box)
 
         # --- leader ---
-        self.leader_box, lead_lay = card("Leader — party control")
+        self.leader_box, lead_lay = card(self._phrase("party_dash_leader", "Leader — party control"))
         self.lead_flags = BadgeRow(["PHASE", "MODE", "LOOT", "POLICY", "INVITE", "RALLY"])
         lead_lay.addWidget(self.lead_flags)
         self.lead_metrics = Metrics(columns=2)
         lead_lay.addWidget(self.lead_metrics)
 
         # Member picker (left) + the picked member's steps / live state / frames (right).
-        pick_head = QLabel("Members — pick one to see its details")
+        pick_head = QLabel(self._phrase("party_dash_pick", "Members — pick one to see its details"))
         pick_head.setStyleSheet("color:#9ca3af;")
         lead_lay.addWidget(pick_head)
         pick_row = QHBoxLayout()
@@ -484,17 +496,27 @@ class PartyDashboard(QWidget):
         self._last_session: dict[str, Any] = {}
         self._last_messages: list[Any] = []
 
-        over_head = QLabel("Overview")
+        over_head = QLabel(self._phrase("party_dash_overview", "Overview"))
         over_head.setStyleSheet("color:#9ca3af;")
         lead_lay.addWidget(over_head)
         self.roster = _table(
-            ["Name", "Seat", "Loot", "Policy", "Invites", "In party", "At rally", "Status"], 150
+            [
+                self._phrase("party_mon_col_name", "Name"),
+                self._phrase("party_dash_col_seat", "Seat"),
+                self._phrase("party_dash_col_loot", "Loot"),
+                self._phrase("party_dash_col_policy", "Policy"),
+                self._phrase("party_dash_col_invites", "Invites"),
+                self._phrase("party_dash_col_in_party", "In party"),
+                self._phrase("party_dash_col_rally", "At rally"),
+                self._phrase("party_dash_col_status", "Status"),
+            ],
+            150,
         )
         lead_lay.addWidget(self.roster)
         root.addWidget(self.leader_box)
 
         # --- member ---
-        self.member_box, mem_lay = card("Member — following leader")
+        self.member_box, mem_lay = card(self._phrase("party_dash_member", "Member — following leader"))
         self.mem_flags = BadgeRow(
             ["POLICY", "MODE", "FARM", "SEAT", "LOOT", "LEADER", "BRAIN"]
         )
@@ -504,20 +526,40 @@ class PartyDashboard(QWidget):
         root.addWidget(self.member_box)
 
         # --- solo ---
-        self.solo_box, solo_lay = card("Solo")
+        self.solo_box, solo_lay = card(self._phrase("party_dash_solo", "Solo"))
         solo_hint = QLabel(
-            "Party is off. The bot runs on its own profile; nothing is sent "
-            "or received over the party socket."
+            self._phrase(
+                "party_dash_solo_hint",
+                "Party is off. The bot runs on its own profile; nothing is sent "
+                "or received over the party socket.",
+            )
         )
         solo_hint.setWordWrap(True)
         solo_lay.addWidget(solo_hint)
         root.addWidget(self.solo_box)
 
-        party_box, party_lay = card("In-game party (memory)")
-        self.members = _table(["Name", "Leader", "HP", "MP", "Lv", "XY", "Map"], 130)
+        party_box, party_lay = card(self._phrase("party_dash_memory", "In-game party (memory)"))
+        self.members = _table(
+            [
+                self._phrase("party_mon_col_name", "Name"),
+                self._phrase("party_mon_col_leader", "Leader"),
+                self._phrase("party_mon_col_hp", "HP"),
+                self._phrase("party_mon_col_mp", "MP"),
+                self._phrase("party_mon_col_lv", "Lv"),
+                self._phrase("party_mon_col_xy", "XY"),
+                self._phrase("party_mon_col_map", "Map"),
+            ],
+            130,
+        )
         party_lay.addWidget(self.members)
         root.addWidget(party_box)
         root.addStretch(1)
+
+    def _phrase(self, key: str, fallback: str) -> str:
+        found = self.t.get(key) if isinstance(self.t, dict) else None
+        if isinstance(found, str) and found:
+            return found
+        return fallback
 
     # ------------------------------------------------------------------ apply
 
@@ -772,9 +814,9 @@ class PartyDashboard(QWidget):
                     if line
                     else "—",
                 ),
-                ("Succession", monitor_state_text(session.get("succession"), "succession")),
+                ("Succession", monitor_state_text(session.get("succession"), "succession", self.t)),
                 ("Succession reason", monitor_failure_reason(session.get("succession"))),
-                ("Absence", monitor_state_text(session.get("absence"), "absence")),
+                ("Absence", monitor_state_text(session.get("absence"), "absence", self.t)),
                 ("Absence reason", monitor_failure_reason(session.get("absence"))),
             ]
         )
@@ -861,7 +903,12 @@ class PartyDashboard(QWidget):
                     lst.setCurrentRow(i)
             if session.get("unnamed_member"):
                 item = lst.item(len(roster))
-                item.setText("? unnamed member\n  reporting, name unknown")
+                item.setText(
+                    self._phrase(
+                        "party_dash_unnamed",
+                        "? unnamed member\n  reporting, name unknown",
+                    )
+                )
                 item.setData(Qt.ItemDataRole.UserRole, "")
                 item.setBackground(QColor(TONES["warn"]))
                 item.setForeground(QColor("#ffffff"))
@@ -879,7 +926,11 @@ class PartyDashboard(QWidget):
         roster = [r for r in (session.get("roster") or []) if isinstance(r, dict)]
         row = next((r for r in roster if str(r.get("name") or "") == self._picked), None)
         if row is None:
-            self.member_title.setText("No roster members" if not roster else "—")
+            self.member_title.setText(
+                self._phrase("party_dash_no_members", "No roster members")
+                if not roster
+                else "—"
+            )
             self.member_steps.set([])
             self.member_metrics.set([])
             if self.member_log.toPlainText():

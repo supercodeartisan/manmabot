@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — a supply buy is the configured shop count
+
+Intent: A party supply purchase buys the UI buy count for that item. The sum of each member's shortage does not raise it, and a bag under the shopkeeper reserve does not raise it either. Spare above the reserve is still dropped first. A bag under the reserve, or a reserve with nothing left while someone is short, is what starts the shop. Adena still limits the count, and MP is still not bought. The per-person drop count and solo shop quantities stay as they are.
+Shared: `planned_buy_qty`, `supply_fill_qty`, `party_shop_buy_qty`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, the drop gesture, Esc, the stop check, MP and arrow rules, solo hunt, and Brain wiring are unchanged.
+Affects: how many HP potions, depoison potions, or arrows the shopkeeper types at the party supply shop.
+Consent: user ("예" — buy the UI amount, do not add up party shortages or fill the reserve in that same count).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-10 — a party mage casts checked support spells on other members
+
+Intent: The party-screen checks are the only spells this mage casts on other members. An empty save keeps heal. Single-target heals use the strongest checked spell on the hotbar (full, greater, extra, heal). Heal all is used only when two or more other members are under the heal line and inside 9 tiles; one member uses a single heal, and heal all alone does not cover that one member. Cure and remove curse run only when a fresh buff report shows poison or a curse. Resurrection clicks a 0% row. Buffs recast when the remain is missing or at or under 10 seconds. A report newer than 20 seconds is the remain. Otherwise the mage counts from the click plus the catalog duration. Three reports after a cast that still lack the buff park that pair for 30 seconds. Death or a map change clears that member's clock. Weapon spells keep bless, then enchant, then holy. Speed keeps greater haste, then haste. Shield, blessed armor, dexterity, might, decrease weight, and berserker each stand alone. One cast per tick, after self retreat, potion, self heal, in-range defense, and self buff. The leader sends buff and ailment rows to every connected member. The shopkeeper supply bundle stays with the shopkeeper. A mage shopkeeper still interrupts a shop only for an in-range heal at the character's own heal line.
+Shared: `choose_party_support`, `_party_list_heal`, `publish_party_buffs`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo magic, self buffs, assist, and other classes are unchanged.
+Affects: a class mage in party-member mode, and the leader's 10-second buff forward.
+Consent: user ("ok, great, let's implement" after the checked-spell, remain, heal-order, and leader-relay plan).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
+
 ## 2026-11-10 — a supply drop is planned on the map pack's nav tile
 
 Intent: `supply_stand` keeps the coordinates it received. Those coordinates become a nav tile only when this map's pack says so: a point on the nav grid is already nav, and a point that lands on that grid after subtracting the pack origin is a game tile. Both readings, or neither, do not pick a tile. The drop neighbor is chosen on that nav tile. The party-list recheck no longer cancels only because its map number differs. The same map confirms the tile: the same tile drops, one tile retargets, two or more tiles cancel. A party row that is a real tile on another map, and not on the stand map, cancels. Anything else waits, and the hold stays.

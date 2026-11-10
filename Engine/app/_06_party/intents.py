@@ -71,6 +71,29 @@ def list_heal(
     )
 
 
+def list_support(
+    reason: str,
+    *,
+    action: Any,
+    click_x: Optional[int] = None,
+    click_y: Optional[int] = None,
+    hotbar_box: Optional[int] = None,
+    hotbar_key: Optional[str] = None,
+) -> Any:
+    """One party-list spell. A missing click is a no-target cast such as heal all."""
+    from .types import ActionIntent
+
+    return ActionIntent(
+        action=action,
+        priority=0.88,
+        reason=f"party_member:{reason}",
+        hotbar_box=hotbar_box,
+        hotbar_key=hotbar_key,
+        click_x=None if click_x is None else int(click_x),
+        click_y=None if click_y is None else int(click_y),
+    )
+
+
 def attack(track_id: int, reason: str, *, mid_act: bool = False) -> Any:
     from .types import ActionIntent, ActionType
 
@@ -482,6 +505,7 @@ __all__ = [
     "idle",
     "intent_for_kind",
     "list_heal",
+    "list_support",
     "pick_settle_stand",
     "plan_field_follow",
     "plan_follow_intent",

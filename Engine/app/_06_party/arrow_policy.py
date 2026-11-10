@@ -317,23 +317,15 @@ def bag_supply_counts(state: Any) -> dict[str, Optional[int]]:
 
 
 def supply_fill_qty(own: Optional[int], keeper_min: int, configured: int) -> int:
-    """One shop trip. At least the boss buy count, and enough to reach the reserve.
+    """The configured shop count. A reserve gap does not raise it.
 
     The shop quantity field stops at 999.
     """
+    del own, keeper_min
     try:
-        buy = max(1, min(999, int(configured)))
+        return max(1, min(999, int(configured)))
     except (TypeError, ValueError):
-        buy = 1
-    if own is None:
-        return buy
-    try:
-        gap = max(0, int(keeper_min) - int(own))
-    except (TypeError, ValueError):
-        return buy
-    if gap <= 0:
-        return buy
-    return max(1, min(999, max(buy, gap)))
+        return 1
 
 
 def affordable_supply_qty(
@@ -422,24 +414,23 @@ def planned_buy_qty(
     configured: int,
     party_need: int,
 ) -> Optional[int]:
-    """Buy for an empty reserve, or None while spare is still on hand to drop.
+    """Buy the configured count, or None while spare is still on hand to drop.
 
-    A bag under the reserve buys the reserve gap and the party shortage together.
-    Spare above the reserve is delivered first. Once that spare is gone, one buy
-    covers the party shortage. The count stops at 999.
+    Spare above the reserve is delivered first. A bag under the reserve, or a
+    reserve with nothing left while the party is short, buys that configured
+    count. The party shortage does not raise it. The count stops at 999.
     """
     try:
         have = int(own)
         keep = int(keeper_min)
-        base = max(1, int(configured))
+        base = max(1, min(999, int(configured)))
         need = max(0, int(party_need))
     except (TypeError, ValueError):
         return None
     spare = have - keep
     if have >= keep and (spare > 0 or need <= 0):
         return None
-    gap = need if have >= keep else max(0, keep + need - have)
-    return max(1, min(999, max(base, gap)))
+    return base
 
 
 def next_supply_buy(
@@ -509,7 +500,7 @@ def choose_supply_duty(
     held: Any = None,
     skip_buys: Any = None,
 ) -> Optional[dict[str, Any]]:
-    """Drop spare that is already in the bag, else buy the reserve and the party.
+    """Drop spare that is already in the bag, else buy the configured count.
 
     ``specs`` is priority order. ``held`` is ``(name, item)`` already on the ground.
     Spare above the reserve is delivered before another town trip. MP stays
@@ -678,7 +669,7 @@ def party_shop_buy_qty(
     solo_qty: Optional[int],
     state: Any = None,
 ) -> Optional[int]:
-    """Party supply shop uses the boss buy count. Every other shop keeps ``solo_qty``."""
+    """Party supply shop uses the configured buy count. Every other shop keeps ``solo_qty``."""
     if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
         return solo_qty
     item = str(scratch.get("party_supply_item") or "arrow")

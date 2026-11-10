@@ -1,7 +1,8 @@
 """Mage spells a party member can choose for other members.
 
 The solo magic table does not read this list. Selection lives on the party
-settings bag. Casting these spells is not decided here.
+settings bag and on ``Profile.party_mage_support_skills``. Casting is decided
+in ``app._06_party.mage_support``.
 """
 from __future__ import annotations
 
@@ -179,6 +180,31 @@ def _duration_sentence(duration: str, language: str) -> str:
     if str(language or "").lower().startswith("zh"):
         return f"持續時間 {text}."
     return f"지속 시간 {text}."
+
+
+def normalize_saved(raw: object) -> dict[str, bool]:
+    """``mage_<id>`` → bool. Unknown keys are dropped."""
+    if not isinstance(raw, dict):
+        return {}
+    saved: dict[str, bool] = {}
+    for key, value in raw.items():
+        text = str(key or "").strip()
+        if text.startswith("mage_"):
+            text = text[5:]
+        try:
+            skill_id = int(text)
+        except (TypeError, ValueError):
+            continue
+        saved[f"mage_{skill_id}"] = bool(value)
+    return saved
+
+
+def checked_skill_ids(raw: object) -> set[int]:
+    """Checked spell ids. An empty save keeps heal, matching the party screen."""
+    saved = normalize_saved(raw)
+    if not saved:
+        return {0}
+    return {int(key[5:]) for key, value in saved.items() if value}
 
 
 def party_mage_support_rows(language: str = "ko") -> list[dict[str, str]]:

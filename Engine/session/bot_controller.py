@@ -3198,6 +3198,9 @@ class BotController:
                     == "mage"
                     else "member"
                 ),
+                "mage_support_skills": dict(
+                    getattr(profile, "party_mage_support_skills", None) or {}
+                ),
             }
         )
         party_mode = bool(party_cfg.enabled)

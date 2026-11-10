@@ -91,6 +91,8 @@ class PartyMemberConfig:
     tree_heal: bool = True
     tree_heal_hp: int = 40
     tree_heal_mp: int = 80
+    # This mage's own party-screen checks. Leader policy does not replace them.
+    mage_support_skills: dict | None = None
 
     @property
     def solo_farm(self) -> bool:
@@ -196,6 +198,7 @@ class PartyMemberConfig:
             tree_heal=_cfg_flag(self.tree_heal, True),
             tree_heal_hp=_cfg_pct(self.tree_heal_hp, 40),
             tree_heal_mp=_cfg_pct(self.tree_heal_mp, 80),
+            mage_support_skills=_cfg_support(self.mage_support_skills),
         )
 
     def merge_leader_policy(
@@ -305,6 +308,7 @@ class PartyMemberConfig:
             "tree_heal": policy.get("tree_heal", self.tree_heal),
             "tree_heal_hp": policy.get("tree_heal_hp", self.tree_heal_hp),
             "tree_heal_mp": policy.get("tree_heal_mp", self.tree_heal_mp),
+            "mage_support_skills": self.mage_support_skills,
         }
         return self.from_mapping(raw)
 
@@ -423,6 +427,7 @@ class PartyMemberConfig:
             tree_heal=_cfg_flag(raw.get("tree_heal", True), True),
             tree_heal_hp=_cfg_pct(raw.get("tree_heal_hp"), 40),
             tree_heal_mp=_cfg_pct(raw.get("tree_heal_mp"), 80),
+            mage_support_skills=_cfg_support(raw.get("mage_support_skills")),
         ).clamped()
 
 
@@ -434,6 +439,15 @@ def _cfg_pct(value: Any, default: int) -> int:
         return max(1, min(100, int(value)))
     except (TypeError, ValueError):
         return default
+
+
+def _cfg_support(value: Any) -> dict:
+    """Normalized party-screen checks. None stays None so an empty save is heal."""
+    if value is None:
+        return {}
+    from settings.party_mage_support import normalize_saved
+
+    return normalize_saved(value)
 
 
 def _cfg_flag(value: Any, default: bool) -> bool:

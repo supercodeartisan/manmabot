@@ -888,6 +888,16 @@ class ScheduleShell(QMainWindow):
                 pass
         hunt = getattr(editor, "hunt_tab", None)
         if hunt is not None:
+            if getattr(hunt, "_monsters_built", False):
+                try:
+                    hunt._load_species()
+                except Exception:
+                    pass
+            if getattr(hunt, "_items_built", False):
+                try:
+                    hunt._load_items()
+                except Exception:
+                    pass
             paint = getattr(hunt, "_paint_haste_hotbar", None)
             refresh_hunt = getattr(hunt, "_refresh_haste_labels", None)
             for refresh in (paint, refresh_hunt):
@@ -899,8 +909,22 @@ class ScheduleShell(QMainWindow):
                     refresh()
                 except Exception:
                     pass
+        magic = getattr(editor, "magic_tab", None)
+        if magic is not None and getattr(magic, "_individual_built", False):
+            for key, button in getattr(magic, "_category_buttons", []):
+                button.setText(magic._catalog.category_label(key, magic.language))
+            try:
+                magic._refresh_skills()
+            except Exception:
+                pass
+        equipment = getattr(editor, "equipment_tab", None)
+        if equipment is not None and getattr(equipment, "_sell_built", False):
+            try:
+                equipment._load_sell_data()
+            except Exception:
+                pass
         for tab, name in (
-            (getattr(editor, "magic_tab", None), "_refresh_magic_summary"),
+            (magic, "_refresh_magic_summary"),
             (getattr(editor, "recovery_tab", None), "_refresh_summary"),
         ):
             refresh = getattr(tab, name, None) if tab is not None else None
@@ -984,6 +1008,12 @@ class ScheduleShell(QMainWindow):
         if bar is not None and hasattr(bar, "_language"):
             bar._language = self.language
             bar.update()
+        monitor = getattr(self, "_party_win", None)
+        if monitor is not None:
+            monitor.t = self.t
+            board = getattr(monitor, "dashboard", None)
+            if board is not None:
+                board.t = self.t
 
     def _rebuild_for_language(self, language: str) -> None:
         """Keep the open screen and replace its wording and font."""
@@ -1032,10 +1062,14 @@ class ScheduleShell(QMainWindow):
         if party is not None:
             if hasattr(party, "_fill_roster_table"):
                 party._fill_roster_table()
+            if hasattr(party, "_fill_support_magic_table"):
+                party._fill_support_magic_table()
             if hasattr(party, "_refresh_member_summary"):
                 party._refresh_member_summary()
             if hasattr(party, "_refresh_personal_summary"):
                 party._refresh_personal_summary()
+            if hasattr(party, "refresh_status_lines"):
+                party.refresh_status_lines()
         self._sync_party_role_chrome()
         self._refresh_operator(force=True)
         self._lock_pane_split()
