@@ -33,6 +33,8 @@ _JOIN = "party_join_leader"
 _PIN = "party_pin_shop_behavior"
 _FLAG = "party_shopkeeper_arrow"
 _NEAR = 3
+# Keep the join route while the leader stays inside this many tiles.
+_JOIN_REPLAN = 24
 # Recipient keeps hunting until the shopkeeper is this close, then stands.
 SUPPLY_HOLD_TILES = 12
 # How long a close shopkeeper waits for this attempt's stop tile.
@@ -1785,24 +1787,84 @@ def _expire_notice(runtime: Any, rows: Any) -> None:
         runtime.supply_notice = None
 
 
-def _tick_join(manager: Any, state: Any) -> Any:
-    tile = getattr(manager.runtime, "sticky_leader_tile", None)
-    map_id = getattr(manager.runtime, "leader_map_id", None)
-    if tile is None or map_id is None:
-        from .intents import idle
+def _party_leader_game_pose(manager: Any, state: Any) -> Optional[tuple[int, int, int]]:
+    """This tick's party-memory map and game xy for the leader.
 
-        return idle("join leader no pose")
-    dist = getattr(manager.runtime, "leader_dist", None)
-    same = bool(getattr(manager.runtime, "leader_same_map", False))
+    Empty when the read missed. A leader on another map still has a pose.
+    """
+    if getattr(state, "party_read_ok", None) is not True:
+        return None
+    from .leader import _party_game_xy, _party_map_id, party_member_block
+
+    cfg = getattr(manager, "config", None)
+    name = str(getattr(cfg, "leader_name", "") or "")
+    if not name:
+        name = str(getattr(getattr(manager, "runtime", None), "leader_name_seen", "") or "")
+    block = party_member_block(getattr(state, "last_party", None), name)
+    if not isinstance(block, dict):
+        return None
+    map_id = _party_map_id(block)
+    xy = _party_game_xy(block)
+    if map_id is None or xy is None:
+        return None
+    return int(map_id), int(xy[0]), int(xy[1])
+
+
+def _held_join_goal(board: Any) -> Optional[tuple[int, int, int]]:
+    """The join route already started, as map and game xy."""
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    goal = scratch.get("party_nav_goal") if isinstance(scratch, dict) else None
+    if not isinstance(goal, tuple) or len(goal) != 4 or goal[0] != "party_join_leader":
+        return None
+    try:
+        return int(goal[1]), int(goal[2]), int(goal[3])
+    except (TypeError, ValueError):
+        return None
+
+
+def _tick_join(manager: Any, state: Any) -> Any:
+    """Walk back to the leader after the buy list is finished.
+
+    The goal is the party-memory game coordinate on whatever map the leader
+    is on. A same-map sticky tile is not that coordinate, and it is cleared
+    while the maps differ.
+    """
+    from .intents import idle
+
+    board = manager._nav_blackboard
+    runtime = manager.runtime
+    dist = getattr(runtime, "leader_dist", None)
+    same = bool(getattr(runtime, "leader_same_map", False))
     if same and dist is not None and int(dist) <= _NEAR:
         _finish_join(manager)
         return None
+    live = _party_leader_game_pose(manager, state)
+    held = _held_join_goal(board)
+    if live is None:
+        target = held
+    elif (
+        held is not None
+        and held[0] == live[0]
+        and max(abs(held[1] - live[1]), abs(held[2] - live[2])) < _JOIN_REPLAN
+    ):
+        target = held
+    else:
+        target = live
+        _log.info(
+            "supply join leader map=%s xy=(%s,%s)",
+            live[0],
+            live[1],
+            live[2],
+        )
+    if target is None:
+        return idle("join leader no pose")
+    map_id, x, y = target
     intent = _tick_nav(
         manager,
         state,
         int(map_id),
-        int(tile[0]),
-        int(tile[1]),
+        int(x),
+        int(y),
         reason="party_join_leader",
     )
     if intent is None:

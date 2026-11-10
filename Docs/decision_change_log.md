@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — shopkeeper joins the leader after the buy list
+
+Intent: After the supply buy list finishes, the shopkeeper walks to the leader's party-memory map and game coordinate. That pose is used on any map. A same-map body within 3 tiles ends the join. A missed read keeps the route already started. The route holds while the leader stays inside 24 tiles, then aims at the new coordinate.
+Shared: `_tick_join`. `try_unstuck_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Buys, drops, follow, and solo shops are unchanged.
+Affects: the shopkeeper's walk back to the leader after a finished party supply purchase.
+Consent: user ("yes" — return to the leader wherever they are after successful shopping).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — follow clicks again when the leader tile changes
 
 Intent: On the party-memory read where the leader tile changes, the member clicks toward the new slot even while already walking. The click stays at most 2 tiles. The same leader tile still keeps a click that aims at the slot and is more than one tile ahead.
