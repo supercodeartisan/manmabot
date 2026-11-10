@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from typing import Callable
 
-from PySide6.QtCore import QPoint, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -41,8 +41,10 @@ _WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 # Classic ``_SCHEDULE_COLUMNS`` widths (stretch=False).
 _SCHEDULE_COLUMN_WIDTHS = (64, 110, 136, 100, 72, 80, 72)
-# Previous time-row pane was 389px. 75px narrower, so the editor stays put.
-_PANE_WIDTH = 314
+# Both languages share this width. Offscreen, with the live theme, the Chinese
+# weekday row makes the left column's minimum 350px and Korean stays at 313.
+# The sash used to follow that minimum, so Simplified Chinese sat ~36px wider.
+_PANE_WIDTH = 350
 
 
 def _shown_elapsed(clock: dict) -> float:
@@ -119,18 +121,8 @@ class ScheduleListPane(QWidget):
         return list(self._routine_entry_ids)
 
     def preferred_pane_width(self) -> int:
-        """Left-pane width that ends at the randomize minutes box (classic sash)."""
-        spin = getattr(self, "random_minutes", None)
-        if spin is None:
-            return 360
-        try:
-            right = spin.mapTo(self, QPoint(spin.width(), 0)).x()
-        except Exception:
-            return 360
-        if right < 80:
-            return _PANE_WIDTH
-        fitted = max(280, min(560, int(right) + 4))
-        return max(_PANE_WIDTH, fitted)
+        """Fixed left-pane width. Language text must not move the sash."""
+        return _PANE_WIDTH
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
