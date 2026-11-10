@@ -1789,6 +1789,69 @@ class ScheduleShell(QMainWindow):
         )
         self._refresh_operator(force=True)
 
+    def _sync_party_leader_character(self) -> None:
+        """Party leader hunt class follows the selected account."""
+        if str(getattr(self.profile, "party_role", "") or "") != "leader":
+            return
+        account_id = None
+        combo = getattr(self.editor, "account_combo", None)
+        if combo is not None:
+            account_id = combo.currentData()
+        if not account_id:
+            account_id = getattr(self.profile, "selected_account_id", None)
+        if not account_id:
+            self._append_log("Party leader class left as saved: no account selected")
+            return
+        try:
+            account = AccountStore().get(str(account_id))
+        except Exception:
+            account = None
+        if account is None:
+            return
+        from settings.profile import apply_account_character, attack_mode_for_character
+
+        char = apply_account_character(self.profile, account)
+        if not char:
+            return
+        save_profile(self.profile)
+        self.bridge.profile = self.profile
+        self.bridge.coordinator.profile = self.profile
+        bag = getattr(self.editor, "bag", None)
+        if bag is not None:
+            bag.set("magic", "class", char)
+        mode = attack_mode_for_character(char)
+        changed = False
+        for task in self.tasks:
+            if str(getattr(task, "account_id", "") or "") != str(account_id):
+                continue
+            if task.character != char:
+                task.character = char
+                changed = True
+            settings = task.settings if isinstance(task.settings, dict) else None
+            if settings is None:
+                continue
+            magic = settings.get("magic")
+            if isinstance(magic, dict) and magic.get("class") != char:
+                magic["class"] = char
+                changed = True
+            hunt = settings.get("hunt")
+            if isinstance(hunt, dict) and hunt.get("attack_mode") != mode:
+                hunt["attack_mode"] = mode
+                changed = True
+        editor_task = getattr(self.editor, "task", None)
+        if editor_task is not None and str(
+            getattr(editor_task, "account_id", "") or ""
+        ) == str(account_id):
+            editor_task.character = char
+        if changed:
+            try:
+                self.schedule_list.store.save(self.tasks)
+            except Exception as exc:
+                self._append_log(
+                    f"Party leader class saved on profile; schedule write failed: {exc}"
+                )
+        self._append_log(f"Party leader class={char} from account")
+
     def _start_party(self) -> None:
         """Start the party bot without arming the solo schedule clock."""
         block = self.editor.party_start_block_message()
@@ -1830,6 +1893,7 @@ class ScheduleShell(QMainWindow):
         if tab is not None:
             tab.flush_routine()
         self._overlay_party_from_editor()
+        self._sync_party_leader_character()
         if not self._game_is_up():
             self._append_log(
                 self.t.get(

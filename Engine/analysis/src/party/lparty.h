@@ -125,14 +125,30 @@ static void lp_read_str_cstr(const uint8_t*hb, uint32_t off, uint32_t lenOff, ch
     else { uint64_t src=*(const uint64_t*)(hb+off); if(rm(src,out,(uint32_t)len)) out[len]=0; else out[0]=0; }
 }
 
+/* 1 = live PartyPlayer, 0 = this slot is not a member, -1 = this slot could not be read.
+ * A stored _Ptr is not enough. _Rep's vft has to be PARTY_VFT_RC_PLAYER on this read.
+ * A failed read is -1 so the caller keeps the sample unknown instead of "no party". */
+static int lp_slot_live(uint64_t slot, uint64_t *ptr_out){
+    uint64_t ptr=0, rep=0, vft=0;
+    *ptr_out=0;
+    if(!rm(slot,&ptr,8) || !rm(slot+8,&rep,8)) return -1;
+    if(!isHeap(ptr) || !isHeap(rep)) return 0;
+    if(!rm(rep,&vft,8)) return -1;
+    if(!isMod(vft) || (uint32_t)(vft-g_base)!=P_VFT_RCP) return 0;
+    *ptr_out=ptr;
+    return 1;
+}
+
 static int read_members(uint64_t party, PMem *out, int cap){
-    int n=0;
+    int n=0, unread=0;
     uint64_t vb=q64(party+P_VBEG), ve=q64(party+P_VEND);
     if(!isHeap(vb) || !isHeap(ve) || ve<vb) return 0;
     uint64_t cnt=(ve-vb)/16; if(cnt>(uint64_t)cap) cnt=cap;
     for(uint64_t i=0;i<cnt;i++){
-        uint64_t e=vb+i*16, ptr=q64(e), rep=q64(e+8);
-        if(!isHeap(ptr)) continue;
+        uint64_t ptr=0;
+        int live=lp_slot_live(vb+i*16,&ptr);
+        if(live<0){ unread=1; continue; }
+        if(!live) continue;
         PMem *m=&out[n]; memset(m,0,sizeof(*m)); m->lvlJoin=-1; m->dead=-1;
         read_sso(ptr,M_NAME,M_NLEN,M_NCAP,m->name,sizeof m->name);
         read_sso(ptr,M_NAME2,M_N2LEN,M_N2CAP,m->name2,sizeof m->name2);
@@ -141,11 +157,11 @@ static int read_members(uint64_t party, PMem *out, int cap){
         rm(ptr+M_LVL,&m->lvl,4); rm(ptr+M_CLS,&m->cls,4); rm(ptr+M_F5C,&m->f5c,4);
         rm(ptr+M_HP,&m->hp,4); rm(ptr+M_MP,&m->mp,4); rm(ptr+M_LVL2,&m->lvl2,4);
         { int32_t mi=0; rm(ptr+M_MAPID,&mi,4); m->mapId=mi; }
-        m->repok = isHeap(rep) && (uint32_t)(q64(rep)-g_base)==P_VFT_RCP;
+        m->repok = 1;
         rm(ptr+M_F54,&m->f54,4); rm(ptr+M_F60,&m->f60,4);
         n++;
     }
-    return n;
+    return unread ? -1 : n;
 }
 /* 배치/개별 읽기 결과에 리더 표시를 채운다. */
 static void lp_mark_leaders(PMem*out,int n,const char*leader){
@@ -205,18 +221,22 @@ static uint64_t lp_resolve_from(uint64_t psub){
     { uint8_t b[0x40]; if(!rm(objB,b,sizeof b)) return 0; party=*(uint64_t*)(b+P_HOP2); }
     return lp_verify(party)?party:0;
 }
-/* 멤버 배치 읽기: 헤더 1콜 + 멤버별 1콜(+힙 이름 1콜). 리더/멤버수도 반환. */
+/* 멤버 배치 읽기: 헤더 1콜 + 칸의 _Rep 확인 + 멤버별 1콜.
+ * 반환 n = 이번 읽기에서 vft가 확인된 멤버 수. -1 = 헤더나 칸을 읽지 못함(미확인). */
 static int lp_read_batch(uint64_t party, PMem*out, int cap, char*leader, int lcap, uint32_t*cnt_out){
-    int n=0; *cnt_out=0; leader[0]=0;
-    uint8_t hb[0x50]; if(!rm(party,hb,sizeof hb)) return 0;
+    int n=0, unread=0; *cnt_out=0; leader[0]=0;
+    uint8_t hb[0x50]; if(!rm(party,hb,sizeof hb)) return -1;
     lp_read_str_cstr(hb,P_LNAME,P_LNAME+0x10,leader,lcap);
     *cnt_out=*(uint32_t*)(hb+P_MCNT);
     uint64_t vb=*(uint64_t*)(hb+P_VBEG), ve=*(uint64_t*)(hb+P_VEND);
     if(!isHeap(vb)||!isHeap(ve)||ve<vb) return 0;
     uint64_t cnt=(ve-vb)/16; if(cnt>(uint64_t)cap) cnt=cap;
     for(uint64_t i=0;i<cnt;i++){
-        uint64_t ptr=q64(vb+i*16); if(!isHeap(ptr)) continue;
-        uint8_t mb[0x80]; if(!rm(ptr,mb,sizeof mb)) continue;
+        uint64_t ptr=0;
+        int live=lp_slot_live(vb+i*16,&ptr);
+        if(live<0){ unread=1; continue; }
+        if(!live) continue;
+        uint8_t mb[0x80]; if(!rm(ptr,mb,sizeof mb)){ unread=1; continue; }
         PMem*m=&out[n]; memset(m,0,sizeof(*m)); m->lvlJoin=-1; m->dead=-1;
         uint64_t len=*(uint64_t*)(mb+M_NLEN);
         if(len< P_SSO && len<sizeof m->name){ memcpy(m->name,mb+M_NAME,len); m->name[len]=0; }
@@ -228,9 +248,10 @@ static int lp_read_batch(uint64_t party, PMem*out, int cap, char*leader, int lca
         m->mapId=*(int32_t*)(mb+M_MAPID);
         m->f54=*(uint32_t*)(mb+M_F54); m->f60=*(uint32_t*)(mb+M_F60);
         m->isLeader = lp_isLeader(m,leader);
+        m->repok = 1;
         n++;
     }
-    return n;
+    return unread ? -1 : n;
 }
 /* 헤더(리더/멤버수) 1콜. (선택 사용) */
 static void lp_read_header(uint64_t party, char*leader,int lcap, uint32_t*cnt){

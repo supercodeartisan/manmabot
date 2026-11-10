@@ -78,7 +78,36 @@ def test_out_of_range_circle_cancels_without_a_miss() -> None:
     assert reasons == ["aim:spell circle"]
 
 
+def test_party_list_waits_for_the_spell_cursor() -> None:
+    seen = {"n": 0}
+
+    def _aim(_executor: object = None) -> bool:
+        seen["n"] += 1
+        return seen["n"] >= 2
+
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        ready = cv.wait_party_spell_aim(None, reason="buff", wait_s=0.2, poll_s=0.01)
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert ready is True
+    assert seen["n"] >= 2
+
+
+def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = lambda *_args, **_kwargs: False  # type: ignore[assignment]
+        ready = cv.wait_party_spell_aim(None, reason="buff", wait_s=0.0)
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert ready is False
+
+
 if __name__ == "__main__":
     test_ready_spell_is_the_aim_point()
     test_out_of_range_circle_cancels_without_a_miss()
+    test_party_list_waits_for_the_spell_cursor()
+    test_party_list_skips_the_click_when_the_cursor_stays_down()
     print("spell aim hold tests ok")

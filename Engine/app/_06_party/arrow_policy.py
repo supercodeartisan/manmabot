@@ -23,30 +23,29 @@ def hunt_map_after_pose(stored: Any, pose_map: Any, *, leaving: bool) -> Any:
 
 
 def report_arrow_count(row: Any) -> Optional[int]:
-    """Arrows plus silver arrows on one party report. None when the row has no bag."""
+    """Silver arrows on one party report. Normal arrows are ignored.
+
+    None when the row has no silver-arrow count.
+    """
     if not isinstance(row, dict):
         return None
     items = row.get("items")
-    if not isinstance(items, dict) or "arrows" not in items:
+    if not isinstance(items, dict) or "silver_arrows" not in items:
         return None
     try:
-        normal = max(0, int(items.get("arrows") or 0))
-        silver = max(0, int(items.get("silver_arrows") or 0))
+        return max(0, int(items.get("silver_arrows") or 0))
     except (TypeError, ValueError):
         return None
-    return normal + silver
 
 
 def bag_arrow_count(state: Any) -> Optional[int]:
-    """Local bag. None until inventory_listen has filled it."""
+    """Local silver arrows. None until inventory_listen has filled the bag."""
     player = getattr(state, "player", None)
     inv = getattr(player, "inventory", None)
     if inv is None or not bool(getattr(inv, "bag_ready", False)):
         return None
     try:
-        return max(0, int(getattr(inv, "arrows", 0) or 0)) + max(
-            0, int(getattr(inv, "silver_arrows", 0) or 0)
-        )
+        return max(0, int(getattr(inv, "silver_arrows", 0) or 0))
     except (TypeError, ValueError):
         return None
 
@@ -199,8 +198,7 @@ def rows_with_expected(rows: Any, book: Any) -> list:
             and reported_arrows is not None
             and adjusted_arrows != reported_arrows
         ):
-            new_items["arrows"] = adjusted_arrows
-            new_items["silver_arrows"] = 0
+            new_items["silver_arrows"] = adjusted_arrows
             changed = True
         if not changed:
             out.append(row)
@@ -223,7 +221,7 @@ def pick_arrow_duty(
 ) -> Optional[dict[str, Any]]:
     """Buy when the shopkeeper is short. Otherwise drop ``give_qty`` to the first short member.
 
-    The shopkeeper keeps ``keeper_min`` arrows. A drop never spends that reserve,
+    The shopkeeper keeps ``keeper_min`` silver arrows. A drop never spends that reserve,
     so a short spare drops only what is left above it. ``skip_names`` leaves the
     mage seat out.
     """
@@ -304,12 +302,7 @@ def bag_supply_counts(state: Any) -> dict[str, Optional[int]]:
         except (TypeError, ValueError):
             return None
 
-    arrows = _n("arrows")
-    silver = _n("silver_arrows")
-    if arrows is None or silver is None:
-        empty["arrow"] = None
-    else:
-        empty["arrow"] = arrows + silver
+    empty["arrow"] = _n("silver_arrows")
     empty["hp"] = _n("hp_potion")
     empty["depoison"] = _n("depoison")
     empty["mp"] = _n("mp_potion")
@@ -626,7 +619,6 @@ def supply_pile_matches(item: Any, kind: str) -> bool:
     reader already treats a pile with no name as adena.
     """
     from app._03_world.merge.memory_inventory import (
-        ARROW_NAMES,
         DEPOISON_NAMES,
         HP_POTION_NAMES,
         MP_POTION_NAMES,
@@ -650,7 +642,7 @@ def supply_pile_matches(item: Any, kind: str) -> bool:
     groups = (
         ("mp", MP_POTION_NAMES),
         ("depoison", DEPOISON_NAMES),
-        ("arrow", ARROW_NAMES | SILVER_ARROW_NAMES),
+        ("arrow", SILVER_ARROW_NAMES),
         ("hp", HP_POTION_NAMES),
     )
     found = None
@@ -675,7 +667,7 @@ def party_shop_buy_qty(
     item = str(scratch.get("party_supply_item") or "arrow")
     bid = str(behavior_id or "")
     matches = (
-        (item == "arrow" and "arrow" in bid)
+        (item == "arrow" and "silver" in bid and "arrow" in bid)
         or (item == "hp" and "hp_potion" in bid)
         or (item == "depoison" and "depoison" in bid)
     )

@@ -436,8 +436,6 @@ def _kind_stack(state: Any, kind: str) -> Any:
 
 def _kind_tables(kind: str) -> tuple[frozenset[int], frozenset[str]]:
     from app._03_world.merge.memory_inventory import (
-        ARROW_IDS,
-        ARROW_NAMES,
         DEPOISON_IDS,
         DEPOISON_NAMES,
         HP_POTION_IDS,
@@ -452,7 +450,7 @@ def _kind_tables(kind: str) -> tuple[frozenset[int], frozenset[str]]:
         "hp": (HP_POTION_IDS, HP_POTION_NAMES),
         "depoison": (DEPOISON_IDS, DEPOISON_NAMES),
         "mp": (MP_POTION_IDS, MP_POTION_NAMES),
-        "arrow": (ARROW_IDS | SILVER_ARROW_IDS, ARROW_NAMES | SILVER_ARROW_NAMES),
+        "arrow": (SILVER_ARROW_IDS, SILVER_ARROW_NAMES),
     }
     return tables.get(str(kind or "arrow"), tables["arrow"])
 

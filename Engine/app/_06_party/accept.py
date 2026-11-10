@@ -14,8 +14,11 @@ Y is pressed again if the popup is still open ``REPRESS_S`` after a press,
 at most ``MAX_PRESSES`` per popup.
 
 A popup from someone other than the leader (``leader_name`` from the policy,
-when known) is left alone. Once party memory showed the join, losing it for
-``LEFT_CONFIRM_S`` turns ``accepted`` into ``left`` so the leader invites again.
+when known) is left alone. Party memory that still names someone else is not
+this invite: Y is still pressed, and the join is confirmed only when the
+memory leader matches the inviter and the popup has closed. Once that join
+showed, losing party memory for ``LEFT_CONFIRM_S`` turns ``accepted`` into
+``left`` so the leader invites again.
 
 ``phase`` (sent to the leader in ``member_state``):
 idle · popup · pressed · waiting_memory · joined · left · missed (closed before
@@ -128,38 +131,52 @@ class InviteAccepter:
         name: str = "",
         session: str = "",
         in_party: Optional[bool] = None,
+        memory_leader: str = "",
     ) -> bool:
         """One step. ``popup`` = ``invite_popup.party_invite`` (None = no invite
-        popup open). ``in_party`` None = party memory unreadable. True when Y
-        reached the game this tick."""
+        popup open). ``in_party`` None = party memory unreadable. ``memory_leader``
+        is that snapshot's leader name. An open popup is answered even when
+        memory still says this character is in a party. True when Y reached
+        the game this tick."""
         pressed = False
-        if in_party is True and self.phase in ("popup", "pressed", "waiting_memory"):
+        memory_leader = str(memory_leader or "").strip()
+        if popup is not None:
+            pressed = self._on_open(popup, leader_name)
+        elif self._open:
+            self._on_closed()
+        if (
+            popup is None
+            and self.phase in ("pressed", "waiting_memory")
+            and self._memory_is_inviter(in_party, memory_leader)
+        ):
             self.phase = "joined"
             self._open = False
             self.accepted_at = time.time()
             self._log("Party memory confirms the join")
             _note_monitor("joined (party memory)")
-            self._track_membership(in_party)
-            self._maybe_ack(name, session)
-            return False
-        if in_party is True and self.phase not in ("popup", "pressed", "waiting_memory"):
-            if popup is not None and self.phase not in ("joined", "left"):
-                if self.skipped != "already in party":
-                    self.skipped = "already in party"
-                    self.phase = "skipped"
-                    self._log(
-                        "Party invite popup ignored — already in party (memory)"
-                    )
-            self._track_membership(in_party)
-            self._maybe_ack(name, session)
-            return False
-        if popup is not None:
-            pressed = self._on_open(popup, leader_name)
-        elif self._open:
-            self._on_closed()
         self._track_membership(in_party)
         self._maybe_ack(name, session)
         return pressed
+
+    def _memory_is_inviter(self, in_party: Optional[bool], memory_leader: str) -> bool:
+        """True when this read is the party of the inviter just answered."""
+        return (
+            in_party is True
+            and bool(self.inviter)
+            and same_name(memory_leader, self.inviter)
+        )
+
+    def blocks_join_map(self, memory_leader: str = "") -> bool:
+        """Hold cross-map join while the popup is up, or until memory names the inviter.
+
+        An idle member who is already in a party is not held. A leftover leader
+        name does not count as the inviter.
+        """
+        if self._open or self.phase in ("popup", "pressed"):
+            return True
+        if self.phase == "waiting_memory":
+            return not self._memory_is_inviter(True, str(memory_leader or "").strip())
+        return False
 
     def _on_open(self, popup: dict[str, Any], leader_name: str) -> bool:
         if not self._open:

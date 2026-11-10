@@ -4,11 +4,50 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .party_log import get_logger as _party_logger
+from .policy import MemberKind, PolicyResult
 
 _log = _party_logger("join")
 
 # Re-arm if leader pose drifts this far (Chebyshev) while joining.
 _REPLAN_TILES = 24
+
+
+def memory_leader_confirmed(policy_name: str, memory_name: str) -> bool:
+    """True when party memory's leader is the connected leader's policy name.
+
+    An empty policy name is not a match, so a leftover party row is not a goal
+    before the leader policy arrives.
+    """
+    from .invite_popup import same_name
+
+    return bool(str(policy_name or "").strip()) and same_name(policy_name, memory_name)
+
+
+def _drop_join(join_nav: Any) -> None:
+    if join_nav is not None and bool(getattr(join_nav, "active", False)):
+        join_nav.clear()
+
+
+def suppress_unconfirmed_leader(
+    result: PolicyResult, join_nav: Any, *, confirmed: bool
+) -> PolicyResult:
+    """Do not walk or scroll toward a party row that is not the policy leader."""
+    if confirmed:
+        return result
+    _drop_join(join_nav)
+    if result.kind in (MemberKind.JOIN_MAP, MemberKind.FOLLOW):
+        return PolicyResult(MemberKind.WAIT, False, "party_leader_unconfirmed")
+    return result
+
+
+def suppress_join_while_invite(result: PolicyResult, join_nav: Any, *, hold: bool) -> PolicyResult:
+    """Drop an in-flight join and do not follow that pose while ``hold``."""
+    if not hold:
+        return result
+    _drop_join(join_nav)
+    if result.kind in (MemberKind.JOIN_MAP, MemberKind.FOLLOW):
+        return PolicyResult(MemberKind.WAIT, False, "invite_before_join")
+    return result
 
 
 class PartyJoinNav:
@@ -189,4 +228,9 @@ class PartyJoinNav:
         )
 
 
-__all__ = ["PartyJoinNav"]
+__all__ = [
+    "PartyJoinNav",
+    "memory_leader_confirmed",
+    "suppress_join_while_invite",
+    "suppress_unconfirmed_leader",
+]

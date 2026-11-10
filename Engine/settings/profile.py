@@ -53,6 +53,26 @@ def attack_mode_for_character(character: str) -> str:
     if char in ("knight", "royal"):
         return "melee"
     return "magic"
+
+
+def account_character_id(account: Any) -> str | None:
+    """Account class, or None when the account has no usable class."""
+    char = str(getattr(account, "character_type", "") or "").strip().lower()
+    if char == "prince":
+        char = "royal"
+    if char not in CHARACTER_IDS:
+        return None
+    return char
+
+
+def apply_account_character(profile: Any, account: Any) -> str | None:
+    """Copy an account class onto a profile and set the hunt attack mode."""
+    char = account_character_id(account)
+    if char is None or profile is None:
+        return None
+    profile.character = char
+    profile.attack_mode = attack_mode_for_character(char)
+    return char
 # Shop-return bag weight threshold choices (GUI listbox / combo only).
 RETURN_WEIGHT_PCT_CHOICES = (50, 60, 70)
 DEFAULT_RETURN_WEIGHT_ABOVE = 70

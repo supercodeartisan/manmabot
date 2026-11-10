@@ -11,10 +11,9 @@ step may depend on one edge message arriving. Instead:
   proof the character is in the party.
 - Leader keeps the latest frame per roster name (``MemberStates``) and
   reconciles each tick: policy confirmed = state echoes the current policy id;
-  joined = leader party memory lists the name, or a fresh member report whose
-  own party memory says it is in this leader's party. ``invite_accept`` alone
-  does not join. A fresh ``/초대`` waits only for that member while its popup
-  is open.
+  joined = this leader read lists the name. A fresh member report counts only
+  while that read is unknown. ``invite_accept`` alone does not join. A fresh
+  ``/초대`` waits only for that member while its popup is open.
 - Frames carry ids (``policy_id``, ``accept_id``, ``session``) so repeats are
   harmless; a state older than ``STALE_S`` is ignored (member gone / restarted).
 """

@@ -803,19 +803,18 @@ class BotController:
 
             pid = str(getattr(self, "_party_policy_id", "") or "")
             out["party_mem"] = "ok" if party_raw is not None else "blind"
+            leader_known = party_raw is not None and party.get("subs_ok") is not False
             out["roster"] = []
             for row in roster:
                 key = row["name"].casefold()
                 irow = invite_rows.get(key) or {}
                 mstate = member_states.row(row["name"])
                 iacc = invite_accepts.row(row["name"])
-                if key in in_party_names and party.get("subs_ok") is not False:
+                if leader_known and key in in_party_names:
                     joined, joined_src = True, "leader memory"
-                elif reported_joined(row["name"], self._party_leader_name):
+                elif not leader_known and reported_joined(row["name"], self._party_leader_name):
                     joined, joined_src = True, "member memory"
-                elif irow.get("joined") and mstate.get("fresh"):
-                    joined, joined_src = True, "member report"
-                elif irow.get("joined"):
+                elif not leader_known and irow.get("joined"):
                     joined, joined_src = True, "seen joined"
                 else:
                     joined, joined_src = False, ""
@@ -2794,12 +2793,31 @@ class BotController:
 
         snap = action_party_snapshot(world)
         info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        from app._06_party.sync import party_view
+
         self._invite_accepter.tick(
             party_invite(getattr(world, "last_uidialog", None)),
             leader_name=str((member_orders.policy or {}).get("leader_name") or ""),
             name=str(info.get("as_name") or "") or _player_chat_name(world, snap) or "member",
             session=member_orders.session,
             in_party=memory_in_party(snap),
+            memory_leader=str(party_view(snap).get("leader") or ""),
+        )
+
+    def _set_invite_join_hold(self, world, party_brain) -> None:
+        """Keep join-map off while the invite popup is open or memory is the old party."""
+        runtime = getattr(party_brain, "runtime", None) if party_brain is not None else None
+        if runtime is None:
+            return
+        accepter = getattr(self, "_invite_accepter", None)
+        leader = ""
+        if accepter is not None and world is not None:
+            from app._06_party.invite import action_party_snapshot
+            from app._06_party.sync import party_view
+
+            leader = str(party_view(action_party_snapshot(world)).get("leader") or "")
+        runtime.hold_join_map = bool(
+            accepter is not None and accepter.blocks_join_map(leader)
         )
 
     def _member_on_leader_roster(self, world, policy: dict) -> bool:
@@ -2960,6 +2978,8 @@ class BotController:
             # Once per loop (the send=False pass). A manual Y this tick wins.
             if not send and not skip_accept:
                 self._member_invite_accept(world)
+            if not send:
+                self._set_invite_join_hold(world, party_brain)
             return
         from app._04_decision.world_nav.session import live_pose_from_state
         from app._06_party.comms.orders import member_orders
@@ -3005,6 +3025,7 @@ class BotController:
             self._member_hello_tick(world)
             if not skip_accept:
                 self._member_invite_accept(world)
+            self._set_invite_join_hold(world, party_brain)
             self._member_beep_if_already_in(world)
             self._member_state_report(world)
             return
