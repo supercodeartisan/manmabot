@@ -267,7 +267,6 @@ class WorldNavHooks:
     """Optional party hooks. Unset for solo, so a plan never waits on a rally."""
 
     on_plan = None  # callable(plan) — leader announces the rally point
-    hold_at_step = None  # callable(step_i, pose) -> bool; True idles before that step
 
 
 @dataclass
@@ -412,9 +411,6 @@ class WorldNavSession:
                 self.fail("gate payload missing")
                 return Status.FAILURE
             return self._emit_gate(blackboard)
-
-        if self.phase == "ready" and self._party_hold(pose):
-            return self._idle(blackboard, "party rally wait members")
 
         if self.step_i >= len(self.plan.steps):
             self.complete()
@@ -1299,12 +1295,3 @@ class WorldNavSession:
         blackboard.current_goal = "world_nav"
         blackboard.emit(ActionType.IDLE, priority=0.4, reason=reason)
         return Status.SUCCESS
-
-    def _party_hold(self, pose: Any) -> bool:
-        hold = WorldNavHooks.hold_at_step
-        if hold is None:
-            return False
-        try:
-            return bool(hold(self.step_i, pose))
-        except Exception:
-            return False

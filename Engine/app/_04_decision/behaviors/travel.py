@@ -694,18 +694,6 @@ def _snap_aside(
     return None
 
 
-def _party_yield_blocks(blackboard: "Blackboard", click: tuple[int, int]) -> bool:
-    """A new leader hop that would leave a closing member farther behind."""
-    raw = blackboard.scratch.get("party_yield_tiles")
-    if not raw or click is None or blackboard.world_origin is None:
-        return False
-    from app._06_party.formation import hop_widens_gap
-
-    origin = (int(blackboard.world_origin.x), int(blackboard.world_origin.y))
-    members = [(int(tile[0]), int(tile[1])) for tile in raw]
-    return hop_widens_gap(origin, (int(click[0]), int(click[1])), members)
-
-
 def emit_travel_hop(
     blackboard: "Blackboard",
     *,
@@ -846,8 +834,6 @@ def emit_travel_hop(
                     else set()
                 )
                 extended = _straight_extend_waypoint(blackboard, terrain, bodies)
-                if extended is not None and _party_yield_blocks(blackboard, extended):
-                    extended = None
                 if extended is not None:
                     from app.bot_log import event
 
@@ -962,18 +948,6 @@ def emit_travel_hop(
             ActionType.IDLE,
             priority=priority,
             reason=planned.note,
-        )
-        return True
-    if _party_yield_blocks(blackboard, planned.click):
-        blackboard.scratch["travel_hop_miss"] = "party_yield"
-        blackboard.nav_path = list(planned.guide)
-        blackboard.travel_hop_active = False
-        blackboard.nav_waypoint = None
-        blackboard.travel_destination = None
-        blackboard.emit(
-            ActionType.IDLE,
-            priority=priority,
-            reason="party yield: member closing",
         )
         return True
     blackboard.scratch.pop("travel_hop_miss", None)

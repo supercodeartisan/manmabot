@@ -797,17 +797,7 @@ class PartyMemberManager:
                 int(cfg.formation_anchor_dy),
             )
         trail_tile = self._formation_trail_tile(cfg, leader_tile=form_leader)
-        from .formation import FORMATION_HOLD_MAX_S
-
-        still_age = self._leader_still_age(
-            leader_tile if leader_present else None
-        )
-        hunt_still = (
-            still_age is not None and still_age >= FORMATION_HOLD_MAX_S
-        )
-        held = bool(
-            cfg.turret_farm or (hunt_still and not cfg.formation_hold)
-        )
+        held = bool(leader_stopped or cfg.turret_farm)
         bodies: set[tuple[int, int]] = set()
         if game_state is not None and origin_ok:
             try:
@@ -1627,20 +1617,6 @@ class PartyMemberManager:
             scratch["leader_tile_seen_at"] = now
             return False
         return age >= float(settle_sec)
-
-    def _leader_still_age(
-        self, leader_tile: Optional[tuple[int, int]]
-    ) -> Optional[float]:
-        """Seconds the latest leader tile has stayed put. None if there is no tile."""
-        if leader_tile is None:
-            return None
-        seen = self.runtime.scratch.get("leader_tile_seen")
-        started = self.runtime.scratch.get("leader_tile_seen_at")
-        tile = (int(leader_tile[0]), int(leader_tile[1]))
-        if seen != tile or started is None:
-            return 0.0
-        age = _sample_age(time.monotonic(), started)
-        return 0.0 if age is None else age
 
     def _leader_is_moving(
         self,

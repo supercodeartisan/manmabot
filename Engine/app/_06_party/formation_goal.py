@@ -125,39 +125,6 @@ def _facing(forward: Optional[tuple[int, int]]) -> tuple[int, int]:
     return facing if facing != (0, 0) else (0, -1)
 
 
-def ideal_side_tile(
-    leader: Tile,
-    forward: Optional[tuple[int, int]],
-    seat: int,
-    followers: int,
-) -> Tile:
-    """The seat's first side tile, even when that tile is blocked."""
-    lat, long = _side_offsets(seat, followers)[0]
-    return _offset_tile(leader, _facing(forward), lat, long)
-
-
-def allowed_side_tiles(
-    leader: Tile,
-    forward: Optional[tuple[int, int]],
-    seat: int,
-    followers: int,
-    terrain: Any,
-    blocked: set[Tile],
-) -> list[Tile]:
-    """Every free side tile this seat may stand on, nearest first."""
-    facing = _facing(forward)
-    leader_t = (int(leader[0]), int(leader[1]))
-    found: list[Tile] = []
-    for lat_i, long_i in _side_offsets(seat, followers):
-        tile = _offset_tile(leader_t, facing, lat_i, long_i)
-        if tile in blocked or not _corridor_free(
-            leader_t, facing, lat_i, long_i, terrain, blocked
-        ):
-            continue
-        found.append(tile)
-    return found
-
-
 def _side_tile(
     leader: Tile,
     forward: Optional[tuple[int, int]],

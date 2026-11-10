@@ -25,7 +25,6 @@ from app._04_decision.behaviors.mode_actions import (
     retreat_loot_if_clear,
 )
 from app._04_decision.behaviors import search as search_beh
-from app._04_decision.behaviors.hold_ground import step_party_hold_ground
 from app._04_decision.behaviors.party_turret import (
     party_turret_active,
     step_party_turret_idle,
@@ -1378,7 +1377,6 @@ def _handlers_traveling() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "routine.duration": _maybe_routine_duration,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),
@@ -2291,7 +2289,6 @@ def _handlers_farming_island() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
@@ -2323,7 +2320,6 @@ def _handlers_farming_dungeon() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
@@ -2412,7 +2408,6 @@ def _handlers_world_nav() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
-        "party.hold_ground": step_party_hold_ground,
         "shop.trip": _shop_before_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),

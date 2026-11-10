@@ -1688,241 +1688,6 @@ class BotController:
         brain = getattr(self, "_party_leader_ref", None)
         return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
 
-    def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
-        """Hold until this wait's companions are on their seats.
-
-        Turret stays put on its own. A shopkeeper, a confirmed shop visit, and
-        another map are not in the wait. A companion whose pose drops stays in
-        it. Ten seconds opens recovery. It does not leave that member behind.
-        """
-        import time
-
-        brain = getattr(self, "_party_leader_ref", None)
-        turret = str(getattr(brain, "hunt_mode", "") or "") == "turret"
-        if not self._party_leader_on() or turret:
-            self._party_line_watch = None
-            self._party_slot_formation = None
-            self._party_line_info = {}
-            self._formation_reform = False
-            self._reform_published = False
-            self._formation_anchor = None
-            blackboard.scratch.pop("party_yield_tiles", None)
-            return False
-        from app._04_decision.nav_config import get_terrain_map
-        from app._06_party.arrow_policy import line_omit_names
-        from app._06_party.formation import (
-            FORMATION_HOLD_MAX_S,
-            NARROW,
-            FormationLagWatch,
-            MemberFormation,
-            SeatSample,
-            route_steps,
-        )
-        from app._06_party.formation_goal import (
-            allowed_side_tiles,
-            choose_formation_goal,
-            ideal_side_tile,
-        )
-        from app._06_party.leader import _party_map_id, _party_tile
-        from app._06_party.sync import member_states
-        from app._06_party.tactics._grid import cheb
-        from settings.profile import normalize_party_roster
-        from websocket.party_orders import seat_index_for_name, seat_role_for_name
-
-        origin = getattr(blackboard, "world_origin", None)
-        if origin is None:
-            blackboard.scratch.pop("party_yield_tiles", None)
-            return False
-        watch = self._party_line_watch
-        if not isinstance(watch, FormationLagWatch):
-            watch = self._party_line_watch = FormationLagWatch()
-        form = self._party_slot_formation
-        if not isinstance(form, MemberFormation):
-            form = self._party_slot_formation = MemberFormation()
-        if map_id != self._party_line_map:
-            watch.reset()
-            form.reset()
-            self._party_line_map = map_id
-        now = time.monotonic()
-        leader_tile = (int(origin.x), int(origin.y))
-        forward, pose_stopped = watch.note_leader(leader_tile, now)
-        if getattr(self, "_reform_published", False):
-            watch.consume_reform(now)
-            self._formation_reform = False
-            self._reform_published = False
-        hunt_still = pose_stopped and watch.still_age >= FORMATION_HOLD_MAX_S
-        if watch.session_on:
-            shape = "side"
-        elif watch.line_shape in ("side", "stand"):
-            shape = watch.line_shape
-        else:
-            shape = "stand" if hunt_still else "side"
-        stopped = shape == "stand"
-        leader_goal = leader_tile
-        forward_goal = forward
-        if watch.session_on and watch.locked_tile is not None:
-            leader_goal = watch.locked_tile
-            forward_goal = watch.locked_forward or forward
-            stopped = False
-            shape = "side"
-        elif watch.session_on and watch.opened_tile is not None:
-            leader_goal = watch.opened_tile
-            forward_goal = watch.locked_forward or forward
-            stopped = False
-            shape = "side"
-        terrain = get_terrain_map()
-        form.observe(terrain, leader_goal)
-        roster = normalize_party_roster(getattr(self._profile, "party_roster", None))
-        snap = getattr(world, "last_party", None)
-        omit = {
-            str(name or "").strip().casefold()
-            for name in line_omit_names(
-                member_states.rows,
-                member_states.peer_for,
-                member_states.awaiting_fresh,
-            )
-        }
-        me = _player_chat_name(world, snap).strip().casefold()
-        party_size = max(1, len(roster) + 1)
-        listed: list[tuple[str, int, Optional[tuple[int, int]], bool]] = []
-        seen_keys: set[str] = set()
-        if isinstance(snap, dict):
-            for row in snap.get("members") or []:
-                if not isinstance(row, dict) or bool(row.get("is_leader")):
-                    continue
-                name = str(row.get("name") or "").strip()
-                key = name.casefold()
-                if not key or key == me:
-                    continue
-                seen_keys.add(key)
-                seat = watch.seat_for(name)
-                if seat is None:
-                    seat = seat_index_for_name(roster, name)
-                if seat is None:
-                    seat = len(listed)
-                excluded = key in omit or seat_role_for_name(roster, name) == "shopkeeper"
-                mid = _party_map_id(row)
-                if map_id is not None and mid is not None and int(mid) != int(map_id):
-                    excluded = True
-                tile = _party_tile(row)
-                listed.append(
-                    (
-                        name,
-                        int(seat),
-                        None if tile is None else (int(tile[0]), int(tile[1])),
-                        excluded,
-                    )
-                )
-        elif watch.session_on:
-            for name in watch.session_names:
-                listed.append((name, watch.seat_for(name) or 0, None, False))
-        if isinstance(snap, dict) and watch.session_on:
-            for name in watch.session_names:
-                if name.casefold() in seen_keys:
-                    continue
-                listed.append((name, watch.seat_for(name) or 0, None, True))
-        bodies = {tile for _name, _seat, tile, excluded in listed if tile is not None and not excluded}
-        samples: list[SeatSample] = []
-        errors: list[int] = []
-        for name, seat, tile, excluded in listed:
-            if excluded or tile is None:
-                samples.append(SeatSample(name, None, tile, seat, excluded))
-                continue
-            occupied = bodies - {tile}
-            if stopped:
-                goal = choose_formation_goal(
-                    leader_goal,
-                    forward=forward_goal,
-                    seat=seat,
-                    followers=party_size,
-                    stopped=True,
-                    trail_tile=None,
-                    terrain=terrain,
-                    occupied=occupied,
-                )
-                options = [] if goal.tile is None else [goal.tile]
-            else:
-                options = allowed_side_tiles(
-                    leader_goal,
-                    forward_goal,
-                    seat,
-                    party_size,
-                    terrain,
-                    occupied,
-                )
-                if not options:
-                    options = [ideal_side_tile(leader_goal, forward_goal, seat, party_size)]
-                target = form.target(seat)
-                if target.kind == NARROW and target.tile is not None:
-                    options.append((int(target.tile[0]), int(target.tile[1])))
-            err = min(cheb(tile, opt) for opt in options)
-            goal_tile = min(options, key=lambda opt: (cheb(tile, opt), opt))
-            steps = route_steps(terrain, tile, goal_tile, occupied)
-            errors.append(err)
-            samples.append(
-                SeatSample(
-                    name,
-                    err,
-                    tile,
-                    seat,
-                    False,
-                    steps,
-                    terrain is not None,
-                )
-            )
-        res = watch.update(samples, now)
-        if watch.session_on and watch.locked_tile is not None and watch.locked_forward is not None:
-            locked = watch.locked_tile
-            facing = watch.locked_forward
-            self._formation_anchor = (
-                int(locked[0]),
-                int(locked[1]),
-                int(facing[0]),
-                int(facing[1]),
-            )
-        else:
-            self._formation_anchor = None
-        if watch.session_on:
-            shape = "side"
-        watch.line_shape = shape if res.hold else None
-        if watch.reform_pending and not getattr(self, "_reform_published", False):
-            self._formation_reform = True
-            self._reform_published = True
-        yield_tiles = [tuple(tile) for tile in watch.yield_tiles()]
-        if yield_tiles and not res.hold:
-            blackboard.scratch["party_yield_tiles"] = yield_tiles
-        else:
-            blackboard.scratch.pop("party_yield_tiles", None)
-        was = bool(self._party_line_info.get("hold"))
-        was_action = bool(self._party_line_info.get("action_needed"))
-        worst = max(errors, default=None)
-        if res.hold and not was:
-            msg = (
-                f"Party: waiting for a seat "
-                f"({res.reason}, behind {res.behind}/{res.known}, gap {worst})"
-            )
-            self.log(msg)
-            self._party_event("line_wait", msg)
-        elif was and not res.hold:
-            self.log(f"Party: moving on ({res.reason})")
-        if watch.action_needed and not was_action:
-            msg = f"Party: formation needs a hand ({res.reason})"
-            self.log(msg)
-            self._party_event("line_wait", msg)
-        self._party_line_info = {
-            "hold": res.hold,
-            "reason": res.reason,
-            "behind": res.behind,
-            "known": res.known,
-            "held_s": round(res.held_s, 1),
-            "gap": worst,
-            "degraded": bool(watch.degraded),
-            "aligned": bool(watch.aligned),
-            "action_needed": bool(watch.action_needed),
-            "shape": shape,
-        }
-        return bool(res.hold)
-
     def _party_socket_note(self, msg: str) -> None:
         self.log(msg)
         self._party_event("socket", msg)
@@ -2017,14 +1782,12 @@ class BotController:
 
         self._start_rally = LeaderStartRally(rally, log=_note)
         WorldNavHooks.on_plan = self._start_rally.on_plan
-        WorldNavHooks.hold_at_step = self._start_rally.should_hold
 
     def _clear_party_nav_hooks(self) -> None:
         from app._04_decision.world_nav.session import WorldNavHooks
         from app._06_party.comms.orders import reset_orders
 
         WorldNavHooks.on_plan = None
-        WorldNavHooks.hold_at_step = None
         self._start_rally = None
         reset_orders()
         self._party_tree_trip = ""
@@ -3329,7 +3092,6 @@ class BotController:
         from app._02_state import ActionType, CharacterType
         from app._03_world.merge.track import create_game_state
         from app._03_world.merge.memory_sync import world_origin_from_snapshot
-        from app._04_decision.behaviors.hold_ground import set_party_hold
         from app._04_decision.behaviors.party_turret import (
             set_party_turret,
             turret_status,
@@ -4089,24 +3851,7 @@ class BotController:
                         leader_brain.prepare(world, rally=start_rally)
                     except Exception as schedule_exc:
                         self.log(f"Party schedule prepare failed: {schedule_exc}")
-                hold_line = False
-                if (
-                    self._party_leader_on()
-                    and leader_brain is not None
-                    and party_brain is None
-                ):
-                    try:
-                        hold_line = self._leader_line_hold(
-                            world, decision.blackboard, last_logged_map_id
-                        )
-                    except Exception as line_exc:
-                        self.log(f"Party formation hold failed: {line_exc}")
-                        hold_line = False
-                self._formation_hold = hold_line
-                if hold_line:
-                    decision.blackboard.travel_hop_active = False
-                    decision.blackboard.nav_waypoint = None
-                set_party_hold(decision.blackboard, hold_line)
+                self._formation_hold = False
                 help_scratch = getattr(decision.blackboard, "scratch", None)
                 if isinstance(help_scratch, dict):
                     if self._party_leader_on():

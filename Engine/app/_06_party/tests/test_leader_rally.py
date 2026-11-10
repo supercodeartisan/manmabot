@@ -49,9 +49,9 @@ def test_plan_does_not_start_the_wait():
     assert rally.body is None
     assert start.should_hold(0, None) is False
     start.note_arrived((0, 9, 9))
-    assert start.state == "waiting"
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 9, 9)
-    assert start.should_hold(0, None) is True
+    assert start.state == "done"
+    assert rally.body is None
+    assert start.should_hold(0, None) is False
 
 
 def test_teleport_plan_does_not_move_the_wait():
@@ -74,8 +74,8 @@ def test_teleport_plan_does_not_move_the_wait():
     assert start.hold_step is None
     assert start.state == "await_mark"
     start.note_arrived((0, 3, 4))
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 3, 4)
-    assert start.state == "waiting"
+    assert start.state == "done"
+    assert rally.body is None
 
 
 def test_rally_point_is_not_sent_to_members():

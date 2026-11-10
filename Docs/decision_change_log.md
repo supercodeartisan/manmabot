@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — seat-wait leftovers removed
+
+Intent: Delete the unused seat wait. The leader tick already never turned it on.
+Shared: `FormationLagWatch`, `test_formation_lag.py`, `ideal_side_tile`, `allowed_side_tiles`, and the `party.hold_ground` step (`party rally wait members`) are gone. `hold_ground_reach` stays for a standing shot. The 5×5 / 7×7 stand, the side-line walk, turret hunting, and the enter-chat DLL are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt. Nothing in the running bot called this wait.
+Consent: user (delete the leftovers; they are unused).
+Result: not run in game. Restart the bot to load it.
+
+## 2026-11-10 — leader does not stand for a member seat
+
+Intent: Remove the seat wait that stopped the leader while members were off their side tiles. Arrival at the mark still starts the hunt. A member stands in the 5×5, or the 7×7 from six people, once the leader has been still for the usual 0.7 seconds, including turret. Walking follow stays the side line.
+Shared: the leader tick no longer calls the seat watch. `set_party_hold` stays off. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt. The leader no longer idles with `party rally wait members` for a seat gap. Member seats and turret hunting are unchanged.
+Consent: user (remove that wait; it is not main's; keep the 5×5 / 7×7 stand).
+Result: not run in game.
+
 ## 2026-11-10 — turret uses the solo hunt distance
 
 Intent: A monster at a party point uses the solo farm's click distance. On screen is in range. Off screen uses the solo click tiles. A mage in spell aim also uses the solo spell range. The 5×5 still limits walking and piles. It does not cut an on-screen shot down to 8 tiles.
