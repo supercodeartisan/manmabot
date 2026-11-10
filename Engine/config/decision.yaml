@@ -74,8 +74,8 @@ decision:
   farm:
     duration_limit_s: 600.0    # in-farm presence seconds before rotating to next farm
     loot_adena_weight_ratio: 0.30  # HUD bag fill > this → loot adena only
-    loot_max_tiles: 7          # leftover item-distance cap for older loot-vs-combat
-    # Do not loot when Chebyshev distance ≥ this (screen/memory; no pathfinding).
+    loot_max_tiles: 7          # party near loot: leader walk and every member's own piles
+    # Responsible member, and solo engage. Do not loot at/above this distance.
     loot_engage_max_tiles: 30
     # Memory pile stays lootable if this close even when UV is slightly off-window.
     loot_keep_tiles: 8

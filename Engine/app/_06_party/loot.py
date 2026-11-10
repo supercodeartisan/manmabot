@@ -18,12 +18,14 @@ if TYPE_CHECKING:
 
 
 def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
-    """None = this member does not loot.
+    """None = this member does not loot. False = no own/contrib gate.
 
     Leader policy only. Random ON → party drops, no ownership gate (False);
     the closest non-leader, non-wizard member is chosen separately.
-    Random OFF + responsible → own drops only (True).
-    Random OFF + none → no loot. ``none`` stays a leader roster value.
+    Random OFF + responsible → every party pile, including a colleague's
+    (False), out to the wide engage radius. The closest-member split is
+    not applied.
+    Any other member → own piles only (True), inside the near radius.
     """
     # The shopkeeper seat does not take ordinary ground loot.
     # A supply pile aimed at someone else is handled by the caller.
@@ -33,8 +35,29 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
         return False
     role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
     if role in ("responsible", "self", "looter"):
-        return True
-    return None
+        return False
+    return True
+
+
+def party_loot_radius(cfg: PartyMemberConfig) -> int:
+    """Tiles this member will walk to a pile.
+
+    The near radius is ``farm.loot_max_tiles``, the same cap the leader
+    uses to notice a pile and to walk to it. The responsible looter uses
+    the wider ``farm.loot_engage_max_tiles``.
+    """
+    from app._04_decision import player_mode as pm
+
+    role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
+    wide = (
+        not bool(getattr(cfg, "random_loot", False))
+        and role in ("responsible", "self", "looter")
+    )
+    raw = pm.LOOT_ENGAGE_MAX_TILES if wide else pm.LOOT_MAX_TILES
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return 1
 
 
 def party_may_loot(cfg: PartyMemberConfig) -> bool:
@@ -442,6 +465,7 @@ __all__ = [
     "find_party_pickup_range_loot",
     "party_closest_looter_filter",
     "party_loot_ownership_filter",
+    "party_loot_radius",
     "party_may_loot",
     "try_party_hold_loot",
 ]

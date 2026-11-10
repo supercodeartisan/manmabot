@@ -1,5 +1,53 @@
 # Decision change log
 
+## 2026-11-10 — one member is waited for at most ten seconds
+
+Intent: The leader stands for one late member for at most 10 seconds. There is no second or third wait. Another member still has their own 10 seconds. Reaching 1 tile still clears that member. The side line stays through that wait, and a hunt stop uses the standing grid only after the same 10 seconds.
+Shared: `FormationLagWatch` only. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: how long a party leader stands for one member who is off their seat.
+Consent: user (the three 8-second waits are too long; the maximum is 10 seconds per player).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — a missed seat can be waited for again
+
+Intent: One failed 8 second wait does not close the seat. That member gets two more waits, 2 seconds apart, while they are still off the seat. Another member keeps their own waits. Reaching 1 tile clears that member. After three tries only that member is left behind. While a wait is on, the side line stays the side line, and members hear that on the party policy. A hunt stop that lasts 8 seconds still uses the standing grid. The first hold tick, if the body is still walking, clicks the current tile once and drops the open hop.
+Shared: `FormationLagWatch`, `set_party_hold`, `step_party_hold_ground`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The 6, 4, 1, and 2–3 tile numbers stay.
+Affects: party leader waits on the way to a hunt and during a moving hunt, and the member formation during that wait. Turret is unchanged.
+Consent: user ("검사해보고 수정하라" — keep a limited retry after 8 seconds, do not change the walking formation into the standing grid during the wait, and check that the hold actually stops the body).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
+## 2026-11-10 — formation wait and catch-up before a new hunt
+
+Intent: While the party is walking together, one required member off their own seat holds the leader. Before the seats have closed, that hold starts immediately. After they have closed, it starts when a member stays at least 6 tiles off the seat for 0.3 seconds. Eight seconds without a return lets the leader walk, marked degraded, until the seats close again. A member 4 tiles off their seat walks back before a new hunt, loot, or buff, and stays on that walk until within 1 tile. A potion, self heal, and self-defense still come first. While the leader is moving, being off the allowed seat also waits on a new assist. A follow click stays 2 tiles. On an open straight line it chains one tile farther before that click ends. A trail seat does not chain.
+Shared: `set_party_hold`, `FormationLagWatch`, `decide_policy`, `plan_slot_hop`, `plan_field_follow`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Turret hunting does not use this hold. A shopkeeper and a member on another map are not required.
+Affects: party leader travel and moving hunt, and member follow versus a new attack or loot. Solo hunt is unchanged.
+Consent: user ("check and implement this" — early leader wait on seat error, member return ahead of a new hunt, and chain the follow click before it ends).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py` and `test_close_follow.py`. Not run in game.
+
+## 2026-11-10 — one near radius for leader loot and member self loot
+
+Intent: `farm.loot_max_tiles` is the distance a party leader notices an on-screen pile and the distance that leader walks to it. Every other member loots their own piles inside that same radius. Hunt, assist, heal, and defend stay ahead of that loot. The responsible member uses `farm.loot_engage_max_tiles` and also picks up a colleague's pile.
+Shared: `party_leader_pile_ok`, `party_loot_radius`, `party_loot_ownership_filter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader farm loot, and member loot while the leader is standing. Solo engage range stays `loot_engage_max_tiles`. Members still do not loot while the leader is moving.
+Consent: user ("하라" — link the hardcoded leader loot range and the move range into one flexible value; other members self-loot inside it under hunt and assist; the responsible member is wider and takes colleagues' piles).
+Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
+## 2026-11-10 — leader loots 7 tiles; responsible takes party piles
+
+Intent: A party leader picks up an on-screen pile within 7 tiles, after the current fight and a member who is being hit, and before a new hunt. A member whose loot role is responsible picks up every party pile, including a colleague's, not only a pile this character claimed. Random loot still goes to the closest eligible member. Standing F4 side loot stays off for the leader.
+Shared: `continue_or_start_loot`, `party_loot_ownership_filter`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader farm loot, and a responsible member while the leader is standing. Solo loot range is unchanged. Members still do not loot while the leader is moving.
+Consent: user ("하라" — leader loots on-screen within 7 tiles; the responsible member loots colleagues' piles too).
+Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
+## 2026-11-10 — point arrival arms turret before enter-farm
+
+Intent: When a party-point walk ends and the body is inside that dot's 5×5, turret turns on before the same tick's farming column. The previous mark's enter-farm click does not run. An area arrival, and a landing outside the 5×5, stay on the old path.
+Shared: `_on_world_nav_arrived`, `_on_point_arrival`, `set_party_turret`. `farm.enter` already returns when turret is on. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader tick that arrives on a map point. Area marks, solo world nav, and the 13 s escape outside turret are unchanged.
+Consent: user ("그렇게 해라" — arm turret on point arrival inside the 5×5, before the farming handoff).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-10 — mage hit jumps the queue; other hits wait
 
 Intent: A monster hitting a mage member replaces the fight already in progress, for the leader and for a member. A monster hitting any other member waits until that fight ends, then is taken before a new hunt. The leader still finishes through the sticky lock. A member keeps the mob already started, then helps the colleague.

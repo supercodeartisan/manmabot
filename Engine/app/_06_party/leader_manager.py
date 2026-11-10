@@ -42,6 +42,7 @@ class PartyLeaderManager:
         if isinstance(scratch, dict):
             scratch.pop("routine_cursor", None)
             scratch.pop("need_world_nav", None)
+            scratch["party_point_arrival"] = self._on_point_arrival
         return len(self.schedule.rows)
 
     def prepare(self, world: Any, rally: Any = None) -> None:
@@ -59,6 +60,7 @@ class PartyLeaderManager:
         blackboard = self.decision.blackboard
         scratch = blackboard.scratch
         scratch.pop("routine_cursor", None)
+        scratch["party_point_arrival"] = self._on_point_arrival
         if self._travel_active(scratch):
             return
         now = time.monotonic()
@@ -133,6 +135,45 @@ class PartyLeaderManager:
         self.hunt_mode = "turret" if mode == "turret" else "moving"
         self.on_area = bool(on_area) and self.hunt_mode != "turret"
         self.turret_anchor = anchor if self.hunt_mode == "turret" else None
+
+    def _on_point_arrival(self, blackboard: Any, reason: str) -> bool:
+        """Arm turret when a party-point walk ends inside that dot's 5×5.
+
+        ``prepare`` already returned while the walk was still active, so the
+        farming handoff in this same tick would otherwise enter the previous
+        mark. The flag is set before that handoff.
+        """
+        if str(reason or "") != "party_schedule":
+            return False
+        row = self.schedule.current()
+        mark = self.schedule.current_mark()
+        if row is None or mark is None or str(mark.get("shape") or "") != "point":
+            return False
+        origin = getattr(blackboard, "world_origin", None)
+        if origin is None:
+            return False
+        from app._04_decision.behaviors.party_turret import set_party_turret
+        from app._04_decision.world_nav import pack_ids
+        from app._06_party.leader_schedule import POINT_BOX_TILES, mark_center
+
+        ax, ay = mark_center(mark)
+        try:
+            gap = max(abs(int(origin.x) - ax), abs(int(origin.y) - ay))
+        except (TypeError, ValueError):
+            return False
+        if gap > int(POINT_BOX_TILES):
+            return False
+        mid = pack_ids.pack_id_to_map_id(str(row.get("map_id") or ""))
+        if mid is None:
+            return False
+        self._set_place("turret", anchor=(ax, ay))
+        set_party_turret(
+            blackboard,
+            True,
+            map_id=int(mid),
+            anchor=(ax, ay),
+        )
+        return True
 
     def _apply_place(self, row: dict[str, Any], pose: Any) -> None:
         """Turret inside a dot's 5×5. An area is moving hunt. Travel stays moving."""

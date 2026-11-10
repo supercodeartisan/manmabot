@@ -30,7 +30,7 @@ from .leader import (
     party_member_block,
     resolve_leader,
 )
-from .policy import MemberKind, PolicyInput, decide_policy
+from .policy import MemberKind, PolicyInput, decide_policy, formation_returning
 from .state import MemberRuntime
 from .party_log import get_logger as _party_logger
 from .support import apply_party_support
@@ -339,7 +339,7 @@ class PartyMemberManager:
             loot_own = None
         else:
             loot_own = party_loot_ownership_filter(cfg)
-            if loot_own is False:
+            if bool(cfg.random_loot) and loot_own is False:
                 loot_item_ok = party_closest_looter_filter(
                     game_state, origin, self.runtime.local_map_id
                 )
@@ -785,7 +785,17 @@ class PartyMemberManager:
         trail_tile = self._formation_trail_tile(
             cfg, leader_tile=leader_tile if leader_present else None
         )
-        held = bool(leader_stopped or cfg.turret_farm)
+        from .formation import FORMATION_HOLD_MAX_S
+
+        still_age = self._leader_still_age(
+            leader_tile if leader_present else None
+        )
+        hunt_still = (
+            still_age is not None and still_age >= FORMATION_HOLD_MAX_S
+        )
+        held = bool(
+            cfg.turret_farm or (hunt_still and not cfg.formation_hold)
+        )
         bodies: set[tuple[int, int]] = set()
         if game_state is not None and origin_ok:
             try:
@@ -857,15 +867,22 @@ class PartyMemberManager:
                 leader_pose_stale=bool(leader_tile is not None and not view.fresh),
                 slot_dist=slot_dist,
                 slot_arrive=1 if formed.kind == "stand" else 0,
+                leader_moving=leader_moving,
+                catch_up=bool(self.runtime.scratch.get("catch_up")),
             )
         )
+        returning = formation_returning(
+            slot_dist, latched=bool(self.runtime.scratch.get("catch_up"))
+        )
+        self.runtime.scratch["catch_up"] = returning
         self.runtime.chasing = result.chasing
         if result.kind is MemberKind.HEAL and support is not None:
             return self._return_support(support, MemberKind.HEAL)
         if result.kind is MemberKind.BUFF and support is not None:
             return self._return_support(support, MemberKind.BUFF)
         if (
-            mage_skips_party_assist(game_state)
+            not returning
+            and mage_skips_party_assist(game_state)
             and result.kind
             not in (MemberKind.STOP, MemberKind.DEFEND, MemberKind.POTION)
         ):
@@ -873,12 +890,14 @@ class PartyMemberManager:
             if listed is not None:
                 return self._return_support(listed, MemberKind.HEAL)
         reason = result.reason
+        if returning and result.kind is MemberKind.FOLLOW:
+            reason = f"catch_up {reason}"
         if result.kind is MemberKind.ASSIST:
             reason = f"{reason} src={assist_src}"
         if view.source and result.kind is MemberKind.FOLLOW:
             reason = f"{reason} via={view.source}"
 
-        if leader_moving or loot_own is None:
+        if leader_moving or loot_own is None or returning:
             can_loot_now = False
             loot_max_tiles = 0
         else:
@@ -887,7 +906,9 @@ class PartyMemberManager:
                 MemberKind.HOLD,
                 MemberKind.FOLLOW,
             )
-            loot_max_tiles = max(4, int(cfg.follow_tiles))
+            from .loot import party_loot_radius
+
+            loot_max_tiles = party_loot_radius(cfg)
             if (
                 can_loot_now
                 and game_state is not None
@@ -907,7 +928,8 @@ class PartyMemberManager:
 
         # Turret idle, before the first swing: pick up, otherwise self-hunt.
         if (
-            not leader_moving
+            not returning
+            and not leader_moving
             and loot_own is not None
             and cfg.turret_farm
             and not cfg.solo_farm
@@ -916,7 +938,9 @@ class PartyMemberManager:
             and getattr(self, "_turret_own_pending", None)
         ):
             can_loot_now = True
-            loot_max_tiles = max(4, int(cfg.follow_tiles))
+            from .loot import party_loot_radius
+
+            loot_max_tiles = party_loot_radius(cfg)
 
         if leader_moving and self._nav_blackboard is not None:
             from .loot import clear_party_loot_sticky
@@ -1589,6 +1613,20 @@ class PartyMemberManager:
             scratch["leader_tile_seen_at"] = now
             return False
         return age >= float(settle_sec)
+
+    def _leader_still_age(
+        self, leader_tile: Optional[tuple[int, int]]
+    ) -> Optional[float]:
+        """Seconds the latest leader tile has stayed put. None if there is no tile."""
+        if leader_tile is None:
+            return None
+        seen = self.runtime.scratch.get("leader_tile_seen")
+        started = self.runtime.scratch.get("leader_tile_seen_at")
+        tile = (int(leader_tile[0]), int(leader_tile[1]))
+        if seen != tile or started is None:
+            return 0.0
+        age = _sample_age(time.monotonic(), started)
+        return 0.0 if age is None else age
 
     def _leader_is_moving(
         self,

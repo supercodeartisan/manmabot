@@ -283,7 +283,9 @@ class BotController:
         self._party_socket_wait_note_at = 0.0
         self._party_turret_info: dict = {}
         self._party_line_info: dict = {}
+        self._formation_hold = False
         self._party_line_watch = None
+        self._party_slot_formation = None
         self._party_line_map: Optional[int] = None
         self._party_near_hold = False
         self._party_policy_info: dict = {}
@@ -1684,49 +1686,124 @@ class BotController:
         return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
 
     def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
-        """Area hunt: brief wait when half or more members lag ``party_lag_tiles``."""
-        profile = self._profile
+        """Hold while a required member is off their seat, including the walk to a hunt.
+
+        Turret stays put on its own. A shopkeeper and a member on another map
+        are not required. After eight seconds the leader walks degraded until
+        the seats close again.
+        """
+        import time
+
         brain = getattr(self, "_party_leader_ref", None)
-        if not (self._party_leader_on() and bool(getattr(brain, "on_area", False))):
+        turret = str(getattr(brain, "hunt_mode", "") or "") == "turret"
+        if not self._party_leader_on() or turret:
             self._party_line_watch = None
+            self._party_slot_formation = None
             self._party_line_info = {}
             return False
-        from app._06_party.formation import LeaderLineWatch, followers_from_party
+        from app._04_decision.nav_config import get_terrain_map
+        from app._06_party.arrow_policy import line_omit_names
+        from app._06_party.formation import (
+            FORMATION_HOLD_MAX_S,
+            NARROW,
+            FormationLagWatch,
+            MemberFormation,
+        )
+        from app._06_party.formation_goal import choose_formation_goal
+        from app._06_party.leader import _party_map_id, _party_tile
+        from app._06_party.sync import member_states
+        from app._06_party.tactics._grid import cheb
+        from settings.profile import normalize_party_roster
+        from websocket.party_orders import seat_index_for_name, seat_role_for_name
 
-        try:
-            lag = max(5, min(100, int(getattr(profile, "party_lag_tiles", 30) or 30)))
-        except (TypeError, ValueError):
-            lag = 30
-        watch = self._party_line_watch
-        if watch is None:
-            watch = self._party_line_watch = LeaderLineWatch(lag_tiles=lag)
-        watch.lag_tiles = lag
-        if map_id != self._party_line_map:
-            watch.reset()
-            self._party_line_map = map_id
         origin = getattr(blackboard, "world_origin", None)
         if origin is None:
             return False
-        watch.observe((int(origin.x), int(origin.y)))
+        watch = self._party_line_watch
+        if not isinstance(watch, FormationLagWatch):
+            watch = self._party_line_watch = FormationLagWatch()
+        form = self._party_slot_formation
+        if not isinstance(form, MemberFormation):
+            form = self._party_slot_formation = MemberFormation()
+        if map_id != self._party_line_map:
+            watch.reset()
+            form.reset()
+            self._party_line_map = map_id
+        now = time.monotonic()
+        leader_tile = (int(origin.x), int(origin.y))
+        forward, pose_stopped = watch.note_leader(leader_tile, now)
+        hunt_still = pose_stopped and watch.still_age >= FORMATION_HOLD_MAX_S
+        if watch.line_shape in ("side", "stand"):
+            shape = watch.line_shape
+        else:
+            shape = "stand" if hunt_still else "side"
+        stopped = shape == "stand"
+        terrain = get_terrain_map()
+        form.observe(terrain, leader_tile)
+        roster = normalize_party_roster(getattr(self._profile, "party_roster", None))
         snap = getattr(world, "last_party", None)
-        from app._06_party.arrow_policy import line_omit_names
-        from app._06_party.sync import member_states
-
-        omit = line_omit_names(
-            member_states.rows,
-            member_states.peer_for,
-            member_states.awaiting_fresh,
-        )
-        followers = followers_from_party(
-            snap,
-            map_id,
-            self_name=_player_chat_name(world, snap),
-            omit_names=omit,
-        )
-        res = watch.check(followers)
+        omit = {
+            str(name or "").strip().casefold()
+            for name in line_omit_names(
+                member_states.rows,
+                member_states.peer_for,
+                member_states.awaiting_fresh,
+            )
+        }
+        me = _player_chat_name(world, snap).strip().casefold()
+        required: list[tuple[str, int, tuple[int, int]]] = []
+        if isinstance(snap, dict):
+            for row in snap.get("members") or []:
+                if not isinstance(row, dict) or bool(row.get("is_leader")):
+                    continue
+                name = str(row.get("name") or "").strip()
+                key = name.casefold()
+                if not key or key == me or key in omit:
+                    continue
+                if seat_role_for_name(roster, name) == "shopkeeper":
+                    continue
+                mid = _party_map_id(row)
+                if map_id is not None and mid is not None and int(mid) != int(map_id):
+                    continue
+                tile = _party_tile(row)
+                if tile is None:
+                    continue
+                seat = seat_index_for_name(roster, name)
+                if seat is None:
+                    seat = len(required)
+                required.append((name, int(seat), (int(tile[0]), int(tile[1]))))
+        party_size = max(1, len(roster) + 1)
+        bodies = {tile for _name, _seat, tile in required}
+        rows: list[tuple[str, Optional[int]]] = []
+        for name, seat, tile in required:
+            trail_tile = None
+            if not stopped:
+                target = form.target(seat)
+                if target.kind == NARROW:
+                    trail_tile = target.tile
+            goal = choose_formation_goal(
+                leader_tile,
+                forward=forward,
+                seat=seat,
+                followers=party_size,
+                stopped=stopped,
+                trail_tile=trail_tile,
+                terrain=terrain,
+                occupied=bodies - {tile},
+            )
+            if goal.tile is None:
+                rows.append((name, None))
+                continue
+            rows.append((name, cheb(tile, goal.tile)))
+        res = watch.update(rows, now)
+        watch.line_shape = shape if res.hold else None
         was = bool(self._party_line_info.get("hold"))
+        worst = max((err for _name, err in rows if err is not None), default=None)
         if res.hold and not was:
-            msg = f"Party: waiting for members ({res.behind}/{res.known} > {lag} tiles behind)"
+            msg = (
+                f"Party: waiting for a seat "
+                f"({res.reason}, behind {res.behind}/{res.known}, gap {worst})"
+            )
             self.log(msg)
             self._party_event("line_wait", msg)
         elif was and not res.hold:
@@ -1737,9 +1814,12 @@ class BotController:
             "behind": res.behind,
             "known": res.known,
             "held_s": round(res.held_s, 1),
-            "lag_tiles": lag,
+            "gap": worst,
+            "degraded": bool(watch.degraded),
+            "aligned": bool(watch.aligned),
+            "shape": shape,
         }
-        return res.hold
+        return bool(res.hold)
 
     def _party_socket_note(self, msg: str) -> None:
         self.log(msg)
@@ -2140,6 +2220,7 @@ class BotController:
             mode = "moving"
         return {
             "leader_mode": mode,
+            "formation_hold": bool(getattr(self, "_formation_hold", False)),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
             "yard_scale_with_roster": True,
@@ -3894,7 +3975,24 @@ class BotController:
                         leader_brain.prepare(world, rally=start_rally)
                     except Exception as schedule_exc:
                         self.log(f"Party schedule prepare failed: {schedule_exc}")
-                set_party_hold(decision.blackboard, False)
+                hold_line = False
+                if (
+                    self._party_leader_on()
+                    and leader_brain is not None
+                    and party_brain is None
+                ):
+                    try:
+                        hold_line = self._leader_line_hold(
+                            world, decision.blackboard, last_logged_map_id
+                        )
+                    except Exception as line_exc:
+                        self.log(f"Party formation hold failed: {line_exc}")
+                        hold_line = False
+                self._formation_hold = hold_line
+                if hold_line:
+                    decision.blackboard.travel_hop_active = False
+                    decision.blackboard.nav_waypoint = None
+                set_party_hold(decision.blackboard, hold_line)
                 help_scratch = getattr(decision.blackboard, "scratch", None)
                 if isinstance(help_scratch, dict):
                     if self._party_leader_on():

@@ -41,6 +41,7 @@ def set_party_hold(blackboard: "Blackboard", on: bool) -> None:
         blackboard.scratch[SCRATCH_PARTY_HOLD] = True
     else:
         blackboard.scratch.pop(SCRATCH_PARTY_HOLD, None)
+        blackboard.scratch.pop("party_hold_stop_sent", None)
 
 
 def party_hold_active(blackboard: "Blackboard") -> bool:
@@ -109,6 +110,29 @@ def step_party_hold_ground(
     """Column step ``party.hold_ground``: no-op unless the leader is holding."""
     if not party_hold_active(blackboard):
         return None
+    origin = blackboard.world_origin
+    if origin is not None and not blackboard.scratch.get("party_hold_stop_sent"):
+        try:
+            from app._05_action.body_pose import body_is_moving
+
+            moving = body_is_moving() is True
+        except Exception:
+            moving = False
+        if moving:
+            from app._04_decision.pathfinding import waypoint_to_content
+
+            here = (int(origin.x), int(origin.y))
+            blackboard.travel_hop_active = False
+            blackboard.nav_waypoint = None
+            blackboard.scratch["party_hold_stop_sent"] = True
+            blackboard.current_goal = "party_hold"
+            blackboard.emit(
+                ActionType.TRAVELING,
+                destination=waypoint_to_content(here, origin),
+                priority=0.4,
+                reason="party hold: stop here",
+            )
+            return Status.SUCCESS
     fought = hold_ground_counterattack(state, blackboard)
     if fought is not None:
         return fought

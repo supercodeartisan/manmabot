@@ -471,6 +471,22 @@ def _on_world_nav_arrived(blackboard: Any, *, reason: str = "") -> None:
     _clear_finished_world_nav_purpose(blackboard)
     _note_field_nav_arrived(blackboard, reason)
     get_logger("nav").info("world nav arrived reason=%s", reason or "-")
+    _arm_party_point_on_arrival(blackboard, reason)
+
+
+def _arm_party_point_on_arrival(blackboard: Any, reason: str) -> None:
+    """A party point walk that lands inside the 5×5 turns turret on now.
+
+    The farming column of this same tick then skips the previous mark's
+    enter-farm click.
+    """
+    fn = blackboard.scratch.get("party_point_arrival")
+    if not callable(fn):
+        return
+    try:
+        fn(blackboard, reason)
+    except Exception:
+        get_logger("nav").exception("party point arrival failed")
 
 
 def _note_field_nav_arrived(blackboard: Any, reason: str) -> None:

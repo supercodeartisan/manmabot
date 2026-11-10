@@ -564,6 +564,88 @@ def test_prepare_walks_to_the_next_mark_when_the_stay_ends() -> None:
         nav_session.live_pose_from_state = real_pose
 
 
+def _point_leader():
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_2",
+                        "shape": "area",
+                        "x0": 700,
+                        "y0": 1200,
+                        "x1": 800,
+                        "y1": 1400,
+                    },
+                    {"name": "point_1", "shape": "point", "x": 966, "y": 366},
+                ],
+                "selected_farms": ["area_2", "point_1"],
+            }
+        ]
+    )
+    return manager
+
+
+def test_point_arrival_arms_turret_inside_the_box() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.behaviors.party_turret import party_turret_active, turret_anchor
+    from app._04_decision.world_nav import pack_ids
+
+    manager = _point_leader()
+    manager.schedule.mark_index = 1
+    board = manager.decision.blackboard
+    board.world_origin = SimpleNamespace(x=965, y=367)
+    real = pack_ids.pack_id_to_map_id
+    pack_ids.pack_id_to_map_id = lambda key: 4 if key == "mainland" else None
+    try:
+        assert manager._on_point_arrival(board, "party_schedule") is True
+    finally:
+        pack_ids.pack_id_to_map_id = real
+    assert manager.hunt_mode == "turret"
+    assert manager.turret_anchor == (966, 366)
+    assert party_turret_active(board)
+    assert turret_anchor(board) == (966, 366)
+
+
+def test_point_arrival_stays_off_outside_the_box() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.behaviors.party_turret import party_turret_active
+
+    manager = _point_leader()
+    manager.schedule.mark_index = 1
+    board = manager.decision.blackboard
+    board.world_origin = SimpleNamespace(x=970, y=372)
+    assert manager._on_point_arrival(board, "party_schedule") is False
+    assert manager.hunt_mode == "moving"
+    assert not party_turret_active(board)
+
+
+def test_area_arrival_does_not_arm_turret() -> None:
+    from types import SimpleNamespace
+
+    manager = _point_leader()
+    board = manager.decision.blackboard
+    board.world_origin = SimpleNamespace(x=750, y=1307)
+    assert manager._on_point_arrival(board, "party_schedule") is False
+    assert manager.hunt_mode == "moving"
+
+
+def test_other_nav_reasons_do_not_arm_turret() -> None:
+    from types import SimpleNamespace
+
+    manager = _point_leader()
+    manager.schedule.mark_index = 1
+    board = manager.decision.blackboard
+    board.world_origin = SimpleNamespace(x=966, y=366)
+    assert manager._on_point_arrival(board, "unstick_return") is False
+    assert manager.hunt_mode == "moving"
+
+
 if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
@@ -580,4 +662,8 @@ if __name__ == "__main__":
     test_rally_walks_to_the_mark_before_waiting()
     test_checked_marks_rotate_in_order()
     test_prepare_walks_to_the_next_mark_when_the_stay_ends()
+    test_point_arrival_arms_turret_inside_the_box()
+    test_point_arrival_stays_off_outside_the_box()
+    test_area_arrival_does_not_arm_turret()
+    test_other_nav_reasons_do_not_arm_turret()
     print("OK")

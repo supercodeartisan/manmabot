@@ -196,6 +196,165 @@ class LeaderLineWatch:
         return LineHold(True, "members_behind", behind, known, held)
 
 
+# A required member this far off their own seat starts the moving wait.
+SLOT_LAG_TILES = 6
+# Ignore a single bad sample before the leader stops.
+SLOT_LAG_HOLD_S = 0.3
+# Back inside the seat: side tile, or the stand seat's 3×3.
+SLOT_REJOIN_TILES = 1
+# One member is waited for this long, then left. There is no second try.
+FORMATION_HOLD_MAX_S = 10.0
+RECOVER_ATTEMPTS = 1
+RECOVER_GAP_S = 0.0
+# Same still window the member uses before a standing formation.
+LEADER_STILL_S = 0.7
+
+
+@dataclass
+class _SeatLag:
+    seen_in_slot: bool = False
+    attempts: int = 0
+    hold_since: Optional[float] = None
+    behind_since: Optional[float] = None
+    cooldown_until: float = 0.0
+    exhausted: bool = False
+
+
+class FormationLagWatch:
+    """Wait on each member's distance to their own seat.
+
+    A member who has not reached the seat holds the leader at once. After
+    that, 6 tiles for 0.3 seconds holds. Ten seconds ends that member's wait.
+    Another member keeps their own ten seconds. Reaching 1 tile clears that
+    member. A spent wait leaves only that member behind.
+    """
+
+    def __init__(self) -> None:
+        self.aligned = False
+        self.degraded = False
+        self.line_shape: Optional[str] = None
+        self.still_age = 0.0
+        self._seats: dict[str, _SeatLag] = {}
+        self._tile: Optional[Tile] = None
+        self._forward: Optional[tuple[int, int]] = None
+        self._still_since: Optional[float] = None
+
+    def reset(self) -> None:
+        self.aligned = False
+        self.degraded = False
+        self.line_shape = None
+        self.still_age = 0.0
+        self._seats.clear()
+        self._tile = None
+        self._forward = None
+        self._still_since = None
+
+    def note_leader(self, tile: Tile, now: float) -> tuple[Optional[tuple[int, int]], bool]:
+        """Return the last step and whether the leader has stood for ``LEADER_STILL_S``."""
+        current = (int(tile[0]), int(tile[1]))
+        if self._tile is None or current != self._tile:
+            if self._tile is not None and current != self._tile:
+                self._forward = (
+                    current[0] - self._tile[0],
+                    current[1] - self._tile[1],
+                )
+            self._tile = current
+            self._still_since = float(now)
+            self.still_age = 0.0
+            return self._forward, False
+        if self._still_since is None:
+            self._still_since = float(now)
+        self.still_age = float(now) - self._still_since
+        return self._forward, self.still_age >= LEADER_STILL_S
+
+    def _consider(self, seat: _SeatLag, error: int, now: float) -> tuple[bool, str]:
+        if error <= SLOT_REJOIN_TILES:
+            seat.seen_in_slot = True
+            seat.attempts = 0
+            seat.exhausted = False
+            seat.hold_since = None
+            seat.behind_since = None
+            seat.cooldown_until = 0.0
+            return False, "in_slot"
+        if seat.exhausted:
+            return False, "degraded"
+        if float(now) < seat.cooldown_until:
+            return False, "recover"
+        if seat.seen_in_slot and error < SLOT_LAG_TILES:
+            seat.behind_since = None
+            seat.hold_since = None
+            return False, "closing"
+        if seat.seen_in_slot:
+            if seat.behind_since is None:
+                seat.behind_since = float(now)
+            if float(now) - seat.behind_since < SLOT_LAG_HOLD_S:
+                return False, "lag_arming"
+        if seat.hold_since is None:
+            seat.hold_since = float(now)
+        held = float(now) - seat.hold_since
+        if held >= FORMATION_HOLD_MAX_S:
+            seat.attempts += 1
+            seat.hold_since = None
+            seat.behind_since = None
+            if seat.attempts >= RECOVER_ATTEMPTS:
+                seat.exhausted = True
+                return False, "degraded"
+            seat.cooldown_until = float(now) + RECOVER_GAP_S
+            return False, "recover"
+        why = "depart" if not seat.seen_in_slot else "slot_behind"
+        return True, why
+
+    def update(
+        self, rows: Sequence[tuple[str, Optional[int]]], now: float
+    ) -> LineHold:
+        """``rows`` are ``(name, seat error)``. ``None`` is an unread pose."""
+        named = [
+            (str(name), None if err is None else int(err))
+            for name, err in rows
+            if str(name or "").strip()
+        ]
+        if not named:
+            self.aligned = False
+            self.degraded = False
+            return LineHold(False, "no_members", 0, 0)
+        hold_name = ""
+        hold_why = ""
+        behind = 0
+        known = 0
+        reasons: list[str] = []
+        for name, err in named:
+            seat = self._seats.setdefault(name, _SeatLag())
+            if err is None:
+                reasons.append(f"WAIT_POSE:{name}")
+                continue
+            known += 1
+            waiting, why = self._consider(seat, err, now)
+            reasons.append(f"{why}:{name}")
+            if err > SLOT_REJOIN_TILES and not seat.exhausted:
+                behind += 1
+            if waiting and not hold_name:
+                hold_name = name
+                hold_why = why
+        live = [self._seats[name] for name, err in named if err is not None]
+        self.aligned = bool(live) and all(
+            seat.seen_in_slot or seat.exhausted for seat in live
+        )
+        self.degraded = bool(live) and any(seat.exhausted for seat in live)
+        if hold_name:
+            return LineHold(True, f"{hold_why}:{hold_name}", behind, known)
+        if any(text.startswith("recover:") for text in reasons):
+            return LineHold(False, "recover", behind, known)
+        if any(text.startswith("degraded:") for text in reasons):
+            return LineHold(False, "degraded", behind, known)
+        if any(text.startswith("closing:") for text in reasons):
+            return LineHold(False, "closing", behind, known)
+        if any(text.startswith("lag_arming:") for text in reasons):
+            return LineHold(False, "lag_arming", behind, known)
+        if known == 0:
+            return LineHold(False, "WAIT_POSE", 0, 0)
+        return LineHold(False, "in_slot", 0, known)
+
+
 def followers_from_party(
     snapshot: Any,
     local_map_id: Optional[int],
@@ -287,8 +446,11 @@ __all__ = [
     "OTHER_MAP",
     "RECLASSIFY_TILES",
     "TRAIL_SPACING",
+    "FORMATION_HOLD_MAX_S",
+    "FormationLagWatch",
     "FormationTarget",
     "LeaderLineWatch",
+    "SLOT_LAG_TILES",
     "LineHold",
     "MemberFormation",
     "followers_from_party",

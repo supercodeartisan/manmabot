@@ -10,6 +10,8 @@ TRAVEL_LEAD_TILES = 2
 CLOSE_RESTART_GAP = 1
 # A follow click stays inside this many tiles so the hop cannot walk past the leader.
 FOLLOW_CLICK_TILES = 2
+# Open straight ground only: one tile past the current hop, still short of a long click.
+FOLLOW_EXTEND_TILES = 3
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
 # A stand seat is a 3×3. The member holds on the center tile or any neighbor.
@@ -260,6 +262,36 @@ def guid_key(value: object) -> Optional[int]:
         return None
 
 
+def follow_extend_hop(
+    member: tuple[int, int],
+    hop: tuple[int, int],
+    slot: tuple[int, int],
+    *,
+    kind: str,
+) -> Optional[tuple[int, int]]:
+    """One tile past ``hop`` when the member, the hop, and the slot are one line.
+
+    A trail seat stays on the short hop. The new tile stays within
+    ``FOLLOW_EXTEND_TILES`` of the member and closer to the slot than ``hop``.
+    """
+    if str(kind or "") == "trail":
+        return None
+    mx, my = int(member[0]), int(member[1])
+    hx, hy = int(hop[0]), int(hop[1])
+    sx, sy = int(slot[0]), int(slot[1])
+    direction = unit8((sx - mx, sy - my))
+    if direction == (0, 0) or unit8((hx - mx, hy - my)) != direction:
+        return None
+    if unit8((sx - hx, sy - hy)) != direction:
+        return None
+    nxt = (hx + direction[0], hy + direction[1])
+    if max(abs(nxt[0] - mx), abs(nxt[1] - my)) > FOLLOW_EXTEND_TILES:
+        return None
+    if tile_chebyshev(nxt, (sx, sy)) >= tile_chebyshev((hx, hy), (sx, sy)):
+        return None
+    return nxt
+
+
 def follow_hop_still_closes(
     member: tuple[int, int],
     slot: tuple[int, int],
@@ -290,6 +322,8 @@ __all__ = [
     "STICKY_GOAL_SLACK",
     "CLOSE_RESTART_GAP",
     "FOLLOW_CLICK_TILES",
+    "FOLLOW_EXTEND_TILES",
+    "follow_extend_hop",
     "TRAVEL_LEAD_TILES",
     "cardinal_tiles",
     "choose_approach_tile",

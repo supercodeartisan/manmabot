@@ -10,9 +10,50 @@ from .follow import (
     FOLLOW_CLICK_TILES,
     choose_approach_tile,
     choose_settle_stand,
+    follow_extend_hop,
     follow_hop_still_closes,
 )
 from .policy import MemberKind
+
+
+def _body_moving() -> bool:
+    try:
+        from app._05_action.body_pose import body_is_moving
+
+        return body_is_moving() is True
+    except Exception:
+        return False
+
+
+def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
+    from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
+    from app._04_decision.nav_config import get_terrain_map
+
+    terrain = get_terrain_map()
+    if terrain is None or not terrain.is_walkable(int(hop[0]), int(hop[1])):
+        return False
+    rx, ry = absolute_to_relative(int(hop[0]), int(hop[1]), origin)
+    return bool(in_battle_click_region(rx, ry))
+
+
+def _emit_follow_hop(
+    origin: Any,
+    hop: tuple[int, int],
+    goal: tuple[int, int],
+    kind: str,
+) -> tuple[Any, tuple[int, int], str, tuple[int, int]]:
+    from app._04_decision.pathfinding import waypoint_to_content
+
+    from .types import ActionIntent, ActionType
+
+    intent = ActionIntent(
+        action=ActionType.TRAVELING,
+        destination=waypoint_to_content(hop, origin),
+        priority=0.55,
+        reason=f"party_member:{kind} {goal[0]},{goal[1]}",
+    )
+    detail = f"{kind} hop {hop[0]},{hop[1]} → {goal[0]},{goal[1]}"
+    return intent, goal, detail, hop
 
 
 def idle(reason: str, *, priority: float = 0.0) -> Any:
@@ -263,25 +304,23 @@ def plan_field_follow(
     goal = path[-1]
     if goal == (ox, oy):
         return idle("at_approach"), goal, "at_approach", None
-    # Same delta and the hop is still on the way: let that step finish.
-    # A new member-to-slot direction clicks the latest tile on this read.
+    # Keep the click while it still aims at the goal and is not about to end.
+    # A straight open line chains one tile farther before that click finishes.
     if (
         previous_hop is not None
+        and _body_moving()
         and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
         and follow_hop_still_closes((ox, oy), goal, previous_hop)
     ):
-        try:
-            from app._05_action.body_pose import body_is_moving
-
-            if body_is_moving():
-                return (
-                    idle("follow_in_transit"),
-                    goal,
-                    "follow_in_transit",
-                    previous_hop,
-                )
-        except Exception:
-            pass
+        extended = follow_extend_hop((ox, oy), previous_hop, goal, kind="field")
+        if extended is not None and _follow_hop_clickable(origin, extended):
+            return _emit_follow_hop(origin, extended, goal, "field")
+        return (
+            idle("follow_in_transit"),
+            goal,
+            "follow_in_transit",
+            previous_hop,
+        )
     hop = select_click_waypoint(
         path,
         origin,
@@ -321,20 +360,19 @@ def plan_slot_hop(
     arrive = STAND_ARRIVE_TILES if kind == "stand" else ARRIVAL_TOLERANCE
     if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= arrive:
         return idle("at_slot"), goal, "at_slot", None
-    # Same delta and the hop is still on the way: let that step finish.
-    # A changed member-to-slot direction clicks this latest tile now.
+    # Keep the click while it still aims at the slot and is not about to end.
+    # A turn, or a hop that would pass the slot, clicks this read's tile.
+    # A straight open line chains one tile farther before the click finishes.
     if (
         previous_hop is not None
+        and _body_moving()
         and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
         and follow_hop_still_closes((ox, oy), goal, previous_hop)
     ):
-        try:
-            from app._05_action.body_pose import body_is_moving
-
-            if body_is_moving():
-                return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
-        except Exception:
-            pass
+        extended = follow_extend_hop((ox, oy), previous_hop, goal, kind=kind)
+        if extended is not None and _follow_hop_clickable(origin, extended):
+            return _emit_follow_hop(origin, extended, goal, kind)
+        return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
     terrain = get_terrain_map()
     if terrain is None:
         return idle("no_terrain"), goal, "no_terrain", None
