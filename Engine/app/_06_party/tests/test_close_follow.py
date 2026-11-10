@@ -38,8 +38,8 @@ def test_walk_starts_one_tile_outside_the_stop_band():
     assert band == "follow"
 
 
-def test_follow_click_stays_short():
-    assert FOLLOW_CLICK_TILES == 2
+def test_follow_click_is_four_tiles():
+    assert FOLLOW_CLICK_TILES == 4
 
 
 def test_offscreen_fresh_pose_uses_the_same_band():
@@ -77,7 +77,8 @@ def test_straight_line_chains_one_tile_and_a_trail_does_not():
     assert follow_extend_hop((0, 0), (2, 0), (8, 0), kind="side") == (3, 0)
     assert follow_extend_hop((0, 0), (2, 0), (8, 0), kind="trail") is None
     assert follow_extend_hop((0, 0), (2, 0), (2, 1), kind="side") is None
-    assert follow_extend_hop((0, 0), (3, 0), (8, 0), kind="side") is None
+    assert follow_extend_hop((0, 0), (3, 0), (8, 0), kind="side") == (4, 0)
+    assert follow_extend_hop((0, 0), (4, 0), (8, 0), kind="side") is None
 
 
 def test_catch_up_defers_a_new_hunt_until_the_seat():

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — party follow click is four tiles
+
+Intent: A party member's follow click walks up to 4 tiles. Two tiles was too short. A straight open line may chain one more tile only while the click stays inside those 4.
+Shared: `FOLLOW_CLICK_TILES` in `plan_slot_hop`, `plan_field_follow`, and the settle/approach hops. The mage's on-screen heal step uses the same slot hop, so that walk is also 4 tiles. Dungeon travel keeps its own 3-tile hop. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party-member local follow, and a mage walking toward an on-screen member who is outside heal range.
+Consent: user (make the follow click 4 tiles; 2 is too short).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-10 — seat-wait leftovers removed
 
 Intent: Delete the unused seat wait. The leader tick already never turned it on.

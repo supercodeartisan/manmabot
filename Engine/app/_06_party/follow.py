@@ -9,9 +9,9 @@ from typing import Callable, Iterable, Optional
 TRAVEL_LEAD_TILES = 2
 CLOSE_RESTART_GAP = 1
 # A follow click stays inside this many tiles so the hop cannot walk past the leader.
-FOLLOW_CLICK_TILES = 2
-# Open straight ground only: one tile past the current hop, still short of a long click.
-FOLLOW_EXTEND_TILES = 3
+FOLLOW_CLICK_TILES = 4
+# Open straight ground only: one tile past the current hop, still inside the click.
+FOLLOW_EXTEND_TILES = 4
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
 # A stand seat is a 3×3. The member holds on the center tile or any neighbor.
