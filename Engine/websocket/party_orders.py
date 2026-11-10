@@ -178,6 +178,7 @@ def policy_message(
     tree_heal_hp: int = 40,
     tree_heal_mp: int = 80,
     formation_hold: bool = False,
+    formation_reform: bool = False,
 ) -> dict[str, Any]:
     """Global party farm knobs from the leader. Members merge into their config.
 
@@ -197,6 +198,7 @@ def policy_message(
     knobs = {
         "leader_mode": "turret" if str(leader_mode or "") == "turret" else "moving",
         "formation_hold": bool(formation_hold),
+        "formation_reform": bool(formation_reform),
         "random_loot": bool(random_loot),
         "loot_role": str(loot_role or "none"),
         "yard_half_w": yard_half_w,

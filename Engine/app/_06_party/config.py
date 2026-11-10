@@ -51,6 +51,8 @@ class PartyMemberConfig:
     leader_mode: str = "moving"
     # Leader is standing only to wait for a seat. Keep the walking side line.
     formation_hold: bool = False
+    # One leader tick: drop the sticky slot and pick a free seat again.
+    formation_reform: bool = False
     # Turret yard half-extents (None = derive from party_size).
     yard_half_w: Optional[int] = None
     yard_half_h: Optional[int] = None
@@ -158,6 +160,7 @@ class PartyMemberConfig:
             farm_mode=mode,
             leader_mode=lead_mode,
             formation_hold=bool(self.formation_hold),
+            formation_reform=bool(self.formation_reform),
             yard_half_w=hw,
             yard_half_h=hh,
             yard_scale_with_roster=bool(self.yard_scale_with_roster),
@@ -252,6 +255,7 @@ class PartyMemberConfig:
             "farm_mode": self.farm_mode,
             "leader_mode": policy.get("leader_mode", self.leader_mode),
             "formation_hold": bool(policy.get("formation_hold", self.formation_hold)),
+            "formation_reform": bool(policy.get("formation_reform", self.formation_reform)),
             "yard_half_w": policy.get("yard_half_w", self.yard_half_w),
             "yard_half_h": policy.get("yard_half_h", self.yard_half_h),
             "yard_scale_with_roster": policy.get(
@@ -391,6 +395,7 @@ class PartyMemberConfig:
             farm_mode=str(raw.get("farm_mode") or "party"),
             leader_mode=str(raw.get("leader_mode") or "moving"),
             formation_hold=bool(raw.get("formation_hold", False)),
+            formation_reform=bool(raw.get("formation_reform", False)),
             yard_half_w=hw_i,
             yard_half_h=hh_i,
             yard_scale_with_roster=bool(raw.get("yard_scale_with_roster", True)),

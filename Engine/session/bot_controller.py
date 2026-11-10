@@ -284,6 +284,8 @@ class BotController:
         self._party_turret_info: dict = {}
         self._party_line_info: dict = {}
         self._formation_hold = False
+        self._formation_reform = False
+        self._reform_published = False
         self._party_line_watch = None
         self._party_slot_formation = None
         self._party_line_map: Optional[int] = None
@@ -1686,11 +1688,11 @@ class BotController:
         return str(getattr(brain, "hunt_mode", "moving") or "moving") == "turret"
 
     def _leader_line_hold(self, world, blackboard, map_id: Optional[int]) -> bool:
-        """Hold while a required member is off their seat, including the walk to a hunt.
+        """Hold until this wait's companions are on their seats.
 
-        Turret stays put on its own. A shopkeeper and a member on another map
-        are not required. After eight seconds the leader walks degraded until
-        the seats close again.
+        Turret stays put on its own. A shopkeeper, a confirmed shop visit, and
+        another map are not in the wait. A companion whose pose drops stays in
+        it. Ten seconds opens recovery. It does not leave that member behind.
         """
         import time
 
@@ -1700,6 +1702,9 @@ class BotController:
             self._party_line_watch = None
             self._party_slot_formation = None
             self._party_line_info = {}
+            self._formation_reform = False
+            self._reform_published = False
+            blackboard.scratch.pop("party_yield_tiles", None)
             return False
         from app._04_decision.nav_config import get_terrain_map
         from app._06_party.arrow_policy import line_omit_names
@@ -1708,8 +1713,13 @@ class BotController:
             NARROW,
             FormationLagWatch,
             MemberFormation,
+            SeatSample,
         )
-        from app._06_party.formation_goal import choose_formation_goal
+        from app._06_party.formation_goal import (
+            allowed_side_tiles,
+            choose_formation_goal,
+            ideal_side_tile,
+        )
         from app._06_party.leader import _party_map_id, _party_tile
         from app._06_party.sync import member_states
         from app._06_party.tactics._grid import cheb
@@ -1718,6 +1728,7 @@ class BotController:
 
         origin = getattr(blackboard, "world_origin", None)
         if origin is None:
+            blackboard.scratch.pop("party_yield_tiles", None)
             return False
         watch = self._party_line_watch
         if not isinstance(watch, FormationLagWatch):
@@ -1732,14 +1743,27 @@ class BotController:
         now = time.monotonic()
         leader_tile = (int(origin.x), int(origin.y))
         forward, pose_stopped = watch.note_leader(leader_tile, now)
+        if getattr(self, "_reform_published", False):
+            watch.consume_reform(now)
+            self._formation_reform = False
+            self._reform_published = False
         hunt_still = pose_stopped and watch.still_age >= FORMATION_HOLD_MAX_S
-        if watch.line_shape in ("side", "stand"):
+        if watch.session_on:
+            shape = "side"
+        elif watch.line_shape in ("side", "stand"):
             shape = watch.line_shape
         else:
             shape = "stand" if hunt_still else "side"
         stopped = shape == "stand"
+        leader_goal = leader_tile
+        forward_goal = forward
+        if watch.session_on and watch.locked_tile is not None:
+            leader_goal = watch.locked_tile
+            forward_goal = watch.locked_forward or forward
+            stopped = False
+            shape = "side"
         terrain = get_terrain_map()
-        form.observe(terrain, leader_tile)
+        form.observe(terrain, leader_goal)
         roster = normalize_party_roster(getattr(self._profile, "party_roster", None))
         snap = getattr(world, "last_party", None)
         omit = {
@@ -1751,54 +1775,96 @@ class BotController:
             )
         }
         me = _player_chat_name(world, snap).strip().casefold()
-        required: list[tuple[str, int, tuple[int, int]]] = []
+        party_size = max(1, len(roster) + 1)
+        listed: list[tuple[str, int, Optional[tuple[int, int]], bool]] = []
+        seen_keys: set[str] = set()
         if isinstance(snap, dict):
             for row in snap.get("members") or []:
                 if not isinstance(row, dict) or bool(row.get("is_leader")):
                     continue
                 name = str(row.get("name") or "").strip()
                 key = name.casefold()
-                if not key or key == me or key in omit:
+                if not key or key == me:
                     continue
-                if seat_role_for_name(roster, name) == "shopkeeper":
-                    continue
+                seen_keys.add(key)
+                seat = watch.seat_for(name)
+                if seat is None:
+                    seat = seat_index_for_name(roster, name)
+                if seat is None:
+                    seat = len(listed)
+                excluded = key in omit or seat_role_for_name(roster, name) == "shopkeeper"
                 mid = _party_map_id(row)
                 if map_id is not None and mid is not None and int(mid) != int(map_id):
-                    continue
+                    excluded = True
                 tile = _party_tile(row)
-                if tile is None:
+                listed.append(
+                    (
+                        name,
+                        int(seat),
+                        None if tile is None else (int(tile[0]), int(tile[1])),
+                        excluded,
+                    )
+                )
+        elif watch.session_on:
+            for name in watch.session_names:
+                listed.append((name, watch.seat_for(name) or 0, None, False))
+        if isinstance(snap, dict) and watch.session_on:
+            for name in watch.session_names:
+                if name.casefold() in seen_keys:
                     continue
-                seat = seat_index_for_name(roster, name)
-                if seat is None:
-                    seat = len(required)
-                required.append((name, int(seat), (int(tile[0]), int(tile[1]))))
-        party_size = max(1, len(roster) + 1)
-        bodies = {tile for _name, _seat, tile in required}
-        rows: list[tuple[str, Optional[int]]] = []
-        for name, seat, tile in required:
-            trail_tile = None
-            if not stopped:
-                target = form.target(seat)
-                if target.kind == NARROW:
-                    trail_tile = target.tile
-            goal = choose_formation_goal(
-                leader_tile,
-                forward=forward,
-                seat=seat,
-                followers=party_size,
-                stopped=stopped,
-                trail_tile=trail_tile,
-                terrain=terrain,
-                occupied=bodies - {tile},
-            )
-            if goal.tile is None:
-                rows.append((name, None))
+                listed.append((name, watch.seat_for(name) or 0, None, True))
+        bodies = {tile for _name, _seat, tile, excluded in listed if tile is not None and not excluded}
+        samples: list[SeatSample] = []
+        errors: list[int] = []
+        for name, seat, tile, excluded in listed:
+            if excluded or tile is None:
+                samples.append(SeatSample(name, None, tile, seat, excluded))
                 continue
-            rows.append((name, cheb(tile, goal.tile)))
-        res = watch.update(rows, now)
+            occupied = bodies - {tile}
+            if stopped:
+                goal = choose_formation_goal(
+                    leader_goal,
+                    forward=forward_goal,
+                    seat=seat,
+                    followers=party_size,
+                    stopped=True,
+                    trail_tile=None,
+                    terrain=terrain,
+                    occupied=occupied,
+                )
+                options = [] if goal.tile is None else [goal.tile]
+            else:
+                options = allowed_side_tiles(
+                    leader_goal,
+                    forward_goal,
+                    seat,
+                    party_size,
+                    terrain,
+                    occupied,
+                )
+                if not options:
+                    options = [ideal_side_tile(leader_goal, forward_goal, seat, party_size)]
+                target = form.target(seat)
+                if target.kind == NARROW and target.tile is not None:
+                    options.append((int(target.tile[0]), int(target.tile[1])))
+            err = min(cheb(tile, opt) for opt in options)
+            errors.append(err)
+            samples.append(SeatSample(name, err, tile, seat, False))
+        res = watch.update(samples, now)
+        if watch.session_on:
+            shape = "side"
         watch.line_shape = shape if res.hold else None
+        if watch.reform_pending and not getattr(self, "_reform_published", False):
+            self._formation_reform = True
+            self._reform_published = True
+        yield_tiles = [tuple(tile) for tile in watch.yield_tiles()]
+        if yield_tiles and not res.hold:
+            blackboard.scratch["party_yield_tiles"] = yield_tiles
+        else:
+            blackboard.scratch.pop("party_yield_tiles", None)
         was = bool(self._party_line_info.get("hold"))
-        worst = max((err for _name, err in rows if err is not None), default=None)
+        was_action = bool(self._party_line_info.get("action_needed"))
+        worst = max(errors, default=None)
         if res.hold and not was:
             msg = (
                 f"Party: waiting for a seat "
@@ -1808,6 +1874,10 @@ class BotController:
             self._party_event("line_wait", msg)
         elif was and not res.hold:
             self.log(f"Party: moving on ({res.reason})")
+        if watch.action_needed and not was_action:
+            msg = f"Party: formation needs a hand ({res.reason})"
+            self.log(msg)
+            self._party_event("line_wait", msg)
         self._party_line_info = {
             "hold": res.hold,
             "reason": res.reason,
@@ -1817,6 +1887,7 @@ class BotController:
             "gap": worst,
             "degraded": bool(watch.degraded),
             "aligned": bool(watch.aligned),
+            "action_needed": bool(watch.action_needed),
             "shape": shape,
         }
         return bool(res.hold)
@@ -2221,6 +2292,7 @@ class BotController:
         return {
             "leader_mode": mode,
             "formation_hold": bool(getattr(self, "_formation_hold", False)),
+            "formation_reform": bool(getattr(self, "_formation_reform", False)),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
             "yard_scale_with_roster": True,

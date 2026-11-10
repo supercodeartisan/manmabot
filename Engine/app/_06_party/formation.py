@@ -200,33 +200,82 @@ class LeaderLineWatch:
 SLOT_LAG_TILES = 6
 # Ignore a single bad sample before the leader stops.
 SLOT_LAG_HOLD_S = 0.3
-# Back inside the seat: side tile, or the stand seat's 3×3.
+# Fresh reading inside this distance is back on the seat.
 SLOT_REJOIN_TILES = 1
-# One member is waited for this long, then left. There is no second try.
+# A member already on the seat stays on it until they step past this.
+RELEASE_SLOP_TILES = 2
+# Same 4-tile return the member already uses. The leader withholds the next hop.
+YIELD_TILES = 4
+# No closer reading for this long, with a fresh tile, is blocked.
+PROGRESS_STALE_S = 2.0
+# A companion already in this wait keeps this long when the pose drops.
+UNKNOWN_GRACE_S = 2.0
+# Ten seconds means the formation did not recover. It does not drop a member.
 FORMATION_HOLD_MAX_S = 10.0
-RECOVER_ATTEMPTS = 1
-RECOVER_GAP_S = 0.0
+# Re-pick a seat this many times, then the wait becomes a hand-needed hold.
+RECOVERY_TRIES = 2
+# Approaching members are re-checked inside this budget. It does not reset.
+RECOVERY_BUDGET_S = 10.0
 # Same still window the member uses before a standing formation.
 LEADER_STILL_S = 0.7
 
+READY = "READY"
+APPROACHING = "APPROACHING"
+BLOCKED = "BLOCKED"
+UNKNOWN = "UNKNOWN"
+EXCLUDED = "EXCLUDED"
+
+
+@dataclass(frozen=True)
+class SeatSample:
+    """One companion this tick. ``error`` ``None`` is an unread pose."""
+
+    name: str
+    error: Optional[int] = None
+    tile: Optional[Tile] = None
+    seat: Optional[int] = None
+    excluded: bool = False
+
+
+def hop_widens_gap(
+    origin: Tile,
+    click: Tile,
+    members: Sequence[Tile],
+) -> bool:
+    """True when ``click`` is farther from any listed member than ``origin`` is."""
+    ox, oy = int(origin[0]), int(origin[1])
+    cx, cy = int(click[0]), int(click[1])
+    for member in members:
+        mx, my = int(member[0]), int(member[1])
+        now = max(abs(ox - mx), abs(oy - my))
+        nxt = max(abs(cx - mx), abs(cy - my))
+        if nxt > now:
+            return True
+    return False
+
 
 @dataclass
-class _SeatLag:
+class _Companion:
+    state: str = UNKNOWN
     seen_in_slot: bool = False
-    attempts: int = 0
-    hold_since: Optional[float] = None
+    joining: bool = False
+    seat: Optional[int] = None
+    last_error: Optional[int] = None
+    last_tile: Optional[Tile] = None
+    best_error: Optional[int] = None
+    progress_at: Optional[float] = None
     behind_since: Optional[float] = None
-    cooldown_until: float = 0.0
-    exhausted: bool = False
+    unknown_since: Optional[float] = None
 
 
 class FormationLagWatch:
-    """Wait on each member's distance to their own seat.
+    """One party wait. Members keep a state; the party decides when to walk.
 
-    A member who has not reached the seat holds the leader at once. After
-    that, 6 tiles for 0.3 seconds holds. Ten seconds ends that member's wait.
-    Another member keeps their own ten seconds. Reaching 1 tile clears that
-    member. A spent wait leaves only that member behind.
+    Before anyone has stood on a seat, one readable member outside that seat
+    starts the wait. After that, 6 tiles for 0.3 seconds starts it. The
+    companion set, facing, and clock are fixed for that wait. A dropped pose
+    stays unknown. Ten seconds, or a member who is not closing, opens recovery.
+    The leader walks when every companion in the wait is on an allowed seat.
     """
 
     def __init__(self) -> None:
@@ -234,20 +283,60 @@ class FormationLagWatch:
         self.degraded = False
         self.line_shape: Optional[str] = None
         self.still_age = 0.0
-        self._seats: dict[str, _SeatLag] = {}
+        self.session_on = False
+        self.action_needed = False
+        self.reform_pending = False
+        self._companions: dict[str, _Companion] = {}
+        self._session: set[str] = set()
+        self._session_since: Optional[float] = None
+        self._recovery_since: Optional[float] = None
+        self._reform_tries = 0
         self._tile: Optional[Tile] = None
         self._forward: Optional[tuple[int, int]] = None
         self._still_since: Optional[float] = None
+        self._locked_tile: Optional[Tile] = None
+        self._locked_forward: Optional[tuple[int, int]] = None
 
     def reset(self) -> None:
         self.aligned = False
         self.degraded = False
         self.line_shape = None
         self.still_age = 0.0
-        self._seats.clear()
+        self.session_on = False
+        self.action_needed = False
+        self.reform_pending = False
+        self._companions.clear()
+        self._session.clear()
+        self._session_since = None
+        self._recovery_since = None
+        self._reform_tries = 0
         self._tile = None
         self._forward = None
         self._still_since = None
+        self._locked_tile = None
+        self._locked_forward = None
+
+    @property
+    def session_names(self) -> tuple[str, ...]:
+        return tuple(sorted(self._session))
+
+    @property
+    def locked_tile(self) -> Optional[Tile]:
+        return self._locked_tile
+
+    @property
+    def locked_forward(self) -> Optional[tuple[int, int]]:
+        return self._locked_forward
+
+    def seat_for(self, name: str) -> Optional[int]:
+        comp = self._companions.get(str(name))
+        if comp is None or not self.session_on:
+            return None
+        return comp.seat
+
+    def member_state(self, name: str) -> str:
+        comp = self._companions.get(str(name))
+        return UNKNOWN if comp is None else comp.state
 
     def note_leader(self, tile: Tile, now: float) -> tuple[Optional[tuple[int, int]], bool]:
         """Return the last step and whether the leader has stood for ``LEADER_STILL_S``."""
@@ -261,98 +350,272 @@ class FormationLagWatch:
             self._tile = current
             self._still_since = float(now)
             self.still_age = 0.0
-            return self._forward, False
-        if self._still_since is None:
-            self._still_since = float(now)
-        self.still_age = float(now) - self._still_since
-        return self._forward, self.still_age >= LEADER_STILL_S
+            stood = False
+        else:
+            if self._still_since is None:
+                self._still_since = float(now)
+            self.still_age = float(now) - self._still_since
+            stood = self.still_age >= LEADER_STILL_S
+        if self.session_on and stood and self._locked_tile is None:
+            self._locked_tile = current
+            self._locked_forward = self._forward
+        return self._forward, stood
 
-    def _consider(self, seat: _SeatLag, error: int, now: float) -> tuple[bool, str]:
-        if error <= SLOT_REJOIN_TILES:
-            seat.seen_in_slot = True
-            seat.attempts = 0
-            seat.exhausted = False
-            seat.hold_since = None
-            seat.behind_since = None
-            seat.cooldown_until = 0.0
-            return False, "in_slot"
-        if seat.exhausted:
-            return False, "degraded"
-        if float(now) < seat.cooldown_until:
-            return False, "recover"
-        if seat.seen_in_slot and error < SLOT_LAG_TILES:
-            seat.behind_since = None
-            seat.hold_since = None
-            return False, "closing"
-        if seat.seen_in_slot:
-            if seat.behind_since is None:
-                seat.behind_since = float(now)
-            if float(now) - seat.behind_since < SLOT_LAG_HOLD_S:
-                return False, "lag_arming"
-        if seat.hold_since is None:
-            seat.hold_since = float(now)
-        held = float(now) - seat.hold_since
-        if held >= FORMATION_HOLD_MAX_S:
-            seat.attempts += 1
-            seat.hold_since = None
-            seat.behind_since = None
-            if seat.attempts >= RECOVER_ATTEMPTS:
-                seat.exhausted = True
-                return False, "degraded"
-            seat.cooldown_until = float(now) + RECOVER_GAP_S
-            return False, "recover"
-        why = "depart" if not seat.seen_in_slot else "slot_behind"
-        return True, why
+    def consume_reform(self, now: float) -> bool:
+        """One seat re-pick. Progress is measured again from this moment."""
+        if not self.reform_pending:
+            return False
+        self.reform_pending = False
+        self._reform_tries += 1
+        for name in self._session:
+            comp = self._companions.get(name)
+            if comp is None or comp.state != BLOCKED:
+                continue
+            comp.best_error = comp.last_error
+            comp.progress_at = float(now)
+        return True
 
-    def update(
-        self, rows: Sequence[tuple[str, Optional[int]]], now: float
-    ) -> LineHold:
-        """``rows`` are ``(name, seat error)``. ``None`` is an unread pose."""
-        named = [
-            (str(name), None if err is None else int(err))
-            for name, err in rows
-            if str(name or "").strip()
-        ]
-        if not named:
+    def yield_tiles(self) -> list[Tile]:
+        """Members at least ``YIELD_TILES`` off a seat while the party is not waiting."""
+        if self.session_on:
+            return []
+        found: list[Tile] = []
+        for comp in self._companions.values():
+            if comp.joining or comp.state == EXCLUDED:
+                continue
+            if comp.last_tile is None or comp.last_error is None:
+                continue
+            if comp.last_error >= YIELD_TILES:
+                found.append(comp.last_tile)
+        return found
+
+    def _open_session(self, now: float) -> None:
+        self.session_on = True
+        self.action_needed = False
+        self._session_since = float(now)
+        self._recovery_since = None
+        self._reform_tries = 0
+        self.reform_pending = False
+        self._locked_tile = None
+        self._locked_forward = self._forward
+        self._session = {
+            name
+            for name, comp in self._companions.items()
+            if comp.state != EXCLUDED and not comp.joining and comp.last_error is not None
+        }
+
+    def _close_session(self) -> None:
+        self.session_on = False
+        self.action_needed = False
+        self.reform_pending = False
+        self._session.clear()
+        self._session_since = None
+        self._recovery_since = None
+        self._reform_tries = 0
+        self._locked_tile = None
+        self._locked_forward = None
+        for comp in self._companions.values():
+            comp.joining = False
+
+    def _mark(self, comp: _Companion, sample: SeatSample, now: float, in_session: bool) -> None:
+        if sample.excluded:
+            comp.state = EXCLUDED
+            comp.joining = False
+            comp.unknown_since = None
+            return
+        if sample.seat is not None and comp.seat is None:
+            comp.seat = int(sample.seat)
+        if sample.error is None:
+            comp.last_error = None
+            if in_session:
+                if comp.unknown_since is None:
+                    comp.unknown_since = float(now)
+                comp.state = UNKNOWN
+            return
+        comp.unknown_since = None
+        error = int(sample.error)
+        comp.last_error = error
+        if sample.tile is not None:
+            comp.last_tile = (int(sample.tile[0]), int(sample.tile[1]))
+        ready = error <= SLOT_REJOIN_TILES or (
+            comp.state == READY and error <= RELEASE_SLOP_TILES
+        )
+        if ready:
+            comp.state = READY
+            comp.seen_in_slot = True
+            comp.best_error = error
+            comp.progress_at = float(now)
+            comp.behind_since = None
+            return
+        if comp.best_error is None or error < comp.best_error:
+            comp.best_error = error
+            comp.progress_at = float(now)
+        age = 0.0 if comp.progress_at is None else float(now) - comp.progress_at
+        comp.state = BLOCKED if age >= PROGRESS_STALE_S else APPROACHING
+
+    def _ensure_recovery(self, now: float) -> None:
+        if self._recovery_since is None:
+            self._recovery_since = float(now)
+
+    def update(self, rows: Sequence[Any], now: float) -> LineHold:
+        """``rows`` are ``SeatSample`` or ``(name, error)``."""
+        samples: list[SeatSample] = []
+        for row in rows:
+            if isinstance(row, SeatSample):
+                if str(row.name or "").strip():
+                    samples.append(row)
+                continue
+            name = str(row[0] or "").strip()
+            if not name:
+                continue
+            err = row[1]
+            tile = row[2] if len(row) > 2 else None
+            samples.append(
+                SeatSample(
+                    name,
+                    None if err is None else int(err),
+                    None if tile is None else (int(tile[0]), int(tile[1])),
+                )
+            )
+        if not samples and not self.session_on:
             self.aligned = False
             self.degraded = False
             return LineHold(False, "no_members", 0, 0)
-        hold_name = ""
-        hold_why = ""
-        behind = 0
-        known = 0
-        reasons: list[str] = []
-        for name, err in named:
-            seat = self._seats.setdefault(name, _SeatLag())
-            if err is None:
-                reasons.append(f"WAIT_POSE:{name}")
-                continue
-            known += 1
-            waiting, why = self._consider(seat, err, now)
-            reasons.append(f"{why}:{name}")
-            if err > SLOT_REJOIN_TILES and not seat.exhausted:
-                behind += 1
-            if waiting and not hold_name:
-                hold_name = name
-                hold_why = why
-        live = [self._seats[name] for name, err in named if err is not None]
-        self.aligned = bool(live) and all(
-            seat.seen_in_slot or seat.exhausted for seat in live
+
+        seen: set[str] = set()
+        for sample in samples:
+            name = str(sample.name).strip()
+            seen.add(name)
+            comp = self._companions.setdefault(name, _Companion())
+            if (
+                self.session_on
+                and name not in self._session
+                and not sample.excluded
+                and comp.last_error is None
+                and not comp.seen_in_slot
+            ):
+                comp.joining = True
+            self._mark(comp, sample, now, name in self._session)
+
+        if self.session_on:
+            for name in list(self._session):
+                if name in seen:
+                    continue
+                comp = self._companions.setdefault(name, _Companion())
+                if comp.unknown_since is None:
+                    comp.unknown_since = float(now)
+                comp.last_error = None
+                comp.state = UNKNOWN
+
+        if not self.session_on:
+            trigger = ""
+            for name, comp in self._companions.items():
+                if comp.joining or comp.state == EXCLUDED or comp.last_error is None:
+                    continue
+                if not comp.seen_in_slot and comp.last_error > SLOT_REJOIN_TILES:
+                    trigger = f"depart:{name}"
+                    break
+                if comp.seen_in_slot and comp.last_error >= SLOT_LAG_TILES:
+                    if comp.behind_since is None:
+                        comp.behind_since = float(now)
+                    if float(now) - comp.behind_since >= SLOT_LAG_HOLD_S:
+                        trigger = f"slot_behind:{name}"
+                        break
+                else:
+                    comp.behind_since = None
+            if trigger:
+                self._open_session(now)
+                for name in self._session:
+                    comp = self._companions[name]
+                    comp.progress_at = float(now)
+                    comp.best_error = comp.last_error
+                    if comp.state != READY:
+                        comp.state = APPROACHING
+            else:
+                live = [
+                    comp
+                    for comp in self._companions.values()
+                    if comp.last_error is not None and comp.state != EXCLUDED and not comp.joining
+                ]
+                self.aligned = bool(live) and all(comp.seen_in_slot for comp in live)
+                self.degraded = False
+                if any(
+                    comp.seen_in_slot and comp.last_error is not None and comp.last_error >= SLOT_LAG_TILES
+                    for comp in live
+                ):
+                    return LineHold(False, "lag_arming", 0, len(live))
+                if any(comp.last_error is not None and comp.last_error > SLOT_REJOIN_TILES for comp in live):
+                    return LineHold(False, "closing", 0, len(live))
+                if live:
+                    return LineHold(False, "in_slot", 0, len(live))
+                return LineHold(False, "no_members", 0, 0)
+
+        for name in list(self._session):
+            comp = self._companions.get(name)
+            if comp is not None and comp.state == EXCLUDED:
+                self._session.discard(name)
+        if not self._session:
+            self._close_session()
+            return LineHold(False, "excluded", 0, 0)
+
+        held = 0.0 if self._session_since is None else float(now) - self._session_since
+        pending = sorted(
+            (name for name in self._session if self._companions[name].state != READY),
+            key=lambda name: (self._companions[name].seen_in_slot, name),
         )
-        self.degraded = bool(live) and any(seat.exhausted for seat in live)
-        if hold_name:
-            return LineHold(True, f"{hold_why}:{hold_name}", behind, known)
-        if any(text.startswith("recover:") for text in reasons):
-            return LineHold(False, "recover", behind, known)
-        if any(text.startswith("degraded:") for text in reasons):
-            return LineHold(False, "degraded", behind, known)
-        if any(text.startswith("closing:") for text in reasons):
-            return LineHold(False, "closing", behind, known)
-        if any(text.startswith("lag_arming:") for text in reasons):
-            return LineHold(False, "lag_arming", behind, known)
-        if known == 0:
-            return LineHold(False, "WAIT_POSE", 0, 0)
-        return LineHold(False, "in_slot", 0, known)
+        behind = len(pending)
+        known = sum(
+            1
+            for name in self._session
+            if self._companions[name].last_error is not None
+        )
+        if not pending:
+            self.aligned = True
+            self.degraded = False
+            self._close_session()
+            return LineHold(False, "together", 0, known, held)
+
+        blocked = [
+            name
+            for name in pending
+            if self._companions[name].state == BLOCKED
+        ]
+        unknown = [
+            name
+            for name in pending
+            if self._companions[name].state == UNKNOWN
+            and self._companions[name].unknown_since is not None
+            and float(now) - float(self._companions[name].unknown_since) >= UNKNOWN_GRACE_S
+        ]
+        if blocked or unknown or held >= FORMATION_HOLD_MAX_S:
+            self._ensure_recovery(now)
+        if blocked and self._reform_tries < RECOVERY_TRIES and not self.reform_pending:
+            self.reform_pending = True
+
+        self.action_needed = False
+        if self._recovery_since is not None:
+            budget_done = float(now) - self._recovery_since >= RECOVERY_BUDGET_S
+            tries_done = self._reform_tries >= RECOVERY_TRIES and not self.reform_pending
+            if tries_done and blocked:
+                self.action_needed = True
+            elif tries_done and unknown and not any(
+                self._companions[name].state == APPROACHING for name in pending
+            ):
+                self.action_needed = True
+            elif budget_done:
+                self.action_needed = True
+        self.degraded = self.action_needed
+        self.aligned = False
+        focus = pending[0]
+        if self.action_needed:
+            why = "action_needed"
+        elif self._recovery_since is not None:
+            why = "recover"
+        elif not self._companions[focus].seen_in_slot:
+            why = "depart"
+        else:
+            why = "slot_behind"
+        return LineHold(True, f"{why}:{focus}", behind, known, held)
 
 
 def followers_from_party(
@@ -448,6 +711,14 @@ __all__ = [
     "TRAIL_SPACING",
     "FORMATION_HOLD_MAX_S",
     "FormationLagWatch",
+    "READY",
+    "APPROACHING",
+    "BLOCKED",
+    "UNKNOWN",
+    "EXCLUDED",
+    "SeatSample",
+    "YIELD_TILES",
+    "hop_widens_gap",
     "FormationTarget",
     "LeaderLineWatch",
     "SLOT_LAG_TILES",

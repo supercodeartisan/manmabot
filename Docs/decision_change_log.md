@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a party wait ends when the formation is back
+
+Intent: One late member no longer starts their own 10 second give-up. The leader opens one wait for the companions who are already walking together, and walks only when each of them has a fresh reading inside the allowed seat. A pose that drops stays unknown. Ten seconds, or a member who is not actually closing, starts a short seat re-pick. If that still fails, the leader keeps standing and shows that a hand is needed. Survival actions stay in front of that hold. At 4 tiles the next leader hop that would widen the gap is withheld. The member click stays 2 tiles, or 3 on a straight line.
+Shared: `FormationLagWatch`, `emit_travel_hop`, `policy_message`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel and a moving hunt, and one member seat re-pick while the leader is recovering the line. Turret is unchanged. A shopkeeper, a confirmed shop visit, and another map stay out of the wait.
+Consent: user ("이 대로 구현하라" — party-level departure, 10 seconds as recovery rather than abandonment, keep an unread companion, and limit the leader's next hop from 4 tiles).
+Result: `Engine/app/_06_party/tests/test_formation_lag.py`. Not run in game.
+
 ## 2026-11-10 — one member is waited for at most ten seconds
 
 Intent: The leader stands for one late member for at most 10 seconds. There is no second or third wait. Another member still has their own 10 seconds. Reaching 1 tile still clears that member. The side line stays through that wait, and a hunt stop uses the standing grid only after the same 10 seconds.

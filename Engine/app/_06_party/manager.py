@@ -806,6 +806,8 @@ class PartyMemberManager:
                 }
             except Exception:
                 bodies = set()
+        if cfg.formation_reform:
+            self.runtime.scratch.pop("formation_slot", None)
         formed = choose_formation_goal(
             leader_tile if leader_present else None,
             forward=self._leader_move_dir(),
@@ -815,7 +817,7 @@ class PartyMemberManager:
             trail_tile=None if held else trail_tile,
             terrain=_terrain_or_none(),
             occupied=bodies,
-            previous=self.runtime.scratch.get("formation_slot"),
+            previous=None if cfg.formation_reform else self.runtime.scratch.get("formation_slot"),
             previous_leader=self.runtime.scratch.get("formation_leader"),
         )
         slot_tile = formed.tile

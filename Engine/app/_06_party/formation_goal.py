@@ -106,18 +106,8 @@ def choose_formation_goal(
     return FormationGoal("side", None, "side_blocked")
 
 
-def _side_tile(
-    leader: Tile,
-    forward: Optional[tuple[int, int]],
-    seat: int,
-    followers: int,
-    terrain: Any,
-    blocked: set[Tile],
-    previous: Optional[Tile],
-) -> Optional[Tile]:
-    facing = unit8(forward)
-    if facing == (0, 0):
-        facing = (0, -1)
+def _side_offsets(seat: int, followers: int) -> list[tuple[int, int]]:
+    """Lateral, longitudinal offsets for this seat, nearest first."""
     lat = primary_lateral(seat)
     owned = {primary_lateral(i) for i in range(max(1, followers))}
     step = 1 if lat > 0 else -1
@@ -127,6 +117,58 @@ def _side_tile(
         if extra not in owned:
             candidates.append((extra, 0))
         extra += step
+    return candidates
+
+
+def _facing(forward: Optional[tuple[int, int]]) -> tuple[int, int]:
+    facing = unit8(forward)
+    return facing if facing != (0, 0) else (0, -1)
+
+
+def ideal_side_tile(
+    leader: Tile,
+    forward: Optional[tuple[int, int]],
+    seat: int,
+    followers: int,
+) -> Tile:
+    """The seat's first side tile, even when that tile is blocked."""
+    lat, long = _side_offsets(seat, followers)[0]
+    return _offset_tile(leader, _facing(forward), lat, long)
+
+
+def allowed_side_tiles(
+    leader: Tile,
+    forward: Optional[tuple[int, int]],
+    seat: int,
+    followers: int,
+    terrain: Any,
+    blocked: set[Tile],
+) -> list[Tile]:
+    """Every free side tile this seat may stand on, nearest first."""
+    facing = _facing(forward)
+    leader_t = (int(leader[0]), int(leader[1]))
+    found: list[Tile] = []
+    for lat_i, long_i in _side_offsets(seat, followers):
+        tile = _offset_tile(leader_t, facing, lat_i, long_i)
+        if tile in blocked or not _corridor_free(
+            leader_t, facing, lat_i, long_i, terrain, blocked
+        ):
+            continue
+        found.append(tile)
+    return found
+
+
+def _side_tile(
+    leader: Tile,
+    forward: Optional[tuple[int, int]],
+    seat: int,
+    followers: int,
+    terrain: Any,
+    blocked: set[Tile],
+    previous: Optional[Tile],
+) -> Optional[Tile]:
+    facing = _facing(forward)
+    candidates = _side_offsets(seat, followers)
     ideal = _offset_tile(leader, facing, candidates[0][0], candidates[0][1])
     if (
         previous is not None
