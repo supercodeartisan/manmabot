@@ -2550,7 +2550,7 @@ class BotController:
             sy = int(stand["y"])
         except (TypeError, ValueError, KeyError):
             return
-        if mid == 0 or (sx == 0 and sy == 0):
+        if sx == 0 and sy == 0:
             return
         key = (str(stand.get("id") or ""), mid, sx, sy)
         if key == getattr(self, "_party_stand_key", None):

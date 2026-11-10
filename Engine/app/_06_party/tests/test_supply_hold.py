@@ -1594,12 +1594,82 @@ def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
     assert "supply hold halt still moving n=3" in caplog.text
 
 
-def test_a_zero_map_stand_is_not_published(monkeypatch) -> None:
+def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) -> None:
+    from app._06_party.arrow_duty import (
+        STAND_WAIT_S,
+        _leader_drop_recheck,
+        _stand_ready,
+        leader_supply_action,
+        leader_supply_stand,
+        plan_supply_drop,
+        tick_shopkeeper_duty,
+    )
+
+    pose = {"ready": True, "x": 381, "y": 442}
+    body = {"moving": True, "standing": False}
+    clock = {"t": 4000.0}
     sent: list[dict] = []
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.comms.publish.publish_body",
         lambda body: sent.append(dict(body)) or 1,
     )
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: (
+            None
+            if not pose["ready"]
+            else type("P", (), {"map_id": 0, "x": pose["x"], "y": pose["y"]})()
+        ),
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_moving", lambda: body["moving"]
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_standing", lambda: body["standing"]
+    )
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
+            "last_party": {
+                "in_party": True,
+                "members": [
+                    {
+                        "name": "Boss",
+                        "guid": "0x10",
+                        "map_id": 0,
+                        "x": 1,
+                        "y": 1,
+                        "is_leader": True,
+                    }
+                ],
+            },
+            "last_print_state": None,
+        },
+    )()
+    hold = {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
+    board = _Board()
+    leader_supply_action(world, board, hold, None)
+    body["moving"] = False
+    body["standing"] = True
+    leader_supply_action(world, board, hold, None)
+    assert leader_supply_stand(board, world.last_party, hold) is None
+    clock["t"] += 0.5
+    leader_supply_action(world, board, hold, None)
+    stand = leader_supply_stand(board, world.last_party, hold)
+    assert stand is not None
+    assert stand["map_id"] == 0
+    assert (stand["x"], stand["y"]) == (381, 442)
+    assert stand["confirmed"] is True
+
     from session.bot_controller import BotController
 
     class _Leader:
@@ -1608,35 +1678,80 @@ def test_a_zero_map_stand_is_not_published(monkeypatch) -> None:
         _party_stand_key = None
 
         def _leader_supply_hold(self):
-            return {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
+            return dict(hold)
 
-    board = _Board()
-    board.scratch["party_leader_hold_pose"] = {
-        "id": "hold:hp:Boss",
-        "confirmed": True,
-        "map": 0,
-        "x": 10,
-        "y": 40,
-    }
-    world = type(
-        "W",
-        (),
+    BotController._publish_supply_stand(_Leader(), world, None, board)
+    assert sent[0]["map_id"] == 0
+    assert (sent[0]["x"], sent[0]["y"]) == (381, 442)
+
+    duty = {"name": "Boss", "item": "hp", "guid": "0x10", "attempt": 0}
+    assert _stand_ready(duty, stand) is True
+    planned = plan_supply_drop(duty, stand, lambda _tile: True)
+    assert planned is not None
+    assert planned["member_map"] == 0
+    assert (planned["member_x"], planned["member_y"]) == (381, 442)
+    world.last_party["members"][0]["x"] = 381
+    world.last_party["members"][0]["y"] = 443
+    stepped = _leader_drop_recheck(world, planned)
+    assert isinstance(stepped, dict)
+    assert stepped["map_id"] == 0
+    assert (stepped["x"], stepped["y"]) == (381, 443)
+
+    pose["y"] = 444
+    assert leader_supply_action(world, board, hold, None) is None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is True
+
+    pose["x"], pose["y"] = 0, 0
+    fresh = {"id": "hold:hp:Boss:1", "for": "Boss", "item": "hp"}
+    leader_supply_action(world, board, fresh, None)
+    clock["t"] += 0.5
+    leader_supply_action(world, board, fresh, None)
+    clock["t"] += 0.5
+    leader_supply_action(world, board, fresh, None)
+    assert board.scratch["party_leader_hold_pose"].get("confirmed") is not True
+    assert leader_supply_stand(board, world.last_party, fresh) is None
+
+    pose["ready"] = False
+    pose["x"], pose["y"] = 381, 442
+    unread = {"id": "hold:hp:Boss:2", "for": "Boss", "item": "hp"}
+    leader_supply_action(world, board, unread, None)
+    clock["t"] += 1.0
+    leader_supply_action(world, board, unread, None)
+    assert board.scratch["party_leader_hold_pose"]["id"] == "hold:hp:Boss:1"
+    assert leader_supply_stand(board, world.last_party, unread) is None
+    missing = dict(stand)
+    missing.pop("map_id")
+    assert _stand_ready(duty, missing) is False
+
+    pose["ready"] = True
+    pose["x"], pose["y"] = 100, 100
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    reports = [
         {
-            "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
-            "last_party": {
-                "in_party": True,
-                "members": [{"name": "Boss", "map_id": 0, "x": 1, "y": 1}],
-            },
-            "last_print_state": None,
-        },
-    )()
-    BotController._publish_supply_stand(_Leader(), world, 99, board)
-    assert sent == []
-    board.scratch["party_leader_hold_pose"]["map"] = 4
-    BotController._publish_supply_stand(_Leader(), world, 99, board)
-    assert sent[0]["map_id"] == 4
-    assert (sent[0]["x"], sent[0]["y"]) == (10, 40)
-    assert sent[0]["confirmed"] is True
+            "from": "Elf",
+            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 0,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    manager = _close_supply(reports, None)
+    manager._nav_blackboard.scratch["party_supply_attempt"] = {
+        "key": ("elf", "arrow"),
+        "n": 0,
+        "since": clock["t"] - STAND_WAIT_S - 1.0,
+        "shifts": 0,
+    }
+    try:
+        timed_out = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert timed_out is None
+    assert manager.runtime.last_reason == "stand timeout"
 
 
 def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None:

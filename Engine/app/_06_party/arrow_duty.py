@@ -1918,8 +1918,10 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
     Steps taken before that stop update the latest tile and do not cancel.
     The stop counts only when the body is not walking and the live map and
     tile stay put for ``HOLD_SETTLE_S``. One stopped sample is not enough.
-    A map id of 0 is not a stop. After the stop, two tiles or a map change
-    cancels whether or not the drop has been announced. One tile does not.
+    Map id 0 is Talking Island and is a real map. A pose that could not be
+    read is not. Tile ``0,0`` is not a stop. After the stop, two tiles or a
+    map change cancels whether or not the drop has been announced. One tile
+    does not.
     """
     scratch = getattr(board, "scratch", None) if board is not None else None
     if not isinstance(scratch, dict) or not isinstance(hold, dict) or not hold.get("id"):
@@ -1951,15 +1953,17 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
         prev["map"], prev["x"], prev["y"] = here
         return True
     if not prev.get("confirmed"):
+        prev_map = prev.get("map")
         same = (
-            int(prev.get("map") or 0) == here[0]
+            prev_map is not None
+            and int(prev_map) == here[0]
             and int(prev.get("x") or 0) == here[1]
             and int(prev.get("y") or 0) == here[2]
         )
         prev["map"], prev["x"], prev["y"] = here
         stopped = _leader_body_stopped()
         prev["stopped"] = stopped
-        if stopped and same and here[0] != 0:
+        if stopped and same and not (here[1] == 0 and here[2] == 0):
             try:
                 since = float(prev.get("settle_at") or 0.0)
             except (TypeError, ValueError):
@@ -2005,9 +2009,10 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
 def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
     """Live stop tile once the body has stayed there.
 
-    Party memory is not the source. ``map_id`` 0 and tile ``0,0`` are not
-    sent. After confirmation the latest live tile is returned, including a
-    later departure, so a two-tile or map change can cancel the hold.
+    Party memory is not the source. Map id 0 is Talking Island and is sent.
+    A missing map is not. Tile ``0,0`` is not sent. After confirmation the
+    latest live tile is returned, including a later departure, so a two-tile
+    or map change can cancel the hold.
     """
     del snapshot
     if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
@@ -2026,7 +2031,7 @@ def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
         y = int(prev["y"])
     except (TypeError, ValueError, KeyError):
         return None
-    if mid == 0 or (x == 0 and y == 0):
+    if x == 0 and y == 0:
         return None
     return {
         "id": str(hold.get("id")),

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — Talking Island map 0 is a real supply stand
+
+Intent: Map id 0 is the Talking Island map, so a stopped live tile there is confirmed and sent. A pose that was not read is still not a stand, and tile `0,0` is still not a stand. The half-second settle, Esc retries, 8-second timeout, 6-second pause, two-tile cancel, and 12-tile approach stay as they are. The shopkeeper already accepts map 0 on the drop tile.
+Shared: `leader_hold_displaced`, `leader_supply_stand`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, the drop gesture, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: a supply stand while the recipient is on Talking Island.
+Consent: user (keep map id 0 as a real map, still drop tile 0,0 and an unread map, and do not change Esc, the settle time, the timeout, the pause, the two-tile cancel, or the 12-tile approach).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a supply stand waits until the live tile has been still
 
 Intent: While a hold is unconfirmed and the body is still walking, Esc is pressed again only at a half-second gap, and at most three times. A stop or a survival action sends no further Esc. The party log records each press, the stop that follows, and a walk that is still moving after the last press. The stand is confirmed only when the live map is not 0 and that live tile has stayed still, with the body not walking, for half a second. One stopped sample does not confirm. `supply_stand` carries that live map and tile. Party memory and `map_id` 0 are not sent. Before confirmation a coordinate change only updates the latest tile. After confirmation, two tiles or a map change cancels even if the drop was announced. One tile still retargets at drop time. The 8-second timeout and the 6-second pause stay.
