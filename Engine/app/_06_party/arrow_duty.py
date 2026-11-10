@@ -84,13 +84,48 @@ def _hold_with_phase(board: Any, duty: dict) -> dict[str, Any]:
     return hold
 
 
-def recipient_hold_intent(state: Any, blackboard: Any, hold: Any) -> Any:
-    """Hunt in place until the drop starts, then stand and receive.
+def _hold_confirmed(board: Any, hold: Any) -> bool:
+    """True after this hold's body has stopped on one tile."""
+    scratch = getattr(board, "scratch", None) if board is not None else None
+    prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+    if not isinstance(prev, dict) or not isinstance(hold, dict):
+        return False
+    return bool(prev.get("confirmed")) and str(prev.get("id") or "") == str(hold.get("id") or "")
 
-    Before the drop, a monster already in reach is attacked and no new
-    search or chase is started. Once the shopkeeper has announced the
+
+def _stop_ground_move(board: Any) -> None:
+    """Drop the planned search or travel hop. The click already sent needs Esc."""
+    if board is None:
+        return
+    try:
+        from app._04_decision.behaviors.search_hop import clear_search_hop
+
+        clear_search_hop(board)
+    except Exception:
+        pass
+    try:
+        from app._04_decision.behaviors.travel import clear_travel
+
+        clear_travel(board)
+    except Exception:
+        pass
+
+
+def recipient_hold_intent(
+    state: Any,
+    blackboard: Any,
+    hold: Any,
+    *,
+    tracked: bool = False,
+) -> Any:
+    """Stop the current walk, then hunt in place until the drop starts.
+
+    The stand is not confirmed while the body is still moving, so this does
+    not start a new search or chase. Once the shopkeeper has announced the
     drop, combat is cleared so the recipient can take the pile.
     """
+    if not tracked and leader_hold_displaced(blackboard, state, hold):
+        return None
     if isinstance(hold, dict) and hold.get("dropping"):
         if blackboard is not None:
             try:
@@ -103,6 +138,19 @@ def recipient_hold_intent(state: Any, blackboard: Any, hold: Any) -> Any:
         from .intents import idle
 
         return idle("supply receive")
+    if isinstance(hold, dict) and not _hold_confirmed(blackboard, hold):
+        _stop_ground_move(blackboard)
+        scratch = getattr(blackboard, "scratch", None) if blackboard is not None else None
+        prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
+        moving = not _leader_body_stopped()
+        if moving and isinstance(prev, dict) and not prev.get("halted"):
+            prev["halted"] = True
+            from .intents import supply_halt
+
+            return supply_halt()
+        from .intents import idle
+
+        return idle("supply hold")
     return supply_wait_intent(state, blackboard)
 
 
@@ -186,8 +234,8 @@ def choose_drop_stand(
 
 
 def _stand_ready(duty: dict, stand: Any) -> bool:
-    """True when this stand belongs to the current delivery attempt."""
-    if not isinstance(stand, dict):
+    """True when this attempt's stop tile has been confirmed."""
+    if not isinstance(stand, dict) or stand.get("confirmed") is not True:
         return False
     if str(stand.get("id") or "") != supply_hold_for(duty)["id"]:
         return False
@@ -246,6 +294,7 @@ def remember_supply_stand(runtime: Any, hold: dict, origin: Any, map_id: Any) ->
             "map_id": None if map_id is None else int(map_id),
             "x": int(origin.x),
             "y": int(origin.y),
+            "confirmed": True,
         }
     except (TypeError, ValueError):
         return
@@ -711,12 +760,31 @@ def _pose_moved(old: tuple, here: tuple) -> bool:
 
 
 def _stand_left(board: Any, stand: dict) -> bool:
-    """True once a confirmed stand tile has moved. The first tile is the anchor."""
+    """True once a confirmed stand tile has moved. The first confirmed tile is the anchor.
+
+    A stand that is not confirmed only refreshes the latest coordinate.
+    A different attempt id does not inherit the previous anchor.
+    """
     try:
         here = (int(stand["map_id"]), int(stand["x"]), int(stand["y"]))
     except (TypeError, ValueError, KeyError):
         return False
     st = _attempt(board)
+    stand_id = str(stand.get("id") or "")
+    if stand_id and str(st.get("stand_id") or "") != stand_id:
+        st["stand_id"] = stand_id
+        st["stand_confirmed"] = False
+        st.pop("stand_at", None)
+        board.scratch[_ATTEMPT] = st
+    if stand.get("confirmed") is not True:
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
+    if not st.get("stand_confirmed"):
+        st["stand_confirmed"] = True
+        st["stand_at"] = [here[0], here[1], here[2]]
+        board.scratch[_ATTEMPT] = st
+        return False
     prev = st.get("stand_at")
     if not isinstance(prev, (list, tuple)) or len(prev) != 3:
         st["stand_at"] = [here[0], here[1], here[2]]
@@ -831,9 +899,13 @@ def tick_shopkeeper_duty(
         return _tick_buy(manager, state, duty)
     duty = _bind_attempt(board, duty)
     stand = getattr(member_orders, "supply_stand", None)
-    if _stand_ready(duty, stand) and _stand_left(board, stand):
+    if (
+        isinstance(stand, dict)
+        and str(stand.get("id") or "") == supply_hold_for(duty)["id"]
+        and _stand_left(board, stand)
+    ):
         cancel_supply_delivery(
-            board, runtime, duty, reason="stand moved", pause=False
+            board, runtime, duty, reason="stand moved"
         )
         runtime.last_kind = "supply"
         runtime.last_reason = "stand moved"
@@ -1244,6 +1316,7 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
         "map_id": live[0],
         "x": live[1],
         "y": live[2],
+        "confirmed": True,
     }
 
 
@@ -1256,7 +1329,7 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
     board = manager._nav_blackboard
     if recheck == "cancel":
         cancel_supply_delivery(
-            board, runtime, duty, reason="stand moved", pause=False
+            board, runtime, duty, reason="stand moved"
         )
         runtime.last_kind = "supply"
         runtime.last_reason = "stand moved"
@@ -1812,10 +1885,16 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
         return False
     if prev.get("moved"):
         return True
-    if not prev.get("stopped"):
+    if not prev.get("confirmed"):
+        same = (
+            int(prev.get("map") or 0) == here[0]
+            and int(prev.get("x") or 0) == here[1]
+            and int(prev.get("y") or 0) == here[2]
+        )
         prev["map"], prev["x"], prev["y"] = here
-        if _leader_body_stopped():
-            prev["stopped"] = True
+        prev["stopped"] = _leader_body_stopped()
+        if prev["stopped"] and same:
+            prev["confirmed"] = True
         return False
     try:
         old = (int(prev["map"]), int(prev["x"]), int(prev["y"]))
@@ -1834,11 +1913,11 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
 
 
 def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
-    """Party-memory stand once the leader has stopped for this hold id.
+    """Party-memory stand once the stop tile has been confirmed.
 
-    None while the body is still walking, so the request tile is not frozen.
-    ``0,0`` is not a stand. A later one-tile or two-tile change is published
-    by calling this again with the latest memory row.
+    None until the body has stopped and the same tile was seen again.
+    ``0,0`` is not a stand. After confirmation, a later tile is published
+    so a two-tile departure can cancel the hold.
     """
     if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
         return None
@@ -1846,7 +1925,7 @@ def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
     prev = scratch.get("party_leader_hold_pose") if isinstance(scratch, dict) else None
     if (
         not isinstance(prev, dict)
-        or not prev.get("stopped")
+        or not prev.get("confirmed")
         or str(prev.get("id") or "") != str(hold.get("id"))
     ):
         return None
@@ -1862,6 +1941,7 @@ def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
             return None
     except (TypeError, ValueError, KeyError):
         return None
+    stand["confirmed"] = True
     return stand
 
 
@@ -1915,7 +1995,7 @@ def leader_supply_action(
     if claim_names_me(hold, name, guid):
         if leader_hold_displaced(blackboard, world, hold):
             return None
-        return recipient_hold_intent(world, blackboard, hold)
+        return recipient_hold_intent(world, blackboard, hold, tracked=True)
     return None
 
 

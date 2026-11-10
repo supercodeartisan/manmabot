@@ -53,7 +53,14 @@ def test_plan_waits_until_the_stop_tile_is_confirmed() -> None:
     assert plan_supply_drop(_duty(), None) is None
     planned = plan_supply_drop(
         _duty(),
-        {"id": "hold:arrow:Elf", "for": "Elf", "map_id": 4, "x": 10, "y": 20},
+        {
+            "id": "hold:arrow:Elf",
+            "for": "Elf",
+            "map_id": 4,
+            "x": 10,
+            "y": 20,
+            "confirmed": True,
+        },
     )
     assert planned is not None
     assert planned["exact"] is True
@@ -703,6 +710,7 @@ def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
         "map_id": 4,
         "x": 100,
         "y": 100,
+        "confirmed": True,
     }
     blocked = {
         (100 + ox, 100 + oy) for ox, oy in arrow_duty._DROP_NEIGHBORS
@@ -1012,7 +1020,7 @@ def test_a_finished_shop_does_not_block_the_join(monkeypatch) -> None:
     assert board.scratch.get("need_world_nav") is None
 
 
-def test_a_moved_stand_cancels_without_a_pause() -> None:
+def test_a_moved_stand_pauses_before_the_next_try() -> None:
     saved_reports = list(member_orders.party_reports)
     saved_stand = member_orders.supply_stand
     saved_open = bool(member_orders.supply_open)
@@ -1032,6 +1040,7 @@ def test_a_moved_stand_cancels_without_a_pause() -> None:
         "map_id": 4,
         "x": 100,
         "y": 100,
+        "confirmed": True,
     }
     manager = _Manager()
     manager._nav_blackboard.world_origin = type("O", (), {"x": 100, "y": 100})()
@@ -1040,6 +1049,8 @@ def test_a_moved_stand_cancels_without_a_pause() -> None:
         "n": 0,
         "since": 0.0,
         "shifts": 0,
+        "stand_id": "hold:arrow:Elf",
+        "stand_confirmed": True,
         "stand_at": [4, 100, 140],
     }
     import app._04_decision.world_nav.session as session
@@ -1058,7 +1069,7 @@ def test_a_moved_stand_cancels_without_a_pause() -> None:
     assert action is None
     assert manager.runtime.supply_hold is None
     assert manager.runtime.last_reason == "stand moved"
-    assert "party_supply_pause" not in manager._nav_blackboard.scratch
+    assert ("elf", "arrow") in manager._nav_blackboard.scratch["party_supply_pause"]
     assert manager._nav_blackboard.scratch["party_supply_attempt"]["n"] == 1
 
 
@@ -1413,3 +1424,137 @@ def test_a_dropping_hold_is_published_again(monkeypatch) -> None:
     assert sent[1]["dropping"] is True
     BotController._publish_supply_hold(leader)
     assert len(sent) == 2
+
+
+def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
+    from app._02_state.enums import ActionType
+    from app._06_party.arrow_duty import leader_supply_action, leader_supply_stand
+
+    pose = {"x": 10, "y": 10}
+    body = {"moving": True, "standing": False}
+    row = {
+        "name": "Boss",
+        "guid": "0x10",
+        "map_id": 4,
+        "x": 10,
+        "y": 10,
+        "is_leader": True,
+    }
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type(
+            "P", (), {"map_id": 4, "x": pose["x"], "y": pose["y"]}
+        )(),
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_moving", lambda: body["moving"]
+    )
+    monkeypatch.setattr(
+        "app._05_action.body_pose.body_is_standing", lambda: body["standing"]
+    )
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "Boss"})()})(),
+            "last_party": {"in_party": True, "members": [row], "leader": row},
+            "last_print_state": None,
+        },
+    )()
+    hold = {"id": "hold:hp:Boss", "for": "Boss", "item": "hp"}
+    board = _Board()
+    walking = leader_supply_action(world, board, hold, None)
+    assert walking.action is ActionType.SHOP_STOP
+    assert "hold" in str(walking.reason)
+    pose["y"] = 40
+    row["y"] = 40
+    body["moving"] = False
+    body["standing"] = True
+    jumped = leader_supply_action(world, board, hold, None)
+    assert jumped is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    assert board.scratch["party_leader_hold_pose"].get("confirmed") is not True
+    assert leader_supply_stand(board, world.last_party, hold) is None
+    settled = leader_supply_action(world, board, hold, None)
+    assert settled is not None
+    stand = leader_supply_stand(board, world.last_party, hold)
+    assert stand is not None and stand.get("confirmed") is True
+    assert (stand["x"], stand["y"]) == (10, 40)
+    pose["y"] = 42
+    row["y"] = 42
+    assert leader_supply_action(world, board, hold, None) is None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is True
+
+
+def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None:
+    import time
+
+    from app._06_party.arrow_duty import _stand_ready
+
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    member_orders.supply_open = True
+    member_orders.supply_stand = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 100,
+        "y": 80,
+        "confirmed": False,
+    }
+    member_orders.party_reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    manager = _Manager()
+    manager._nav_blackboard.world_origin = type("O", (), {"x": 100, "y": 100})()
+    manager._nav_blackboard.scratch["party_supply_attempt"] = {
+        "key": ("elf", "arrow"),
+        "n": 0,
+        "since": time.time(),
+        "shifts": 0,
+        "stand_id": "hold:arrow:Elf",
+        "stand_at": [4, 100, 100],
+    }
+    import app._04_decision.world_nav.session as session
+
+    real_pose = session.live_pose_from_state
+    session.live_pose_from_state = lambda _state, fresh=False: _pose(4, 100, 100)
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        session.live_pose_from_state = real_pose
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert action is not None
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason == "wait for stand"
+    assert manager._nav_blackboard.scratch["party_supply_attempt"]["stand_at"][2] == 80
+    duty = {"name": "Elf", "item": "arrow", "attempt": 1}
+    assert (
+        _stand_ready(
+            duty,
+            {
+                "id": "hold:arrow:Elf",
+                "for": "Elf",
+                "map_id": 4,
+                "x": 1,
+                "y": 1,
+                "confirmed": True,
+            },
+        )
+        is False
+    )

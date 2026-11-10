@@ -2519,7 +2519,6 @@ class BotController:
         if not isinstance(hold, dict) or not hold.get("id"):
             return
         from app._06_party.comms.publish import publish_body
-        from app._06_party.leader import stand_from_party_memory
         from app._06_party.sync import member_states
 
         me = _player_chat_name(world, getattr(world, "last_party", None))
@@ -2542,11 +2541,7 @@ class BotController:
                     continue
                 stand = body
                 break
-            if stand is None:
-                stand = stand_from_party_memory(
-                    getattr(world, "last_party", None), who, str(hold.get("id"))
-                )
-        if not isinstance(stand, dict):
+        if not isinstance(stand, dict) or stand.get("confirmed") is not True:
             return
         key = (
             str(stand.get("id") or ""),
@@ -2566,6 +2561,7 @@ class BotController:
                 "map_id": stand.get("map_id") if stand.get("map_id") is not None else map_id,
                 "x": stand.get("x"),
                 "y": stand.get("y"),
+                "confirmed": True,
             }
         )
         self._party_stand_key = key

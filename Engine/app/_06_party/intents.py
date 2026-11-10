@@ -15,6 +15,17 @@ from .follow import (
 from .policy import MemberKind
 
 
+def supply_halt(reason: str = "supply hold halt") -> Any:
+    """Esc once, the same cancel a shop uses to stop an auto-walk."""
+    from .types import ActionIntent, ActionType
+
+    return ActionIntent(
+        action=ActionType.SHOP_STOP,
+        priority=0.5,
+        reason=f"party_member:{reason}",
+    )
+
+
 def idle(reason: str, *, priority: float = 0.0) -> Any:
     from .types import ActionIntent, ActionType
 

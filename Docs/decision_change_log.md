@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — a supply stand is sent only after the walk has stopped
+
+Intent: A hold stops the ground click already in progress, and `supply_stand` is sent only after the body is stopped on the same tile a second time. Until that confirmation, a two-tile change updates the latest coordinate and does not cancel. After confirmation, two tiles or a map change still cancels. The shopkeeper drops only from a confirmed stand for the current attempt id. A stand-moved cancel and a stand timeout both wait out the existing short pause before the same person and item are tried again. Critical retreat, a potion, and urgent self-heal stay first, and a survival action that changes the tile still cancels the hold.
+Shared: `leader_hold_displaced`, `leader_supply_stand`, `recipient_hold_intent`, `_stand_left`, `_publish_supply_stand`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Supply choice, the 12-tile approach, buy quantity, solo hunt, MP and arrow rules, and Brain wiring are unchanged.
+Affects: the party member, including the leader, who receives a supply hold, and the shopkeeper's drop anchor.
+Consent: user (halt the in-progress ground move, send supply_stand only after a real stop, update coordinates before confirmation, apply the two-tile and map cancel only after confirmation, use only a confirmed stand for the current attempt, and pause a retry after stand moved or a failed stop).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-10 — a supply hold stays up, and the recipient hunts in place until the drop
 
 Intent: Once the shopkeeper is within 12 tiles, that hold stays for the same person and item even if the next step is outside 12 again. The recipient stops new search and chase, and attacks only a monster already in reach, until the shopkeeper announces the drop. The announce is one tick beside the recipient before the ground gesture, and it is published on the same hold id with `dropping`. That tick clears combat so they can receive. A finished drop, the 8-second stand timeout, a two-tile departure after the body stops, or a map change returns the hunt to normal. Critical retreat, a potion, and urgent self-heal still come first.

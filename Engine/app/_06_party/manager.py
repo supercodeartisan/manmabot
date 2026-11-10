@@ -445,9 +445,19 @@ class PartyMemberManager:
             leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
             hold = None if leaving else member_orders.supply_hold
             if claim_names_me(hold, seat_name, seat_guid):
-                remember_supply_stand(
-                    self.runtime, hold, origin, self.runtime.local_map_id
+                from .arrow_duty import _hold_confirmed, leader_hold_displaced
+
+                left = leader_hold_displaced(
+                    self._nav_blackboard, game_state, hold
                 )
+                if _hold_confirmed(self._nav_blackboard, hold):
+                    remember_supply_stand(
+                        self.runtime, hold, origin, self.runtime.local_map_id
+                    )
+                else:
+                    self.runtime.supply_stand = None
+                if left:
+                    hold = None
             else:
                 self.runtime.supply_stand = None
             picked = None if leaving else tick_supply_pickup(
@@ -461,7 +471,7 @@ class PartyMemberManager:
                 drop, seat_name, seat_guid
             ):
                 waited = recipient_hold_intent(
-                    game_state, self._nav_blackboard, hold
+                    game_state, self._nav_blackboard, hold, tracked=True
                 )
                 self.runtime.last_kind = "supply"
                 self.runtime.last_reason = "supply hold"
