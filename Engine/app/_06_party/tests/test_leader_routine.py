@@ -354,6 +354,109 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         nav_session.live_pose_from_state = real_pose
 
 
+def test_checked_marks_rotate_in_order() -> None:
+    schedule = PartyLeaderSchedule.from_routine(
+        [
+            {
+                "map_id": "mainland",
+                "duration_minutes": 60,
+                "selected_farms": ["area_2", "area_3", "point_1"],
+                "farm_stays_s": {"area_2": 120.0, "area_3": 120.0, "point_1": 600.0},
+                "areas": [
+                    {
+                        "name": "area_2",
+                        "shape": "area",
+                        "x0": 0,
+                        "y0": 0,
+                        "x1": 10,
+                        "y1": 10,
+                    },
+                    {
+                        "name": "area_3",
+                        "shape": "area",
+                        "x0": 100,
+                        "y0": 100,
+                        "x1": 120,
+                        "y1": 120,
+                    },
+                    {"name": "point_1", "shape": "point", "x": 50, "y": 50},
+                ],
+            }
+        ]
+    )
+    assert schedule.goal_nav() == ("mainland", 5, 5)
+    assert schedule.inside_current_nav(1, 1)
+    assert not schedule.inside_current_nav(110, 110)
+    schedule.note_mark(0.0, True)
+    schedule.note_mark(120.0, True)
+    assert schedule.mark_due(120.0)
+    assert schedule.advance_mark()
+    assert schedule.goal_nav() == ("mainland", 110, 110)
+    assert schedule.inside_current_nav(110, 110)
+    assert not schedule.inside_current_nav(1, 1)
+    schedule.mark_elapsed = 120.0
+    assert schedule.advance_mark()
+    assert schedule.goal_nav() == ("mainland", 50, 50)
+    assert schedule.advance_mark()
+    assert schedule.goal_nav() == ("mainland", 5, 5)
+
+
+def test_prepare_walks_to_the_next_mark_when_the_stay_ends() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "duration_minutes": 60,
+                "selected_farms": ["area_2", "area_3"],
+                "farm_stays_s": {"area_2": 120.0, "area_3": 120.0},
+                "areas": [
+                    {
+                        "name": "area_2",
+                        "shape": "area",
+                        "x0": 0,
+                        "y0": 0,
+                        "x1": 10,
+                        "y1": 10,
+                    },
+                    {
+                        "name": "area_3",
+                        "shape": "area",
+                        "x0": 100,
+                        "y0": 100,
+                        "x1": 120,
+                        "y1": 120,
+                    },
+                ],
+            }
+        ]
+    )
+    manager.schedule.mark_elapsed = 120.0
+    walked: list[int] = []
+    farmed: list[int] = []
+    manager._nav_xy = lambda pack_id, pose: (1, 1)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: True  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
+    real_pose = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = (
+        lambda state, fresh=False: SimpleNamespace(map_id=4, x=1, y=1)
+    )
+    try:
+        manager.prepare(object(), None)
+        assert walked == [1]
+        assert farmed == []
+        assert manager.schedule.goal_nav() == ("mainland", 110, 110)
+    finally:
+        nav_session.live_pose_from_state = real_pose
+
+
 if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
@@ -366,4 +469,6 @@ if __name__ == "__main__":
     test_row_minutes_advance_to_the_next_party_row()
     test_hold_does_not_spend_the_row()
     test_rally_walks_to_the_mark_before_waiting()
+    test_checked_marks_rotate_in_order()
+    test_prepare_walks_to_the_next_mark_when_the_stay_ends()
     print("OK")

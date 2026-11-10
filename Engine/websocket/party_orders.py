@@ -571,6 +571,12 @@ class MemberOrders:
         self.party_reports: list[dict[str, Any]] = []
         # Ground arrow pile the leader told this member about. None = none.
         self.supply_drop: Optional[dict[str, Any]] = None
+        # Stop on the current tile until this drop lands. None = not waiting.
+        self.supply_hold: Optional[dict[str, Any]] = None
+        # Tile the recipient stopped on. The shopkeeper drops beside it.
+        self.supply_stand: Optional[dict[str, Any]] = None
+        # Leader hunt has started. Supply stays closed until this is true.
+        self.supply_open: bool = False
 
     @property
     def order_kind(self) -> str:
@@ -586,6 +592,9 @@ class MemberOrders:
         self._policy_dirty = False
         self.party_reports = []
         self.supply_drop = None
+        self.supply_hold = None
+        self.supply_stand = None
+        self.supply_open = False
 
     def clear(self) -> None:
         self._drop_orders()
@@ -645,11 +654,24 @@ class MemberOrders:
                 else:
                     self.supply_drop = dict(body)
                 continue
+            if kind == "supply_hold":
+                if bool(body.get("clear")):
+                    self.supply_hold = None
+                else:
+                    self.supply_hold = dict(body)
+                continue
+            if kind == "supply_stand":
+                if bool(body.get("clear")):
+                    self.supply_stand = None
+                else:
+                    self.supply_stand = dict(body)
+                continue
             if kind == "party_reports":
                 rows = body.get("reports")
                 self.party_reports = [
                     dict(row) for row in rows if isinstance(row, dict)
                 ] if isinstance(rows, list) else []
+                self.supply_open = bool(body.get("hunt_open"))
                 continue
             if kind == RALLY:
                 # A rally pin is not a walk goal. Follow uses party memory.

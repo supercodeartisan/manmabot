@@ -2257,6 +2257,92 @@ class BotController:
         self._publish_party_policy()
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
+        self._publish_supply_hold()
+        self._publish_supply_stand(world, map_id)
+
+    def _leader_blackboard(self):
+        board = getattr(getattr(self, "_party_leader_ref", None), "decision", None)
+        blackboard = getattr(board, "blackboard", None)
+        if blackboard is None:
+            blackboard = getattr(getattr(self, "decision", None), "blackboard", None)
+        return blackboard
+
+    def _leader_leaving_hunt(self, blackboard) -> bool:
+        """Retreat, mother tree, or a return scroll. A new hunt map is not leaving."""
+        from app._04_decision.player_mode import PlayerMode
+        from app._04_decision.world_nav.hooks import SCRATCH_NEED_WORLD_NAV
+
+        mode = getattr(blackboard, "player_mode", None)
+        if mode is PlayerMode.RETREATING:
+            return True
+        scratch = getattr(blackboard, "scratch", None)
+        if isinstance(scratch, dict):
+            if scratch.get("mother_tree_trip"):
+                return True
+            if scratch.get("hp_safe_scrolled") or scratch.get("hp_safe_scroll_spot"):
+                return True
+            if str(scratch.get(SCRATCH_NEED_WORLD_NAV) or "") == "post_retreat":
+                return True
+        return False
+
+    def _party_hunt_open(self, world) -> bool:
+        """True after the start rally has reached the hunt mark."""
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.arrow_policy import hunt_map_after_pose
+
+        rally = getattr(self, "_start_rally", None)
+        if rally is None or str(getattr(rally, "state", "") or "") != "done":
+            return False
+        pose = live_pose_from_state(world)
+        pose_map = int(pose.map_id) if pose is not None else None
+        self._party_hunt_map = hunt_map_after_pose(
+            getattr(self, "_party_hunt_map", None),
+            pose_map,
+            leaving=self._leader_leaving_hunt(self._leader_blackboard()),
+        )
+        return True
+
+    def _leader_supply_away(self, world, blackboard) -> bool:
+        """Leader is leaving the hunt, or is no longer on the hunt map."""
+        from app._04_decision.world_nav.session import live_pose_from_state
+
+        if self._leader_leaving_hunt(blackboard):
+            return True
+        hunt = getattr(self, "_party_hunt_map", None)
+        pose = live_pose_from_state(world)
+        if hunt is not None and pose is not None and int(pose.map_id) != int(hunt):
+            return True
+        return False
+
+    def _supply_away_names(self, world) -> set[str]:
+        """Recipients the shopkeeper must not walk to."""
+        from app._06_party.sync import member_states
+
+        hunt = getattr(self, "_party_hunt_map", None)
+        away: set[str] = set()
+        for name, row in member_states.rows.items():
+            live = row.get("live") if isinstance(row, dict) else None
+            if not isinstance(live, dict):
+                continue
+            kind = str(live.get("kind") or "")
+            if kind == "retreat":
+                away.add(str(name).casefold())
+                continue
+            if hunt is None:
+                continue
+            try:
+                if int(live.get("map_id")) != int(hunt):
+                    away.add(str(name).casefold())
+            except (TypeError, ValueError):
+                continue
+        me = _player_chat_name(world, getattr(world, "last_party", None))
+        board = getattr(getattr(self, "_party_leader_ref", None), "decision", None)
+        blackboard = getattr(board, "blackboard", None)
+        if blackboard is None:
+            blackboard = getattr(getattr(self, "decision", None), "blackboard", None)
+        if me and blackboard is not None and self._leader_supply_away(world, blackboard):
+            away.add(me.casefold())
+        return away
 
     def _publish_shop_reports(self, world, map_id) -> None:
         """Forward member reports and this leader's report to the shopkeeper."""
@@ -2271,6 +2357,7 @@ class BotController:
             x, y = int(pose.x), int(pose.y)
             mid = int(pose.map_id)
         rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        hunt_open = self._party_hunt_open(world)
         sent = publish_shop_reports(
             world,
             rows,
@@ -2278,6 +2365,8 @@ class BotController:
             mid,
             x,
             y,
+            hunt_open=hunt_open,
+            away=self._supply_away_names(world),
         )
         if sent:
             self.log(f"Party reports sent to shopkeeper ({sent})")
@@ -2365,6 +2454,138 @@ class BotController:
             }
         )
         self._party_supply_id = str(claim.get("id"))
+
+    def _shopkeeper_live(self) -> dict | None:
+        from app._06_party.comms.publish import _shopkeeper_names
+        from app._06_party.sync import member_states
+        from settings.profile import normalize_party_roster
+
+        names = _shopkeeper_names(
+            normalize_party_roster(getattr(self._profile, "party_roster", None))
+        )
+        if not names:
+            return None
+        row = member_states.rows.get(names[0])
+        if not isinstance(row, dict):
+            for key, value in member_states.rows.items():
+                if str(key).casefold() == names[0].casefold():
+                    row = value
+                    break
+        live = row.get("live") if isinstance(row, dict) else None
+        return live if isinstance(live, dict) else None
+
+    def _leader_supply_hold(self) -> dict | None:
+        live = self._shopkeeper_live()
+        hold = live.get("supply_hold") if isinstance(live, dict) else None
+        return dict(hold) if isinstance(hold, dict) else None
+
+    def _publish_supply_hold(self) -> None:
+        hold = self._leader_supply_hold()
+        sent_id = str(getattr(self, "_party_hold_id", "") or "")
+        from app._06_party.comms.publish import publish_body
+
+        if not isinstance(hold, dict) or not hold.get("id"):
+            if not sent_id:
+                return
+            publish_body({"type": "supply_hold", "from": "leader", "clear": True})
+            publish_body({"type": "supply_stand", "from": "leader", "clear": True})
+            self._party_hold_id = ""
+            self._party_stand_key = None
+            return
+        if str(hold.get("id")) != sent_id:
+            publish_body(
+                {
+                    "type": "supply_hold",
+                    "from": "leader",
+                    "clear": False,
+                    "id": hold.get("id"),
+                    "for": hold.get("for"),
+                    "item": hold.get("item") or "arrow",
+                    "qty": hold.get("qty"),
+                    "min": hold.get("min"),
+                }
+            )
+            self._party_hold_id = str(hold.get("id"))
+            self._party_stand_key = None
+
+    def _publish_supply_stand(self, world, map_id) -> None:
+        hold = self._leader_supply_hold()
+        if not isinstance(hold, dict) or not hold.get("id"):
+            return
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.comms.publish import publish_body
+        from app._06_party.leader import stand_from_party_memory
+        from app._06_party.sync import member_states
+
+        me = _player_chat_name(world, getattr(world, "last_party", None))
+        who = str(hold.get("for") or "").strip()
+        stand = None
+        for row in member_states.rows.values():
+            live = row.get("live") if isinstance(row, dict) else None
+            body = live.get("supply_stand") if isinstance(live, dict) else None
+            if not isinstance(body, dict):
+                continue
+            if str(body.get("id") or "") != str(hold.get("id")):
+                continue
+            stand = body
+            break
+        if stand is None:
+            stand = stand_from_party_memory(
+                getattr(world, "last_party", None), who, str(hold.get("id"))
+            )
+        if stand is None and me and who and me.casefold() == who.casefold():
+            pose = live_pose_from_state(world)
+            if pose is not None:
+                stand = {
+                    "id": hold.get("id"),
+                    "for": who,
+                    "map_id": int(pose.map_id),
+                    "x": int(pose.x),
+                    "y": int(pose.y),
+                }
+        if not isinstance(stand, dict):
+            return
+        key = (
+            str(stand.get("id") or ""),
+            stand.get("map_id"),
+            stand.get("x"),
+            stand.get("y"),
+        )
+        if key == getattr(self, "_party_stand_key", None):
+            return
+        publish_body(
+            {
+                "type": "supply_stand",
+                "from": "leader",
+                "clear": False,
+                "id": stand.get("id"),
+                "for": stand.get("for") or who,
+                "map_id": stand.get("map_id") if stand.get("map_id") is not None else map_id,
+                "x": stand.get("x"),
+                "y": stand.get("y"),
+            }
+        )
+        self._party_stand_key = key
+
+    def _nudge_supply_live(self) -> None:
+        """Send member_state on the tick a hold or stand tile changes."""
+        reporter = getattr(self, "_member_state_reporter", None)
+        if reporter is None:
+            return
+        brain = getattr(self, "_party_brain_ref", None)
+        runtime = getattr(brain, "runtime", None)
+        hold = getattr(runtime, "supply_hold", None) if runtime is not None else None
+        stand = getattr(runtime, "supply_stand", None) if runtime is not None else None
+        key = (
+            str(hold.get("id") or "") if isinstance(hold, dict) else "",
+            str(stand.get("id") or "") if isinstance(stand, dict) else "",
+            stand.get("x") if isinstance(stand, dict) else None,
+            stand.get("y") if isinstance(stand, dict) else None,
+        )
+        if key == getattr(self, "_supply_live_key", None):
+            return
+        reporter.nudge()
+        self._supply_live_key = key
 
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
@@ -2704,6 +2925,7 @@ class BotController:
 
         snap = action_party_snapshot(world)
         name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
+        self._nudge_supply_live()
         self._member_state_reporter.tick(
             self._party_comms.send_member_state,
             name=name or "member",
@@ -2750,6 +2972,24 @@ class BotController:
                     "x": notice.get("x"),
                     "y": notice.get("y"),
                     "qty": notice.get("qty"),
+                }
+            hold = getattr(runtime, "supply_hold", None)
+            if isinstance(hold, dict) and hold.get("id"):
+                out["supply_hold"] = {
+                    "id": hold.get("id"),
+                    "for": hold.get("for"),
+                    "item": hold.get("item") or "arrow",
+                    "qty": hold.get("qty"),
+                    "min": hold.get("min"),
+                }
+            stand = getattr(runtime, "supply_stand", None)
+            if isinstance(stand, dict) and stand.get("id"):
+                out["supply_stand"] = {
+                    "id": stand.get("id"),
+                    "for": stand.get("for"),
+                    "map_id": stand.get("map_id"),
+                    "x": stand.get("x"),
+                    "y": stand.get("y"),
                 }
         gather = member_orders.gather or {}
         out["rally"] = str(gather.get("stage") or "")
@@ -3694,6 +3934,11 @@ class BotController:
                         skip_accept=chat_kind == "accept",
                     )
                     action = party_brain.decide(world)
+                    if self._party_comms.client is not None:
+                        try:
+                            self._member_state_report(world)
+                        except Exception as supply_live_exc:
+                            self.log(f"Party supply live send failed: {supply_live_exc}")
                     self._member_party_tick(
                         world,
                         last_logged_map_id,
@@ -3709,11 +3954,31 @@ class BotController:
                     )
                 elif leader_brain is not None:
                     self._arm_party_arrow_cover(decision.blackboard)
-                    pickup = None
                     if self._party_leader_on():
+                        try:
+                            self._drain_party_reports(world)
+                        except Exception as drain_exc:
+                            self.log(f"Party leader drain failed: {drain_exc}")
+                    me = _player_chat_name(world, getattr(world, "last_party", None))
+                    supply_here = (
+                        self._party_leader_on()
+                        and self._party_hunt_open(world)
+                        and not self._leader_supply_away(world, decision.blackboard)
+                    )
+                    hold = self._leader_supply_hold() if supply_here else None
+                    claim = self._leader_supply_claim() if supply_here else None
+                    from app._06_party.arrow_duty import claim_names_me, supply_wait_intent
+
+                    if claim_names_me(claim, me):
                         pickup = self._leader_arrow_pickup(world, decision.blackboard)
-                    if pickup is not None:
-                        action = pickup
+                        if pickup is not None:
+                            action = pickup
+                        elif claim_names_me(hold, me):
+                            action = supply_wait_intent(world, decision.blackboard)
+                        else:
+                            action = leader_brain.decide(world)
+                    elif claim_names_me(hold, me):
+                        action = supply_wait_intent(world, decision.blackboard)
                     else:
                         action = leader_brain.decide(world)
                     try:

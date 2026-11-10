@@ -8,6 +8,20 @@ DUTY_SHOP = "shop"
 DUTY_SUPPLY = "supply"
 
 
+def hunt_map_after_pose(stored: Any, pose_map: Any, *, leaving: bool) -> Any:
+    """While the leader is hunting, the hunt map is the map they are on.
+
+    A retreat or a return scroll keeps the previous map so people still there
+    stay eligible and the leader, now elsewhere, does not.
+    """
+    if leaving or pose_map is None:
+        return stored
+    try:
+        return int(pose_map)
+    except (TypeError, ValueError):
+        return stored
+
+
 def report_arrow_count(row: Any) -> Optional[int]:
     """Arrows plus silver arrows on one party report. None when the row has no bag."""
     if not isinstance(row, dict):

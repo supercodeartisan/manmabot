@@ -376,6 +376,126 @@ def test_policy_merge_keeps_arrow_and_pickup_knobs() -> None:
     assert cfg.random_loot is True
 
 
+def test_same_map_drop_converts_game_xy_before_travel() -> None:
+    """Report xy is raw game. Same-map travel must get nav tiles."""
+    from app._03_world.merge.memory_sync import configure_map_origin, get_map_origin
+    from app._06_party import arrow_duty
+
+    saved = get_map_origin()
+    configure_map_origin(
+        {"navigation": {"map_origin_x": 32448, "map_origin_y": 32128}}
+    )
+    goals: list[tuple[int, int]] = []
+    other_map: list[tuple[int, int]] = []
+
+    class _Pose:
+        def __init__(self, map_id: int) -> None:
+            self.map_id = map_id
+            self.x = 33120
+            self.y = 33370
+
+    class _Origin:
+        x = 672
+        y = 1242
+
+    class _Board:
+        def __init__(self) -> None:
+            self.world_origin = _Origin()
+            self.nav_goal = None
+            self.intent = None
+            self.scratch: dict = {}
+
+    class _Runtime:
+        duty_phase = ""
+        last_kind = ""
+        last_reason = ""
+
+    class _Manager:
+        def __init__(self) -> None:
+            self._nav_blackboard = _Board()
+            self.runtime = _Runtime()
+
+    import app._04_decision.behaviors.travel as travel
+    import app._04_decision.world_nav.session as session
+
+    real_pose = session.live_pose_from_state
+    real_start = travel.start_travel
+    real_emit = travel.emit_travel_hop
+    real_nav = arrow_duty._tick_nav
+    pose_map = {"id": 4}
+
+    def _pose(_state, fresh=False):
+        del fresh
+        return _Pose(pose_map["id"])
+
+    def _start(board, goal, reason=""):
+        del reason
+        goals.append((int(goal[0]), int(goal[1])))
+        board.nav_goal = (int(goal[0]), int(goal[1]))
+
+    def _emit(*_args, **_kwargs) -> bool:
+        return False
+
+    def _nav(_manager, _state, _map_id, x, y, *, reason):
+        del reason
+        other_map.append((int(x), int(y)))
+        return None
+
+    session.live_pose_from_state = _pose
+    travel.start_travel = _start
+    travel.emit_travel_hop = _emit
+    arrow_duty._tick_nav = _nav
+    try:
+        manager = _Manager()
+        # Game (33205, 33436) is nav (757, 1308) on this origin.
+        walked = arrow_duty._beside_member(
+            manager,
+            object(),
+            {"x": 33205, "y": 33436, "map_id": 4},
+        )
+        assert walked is not True
+        assert goals == [(757, 1308)]
+        # Already-nav report xy is left as-is.
+        goals.clear()
+        manager._nav_blackboard.nav_goal = None
+        arrow_duty._beside_member(
+            manager,
+            object(),
+            {"x": 757, "y": 1308, "map_id": 4},
+        )
+        assert goals == [(757, 1308)]
+        # Within 3 tiles after conversion: stand and drop, no travel.
+        goals.clear()
+        beside = arrow_duty._beside_member(
+            manager,
+            object(),
+            {"x": 33122, "y": 33372, "map_id": 4},
+        )
+        assert beside is True
+        assert goals == []
+        # Other map keeps game xy for world nav.
+        pose_map["id"] = 0
+        arrow_duty._beside_member(
+            manager,
+            object(),
+            {"x": 33205, "y": 33436, "map_id": 4},
+        )
+        assert other_map == [(33205, 33436)]
+    finally:
+        session.live_pose_from_state = real_pose
+        travel.start_travel = real_start
+        travel.emit_travel_hop = real_emit
+        arrow_duty._tick_nav = real_nav
+        configure_map_origin(
+            {
+                "navigation": {
+                    "map_origin_x": saved[0],
+                    "map_origin_y": saved[1],
+                }
+            }
+        )
+
+
 if __name__ == "__main__":
     test_shopkeeper_does_not_take_ground_loot()
     test_random_loot_still_available_for_a_normal_seat()
@@ -395,4 +515,5 @@ if __name__ == "__main__":
     test_line_hold_omits_only_a_live_shop_phase()
     test_party_loot_uses_the_boss_weight_line()
     test_policy_merge_keeps_arrow_and_pickup_knobs()
+    test_same_map_drop_converts_game_xy_before_travel()
     print("ok")

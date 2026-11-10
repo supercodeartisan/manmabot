@@ -7,7 +7,7 @@ from __future__ import annotations
 # LEG_TICKS, search rolls the next leg. Each new leg is a real click.
 # Another action that skips search for more than one tick drops the hop.
 # The next search tick plans a new point and clicks immediately.
-LEG_TICKS = 30
+LEG_TICKS = 60
 
 __all__ = [
     "LEG_TICKS",

@@ -10,6 +10,7 @@ from .follow import (
     FOLLOW_CLICK_TILES,
     choose_approach_tile,
     choose_settle_stand,
+    follow_hop_still_closes,
 )
 from .policy import MemberKind
 
@@ -262,11 +263,12 @@ def plan_field_follow(
     goal = path[-1]
     if goal == (ox, oy):
         return idle("at_approach"), goal, "at_approach", None
-    # Keep walking the last click unless it is nearly reached or the goal moved.
+    # Same delta and the hop is still on the way: let that step finish.
+    # A new member-to-slot direction clicks the latest tile on this read.
     if (
-        previous_goal == goal
-        and previous_hop is not None
+        previous_hop is not None
         and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
+        and follow_hop_still_closes((ox, oy), goal, previous_hop)
     ):
         try:
             from app._05_action.body_pose import body_is_moving
@@ -316,10 +318,12 @@ def plan_slot_hop(
     goal = (int(slot[0]), int(slot[1]))
     if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= ARRIVAL_TOLERANCE:
         return idle("at_slot"), goal, "at_slot", None
+    # Same delta and the hop is still on the way: let that step finish.
+    # A changed member-to-slot direction clicks this latest tile now.
     if (
-        previous_goal == goal
-        and previous_hop is not None
+        previous_hop is not None
         and max(abs(previous_hop[0] - ox), abs(previous_hop[1] - oy)) > 1
+        and follow_hop_still_closes((ox, oy), goal, previous_hop)
     ):
         try:
             from app._05_action.body_pose import body_is_moving

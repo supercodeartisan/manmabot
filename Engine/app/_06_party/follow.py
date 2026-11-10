@@ -258,6 +258,30 @@ def guid_key(value: object) -> Optional[int]:
         return None
 
 
+def follow_hop_still_closes(
+    member: tuple[int, int],
+    slot: tuple[int, int],
+    hop: Optional[tuple[int, int]],
+) -> bool:
+    """True when ``hop`` is still a step from the member toward ``slot``.
+
+    The slot is the formation tile from this memory read, not the leader tile.
+    A hop past that slot, or a hop whose direction differs from the current
+    member-to-slot delta, does not count.
+    """
+    if hop is None:
+        return False
+    mx, my = int(member[0]), int(member[1])
+    sx, sy = int(slot[0]), int(slot[1])
+    hx, hy = int(hop[0]), int(hop[1])
+    if (hx, hy) == (mx, my):
+        return False
+    slot_dir = unit8((sx - mx, sy - my))
+    if slot_dir == (0, 0) or unit8((hx - mx, hy - my)) != slot_dir:
+        return False
+    return max(abs(hx - mx), abs(hy - my)) <= max(abs(sx - mx), abs(sy - my))
+
+
 __all__ = [
     "ARRIVAL_TOLERANCE",
     "STICKY_GOAL_SLACK",
@@ -267,6 +291,7 @@ __all__ = [
     "cardinal_tiles",
     "choose_approach_tile",
     "choose_settle_stand",
+    "follow_hop_still_closes",
     "follow_kind",
     "formation_slot_offset",
     "guid_key",
