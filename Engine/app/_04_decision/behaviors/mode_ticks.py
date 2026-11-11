@@ -18,6 +18,7 @@ from app._04_decision.behaviors.mode_actions import (
     clear_approach_hold_tick,
     continue_or_start_loot,
     farm_loot_or_combat,
+    open_loot_pile,
     _quiet_route_click,
     hold_fire_outside_hunt,
     maybe_escalate_teleport_to_safe,
@@ -298,19 +299,7 @@ def _maybe_return_on_idle(
 
 def _live_loot_pile(state: "GameState", blackboard: "Blackboard") -> bool:
     """True when the current loot id is still an item in memory."""
-    item_id = getattr(blackboard, "current_item_id", None)
-    if item_id is None:
-        return False
-    try:
-        obj = state.get_object(int(item_id))
-    except (TypeError, ValueError):
-        return False
-    from app._02_state.objects import ObjectType
-    from app._04_decision.combat_query import memory_target_gone
-
-    if obj is None or getattr(obj, "object_type", None) is not ObjectType.ITEM:
-        return False
-    return not memory_target_gone(state, obj)
+    return open_loot_pile(state, blackboard) is not None
 
 
 def _drive_world_nav(

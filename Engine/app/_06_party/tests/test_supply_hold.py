@@ -1274,9 +1274,16 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
     shifted = leader_supply_stand(board, world.last_party, hold)
     assert shifted is not None
     assert shifted["map_id"] == 4
-    assert (shifted["x"], shifted["y"]) == (10, 41)
+    assert (shifted["x"], shifted["y"]) == (10, 40)
 
     pose["y"] = 42
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (10, 40)
+
     hold["dropping"] = True
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
@@ -1316,6 +1323,59 @@ def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
     assert claim_names_me({"for": "Elf", "guid": "0xAA"}, "Elf", "0xBB") is False
     assert claim_names_me({"for": "Elf", "guid": "0xAA"}, "Other", "0xAA") is True
     assert claim_names_me({"for": "Elf"}, "Elf", "") is True
+
+
+def test_a_lagging_party_row_keeps_the_stand_until_it_has_matched() -> None:
+    from app._06_party.arrow_duty import _apply_leader_drop_recheck, _leader_drop_recheck
+
+    duty = {
+        "kind": "drop",
+        "item": "hp",
+        "name": "Boss",
+        "qty": 10,
+        "min": 1,
+        "guid": "0x10",
+        "attempt": 0,
+        "member_map": 4,
+        "member_x": 10,
+        "member_y": 20,
+    }
+
+    def _party(y: int) -> dict:
+        return {
+            "in_party": True,
+            "leader": {
+                "name": "Boss",
+                "guid": "0x10",
+                "is_leader": True,
+                "map_id": 4,
+                "x": 10,
+                "y": y,
+            },
+            "members": [],
+        }
+
+    far = type("S", (), {"last_party": _party(24)})()
+    manager = _Manager()
+    manager.runtime.supply_hold = {"id": "hold:hp:Boss", "for": "Boss"}
+    assert _leader_drop_recheck(far, dict(duty), manager._nav_blackboard) is None
+    kept = _apply_leader_drop_recheck(manager, far, dict(duty))
+    assert kept is not None
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "stand moved"
+
+    same = type("S", (), {"last_party": _party(20)})()
+    assert _leader_drop_recheck(same, dict(duty), manager._nav_blackboard) is None
+    assert (
+        manager._nav_blackboard.scratch["party_supply_attempt"]["stand_matched_id"]
+        == "hold:hp:Boss"
+    )
+
+    two = type("S", (), {"last_party": _party(22)})()
+    assert _leader_drop_recheck(two, dict(duty), manager._nav_blackboard) == "cancel"
+    assert _apply_leader_drop_recheck(manager, two, dict(duty)) is None
+    assert manager.runtime.supply_hold is None
+    assert manager.runtime.last_reason == "stand moved"
 
 
 def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -> None:
@@ -1653,8 +1713,12 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
     assert stand["map_id"] == 4
     assert (stand["x"], stand["y"]) == (10, 40)
     pose["y"] = 42
-    assert leader_supply_action(world, board, hold, None) is None
-    assert board.scratch["party_leader_hold_pose"]["moved"] is True
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (10, 40)
 
 
 def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
@@ -1758,7 +1822,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
         tick_shopkeeper_duty,
     )
 
-    pose = {"ready": True, "x": 381, "y": 442}
+    pose = {"ready": True, "map": 0, "x": 381, "y": 442}
     body = {"moving": True, "standing": False}
     clock = {"t": 4000.0}
     sent: list[dict] = []
@@ -1778,7 +1842,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
         lambda _state, fresh=False: (
             None
             if not pose["ready"]
-            else type("P", (), {"map_id": 0, "x": pose["x"], "y": pose["y"]})()
+            else type("P", (), {"map_id": pose["map"], "x": pose["x"], "y": pose["y"]})()
         ),
     )
     monkeypatch.setattr(
@@ -1851,8 +1915,16 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     assert (stepped["x"], stepped["y"]) == (381, 443)
 
     pose["y"] = 444
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (381, 442)
+    pose["map"] = 4
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
+    pose["map"] = 0
 
     pose["x"], pose["y"] = 0, 0
     fresh = {"id": "hold:hp:Boss:1", "for": "Boss", "item": "hp"}

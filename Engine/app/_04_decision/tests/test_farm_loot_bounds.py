@@ -101,20 +101,32 @@ def test_adena_inside_the_active_farm_is_started(monkeypatch) -> None:
     assert board.current_item_id == 30
 
 
-def test_sticky_outside_pile_is_dropped(monkeypatch) -> None:
+def test_sticky_outside_pile_stays_until_pickup(monkeypatch) -> None:
     state = _state()
     _arm(state, _adena(34, (297, 448), (-8, 0)))
     board = _board()
     board.current_item_id = 34
+    seen: list[int] = []
     monkeypatch.setattr(
         "app._04_decision.behaviors.mode_actions.get_active_farm",
         lambda index: FARM,
     )
 
+    def _tick(state, blackboard, item, *, fresh):
+        del state, blackboard, fresh
+        seen.append(int(item.track_id))
+        return Status.SUCCESS
+
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.mode_actions.tick_loot_item",
+        _tick,
+    )
+
     result = continue_or_start_loot(state, board, restrict_to_farm=True)
 
-    assert result is None
-    assert board.current_item_id is None
+    assert result is Status.SUCCESS
+    assert seen == [34]
+    assert board.current_item_id == 34
 
 
 def test_farm_engage_uses_the_active_farm(monkeypatch) -> None:

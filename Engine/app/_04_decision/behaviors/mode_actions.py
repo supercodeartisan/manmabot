@@ -40,7 +40,6 @@ from app._04_decision.combat_query import (
     nearest_attackable,
     nearest_attacks_me_force,
     nearest_lootable,
-    object_absolute_tile,
     sync_attacks_me_force_targets,
     tile_distance_from_player,
 )
@@ -2173,11 +2172,27 @@ def _resolve_loot_gap(
     return _LOOT_TRACK_HOLD
 
 
-def party_leader_pile_ok(blackboard: "Blackboard", obj: object | None) -> bool:
-    """Solo loot is unchanged. A party leader keeps an on-screen pile inside the near radius.
+def open_loot_pile(state: "GameState", blackboard: "Blackboard") -> object | None:
+    """The current loot row when it is still an item in memory."""
+    item_id = getattr(blackboard, "current_item_id", None)
+    if item_id is None:
+        return None
+    try:
+        obj = state.get_object(int(item_id))
+    except (TypeError, ValueError):
+        return None
+    if obj is None or getattr(obj, "object_type", None) is not ObjectType.ITEM:
+        return None
+    if memory_target_gone(state, obj):
+        return None
+    return obj
 
-    The radius is ``LOOT_MAX_TILES`` (``farm.loot_max_tiles``). That same
-    value is how far the leader walks to the pile.
+
+def party_leader_pile_ok(blackboard: "Blackboard", obj: object | None) -> bool:
+    """Solo loot is unchanged. A party leader starts an on-screen pile inside the near radius.
+
+    The radius is ``LOOT_MAX_TILES`` (``farm.loot_max_tiles``). A pile already
+    chosen is not dropped when it leaves that radius.
     """
     if not blackboard.scratch.get("party_leader_no_loot"):
         return obj is not None
@@ -2204,7 +2219,10 @@ def continue_or_start_loot(
 ) -> Status | None:
     """Sticky loot as walk-to-item then pickup; None if no loot this tick.
 
-    A party leader loots only an on-screen pile within ``LOOT_MAX_TILES``.
+    A party leader starts only an on-screen pile within ``LOOT_MAX_TILES``.
+    A pile already chosen stays until it leaves memory, the bag count rises,
+    the pickup give-up fires, or the path abandon clears it. Screen, farm,
+    ownership, and a second pile do not drop it first.
     """
     leader_near = bool(blackboard.scratch.get("party_leader_no_loot"))
     # Clicked pile still in memory: re-click / walk back — do not roam away.
@@ -2253,79 +2271,16 @@ def continue_or_start_loot(
             blackboard.scratch.pop(_SCRATCH_LOOT_TRACK_SINCE, None)
             _store_loot_identity(blackboard, sticky)
         if sticky is not None and blackboard.current_item_id is not None:
-            drop = False
-            if loot_mode == LOOT_MODE_ADENA and not is_adena(sticky):
-                drop = True
-            else:
-                from app._04_decision.combat_query import loot_within_engage_tiles
-
-                if not loot_within_engage_tiles(sticky):
-                    drop = True
-            if not drop and farm is not None:
-                from app._04_decision.combat_query import _loot_in_farm
-
-                if not _loot_in_farm(sticky, farm, origin):
-                    drop = True
-            if not drop and not leader_near:
-                from app._04_decision.ground_loot import loot_ownership_allowed
-
-                if not loot_ownership_allowed(sticky):
-                    drop = True
-            if not drop and not party_leader_pile_ok(blackboard, sticky):
-                drop = True
-            if not drop:
-                from app._04_decision.behaviors.loot_hop import _in_pickup_range
-                from app._04_decision.combat_query import (
-                    object_absolute_tile,
-                    small_adena_ignored,
-                )
-
-                if small_adena_ignored(sticky) and (
-                    origin is None
-                    or not _in_pickup_range(
-                        origin,
-                        sticky,
-                        object_absolute_tile(sticky, origin),
-                    )
-                ):
-                    drop = True
-            # Adena on the loot list beats sticky non-adena (approach/pickup).
-            if not drop and not is_adena(sticky):
-                from app._04_decision.combat_query import list_lootable
-
-                preview_skip = set(
-                    excluded_target_ids(blackboard)
-                )
-                preview_skip.update(
-                    tid
-                    for tid in blackboard.loot_clicked_ids
-                    if recently_clicked_loot(blackboard, tid)
-                )
-                preview_skip.add(int(sticky.track_id))
-                for cand in list_lootable(
-                    state,
-                    loot_mode=loot_mode,
-                    farm=farm,
-                    origin=origin,
-                    exclude=preview_skip,
-                    screen_only=screen_only,
-                    ownership_filter=not leader_near,
-                ):
-                    if is_adena(cand) and party_leader_pile_ok(blackboard, cand):
-                        drop = True
-                        break
-            if drop:
-                clear_loot_hop(blackboard)
-                blackboard.current_item_id = None
-            else:
-                _quiet_search_click(blackboard)
-                _quiet_route_click(blackboard)
-                status = tick_loot_item(
-                    state, blackboard, sticky, fresh=False
-                )
-                if status is Status.SUCCESS:
-                    return Status.SUCCESS
-                # Walk blocked → fall through to the next live memory item.
+            # Confirmed pile: walk and pick it up. Do not clear it for range,
+            # farm, ownership, or a nearer adena. Path abandon returns FAILURE
+            # after clearing the id, and the search below may start the next pile.
+            _quiet_search_click(blackboard)
+            _quiet_route_click(blackboard)
+            status = tick_loot_item(
+                state, blackboard, sticky, fresh=False
+            )
+            if status is Status.SUCCESS:
+                return Status.SUCCESS
 
     if not allow_new:
         return None
@@ -2734,8 +2689,9 @@ def farm_loot_or_combat(
        attacking. Give-up / abandon still clear sticky. Loot waits while
        the sticky is held.
     3. Else pick up on-screen (or memory-near) ground items — loot is priority
-       over nearby non-attacking threats (no 5-tile interrupt). Adena is
-       preferred over other piles; sticky non-adena yields to adena.
+       over nearby non-attacking threats (no 5-tile interrupt). A pile already
+       chosen is finished before another pile or a new hunt target. Adena is
+       preferred only when choosing the first pile.
     4. A missed loot cursor last tick yields to an attackable monster when
        there is nothing left to loot.
     5. After F4, stay on that pile until it leaves the world or the bag
@@ -2880,6 +2836,15 @@ def farm_loot_or_combat(
         item_id = blackboard.current_item_id
         event("loot", "farm branch=loot item_id=%s", item_id)
         return loot
+    if open_loot_pile(state, blackboard) is not None:
+        event("loot", "farm branch=loot item_id=%s", blackboard.current_item_id)
+        blackboard.current_goal = "loot"
+        blackboard.emit(
+            ActionType.IDLE,
+            priority=0.3,
+            reason="loot until pickup",
+        )
+        return Status.SUCCESS
 
     if blackboard.scratch.get("party_help_open"):
         from app._06_party.assist import resolve_member_help_target
