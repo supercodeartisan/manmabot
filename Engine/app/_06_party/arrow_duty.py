@@ -653,6 +653,7 @@ def cancel_supply_delivery(
     st["shifts"] = 0
     st["blocks"] = 0
     st.pop("stand_at", None)
+    st.pop("stand_matched_id", None)
     st.pop("defer_since", None)
     st.pop("walk_idle_since", None)
     board.scratch[_ATTEMPT] = st
@@ -1392,15 +1393,37 @@ def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
     return bool(row_name and row_name == leader_name)
 
 
-def _leader_drop_recheck(state: Any, duty: dict) -> Any:
+def _remember_stand_match(board: Any, duty: dict) -> None:
+    """The party row has stood on this attempt's confirmed stand."""
+    duty["_stand_matched"] = True
+    if board is None:
+        return
+    st = _attempt(board)
+    st["stand_matched_id"] = str(supply_hold_for(duty).get("id") or "")
+    board.scratch[_ATTEMPT] = st
+
+
+def _stand_was_matched(board: Any, duty: dict) -> bool:
+    """True after this attempt's party row has already landed on the stand."""
+    if duty.get("_stand_matched"):
+        return True
+    if board is None:
+        return False
+    return str(_attempt(board).get("stand_matched_id") or "") == str(
+        supply_hold_for(duty).get("id") or ""
+    )
+
+
+def _leader_drop_recheck(state: Any, duty: dict, board: Any = None) -> Any:
     """Refresh a leader drop against the party row.
 
     None means drop on the already confirmed stand: the recipient is not the
-    leader, the leader row has no readable tile, or the live nav tile still
-    matches. ``"cancel"`` means the party row confirms a map change or a move
-    of two or more tiles. ``"defer"`` means a different map id still projects
-    onto the stand, so the drop waits. A dict is a stand rebuilt on a
-    one-tile step.
+    leader, the leader row has no readable tile, the live nav tile still
+    matches, or the row is still two or more tiles away and has not landed on
+    this stand yet. ``"cancel"`` means the party row confirms a map change,
+    or a move of two or more tiles after that row has already matched the
+    stand. ``"defer"`` means a different map id still projects onto the stand,
+    so the drop waits. A dict is a stand rebuilt on a one-tile step.
     """
     from .leader import supply_member_row
 
@@ -1434,10 +1457,14 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
         if on_stand is None:
             return None
         if on_stand == stand_nav:
+            _remember_stand_match(board, duty)
             return None
-        if _tile_gap(stand_nav, on_stand) >= 2:
-            return "cancel"
-        if _tile_gap(stand_nav, on_stand) == 1:
+        gap = _tile_gap(stand_nav, on_stand)
+        if gap >= 2:
+            if _stand_was_matched(board, duty):
+                return "cancel"
+            return None
+        if gap == 1:
             return {
                 "id": supply_hold_for(duty)["id"],
                 "for": str(duty.get("name") or ""),
@@ -1558,10 +1585,14 @@ def _idle_drop_walk(manager: Any, duty: dict, reason: str) -> Any:
 
 
 def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
-    """Aim the drop at the leader's live tile. None means the hold was cleared."""
-    recheck = _leader_drop_recheck(state, duty)
-    runtime = manager.runtime
+    """Keep the confirmed stand until the party row has matched it.
+
+    None means the hold was cleared. A one-tile party row still retargets the
+    drop. Two or more tiles cancel only after that row has landed on the stand.
+    """
     board = manager._nav_blackboard
+    recheck = _leader_drop_recheck(state, duty, board)
+    runtime = manager.runtime
     if recheck is None:
         _clear_defer_clock(board)
         return duty
@@ -2159,9 +2190,10 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
     The stop counts only when the body is not walking and the live map and
     tile stay put for ``HOLD_SETTLE_S``. One stopped sample is not enough.
     Map id 0 is Talking Island and is a real map. A pose that could not be
-    read is not. Tile ``0,0`` is not a stop. After the stop, two tiles or a
-    map change cancels whether or not the drop has been announced. One tile
-    does not.
+    read is not. Tile ``0,0`` is not a stop. After the stop, a two-tile step
+    stays on the hold until the drop is announced. A map change cancels
+    before that. Once the drop is announced, two tiles cancel as well. One
+    tile does not.
     """
     scratch = getattr(board, "scratch", None) if board is not None else None
     if not isinstance(scratch, dict) or not isinstance(hold, dict) or not hold.get("id"):
@@ -2241,18 +2273,21 @@ def leader_hold_displaced(board: Any, world: Any, hold: Any) -> bool:
         return False
     if not _pose_moved(anchor, here):
         return False
+    if int(anchor[0]) == int(here[0]) and not (
+        isinstance(hold, dict) and hold.get("dropping")
+    ):
+        return False
     prev["moved"] = True
     _log.info("supply hold moved id=%s", key)
     return True
 
 
 def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
-    """Live stop tile once the body has stayed there.
+    """The confirmed stop tile, held until this drop ends.
 
     Party memory is not the source. Map id 0 is Talking Island and is sent.
     A missing map is not. Tile ``0,0`` is not sent. After confirmation the
-    latest live tile is returned, including a later departure, so a two-tile
-    or map change can cancel the hold.
+    anchored stop is returned. A later live step does not publish a new tile.
     """
     del snapshot
     if not isinstance(hold, dict) or not str(hold.get("id") or "").strip():
@@ -2266,11 +2301,16 @@ def leader_supply_stand(board: Any, snapshot: Any, hold: Any) -> Optional[dict]:
     ):
         return None
     try:
-        mid = int(prev["map"])
-        x = int(prev["x"])
-        y = int(prev["y"])
+        mid = int(prev["anchor_map"])
+        x = int(prev["anchor_x"])
+        y = int(prev["anchor_y"])
     except (TypeError, ValueError, KeyError):
-        return None
+        try:
+            mid = int(prev["map"])
+            x = int(prev["x"])
+            y = int(prev["y"])
+        except (TypeError, ValueError, KeyError):
+            return None
     if x == 0 and y == 0:
         return None
     return {
@@ -2293,8 +2333,9 @@ def leader_supply_action(
 
     Critical retreat, then the same urgent self care members use, then a
     supply pickup or stand. A hold only stops new attacks and chase. Steps
-    before the body stops stay on the hold. After the stop, two tiles or a
-    map change returns None so the hunt decision runs again.
+    before the body stops stay on the hold. After the stop, a two-tile step
+    stays until the drop is announced. A map change returns None so the hunt
+    decision runs again. Once the drop is announced, two tiles do too.
     """
     if world is None or blackboard is None:
         return None
