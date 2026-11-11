@@ -15,6 +15,21 @@ Shared: `PartyLeaderManager._party_walk_from_far` and `_release_stale_party_walk
 Affects: the party leader's walk after a talking scroll, and any later party walk whose start the body has already reached.
 Consent: user (create a branch and apply the start-tile rule).
 Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+## 2026-11-11 — party supply no longer handles depoison potions
+
+Intent: Remove the depoison row from the party supply tables, and stop the shopkeeper from buying or dropping it. HP and silver arrows stay.
+Shared: `_supply_specs` and the party supply tables. Solo depoison purchase, heal, follow, and the HP and arrow rows are unchanged.
+Affects: party shopkeeper supply only. A member short on antidote is no longer a supply recipient.
+Consent: user ("remove 해독물약 as well in the party mode").
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`, `UI/ui_qt/editors/tests/test_party_workspace.py`. Not run in game.
+
+## 2026-11-11 — party supply no longer handles mana potions
+
+Intent: Remove the mana-potion row from the party supply tables, and stop the shopkeeper from dropping or buying it. HP, depoison, and silver arrows stay.
+Shared: `_supply_specs` and the party supply tables. Solo MP potion use, heal, follow, and the other supply rows are unchanged.
+Affects: party shopkeeper supply only. A mage who is short on blue potions is no longer a supply recipient.
+Consent: user ("파티모드에서 마나물약항목은 없애버리자").
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`, `UI/ui_qt/editors/tests/test_party_workspace.py`. Not run in game.
 
 ## 2026-11-11 — a drop with no hop releases the hold after 8 seconds
 
