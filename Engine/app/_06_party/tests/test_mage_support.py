@@ -222,6 +222,44 @@ def test_self_only_spells_are_not_offered_to_another_member() -> None:
     assert haste["skill_id"] == 42
 
 
+def test_catch_up_heal_stays_in_range_and_leaves_the_buff() -> None:
+    low_far = [
+        _member("mage", "0x1", 100, 100),
+        _member("knight", "0x2", 40, 120),
+    ]
+    walked, note = _choose(
+        members=low_far,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+        cast_only=True,
+        heals_only=True,
+    )
+    assert walked is None
+    assert "step" not in note
+    low_near = [
+        _member("mage", "0x1", 100, 100),
+        _member("knight", "0x2", 40, 104),
+    ]
+    choice, _note = _choose(
+        members=low_near,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+        cast_only=True,
+        heals_only=True,
+    )
+    assert choice["spell"] == "heal"
+    assert choice["skill_id"] == 0
+    seated, _note = _choose(
+        members=low_near,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+    )
+    assert seated["spell"] == "heal"
+
+
 def test_leader_policy_keeps_the_mages_own_checks() -> None:
     cfg = PartyMemberConfig(mage_support_skills={"mage_2": True, "mage_0": False})
     merged = cfg.merge_leader_policy({"leader_mode": "moving", "roster": [], "mage_heal_pct": 65})

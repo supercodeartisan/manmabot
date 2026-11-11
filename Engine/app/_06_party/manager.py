@@ -51,6 +51,22 @@ def mage_skips_party_assist(game_state: Any) -> bool:
 
     return is_mage(game_state)
 
+
+def mage_list_heal_request(
+    returning: bool, kind: MemberKind
+) -> Optional[tuple[bool, bool]]:
+    """``(cast_only, heals_only)`` for a mage's party-list support this tick.
+
+    Catch-up asks only for a heal that can be cast from here. A buff, and a
+    walk toward someone outside that range, wait until the slot. Stop, defend,
+    and a potion do not ask.
+    """
+    if kind in (MemberKind.STOP, MemberKind.DEFEND, MemberKind.POTION):
+        return None
+    if returning:
+        return (True, True)
+    return (False, False)
+
 _DECISION_HISTORY = 20
 # A gap longer than this is not continued stationary evidence.
 _MOTION_GAP_S = 30.0
@@ -951,22 +967,25 @@ class PartyMemberManager:
             return self._return_support(support, MemberKind.HEAL)
         if result.kind is MemberKind.BUFF and support is not None:
             return self._return_support(support, MemberKind.BUFF)
-        if (
-            not returning
-            and mage_skips_party_assist(game_state)
-            and result.kind
-            not in (MemberKind.STOP, MemberKind.DEFEND, MemberKind.POTION)
-        ):
-            listed = self._party_list_heal(game_state, origin if origin_ok else None)
-            if listed is not None:
-                from app._02_state.enums import ActionType
-
-                kind = (
-                    MemberKind.BUFF
-                    if getattr(listed, "action", None) is ActionType.BUFF
-                    else MemberKind.HEAL
+        if mage_skips_party_assist(game_state):
+            request = mage_list_heal_request(returning, result.kind)
+            if request is not None:
+                cast_only, heals_only = request
+                listed = self._party_list_heal(
+                    game_state,
+                    origin if origin_ok else None,
+                    cast_only=cast_only,
+                    heals_only=heals_only,
                 )
-                return self._return_support(listed, kind)
+                if listed is not None:
+                    from app._02_state.enums import ActionType
+
+                    kind = (
+                        MemberKind.BUFF
+                        if getattr(listed, "action", None) is ActionType.BUFF
+                        else MemberKind.HEAL
+                    )
+                    return self._return_support(listed, kind)
         reason = result.reason
         if returning and result.kind is MemberKind.FOLLOW:
             reason = f"catch_up {reason}"
