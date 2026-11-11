@@ -7,7 +7,7 @@ from app._06_party.formation_goal import (
     primary_lateral,
     stand_radius,
 )
-from app._06_party.manager import PartyMemberManager
+from app._06_party.manager import FORMATION_STAND_SETTLE_S, PartyMemberManager
 from app._06_party.policy import MemberKind, PolicyInput, decide_policy
 from app._06_party.state import MemberRuntime
 
@@ -159,6 +159,69 @@ def test_one_leader_step_moves_the_side_slot():
     assert nxt.tile == (11, 11)
 
 
+def test_a_backward_hop_keeps_the_side_slot_until_the_leader_has_stopped():
+    from app._06_party.formation_goal import FormationGoal, closing_slot
+
+    chosen = FormationGoal("side", (11, 9), "side+1")
+    kept = closing_slot(
+        held=False,
+        previous=(10, 11),
+        previous_kind="side",
+        chosen=chosen,
+        origin=(10, 12),
+        hop=(10, 13),
+        leader=(10, 8),
+    )
+    assert kept.tile == (10, 11)
+    assert kept.reason == "keep_closing"
+    stand = closing_slot(
+        held=True,
+        previous=(10, 11),
+        previous_kind="side",
+        chosen=chosen,
+        origin=(10, 12),
+        hop=(10, 13),
+        leader=(10, 8),
+    )
+    assert stand.tile == (11, 9)
+    closer = closing_slot(
+        held=False,
+        previous=(10, 11),
+        previous_kind="side",
+        chosen=chosen,
+        origin=(10, 12),
+        hop=(10, 11),
+        leader=(10, 8),
+    )
+    assert closer.tile == (11, 9)
+
+
+def test_the_stand_grid_waits_two_seconds():
+    mgr = PartyMemberManager.__new__(PartyMemberManager)
+    mgr.runtime = MemberRuntime()
+    assert (
+        mgr._leader_looks_stopped(
+            leader_tile=(3, 4), settle_sec=FORMATION_STAND_SETTLE_S
+        )
+        is False
+    )
+    mgr.runtime.scratch["leader_tile_seen_at"] = time.monotonic() - 1.0
+    assert mgr._leader_looks_stopped(leader_tile=(3, 4)) is True
+    assert (
+        mgr._leader_looks_stopped(
+            leader_tile=(3, 4), settle_sec=FORMATION_STAND_SETTLE_S
+        )
+        is False
+    )
+    mgr.runtime.scratch["leader_tile_seen_at"] = time.monotonic() - 2.0
+    assert (
+        mgr._leader_looks_stopped(
+            leader_tile=(3, 4), settle_sec=FORMATION_STAND_SETTLE_S
+        )
+        is True
+    )
+
+
 def test_standing_fight_stays_stopped():
     mgr = PartyMemberManager.__new__(PartyMemberManager)
     mgr.runtime = MemberRuntime()
@@ -175,5 +238,7 @@ if __name__ == "__main__":
     test_stopped_grid_excludes_the_leader()
     test_slot_distance_replaces_the_leader_band()
     test_one_leader_step_moves_the_side_slot()
+    test_a_backward_hop_keeps_the_side_slot_until_the_leader_has_stopped()
+    test_the_stand_grid_waits_two_seconds()
     test_standing_fight_stays_stopped()
     print("ok")
