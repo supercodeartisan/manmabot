@@ -844,22 +844,6 @@ class PartyTab(QWidget):
                 ("party_shopkeeper_hp_buy", "shopkeeper_hp_buy", 20, 1, 999),
             ),
             (
-                self._tx("party_ui_supply_cure", "해독 물약"),
-                self._tx("party_ui_supply_all_but_keeper", "전원 (담당 제외)"),
-                ("party_member_depoison_min", "member_depoison_min", 1, 0, 9999),
-                ("party_shopkeeper_depoison_min", "shopkeeper_depoison_min", 2, 0, 9999),
-                ("party_member_depoison_give", "member_depoison_give", 1, 1, 9999),
-                ("party_shopkeeper_depoison_buy", "shopkeeper_depoison_buy", 5, 1, 999),
-            ),
-            (
-                self._tx("party_ui_supply_mp", "마나 물약"),
-                self._tx("party_ui_supply_mage_only", "마법사만"),
-                ("party_member_mp_min", "member_mp_min", 5, 0, 9999),
-                ("party_shopkeeper_mp_min", "shopkeeper_mp_min", 10, 0, 9999),
-                ("party_member_mp_give", "member_mp_give", 5, 1, 9999),
-                None,
-            ),
-            (
                 self._tx("party_ui_supply_arrow", "은화살"),
                 self._tx("party_ui_supply_not_mage", "마법사 제외"),
                 ("party_member_arrow_min", "member_arrow_min", 300, 0, 9999),

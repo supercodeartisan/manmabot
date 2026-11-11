@@ -960,16 +960,12 @@ def test_supply_tables_split_self_shop_and_party_give() -> None:
     assert titles[:2] == ["본인이 사는 것", "다른 파티원에게 주는 것"]
     assert tab.supply_self_table.columnCount() == 3
     assert tab.supply_others_table.columnCount() == 4
-    assert [tab.supply_self_table.item(row, 0).text() for row in range(4)] == [
+    assert [tab.supply_self_table.item(row, 0).text() for row in range(2)] == [
         "체력 물약",
-        "해독 물약",
-        "마나 물약",
         "은화살",
     ]
-    assert tab.supply_self_table.item(2, 2).text() == "없음"
     assert tab.supply_others_table.item(0, 1).text() == "전원 (담당 제외)"
-    assert tab.supply_others_table.item(2, 1).text() == "마법사만"
-    assert tab.supply_others_table.item(3, 1).text() == "마법사 제외"
+    assert tab.supply_others_table.item(1, 1).text() == "마법사 제외"
     tab.party_shopkeeper_hp_buy.setValue(30)
     tab.party_member_hp_min.setValue(7)
     assert tab.bag.get_int("party", "shopkeeper_hp_buy", 0) == 30
