@@ -187,10 +187,9 @@ def _supply_rows() -> list[dict]:
     ]
 
 
-def test_potions_come_before_arrows_and_mp_stays_on_the_mage() -> None:
+def test_potions_come_before_arrows() -> None:
     specs = _supply_specs(PartyMemberConfig(), {"mage"})
-    assert [row["item"] for row in specs] == ["hp", "depoison", "mp", "arrow"]
-    assert specs[2]["can_buy"] is False
+    assert [row["item"] for row in specs] == ["hp", "arrow"]
     full = {"hp": 30, "depoison": 5, "mp": 20, "arrow": 500}
     duty = choose_supply_duty(full, _supply_rows(), specs, self_name="Keeper")
     assert duty is not None
@@ -212,10 +211,10 @@ def test_potions_come_before_arrows_and_mp_stays_on_the_mage() -> None:
     for row in rows:
         row["items"]["hp_potion"] = 40
         row["items"]["depoison"] = 5
-    mp = choose_supply_duty(full, rows, specs, self_name="Keeper")
-    assert mp is not None
-    assert mp["item"] == "mp"
-    assert mp["name"] == "Mage"
+    arrows = choose_supply_duty(full, rows, specs, self_name="Keeper")
+    assert arrows is not None
+    assert arrows["item"] == "arrow"
+    assert arrows["name"] == "Elf"
     short_mp = choose_supply_duty(
         {"hp": 30, "depoison": 5, "mp": 2, "arrow": 400},
         rows,
@@ -304,7 +303,7 @@ def test_blue_potion_count_comes_from_the_bag() -> None:
 def test_later_supply_rows_are_bought_before_returning() -> None:
     specs = _supply_specs(PartyMemberConfig(), set())
     short = {"hp": 5, "depoison": 0, "mp": 20, "arrow": 10}
-    assert next_supply_buy(short, specs, after_item="hp")["item"] == "depoison"
+    assert next_supply_buy(short, specs, after_item="hp")["item"] == "arrow"
     assert (
         next_supply_buy(
             {"hp": 5, "depoison": 5, "mp": 20, "arrow": 10},
@@ -345,14 +344,14 @@ def test_one_trip_buys_the_configured_count() -> None:
 def test_a_broke_item_is_skipped_for_the_next_buy() -> None:
     specs = _supply_specs(PartyMemberConfig(), set())
     duty = choose_supply_duty(
-        {"hp": 0, "depoison": 0, "mp": 20, "arrow": 500},
+        {"hp": 0, "depoison": 0, "mp": 20, "arrow": 10},
         [],
         specs,
         self_name="Keeper",
         skip_buys={"hp"},
     )
     assert duty is not None
-    assert duty["item"] == "depoison"
+    assert duty["item"] == "arrow"
 
 
 def test_party_hp_buy_qty_stays_off_solo_shops() -> None:
@@ -590,7 +589,7 @@ def test_same_map_drop_converts_game_xy_before_travel() -> None:
         )
 
 
-def test_a_class_mage_keeps_mp_when_the_seat_is_not_mage() -> None:
+def test_a_class_mage_is_skipped_for_arrows() -> None:
     roster = [
         {"name": "Elf", "role": "mage"},
         {"name": "Wizard", "role": "member"},
@@ -622,24 +621,24 @@ def test_a_class_mage_keeps_mp_when_the_seat_is_not_mage() -> None:
             "y": 1,
         }
 
-    mp = choose_supply_duty(
-        full,
-        [_row("Wizard", 0, 0), _row("Elf", 0, 0), _row("Boss", 0, 0)],
-        specs,
-        self_name="Keeper",
-    )
-    assert mp is not None
-    assert mp["item"] == "mp"
-    assert mp["name"] == "Wizard"
     arrows = choose_supply_duty(
         full,
-        [_row("Wizard", 20, 0), _row("Elf", 20, 0), _row("Boss", 20, 0)],
+        [_row("Wizard", 0, 0), _row("Elf", 0, 0), _row("Boss", 0, 0)],
         specs,
         self_name="Keeper",
     )
     assert arrows is not None
     assert arrows["item"] == "arrow"
     assert arrows["name"] == "Boss"
+    again = choose_supply_duty(
+        full,
+        [_row("Wizard", 20, 0), _row("Elf", 20, 0), _row("Boss", 20, 0)],
+        specs,
+        self_name="Keeper",
+    )
+    assert again is not None
+    assert again["item"] == "arrow"
+    assert again["name"] == "Boss"
 
 
 def test_a_drop_updates_the_count_until_the_report_changes() -> None:
@@ -722,12 +721,9 @@ def test_a_covered_spare_still_drops_and_a_short_spare_buys() -> None:
     assert reserve["buy"] == 20
 
 
-def test_mp_is_not_bought_without_a_shop_behavior() -> None:
-    from app._06_party.arrow_duty import supply_shop_id
-
-    assert supply_shop_id("mp") is None
+def test_party_supply_does_not_handle_mp() -> None:
     specs = _supply_specs(PartyMemberConfig(), {"mage"})
-    assert specs[2]["can_buy"] is False
+    assert [row["item"] for row in specs] == ["hp", "arrow"]
     duty = choose_supply_duty(
         {"hp": 30, "depoison": 5, "mp": 0, "arrow": 500},
         [
@@ -738,7 +734,7 @@ def test_mp_is_not_bought_without_a_shop_behavior() -> None:
                     "depoison": 5,
                     "mp_potion": 0,
                     "arrows": 500,
-                    "silver_arrows": 0,
+                    "silver_arrows": 400,
                 },
                 "map_id": 4,
                 "x": 1,

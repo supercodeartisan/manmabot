@@ -1036,7 +1036,6 @@ def tick_shopkeeper_duty(
     held = None
     if isinstance(notice, dict):
         held = (notice.get("for"), notice.get("item") or "arrow")
-    _note_mp_buy(board)
     duty = choose_supply_duty(
         bag_supply_counts(state),
         bind_supply_identity(
@@ -1229,21 +1228,8 @@ def _supply_report_rows(board: Any, runtime: Any, reports: Any) -> list:
     )
 
 
-def _note_mp_buy(board: Any) -> None:
-    """Say once that MP has no shop behavior, so it stays a drop."""
-    scratch = getattr(board, "scratch", None)
-    if not isinstance(scratch, dict) or scratch.get("_mp_buy_note"):
-        return
-    if supply_shop_id("mp") is not None:
-        scratch["_mp_buy_note"] = "on"
-        return
-    scratch["_mp_buy_note"] = "off"
-    _log.info("mp buy unavailable: no shop behavior")
-
-
 def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
-    """HP, depoison, MP, then silver arrows. MP is bought only when a shop exists."""
-    mp_can_buy = supply_shop_id("mp") is not None
+    """HP, then silver arrows. Party supply does not handle MP or depoison."""
     return [
         {
             "item": "hp",
@@ -1252,23 +1238,6 @@ def _supply_specs(cfg: Any, mages: set[str]) -> list[dict[str, Any]]:
             "give": int(cfg.member_hp_give),
             "buy": int(cfg.shopkeeper_hp_buy),
             "can_buy": True,
-        },
-        {
-            "item": "depoison",
-            "member_min": int(cfg.member_depoison_min),
-            "keeper_min": int(cfg.shopkeeper_depoison_min),
-            "give": int(cfg.member_depoison_give),
-            "buy": int(cfg.shopkeeper_depoison_buy),
-            "can_buy": True,
-        },
-        {
-            "item": "mp",
-            "member_min": int(cfg.member_mp_min),
-            "keeper_min": int(cfg.shopkeeper_mp_min),
-            "give": int(cfg.member_mp_give),
-            "buy": int(cfg.shopkeeper_mp_buy),
-            "only_names": mages,
-            "can_buy": mp_can_buy,
         },
         {
             "item": "arrow",
