@@ -102,6 +102,17 @@ def test_catch_up_defers_a_new_hunt_until_the_seat():
     assert back.kind is MemberKind.ASSIST
 
 
+def test_catch_up_asks_only_for_an_in_range_heal():
+    from app._06_party.manager import mage_list_heal_request
+
+    assert mage_list_heal_request(True, MemberKind.FOLLOW) == (True, True)
+    assert mage_list_heal_request(False, MemberKind.FOLLOW) == (False, False)
+    assert mage_list_heal_request(False, MemberKind.HOLD) == (False, False)
+    assert mage_list_heal_request(True, MemberKind.POTION) is None
+    assert mage_list_heal_request(True, MemberKind.DEFEND) is None
+    assert mage_list_heal_request(True, MemberKind.STOP) is None
+
+
 def test_catch_up_keeps_potion_heal_and_defend():
     common = dict(slot_dist=6, assist_ready=True)
     assert decide_policy(_policy(need_potion=True, **common)).kind is MemberKind.POTION
@@ -136,5 +147,6 @@ if __name__ == "__main__":
     test_same_delta_keeps_the_hop_and_a_turn_does_not()
     test_straight_line_chains_one_tile_and_a_trail_does_not()
     test_catch_up_defers_a_new_hunt_until_the_seat()
+    test_catch_up_asks_only_for_an_in_range_heal()
     test_catch_up_keeps_potion_heal_and_defend()
     print("OK")
