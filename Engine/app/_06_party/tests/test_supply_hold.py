@@ -1386,6 +1386,38 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
     assert manager.runtime.supply_hold is not None
 
 
+def test_a_stable_one_tile_bias_adopts_the_drop_once() -> None:
+    from app._06_party.arrow_duty import _ATTEMPT, _apply_leader_drop_recheck
+
+    stand = {
+        "id": "hold:hp:poorboy",
+        "for": "poorboy",
+        "map_id": 0,
+        "x": 32624,
+        "y": 33148,
+        "confirmed": True,
+    }
+    duty = {"name": "poorboy", "item": "hp", "guid": "0x10", "qty": 10, "min": 1}
+
+    def _near_stand(tile: tuple[int, int]) -> bool:
+        return max(abs(int(tile[0]) - 368), abs(int(tile[1]) - 444)) <= 4
+
+    planned = plan_supply_drop(duty, stand, _near_stand)
+    assert planned is not None
+    one = type("S", (), {"last_party": _leader_party(0, 32625, 33148)})()
+    manager = _Manager()
+    manager._nav_blackboard.scratch[_ATTEMPT] = {"walk_idle_since": 10.0}
+    first = _apply_leader_drop_recheck(manager, one, planned)
+    assert first is not None
+    assert (first["member_x"], first["member_y"]) == (32625, 33148)
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch[_ATTEMPT]
+    manager._nav_blackboard.scratch[_ATTEMPT]["walk_idle_since"] = 12345.0
+    second = _apply_leader_drop_recheck(manager, one, planned)
+    assert second is not None
+    assert (second["member_x"], second["member_y"]) == (32625, 33148)
+    assert manager._nav_blackboard.scratch[_ATTEMPT]["walk_idle_since"] == 12345.0
+
+
 def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) -> None:
     from app._06_party.manager import PartyMemberManager
 
@@ -1394,7 +1426,7 @@ def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) ->
     manager._nav_blackboard = board
     seen: dict = {}
 
-    def _heal(_state, _origin, cast_only=False, below=None):
+    def _heal(_state, _origin, cast_only=False, below=None, **_extra):
         seen["cast_only"] = cast_only
         seen["below"] = below
         return type("I", (), {"reason": "list heal"})()

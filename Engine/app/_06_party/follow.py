@@ -324,12 +324,14 @@ def hold_follow_click(
     body_moving: bool,
     leader_moved: bool,
 ) -> bool:
-    """Keep the click only while this read's leader tile is unchanged.
+    """Keep a moving hop that still closes on this read's slot.
 
-    A leader step clicks again on that read. The same tile keeps a hop that
-    still closes and is more than one tile ahead.
+    A leader step refreshes the slot and does not, by itself, replace the
+    click. A hop that no longer closes, or that is already the next tile,
+    clicks again.
     """
-    if leader_moved or not body_moving or hop is None:
+    del leader_moved
+    if not body_moving or hop is None:
         return False
     mx, my = int(member[0]), int(member[1])
     hx, hy = int(hop[0]), int(hop[1])

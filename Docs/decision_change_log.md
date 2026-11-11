@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-11 — formation heading stays put, and a supply aim sticks inside 3×3
+
+Intent: A party member keeps one side of the leader. The leader's current tile moves that side immediately. One strafe or backstep does not swap the side, and a two-second stop does not replace it with an angle-sorted cell. A new heading is adopted after two tiles in that direction, on the side closer to the member. A follow click stays while its hop still closes. A hop on a player sprite tries another closing hop on the same side, then waits. A supply drop adopts the leader's live tile once when it is inside the confirmed stand's 3×3. While the leader stays inside that adopted 3×3 the aim and the wait clock stay. Leaving the box cancels the attempt.
+Shared: `choose_formation_goal`, `advance_heading`, `hold_follow_click`, `plan_slot_hop`, and `_apply_leader_drop_recheck`. Arrival stays exact on a moving slot. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow beside a leader who sidesteps or pauses, and a shopkeeper drop when the leader's party row is one tile off the confirmed stand. Solo movement is unchanged.
+Consent: user ("fix" after the 3×3 supply rule and the trimmed formation scope).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`, `test_close_follow.py`, `test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a loot-seat shopkeeper picks up between supply attempts
+
+Intent: A shopkeeper who is also the responsible looter picks up party piles on follow and hold. A shopkeeper who is not the loot seat still leaves ordinary piles. Buying, walking to a recipient, waiting for the stand, and dropping still return before loot, so those ticks do not pick up. The announced supply pile stays reserved for the recipient.
+Shared: `party_loot_ownership_filter`. `tick_shopkeeper_duty`, `pile_reserved`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party member whose seat is shopkeeper and whose loot role is responsible, self, or looter. Solo loot and a shopkeeper without that loot role are unchanged.
+Consent: user ("fix it" after the shopkeeper loot lock).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
 ## 2026-11-11 — a live pile holds the world-nav route click
 
 Intent: Starting a loot approach clears the armed route hop. While that pile is still the current item and still in memory, a tick that emits no loot click does not click the route. The route goal and the world-nav session stay. The route resumes when the pile is no longer the current item. The one-tile travel arrival rule is unchanged.
