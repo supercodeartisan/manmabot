@@ -65,6 +65,7 @@ Sticky `PlayerMode.WORLD_NAV`. 진입: `begin_world_nav` / farming `nav.world`·
 | 3 | `survival.hp` | heal/… | emit / handoff retreating | — |
 | 4 | `survival.mp_safe` | — | handoff retreating | — |
 | 5 | `survival.return_vitals` | — | handoff retreating | — |
+| 5a | `party.rally_wait` | `IDLE` | emit when `scratch["party_rally_wait"]` (party leader stand); else pass | wait |
 | 6 | `shop.trip` | `SHOP_*` / scroll / walk | **handoff SHOPPING** (request after_shop) | wait |
 | 7 | `spell.support` | heal | emit | — |
 | 8 | `spell.buffs` | `BUFF` | emit | — |
@@ -101,6 +102,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 4 | `survival.mp_safe` | `_maybe_low_mp_to_safe` | — | **handoff retreating** | — |
 | 5 | `survival.return_vitals` | `_maybe_return_on_vitals` | — | **handoff retreating** | — |
 | 6 | `survival.return_idle` | `_maybe_return_on_idle` | — | **handoff retreating** | — |
+| 6a | `party.rally_wait` | `_step_party_rally_wait` | `IDLE` | emit when `scratch["party_rally_wait"]`; else pass. Stops the column before nav, confined, and search | wait |
 | 7 | `shop.before_world_nav` | `_shop_before_world_nav` | `SHOP_*`, scroll, walk | **handoff SHOPPING** | wait |
 | 8 | `nav.world` | `_maybe_world_nav` | scroll/gate/`IDLE`; walk→engage | emit | wait |
 | 9 | `spell.support` | `_maybe_support_spells(buffs=False)` | `HEAL` 등 | emit | — |
@@ -112,7 +114,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 15 | `farm.post_shop_return` | `_maybe_post_shop_farm_return` | nav request | emit / pass | — |
 | 16 | `nav.hunt_map` | `_maybe_scroll_to_hunt_map` | scroll / world_nav | emit | — |
 | 16a | `party.turret_leash` | `step_party_turret_leash` | `TRAVELING` (back to anchor) | emit / pass (party leader turret only) | — |
-| 17 | `farm.engage` | `farm_loot_or_combat` | `ATTACK`, `PICKUP`, approach | emit | fail |
+| 17 | `farm.engage` | `farm_loot_or_combat` | `ATTACK`, `PICKUP`, approach | emit. Solo keeps the active farm rect. A party leader (`party_leader_no_loot`) keeps an on-screen pile within 7 tiles and does not apply that rect | fail |
 | 17a | `party.turret_idle` | `step_party_turret_idle` | `TRAVELING` / `IDLE` | emit (party leader turret only) | — |
 | 18 | `farm.enter` | `_enter_farm_if_needed` | `TRAVELING`, `IDLE` | emit / handoff traveling | fail |
 | 19 | `farm.search` | `_search_inside_farm` | `SEARCHING`, `IDLE` | emit | fail |
@@ -129,6 +131,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | 3 | `survival.mp_safe` | shared | — |
 | 4 | `survival.return_vitals` | shared | — |
 | 5 | `survival.return_idle` | shared | — |
+| 5a | `party.rally_wait` | shared. `IDLE` while the leader stands at the rally mark | wait |
 | 6 | `shop.before_world_nav` | shared | wait |
 | 7 | `nav.world` | shared | wait |
 | 8 | `spell.support` | shared | — |
@@ -202,6 +205,7 @@ Sticky `PlayerMode.SHOPPING`. 진입: `begin_shopping` / farming·world_nav·tra
 | `survival.hp` | island, dungeon, traveling | — |
 | `survival.mp_safe` | island, dungeon, traveling | — |
 | `survival.return_vitals` | island, dungeon, traveling | — |
+| `party.rally_wait` | world_nav, island, dungeon | wait |
 | `party.turret_leash` / `party.turret_idle` | island, dungeon | — |
 | `survival.return_idle` | island, dungeon | — |
 | `survival.inplace_hp` | retreating | — |

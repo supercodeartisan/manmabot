@@ -28,7 +28,7 @@ Each reader is a thin class on `ModuleReader` (`lc_session.py`). It loads `Engin
 | `shop_listen_reader.py` | `shop.dll` | 400 ms | `buy`, `sell` |
 | `buff_listen_reader.py` | `buff.dll` | 300 ms | `buffs`: `name`, `remain` |
 | `uidialog_listen_reader.py` | `uidialogmon.dll` | 200 ms | `windows`, `open` |
-| `party_listen_reader.py` | `party.dll` | 300 ms | `leader`, `members`, `in_party`, `subs_ok` |
+| `party_listen_reader.py` | `party.dll` | 300 ms | `leader`, `members`, `in_party`, `subs_ok`. A failed read is not a live pose. Party decide uses that snapshot as described in `PARTY_RUNTIME.md` |
 
 `body_pose.py` is outside the tick buffer. Travel, unstick, search hops, and loot hops still call `body_is_moving()`. That function still returns `True`, `False`, or `None`. The live ids come from `bodyact.dll` (50 ms) through `read_action()`. The stand/walk/attack numbers it compares against are loaded at import from `registry/LC930_REGISTRY.txt` (`VFT_BREATHACT`, `VFT_MOVINGACT`, `VFT_MOVINGBACK`). `read_vitals()` and `read_progress()` use the `charread` sample. Decision code does not call those two; HP actions use the player block on the tick buffer.
 

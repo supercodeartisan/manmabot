@@ -24,6 +24,9 @@ Engine/app/_03_world/       merge/ + space/ + catalog/ + debug/ (no flat shims)
 Engine/app/_04_decision/    sticky modes + ladders (see DECISION_HIERARCHY.md)
 Engine/app/_05_action/      clicks + window geometry (4:3 bounds, optional preview grab)
                         # SLOT_IDS / SKILL_KEYS re-export from settings.spell_defaults
+Engine/app/_06_party/       party leader schedule, member decide, invite, supply
+                        # live callers: PartyLeaderManager, PartyMemberManager
+                        # brains/ is not the session caller (see PARTY_RUNTIME.md)
 Engine/session/       BotController, paths, probes, elevate, drivers
                         # world_nav_inject: normalize_routine + map overlays → blackboard
 Engine/settings/      profile / schedule / accounts / farm overlays (UserData I/O)
@@ -69,7 +72,7 @@ Live bot starts SignedDriver through `session.monitor_launch.driver_script_path(
 
 ## Docs topics
 
-- `Docs/architecture/` — layout, `ANALYSIS_MODULES.md` (live memory path), `MEMORY_READ_CANON.md` (older listener DLLs), `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`, `SENSOR_PRE_TIDY.md` (pre-sensor split; docs-only)
+- `Docs/architecture/` — layout, `ANALYSIS_MODULES.md` (live memory path), `MEMORY_READ_CANON.md` (older listener DLLs), `USERDATA_POLICY.md`, `LOGIC_OVERVIEW.md`, `DECISION_HIERARCHY.md`, `DECISION_STEPS.md`, `ISSUE_idle_livelock.md`, `SENSOR_PRE_TIDY.md` (pre-sensor split; docs-only). Party: `PARTY_RUNTIME.md` (who runs), `PARTY_CODE_TO_ACTION.md` (intent to click), `PARTY_EDGE_CASES.md` (branches). `PARTY_MEMBER_ANALYSIS.md` and `PARTY_MEMBER_MVP.md` record the 2026-10-13 request and what of it is live.
 - `Docs/decision/` — decision change log
 - `Docs/combat/` — combat design / CODEX notes
 - `Docs/prompt/` — master prompt + fragments

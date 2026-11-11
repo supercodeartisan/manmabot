@@ -1,9 +1,29 @@
-# Party member: analysis of the existing solo bot
+# Party member: the 2026-10-13 request, against the live loop
 
-Date: 2026-10-13
-Status: analysis and proposed design, not implemented or tested in-game.
+Date of the request: 2026-10-13. Updated 2026-11-10 against the live call path.
 
-## Purpose and evidence
+The live party loop is not this proposal. Read these first:
+
+- [Who runs a tick](PARTY_RUNTIME.md)
+- [Which function emits which action](PARTY_CODE_TO_ACTION.md)
+- [Branches](PARTY_EDGE_CASES.md)
+
+The sections below are the original request. They are not a specification of the current code. The table after this paragraph is the difference that matters.
+
+| 2026-10-13 request | Live code |
+| --- | --- |
+| A future member must not use solo departure | `party_critical_escape` runs the retreat column (mother tree, talking scroll, safe zone) from the party recovery overlay. After HP recovers, a solo `post_retreat` walk back to a hunt map is dropped so the member follows the leader. |
+| Low HP must not leave on its own | A retreat at the party retreat threshold does leave. Potion and self heal run first, inside `urgent_self_survival`. |
+| Assist the leader, then a protection queue (finish A, then B) | One target per tick. Out of attack range, the member walks the formation slot and does not path to the monster. There is no finish-A-then-B queue. |
+| No cross-map travel in the first version | `PartyJoinNav` plans a world-nav route to the leader's party-memory map and coordinate. An invite popup or an unconfirmed leader name clears that route. |
+| Leader handles loot; member does not | A member loots when the leader has stood on one tile for 0.7 s and the policy kind is hold or follow. The leader loots an on-screen pile within 7 tiles and does not use the farm rect. |
+| No leader bot, no invites, no supply | The leader process is `PartyLeaderManager`. Invites, the rally stand, the shopkeeper buy/drop, and mage list heal are live. `brains/LeaderBrain.adopt` is not the caller. |
+| Stationary mode blocks every move | A point mark arms the leader turret (5×5 walk-back, 3×3 stand). Members learn that on a later policy ingest as `leader_mode=turret`. Area marks stay a moving hunt. |
+| Death reports and waits | A dead member policy returns `IDLE`. The member loop does not run `survival.death`, so it does not emit `RESPAWN` from that column. |
+
+No claim below this heading is evidence that the behavior shipped.
+
+## Purpose and evidence (2026-10-13)
 
 The project's existing documents describe the solo bot. They are the baseline for deciding what a future party member must keep, replace, or disable. Party requirements come from the user's requested behavior, not from an existing implemented party specification.
 
@@ -104,10 +124,10 @@ The current `EXP_KILL_RELEASE_ENABLED` flag is false. Keep EXP-based target rele
 
 Full scope includes membership, follow/hold, assist, protection, healing/buffs, controlled loot, supply requests, leader replacement, death/rejoin, schedules and optional courier duties. This is not the scope of the initial MVP.
 
-The user subsequently narrowed the initial MVP to following one leader and helping that leader farm. See [the isolated MVP proposal](PARTY_MEMBER_MVP.md).
+The user subsequently narrowed the initial MVP to following one leader and helping that leader farm. See [the isolated MVP note](PARTY_MEMBER_MVP.md). The live loop is wider than that note. Use the three party documents linked at the top.
 
-## Architecture recommendation
+## Architecture recommendation (2026-10-13)
 
 Preserve reusable perception and action mechanisms but isolate party decisions from the solo decision columns. Add explicit party state for full party functionality. The largest change is what the member is allowed to decide independently, rather than the physical input mechanism.
 
-No implementation changes were made for this analysis.
+No implementation was made for the 2026-10-13 analysis. The implementation that exists now is the live loop linked at the top of this file, not a completion of every row in the proposal.

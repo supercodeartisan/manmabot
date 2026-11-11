@@ -1,8 +1,9 @@
 # 로직 개괄
 
-기준: 2026-10-04 워크스페이스 코드.  
-이 문서는 라이브 경로가 실제로 하는 일을 위에서 아래로 적는다.  
+기준: 2026-10-04 워크스페이스 코드. 파티 세션은 2026-11-10 정본을 따른다.
+이 문서는 라이브 경로가 실제로 하는 일을 위에서 아래로 적는다.
 9월 상태 문서·마스터 프롬프트·전투 설명서와 어긋나면 이 문서와 코드를 따른다.
+파티가 켜진 세션은 이 개괄의 솔로 루틴이 아니다. 멤버는 `PartyMemberManager.decide`만 호출한다. 리더는 `PartyLeaderManager`가 스케줄과 랠리 대기를 준비한 뒤 솔로 열을 탄다. 정본은 [PARTY_RUNTIME.md](PARTY_RUNTIME.md), [PARTY_CODE_TO_ACTION.md](PARTY_CODE_TO_ACTION.md), [PARTY_EDGE_CASES.md](PARTY_EDGE_CASES.md).
 
 상점과 월드 내비는 sticky `PlayerMode`다 (`SHOPPING`, `WORLD_NAV`). farming·traveling 열의 `shop.*` / `nav.world`는 진입 handoff다.
 
@@ -31,6 +32,7 @@ run.py
   ├─ Engine/settings               UserData 읽기/쓰기, 태스크→프로필
   ├─ Engine/login → autologin      Purple/게임 로그인 제품
   ├─ Engine/app                    센서 → 월드(채우기) → _02_state → 의사결정 → 행동
+  │    └─ _06_party                파티 리더 스케줄, 멤버 decide, 초대, 보급
   ├─ Engine/shop                   상점 YAML 실행 (구매·판매 창)
   ├─ Engine/hotbar                 핫바 스캔·아이콘 매칭
   └─ Engine/i18n                   문자열·표시 이름
