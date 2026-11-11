@@ -39,8 +39,15 @@ _MEMBER_ACCENT = _LEADER_ACCENT
 
 
 class PartyWorkspace(QWidget):
-    def __init__(self, tab: PartyTab, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        tab: PartyTab,
+        parent: QWidget | None = None,
+        *,
+        lock_reason=None,
+    ) -> None:
         super().__init__(parent)
+        self._lock_reason = lock_reason
         with bind_tx_keys():
             self._assemble(tab)
 
@@ -156,8 +163,18 @@ class PartyWorkspace(QWidget):
         return self.tab._role()
 
     def role_ready(self) -> bool:
-        """True after this process confirms the saved party role."""
+        """True after this party entry confirms the saved party role."""
         return self._confirmed and self.saved_role() in ("leader", "member")
+
+    def _fresh_lock(self) -> tuple[bool, str]:
+        """Live execution lock. A cached ``_locked`` flag is only a fallback."""
+        getter = getattr(self, "_lock_reason", None)
+        if callable(getter):
+            reason = str(getter() or "")
+            return bool(reason), reason
+        if self._locked:
+            return True, ""
+        return False, ""
 
     def current_page(self) -> str:
         return self._page
@@ -178,12 +195,15 @@ class PartyWorkspace(QWidget):
         self._paint_saved()
 
     def present(self) -> None:
-        """Party mode opened. The picker is reachable only while stopped."""
+        """Party mode opened. A stopped entry always starts on the picker."""
         self.tab.use_party_mode()
-        if self._locked:
-            self._show_role(self.saved_role())
-        else:
-            self.show_picker()
+        locked, reason = self._fresh_lock()
+        if locked:
+            self.set_locked(True, reason)
+            return
+        self._confirmed = False
+        self.set_locked(False, "")
+        self.show_picker()
 
     def set_locked(self, locked: bool, reason: str) -> None:
         self._locked = bool(locked)
