@@ -14,6 +14,13 @@ from app._06_party.party_log import get_logger as _party_logger
 
 _log = _party_logger("leader")
 
+# WorldNavSession._start_walk idles while live xy is this far from the walk's
+# ``from``. That wait is for a gate whose map id flips one tick before xy.
+# A party talking-scroll land is a different tile on purpose. If the gap is
+# still there after this long, the plan was built on the pre-land tile.
+_WALK_FROM_LAG_TILES = 24
+_WALK_FROM_LAG_S = 1.0
+
 
 class PartyLeaderManager:
     """Leader tick. The party document chooses the mark. Solo decide hunts it."""
@@ -23,6 +30,7 @@ class PartyLeaderManager:
         self.schedule = PartyLeaderSchedule([])
         self._mounted: Optional[tuple] = None
         self._retry_at = 0.0
+        self._from_far_since = 0.0
         # turret only while the live tile is a party-map point.
         self.hunt_mode = "moving"
         self.on_area = False
@@ -36,6 +44,7 @@ class PartyLeaderManager:
         self.schedule = PartyLeaderSchedule.from_routine(routine)
         self._mounted = None
         self._retry_at = 0.0
+        self._from_far_since = 0.0
         self._set_place("moving")
         blackboard = self.decision.blackboard
         scratch = getattr(blackboard, "scratch", None)
@@ -85,7 +94,8 @@ class PartyLeaderManager:
             self._mount(blackboard, row)
             return
         if not point_held and self._travel_active(scratch):
-            return
+            if not self._release_stale_party_walk(scratch, pose):
+                return
         if not point_held and self._rally_walk_pending(rally, row, pose):
             schedule.note_inside(now, False)
             schedule.note_mark(now, False)
@@ -362,8 +372,73 @@ class PartyLeaderManager:
             "" if mark is None else mark.get("name"),
         )
 
+    def _scroll_landing(self, scratch: dict) -> bool:
+        from app._04_decision.talking_scroll import SCRATCH_SCROLL_ARRIVAL
+
+        return bool(scratch.get(SCRATCH_SCROLL_ARRIVAL))
+
+    def _party_walk_from_far(self, session: Any, pose: Any) -> bool:
+        """True when this party walk still starts far from the live tile."""
+        if str(getattr(session, "reason", "") or "") != "party_schedule":
+            return False
+        plan = getattr(session, "plan", None)
+        steps = getattr(plan, "steps", None) or []
+        try:
+            step_i = int(getattr(session, "step_i", 0) or 0)
+        except (TypeError, ValueError):
+            return False
+        if step_i < 0 or step_i >= len(steps):
+            return False
+        step = steps[step_i]
+        if str(getattr(step, "op", "") or "") != "walk":
+            return False
+        detail = getattr(step, "detail", None)
+        if not isinstance(detail, dict):
+            return False
+        frm = detail.get("from")
+        if not isinstance(frm, dict):
+            return False
+        try:
+            if int(frm.get("mapId", pose.map_id)) != int(pose.map_id):
+                return False
+            gap = max(
+                abs(int(pose.x) - int(frm["x"])),
+                abs(int(pose.y) - int(frm["y"])),
+            )
+        except (TypeError, ValueError, AttributeError):
+            return False
+        return gap > _WALK_FROM_LAG_TILES
+
+    def _release_stale_party_walk(self, scratch: dict, pose: Any) -> bool:
+        """Drop a party walk that is still waiting on a pre-land start tile.
+
+        The first second matches the gate-lag idle in ``_start_walk``. After
+        that the live tile is the landing, so the next ``prepare`` arms from it.
+        """
+        session = scratch.get("world_nav_session")
+        if session is None or not self._party_walk_from_far(session, pose):
+            self._from_far_since = 0.0
+            return False
+        now = time.monotonic()
+        if self._from_far_since <= 0.0:
+            self._from_far_since = now
+            return False
+        if now - self._from_far_since < _WALK_FROM_LAG_S:
+            return False
+        self._from_far_since = 0.0
+        session.fail("party walk from is not the live tile")
+        self._clear_travel(scratch)
+        _log.info(
+            "party schedule dropped walk from a pre-land tile at (%s,%s)",
+            getattr(pose, "x", "?"),
+            getattr(pose, "y", "?"),
+        )
+        return True
+
     def _arm_travel(self, blackboard: Any, world: Any, pose: Any) -> None:
         scratch = blackboard.scratch
+        if self._scroll_landing(scratch):
+            return
         if self._travel_active(scratch):
             return
         now = time.monotonic()

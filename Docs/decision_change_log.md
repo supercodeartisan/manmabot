@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — party replans after a scroll land; pause time is not confined
+
+Intent: A party route built on the pre-land tile is dropped once the live tile has stayed more than 24 tiles away for 1 second, and the next plan uses the landing. No new party route starts while a talking scroll landing is still open. The 13 s confined clock counts decide ticks only, so a hotkey pause does not fire a talking scroll. Solo world-nav's gate wait is unchanged.
+Shared: `PartyLeaderManager._arm_travel`, `_release_stale_party_walk`, and `note_confined_progress`. `WorldNavSession._start_walk`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's route after a talking scroll, and the confined escape on solo farming, solo travel, and world-nav walks.
+Consent: user (fix the land wait on the party only; fix the pause clock for solo and party).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`, `Engine/app/_04_decision/tests/test_confined_clock.py`. Not run in game.
+
 ## 2026-11-10 — member order is assist, then loot, then follow
 
 Intent: A party member attacks when an assist target is in range, then picks up, then follows. A leader step and a seat catch-up no longer cancel that attack or that pile. Heal, a potion, and self-defense stay first. A buff still waits while the member is walking back to the seat.
