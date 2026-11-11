@@ -1,31 +1,5 @@
 # Decision change log
 
-<<<<<<< HEAD
-## 2026-11-11 — a missed party-list cast clears the spell cursor
-
-Intent: A party-list buff or heal presses the skill key once, then clicks the row only after the spell cursor is up. When that wait misses, or a later walk still sees the circle, Esc runs first. If the circle remains, a right-click lands inside the game view. The walk click waits until the cursor is no longer a spell circle. The skill key is not pressed again.
-Shared: `cancel_spell_aim`. Party-list heal and buff call it when the aim wait misses. The travel hop calls it and skips the ground click while the circle remains. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
-Affects: party mage follow after a buff or heal, and any walk that already cancelled a leftover spell circle, including a solo mage cast miss.
-Consent: user ("yes" after the stuck spell cursor).
-Result: `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
-
-## 2026-11-11 — a missing party heal stays on
-
-Intent: The party mage screen shows 힐 checked when `mage_0` was never saved. The caster now uses that same rule. `mage_0: false` is the only save that turns 힐 off. Opening the party support table writes `mage_0: true` when the key is absent, so the file matches the checkbox. 실드 left in an older save is still skipped.
-Shared: `checked_skill_ids`. The party table writes the default through `_write_support_magic`. Solo magic, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
-Affects: party mage heal and buff selection. A profile that saved another party spell without ever saving 힐 starts healing.
-Consent: user ("yes, please update").
-Result: `Engine/settings/tests/test_party_mage_support.py`, `UI/ui_qt/editors/tests/test_party_workspace.py`. Not run in game.
-=======
-## 2026-11-11 — party hunt keeps its mark, and party clicks miss player sprites
-
-Intent: After a map reload, the party leader's hunt rect is the party mark again, not the solo yaml farm. A point stays its 5×5. Inside that mark the leader does not walk toward the solo area. Outside it, the return walk uses the mark. During a party session, a click is not placed on a memory player's center or on any of the eight tiles that touch it. Solo clicks still avoid only living centers. Monster neighbors stay clickable.
-Shared: `PartyLeaderManager._mount`, `click_bodies` (travel, loot approach, search), and the party follow hop. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
-Affects: the party leader after a talking scroll lands, and party move, follow, loot approach, and search while another player is beside the click. Solo hunting is unchanged.
-Consent: user (the neighbor exclusion is party-only; the farm-edge walk must be fixed; do it on a new branch).
-Result: `Engine/app/_06_party/tests/test_leader_routine.py`, `Engine/app/_04_decision/tests/test_party_click_ring.py`. Not run in game.
->>>>>>> origin/main
-
 ## 2026-11-11 — after the rally stand the leader walks
 
 Intent: A party start route still uses an NPC teleporter or a talking scroll to reach the meet tile. The stand is on the landing of the last of those steps. After that stand, the same route's remaining steps are walks, and a new party route armed before the leader is inside the farm does not use a talking scroll or an NPC teleporter. A walk-only route still stands on the tile where the plan was made.
