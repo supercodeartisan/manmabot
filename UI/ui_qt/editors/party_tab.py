@@ -473,6 +473,8 @@ class PartyTab(QWidget):
         return self._tx("party_ui_support_magic_buff", "강화")
 
     def _fill_support_magic_table(self) -> None:
+        if getattr(self, "_support_magic_filling", False):
+            return
         box = getattr(self, "member_support_magic_box", None)
         table = getattr(self, "member_support_magic_table", None)
         if box is None or table is None:
@@ -485,6 +487,13 @@ class PartyTab(QWidget):
 
         rows = party_mage_support_rows(self.language)
         saved = self._support_magic_saved()
+        if "mage_0" not in saved:
+            self._support_magic_filling = True
+            try:
+                self._write_support_magic("mage_0", True)
+            finally:
+                self._support_magic_filling = False
+            saved = self._support_magic_saved()
         self._release_table_widgets(table)
         table.blockSignals(True)
         for index, row in enumerate(rows):
