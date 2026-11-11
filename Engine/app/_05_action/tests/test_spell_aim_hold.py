@@ -147,6 +147,32 @@ def test_stuck_spell_right_clicks_inside_the_view() -> None:
     assert executor.mouse.clicks == [(100 + 800 * 0.62, 50 + 600 * 0.45, "right")]
 
 
+def test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.mouse = _ClickMouse()
+    executor._perception_capture = _Capture()
+    seen = {"spell": True}
+
+    def _aim(_executor: object = None) -> bool:
+        return bool(seen["spell"])
+
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        cv.cancel_spell_aim(executor, reason="heal")
+        cv.cancel_spell_aim(executor, reason="heal")
+        assert len(executor.mouse.clicks) == 1
+        seen["spell"] = False
+        assert cv.cancel_spell_aim(executor, reason="heal") is False
+        seen["spell"] = True
+        cv.cancel_spell_aim(executor, reason="heal")
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
+    assert executor.keyboard.pressed == ["esc", "esc", "esc"]
+
+
 def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:
     original = cv.cursor_is_spell_aim
     try:
@@ -163,4 +189,5 @@ if __name__ == "__main__":
     test_party_list_waits_for_the_spell_cursor()
     test_party_list_skips_the_click_when_the_cursor_stays_down()
     test_stuck_spell_right_clicks_inside_the_view()
+    test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops()
     print("spell aim hold tests ok")

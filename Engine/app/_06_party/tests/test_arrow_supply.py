@@ -130,7 +130,12 @@ def test_party_buy_qty_does_not_replace_solo() -> None:
         {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 250},
         "silver_arrows",
         40,
-    ) == 250
+    ) == 50
+    assert party_shop_buy_qty(
+        {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 200},
+        "buy_silver_arrows_mainland",
+        40,
+    ) == 40
     assert party_shop_buy_qty(
         {"party_shopkeeper_arrow": True, "party_arrow_buy_qty": 250},
         "hp_potion",

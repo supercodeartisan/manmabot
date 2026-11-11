@@ -18,6 +18,7 @@ from app._04_decision.behaviors.mode_actions import (
     clear_approach_hold_tick,
     continue_or_start_loot,
     farm_loot_or_combat,
+    _quiet_route_click,
     hold_fire_outside_hunt,
     maybe_escalate_teleport_to_safe,
     maybe_heal_mp_to_hp_at_tree,
@@ -295,6 +296,23 @@ def _maybe_return_on_idle(
     return True
 
 
+def _live_loot_pile(state: "GameState", blackboard: "Blackboard") -> bool:
+    """True when the current loot id is still an item in memory."""
+    item_id = getattr(blackboard, "current_item_id", None)
+    if item_id is None:
+        return False
+    try:
+        obj = state.get_object(int(item_id))
+    except (TypeError, ValueError):
+        return False
+    from app._02_state.objects import ObjectType
+    from app._04_decision.combat_query import memory_target_gone
+
+    if obj is None or getattr(obj, "object_type", None) is not ObjectType.ITEM:
+        return False
+    return not memory_target_gone(state, obj)
+
+
 def _drive_world_nav(
     state: "GameState",
     blackboard: "Blackboard",
@@ -303,7 +321,8 @@ def _drive_world_nav(
 
     During ``walk``, combat/loot runs *before* nav hop advance so sticky
     engage is not starved by world-nav waypoint clicks every tick.
-    A hunt-rect or dungeon-entrance arrival finishes before that, so the
+    A live current pile also holds the route on a tick that emits no loot
+    click. A hunt-rect or dungeon-entrance arrival finishes before that, so the
     leftover walk to the center never starts.
     """
     from app._04_decision.world_nav.hooks import finish_hunt_edge_arrival
@@ -325,7 +344,8 @@ def _drive_world_nav(
     if phase == "walk" or (
         phase == "gate_approach" and hold_fire_outside_hunt(state, blackboard)
     ):
-        if hold_fire_outside_hunt(state, blackboard):
+        outside = hold_fire_outside_hunt(state, blackboard)
+        if outside:
             fought = approach_counterattack(state, blackboard)
         else:
             fought = farm_loot_or_combat(
@@ -335,6 +355,21 @@ def _drive_world_nav(
             if session is not None or need:
                 ensure_world_nav_mode(blackboard)
             return fought
+        if (
+            phase == "walk"
+            and not outside
+            and _live_loot_pile(state, blackboard)
+        ):
+            _quiet_route_click(blackboard)
+            if session is not None or need:
+                ensure_world_nav_mode(blackboard)
+            blackboard.current_goal = "loot"
+            blackboard.emit(
+                ActionType.IDLE,
+                priority=0.3,
+                reason="loot before route",
+            )
+            return Status.SUCCESS
 
     status = tick_world_nav(state, blackboard)
     session = blackboard.scratch.get(SCRATCH_WORLD_NAV)
@@ -344,7 +379,8 @@ def _drive_world_nav(
     phase = getattr(session, "phase", None) if session is not None else None
     # ready→walk this tick: overlay once after the first hop is armed.
     if phase == "walk":
-        if hold_fire_outside_hunt(state, blackboard):
+        outside = hold_fire_outside_hunt(state, blackboard)
+        if outside:
             fought = approach_counterattack(state, blackboard)
         else:
             fought = farm_loot_or_combat(
@@ -352,6 +388,15 @@ def _drive_world_nav(
             )
         if fought is not None:
             return fought
+        if not outside and _live_loot_pile(state, blackboard):
+            _quiet_route_click(blackboard)
+            blackboard.current_goal = "loot"
+            blackboard.emit(
+                ActionType.IDLE,
+                priority=0.3,
+                reason="loot before route",
+            )
+            return Status.SUCCESS
     if status is not None:
         return status
     if str(blackboard.scratch.get(SCRATCH_ROUTINE_KIND) or "") == "break":

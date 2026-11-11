@@ -11,8 +11,11 @@ from app._03_world import Position
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# How many arrows to type into the shop buy field (1–999; Version 1 UI overrides).
+# Arrows the user wants (1–999). The shop field is bundles, not this count.
+# Normal: 1 typed = 10 arrows. Silver: 1 typed = 5 arrows.
 ARROW_BUY_QTY = 200
+NORMAL_ARROWS_PER_SHOP_UNIT = 10
+SILVER_ARROWS_PER_SHOP_UNIT = 5
 # Live shopping policy (Version 1 profile / schedule → configure_decision).
 BUY_NORMAL_ARROWS = True
 BUY_SILVER_ARROWS = False
@@ -164,13 +167,42 @@ def resolve_sell_behavior_ids() -> tuple[str, ...]:
     )
 
 
+def arrow_shop_units(behavior_id: str, arrow_count: int) -> int | None:
+    """Shop-dialog digits for an arrow buy. None when ``behavior_id`` is not arrows.
+
+    The profile count stays in arrows. The dialog counts bundles:
+    1 normal = 10 arrows, 1 silver = 5 arrows. 200 silver types 40;
+    200 normal types 20. A remainder is dropped. Fewer than one bundle
+    still types 1.
+    """
+    bid = str(behavior_id or "")
+    if "arrow" not in bid:
+        return None
+    per = (
+        SILVER_ARROWS_PER_SHOP_UNIT
+        if "silver" in bid
+        else NORMAL_ARROWS_PER_SHOP_UNIT
+    )
+    try:
+        count = int(arrow_count)
+    except (TypeError, ValueError):
+        count = per
+    return max(1, min(999, count // per))
+
+
 def buy_qty_for_behavior(behavior_id: str) -> int | None:
-    """UI quantity for a calibrated buy behavior, or None to use YAML default."""
+    """UI quantity for a calibrated buy behavior, or None to use YAML default.
+
+    Arrow settings are arrow counts. This returns the bundle count the
+    shop dialog accepts.
+    """
     bid = str(behavior_id or "")
     if "silver_arrow" in bid:
-        return max(1, min(999, int(SILVER_ARROW_BUY_QTY)))
+        units = arrow_shop_units(bid, SILVER_ARROW_BUY_QTY)
+        return units if units is not None else 1
     if "normal_arrow" in bid:
-        return max(1, min(999, int(ARROW_BUY_QTY)))
+        units = arrow_shop_units(bid, ARROW_BUY_QTY)
+        return units if units is not None else 1
     if "depoison" in bid:
         return max(1, min(999, int(DEPOISON_BUY_QTY)))
     if "hp_potion" in bid:
@@ -379,6 +411,7 @@ __all__ = [
     "is_sell_behavior",
     "is_store_behavior",
     "is_teleporter_behavior",
+    "arrow_shop_units",
     "buy_qty_for_behavior",
     "affordable_hp_potion_qty",
 ]
