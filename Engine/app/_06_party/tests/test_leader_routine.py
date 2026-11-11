@@ -864,6 +864,159 @@ def test_other_nav_reasons_do_not_arm_turret() -> None:
     assert manager.hunt_mode == "moving"
 
 
+def _pre_land_walk(frm: tuple[int, int]):
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav.ready.planner import PlanStep
+
+    class _Session:
+        reason = "party_schedule"
+        phase = "ready"
+        step_i = 0
+        plan = SimpleNamespace(
+            steps=[
+                PlanStep(
+                    "walk",
+                    87,
+                    {
+                        "from": {"mapId": 4, "x": frm[0], "y": frm[1]},
+                        "to": {"mapId": 4, "x": 33131, "y": 33226},
+                    },
+                )
+            ]
+        )
+
+        def fail(self, message: str) -> None:
+            self.phase = "fail"
+            self.error = message
+
+    return _Session()
+
+
+def test_party_keeps_a_walk_during_the_gate_lag() -> None:
+    import time
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    session = _pre_land_walk((33044, 33291))
+    decision.blackboard.scratch["world_nav_session"] = session
+    manager._from_far_since = time.monotonic() - 0.2
+    armed: list[int] = []
+    manager._arm_travel = lambda *args, **kwargs: armed.append(1)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: False  # type: ignore[method-assign]
+    real = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = (
+        lambda state, fresh=False: SimpleNamespace(map_id=4, x=33430, y=32789)
+    )
+    try:
+        manager.prepare(object(), None)
+    finally:
+        nav_session.live_pose_from_state = real
+    assert decision.blackboard.scratch["world_nav_session"] is session
+    assert session.phase == "ready"
+    assert armed == []
+
+
+def test_party_drops_a_pre_land_walk_and_arms_from_the_landing() -> None:
+    import time
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    session = _pre_land_walk((33044, 33291))
+    decision.blackboard.scratch["world_nav_session"] = session
+    manager._from_far_since = time.monotonic() - 2.0
+    armed: list[int] = []
+    manager._arm_travel = lambda *args, **kwargs: armed.append(1)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: False  # type: ignore[method-assign]
+    real = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = (
+        lambda state, fresh=False: SimpleNamespace(map_id=4, x=33430, y=32789)
+    )
+    try:
+        manager.prepare(object(), None)
+    finally:
+        nav_session.live_pose_from_state = real
+    assert "world_nav_session" not in decision.blackboard.scratch
+    assert session.phase == "fail"
+    assert armed == [1]
+
+
+def test_party_does_not_arm_while_a_scroll_landing_is_open() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.talking_scroll import SCRATCH_SCROLL_ARRIVAL
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    decision.blackboard.scratch[SCRATCH_SCROLL_ARRIVAL] = True
+    manager._arm_travel(
+        decision.blackboard,
+        object(),
+        SimpleNamespace(map_id=4, x=33044, y=33291),
+    )
+    assert "world_nav_session" not in decision.blackboard.scratch
+
+
 if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
@@ -886,4 +1039,7 @@ if __name__ == "__main__":
     test_point_arrival_stays_off_outside_the_box()
     test_area_arrival_does_not_arm_turret()
     test_other_nav_reasons_do_not_arm_turret()
+    test_party_keeps_a_walk_during_the_gate_lag()
+    test_party_drops_a_pre_land_walk_and_arms_from_the_landing()
+    test_party_does_not_arm_while_a_scroll_landing_is_open()
     print("OK")

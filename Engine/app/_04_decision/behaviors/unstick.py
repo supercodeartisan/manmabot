@@ -52,6 +52,10 @@ SCRATCH_DETOUR_CLICK_AT = "enter_farm_detour_click_at"
 SCRATCH_CONFINED_ORIGIN = "unstick_confined_origin"
 SCRATCH_CONFINED_SINCE = "unstick_confined_since"
 SCRATCH_CONFINED_EPISODE = "unstick_confined_episode"
+SCRATCH_CONFINED_TICK = "unstick_confined_tick"
+# A hotkey pause stops the decide tick. A gap longer than this is that pause,
+# not time spent inside the 3-tile bubble.
+_CONFINE_TICK_GAP_S = 1.0
 
 # Pause between sweep clicks so a successful step can clear the stuck clock.
 UNSTICK_SWEEP_GAP_S = 0.5
@@ -80,6 +84,7 @@ def reset_confined_progress(blackboard: "Blackboard") -> None:
     blackboard.scratch.pop(SCRATCH_CONFINED_ORIGIN, None)
     blackboard.scratch.pop(SCRATCH_CONFINED_SINCE, None)
     blackboard.scratch.pop(SCRATCH_CONFINED_EPISODE, None)
+    blackboard.scratch.pop(SCRATCH_CONFINED_TICK, None)
 
 
 def _player_tile(blackboard: "Blackboard") -> tuple[int, int]:
@@ -616,8 +621,19 @@ def note_confined_planned_avoid(
         note_confined_body_avoid(blackboard)
 
 
+def _slide_confined_clock(blackboard: "Blackboard", now: float) -> float:
+    """Keep the 13 s clock on decide ticks. A pause gap does not count."""
+    started = float(blackboard.scratch.get(SCRATCH_CONFINED_SINCE) or 0.0)
+    last = float(blackboard.scratch.get(SCRATCH_CONFINED_TICK) or 0.0)
+    blackboard.scratch[SCRATCH_CONFINED_TICK] = now
+    if started > 0.0 and last > 0.0 and (now - last) > _CONFINE_TICK_GAP_S:
+        started += now - last
+        blackboard.scratch[SCRATCH_CONFINED_SINCE] = started
+    return started
+
+
 def note_confined_progress(blackboard: "Blackboard") -> bool:
-    """Update the 3-tile bubble clock. True when it has lasted 13 s."""
+    """Update the 3-tile bubble clock. True when it has lasted 13 s of ticks."""
     from app._03_world.space.world_coords import tile_chebyshev
 
     cur = _player_tile(blackboard)
@@ -625,6 +641,7 @@ def note_confined_progress(blackboard: "Blackboard") -> bool:
     raw = blackboard.scratch.get(SCRATCH_CONFINED_ORIGIN)
     if raw is None:
         _begin_confined_episode(blackboard, cur, now)
+        blackboard.scratch[SCRATCH_CONFINED_TICK] = now
         return False
     origin = (int(raw[0]), int(raw[1]))
     if tile_chebyshev(cur[0], cur[1], origin[0], origin[1]) > int(
@@ -632,10 +649,12 @@ def note_confined_progress(blackboard: "Blackboard") -> bool:
     ):
         _log_confined_episode(blackboard, "leave", cur, now)
         _begin_confined_episode(blackboard, cur, now)
+        blackboard.scratch[SCRATCH_CONFINED_TICK] = now
         return False
-    started = float(blackboard.scratch.get(SCRATCH_CONFINED_SINCE) or 0.0)
+    started = _slide_confined_clock(blackboard, now)
     if started <= 0.0:
         blackboard.scratch[SCRATCH_CONFINED_SINCE] = now
+        started = now
     _sample_confined_episode(blackboard, cur)
     due = (now - started) >= float(pm.UNSTICK_CONFINED_SECONDS) if started > 0.0 else False
     if due:
