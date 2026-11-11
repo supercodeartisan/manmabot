@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-10 — rally stand starts on the walk-arrival tick
+
+Intent: When the party leader's walk to the rally mark finishes, stand on that tick. The same tick used to switch to farming and click into the farm before `party_rally_wait` existed. The 3-minute stand and the immediate leave when everyone is there are unchanged.
+Shared: `PartyLeaderManager._on_rally_walk_arrived`, called from world-nav arrival before the farming handoff. `prepare`, `note_arrived`, and `party.rally_wait` are the same stand. Solo world-nav arrival, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's first arrival at the rally mark.
+Consent: user (fix this).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-10 — party leader stands at the rally until the roster is there
 
 Intent: After the party leader reaches the rally mark, stand there. If every expected member is at that mark, walk into the farming area immediately. If someone is still missing, leave when 3 minutes have passed. The invite window does not cut this stand short. Members are not sent the rally tile.

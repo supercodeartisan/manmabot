@@ -66,6 +66,11 @@ class PartyLeaderManager:
         scratch["party_rally_wait"] = False
         scratch.pop("routine_cursor", None)
         scratch["party_point_arrival"] = self._on_point_arrival
+        scratch["party_rally_arrival"] = (
+            lambda bb, reason, rally=rally: self._on_rally_walk_arrived(
+                bb, reason, rally
+            )
+        )
         # Arrived turret stays the hunt. A step outside the 5×5 walks back
         # through that module. It does not open another world-nav route.
         point_held = self._point_routine_held(blackboard)
@@ -193,6 +198,31 @@ class PartyLeaderManager:
         self.hunt_mode = "turret" if mode == "turret" else "moving"
         self.on_area = bool(on_area) and self.hunt_mode != "turret"
         self.turret_anchor = anchor if self.hunt_mode == "turret" else None
+
+    def _on_rally_walk_arrived(self, blackboard: Any, reason: str, rally: Any) -> None:
+        """Stand when the mark walk ends inside ``decide``.
+
+        ``prepare`` already returned while that walk was still active. The
+        same tick then hands off to farming. Enter the stand here so the
+        farming column idles instead of searching.
+        """
+        if str(reason or "") != "party_schedule":
+            return
+        if rally is None or str(getattr(rally, "state", "") or "") != "await_mark":
+            return
+        row = self.schedule.current()
+        if row is None:
+            return
+        from app._04_decision.world_nav.session import live_pose_from_state
+
+        pose = live_pose_from_state(blackboard.scratch.get("_world_nav_pose_state"))
+        if pose is None:
+            return
+        rally.note_arrived(self._arrival_point(row, pose))
+        if str(getattr(rally, "state", "") or "") != "waiting":
+            return
+        blackboard.scratch["party_rally_wait"] = True
+        self._drop_open_travel(blackboard.scratch)
 
     def _on_point_arrival(self, blackboard: Any, reason: str) -> bool:
         """Arm turret when a party-point walk ends inside that dot's 5×5.
