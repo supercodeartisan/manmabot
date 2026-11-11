@@ -98,6 +98,17 @@ def test_assist_beats_follow_while_moving_or_off_seat():
     assert no_target.kind is MemberKind.FOLLOW
 
 
+def test_catch_up_asks_only_for_an_in_range_heal():
+    from app._06_party.manager import mage_list_heal_request
+
+    assert mage_list_heal_request(True, MemberKind.FOLLOW) == (True, True)
+    assert mage_list_heal_request(False, MemberKind.FOLLOW) == (False, False)
+    assert mage_list_heal_request(False, MemberKind.HOLD) == (False, False)
+    assert mage_list_heal_request(True, MemberKind.POTION) is None
+    assert mage_list_heal_request(True, MemberKind.DEFEND) is None
+    assert mage_list_heal_request(True, MemberKind.STOP) is None
+
+
 def test_catch_up_keeps_potion_heal_and_defend():
     common = dict(slot_dist=6, assist_ready=True)
     assert decide_policy(_policy(need_potion=True, **common)).kind is MemberKind.POTION

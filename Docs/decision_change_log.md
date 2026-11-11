@@ -23,6 +23,13 @@ Shared: `PartyLeaderManager._on_rally_walk_arrived`, called from world-nav arriv
 Affects: the party leader's first arrival at the rally mark.
 Consent: user (fix this).
 Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+## 2026-11-10 — a mage heals during catch-up when the cast is in range
+
+Intent: While a mage is walking back to the formation slot, still cast a party heal that is already in range and under the leader's heal percent. A buff, a walk toward someone farther out, loot, and a new attack wait until the slot.
+Shared: `mage_list_heal_request` and `_party_list_heal` (`cast_only`, `heals_only`). `formation_returning`, follow clicks, loot, assist, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a mage party member who is 4 or more tiles off the slot, until that member is within 1 tile. A mage-class shopkeeper on the same member tick gets the same in-range heal.
+Consent: user ("yes" after the catch-up gate skipped heals during the goblin fight).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`, `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
 
 ## 2026-11-10 — party leader stands at the rally until the roster is there
 
