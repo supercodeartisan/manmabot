@@ -15,10 +15,38 @@
 static uint64_t g_pid = 0, g_base = 0;
 static uint32_t g_modSize = 0;
 static int g_attached = 0;
-static uint32_t g_mgrRva = 0x16F8A00u;
-static uint32_t g_msgAnchor = 0x16F8A28u;
-static uint32_t g_vftShop = 0x123E848u;
-static uint32_t g_vftInv = 0x123B1E0u;
+/* Defaults match registry/LC930_REGISTRY.txt. loadShopRegistry overwrites them. */
+static uint32_t g_mgrRva = 0x1708750u;
+static uint32_t g_holderOff = 0xD0u;
+static uint32_t g_subB = 0x180u;
+static uint32_t g_subStride = 16u;
+static uint32_t g_msgAnchor = 0x1708778u;
+static uint32_t g_vftShop = 0x1242258u;
+static uint32_t g_vftInv = 0x123EE28u;
+static uint32_t g_invVecBeg = 0x3D8u;
+static uint32_t g_invVecEnd = 0x3E0u;
+static uint32_t g_itemVft = 0x123E848u;
+static uint32_t g_itemId = 0x18u;
+static uint32_t g_itemTemplate = 0x20u;
+static uint32_t g_itemCount = 0x38u;
+static uint32_t g_itemFmt = 0x68u;
+static uint32_t g_shopState = 0x28u;
+static uint32_t g_buyBegin = 0x40u;
+static uint32_t g_buyEnd = 0x48u;
+static uint32_t g_buyStride = 0x90u;
+static uint32_t g_sellBegin = 0x58u;
+static uint32_t g_sellEnd = 0x60u;
+static uint32_t g_sellStride = 0x20u;
+static uint32_t g_buyItemVft = 0x1257920u;
+static uint32_t g_bliKey = 0x30u;
+static uint32_t g_bliKeyBack = 2u;
+static uint32_t g_bliOrder = 0x38u;
+static uint32_t g_bliItemId = 0x3Cu;
+static uint32_t g_bliTemplate = 0x40u;
+static uint32_t g_bliPrice = 0x44u;
+static uint32_t g_sellItemVft = 0x1257988u;
+static uint32_t g_sliId = 0x18u;
+static uint32_t g_sliUnit = 0x1Cu;
 
 static int rm(uint64_t a, void* b, uint32_t s) {
     int drv = 0;
@@ -108,7 +136,7 @@ static uint32_t midFromKey(uint64_t keyPtr) {
     char s[64] = "";
     const char* d;
     if (!isHeap(keyPtr)) return 0;
-    readSSO(keyPtr - 2, s, (int)sizeof(s));
+    readSSO(keyPtr - g_bliKeyBack, s, (int)sizeof(s));
     d = strchr(s, '$');
     if (!d) return 0;
     return (uint32_t)strtoul(d + 1, 0, 10);
@@ -129,15 +157,15 @@ static uint64_t findSubByVft(uint32_t want) {
     }
     mgr = q64(g_base + g_mgrRva);
     if (!isHeap(mgr)) return 0;
-    holder = q64(mgr + 0xD0);
+    holder = q64(mgr + g_holderOff);
     if (!isHeap(holder)) return 0;
-    bgn = q64(holder + 0x180);
-    end = q64(holder + 0x188);
-    if (!isHeap(bgn) || end <= bgn) return 0;
-    subs = (long)((end - bgn) / 16);
+    bgn = q64(holder + g_subB);
+    end = q64(holder + g_subB + 8);
+    if (!isHeap(bgn) || end <= bgn || !g_subStride) return 0;
+    subs = (long)((end - bgn) / g_subStride);
     if (subs < 1 || subs > 128) return 0;
     for (i = 0; i < subs; i++) {
-        uint64_t s = q64(bgn + 16ull * (uint64_t)i);
+        uint64_t s = q64(bgn + (uint64_t)g_subStride * (uint64_t)i);
         uint64_t v;
         if (!isHeap(s)) continue;
         v = q64(s);
@@ -221,9 +249,36 @@ static int loadRegFile(const char* path) {
         if (!eq) continue;
         *eq = 0;
         if (!strcmp(line, "MGR")) { applyRegKey(line, eq + 1, &g_mgrRva); n++; }
+        else if (!strcmp(line, "HOLDER_OFF")) { applyRegKey(line, eq + 1, &g_holderOff); n++; }
+        else if (!strcmp(line, "SUBB")) { applyRegKey(line, eq + 1, &g_subB); n++; }
+        else if (!strcmp(line, "SUB_STRIDE")) { applyRegKey(line, eq + 1, &g_subStride); n++; }
         else if (!strcmp(line, "MSG_ANCHOR_RVA")) { applyRegKey(line, eq + 1, &g_msgAnchor); n++; }
         else if (!strcmp(line, "VFT_SHOP")) { applyRegKey(line, eq + 1, &g_vftShop); n++; }
         else if (!strcmp(line, "VFT_INVENTORY")) { applyRegKey(line, eq + 1, &g_vftInv); n++; }
+        else if (!strcmp(line, "INV_VEC_BEG")) { applyRegKey(line, eq + 1, &g_invVecBeg); n++; }
+        else if (!strcmp(line, "INV_VEC_END")) { applyRegKey(line, eq + 1, &g_invVecEnd); n++; }
+        else if (!strcmp(line, "ITEM_VFT")) { applyRegKey(line, eq + 1, &g_itemVft); n++; }
+        else if (!strcmp(line, "ITEM_ID")) { applyRegKey(line, eq + 1, &g_itemId); n++; }
+        else if (!strcmp(line, "ITEM_TEMPLATE")) { applyRegKey(line, eq + 1, &g_itemTemplate); n++; }
+        else if (!strcmp(line, "ITEM_COUNT")) { applyRegKey(line, eq + 1, &g_itemCount); n++; }
+        else if (!strcmp(line, "ITEM_FMT")) { applyRegKey(line, eq + 1, &g_itemFmt); n++; }
+        else if (!strcmp(line, "SHOP_STATE")) { applyRegKey(line, eq + 1, &g_shopState); n++; }
+        else if (!strcmp(line, "SHOP_BUY_BEGIN")) { applyRegKey(line, eq + 1, &g_buyBegin); n++; }
+        else if (!strcmp(line, "SHOP_BUY_END")) { applyRegKey(line, eq + 1, &g_buyEnd); n++; }
+        else if (!strcmp(line, "BUY_STRIDE")) { applyRegKey(line, eq + 1, &g_buyStride); n++; }
+        else if (!strcmp(line, "SHOP_SELL_BEGIN")) { applyRegKey(line, eq + 1, &g_sellBegin); n++; }
+        else if (!strcmp(line, "SHOP_SELL_END")) { applyRegKey(line, eq + 1, &g_sellEnd); n++; }
+        else if (!strcmp(line, "SELL_STRIDE")) { applyRegKey(line, eq + 1, &g_sellStride); n++; }
+        else if (!strcmp(line, "BUYLISTITEM_VFT")) { applyRegKey(line, eq + 1, &g_buyItemVft); n++; }
+        else if (!strcmp(line, "BLI_KEY")) { applyRegKey(line, eq + 1, &g_bliKey); n++; }
+        else if (!strcmp(line, "BLI_KEY_BACK")) { applyRegKey(line, eq + 1, &g_bliKeyBack); n++; }
+        else if (!strcmp(line, "BLI_ORDER")) { applyRegKey(line, eq + 1, &g_bliOrder); n++; }
+        else if (!strcmp(line, "BLI_ITEMID")) { applyRegKey(line, eq + 1, &g_bliItemId); n++; }
+        else if (!strcmp(line, "BLI_TEMPLATE")) { applyRegKey(line, eq + 1, &g_bliTemplate); n++; }
+        else if (!strcmp(line, "BLI_PRICE")) { applyRegKey(line, eq + 1, &g_bliPrice); n++; }
+        else if (!strcmp(line, "SELLLISTITEM_VFT")) { applyRegKey(line, eq + 1, &g_sellItemVft); n++; }
+        else if (!strcmp(line, "SLI_ID")) { applyRegKey(line, eq + 1, &g_sliId); n++; }
+        else if (!strcmp(line, "SLI_UNIT")) { applyRegKey(line, eq + 1, &g_sliUnit); n++; }
     }
     fclose(f);
     return n > 0;
@@ -293,18 +348,18 @@ static int writeShopJson(FILE* f) {
                 (unsigned long)g_pid, (unsigned long long)g_base);
         return 1;
     }
-    int state = (int)d32(shop + 0x28);
-    uint64_t vb = q64(shop + 0x40), ve = q64(shop + 0x48);
-    uint64_t sb = q64(shop + 0x58), se = q64(shop + 0x60);
-    uint64_t bn = (isHeap(vb) && isHeap(ve) && ve >= vb) ? (ve - vb) / 0x90 : 0;
-    uint64_t sn = (isHeap(sb) && isHeap(se) && se >= sb) ? (se - sb) / 0x20 : 0;
+    int state = (int)d32(shop + g_shopState);
+    uint64_t vb = q64(shop + g_buyBegin), ve = q64(shop + g_buyEnd);
+    uint64_t sb = q64(shop + g_sellBegin), se = q64(shop + g_sellEnd);
+    uint64_t bn = (isHeap(vb) && isHeap(ve) && ve >= vb && g_buyStride) ? (ve - vb) / g_buyStride : 0;
+    uint64_t sn = (isHeap(sb) && isHeap(se) && se >= sb && g_sellStride) ? (se - sb) / g_sellStride : 0;
     uint64_t ib = 0, ie = 0;
     int incnt = 0;
     if (bn > 512) bn = 512;
     if (sn > 512) sn = 512;
     if (isHeap(inv)) {
-        ib = q64(inv + 0x3D8);
-        ie = q64(inv + 0x3E0);
+        ib = q64(inv + g_invVecBeg);
+        ie = q64(inv + g_invVecEnd);
         incnt = (isHeap(ib) && isHeap(ie) && ie >= ib) ? (int)((ie - ib) / 8) : 0;
         if (incnt > 0x400) incnt = 0x400;
     }
@@ -315,17 +370,17 @@ static int writeShopJson(FILE* f) {
             (unsigned long long)sn);
 
     for (uint64_t k = 0; k < bn; k++) {
-        uint64_t b = vb + k * 0x90;
+        uint64_t b = vb + k * g_buyStride;
         uint32_t order, itemId, tmpl, price, mid;
         uint64_t keyPtr;
         char nm[256] = "", esc[512];
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1249D88u) break;
-        order = d32(b + 0x38);
-        itemId = d32(b + 0x3C);
-        tmpl = d32(b + 0x40);
-        price = d32(b + 0x44);
-        /* stand: +0x30 → display string "$NNN"; itemId is a different id space. */
-        keyPtr = q64(b + 0x30);
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != g_buyItemVft) break;
+        order = d32(b + g_bliOrder);
+        itemId = d32(b + g_bliItemId);
+        tmpl = d32(b + g_bliTemplate);
+        price = d32(b + g_bliPrice);
+        /* stand: BLI_KEY → display string "$NNN"; itemId is a different id space. */
+        keyPtr = q64(b + g_bliKey);
         mid = midFromKey(keyPtr);
         if (!mid) mid = itemId;
         if (mid) resolve(mid, nm, sizeof(nm));
@@ -338,18 +393,18 @@ static int writeShopJson(FILE* f) {
     fprintf(f, "],\"sell\":[");
     int sold = 0;
     for (uint64_t k = 0; k < sn; k++) {
-        uint64_t b = sb + k * 0x20;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x124A2D0u) break;
-        uint32_t id = d32(b + 0x18), unit = d32(b + 0x1C);
+        uint64_t b = sb + k * g_sellStride;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != g_sellItemVft) break;
+        uint32_t id = d32(b + g_sliId), unit = d32(b + g_sliUnit);
         char fmt[64] = "", nm[256] = "", esc[512];
         uint32_t tmpl = 0, cnt = 0, mid = 0;
         for (int j = 0; j < incnt; j++) {
             uint64_t it = q64(ib + j * 8);
-            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x12319D0u &&
-                d32(it + 0x18) == id) {
-                readSSO(it + 0x68, fmt, sizeof(fmt));
-                tmpl = d32(it + 0x20);
-                cnt = d32(it + 0x38);
+            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == g_itemVft &&
+                d32(it + g_itemId) == id) {
+                readSSO(it + g_itemFmt, fmt, sizeof(fmt));
+                tmpl = d32(it + g_itemTemplate);
+                cnt = d32(it + g_itemCount);
                 break;
             }
         }
@@ -401,16 +456,16 @@ __declspec(dllexport) void shop_listen_shutdown(void) { shopDetach(); }
 static const char* g_last = NULL;
 
 static void dumpBuy(uint64_t shop) {
-    uint64_t vb = q64(shop + 0x40), ve = q64(shop + 0x48);
-    uint64_t n = (isHeap(vb) && isHeap(ve) && ve >= vb) ? (ve - vb) / 0x90 : 0;
+    uint64_t vb = q64(shop + g_buyBegin), ve = q64(shop + g_buyEnd);
+    uint64_t n = (isHeap(vb) && isHeap(ve) && ve >= vb && g_buyStride) ? (ve - vb) / g_buyStride : 0;
     if (n > 512) n = 512;
     printf("[BUY] n=%llu\n", (unsigned long long)n);
     for (uint64_t k = 0; k < n; k++) {
-        uint64_t b = vb + k * 0x90;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x1249D88u) break;
-        uint32_t order = d32(b + 0x38), itemId = d32(b + 0x3C), tmpl = d32(b + 0x40),
-                 price = d32(b + 0x44);
-        uint32_t mid = midFromKey(q64(b + 0x30));
+        uint64_t b = vb + k * g_buyStride;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != g_buyItemVft) break;
+        uint32_t order = d32(b + g_bliOrder), itemId = d32(b + g_bliItemId), tmpl = d32(b + g_bliTemplate),
+                 price = d32(b + g_bliPrice);
+        uint32_t mid = midFromKey(q64(b + g_bliKey));
         char nm[256] = "";
         if (!mid) mid = itemId;
         if (mid) resolve(mid, nm, sizeof(nm));
@@ -421,26 +476,26 @@ static void dumpBuy(uint64_t shop) {
 }
 
 static void dumpSell(uint64_t shop, uint64_t ib, int incnt) {
-    uint64_t sb = q64(shop + 0x58), se = q64(shop + 0x60);
-    uint64_t n = (isHeap(sb) && isHeap(se) && se >= sb) ? (se - sb) / 0x20 : 0;
+    uint64_t sb = q64(shop + g_sellBegin), se = q64(shop + g_sellEnd);
+    uint64_t n = (isHeap(sb) && isHeap(se) && se >= sb && g_sellStride) ? (se - sb) / g_sellStride : 0;
     if (n > 512) n = 512;
     printf("[SELL] n=%llu  (idx 0 = top; scroll must NOT reorder)\n", (unsigned long long)n);
     char order_line[2048];
     int op = 0;
     order_line[0] = 0;
     for (uint64_t k = 0; k < n; k++) {
-        uint64_t b = sb + k * 0x20;
-        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != 0x124A2D0u) break;
-        uint32_t id = d32(b + 0x18), unit = d32(b + 0x1C);
+        uint64_t b = sb + k * g_sellStride;
+        if (!inMod(q64(b)) || (uint32_t)(q64(b) - g_base) != g_sellItemVft) break;
+        uint32_t id = d32(b + g_sliId), unit = d32(b + g_sliUnit);
         char fmt[64] = "", nm[256] = "";
         uint32_t tmpl = 0, cnt = 0, mid = 0;
         for (int j = 0; j < incnt; j++) {
             uint64_t it = q64(ib + j * 8);
-            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == 0x12319D0u &&
-                d32(it + 0x18) == id) {
-                readSSO(it + 0x68, fmt, sizeof(fmt));
-                tmpl = d32(it + 0x20);
-                cnt = d32(it + 0x38);
+            if (isHeap(it) && (uint32_t)(q64(it) - g_base) == g_itemVft &&
+                d32(it + g_itemId) == id) {
+                readSSO(it + g_itemFmt, fmt, sizeof(fmt));
+                tmpl = d32(it + g_itemTemplate);
+                cnt = d32(it + g_itemCount);
                 break;
             }
         }
@@ -472,17 +527,17 @@ int main(int argc, char** argv) {
     for (;;) {
         uint64_t shop = findSubByVft(g_vftShop), inv = findSubByVft(g_vftInv);
         if (!isHeap(shop)) { Sleep(200); continue; }
-        int state = (int)d32(shop + 0x28);
-        uint64_t vb = q64(shop + 0x40), ve = q64(shop + 0x48), sb = q64(shop + 0x58),
-                 se = q64(shop + 0x60);
-        uint64_t bn = (isHeap(vb) && isHeap(ve) && ve >= vb) ? (ve - vb) / 0x90 : 0;
-        uint64_t sn = (isHeap(sb) && isHeap(se) && se >= sb) ? (se - sb) / 0x20 : 0;
-        uint64_t ib = q64(inv + 0x3D8), ie = q64(inv + 0x3E0);
+        int state = (int)d32(shop + g_shopState);
+        uint64_t vb = q64(shop + g_buyBegin), ve = q64(shop + g_buyEnd), sb = q64(shop + g_sellBegin),
+                 se = q64(shop + g_sellEnd);
+        uint64_t bn = (isHeap(vb) && isHeap(ve) && ve >= vb && g_buyStride) ? (ve - vb) / g_buyStride : 0;
+        uint64_t sn = (isHeap(sb) && isHeap(se) && se >= sb && g_sellStride) ? (se - sb) / g_sellStride : 0;
+        uint64_t ib = q64(inv + g_invVecBeg), ie = q64(inv + g_invVecEnd);
         int incnt = (isHeap(ib) && isHeap(ie) && ie >= ib) ? (int)((ie - ib) / 8) : 0;
         if (incnt > 0x400) incnt = 0x400;
         char sig[128];
         snprintf(sig, sizeof(sig), "s%d_b%llu_%u_s%llu_%u", state, (unsigned long long)bn,
-                 bn ? d32(vb + 0x38) : 0, (unsigned long long)sn, sn ? d32(sb + 0x18) : 0);
+                 bn ? d32(vb + g_bliOrder) : 0, (unsigned long long)sn, sn ? d32(sb + g_sliId) : 0);
         if (!g_last || strcmp(g_last, sig) != 0) {
             printf("\n=== change t=%ums state=%d buy=%llu sell=%llu ===\n",
                    (unsigned)(GetTickCount() - t0), state, (unsigned long long)bn,
