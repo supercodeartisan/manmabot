@@ -42,8 +42,17 @@ class _State:
         self.player = type("P", (), {"inventory": _Inv(weight)})()
 
 
-def test_shopkeeper_does_not_take_ground_loot() -> None:
-    cfg = PartyMemberConfig(random_loot=True, loot_role="responsible", seat_role="shopkeeper")
+def test_shopkeeper_loot_seat_takes_ground_loot() -> None:
+    cfg = PartyMemberConfig(random_loot=False, loot_role="responsible", seat_role="shopkeeper")
+    assert party_loot_ownership_filter(cfg) is False
+    random_cfg = PartyMemberConfig(
+        random_loot=True, loot_role="responsible", seat_role="shopkeeper"
+    )
+    assert party_loot_ownership_filter(random_cfg) is False
+
+
+def test_shopkeeper_without_loot_seat_leaves_ground_loot() -> None:
+    cfg = PartyMemberConfig(random_loot=True, loot_role="none", seat_role="shopkeeper")
     assert party_loot_ownership_filter(cfg) is None
 
 
@@ -778,7 +787,8 @@ def test_brains_adopt_the_manager_and_the_session_keeps_it() -> None:
 
 
 if __name__ == "__main__":
-    test_shopkeeper_does_not_take_ground_loot()
+    test_shopkeeper_loot_seat_takes_ground_loot()
+    test_shopkeeper_without_loot_seat_leaves_ground_loot()
     test_random_loot_still_available_for_a_normal_seat()
     test_short_shopkeeper_buys_before_dropping()
     test_drop_qty_keeps_the_shopkeeper_reserve()
