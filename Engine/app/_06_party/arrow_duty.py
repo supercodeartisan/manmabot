@@ -653,10 +653,8 @@ def cancel_supply_delivery(
     st["shifts"] = 0
     st["blocks"] = 0
     st.pop("stand_at", None)
-    st.pop("stand_matched_id", None)
     st.pop("defer_since", None)
     st.pop("walk_idle_since", None)
-    st.pop("drop_aim", None)
     board.scratch[_ATTEMPT] = st
     if pause:
         pauses = dict(board.scratch.get(_PAUSE) or {})
@@ -1394,38 +1392,17 @@ def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
     return bool(row_name and row_name == leader_name)
 
 
-def _remember_stand_match(board: Any, duty: dict) -> None:
-    """The party row has stood on this attempt's confirmed stand."""
-    duty["_stand_matched"] = True
-    if board is None:
-        return
-    st = _attempt(board)
-    st["stand_matched_id"] = str(supply_hold_for(duty).get("id") or "")
-    board.scratch[_ATTEMPT] = st
-
-
-def _stand_was_matched(board: Any, duty: dict) -> bool:
-    """True after this attempt's party row has already landed on the stand."""
-    if duty.get("_stand_matched"):
-        return True
-    if board is None:
-        return False
-    return str(_attempt(board).get("stand_matched_id") or "") == str(
-        supply_hold_for(duty).get("id") or ""
-    )
-
-
 def _leader_drop_recheck(state: Any, duty: dict, board: Any = None) -> Any:
     """Refresh a leader drop against the party row.
 
     None means drop on the already confirmed stand: the recipient is not the
     leader, the leader row has no readable tile, the live nav tile still
-    matches, or the row is still two or more tiles away and has not landed on
-    this stand yet. ``"cancel"`` means the party row confirms a map change,
-    or a move of two or more tiles after that row has already matched the
-    stand. ``"defer"`` means a different map id still projects onto the stand,
-    so the drop waits. A dict is a stand rebuilt on a one-tile step.
+    matches, or the row is two or more tiles away on the same map. ``"cancel"``
+    means the party row confirms a map change. ``"defer"`` means a different
+    map id still projects onto the stand, so the drop waits. A dict is a stand
+    rebuilt on a one-tile step.
     """
+    del board
     from .leader import supply_member_row
 
     snapshot = getattr(state, "last_party", None)
@@ -1458,12 +1435,9 @@ def _leader_drop_recheck(state: Any, duty: dict, board: Any = None) -> Any:
         if on_stand is None:
             return None
         if on_stand == stand_nav:
-            _remember_stand_match(board, duty)
             return None
         gap = _tile_gap(stand_nav, on_stand)
         if gap >= 2:
-            if _stand_was_matched(board, duty):
-                return "cancel"
             return None
         if gap == 1:
             return {
@@ -1585,116 +1559,16 @@ def _idle_drop_walk(manager: Any, duty: dict, reason: str) -> Any:
     return idle(reason)
 
 
-def _leader_live_xy(state: Any, duty: dict) -> Optional[tuple[int, int, int]]:
-    """Leader party-row map and game tile. None when that row is not the leader."""
-    from .leader import supply_member_row
-
-    snapshot = getattr(state, "last_party", None)
-    row = supply_member_row(
-        snapshot,
-        str(duty.get("name") or ""),
-        str(duty.get("guid") or ""),
-    )
-    if not _is_party_leader_row(snapshot, row):
-        return None
-    try:
-        live = (int(row["map_id"]), int(row["x"]), int(row["y"]))
-    except (TypeError, ValueError, KeyError):
-        return None
-    if live[1] == 0 and live[2] == 0:
-        return None
-    return live
-
-
-def _stored_drop_aim(board: Any) -> Optional[tuple[int, int, int]]:
-    raw = _attempt(board).get("drop_aim")
-    if not isinstance(raw, (list, tuple)) or len(raw) != 3:
-        return None
-    try:
-        return (int(raw[0]), int(raw[1]), int(raw[2]))
-    except (TypeError, ValueError):
-        return None
-
-
-def _remember_drop_aim(board: Any, live: tuple[int, int, int]) -> None:
-    if board is None:
-        return
-    st = _attempt(board)
-    st["drop_aim"] = [int(live[0]), int(live[1]), int(live[2])]
-    board.scratch[_ATTEMPT] = st
-
-
-def _inside_drop_box(
-    aim: tuple[int, int, int],
-    live: tuple[int, int, int],
-) -> Optional[bool]:
-    """True when ``live`` is inside the 3×3 of ``aim``. None when nav is unknown."""
-    if int(aim[0]) != int(live[0]):
-        return False
-    aim_nav = _coord_on_map(aim[0], aim[1], aim[2])
-    live_nav = _coord_on_map(live[0], live[1], live[2])
-    if aim_nav is None or live_nav is None:
-        return None
-    return _tile_gap(aim_nav, live_nav) <= 1
-
-
-def _aim_stand(duty: dict, live: tuple[int, int, int]) -> dict:
-    return {
-        "id": supply_hold_for(duty)["id"],
-        "for": str(duty.get("name") or ""),
-        "map_id": int(live[0]),
-        "x": int(live[1]),
-        "y": int(live[2]),
-        "confirmed": True,
-    }
-
-
 def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
-<<<<<<< HEAD
-    """Keep the confirmed stand until the party row has matched it.
+    """Drop on the confirmed stand. None means the hold was cleared.
 
-    None means the hold was cleared. A one-tile party row still retargets the
-    drop. Two or more tiles cancel only after that row has landed on the stand.
+    A one-tile party row retargets the drop. Two or more tiles on the same
+    map keep that stand. A map change cancels the attempt.
     """
     board = manager._nav_blackboard
     recheck = _leader_drop_recheck(state, duty, board)
     runtime = manager.runtime
-=======
-    """Aim the drop once inside the leader's 3×3. None means the hold was cleared.
-
-    The live tile inside that box is adopted once. Later reads inside the
-    same 3×3 keep that aim and leave the wait clock alone. Leaving the box
-    cancels the attempt.
-    """
-    recheck = _leader_drop_recheck(state, duty)
-    runtime = manager.runtime
-    board = manager._nav_blackboard
-    live = _leader_live_xy(state, duty)
-    aim = _stored_drop_aim(board)
-    if aim is not None and live is not None:
-        inside = _inside_drop_box(aim, live)
-        if inside is True:
-            _clear_defer_clock(board)
-            if (
-                int(duty.get("member_map") or -1) == aim[0]
-                and int(duty.get("member_x") or 0) == aim[1]
-                and int(duty.get("member_y") or 0) == aim[2]
-            ):
-                return duty
-            shifts = int(_attempt(board).get("shifts") or 0)
-            replanned = plan_supply_drop(
-                duty, _aim_stand(duty, aim), _tile_open, ring=shifts
-            )
-            return duty if replanned is None else replanned
-        if inside is False:
-            cancel_supply_delivery(board, runtime, duty, reason="stand moved")
-            runtime.last_kind = "supply"
-            runtime.last_reason = "stand moved"
-            return None
->>>>>>> origin/main
     if recheck is None:
-        if live is not None:
-            _remember_drop_aim(board, live)
         _clear_defer_clock(board)
         return duty
     if recheck == "defer":
@@ -1706,12 +1580,6 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
         runtime.last_kind = "supply"
         runtime.last_reason = "stand moved"
         return None
-    adopted = (
-        int(recheck["map_id"]),
-        int(recheck["x"]),
-        int(recheck["y"]),
-    )
-    _remember_drop_aim(board, adopted)
     _clear_defer_clock(board)
     _clear_walk_idle_clock(board)
     shifts = int(_attempt(board).get("shifts") or 0)
@@ -1805,7 +1673,6 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
     _remember_drop(runtime, duty)
     if board is not None:
         done = _attempt(board)
-        done.pop("drop_aim", None)
         if done.get("key") is not None:
             done["blocks"] = 0
         board.scratch[_ATTEMPT] = done

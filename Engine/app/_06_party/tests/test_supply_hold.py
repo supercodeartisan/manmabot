@@ -1325,7 +1325,7 @@ def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
     assert claim_names_me({"for": "Elf"}, "Elf", "") is True
 
 
-def test_a_lagging_party_row_keeps_the_stand_until_it_has_matched() -> None:
+def test_a_far_party_row_keeps_the_confirmed_stand() -> None:
     from app._06_party.arrow_duty import _apply_leader_drop_recheck, _leader_drop_recheck
 
     duty = {
@@ -1366,16 +1366,14 @@ def test_a_lagging_party_row_keeps_the_stand_until_it_has_matched() -> None:
 
     same = type("S", (), {"last_party": _party(20)})()
     assert _leader_drop_recheck(same, dict(duty), manager._nav_blackboard) is None
-    assert (
-        manager._nav_blackboard.scratch["party_supply_attempt"]["stand_matched_id"]
-        == "hold:hp:Boss"
-    )
 
     two = type("S", (), {"last_party": _party(22)})()
-    assert _leader_drop_recheck(two, dict(duty), manager._nav_blackboard) == "cancel"
-    assert _apply_leader_drop_recheck(manager, two, dict(duty)) is None
-    assert manager.runtime.supply_hold is None
-    assert manager.runtime.last_reason == "stand moved"
+    assert _leader_drop_recheck(two, dict(duty), manager._nav_blackboard) is None
+    kept_after = _apply_leader_drop_recheck(manager, two, dict(duty))
+    assert kept_after is not None
+    assert (kept_after["member_x"], kept_after["member_y"]) == (10, 20)
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "stand moved"
 
 
 def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -> None:
@@ -1414,7 +1412,7 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
         "leader": {"name": "Boss", "guid": "0x10", "is_leader": True, "map_id": 4, "x": 10, "y": 22},
         "members": [],
     }
-    assert _leader_drop_recheck(type("S", (), {"last_party": two})(), duty) == "cancel"
+    assert _leader_drop_recheck(type("S", (), {"last_party": two})(), duty) is None
 
     manager = _Manager()
     manager.runtime.supply_hold = {"id": "hold:arrow:Boss", "for": "Boss"}
@@ -1446,7 +1444,7 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
     assert manager.runtime.supply_hold is not None
 
 
-def test_a_stable_one_tile_bias_adopts_the_drop_once() -> None:
+def test_a_one_tile_party_row_retargets_the_drop_again() -> None:
     from app._06_party.arrow_duty import _ATTEMPT, _apply_leader_drop_recheck
 
     stand = {
@@ -1475,7 +1473,7 @@ def test_a_stable_one_tile_bias_adopts_the_drop_once() -> None:
     second = _apply_leader_drop_recheck(manager, one, planned)
     assert second is not None
     assert (second["member_x"], second["member_y"]) == (32625, 33148)
-    assert manager._nav_blackboard.scratch[_ATTEMPT]["walk_idle_since"] == 12345.0
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch[_ATTEMPT]
 
 
 def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) -> None:
@@ -2202,7 +2200,7 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     ) == 1
 
     two = type("S", (), {"last_party": _leader_party(0, 32626, 33148)})()
-    assert _leader_drop_recheck(two, planned) == "cancel"
+    assert _leader_drop_recheck(two, planned) is None
 
     finished = _Manager()
     finished.runtime.supply_hold = {"id": "hold:hp:poorboy", "for": "poorboy"}
@@ -2235,7 +2233,10 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     assert drops["n"] == 1
     assert finished.runtime.supply_hold is None
     assert finished.runtime.last_reason == "hp dropped"
-    assert _apply_leader_drop_recheck(finished, two, planned) is None
+    kept = _apply_leader_drop_recheck(finished, two, planned)
+    assert kept is planned
+    assert finished.runtime.last_reason == "hp dropped"
+    assert finished.runtime.supply_hold is None
 
 
 def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -> None:

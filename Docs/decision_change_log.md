@@ -1,6 +1,13 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-11 — a same-map party row does not cancel a confirmed stand
+
+Intent: The shopkeeper drops on the recipient's confirmed stand. A party row two or more tiles away on the same map does not cancel that drop, and the drop does not adopt a 3×3 around the first party-memory tile. One tile still retargets the drop to that party row. A map change still cancels. The 8 second stand timeout stays. The leader still publishes the anchored stop, and a two-tile step before the drop is announced does not return him to the hunt.
+Shared: `_leader_drop_recheck` and `_apply_leader_drop_recheck`. Formation heading, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a shopkeeper drop to the party leader. Other members already drop on their confirmed stand. A leader who walks off on the same map waits out the 8 second timeout.
+Consent: user ("수정은 진행하자" after dropping the 3×3 supply aim).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-11 — a confirmed supply stand waits for the party row
 
 Intent: The confirmed stop tile stays the drop target until the drop ends. The leader publishes that anchored tile, not each later live step. A party row that is still two or more tiles away does not cancel the delivery until that row has landed on the stand. A map change still cancels. After the row has matched, two or more tiles cancel. One tile still retargets the drop. Before the drop is announced, a two-tile live step does not send the leader back to the hunt. A map change does. After the drop is announced, two tiles do too. The 8 second stand timeout stays.
@@ -16,7 +23,7 @@ Shared: `continue_or_start_loot` and `farm_loot_or_combat`. `try_unstick_escape`
 Affects: party-leader schedule walks, solo world-nav walks, and in-farm loot. A confirmed pile can be walked past the leader near radius. The next pile and a screen monster wait until that pickup ends.
 Consent: user ("yes" after the party leader left adena 195).
 Result: `Engine/app/_04_decision/tests/test_loot_route_hold.py`, `Engine/app/_04_decision/tests/test_farm_loot_bounds.py`. Not run in game.
-=======
+
 ## 2026-11-11 — formation heading stays put, and a supply aim sticks inside 3×3
 
 Intent: A party member keeps one side of the leader. The leader's current tile moves that side immediately. One strafe or backstep does not swap the side, and a two-second stop does not replace it with an angle-sorted cell. A new heading is adopted after two tiles in that direction, on the side closer to the member. A follow click stays while its hop still closes. A hop on a player sprite tries another closing hop on the same side, then waits. A supply drop adopts the leader's live tile once when it is inside the confirmed stand's 3×3. While the leader stays inside that adopted 3×3 the aim and the wait clock stay. Leaving the box cancels the attempt.
@@ -32,7 +39,6 @@ Shared: `party_loot_ownership_filter`. `tick_shopkeeper_duty`, `pile_reserved`, 
 Affects: a party member whose seat is shopkeeper and whose loot role is responsible, self, or looter. Solo loot and a shopkeeper without that loot role are unchanged.
 Consent: user ("fix it" after the shopkeeper loot lock).
 Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
->>>>>>> origin/main
 
 ## 2026-11-11 — a live pile holds the world-nav route click
 
