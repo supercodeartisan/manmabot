@@ -3,7 +3,9 @@ import time
 
 from app._06_party.config import PartyMemberConfig
 from app._06_party.formation_goal import (
+    advance_heading,
     choose_formation_goal,
+    nearer_lateral,
     primary_lateral,
     stand_radius,
 )
@@ -222,6 +224,52 @@ def test_the_stand_grid_waits_two_seconds():
     )
 
 
+def test_one_strafe_keeps_the_side_and_two_tiles_turn_it():
+    heading, pending, run, committed = advance_heading(None, None, 0, (1, 0))
+    assert heading == (1, 0) and committed is True
+    heading, pending, run, committed = advance_heading(heading, pending, run, (0, -1))
+    assert heading == (1, 0) and committed is False and pending == (0, -1) and run == 1
+    kept = choose_formation_goal(
+        (10, 9),
+        forward=heading,
+        seat=0,
+        followers=1,
+        stopped=False,
+        trail_tile=None,
+        lateral=1,
+    )
+    assert kept.tile == (10, 10)
+    turned, pending, run, committed = advance_heading(heading, pending, run, (0, -1))
+    assert turned == (0, -1) and committed is True
+    flipped = nearer_lateral((10, 10), (-1, 0), 1, (10, 12))
+    assert flipped == -1
+
+
+def test_a_stop_keeps_the_latched_side():
+    held = choose_formation_goal(
+        (20, 20),
+        forward=(1, 0),
+        seat=0,
+        followers=5,
+        stopped=True,
+        trail_tile=None,
+        lateral=1,
+        previous=(20, 21),
+    )
+    assert held.kind == "side"
+    assert held.tile == (20, 21)
+
+
+def test_a_rejected_player_hop_tries_another_closing_tile():
+    from app._06_party.intents import _closing_hop_off_player
+
+    origin = type("O", (), {"x": 0, "y": 0})()
+    alt = _closing_hop_off_player(origin, (4, 0), (2, 0), None)
+    assert alt is not None and alt != (2, 0)
+    assert alt[0] > 0
+    assert max(abs(4 - alt[0]), abs(alt[1])) < 4
+
+
 def test_standing_fight_stays_stopped():
     mgr = PartyMemberManager.__new__(PartyMemberManager)
     mgr.runtime = MemberRuntime()
@@ -240,5 +288,8 @@ if __name__ == "__main__":
     test_one_leader_step_moves_the_side_slot()
     test_a_backward_hop_keeps_the_side_slot_until_the_leader_has_stopped()
     test_the_stand_grid_waits_two_seconds()
+    test_one_strafe_keeps_the_side_and_two_tiles_turn_it()
+    test_a_stop_keeps_the_latched_side()
+    test_a_rejected_player_hop_tries_another_closing_tile()
     test_standing_fight_stays_stopped()
     print("ok")

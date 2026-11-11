@@ -117,12 +117,15 @@ def test_catch_up_keeps_potion_heal_and_defend():
     assert decide_policy(_policy(need_buff=True, **common)).kind is not MemberKind.BUFF
 
 
-def test_a_leader_step_drops_the_held_click():
+def test_a_leader_step_keeps_a_hop_that_still_closes():
     assert hold_follow_click(
         (0, 0), (5, 0), (2, 0), body_moving=True, leader_moved=False
     )
-    assert not hold_follow_click(
+    assert hold_follow_click(
         (0, 0), (6, 0), (2, 0), body_moving=True, leader_moved=True
+    )
+    assert not hold_follow_click(
+        (0, 0), (0, 6), (2, 0), body_moving=True, leader_moved=True
     )
 
 
@@ -139,7 +142,7 @@ if __name__ == "__main__":
     test_offscreen_fresh_pose_uses_the_same_band()
     test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()
-    test_a_leader_step_drops_the_held_click()
+    test_a_leader_step_keeps_a_hop_that_still_closes()
     test_same_delta_keeps_the_hop_and_a_turn_does_not()
     test_straight_line_chains_one_tile_and_a_trail_does_not()
     test_assist_beats_follow_while_moving_or_off_seat()

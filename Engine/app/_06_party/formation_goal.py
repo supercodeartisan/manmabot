@@ -21,6 +21,8 @@ _JUMP_TILES = 6
 # Keep the previous side tile only while it is still the ideal. A one-tile
 # leader step moves the slot immediately.
 _ARRIVE = 0
+# A new travel direction replaces the formation heading after this many tiles.
+_HEADING_CONFIRM_TILES = 2
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,71 @@ def stand_radius(followers: int) -> int:
     return 2 if int(followers) <= 5 else 3
 
 
+def advance_heading(
+    heading: Optional[tuple[int, int]],
+    pending_dir: Optional[tuple[int, int]],
+    pending_tiles: int,
+    step: Optional[tuple[int, int]],
+) -> tuple[Optional[tuple[int, int]], Optional[tuple[int, int]], int, bool]:
+    """Keep the formation heading until a new direction lasts two tiles.
+
+    The first real step sets the heading. One strafe or backstep does not.
+    Returns heading, pending direction, pending tiles, and whether the
+    heading was committed on this step.
+    """
+    direction = unit8(step)
+    if direction == (0, 0):
+        return heading, pending_dir, int(pending_tiles), False
+    current = unit8(heading)
+    if current == (0, 0):
+        return direction, None, 0, True
+    if direction == current:
+        return current, None, 0, False
+    dist = max(abs(int(step[0])), abs(int(step[1]))) if step is not None else 1
+    if pending_dir == direction:
+        run = int(pending_tiles) + max(1, dist)
+    else:
+        run = max(1, dist)
+    if run >= _HEADING_CONFIRM_TILES:
+        return direction, None, 0, True
+    return current, direction, run, False
+
+
+def nearer_lateral(
+    leader: Tile,
+    heading: tuple[int, int],
+    lateral: int,
+    prefer: Tile,
+) -> int:
+    """Same distance on the side closer to ``prefer``. A tie keeps the sign."""
+    mag = abs(int(lateral)) or 1
+    current = mag if int(lateral) >= 0 else -mag
+    plus = _offset_tile(leader, _facing(heading), mag, 0)
+    minus = _offset_tile(leader, _facing(heading), -mag, 0)
+    if cheb(prefer, plus) == cheb(prefer, minus):
+        return current
+    if cheb(prefer, plus) < cheb(prefer, minus):
+        return mag
+    return -mag
+
+
+def signed_lateral(
+    leader: Tile,
+    heading: tuple[int, int],
+    tile: Tile,
+) -> Optional[int]:
+    """Lateral steps of ``tile`` in ``heading``'s frame. None when it is not a side slot."""
+    fx, fy = _facing(heading)
+    rx, ry = right_of((fx, fy))
+    dx = int(tile[0]) - int(leader[0])
+    dy = int(tile[1]) - int(leader[1])
+    lat = dx * rx + dy * ry
+    along = dx * fx + dy * fy
+    if lat == 0 or abs(along) > abs(lat):
+        return None
+    return int(lat)
+
+
 def choose_formation_goal(
     leader: Optional[Tile],
     *,
@@ -62,6 +129,7 @@ def choose_formation_goal(
     occupied: Optional[set[Tile]] = None,
     previous: Optional[Tile] = None,
     previous_leader: Optional[Tile] = None,
+    lateral: Optional[int] = None,
 ) -> FormationGoal:
     """One absolute navigation tile, or ``none`` when no legal slot exists."""
     if leader is None:
@@ -79,6 +147,20 @@ def choose_formation_goal(
     count = max(1, int(followers))
     seat_i = 0 if seat is None else max(0, int(seat))
 
+    if stopped and lateral is not None:
+        held = _held_side_tile(
+            leader_t,
+            forward,
+            int(lateral),
+            count,
+            terrain,
+            blocked,
+            sticky,
+        )
+        if held is not None:
+            return held
+        return FormationGoal("stand", None, "stand_full")
+
     if stopped:
         tile = _stand_tile(
             leader_t, seat_i, count, terrain, blocked, sticky
@@ -95,6 +177,7 @@ def choose_formation_goal(
         terrain,
         blocked,
         sticky,
+        lateral=lateral,
     )
     if tile is not None:
         return FormationGoal("side", tile, f"side{primary_lateral(seat_i):+d}")
@@ -106,9 +189,15 @@ def choose_formation_goal(
     return FormationGoal("side", None, "side_blocked")
 
 
-def _side_offsets(seat: int, followers: int) -> list[tuple[int, int]]:
+def _side_offsets(
+    seat: int,
+    followers: int,
+    lateral: Optional[int] = None,
+) -> list[tuple[int, int]]:
     """Lateral, longitudinal offsets for this seat, nearest first."""
-    lat = primary_lateral(seat)
+    lat = primary_lateral(seat) if lateral is None else int(lateral)
+    if lat == 0:
+        lat = primary_lateral(seat)
     owned = {primary_lateral(i) for i in range(max(1, followers))}
     step = 1 if lat > 0 else -1
     candidates: list[tuple[int, int]] = [(lat, 0), (lat, 1), (lat, -1)]
@@ -133,9 +222,10 @@ def _side_tile(
     terrain: Any,
     blocked: set[Tile],
     previous: Optional[Tile],
+    lateral: Optional[int] = None,
 ) -> Optional[Tile]:
     facing = _facing(forward)
-    candidates = _side_offsets(seat, followers)
+    candidates = _side_offsets(seat, followers, lateral)
     ideal = _offset_tile(leader, facing, candidates[0][0], candidates[0][1])
     if (
         previous is not None
@@ -198,6 +288,58 @@ def _corridor_free(
         if not _free(terrain, (tx, ty), blocked):
             return False
     return steps > 0
+
+
+def _held_side_tile(
+    leader: Tile,
+    forward: Optional[tuple[int, int]],
+    lateral: int,
+    followers: int,
+    terrain: Any,
+    blocked: set[Tile],
+    prefer: Optional[Tile],
+) -> Optional[FormationGoal]:
+    """Keep the latched side inside the stand box. A bad tile takes the nearest."""
+    facing = _facing(forward)
+    radius = stand_radius(followers)
+    rebased = _offset_tile(leader, facing, int(lateral), 0)
+    if (
+        cheb(rebased, leader) <= radius
+        and rebased not in blocked
+        and _free(terrain, rebased, blocked)
+    ):
+        return FormationGoal("side", rebased, f"hold{int(lateral):+d}")
+    nearest = _nearest_stand_tile(leader, radius, terrain, blocked, prefer)
+    if nearest is None:
+        return None
+    return FormationGoal("side", nearest, "hold_near")
+
+
+def _nearest_stand_tile(
+    leader: Tile,
+    radius: int,
+    terrain: Any,
+    blocked: set[Tile],
+    prefer: Optional[Tile],
+) -> Optional[Tile]:
+    lx, ly = int(leader[0]), int(leader[1])
+    found: list[Tile] = []
+    r = max(1, int(radius))
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if max(abs(dx), abs(dy)) > r or (dx == 0 and dy == 0):
+                continue
+            tile = (lx + dx, ly + dy)
+            if tile in blocked or not _free(terrain, tile, blocked):
+                continue
+            if not _reachable(leader, tile, terrain, blocked):
+                continue
+            found.append(tile)
+    if not found:
+        return None
+    if prefer is None:
+        return found[0]
+    return min(found, key=lambda tile: (cheb(tile, prefer), cheb(tile, leader)))
 
 
 def _stand_tile(
@@ -310,9 +452,12 @@ def _free(terrain: Any, tile: Tile, blocked: set[Tile]) -> bool:
 
 __all__ = [
     "FormationGoal",
+    "advance_heading",
     "choose_formation_goal",
     "closing_slot",
+    "nearer_lateral",
     "primary_lateral",
     "right_of",
+    "signed_lateral",
     "stand_radius",
 ]

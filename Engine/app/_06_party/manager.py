@@ -18,7 +18,13 @@ from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
-from .formation_goal import choose_formation_goal, closing_slot
+from .formation_goal import (
+    advance_heading,
+    choose_formation_goal,
+    closing_slot,
+    nearer_lateral,
+    signed_lateral,
+)
 from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
 from .join_map import (
     PartyJoinNav,
@@ -871,23 +877,57 @@ class PartyMemberManager:
             cfg=cfg,
             field=None,
         )
-        from .follow import tile_chebyshev
+        from .follow import tile_chebyshev, unit8
         from .intents import _occupied_tiles
 
         form_leader = leader_tile if leader_present else None
         form_forward = self._leader_move_dir()
-        if (
-            cfg.formation_hold
-            and cfg.formation_anchor_x is not None
+        scratch = self.runtime.scratch
+        anchor = (
+            cfg.formation_anchor_x is not None
             and cfg.formation_anchor_y is not None
             and cfg.formation_anchor_dx is not None
             and cfg.formation_anchor_dy is not None
-        ):
+        )
+        if cfg.formation_hold and anchor:
             form_leader = (int(cfg.formation_anchor_x), int(cfg.formation_anchor_y))
             form_forward = (
                 int(cfg.formation_anchor_dx),
                 int(cfg.formation_anchor_dy),
             )
+        elif leader_present and bool(scratch.get("leader_stepped")):
+            heading, pending, run, committed = advance_heading(
+                scratch.get("formation_heading"),
+                scratch.get("formation_heading_pending"),
+                int(scratch.get("formation_heading_run") or 0),
+                form_forward,
+            )
+            if heading is not None:
+                scratch["formation_heading"] = heading
+            else:
+                scratch.pop("formation_heading", None)
+            if pending is not None:
+                scratch["formation_heading_pending"] = pending
+                scratch["formation_heading_run"] = int(run)
+            else:
+                scratch.pop("formation_heading_pending", None)
+                scratch.pop("formation_heading_run", None)
+            latched = scratch.get("formation_lateral")
+            if (
+                committed
+                and heading is not None
+                and isinstance(latched, int)
+                and latched != 0
+                and form_leader is not None
+                and me_tile is not None
+            ):
+                scratch["formation_lateral"] = nearer_lateral(
+                    form_leader, heading, latched, me_tile
+                )
+            if heading is not None:
+                form_forward = heading
+        elif scratch.get("formation_heading") is not None:
+            form_forward = scratch.get("formation_heading")
         trail_tile = self._formation_trail_tile(cfg, leader_tile=form_leader)
         held = bool(formation_stopped or cfg.turret_farm)
         bodies: set[tuple[int, int]] = set()
@@ -902,6 +942,10 @@ class PartyMemberManager:
                 bodies = set()
         if cfg.formation_reform:
             self.runtime.scratch.pop("formation_slot", None)
+            self.runtime.scratch.pop("formation_heading", None)
+            self.runtime.scratch.pop("formation_heading_pending", None)
+            self.runtime.scratch.pop("formation_heading_run", None)
+            self.runtime.scratch.pop("formation_lateral", None)
         prev_form = str(self.runtime.formation or "")
         prev_kind = prev_form.split(":", 1)[0]
         prev_slot = self.runtime.scratch.get("formation_slot")
@@ -916,6 +960,11 @@ class PartyMemberManager:
             occupied=bodies,
             previous=None if cfg.formation_reform else prev_slot,
             previous_leader=self.runtime.scratch.get("formation_leader"),
+            lateral=(
+                None
+                if cfg.formation_reform
+                else self.runtime.scratch.get("formation_lateral")
+            ),
         )
         previous_tile = None
         if isinstance(prev_slot, tuple) and len(prev_slot) == 2:
@@ -958,9 +1007,27 @@ class PartyMemberManager:
                 int(leader_tile[0]),
                 int(leader_tile[1]),
             )
+            frame = form_forward if isinstance(form_forward, tuple) else None
+            if (
+                formed.kind == "side"
+                and frame is not None
+                and len(frame) == 2
+                and form_leader is not None
+            ):
+                recovered = signed_lateral(form_leader, frame, slot_tile)
+                if recovered is not None:
+                    self.runtime.scratch["formation_lateral"] = recovered
+                    if self.runtime.scratch.get("formation_heading") is None:
+                        faced = unit8(frame)
+                        if faced != (0, 0):
+                            self.runtime.scratch["formation_heading"] = faced
         elif not leader_present:
             self.runtime.scratch.pop("formation_slot", None)
             self.runtime.scratch.pop("formation_leader", None)
+            self.runtime.scratch.pop("formation_heading", None)
+            self.runtime.scratch.pop("formation_heading_pending", None)
+            self.runtime.scratch.pop("formation_heading_run", None)
+            self.runtime.scratch.pop("formation_lateral", None)
         self.runtime.formation = (
             f"{formed.kind}:{formed.reason}" if formed.kind != "none" else ""
         )
