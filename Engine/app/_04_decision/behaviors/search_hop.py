@@ -24,19 +24,35 @@ from app._04_decision.nav_config import (
 from app._04_decision import player_mode as pm
 
 
-def clear_search_hop(blackboard) -> None:
+def suspend_search_click(blackboard) -> None:
+    """Drop the click that is in flight. ``search_leg_goal`` stays.
+
+    Loot, a fight, a wall step, and a supply pickup take the tick without
+    ending the coverage leg. The next search tick plans a new hop from the
+    live tile toward that same goal. The 60-tick cap counts only ticks that
+    run this function's caller, so a gap does not add to it.
+    """
     blackboard.search_leg_ticks = 0
     blackboard.search_destination = None
     blackboard.search_waypoint = None
-    blackboard.search_leg_goal = None
     blackboard.search_hop_active = False
     blackboard.search_click_at = 0.0
-
     blackboard.search_stuck_tile = None
     blackboard.search_stuck_since_tick = 0
     blackboard.search_stuck_since_time = 0.0
     blackboard.search_unstick_active = False
     reset_unstick_tries(blackboard)
+
+
+def clear_search_hop(blackboard) -> None:
+    """Drop the click and the coverage goal.
+
+    Used when the leg is no longer a hunt target: arrival already clears the
+    goal on its own path, and this call covers a new mark, leaving the farm,
+    and the start of travel or retreat.
+    """
+    suspend_search_click(blackboard)
+    blackboard.search_leg_goal = None
 
 
 def _near_tile(blackboard, tile: tuple[int, int]) -> bool:
@@ -302,11 +318,13 @@ def emit_search_hop(
     Returns ``True`` if a click was emitted (mid_act=False), ``False`` if we
     only kept walking (mid_act=True).
 
-    A gap of more than one tick means another action took the ladder. That
-    hop is dropped. This call then plans a new in-view point and clicks it.
+    A gap of more than one tick means another action took the ladder. The
+    click is dropped. The coverage goal stays, and this call plans a new hop
+    from the live tile toward that goal. A new goal is chosen when the old
+    one is already gone, the body is on it, or the 60-tick cap fires.
     """
     if blackboard.last_search_tick > 0 and blackboard.tick_count - blackboard.last_search_tick > 1:
-        clear_search_hop(blackboard)
+        suspend_search_click(blackboard)
 
     farm = get_active_farm(blackboard.farm_area_index)
     terrain = get_terrain_map()
@@ -519,6 +537,7 @@ def emit_search_hop(
 __all__ = [
     "clear_search_hop",
     "emit_search_hop",
+    "suspend_search_click",
 ]
 
 from app._04_decision.decide_spans import traced

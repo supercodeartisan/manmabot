@@ -156,7 +156,61 @@ def test_one_leader_step_moves_the_side_slot():
     )
     assert first.tile == (10, 11)
     assert nxt.kind == "side"
+    assert nxt.tile == (10, 11)
+    assert nxt.reason == "slot_hold"
+
+
+def test_a_longer_leader_move_picks_a_new_side_slot():
+    leader = (10, 10)
+    first = choose_formation_goal(
+        leader, forward=(1, 0), seat=0, followers=2, stopped=False, trail_tile=None
+    )
+    nxt = choose_formation_goal(
+        (14, 10),
+        forward=(1, 0),
+        seat=0,
+        followers=2,
+        stopped=False,
+        trail_tile=None,
+        previous=first.tile,
+        previous_leader=leader,
+    )
+    assert nxt.tile == (14, 11)
+    assert nxt.reason != "slot_hold"
+
+
+def test_a_blocked_slot_is_replaced_when_the_leader_steps():
+    leader = (10, 10)
+    first = choose_formation_goal(
+        leader, forward=(1, 0), seat=0, followers=2, stopped=False, trail_tile=None
+    )
+    nxt = choose_formation_goal(
+        (11, 10),
+        forward=(1, 0),
+        seat=0,
+        followers=2,
+        stopped=False,
+        trail_tile=None,
+        terrain=_Terrain({first.tile}),
+        occupied=set(),
+        previous=first.tile,
+        previous_leader=leader,
+    )
     assert nxt.tile == (11, 11)
+    assert nxt.reason != "slot_hold"
+
+
+def test_a_new_map_forgets_the_slot():
+    mgr = PartyMemberManager.__new__(PartyMemberManager)
+    mgr.runtime = MemberRuntime()
+    mgr.runtime.local_map_id = 0
+    mgr.runtime.scratch["formation_slot"] = (10, 11)
+    mgr.runtime.scratch["formation_map"] = 4
+    mgr._drop_slot_when_the_order_changes(PartyMemberConfig())
+    assert "formation_slot" not in mgr.runtime.scratch
+    mgr.runtime.scratch["formation_slot"] = (10, 11)
+    mgr._drop_slot_when_the_order_changes(PartyMemberConfig())
+    assert mgr.runtime.scratch["formation_slot"] == (10, 11)
 
 
 def test_a_backward_hop_keeps_the_side_slot_until_the_leader_has_stopped():

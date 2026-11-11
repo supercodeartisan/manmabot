@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — keep the search goal, and stop supply clicks from fighting the slot
+
+Intent: A loot, fight, wall step, or supply pickup drops the search click and keeps `search_leg_goal`. The next search hop is planned from the live tile. The 60-tick cap still starts a new leg, and it does not count ticks the search does not run. A new mark, leaving the farm, and travel or retreat still clear the goal. A leader HP drop claim blocks search, a new attack, and general loot until the pile is gone or the claim is cancelled. One missing report keeps that claim. Critical retreat and urgent self care still run first. The pre-drop hold is unchanged apart from keeping the search goal while the click stops. A member arrow claim on the same map blocks follow, the slot, assist, and general loot the same way, including one tick that does not emit a pickup. A one-tile leader step keeps the current slot when it is still free and inside the formation band. A longer move, a blocked slot, a map change, or a new anchor recalculates it. A same-map talking scroll whose landing is within 24 tiles is completed without a cast, and the next walk step runs. A farther same-map landing, and a different map, still cast.
+Shared: `suspend_search_click`, `emit_search_hop`, `leader_supply_action`, `_pickup_claim`, `_stop_ground_move`, `PartyMemberManager.decide`, `choose_formation_goal`, `WorldNavSession._start_scroll`. Buy quantity, the 8 second hold, the 6 second pause, Esc, and the shopkeeper drop path are unchanged. Follow and assist still win when no supply claim is open.
+Affects: solo and party-leader search after an interruption, the leader's own supply pickup, a member's arrow pickup, every member's formation slot, and world-nav scroll steps.
+Consent: user (implement the search-goal hold together with the four logged party fixes, keeping the existing priority order).
+Result: `Engine/app/_04_decision/tests/test_search_goal.py`, `test_same_map_scroll.py`, `Engine/app/_06_party/tests/test_supply_hold.py`, `test_formation_goal.py`. Not run in game.
+
 ## 2026-11-11 — a drop with no hop releases the hold after 8 seconds
 
 Intent: On a same-map supply drop, eight seconds without an emitted hop clears the hold through the existing stand timeout. A hop, or arrival on the exact drop tile, clears that wait. A walk that keeps emitting hops is not cut at 8 seconds. The potion is still dropped only from the exact tile.

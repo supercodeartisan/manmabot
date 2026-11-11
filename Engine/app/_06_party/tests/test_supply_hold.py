@@ -2363,3 +2363,213 @@ def test_a_drop_with_no_click_expires_without_using_the_walk_clock(monkeypatch) 
     assert arrived.runtime.supply_hold is not None
     assert arrived.runtime.last_reason != "stand timeout"
     assert "walk_idle_since" not in arrived._nav_blackboard.scratch["party_supply_attempt"]
+
+
+def test_a_leader_hp_claim_blocks_search_until_the_pile_is_gone(monkeypatch) -> None:
+    from app._06_party.arrow_duty import leader_supply_action
+
+    pose = {"map_id": 0, "x": 10, "y": 10}
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), pose)(),
+    )
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "poorboy"})()})(),
+            "last_party": None,
+            "last_print_state": None,
+        },
+    )()
+    board = _Board()
+    board.world_origin = type("O", (), {"x": 10, "y": 10})()
+    board.search_leg_goal = (40, 40)
+    board.nav_goal = None
+    board.intent = None
+    claim = {
+        "id": "hp:poorboy:1",
+        "for": "poorboy",
+        "item": "hp",
+        "map_id": 0,
+        "x": 10,
+        "y": 12,
+    }
+    monkeypatch.setattr(
+        "app._06_party.arrow_duty.leader_supply_pickup",
+        lambda *_a, **_k: None,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.combat_query.list_lootable",
+        lambda *_a, **_k: [],
+    )
+    held = leader_supply_action(world, board, None, claim)
+    assert getattr(held, "reason", "") == "party_member:supply pickup"
+    assert board.search_leg_goal == (40, 40)
+
+    potion = type("I", (), {"reason": "hp potion"})()
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: potion
+    )
+    assert leader_supply_action(world, board, None, claim) is potion
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+
+    # One missing report still owns the tick. The next one, with no pile, does not.
+    gap = leader_supply_action(world, board, None, None)
+    assert getattr(gap, "reason", "") == "party_member:supply pickup"
+    assert leader_supply_action(world, board, None, None) is None
+
+
+def test_a_seen_hp_pile_that_is_gone_returns_the_hunt(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _SEEN, _claim_key, leader_supply_action
+
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), {"map_id": 0, "x": 10, "y": 10})(),
+    )
+    monkeypatch.setattr(
+        "app._04_decision.combat_query.list_lootable",
+        lambda *_a, **_k: [],
+    )
+    world = type(
+        "W",
+        (),
+        {
+            "player": type("P", (), {"identity": type("N", (), {"name": "poorboy"})()})(),
+            "last_party": None,
+            "last_print_state": None,
+        },
+    )()
+    board = _Board()
+    board.world_origin = type("O", (), {"x": 10, "y": 10})()
+    claim = {
+        "id": "hp:poorboy:1",
+        "for": "poorboy",
+        "item": "hp",
+        "map_id": 0,
+        "x": 10,
+        "y": 11,
+    }
+    board.scratch[_SEEN] = _claim_key(claim)
+    assert leader_supply_action(world, board, None, claim) is None
+
+
+def test_pickup_walk_puts_the_search_goal_back(monkeypatch) -> None:
+    from app._04_decision.behaviors.search_hop import clear_search_hop
+    from app._06_party.arrow_duty import _pickup_claim
+
+    board = _Board()
+    board.world_origin = type("O", (), {"x": 10, "y": 10})()
+    board.search_leg_goal = (40, 40)
+    board.nav_goal = None
+    board.intent = type("I", (), {"reason": "party supply pickup"})()
+    claim = {"id": "hp:poorboy:1", "for": "poorboy", "item": "hp", "map_id": 0, "x": 30, "y": 30}
+
+    def _start(blackboard, goal, reason):
+        clear_search_hop(blackboard)
+        blackboard.nav_goal = goal
+
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), {"map_id": 0, "x": 10, "y": 10})(),
+    )
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.travel.start_travel",
+        _start,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.travel.emit_travel_hop",
+        lambda *_a, **_k: True,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.combat_query.list_lootable",
+        lambda *_a, **_k: [],
+    )
+    action = _pickup_claim(object(), board, claim, None)
+    assert action is board.intent
+    assert board.search_leg_goal == (40, 40)
+
+
+def test_a_member_arrow_claim_idles_instead_of_the_slot(monkeypatch) -> None:
+    from app._06_party.comms.orders import member_orders
+    from app._06_party.manager import PartyMemberManager
+
+    saved = member_orders.supply_drop
+    member_orders.supply_drop = {
+        "id": "arrow:콘러드:1",
+        "for": "콘러드",
+        "item": "arrow",
+        "map_id": 0,
+        "x": 20,
+        "y": 20,
+    }
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "app._06_party.arrow_duty.tick_supply_pickup",
+        lambda *_a, **_k: None,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), {"map_id": 0, "x": 10, "y": 10})(),
+    )
+    manager = PartyMemberManager()
+    manager.runtime.local_map_id = 0
+    origin = type("O", (), {"x": 10, "y": 10})()
+    board = _Board()
+    board.world_origin = origin
+    manager.set_world_origin(origin)
+    manager.set_nav_blackboard(board)
+    world = type(
+        "W",
+        (),
+        {
+            "player": type(
+                "P",
+                (),
+                {
+                    "alive": True,
+                    "hp": 20,
+                    "hp_ratio": 1.0,
+                    "identity": type("N", (), {"name": "콘러드"})(),
+                },
+            )(),
+            "last_party": {
+                "in_party": True,
+                "members": [
+                    {
+                        "name": "콘러드",
+                        "map_id": 0,
+                        "x": 10,
+                        "y": 10,
+                        "is_leader": False,
+                    }
+                ],
+            },
+            "last_print_state": None,
+        },
+    )()
+    try:
+        action = manager.decide(world)
+    finally:
+        member_orders.supply_drop = saved
+    assert getattr(action, "reason", "") == "party_member:supply pickup"
+    assert manager.runtime.last_kind == "supply"

@@ -18,8 +18,8 @@ from .tactics._grid import Tile, cheb, walkable
 
 # Same-map teleport. A jump this far drops the sticky slot.
 _JUMP_TILES = 6
-# Keep the previous side tile only while it is still the ideal. A one-tile
-# leader step moves the slot immediately.
+# A one-tile drift of the ideal keeps the slot the member is already using.
+_KEEP_DRIFT = 1
 _ARRIVE = 0
 
 
@@ -83,27 +83,37 @@ def choose_formation_goal(
         tile = _stand_tile(
             leader_t, seat_i, count, terrain, blocked, sticky
         )
-        if tile is None:
-            return FormationGoal("stand", None, "stand_full")
-        return FormationGoal("stand", tile, f"stand_r{stand_radius(count)}")
-
-    tile = _side_tile(
-        leader_t,
-        forward,
-        seat_i,
-        count,
-        terrain,
-        blocked,
-        sticky,
-    )
-    if tile is not None:
-        return FormationGoal("side", tile, f"side{primary_lateral(seat_i):+d}")
-
-    if trail_tile is not None:
-        trail = (int(trail_tile[0]), int(trail_tile[1]))
-        if trail != leader_t and _free(terrain, trail, blocked):
-            return FormationGoal("trail", trail, f"trail_seat{seat_i}")
-    return FormationGoal("side", None, "side_blocked")
+        chosen = (
+            FormationGoal("stand", None, "stand_full")
+            if tile is None
+            else FormationGoal("stand", tile, f"stand_r{stand_radius(count)}")
+        )
+        limit = stand_radius(count)
+    else:
+        tile = _side_tile(
+            leader_t,
+            forward,
+            seat_i,
+            count,
+            terrain,
+            blocked,
+            sticky,
+        )
+        if tile is not None:
+            chosen = FormationGoal("side", tile, f"side{primary_lateral(seat_i):+d}")
+        elif trail_tile is not None:
+            trail = (int(trail_tile[0]), int(trail_tile[1]))
+            if trail != leader_t and _free(terrain, trail, blocked):
+                chosen = FormationGoal("trail", trail, f"trail_seat{seat_i}")
+            else:
+                chosen = FormationGoal("side", None, "side_blocked")
+        else:
+            chosen = FormationGoal("side", None, "side_blocked")
+        limit = max(2, abs(primary_lateral(seat_i)) + 1)
+    kept = _retain_slot(sticky, leader_t, chosen.tile, terrain, blocked, limit)
+    if kept is not None and kept != chosen.tile:
+        return FormationGoal(chosen.kind, kept, "slot_hold")
+    return chosen
 
 
 def _side_offsets(seat: int, followers: int) -> list[tuple[int, int]]:
@@ -298,6 +308,33 @@ def closing_slot(
         kind = previous_kind if previous_kind in ("side", "trail", "stand") else "side"
         return FormationGoal(kind, prev, "keep_closing")
     return chosen
+
+
+def _retain_slot(
+    previous: Optional[Tile],
+    leader: Tile,
+    ideal: Optional[Tile],
+    terrain: Any,
+    blocked: set[Tile],
+    max_from_leader: int,
+) -> Optional[Tile]:
+    """Keep a live slot through a one-tile leader step or a small turn.
+
+    A blocked tile, a slot that has left the formation band, or an ideal
+    more than one tile away is recalculated. Map changes and a new anchor
+    drop ``previous`` before this runs.
+    """
+    if previous is None:
+        return None
+    prev = (int(previous[0]), int(previous[1]))
+    if prev == leader or prev in blocked or not _free(terrain, prev, blocked):
+        return None
+    dist = cheb(prev, leader)
+    if dist < 1 or dist > int(max_from_leader):
+        return None
+    if ideal is not None and cheb(prev, ideal) > _KEEP_DRIFT:
+        return None
+    return prev
 
 
 def _free(terrain: Any, tile: Tile, blocked: set[Tile]) -> bool:

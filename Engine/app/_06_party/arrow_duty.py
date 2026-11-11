@@ -101,13 +101,13 @@ def _hold_confirmed(board: Any, hold: Any) -> bool:
 
 
 def _stop_ground_move(board: Any) -> None:
-    """Drop the planned search or travel hop. The click already sent needs Esc."""
+    """Stop the click that is in flight. The coverage goal stays for later."""
     if board is None:
         return
     try:
-        from app._04_decision.behaviors.search_hop import clear_search_hop
+        from app._04_decision.behaviors.search_hop import suspend_search_click
 
-        clear_search_hop(board)
+        suspend_search_click(board)
     except Exception:
         pass
     try:
@@ -180,9 +180,9 @@ def recipient_hold_intent(
     if isinstance(hold, dict) and hold.get("dropping"):
         if blackboard is not None:
             try:
-                from app._04_decision.behaviors.search_hop import clear_search_hop
+                from app._04_decision.behaviors.search_hop import suspend_search_click
 
-                clear_search_hop(blackboard)
+                suspend_search_click(blackboard)
             except Exception:
                 pass
         _drop_combat_lock(blackboard)
@@ -494,6 +494,126 @@ def _mark_supply_seen(blackboard: Any, claim: dict) -> None:
         scratch[_SEEN] = _claim_key(claim)
 
 
+_SELF_PICKUP = "party_self_pickup"
+_SELF_PICKUP_GAP = "party_self_pickup_gap"
+
+
+def _claim_coords(claim: Any) -> Optional[tuple[int, int, int]]:
+    if not isinstance(claim, dict):
+        return None
+    try:
+        return int(claim["x"]), int(claim["y"]), int(claim["map_id"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _supply_pile(state: Any, blackboard: Any, claim: dict, tx: int, ty: int) -> Any:
+    """Ground pile for this drop, within two tiles of the announced cell."""
+    origin = getattr(blackboard, "world_origin", None)
+    if origin is None:
+        return None
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision.combat_query import is_adena, list_lootable, object_absolute_tile
+
+    if tile_chebyshev(int(origin.x), int(origin.y), tx, ty) > 8:
+        return None
+    for item in list_lootable(
+        state,
+        loot_mode="all_items",
+        farm=None,
+        origin=origin,
+        check_path=False,
+        ownership_filter=False,
+    ):
+        try:
+            tile = object_absolute_tile(item, origin)
+        except Exception:
+            continue
+        if tile is None or is_adena(item):
+            continue
+        if not supply_pile_matches(item, str(claim.get("item") or "")):
+            continue
+        if not supply_pile_qty_ok(item, claim.get("qty")):
+            continue
+        if tile_chebyshev(int(tile[0]), int(tile[1]), tx, ty) <= 2:
+            return item
+    return None
+
+
+def supply_ground(state: Any, blackboard: Any, claim: Any) -> str:
+    """``pile`` when the drop is on the ground, ``gone`` after it was seen, else ``unknown``."""
+    coords = _claim_coords(claim)
+    if coords is None or blackboard is None:
+        return "unknown"
+    tx, ty, mid = coords
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(state)
+    origin = getattr(blackboard, "world_origin", None)
+    if pose is None or origin is None or int(pose.map_id) != mid:
+        return "unknown"
+    if _supply_pile(state, blackboard, claim, tx, ty) is not None:
+        return "pile"
+    if _supply_seen(blackboard, claim):
+        return "gone"
+    return "unknown"
+
+
+def remember_self_pickup(
+    blackboard: Any,
+    claim: Any,
+    name: str,
+    guid: str,
+    state: Any,
+) -> Optional[dict]:
+    """The leader's own drop, including one tick whose report is missing.
+
+    A drop for someone else, a second empty tick with no pile, or a pile
+    that was seen and is gone, releases the latch. The hold before a drop
+    is not this claim.
+    """
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        if isinstance(claim, dict) and claim_names_me(claim, name, guid):
+            return claim
+        return None
+    if isinstance(claim, dict) and str(claim.get("id") or ""):
+        if claim_names_me(claim, name, guid):
+            scratch[_SELF_PICKUP] = dict(claim)
+            scratch.pop(_SELF_PICKUP_GAP, None)
+            return scratch[_SELF_PICKUP]
+        scratch.pop(_SELF_PICKUP, None)
+        scratch.pop(_SELF_PICKUP_GAP, None)
+        return None
+    latched = scratch.get(_SELF_PICKUP)
+    if not isinstance(latched, dict) or not claim_names_me(latched, name, guid):
+        scratch.pop(_SELF_PICKUP, None)
+        return None
+    ground = supply_ground(state, blackboard, latched)
+    if ground == "pile":
+        scratch.pop(_SELF_PICKUP_GAP, None)
+        return latched
+    if ground == "gone":
+        scratch.pop(_SELF_PICKUP, None)
+        scratch.pop(_SELF_PICKUP_GAP, None)
+        return None
+    if not scratch.get(_SELF_PICKUP_GAP):
+        scratch[_SELF_PICKUP_GAP] = True
+        return latched
+    scratch.pop(_SELF_PICKUP, None)
+    scratch.pop(_SELF_PICKUP_GAP, None)
+    return None
+
+
+def _restore_search_goal(blackboard: Any, goal: Any) -> None:
+    if blackboard is None or goal is None:
+        return
+    try:
+        blackboard.search_leg_goal = (int(goal[0]), int(goal[1]))
+    except (TypeError, ValueError):
+        return
+
+
 def _drop_combat_lock(blackboard: Any) -> None:
     """Stop the swing that was in progress so pickup or the stand can own the tick."""
     if blackboard is None:
@@ -514,9 +634,9 @@ def supply_wait_intent(state: Any, blackboard: Any) -> Any:
 
     if blackboard is not None:
         try:
-            from app._04_decision.behaviors.search_hop import clear_search_hop
+            from app._04_decision.behaviors.search_hop import suspend_search_click
 
-            clear_search_hop(blackboard)
+            suspend_search_click(blackboard)
         except Exception:
             pass
     monster = None
@@ -2322,10 +2442,10 @@ def leader_supply_action(
 ) -> Any:
     """Leader tick before the hunt decision.
 
-    Critical retreat, then the same urgent self care members use, then a
-    supply pickup or stand. A hold only stops new attacks and chase. Steps
-    before the body stops stay on the hold. After the stop, two tiles or a
-    map change returns None so the hunt decision runs again.
+    Critical retreat, then the same urgent self care members use. A drop
+    claim for this leader then owns the tick until the pile is gone or the
+    claim is cancelled. The hold before that drop is a different state: the
+    body stops, and two tiles or a map change returns None so the hunt runs.
     """
     if world is None or blackboard is None:
         return None
@@ -2357,10 +2477,17 @@ def leader_supply_action(
         if claim_names_me(hold, name, guid):
             leader_hold_displaced(blackboard, world, hold)
         return care
-    if claim_names_me(claim, name, guid):
-        pickup = leader_supply_pickup(world, blackboard, claim if isinstance(claim, dict) else None)
+    claim = remember_self_pickup(blackboard, claim, name, guid, world)
+    if isinstance(claim, dict) and claim_names_me(claim, name, guid):
+        pickup = leader_supply_pickup(
+            world, blackboard, claim
+        )
         if pickup is not None:
             return pickup
+        if supply_ground(world, blackboard, claim) != "gone":
+            from .intents import idle
+
+            return idle("supply pickup")
     if claim_names_me(hold, name, guid):
         if leader_hold_displaced(blackboard, world, hold):
             return None
@@ -2393,32 +2520,9 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
     if pose is None or origin is None or int(pose.map_id) != mid:
         return None
     from app._03_world.space.world_coords import tile_chebyshev
-    from app._04_decision.combat_query import is_adena, list_lootable, object_absolute_tile
 
     dist = tile_chebyshev(int(origin.x), int(origin.y), tx, ty)
-    pile = None
-    if dist <= 8:
-        for item in list_lootable(
-            state,
-            loot_mode="all_items",
-            farm=None,
-            origin=origin,
-            check_path=False,
-            ownership_filter=False,
-        ):
-            try:
-                tile = object_absolute_tile(item, origin)
-            except Exception:
-                continue
-            if tile is None or is_adena(item):
-                continue
-            if not supply_pile_matches(item, str(claim.get("item") or "")):
-                continue
-            if not supply_pile_qty_ok(item, claim.get("qty")):
-                continue
-            if tile_chebyshev(int(tile[0]), int(tile[1]), tx, ty) <= 2:
-                pile = item
-                break
+    pile = _supply_pile(state, blackboard, claim, tx, ty)
     if pile is not None and dist <= 2:
         from app._02_state.enums import ActionType
         from .types import ActionIntent
@@ -2449,8 +2553,10 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
     goal = (tx, ty)
+    saved_goal = getattr(blackboard, "search_leg_goal", None)
     if getattr(blackboard, "nav_goal", None) != goal:
         start_travel(blackboard, goal, reason="party supply pickup")
+    _restore_search_goal(blackboard, saved_goal)
     if emit_travel_hop(
         blackboard, reason="party supply pickup", priority=0.6, state=state
     ):

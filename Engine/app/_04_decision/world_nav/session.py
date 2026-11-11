@@ -32,6 +32,11 @@ SCRATCH_WORLD_NAV_EXIT_LAND = "world_nav_exit_land"
 # Path to a walkable tile within this Chebyshev radius; same radius = arrived.
 ARRIVE_TILES = 1
 SCROLL_LAND_SLACK = 8
+# Same-map scroll skip. The landing slack above is "the cast already finished".
+# A body already inside this radius of that landing is at the hub, so the
+# cast is not repeated. 24 covers the logged meet, 22 tiles from the talking
+# island spellbook hub. A farther same-map landing still casts.
+SCROLL_LOCAL_TILES = 24
 SCROLL_LAND_TIMEOUT_S = 25.0
 # After talking-scroll pose lands: stand still before walk / NPC click.
 SCROLL_LAND_SETTLE_S = 2.0
@@ -444,7 +449,7 @@ class WorldNavSession:
             if step.op == "walk":
                 return self._start_walk(step, pose, blackboard, state)
             if step.op == "talking_scroll":
-                return self._start_scroll(step, blackboard)
+                return self._start_scroll(step, pose, blackboard, state)
             if step.op == "map_transition":
                 return self._start_transition(step, pose, blackboard, state)
             if step.op == "npc_teleporter":
@@ -630,13 +635,44 @@ class WorldNavSession:
             return Status.FAILURE
         return self._idle(blackboard, "world nav walk")
 
-    def _start_scroll(self, step: Any, blackboard: Any) -> Status:
+    def _scroll_already_satisfied(self, step: Any, pose: Any) -> bool:
+        """True when this scroll's landing is the hub the body is already at.
+
+        Same map id is not enough. The body must be within ``SCROLL_LOCAL_TILES``
+        of the landing. A same-map landing farther than that still casts.
+        """
+        if pose is None:
+            return False
+        det = getattr(step, "detail", None) or {}
+        to = det.get("to") or {}
+        try:
+            map_id = int(to["mapId"])
+            tx, ty = int(to["x"]), int(to["y"])
+        except (KeyError, TypeError, ValueError):
+            return False
+        if int(pose.map_id) != map_id:
+            return False
+        return _chev(int(pose.x), int(pose.y), tx, ty) <= SCROLL_LOCAL_TILES
+
+    def _start_scroll(self, step: Any, pose: Any, blackboard: Any, state: Any) -> Status:
         from app._04_decision.talking_scroll import emit_talking_scroll_uv
 
         det = step.detail
         to = det["to"]
         map_id = int(to["mapId"])
         tx, ty = int(to["x"]), int(to["y"])
+        if self._scroll_already_satisfied(step, pose):
+            tokens = api.state_tokens()
+            api.emit_state(
+                tokens.STEP_OK,
+                i=self.step_i + 1,
+                n=len(self.plan.steps),
+                op="talking_scroll",
+            )
+            self.step_i += 1
+            self.phase = "ready"
+            self.scroll_target = None
+            return self.tick(state, blackboard)
         ui = det.get("ui") or {}
         click = ui.get("click") or {}
         snap = ui.get("snapshot_size") or {"width": 800, "height": 600}

@@ -182,6 +182,27 @@ class PartyMemberManager:
             "follow_nav",
         )
 
+    def _drop_slot_when_the_order_changes(self, cfg: Any) -> None:
+        """A new map or a new anchor forgets the slot. A one-tile step does not."""
+        map_now = self.runtime.local_map_id
+        if self.runtime.scratch.get("formation_map") != map_now:
+            self.runtime.scratch.pop("formation_slot", None)
+            self.runtime.scratch.pop("formation_leader", None)
+        self.runtime.scratch["formation_map"] = map_now
+        anchor = (
+            getattr(cfg, "formation_anchor_x", None),
+            getattr(cfg, "formation_anchor_y", None),
+            getattr(cfg, "formation_anchor_dx", None),
+            getattr(cfg, "formation_anchor_dy", None),
+        )
+        if anchor != (None, None, None, None) and (
+            self.runtime.scratch.get("formation_anchor") != anchor
+        ):
+            self.runtime.scratch.pop("formation_slot", None)
+            self.runtime.scratch.pop("formation_leader", None)
+        if anchor != (None, None, None, None):
+            self.runtime.scratch["formation_anchor"] = anchor
+
     def set_local_map_id(self, map_id: Optional[int]) -> None:
         self.runtime.local_map_id = (
             int(map_id) if map_id is not None else None
@@ -465,7 +486,10 @@ class PartyMemberManager:
                     player=getattr(game_state, "player", None),
                     print_state=getattr(game_state, "last_print_state", None),
                 )
-            leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
+            retreat = str(self.runtime.last_kind or "") == "retreat"
+            # A map join still skips the pre-drop stand. A same-map pickup
+            # does not: the slot was clicking through the arrow pile.
+            leaving = retreat or self.joining_map()
             hold = None if leaving else member_orders.supply_hold
             if claim_names_me(hold, seat_name, seat_guid):
                 from .arrow_duty import _hold_confirmed, leader_hold_displaced
@@ -483,12 +507,36 @@ class PartyMemberManager:
                     hold = None
             else:
                 self.runtime.supply_stand = None
-            picked = None if leaving else tick_supply_pickup(
-                self, game_state, self_name=seat_name, self_guid=seat_guid
-            )
+            drop_claim = None if retreat else member_orders.supply_drop
+            same_drop = False
+            if claim_names_me(drop_claim, seat_name, seat_guid):
+                try:
+                    same_drop = int(drop_claim.get("map_id")) == int(
+                        self.runtime.local_map_id
+                    )
+                except (TypeError, ValueError):
+                    same_drop = False
+            picked = None
+            if claim_names_me(drop_claim, seat_name, seat_guid) and (
+                same_drop or not self.joining_map()
+            ):
+                picked = tick_supply_pickup(
+                    self, game_state, self_name=seat_name, self_guid=seat_guid
+                )
             if picked is not None:
                 self._record_decision(picked)
                 return picked
+            if same_drop and claim_names_me(drop_claim, seat_name, seat_guid):
+                from .arrow_duty import supply_ground
+
+                if supply_ground(game_state, self._nav_blackboard, drop_claim) != "gone":
+                    from .intents import idle
+
+                    waited = idle("supply pickup")
+                    self.runtime.last_kind = "supply"
+                    self.runtime.last_reason = "supply pickup"
+                    self._record_decision(waited)
+                    return waited
             drop = member_orders.supply_drop
             if claim_names_me(hold, seat_name, seat_guid) and not claim_names_me(
                 drop, seat_name, seat_guid
@@ -899,6 +947,7 @@ class PartyMemberManager:
                 bodies = set()
         if cfg.formation_reform:
             self.runtime.scratch.pop("formation_slot", None)
+        self._drop_slot_when_the_order_changes(cfg)
         prev_form = str(self.runtime.formation or "")
         prev_kind = prev_form.split(":", 1)[0]
         prev_slot = self.runtime.scratch.get("formation_slot")
