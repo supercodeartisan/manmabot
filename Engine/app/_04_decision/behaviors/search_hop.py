@@ -126,11 +126,11 @@ def _emit_body_hop(
     priority: float,
 ) -> bool:
     """Click one avoidance hop toward ``goal``. False = no click this tick."""
-    from app._04_decision.avoidance import collect_body_tiles, plan_body_click
+    from app._04_decision.avoidance import click_bodies, plan_body_click
     from app._04_decision.pathfinding import waypoint_to_content
 
     origin = blackboard.world_origin
-    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    bodies = click_bodies(state, origin, blackboard)
     planned = plan_body_click(
         terrain,
         origin,

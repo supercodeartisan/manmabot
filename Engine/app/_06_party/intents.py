@@ -36,6 +36,18 @@ def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
     return bool(in_battle_click_region(rx, ry))
 
 
+def _hop_on_player(state: Any, origin: Any, hop: Optional[tuple[int, int]]) -> bool:
+    """True when this click tile is a player's center or a tile that touches it."""
+    if state is None or origin is None or hop is None:
+        return False
+    from app._04_decision.avoidance import player_click_tiles
+
+    try:
+        return (int(hop[0]), int(hop[1])) in player_click_tiles(state, origin)
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
 def _emit_follow_hop(
     origin: Any,
     hop: tuple[int, int],
@@ -199,6 +211,7 @@ def _plan_approach_hop(
         previous_goal=previous_goal,
         reason_prefix=reason_prefix,
         max_hop=max_hop,
+        state=game_state,
         retry=lambda bad: choose_approach_tile(
             terrain.is_walkable,
             target_tile,
@@ -221,6 +234,7 @@ def _plan_hop_to_goal(
     reason_prefix: str,
     retry: Optional[Any] = None,
     max_hop: Optional[int] = None,
+    state: Any = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str]:
     """TRAVELING click toward ``goal``; ``retry(bad_goal)`` picks another on no path."""
     from app._04_decision.pathfinding import plan_travel_click
@@ -255,6 +269,8 @@ def _plan_hop_to_goal(
         if dest is None:
             return idle("no_path"), None, "no_path"
     hop = waypoint if waypoint is not None else goal
+    if _hop_on_player(state, origin, hop):
+        return idle("player_beside"), goal, "player_beside"
     intent = ActionIntent(
         action=ActionType.TRAVELING,
         destination=dest,
@@ -290,6 +306,7 @@ def plan_follow_intent(
             previous_goal=previous_goal,
             reason_prefix=stand_reason,
             max_hop=FOLLOW_CLICK_TILES,
+            state=game_state,
         )
     return _plan_approach_hop(
         game_state,
@@ -320,6 +337,7 @@ def plan_field_follow(
     previous_goal: Optional[tuple[int, int]],
     previous_hop: Optional[tuple[int, int]],
     leader_moved: bool = False,
+    state: Any = None,
 ) -> Optional[tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]]:
     """TRAVELING click down the leader walk field (no A*).
 
@@ -348,6 +366,8 @@ def plan_field_follow(
     ):
         extended = follow_extend_hop((ox, oy), previous_hop, goal, kind="field")
         if extended is not None and _follow_hop_clickable(origin, extended):
+            if _hop_on_player(state, origin, extended):
+                return idle("player_beside"), goal, "player_beside", None
             return _emit_follow_hop(origin, extended, goal, "field")
         return (
             idle("follow_in_transit"),
@@ -363,6 +383,8 @@ def plan_field_follow(
     )
     if hop is None:
         return None
+    if _hop_on_player(state, origin, hop):
+        return idle("player_beside"), goal, "player_beside", None
     intent = ActionIntent(
         action=ActionType.TRAVELING,
         destination=waypoint_to_content(hop, origin),
@@ -381,6 +403,7 @@ def plan_slot_hop(
     previous_hop: Optional[tuple[int, int]],
     kind: str,
     leader_moved: bool = False,
+    state: Any = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
     """Short hop toward an absolute formation tile. Does not aim at the leader."""
     from app._04_decision.nav_config import get_terrain_map
@@ -406,6 +429,8 @@ def plan_slot_hop(
     ):
         extended = follow_extend_hop((ox, oy), previous_hop, goal, kind=kind)
         if extended is not None and _follow_hop_clickable(origin, extended):
+            if _hop_on_player(state, origin, extended):
+                return idle("player_beside"), goal, "player_beside", None
             return _emit_follow_hop(origin, extended, goal, kind)
         return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
     terrain = get_terrain_map()
@@ -417,6 +442,8 @@ def plan_slot_hop(
     if dest is None:
         return idle("no_path"), None, "no_path", None
     hop = waypoint if waypoint is not None else goal
+    if _hop_on_player(state, origin, hop):
+        return idle("player_beside"), goal, "player_beside", None
     intent = ActionIntent(
         action=ActionType.TRAVELING,
         destination=dest,

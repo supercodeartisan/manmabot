@@ -797,9 +797,9 @@ def tick_loot_item(
         )
         return Status.SUCCESS
 
-    from app._04_decision.avoidance import collect_body_tiles, plan_body_click
+    from app._04_decision.avoidance import click_bodies, plan_body_click
 
-    bodies = collect_body_tiles(state, hop_origin)
+    bodies = click_bodies(state, hop_origin, blackboard)
     planned = plan_body_click(
         terrain,
         hop_origin,
