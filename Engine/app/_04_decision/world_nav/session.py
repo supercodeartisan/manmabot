@@ -414,26 +414,16 @@ class WorldNavSession:
             return self._emit_gate(blackboard)
 
         if self.step_i >= len(self.plan.steps):
+            if self._pause_for_rally(pose, blackboard):
+                return Status.SUCCESS
             self.complete()
             return None
 
         step = self.plan.steps[self.step_i]
         tokens = api.state_tokens()
         if self.phase == "ready":
-            hold = WorldNavHooks.should_hold
-            if hold is not None:
-                try:
-                    paused = bool(hold(self.step_i, pose))
-                except Exception:
-                    paused = False
-                if paused:
-                    blackboard.current_goal = "rally"
-                    blackboard.emit(
-                        ActionType.IDLE,
-                        priority=0.45,
-                        reason="party rally wait",
-                    )
-                    return Status.SUCCESS
+            if self._pause_for_rally(pose, blackboard):
+                return Status.SUCCESS
             api.emit_state(
                 tokens.STEP_BEGIN,
                 i=self.step_i + 1,
@@ -459,6 +449,25 @@ class WorldNavSession:
             return self._tick_gate_approach(step, pose, blackboard, state)
 
         return Status.SUCCESS
+
+    def _pause_for_rally(self, pose: Any, blackboard: Any) -> bool:
+        """Party start stand. Solo leaves the hook empty and never pauses here."""
+        hold = WorldNavHooks.should_hold
+        if hold is None:
+            return False
+        try:
+            paused = bool(hold(self.step_i, pose))
+        except Exception:
+            return False
+        if not paused:
+            return False
+        blackboard.current_goal = "rally"
+        blackboard.emit(
+            ActionType.IDLE,
+            priority=0.45,
+            reason="party rally wait",
+        )
+        return True
 
     def _snap_live_origin(self, blackboard: Any) -> bool:
         """If player nav cell is non-walkable, move origin to nearest walkable ≤2.
