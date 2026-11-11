@@ -554,8 +554,8 @@ def _follow_body_click(
     """
     from app._04_decision.avoidance import (
         classify_ground_reclick,
+        click_bodies,
         click_clear,
-        collect_body_tiles,
     )
     from app._05_action.body_pose import body_is_moving
 
@@ -564,7 +564,7 @@ def _follow_body_click(
     moving = body_is_moving()
     _watch_hop_motion(blackboard, moving)
     if moving is not True:
-        bodies = collect_body_tiles(state, origin) if state is not None else set()
+        bodies = click_bodies(state, origin, blackboard)
         if not click_clear(terrain, bodies, start, waypoint):
             from app.bot_log import event
 
@@ -630,7 +630,7 @@ def emit_gate_sidestep(
     arrived. ``plan_body_click`` still steps aside when a body blocks
     that line. Returns False when no walkable step exists.
     """
-    from app._04_decision.avoidance import collect_body_tiles, plan_body_click
+    from app._04_decision.avoidance import click_bodies, plan_body_click
 
     terrain = get_terrain_map()
     if terrain is None:
@@ -643,7 +643,7 @@ def emit_gate_sidestep(
     sy = 0 if py == fy else (1 if py > fy else -1)
     if sx == 0 and sy == 0:
         sx = 1
-    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    bodies = click_bodies(state, origin, blackboard)
     for csx, csy in ((sx, sy), (-sy, sx), (sy, -sx), (-sx, -sy)):
         raw = (ox + 2 * int(csx), oy + 2 * int(csy))
         goal = _snap_aside(terrain, raw, avoid=(ox, oy))
@@ -826,13 +826,9 @@ def emit_travel_hop(
                 )
                 == 2
             ):
-                from app._04_decision.avoidance import collect_body_tiles
+                from app._04_decision.avoidance import click_bodies
 
-                bodies = (
-                    collect_body_tiles(state, blackboard.world_origin)
-                    if state is not None
-                    else set()
-                )
+                bodies = click_bodies(state, blackboard.world_origin, blackboard)
                 extended = _straight_extend_waypoint(blackboard, terrain, bodies)
                 if extended is not None:
                     from app.bot_log import event
@@ -880,12 +876,12 @@ def emit_travel_hop(
             # The click line closed. Fall through and pick the next one.
 
     # Field and dungeon: same avoidance hop (guide → interim → click).
-    from app._04_decision.avoidance import collect_body_tiles, plan_body_click
+    from app._04_decision.avoidance import click_bodies, plan_body_click
     from app._04_decision.clickgap import note_hold
     from app._04_decision.patrol import PURPOSE_PATROL, clear_patrol_click_block
 
     origin = blackboard.world_origin
-    bodies = collect_body_tiles(state, origin) if state is not None else set()
+    bodies = click_bodies(state, origin, blackboard)
     short_walk = (
         blackboard.travel_purpose == "world_nav"
         and bool(blackboard.scratch.get(SCRATCH_WORLD_NAV_SHORT_WALK))

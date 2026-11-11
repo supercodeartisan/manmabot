@@ -1151,6 +1151,73 @@ def test_party_does_not_arm_while_a_scroll_landing_is_open() -> None:
     assert "world_nav_session" not in decision.blackboard.scratch
 
 
+def test_party_remounts_marks_after_the_yaml_reload() -> None:
+    from app._04_decision import nav_config
+    from app._04_decision import player_mode as pm
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "duration_minutes": 10,
+                "areas": [
+                    {
+                        "name": "yard",
+                        "shape": "area",
+                        "x0": 10,
+                        "y0": 20,
+                        "x1": 30,
+                        "y1": 40,
+                    }
+                ],
+            }
+        ]
+    )
+    loads: list[list[dict]] = []
+    live: list[object] = []
+
+    class _Rect:
+        def __init__(self, item: dict) -> None:
+            self.name = item["name"]
+            self.x0 = int(item["x0"])
+            self.y0 = int(item["y0"])
+            self.x1 = int(item["x1"])
+            self.y1 = int(item["y1"])
+
+    def _load(nav: dict) -> None:
+        areas = [dict(item) for item in nav.get("farm_areas") or []]
+        loads.append(areas)
+        live[:] = [_Rect(item) for item in areas]
+
+    real_get = nav_config.get_farm_areas
+    real_load = nav_config._load_farms_and_home
+    old_hunt = pm.HUNT_MAP_ID
+    nav_config.get_farm_areas = lambda: list(live)
+    nav_config._load_farms_and_home = _load
+    try:
+        row = manager.schedule.current()
+        assert row is not None
+        manager._mount(decision.blackboard, row)
+        assert loads[0][0]["name"] == "yard"
+        assert "farm_areas_file" not in (
+            decision.blackboard.scratch["runtime_config"]["navigation"]
+        )
+        live[:] = [
+            _Rect({"name": "남쪽해안", "x0": 204, "y0": 447, "x1": 285, "y1": 480})
+        ]
+        manager._mount(decision.blackboard, row)
+        assert len(loads) == 2
+        assert loads[1][0]["name"] == "yard"
+        manager._mount(decision.blackboard, row)
+        assert len(loads) == 2
+    finally:
+        nav_config.get_farm_areas = real_get
+        nav_config._load_farms_and_home = real_load
+        pm.HUNT_MAP_ID = old_hunt
+
+
 if __name__ == "__main__":
     test_empty_party_routine_does_not_install_solo_cursor()
     test_stale_check_uses_the_saved_party_mark()
@@ -1179,4 +1246,5 @@ if __name__ == "__main__":
     test_party_drops_a_walk_whose_start_map_never_matches()
     test_after_the_rally_stand_a_new_route_walks()
     test_party_does_not_arm_while_a_scroll_landing_is_open()
+    test_party_remounts_marks_after_the_yaml_reload()
     print("OK")

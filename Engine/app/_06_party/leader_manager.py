@@ -53,6 +53,7 @@ class PartyLeaderManager:
         if isinstance(scratch, dict):
             scratch.pop("routine_cursor", None)
             scratch.pop("need_world_nav", None)
+            scratch["party_player_ring"] = True
             scratch["party_point_arrival"] = self._on_point_arrival
             from app._04_decision.behaviors.party_turret import release_turret_routine
 
@@ -326,20 +327,11 @@ class PartyLeaderManager:
         except (TypeError, ValueError, AttributeError):
             return None
 
-    def _mount(self, blackboard: Any, row: dict[str, Any]) -> None:
-        marks = self.schedule.marks()
-        key = (
-            str(row.get("id") or ""),
-            tuple(str(mark["name"]) for mark in marks),
-            int(self.schedule.mark_index),
-        )
-        blackboard.farm_area_index = int(self.schedule.mark_index)
-        if self._mounted == key:
-            return
+    def _mark_rects(self) -> list[dict[str, int | str]]:
         from app._06_party.leader_schedule import point_farm_bounds
 
-        rects = []
-        for mark in marks:
+        rects: list[dict[str, int | str]] = []
+        for mark in self.schedule.marks():
             x0, y0, x1, y1 = point_farm_bounds(mark)
             rects.append(
                 {
@@ -351,6 +343,39 @@ class PartyLeaderManager:
                     "y1": y1,
                 }
             )
+        return rects
+
+    def _farms_are_marks(self, rects: list[dict[str, int | str]]) -> bool:
+        """True when the live farm list is still this row's party marks."""
+        from app._04_decision.nav_config import get_farm_areas
+
+        live = get_farm_areas()
+        if len(live) != len(rects):
+            return False
+        for got, want in zip(live, rects):
+            if (
+                str(getattr(got, "name", "") or "") != str(want["name"])
+                or int(got.x0) != int(want["x0"])
+                or int(got.y0) != int(want["y0"])
+                or int(got.x1) != int(want["x1"])
+                or int(got.y1) != int(want["y1"])
+            ):
+                return False
+        return True
+
+    def _mount(self, blackboard: Any, row: dict[str, Any]) -> None:
+        marks = self.schedule.marks()
+        key = (
+            str(row.get("id") or ""),
+            tuple(str(mark["name"]) for mark in marks),
+            int(self.schedule.mark_index),
+        )
+        blackboard.farm_area_index = int(self.schedule.mark_index)
+        rects = self._mark_rects()
+        # A map reload replaces these rects with the solo yaml. Put the
+        # party marks back before the hunt tick reads the active farm.
+        if self._mounted == key and self._farms_are_marks(rects):
+            return
         scratch = blackboard.scratch
         cfg = scratch.get("runtime_config")
         if not isinstance(cfg, dict):
