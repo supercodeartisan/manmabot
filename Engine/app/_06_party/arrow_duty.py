@@ -1650,16 +1650,6 @@ def _aim_stand(duty: dict, live: tuple[int, int, int]) -> dict:
 
 
 def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
-<<<<<<< HEAD
-    """Keep the confirmed stand until the party row has matched it.
-
-    None means the hold was cleared. A one-tile party row still retargets the
-    drop. Two or more tiles cancel only after that row has landed on the stand.
-    """
-    board = manager._nav_blackboard
-    recheck = _leader_drop_recheck(state, duty, board)
-    runtime = manager.runtime
-=======
     """Aim the drop once inside the leader's 3×3. None means the hold was cleared.
 
     The live tile inside that box is adopted once. Later reads inside the
@@ -1691,7 +1681,6 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
             runtime.last_kind = "supply"
             runtime.last_reason = "stand moved"
             return None
->>>>>>> origin/main
     if recheck is None:
         if live is not None:
             _remember_drop_aim(board, live)
