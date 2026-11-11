@@ -334,16 +334,6 @@ class PartyTab(QWidget):
         self.follow_motion = QLabel(self._tx("party_ui_motion_idle", "이동 상태: 정지"))
         self.follow_motion.setWordWrap(True)
         inner.addWidget(self.follow_motion)
-        note = QLabel(
-            self._tx(
-                "party_ui_follow_note",
-                "이동 상태는 프로그램 상태만 표시합니다. "
-                "따라가는 중의 칸 거리는 실행 중 파티 동작이 처리하며, "
-                "이 화면은 그 값을 새로 만들지 않습니다.",
-            )
-        )
-        note.setWordWrap(True)
-        inner.addWidget(note)
         lay.addStretch(1)
         return host
 
@@ -353,15 +343,6 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        farm_hint = QLabel(
-            self._tx(
-                "party_ui_assist_hint",
-                "파티: 파티장이 공격하는 대상을 따라 공격합니다. "
-                "단독: 파티장 근처에서 자기 대상을 공격합니다.",
-            )
-        )
-        farm_hint.setWordWrap(True)
-        inner.addWidget(farm_hint)
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel(self._tx("party_ui_assist_label", "파티장 공격 대상 추종")))
         self.party_farm_mode = QComboBox()
@@ -400,32 +381,15 @@ class PartyTab(QWidget):
         if mode not in ("immediate", "finish"):
             mode = "immediate"
         options = (
-            (
-                "immediate",
-                "party_ui_hit_now",
-                "즉시 지원",
-                "party_ui_hit_now_note",
-                "파티원이 몬스터에게 공격받으면 현재 공격 중인 몬스터를 중단하고 "
-                "해당 파티원을 공격하는 몬스터를 즉시 공격한다.",
-            ),
-            (
-                "finish",
-                "party_ui_hit_after",
-                "현재 공격하던 몬스터 처치 후 지원",
-                "party_ui_hit_after_note",
-                "현재 공격 중인 몬스터를 먼저 처치한 다음 "
-                "해당 파티원을 공격하는 몬스터를 공격한다.",
-            ),
+            ("immediate", "party_ui_hit_now", "즉시 지원"),
+            ("finish", "party_ui_hit_after", "현재 공격하던 몬스터 처치 후 지원"),
         )
         self.member_hit_buttons: dict[str, QRadioButton] = {}
-        for value, title_key, title_fallback, note_key, note_fallback in options:
+        for value, title_key, title_fallback in options:
             button = QRadioButton(self._tx(title_key, title_fallback))
             button.setChecked(mode == value)
             self.member_hit_group.addButton(button)
             hit_lay.addWidget(button)
-            note = QLabel(self._tx(note_key, note_fallback))
-            note.setWordWrap(True)
-            hit_lay.addWidget(note)
             self.member_hit_buttons[value] = button
             button.toggled.connect(
                 lambda checked, chosen=value: self._on_hit_support(chosen, checked)
@@ -448,15 +412,6 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        note = QLabel(
-            self._tx(
-                "party_ui_support_magic_note",
-                "마법사 캐릭터의 파티원 화면에서만 고릅니다. "
-                "체크한 마법은 파티 설정에만 저장되고, 솔로 개별 마법 표는 바꾸지 않습니다.",
-            )
-        )
-        note.setWordWrap(True)
-        inner.addWidget(note)
         table = _SupportMagicTable()
         table.setHorizontalHeaderLabels(
             [
@@ -593,33 +548,9 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        hint = QLabel(
-            self._tx(
-                "party_ui_personal_hint",
-                "따라가기, 정지, 어시스트, 사냥 방식은 이 봇의 개인 설정입니다. "
-                "루팅 규칙은 파티장에게서 받습니다.",
-            )
-        )
-        hint.setWordWrap(True)
-        inner.addWidget(hint)
         self.personal_summary = QLabel("")
         self.personal_summary.setWordWrap(True)
         inner.addWidget(self.personal_summary)
-        self.policy_summary_host = QWidget()
-        policy_lay = QVBoxLayout(self.policy_summary_host)
-        policy_lay.setContentsMargins(0, 8, 0, 0)
-        future = QLabel(self._tx("party_ui_policy_title", "파티장 정책 요약"))
-        future.setObjectName("muted")
-        policy_lay.addWidget(future)
-        reserved = QLabel(
-            self._tx(
-                "party_ui_policy_reserved",
-                "파티장이 보낸 정책은 이후 이 자리에 읽기 전용으로 표시합니다.",
-            )
-        )
-        reserved.setWordWrap(True)
-        policy_lay.addWidget(reserved)
-        inner.addWidget(self.policy_summary_host)
         lay.addStretch(1)
         self._refresh_personal_summary()
         return host
@@ -636,15 +567,6 @@ class PartyTab(QWidget):
         self.status_leader = QLabel(self._tx("party_ui_leader_unknown", "파티장 상태: 미입력"))
         self.status_leader.setWordWrap(True)
         inner.addWidget(self.status_leader)
-        join = QLabel(
-            self._tx(
-                "party_ui_join_note",
-                "파티 참여 상태는 실행 중 파티 메모리로 확인합니다. "
-                "이 화면은 참여 여부를 새로 판단하지 않습니다.",
-            )
-        )
-        join.setWordWrap(True)
-        inner.addWidget(join)
         lay.addStretch(1)
         return host
 
@@ -670,14 +592,6 @@ class PartyTab(QWidget):
             False,
             on_change=self._refresh_succession_warning,
         )
-        note = QLabel(
-            self._tx(
-                "party_ui_succession_note",
-                "파티장이 마을로 이동하면 지정된 차기 파티원에게 파티장 권한을 인계합니다.",
-            )
-        )
-        note.setWordWrap(True)
-        inner.addWidget(note)
         row = QHBoxLayout()
         row.addWidget(QLabel(self._tx("party_ui_successor", "차기 파티장")))
         self.succession_combo = QComboBox()
@@ -728,15 +642,6 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        note = QLabel(
-            self._tx(
-                "party_ui_absence_note",
-                "파티장이 마을로 이동하고 파티장 인계가 진행되는 동안 "
-                "나머지 파티원들이 수행할 행동을 설정합니다.",
-            )
-        )
-        note.setWordWrap(True)
-        inner.addWidget(note)
         self.absence_group = QButtonGroup(host)
         self.absence_group.setExclusive(True)
         self.absence_buttons: dict[str, QRadioButton] = {}
@@ -802,31 +707,14 @@ class PartyTab(QWidget):
         group.setExclusive(True)
         buttons: dict[str, QRadioButton] = {}
         options = (
-            (
-                "party",
-                self._tx("party_ui_target_follow", "파티장 공격 대상 따라가기"),
-                self._tx(
-                    "party_ui_target_follow_note",
-                    "파티장이 공격하는 몬스터를 파티원도 같이 공격합니다.",
-                ),
-            ),
-            (
-                "solo",
-                self._tx("party_ui_target_random", "랜덤 공격"),
-                self._tx(
-                    "party_ui_target_random_note",
-                    "각 파티원이 주변의 공격 가능한 몬스터를 따로 고릅니다.",
-                ),
-            ),
+            ("party", self._tx("party_ui_target_follow", "파티장 공격 대상 따라가기")),
+            ("solo", self._tx("party_ui_target_random", "랜덤 공격")),
         )
-        for mode, title, detail in options:
+        for mode, title in options:
             button = QRadioButton(title)
             button.setEnabled(editable)
             group.addButton(button)
             inner.addWidget(button)
-            note = QLabel(detail)
-            note.setWordWrap(True)
-            inner.addWidget(note)
             buttons[mode] = button
             if editable:
                 button.toggled.connect(
@@ -912,16 +800,6 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        note = QLabel(
-            self._tx(
-                "party_ui_care_mage_note",
-                "다른 파티원의 체력이 이 값보다 낮으면 마법사가 파티 목록에서 힐합니다. "
-                "본인 힐, 물약, 후퇴, 어머니 숲, 말하는 두루마리, 안전지대는 "
-                "각 캐릭터의 솔로 설정을 씁니다.",
-            )
-        )
-        note.setWordWrap(True)
-        inner.addWidget(note)
         self.party_mage_heal_pct = add_spin_row(
             inner,
             self.bag,
@@ -940,20 +818,6 @@ class PartyTab(QWidget):
         lay.addWidget(self_box)
         self_inner = self_box.layout()
         assert isinstance(self_inner, QVBoxLayout)
-        self_note = QLabel(
-            self._tx(
-                "party_ui_supply_self_note",
-                "상점 담당 자신의 가방입니다. "
-                "가진 수가 담당 유지보다 적으면 상점에 가서 사는 수만큼 삽니다. "
-                "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
-                "한 개 값도 안 되면 그 물건은 건너뜁니다. "
-                "체력, 해독, 은화살 순으로 이어서 사고, "
-                "더 살 곳이 없으면 파티장에게 돌아옵니다. "
-                "마나 물약은 상점이 없어서 사지 않습니다.",
-            )
-        )
-        self_note.setWordWrap(True)
-        self_inner.addWidget(self_note)
         self.supply_self_table = self._build_supply_self_table()
         self_inner.addWidget(self.supply_self_table)
 
@@ -963,20 +827,6 @@ class PartyTab(QWidget):
         lay.addWidget(other_box)
         other_inner = other_box.layout()
         assert isinstance(other_inner, QVBoxLayout)
-        other_note = QLabel(
-            self._tx(
-                "party_ui_supply_others_note",
-                "다른 파티원 가방이 미만이면 줌보다 적으면, "
-                "그 옆에 주는 수만큼 떨어뜨립니다. "
-                "담당 유지보다 적게 주지는 않습니다. "
-                "여분이 없으면 사는 수만큼 삽니다. "
-                "아데나가 부족하면 그 가격으로 살 수 있는 개수만 삽니다. "
-                "체력 다음에 해독, 그 다음에 은화살을 이어서 사고 "
-                "더 갈 상점이 없으면 파티장에게 돌아옵니다.",
-            )
-        )
-        other_note.setWordWrap(True)
-        other_inner.addWidget(other_note)
         self.supply_others_table = self._build_supply_others_table()
         other_inner.addWidget(self.supply_others_table)
         lay.addStretch(1)
@@ -1154,16 +1004,6 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        loot_hint = QLabel(
-            self._tx(
-                "party_ui_loot_hint",
-                "무작위 루팅: 파티장과 마법사를 제외하고 가장 가까운 파티원이 "
-                "파티 드랍을 줍습니다. 끄면 명단에서 담당으로 표시된 줄만 "
-                "자기 드랍을 줍습니다. 파티장이 이동 중일 때 파티원은 줍지 않습니다.",
-            )
-        )
-        loot_hint.setWordWrap(True)
-        inner.addWidget(loot_hint)
         self.party_random_loot = add_check(
             inner,
             self.bag,
@@ -1232,15 +1072,6 @@ class PartyTab(QWidget):
         lay.addWidget(self.leader_local_test_box)
         local_lay = self.leader_local_test_box.layout()
         assert isinstance(local_lay, QVBoxLayout)
-        local_hint = QLabel(
-            self._tx(
-                "party_ui_local_hint",
-                "파티장 봇을 먼저 시작하세요. 이 PC에서 localhost로 확인한 뒤 "
-                "LAN IP로 확인합니다.",
-            )
-        )
-        local_hint.setWordWrap(True)
-        local_lay.addWidget(local_hint)
         local_row = QHBoxLayout()
         self.ws_local_btn = QPushButton(self._tx("party_ui_test_localhost", "localhost 테스트"))
         self.ws_local_btn.clicked.connect(self._test_ws_localhost)

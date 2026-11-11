@@ -2965,6 +2965,7 @@ class BotController:
                     "map_id": stand.get("map_id"),
                     "x": stand.get("x"),
                     "y": stand.get("y"),
+                    "confirmed": stand.get("confirmed") is True,
                 }
         gather = member_orders.gather or {}
         out["rally"] = str(gather.get("stage") or "")

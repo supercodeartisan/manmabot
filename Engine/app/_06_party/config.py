@@ -499,6 +499,16 @@ def _cfg_flag(value: Any, default: bool) -> bool:
     return bool(value)
 
 
+def _coord(value: Any) -> Optional[int]:
+    """Formation anchor. Missing or non-numeric stays empty."""
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _cfg_int(value: Any, default: int) -> int:
     try:
         if value is None or str(value).strip() == "":

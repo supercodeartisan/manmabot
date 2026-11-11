@@ -1875,6 +1875,82 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     assert manager.runtime.last_reason == "stand timeout"
 
 
+def test_a_member_stand_keeps_confirmed_so_the_leader_can_publish_it(monkeypatch) -> None:
+    """The mage's settled tile is useless to the shopkeeper without confirmed."""
+    from session.bot_controller import BotController
+    from app._06_party.sync import member_states
+
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        "app._06_party.comms.publish.publish_body",
+        lambda body: sent.append(dict(body)) or 1,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: None,
+    )
+    stand = {
+        "id": "hold:hp:poorboy",
+        "for": "poorboy",
+        "map_id": 0,
+        "x": 360,
+        "y": 424,
+        "confirmed": True,
+    }
+    runtime = type(
+        "R",
+        (),
+        {
+            "last_kind": "supply",
+            "last_reason": "supply hold",
+            "duty_phase": "follow",
+            "supply_notice": None,
+            "supply_hold": None,
+            "supply_stand": stand,
+        },
+    )()
+    member = type(
+        "M",
+        (),
+        {
+            "state": type("S", (), {"value": "running"})(),
+            "_party_brain_ref": type("B", (), {"runtime": runtime})(),
+        },
+    )()
+    live = BotController._member_live_view(member, object())
+    assert live["supply_stand"]["confirmed"] is True
+    assert (live["supply_stand"]["x"], live["supply_stand"]["y"]) == (360, 424)
+
+    hold = {"id": "hold:hp:poorboy", "for": "poorboy", "item": "hp"}
+    leader = type(
+        "L",
+        (),
+        {
+            "_party_hold_id": hold["id"],
+            "_party_hold_drop": False,
+            "_party_stand_key": None,
+            "_leader_supply_hold": lambda self: dict(hold),
+        },
+    )()
+    saved = dict(member_states.rows)
+    try:
+        member_states.rows.clear()
+        member_states.rows["poorboy"] = {
+            "live": {"supply_stand": {k: v for k, v in stand.items() if k != "confirmed"}}
+        }
+        BotController._publish_supply_stand(leader, object(), None, None)
+        assert sent == []
+        member_states.rows["poorboy"] = {"live": {"supply_stand": dict(live["supply_stand"])}}
+        BotController._publish_supply_stand(leader, object(), None, None)
+    finally:
+        member_states.rows.clear()
+        member_states.rows.update(saved)
+    assert sent[0]["type"] == "supply_stand"
+    assert sent[0]["confirmed"] is True
+    assert sent[0]["map_id"] == 0
+    assert (sent[0]["x"], sent[0]["y"]) == (360, 424)
+
+
 def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None:
     import time
 

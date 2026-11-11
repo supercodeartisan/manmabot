@@ -111,6 +111,7 @@ class TaskEditor(QWidget):
             return
         stack.setCurrentIndex(1 if party else 0)
         if party and self.party_tab is not None:
+            self.sync_party_role_lock()
             self.party_tab.reload_from_bag()
             workspace = getattr(self, "party_workspace", None)
             if workspace is not None:
@@ -285,7 +286,10 @@ class TaskEditor(QWidget):
             profile=self.profile,
             can_edit_map=self._maps_editable,
         )
-        self.party_workspace = PartyWorkspace(self.party_tab)
+        self.party_workspace = PartyWorkspace(
+            self.party_tab,
+            lock_reason=self.party_lock_reason,
+        )
 
         self.other_tab = OtherTab(
             profile=self.profile,

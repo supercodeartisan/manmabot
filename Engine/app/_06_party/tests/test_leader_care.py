@@ -40,6 +40,23 @@ def test_care_lines_merge_from_the_leader_policy() -> None:
     assert cfg.safe_zone is True
 
 
+def test_formation_anchor_merges_from_the_leader_policy() -> None:
+    cfg = PartyMemberConfig().merge_leader_policy(
+        {
+            "leader_mode": "moving",
+            "roster": [],
+            "formation_anchor_x": "10",
+            "formation_anchor_y": 20,
+            "formation_anchor_dx": "",
+            "formation_anchor_dy": None,
+        }
+    )
+    assert cfg.formation_anchor_x == 10
+    assert cfg.formation_anchor_y == 20
+    assert cfg.formation_anchor_dx is None
+    assert cfg.formation_anchor_dy is None
+
+
 def test_old_policy_without_care_lines_keeps_party_defaults() -> None:
     cfg = PartyMemberConfig().merge_leader_policy(
         {"leader_mode": "moving", "roster": []}

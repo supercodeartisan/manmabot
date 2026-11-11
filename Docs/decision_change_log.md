@@ -31,6 +31,13 @@ Shared: `LeaderStartRally.note_arrived` / `update`, `PartyLeaderManager.prepare`
 Affects: the party leader's start, between arriving at the rally mark and entering the farm.
 Consent: user (전원이 모이면 그 즉시로 이동하라. 우의 기능을 구현하라).
 Result: `Engine/app/_06_party/tests/test_leader_rally.py`, `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+## 2026-11-10 — a member stand keeps its confirmed flag
+
+Intent: The recipient's settled stop tile reaches the shopkeeper. `member_state` already carried the tile and now also carries `confirmed`, which the leader requires before it republishes `supply_stand`.
+Shared: `_member_live_view`. The stand wait, the drop, follow, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party member who is told to stand for a supply drop. The leader's own stand still comes from the local pose.
+Consent: user ("how to resolve it?" after the mage stand never reached the shopkeeper).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
 
 ## 2026-11-10 — hunt loot stays inside the active farm
 
