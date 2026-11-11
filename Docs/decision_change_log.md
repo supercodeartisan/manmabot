@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — party hunt keeps its mark, and party clicks miss player sprites
+
+Intent: After a map reload, the party leader's hunt rect is the party mark again, not the solo yaml farm. A point stays its 5×5. Inside that mark the leader does not walk toward the solo area. Outside it, the return walk uses the mark. During a party session, a click is not placed on a memory player's center or on any of the eight tiles that touch it. Solo clicks still avoid only living centers. Monster neighbors stay clickable.
+Shared: `PartyLeaderManager._mount`, `click_bodies` (travel, loot approach, search), and the party follow hop. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader after a talking scroll lands, and party move, follow, loot approach, and search while another player is beside the click. Solo hunting is unchanged.
+Consent: user (the neighbor exclusion is party-only; the farm-edge walk must be fixed; do it on a new branch).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`, `Engine/app/_04_decision/tests/test_party_click_ring.py`. Not run in game.
+
 ## 2026-11-11 — after the rally stand the leader walks
 
 Intent: A party start route still uses an NPC teleporter or a talking scroll to reach the meet tile. The stand is on the landing of the last of those steps. After that stand, the same route's remaining steps are walks, and a new party route armed before the leader is inside the farm does not use a talking scroll or an NPC teleporter. A walk-only route still stands on the tile where the plan was made.

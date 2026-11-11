@@ -123,6 +123,86 @@ def collect_body_tiles(
     return tiles
 
 
+def _party_click_ring(blackboard: object | None) -> bool:
+    scratch = getattr(blackboard, "scratch", None)
+    return isinstance(scratch, dict) and bool(scratch.get("party_player_ring"))
+
+
+def _living_player_centers(
+    state: object,
+    origin: WorldOrigin,
+) -> set[tuple[int, int]]:
+    """Memory tiles of living players other than this character."""
+    if state is None or not hasattr(state, "objects"):
+        return set()
+    from app._04_decision.combat_query import object_absolute_tile
+    from app._04_decision.target_selector import MAX_MISSED_FRAMES
+
+    start = (int(origin.x), int(origin.y))
+    missing = getattr(state, "missing_frames", None)
+    tiles: set[tuple[int, int]] = set()
+    for obj in _body_candidates(state):
+        if getattr(obj, "object_type", None) is not ObjectType.PLAYER:
+            continue
+        if not _avoid_body(obj):
+            continue
+        if getattr(obj, "status", None) is ObjectStatus.DEAD:
+            continue
+        if getattr(obj, "relationship", None) is Relationship.SELF:
+            continue
+        track_id = getattr(obj, "track_id", None)
+        if callable(missing) and track_id is not None:
+            if int(missing(int(track_id))) > int(MAX_MISSED_FRAMES):
+                continue
+        try:
+            tile = object_absolute_tile(obj, origin)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if tile == start:
+            continue
+        if tile_chebyshev(start[0], start[1], tile[0], tile[1]) > AVOID_RADIUS:
+            continue
+        tiles.add((int(tile[0]), int(tile[1])))
+    return tiles
+
+
+def player_click_tiles(
+    state: object,
+    origin: WorldOrigin,
+) -> set[tuple[int, int]]:
+    """A player's center and the eight tiles that touch it.
+
+    The character's own tile is left out. Monsters are not included.
+    """
+    start = (int(origin.x), int(origin.y))
+    blocked: set[tuple[int, int]] = set()
+    for cx, cy in _living_player_centers(state, origin):
+        blocked.add((cx, cy))
+        for dx, dy in _NEIGHBORS:
+            tile = (cx + dx, cy + dy)
+            if tile != start:
+                blocked.add(tile)
+    return blocked
+
+
+def click_bodies(
+    state: object | None,
+    origin: WorldOrigin,
+    blackboard: object | None = None,
+) -> set[tuple[int, int]]:
+    """Body tiles for one click.
+
+    Solo keeps each living center. A party session also closes the eight
+    tiles that touch a player's center, so the click is not on that sprite.
+    """
+    tiles = collect_body_tiles(state, origin) if state is not None else set()
+    if state is None or not _party_click_ring(blackboard):
+        return tiles
+    tiles |= player_click_tiles(state, origin)
+    tiles.discard((int(origin.x), int(origin.y)))
+    return tiles
+
+
 def _cell_blocked(
     terrain: TerrainMap,
     bodies: set[tuple[int, int]],
@@ -729,7 +809,9 @@ __all__ = [
     "classify_ground_reclick",
     "log_ground_pause",
     "click_clear",
+    "click_bodies",
     "collect_body_tiles",
+    "player_click_tiles",
     "interim_waypoint",
     "plan_avoidance_click",
     "plan_body_click",

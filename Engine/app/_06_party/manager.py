@@ -169,6 +169,9 @@ class PartyMemberManager:
     def set_nav_blackboard(self, blackboard: Any) -> None:
         """Wire the session Blackboard so join-map can emit scroll/GATE intents."""
         self._nav_blackboard = blackboard
+        scratch = getattr(blackboard, "scratch", None)
+        if isinstance(scratch, dict):
+            scratch["party_player_ring"] = True
         if blackboard is not None and self.world_origin is not None:
             try:
                 blackboard.world_origin = self.world_origin
@@ -934,6 +937,7 @@ class PartyMemberManager:
                     previous_hop=self.runtime.follow_hop,
                     kind=formed.kind,
                     leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
+                    state=game_state,
                 )
             except Exception as exc:
                 _log.debug("party slot probe failed: %s", exc)
@@ -1213,6 +1217,7 @@ class PartyMemberManager:
                         previous_hop=self.runtime.follow_hop,
                         kind=formed.kind,
                         leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
+                        state=game_state,
                     )
                 except Exception as exc:
                     _log.debug("party slot hop failed: %s", exc)
@@ -1231,6 +1236,7 @@ class PartyMemberManager:
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
                         leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
+                        state=game_state,
                     )
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)
@@ -1551,6 +1557,7 @@ class PartyMemberManager:
                     previous_goal=self.runtime.approach_goal,
                     previous_hop=self.runtime.follow_hop,
                     kind="heal_step",
+                    state=game_state,
                 )
             except Exception as exc:
                 self._note_list_heal(f"skip step {exc}")
