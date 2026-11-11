@@ -1,9 +1,86 @@
-# Isolated party-member MVP
+# Party member loop
 
-Date: 2026-10-13
-Status: v1 member brain implemented under ``Engine/app/_06_party/`` (follow / assist / hold). Session enables via profile ``party_member_enabled`` + ``party_leader_name``.
+Date of the first note: 2026-10-13. Updated 2026-11-10 to the live caller.
 
-## Objective
+The session does not call `DecisionBrain.adopt`. A member, mage, or shopkeeper process calls `PartyMemberManager.decide`. A leader process calls `PartyLeaderManager.prepare`, then either `leader_supply_action` or `DecisionManager.decide`. Enablement is `party_member_enabled` with `party_role != "leader"`. The leader identity used for follow comes from party memory after the policy overlay, not from a typed `party_leader_name` alone.
+
+Procedure, actions, and branches:
+
+- [PARTY_RUNTIME.md](PARTY_RUNTIME.md)
+- [PARTY_CODE_TO_ACTION.md](PARTY_CODE_TO_ACTION.md)
+- [PARTY_EDGE_CASES.md](PARTY_EDGE_CASES.md)
+
+## What this note asked for, and what runs now
+
+The 2026-10-13 MVP was follow, assist, and hold, with cross-map, invites, healing, supply, and a leader bot deferred. The live member tick is larger. Order inside `_decide_party`, first return wins:
+
+1. Critical retreat (`party_critical_escape`): mother tree, talking scroll, or safe zone.
+2. Urgent self care: HP potion, self heal, or an in-range defense shot.
+3. Supply pickup, or the recipient hold (`SHOP_STOP` while walking, then `IDLE`).
+4. Shopkeeper heal and `tick_shopkeeper_duty` when `seat_role == "shopkeeper"`.
+5. Self heal / buff stash and potion side intents.
+6. Assist only when a target is already in attack range and hunt is not deferred. A mage class clears that target. Out of range, the member walks the formation slot.
+7. `JOIN_MAP` or a far follow opens `PartyJoinNav`.
+8. Otherwise follow a formation slot with a click of at most 2 tiles, or hold.
+
+Loot is on when the leader tile has been unchanged for 0.7 seconds and the kind is hold or follow. A moving leader clears sticky loot.
+
+Death in this loop is `IDLE` (`STOP`). This loop does not run the solo `survival.death` column.
+
+## Modules that the session actually uses
+
+```text
+Engine/app/_06_party/
+  manager.py            PartyMemberManager.decide
+  leader_manager.py     PartyLeaderManager.prepare / decide
+  leader_rally.py       3 minute stand, or leave when Rally.ready
+  leader_schedule.py    party_routine marks, not profile.routine
+  invite.py             /초대 and 파티탈퇴
+  policy.py             MemberKind ladder
+  intents.py            ActionIntent builders
+  follow.py             2-tile click, hold while the leader tile is unchanged
+  formation_goal.py     side, trail, or stand slot
+  join_map.py           WorldNav to the leader pose
+  assist.py             engage_like_solo
+  support.py            retreat and urgent self care
+  arrow_duty.py         shopkeeper buy, drop, recipient hold
+  brains/               contract only; session does not call adopt
+Engine/session/bot_controller.py
+  _run_bot_loop         chooses the one driver
+Engine/websocket/party_orders.py
+  Rally, seat_role_for_name, policy bodies
+```
+
+`brains/LeaderBrain.adopt` returns `ready=False`. Wiring it later does nothing until `_run_bot_loop` calls it.
+
+## Still not a live party behavior
+
+These were deferred in 2026-10-13 and are still not what the tick does:
+
+- A protection queue that finishes monster A before it accepts B.
+- Automatic leader transfer.
+- Kick.
+- The member loop emitting `RESPAWN` from `survival.death`.
+- A rally tile sent to members. They follow the leader's live party-memory tile.
+
+## Acceptance scenarios from 2026-10-13
+
+1. Leader walks: member follow clicks at most 2 tiles and does not aim at the leader tile when a formation slot exists. A leader step on that read clicks again.
+2. Leader attacks A, and A is in range: the member assists A. Out of range, the member walks the slot instead of approaching A.
+3. Leader moves during combat, and this member is off the slot: a new assist waits until the member is back on the slot.
+4. Leader on another map, both map ids known, policy name matches: the member world-navs. The 2026-10-13 "wait, no scroll" rule is not the live rule.
+5. Low HP at the retreat threshold: the member can leave (mother tree, scroll, or safe zone). Potion and self heal still come first. The 2026-10-13 "no retreat" rule is not the live rule.
+6. Leader target changes: the next assist selection uses the new target. A blocked shot does not pick a different monster.
+7. Pause: policy `STOP` is `IDLE`. The executor drops the mouse when the action is not `IDLE` or a button is held.
+8. Solo mode: `party_leader_no_loot` is not set, and `PartyMemberManager` is not constructed.
+
+Unit tests under `Engine/app/_06_party/tests/` lock the branches they name. They are not an in-game acceptance pass.
+
+## Original MVP text (2026-10-13)
+
+The rest of this file is the original note. Where it disagrees with the sections above, the sections above are the live loop.
+
+### Objective as written then
 
 Follow one selected team leader and help kill the leader's target. Keep the member close enough to participate in the same farming activity. The leader may be human-controlled or an existing solo bot; a new leader bot is not a prerequisite.
 

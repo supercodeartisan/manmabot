@@ -776,6 +776,22 @@ def _step_spell_support(
     return _maybe_support_spells(state, blackboard, allow_buffs=allow_buffs)
 
 
+def _step_party_rally_wait(
+    state: "GameState", blackboard: "Blackboard"
+) -> Status | None:
+    """Stand on the rally mark. The hunt walk starts when this flag drops."""
+    del state
+    if not blackboard.scratch.get("party_rally_wait"):
+        return None
+    blackboard.current_goal = "rally"
+    blackboard.emit(
+        ActionType.IDLE,
+        priority=0.45,
+        reason="party rally wait",
+    )
+    return Status.SUCCESS
+
+
 def _step_farm_engage(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
@@ -2298,6 +2314,7 @@ def _handlers_farming_island() -> dict:
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
+        "party.rally_wait": _step_party_rally_wait,
         "shop.before_world_nav": _shop_before_world_nav,
         "nav.world": _maybe_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
@@ -2329,6 +2346,7 @@ def _handlers_farming_dungeon() -> dict:
         "survival.return_idle": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_idle, s, b
         ),
+        "party.rally_wait": _step_party_rally_wait,
         "shop.before_world_nav": _shop_before_world_nav,
         "nav.world": _maybe_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
@@ -2414,6 +2432,7 @@ def _handlers_world_nav() -> dict:
         "survival.return_vitals": lambda s, b: _step_handoff_retreat_if(
             _maybe_return_on_vitals, s, b
         ),
+        "party.rally_wait": _step_party_rally_wait,
         "shop.trip": _shop_before_world_nav,
         "spell.support": lambda s, b: _step_spell_support(s, b, allow_buffs=False),
         "spell.buffs": lambda s, b: _step_spell_support(s, b, allow_buffs=True),

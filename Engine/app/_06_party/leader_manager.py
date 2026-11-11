@@ -63,6 +63,7 @@ class PartyLeaderManager:
         if pose is None:
             return
         scratch = blackboard.scratch
+        scratch["party_rally_wait"] = False
         scratch.pop("routine_cursor", None)
         scratch["party_point_arrival"] = self._on_point_arrival
         # Arrived turret stays the hunt. A step outside the 5×5 walks back
@@ -70,9 +71,23 @@ class PartyLeaderManager:
         point_held = self._point_routine_held(blackboard)
         if point_held:
             self._drop_open_travel(scratch)
+        now = time.monotonic()
+        if (
+            rally is not None
+            and str(getattr(rally, "state", "") or "") == "await_mark"
+            and self._at_rally_point(row, pose)
+        ):
+            rally.note_arrived(self._arrival_point(row, pose))
+        if rally is not None and str(getattr(rally, "state", "") or "") == "waiting":
+            scratch["party_rally_wait"] = True
+            self._drop_open_travel(scratch)
+            inside = self._inside(row, pose)
+            schedule.note_inside(now, inside, holding=True)
+            schedule.note_mark(now, inside, holding=True)
+            self._mount(blackboard, row)
+            return
         if not point_held and self._travel_active(scratch):
             return
-        now = time.monotonic()
         if not point_held and self._rally_walk_pending(rally, row, pose):
             schedule.note_inside(now, False)
             schedule.note_mark(now, False)
@@ -84,19 +99,16 @@ class PartyLeaderManager:
             if self.hunt_mode == "turret":
                 self._hold_turret_routine(blackboard)
             self._mount(blackboard, row)
-            if rally is not None and getattr(rally, "state", "") == "await_mark":
-                rally.note_arrived(self._arrival_point(row, pose))
-            holding = rally is not None and getattr(rally, "state", "") == "waiting"
-            schedule.note_inside(now, True, holding=holding)
-            schedule.note_mark(now, True, holding=holding)
-            if not holding and schedule.due(now) and schedule.advance():
+            schedule.note_inside(now, True)
+            schedule.note_mark(now, True)
+            if schedule.due(now) and schedule.advance():
                 self._mounted = None
                 self._set_place("moving")
                 self._clear_travel(scratch)
                 self._release_turret_routine(blackboard)
                 self._arm_travel(blackboard, world, pose)
                 return
-            if not holding and schedule.mark_due(now) and schedule.advance_mark():
+            if schedule.mark_due(now) and schedule.advance_mark():
                 self._set_place("moving")
                 self._clear_travel(scratch)
                 self._release_turret_routine(blackboard)

@@ -437,6 +437,32 @@ BOOL SignedGetModuleBase(uint64_t pid, uint64_t address, uint64_t* moduleBase) {
 }
 
 // ---------------------------------------------------------------------------
+// Get the process image base via the driver (IOCTL 0x222048)
+//   { Pid @0 }; base @ +8   (PsGetProcessSectionBaseAddress)
+//   1 IOCTL, no PEB/LDR walk.
+// ---------------------------------------------------------------------------
+BOOL SignedGetImageBaseEx(uint64_t pid, uint32_t ioctl, uint64_t* base) {
+    if (g_SdHandle == INVALID_HANDLE_VALUE || !base) return FALSE;
+    SD_INFO_STRUCT req;
+    RtlZeroMemory(&req, sizeof(req));
+    req.Pid = (uint32_t)pid;
+
+    DWORD bytesReturned = 0;
+    g_sd_ioctls++;
+    if (!DeviceIoControl(g_SdHandle, ioctl,
+        &req, 0x10,
+        &req, 0x10,
+        &bytesReturned, NULL))
+        return FALSE;
+    *base = *(uint64_t*)((uint8_t*)&req + 8);   /* base @ +8 */
+    return (*base != 0);
+}
+
+BOOL SignedGetImageBase(uint64_t pid, uint64_t* base) {
+    return SignedGetImageBaseEx(pid, SD_IOCTL_IMAGE_BASE, base);
+}
+
+// ---------------------------------------------------------------------------
 // Attach helper to a target PID (cached for later reads)
 // ---------------------------------------------------------------------------
 void SignedSetTarget(uint64_t pid) {

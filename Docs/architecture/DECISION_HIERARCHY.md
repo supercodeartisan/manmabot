@@ -11,7 +11,8 @@
 - 한 칸을 고칠 때 **같이 깨질 수 있는 칸/모드**가 표로 보인다 (고지 문장이 자동에 가깝게 나온다).
 - 모드 수는 적게, **재사용 칸(행동)** 은 이름 있게 — 복붙 사다리가 늘어나지 않는다.
 
-라이브는 behavior tree가 아니다. **sticky `PlayerMode` + 모드별 행동 열(선착순)** 이다.  
+라이브는 behavior tree가 아니다. **sticky `PlayerMode` + 모드별 행동 열(선착순)** 이다.
+파티 멤버 틱은 그 열이 아니다. `PartyMemberManager.decide`가 `ActionIntent`를 만든다. 파티 리더는 `PartyLeaderManager.prepare`가 모드와 `party.rally_wait` / 터렛 플래그를 세운 뒤, 같은 열을 `DecisionManager.decide`로 탄다. 정본은 [PARTY_RUNTIME.md](PARTY_RUNTIME.md).
 파일 분할·레거시 삭제·사다리 로직 변경은 이 경계를 코드에 옮길 때의 일이다.  
 코드와 충돌하면 [`mode_ticks.py`](../../Engine/app/_04_decision/behaviors/mode_ticks.py)와 [`decision_change_log.md`](../decision/decision_change_log.md)가 이긴다.
 

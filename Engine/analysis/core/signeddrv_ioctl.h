@@ -110,6 +110,7 @@
 #define SD_IOCTL_READ_CR3   0x222000   // CR3-based READ (requires non-zero CR3, not used)
 #define SD_IOCTL_WRITE      0x222004   // CR3-based COPY (requires CR3, not used)
 #define SD_IOCTL_MODULE     0x222008
+#define SD_IOCTL_IMAGE_BASE 0x222048   // GET_IMAGE_BASE (Pid@0, base@+8) - 1 IOCTL
 #define SD_IOCTL_PEB        0x22204C   // GET_PEB (Pid dword@0, PEB@+8) - REAL PEB ioctl
 // 0x22200C is a MODULE-NAME lookup that dereferences input[0] as a string
 // pointer (sub_1400016D8). It is NOT a PEB lookup: sending a PID there crashes

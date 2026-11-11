@@ -1,4 +1,32 @@
 # =============================================================================
+# [UPD 2026-11-11] 게임 정기갱신 대응 (REGISTRY_VERSION=37)
+#   base=0x7FF7113B0000 / MODULE_SIZE=0x3FA2000 (구 0x3F6E000 → +0x34000) / MGR=0x1708750
+#   VFT/COL/TD: 구 빌드 덤프에서 RTTI 클래스명 복원 → 새 RTTI 표에서 동일 이름 + COL.offset=0 재매핑
+#        (115키 단일후보, 모호성 0. legacy 예외는 아래 UNVERIFIED 참조)
+#   UILAY_*: 키 이름의 클래스명(.?AV<Class>@ui@lineage@@)으로 새 이미지 직접 재매핑 (33키 전부 단일후보)
+#        — 이전 갱신에서 stale 로 남아 있던 값까지 전부 새 빌드 값으로 교체.
+#   MGR: .data 블록정렬 delta=+0x1D060 (126/143 유닛, 2nd 23) + 라이브 체인 검증
+#        guard(mgr+0xD8)=0x700000001(하위 u8=1), holder=*(mgr+0xD0), subs 64개 전부 힙,
+#        sub[22]=ActorSubsystem(0x11F5958) sub[23]=MapSubsystem(0x1240480)
+#        sub[30]=HudSlotData(0x11F9FE0) sub[31]=Chat(0x1233E38)
+#   전역 슬롯: PLAYER_X,Y/MSG_ANCHOR_RVA = +0x1D060
+#        (PLAYER_X 142/159, MSG_ANCHOR 122/139 독립 일치)
+#        ST_BLOCK = MGR-0x150 = 0x1708600 (라이브: X/Y+HP/MAXHP/MP/Lv 한 블록, 유일 히트)
+#        MAP_PLAYER_X,Y = +0x1D060 (동일 .data 시프트 가정 — 사용 모듈 없음)
+#        ExperiencePct64: 대상 RVA 0x1644800 → 0x1660548 재정렬, 참조 3쌍 구조 일치 → 슬롯 0x16604C8
+#        (라이브 확인: 슬롯 값 = BASE+0x1660548)
+#        CAM_GLOB: 라이브 .data 스캔 힙 객체 vft==BASE+VFT_CAMERA 단일 히트 → 0x18B5E30
+#        (객체 0x2033D45F920 = MGR subs[08], 이중 확인)
+#   문서: docs/UPDATE_2026-11-11.md
+# =============================================================================
+# [UNVERIFIED 2026-11-11] 이번 빌드에서 증거를 얻지 못해 구 빌드 값을 유지한 키
+#   코드 RVA 10: BT_FINDTARGET_EXEC / BT_MOVETOTARGET_EXEC / BT_INTERACT_EXEC / BT_NODE_RESET / ENT_HOSTILITY_FNV / WMS_TILELIST_PROVIDER_RVA / WMS_ATLAS_LOOKUP_RVA / HZL_DEL_SEGMAP_DOCALL / HZL_TILESET_INSERT / HZL_TILESET_HELPER
+#     (덤프 코드 페이지 0 = NCGuard 지연복호화 → 동일 함수 증명 불가. 값 유지.)
+#   기타 값 유지 27 (사용 모듈 없음/구규격 참고): WINDOW_NPCShop / WINDOW_Inventory / WINDOW_NPCStorage / WINDOW_TalkingScroll / WINDOW_HudSlot / ATS_COL_PRIMARY / ATS_COL_SECONDARY / ATS_CD / BT_SELECTOR_EXEC / BT_SEQUENCE_EXEC / BT_PARALLEL_EXEC / BT_NODE_TICK / BT_NODE_EXIT / BB_GET / WMS_TD_STR / WMS_COL / WMS_DRAW_RVA / MHM_DEL_PORTAL_TD / MHM_DEL_UITYPE_TD / MHM_DEL_VOID_TD / MHM_DEL_RECTSET_TD / WMS_BUILD_RVA / HZL_COL / HZL_PC_COL / HZL_DEL_SEGMAP_HANDLER / HZL_COLOR_MAPPER / HZL_COLOR_APPLY
+#   RTTI 없음: WIN_TEXT_CLS / POPUP_TEXT_CLS (vft-8 이 COL 이 아님 → 클래스명 복원 불가)
+#   ATS_COL_PRIMARY/SECONDARY, ATS_CD: legacy(구 빌드부터 VFT_ATS 와 다른 클래스) — 사용처 없음
+#   SHOP_VFT2: RTTI/dump 근거 없음, 사용 모듈 없음 (legacy dead entry)
+# =============================================================================
 # [UPD 2026-11-04] 게임 정기갱신 대응 (REGISTRY_VERSION=36)
 #   base=0x7FF6E6AB0000 / MODULE_SIZE=0x3F6E000 (구 0x3F86000 → -0x18000) / MGR=0x16EB6F0
 #   VFT 105키 전부 유효(legacy 1: SHOP_VFT2 — 문서화된 dead entry)
@@ -52,15 +80,15 @@
 #    갱신(패치/빌드 변동) → 이 파일만 수정 → 전체 동작.
 #
 #  형식: KEY=VALUE   (# 주석, 공백 무시, 0x16진/10진 허용)
-#  기준: 2026-10-28 LC.exe 26.10.27.2001 (module size 0x3F86000) LIVE-VERIFIED
+#  기준: 26.11.10.2003 LC.exe (module size 0x3FA2000) LIVE-VERIFIED
 #  읽기: signeddrv.sys MmCopy (SignedReadMemory/SignedReadFast) ONLY
 #  갱신 절차는 docs/REGISTRY_GUIDE.md 참조.
 # =============================================================================
 
-REGISTRY_VERSION=36
-BUILD=26.10.27.2001
-REGISTRY_UPDATED=2026-10-28.verify
-MODULE_SIZE=0x3F6E000
+REGISTRY_VERSION=37
+BUILD=26.11.10.2003
+REGISTRY_UPDATED=2026-11-11
+MODULE_SIZE=0x3FA2000
 
 # =============================================================================
 # [SEC-1] 전역 앵커 체인
@@ -68,7 +96,7 @@ MODULE_SIZE=0x3F6E000
 #   holder=*(mgr+HOLDER_OFF); sub[i]=*(holder+SUBB+SUB_STRIDE*i)
 #   모든 서버시스템은 vft(RTTI)로 식별. 인덱스 금지.
 # =============================================================================
-MGR=0x16EB6F0
+MGR=0x1708750
 GUARD_OFF=0xD8
 GUARD_VAL=1
 HOLDER_OFF=0xD0
@@ -79,56 +107,56 @@ SUBCOUNT=64
 # =============================================================================
 # [SEC-2] 서버시스템 vft (RVA)
 # =============================================================================
-VFT_ACTORSUBS=0x11DE3E8
-VFT_MAPSUBS=0x1228960
-VFT_BEHAVIORS=0x11E2868
-VFT_NETWORK=0x11F9DF0
-VFT_INVENTORY=0x1227468
-VFT_CHARDATA=0x11E5088
-VFT_HUDSLOT=0x11E2C58
-VFT_BUFF=0x121BF48
-VFT_SPELL=0x122B9F0
-VFT_SHOP=0x122A7B0
-VFT_PLAYERSHOP=0x122A528
-VFT_EQUIPINFO=0x1226DD0
-VFT_DUNGEON=0x1226290
-VFT_STORAGE=0x122BFB8
+VFT_ACTORSUBS=0x11F5958
+VFT_MAPSUBS=0x1240480
+VFT_BEHAVIORS=0x11F9AC8
+VFT_NETWORK=0x1211308
+VFT_INVENTORY=0x123EE28
+VFT_CHARDATA=0x11FC560
+VFT_HUDSLOT=0x11F9FE0
+VFT_BUFF=0x1233728
+VFT_SPELL=0x12432D0
+VFT_SHOP=0x1242258
+VFT_PLAYERSHOP=0x1241E80
+VFT_EQUIPINFO=0x123E728
+VFT_DUNGEON=0x123DCE0
+VFT_STORAGE=0x12438F8
 # [2026-10-21] 창고 아이템 모델(오프라인 RTTI + vftable 확인)
 #   CommonItemInfo@LIN       : 저장/조회 아이템 공통 모델(shared_ptr 리소스)
 #   ItemInfo@LIN             : UI 리스트 셀 표시 모델(크기 0xF8, 소멸자에서 확인)
 #   ListSlot@ui::lineage     : 리스트 슬롯 UI
 #   SC_WAREHOUSE_ITEM_LIST_NOTI_WarehouseItemInfo : 창고 목록 통지 아이템
-VFT_COMMONITEMINFO=0x123F760
-VFT_ITEMINFO=0x1252B98
-VFT_LISTSLOT=0x1297458
-VFT_WAREHOUSEITEMINFO=0x1254A10
-VFT_MAIL=0x11E2918
-VFT_CAMERA=0x11EB290
-VFT_INPUT=0x11E2BA8
-VFT_GAMESTATE=0x11E25F8
-VFT_CHAT=0x121C470
-VFT_RESOURCE=0x11E27C8
+VFT_COMMONITEMINFO=0x1251BB0
+VFT_ITEMINFO=0x126BF38
+VFT_LISTSLOT=0x12AF420
+VFT_WAREHOUSEITEMINFO=0x126B8B8
+VFT_MAIL=0x11F9F90
+VFT_CAMERA=0x1202790
+VFT_INPUT=0x11FA0E0
+VFT_GAMESTATE=0x11F9D80
+VFT_CHAT=0x1233E38
+VFT_RESOURCE=0x11F9CB0
 # (구) VFT_WORLDENV=0x1228590 — 신빌드 RTTI 없음(키로 두지 않음)
 # (구) VFT_RENDERSPRITE=0x11F18D8 — 신빌드 RTTI 없음(키로 두지 않음)
-VFT_UISUBSYSTEM=0x11E2718
-VFT_NGUARD=0x11E2658
-VFT_ACTORCTL=0x11E0A60
-VFT_PORTALACT=0x11E8D58
+VFT_UISUBSYSTEM=0x11FA180
+VFT_NGUARD=0x11F9D30
+VFT_ACTORCTL=0x11F7F48
+VFT_PORTALACT=0x1200238
 
 # =============================================================================
 # [SEC-3] 엔티티 / 액터 계층
 #   entity e { vft@0x00, self@0x08, GUID@0x18, H@0x20 }
 #   ActorSubsystem → 셀(sentinel) → node{next,cellX,cellY,vec(begin,end)}
 # =============================================================================
-VFT_SELF=0x11E1388
-VFT_PLAYER=0x11E1350
-VFT_MONSTER=0x11E1240
-VFT_ITEM=0x11E1198
-VFT_NPC=0x11E1160
-VFT_SEGPROP=0x11E16F0
-VFT_ACTOR=0x11DD798
-VFT_SHIP=0x11E1660
-VFT_SUMMON=0x11E17E8
+VFT_SELF=0x11F8828
+VFT_PLAYER=0x11F87F0
+VFT_MONSTER=0x11F86E0
+VFT_ITEM=0x11F8638
+VFT_NPC=0x11F8600
+VFT_SEGPROP=0x11F8B90
+VFT_ACTOR=0x11F4C48
+VFT_SHIP=0x11F8B00
+VFT_SUMMON=0x11F8C90
 ENT_SELF=0x08
 ENT_GUID=0x18
 ENT_H=0x20
@@ -148,27 +176,27 @@ CELL_VEC_BEG=0x18
 CELL_VEC_END=0x20
 # H 컴포넌트 테이블
 # [UPD 2026-10-07] VFT_PRES_A = _Ref_count_obj2<TransformComponent> (H+0x08, live-verified)
-VFT_PRES_A=0x11DD728
-VFT_PRES_B=0x11E1098
-VFT_AC=0x11E07C8
-VFT_ATTACKACT=0x11E0508
-VFT_DEATH=0x11E0310
-VFT_DEADBODY=0x11E03E8
-VFT_DAMAGEDACTION=0x11E0358
-VFT_DAMAGEDREACTION=0x11E0598
-VFT_EFFECTACTION=0x11E03A0
-VFT_BREATHACT=0x11E0550
+VFT_PRES_A=0x11F4BD8
+VFT_PRES_B=0x11F8538
+VFT_AC=0x11F7C70
+VFT_ATTACKACT=0x11F79B0
+VFT_DEATH=0x11F7800
+VFT_DEADBODY=0x11F7890
+VFT_DAMAGEDACTION=0x11F7968
+VFT_DAMAGEDREACTION=0x11F7A40
+VFT_EFFECTACTION=0x11F7848
+VFT_BREATHACT=0x11F79F8
 # [10_15] body action / command (AC+0xC0, ActorController+0x58) LIVE-VERIFIED Manmabot body_pose
-VFT_MOVINGACT=0x11E0680
-VFT_MOVINGBACK=0x11E0638
-VFT_ACTIONBASE=0x11E05E0
-VFT_SPELLACT=0x11E02C8
-VFT_CHANGEDIR=0x11E04C0
-VFT_CMDMOVE=0x11E0910
-VFT_CMDATTACK=0x11E0A90
-VFT_CMDINTERACT=0x11E0948
-VFT_ACTORATTR=0x11E08E0
-VFT_COOLDOWN=0x11E0CE0
+VFT_MOVINGACT=0x11F7B28
+VFT_MOVINGBACK=0x11F7AE0
+VFT_ACTIONBASE=0x11F7A88
+VFT_SPELLACT=0x11F77B8
+VFT_CHANGEDIR=0x11F7698
+VFT_CMDMOVE=0x11F7DB8
+VFT_CMDATTACK=0x11F7F78
+VFT_CMDINTERACT=0x11F7DF0
+VFT_ACTORATTR=0x11F7D88
+VFT_COOLDOWN=0x11F8188
 ACT_IDX=2
 COMP_TABLE=0x20
 # AttackAction 필드
@@ -248,8 +276,8 @@ ENT_COMBAT_HOLD_MS=1500
 #       value = u8 - (k*K_MUL ^ K_XOR)     (mod 2^32, int32)
 #   plain 필드(난독화 아님): WEIGHT_CUR / WEIGHT_MAX
 # =============================================================================
-CD_VFT=0x11E5088
-VFT_STATUS=0x11E50F8
+CD_VFT=0x11FC560
+VFT_STATUS=0x11FC540
 CD_OFF=0x498
 K_MUL=0x7F4A7C15
 K_XOR=0x2F8B1064
@@ -273,7 +301,7 @@ STAT_LAWFUL=0x32C
 STAT_AC=0x368
 # CharacterInfo (vft 아래, wrapper+CI_BASE)
 # [UPD 2026-10-07] CI_VFT = _Ref_count_obj2<CharacterInfo> (CI_BASE=+0x10)
-CI_VFT=0x11E4FC0
+CI_VFT=0x11FC480
 CI_BASE=0x10
 CI_HP=0x5C
 CI_MAXHP=0x68
@@ -297,17 +325,17 @@ CI_INT=0xC8
 #     · 체인 '정본 위치' 정적 유도에 미러를 단독 사용하는 것만 금지(미러는 종점 대조용).
 #     · charread 출력값은 체인 실패 시 미러로 폴백한다(추가 IOCTL 0; 이미 매 표본 읽음).
 # -----------------------------------------------------------------------------
-VFT_HUDCHARINFO=0x127E3A8
-VFT_LOADINGBAR=0x12AB908
-VFT_HUDZONELAYOUT=0x12829E8
+VFT_HUDCHARINFO=0x1296628
+VFT_LOADINGBAR=0x12C3AA8
+VFT_HUDZONELAYOUT=0x129A9B0
 EXP_CD_0=0x1B0
 EXP_CD_1=0x28
 EXP_CD_2=0x110
 EXP_HUD_BAR=0xE8
 EXP_BAR_PCT=0x704
-ExperiencePct64=0x1641B00
+ExperiencePct64=0x16604C8
 # static player block (모듈 상대)
-ST_BLOCK=0x16EA0F0
+ST_BLOCK=0x1708600
 ST_X=0x0
 ST_Y=0x4
 ST_HEADING=0x8
@@ -322,10 +350,10 @@ CELL_MAP_OFF=0x7A0
 # =============================================================================
 # [SEC-5] 실시간 화면좌표 보간 (world cell → screen px)
 # =============================================================================
-PLAYER_X=0x16EB5A0
-PLAYER_Y=0x16EB5A4
+PLAYER_X=0x1708600
+PLAYER_Y=0x1708604
 # [UPD 2026-10-07] CAM_GLOB = module slot -> CameraSubsystem (live scan)
-CAM_GLOB=0x1886820
+CAM_GLOB=0x18B5E30
 PPS=0.53
 VP_DX=1.8
 VP_DY=63.0
@@ -342,9 +370,9 @@ ISO_V_SCALE=24.0
 # =============================================================================
 # [SEC-6] 버프 읽기 (HudSlotDataSubsystem → cont → 고정체인 → record)
 # =============================================================================
-HUD_VFT=0x11E2C58
+HUD_VFT=0x11F9FE0
 HUD_CONT_OFF=0x20
-RECORD_VFT_RVA=0x121BD98
+RECORD_VFT_RVA=0x1233690
 # [STALE 2026-10-15] 사용 금지 — 절대주소 하드코딩. ASLR 재시작 시 반드시 깨진다.
 #   RVA 로는 RECORD_VFT_RVA=0x121B590 을 사용하라 (g_base + RECORD_VFT_RVA).
 #   src/ 에 이 키를 참조하는 코드는 없다(2026-10-15 확인). 삭제하지 않고 금지 표지만 남긴다.
@@ -380,11 +408,11 @@ CONT_SCAN_BYTES=0x400
 # =============================================================================
 # [SEC-7] 인벤토리
 # =============================================================================
-INV_VFT=0x1227468
+INV_VFT=0x123EE28
 INV_VEC_BEG=0x3D8
 INV_VEC_END=0x3E0
 INV_VEC_CAP=0x3E8
-ITEM_VFT=0x1226E20
+ITEM_VFT=0x123E848
 ITEM_ID=0x18
 ITEM_TEMPLATE=0x20
 ITEM_CFG=0x30
@@ -393,7 +421,7 @@ ITEM_ENCHANT=0x3C
 ITEM_KIND=0x44
 ITEM_FMT=0x68
 # [UPD 2026-10-07] WITEM_VFT = WorldItem
-WITEM_VFT=0x12473F8
+WITEM_VFT=0x1260B40
 WITEM_TYPE=0x18
 WITEM_QTY=0x38
 
@@ -430,7 +458,7 @@ SLOT_EMPTY=0xFFFFFFFF
 # [SEC-9] 상점 리스트
 # =============================================================================
 # [LEGACY 2026-10-07] SHOP_VFT2 unidentifiable (no 2nd vft in ShopSubsystem object, class unknown, unused by code); kept for reference.
-SHOP_VFT2=0x11E8F98
+SHOP_VFT2=0x1200478
 SHOP_STATE=0x28
 SHOP_BUY_BEGIN=0x40
 SHOP_BUY_END=0x48
@@ -439,10 +467,10 @@ BUY_STRIDE=0x90
 SHOP_SELL_BEGIN=0x58
 SHOP_SELL_END=0x60
 SELL_STRIDE=0x20
-SELLLISTITEM_VFT=0x123FDE0
+SELLLISTITEM_VFT=0x1257988
 SLI_ID=0x18
 SLI_UNIT=0x1C
-BUYLISTITEM_VFT=0x123FD78
+BUYLISTITEM_VFT=0x1257920
 BLI_KEY=0x30
 BLI_KEY_BACK=0x2
 BLI_ORDER=0x38
@@ -513,37 +541,37 @@ UIDLG_WIN_AgitAuction=AgitAuctionLayout
 # ── (참고) 창별 고정체인은 컨테이너 walk(UIDLG_CONT/UIDLG_CONT_VAL)로 대체됨. ──
 #   도출/검증: probes/uidlgchain_930 · uistruct_1016 (컨테이너 walk + BFS 대조).
 # ── 런타임 레이아웃 vft (2026-10-16 uistruct_1016 실측, 참고) ──
-UILAY_NPCDialogLayoutPCImpl=0x12953C8
-UILAY_NPCShopLayoutPCImpl=0x12A0370
-UILAY_BMStorageLayoutPCImpl=0x12A3590
-UILAY_InventoryLayoutPCImpl=0x128EDF8
-UILAY_TeleportBookLayout=0x12A4430
-UILAY_ExchangeLayoutPCImpl=0x12861B0
-UILAY_AmountSelectorLayout=0x12A2FD8
-UILAY_BoardListLayout=0x127E960
-UILAY_BoardDetailLayout=0x127E5D0
-UILAY_BoardWriteLayout=0x127EA18
-UILAY_CharacterInfoLayoutPCImpl=0x1280320
-UILAY_SpellLayoutPCImpl=0x12A2C50
-UILAY_PartyLayout=0x1298CF0
-UILAY_CommunityLayoutPCImpl=0x1282B18
-UILAY_FriendBlockLayoutPCImpl=0x1283290
-UILAY_BehaviorLayoutPCImpl=0x127E468
-UILAY_ATSLayoutPCImpl=0x127D188
-UILAY_RankingLayout=0x129E050
-UILAY_AgitAuctionLayout=0x127D980
-UILAY_HudHpMpLayoutPCImpl=0x128A3B0
-UILAY_HudSlotLayoutPCImpl=0x128C858
-UILAY_HudChatLayoutPCImpl=0x1289900
-UILAY_HudCharacterInfoLayoutPCImpl=0x1288A78
-UILAY_HudPartyInfoLayoutPCImpl=0x1281380
-UILAY_HudMenuLayoutPCImpl=0x128A950
-UILAY_HudBuffLayout=0x1288320
-UILAY_HudZoneLayoutPCImpl=0x128CEB0
-UILAY_HudQuickSpellSlotLayout=0x128BD90
-UILAY_HudMessageLayout=0x128AC20
+UILAY_NPCDialogLayoutPCImpl=0x12A2F80
+UILAY_NPCShopLayoutPCImpl=0x12ADFE0
+UILAY_BMStorageLayoutPCImpl=0x12B1270
+UILAY_InventoryLayoutPCImpl=0x129C698
+UILAY_TeleportBookLayout=0x12B2148
+UILAY_ExchangeLayoutPCImpl=0x1293C50
+UILAY_AmountSelectorLayout=0x12B0BA8
+UILAY_BoardListLayout=0x128C420
+UILAY_BoardDetailLayout=0x128C0F8
+UILAY_BoardWriteLayout=0x128C518
+UILAY_CharacterInfoLayoutPCImpl=0x128DDC0
+UILAY_SpellLayoutPCImpl=0x12B0900
+UILAY_PartyLayout=0x12A68A0
+UILAY_CommunityLayoutPCImpl=0x1290658
+UILAY_FriendBlockLayoutPCImpl=0x1290D38
+UILAY_BehaviorLayoutPCImpl=0x128BEB8
+UILAY_ATSLayoutPCImpl=0x128AC40
+UILAY_RankingLayout=0x12AB848
+UILAY_AgitAuctionLayout=0x128B440
+UILAY_HudHpMpLayoutPCImpl=0x1297D68
+UILAY_HudSlotLayoutPCImpl=0x129A428
+UILAY_HudChatLayoutPCImpl=0x12972A8
+UILAY_HudCharacterInfoLayoutPCImpl=0x1296628
+UILAY_HudPartyInfoLayoutPCImpl=0x12993F0
+UILAY_HudMenuLayoutPCImpl=0x12984F0
+UILAY_HudBuffLayout=0x1295E38
+UILAY_HudZoneLayoutPCImpl=0x129A9B0
+UILAY_HudQuickSpellSlotLayout=0x12998C8
+UILAY_HudMessageLayout=0x1298750
 # [2026-10-17] 창고 창(StorageLayout) 실측 — 런타임 상주/열림 시 검출
-UILAY_NPCStorageLayoutPCImpl=0x12A3B78
+UILAY_NPCStorageLayoutPCImpl=0x12B1828
 # ── HUD 파티 정보창 (2026-10-30 실측, uiparty) ──────────────────────────
 #   HudPartyInfoLayoutPCImpl = vft 0x1294C80 (registry 구값 0x128BAF8 은 stale)
 #   창 사각형  : LayoutBase +0x60/+0x64 (float x,y) · Node(+0x30) +0x6C/+0x70 (float w,h)
@@ -558,7 +586,7 @@ PARTY_HUD_SLOT_OFF=0xC0
 PARTY_HUD_SLOT_STRIDE=0x10
 PARTY_HUD_SLOT_OBJ=0x08
 PARTY_HUD_SLOT_COUNT=8
-PARTY_HUD_SLOT_VFT=0x1280F80
+PARTY_HUD_SLOT_VFT=0x1298F40
 PARTY_HUD_SLOT_LABEL_OFF=0xC0
 #   슬롯 실측(2026-10-30, 파티 3명): guid @+0x10, HP% @+0x1C, MP% @+0x20 (float)
 #   비활성 슬롯 = guid 0xFFFFFFFF (hp/mp 0)
@@ -709,7 +737,7 @@ STORAGE_MAX_ITEM=4096
 #   ⚠ 2026-10-21: 개인 창고만 연 상태에서 BM+0x28/+0x38 은 콜백(RedDot/ListNode) 객체를
 #     가리켜 **ctx 오프셋 미확정**. 혈맹창고 창을 연 상태에서 storectx/dumplayout 으로 재확정할 것.
 #     (개인 창고 확정값 0x28=맡기기, 0x38=찾기 를 그대로 복사하지 말 것)
-VFT_BMSTORAGE=0x122BC88
+VFT_BMSTORAGE=0x1243610
 BMSTORAGE_CTX_DEPOSIT=0x28
 BMSTORAGE_CTX_LIST=0x38
 # ── 창고 모듈: 슬롯/이벤트 동작 ──
@@ -759,7 +787,7 @@ CHAT_HIST_MASK_OFF=0x10
 CHAT_HIST_HEAD_OFF=0x18
 CHAT_HIST_COUNT_OFF=0x20
 CHAT_HIST_CAP=300
-CHATDATA_VFT=0x121C5F8
+CHATDATA_VFT=0x1233EB0
 CHATDATA_MSG_OFF=0x18
 CHATDATA_FULL_OFF=0x38
 CHATDATA_SENDER_OFF=0x58
@@ -799,7 +827,7 @@ CHATSOCK_NEEDLE=ABCDEF123
 # 레코드 헤더 덤프 바이트 수(진단용)
 CHATSOCK_HDR=0x40
 # ── 명명 창 (구규격 RTTI 확정 vft, 참고; 값은 구빌드 기준) ──
-WINDOW_NPCDialog=0x126A2F8
+WINDOW_NPCDialog=0x1282450
 WINDOW_NPCShop=0x1274830
 WINDOW_Inventory=0x1263A70
 WINDOW_NPCStorage=0x12780C8
@@ -818,18 +846,18 @@ SCALE=0.625
 # =============================================================================
 # [SEC-11] 지도 / 던전
 # =============================================================================
-DUNGEONSUBS_VFT=0x1226290
+DUNGEONSUBS_VFT=0x123DCE0
 # [UPD 2026-10-07] MAP_BG_VFT = MapBackgroundNode
-MAP_BG_VFT=0x11ECD30
+MAP_BG_VFT=0x12040F0
 # [UPD 2026-10-07] TRANSPTILE_VFT = TranspTile
-TRANSPTILE_VFT=0x12113E8
+TRANSPTILE_VFT=0x1228CB8
 # [UPD 2026-10-07] BITMAPTILE_VFT = BitmapTile
-BITMAPTILE_VFT=0x12113D0
+BITMAPTILE_VFT=0x1228CA0
 # [UPD 2026-10-07] TMXTILEDMAP_VFT = TMXTiledMap
-TMXTILEDMAP_VFT=0x12B85B8
-TMXLAYER_VFT=0x12C8E28
-MAP_PLAYER_X=0x16C6C40
-MAP_PLAYER_Y=0x16C6C44
+TMXTILEDMAP_VFT=0x12D0738
+TMXLAYER_VFT=0x12E0FE8
+MAP_PLAYER_X=0x16E3CA0
+MAP_PLAYER_Y=0x16E3CA4
 MAPDATA_DIR=T3_maps/dec
 MAP_REGION_JSON=data_region.jsonc.lcf.bin
 MAP_BG_JSON=data_map_background.jsonc.lcf
@@ -922,7 +950,7 @@ INVENTORY_OFFSETS=10_4_test/registry/inventory_offsets.txt
 #   rec    = *(anchor + idx*MSG_BUCKET_STRIDE)
 #   while recMid(rec)!=mid : rec = *(rec+MSG_REC_NEXT)
 #   name   = readSSO( *(*(rec+MSG_REC_NAME)+MSG_NAME_KR) + MSG_NODE_TEXT )
-MSG_ANCHOR_RVA=0x16EB718
+MSG_ANCHOR_RVA=0x1708778
 MSG_BUCKET_STRIDE=0x10
 MSG_BUCKET_MASK=0xFFFF
 MSG_FNV_OFFSET=0xCBF29CE484222325
@@ -1070,9 +1098,9 @@ SHOP_MID_FALLBACK=1
 #           원소 = shared_ptr{_Ptr@+0, _Rep@+8}; *(_Rep) vft == base+PARTY_VFT_RC_PLAYER
 #   (2026-10-09 라이브: 리더 tarak, 멤버2; tarak pos 32559,32971 로 검증)
 # =============================================================================
-PARTY_VFT_SUBS=0x12293B8
-PARTY_VFT_RC=0x1229350
-PARTY_VFT_RC_PLAYER=0x1229328
+PARTY_VFT_SUBS=0x1240D60
+PARTY_VFT_RC=0x1240CD8
+PARTY_VFT_RC_PLAYER=0x1240C70
 # 고정체인 (PartySubsystem → Party). 실패 시 서명 BFS 폴백.
 PARTY_REF_OFF=0x4A0
 PARTY_HOP1_OFF=0x00
@@ -1121,7 +1149,7 @@ PARTY_RESCAN_MS=5000
 ENT_LEVEL_OFF=0x120
 # 실시간 파티 출력주기(ms) — realtime_party 전용
 REALTIME_PARTY_PERIOD_MS=1000
-# realtime_party: 액터 조인(레벨/사망/공격대상) 여부. 1=조인(드라이버 콜 증가), 0=미조인
+# realtime_party: 액터 조인(레벨/사망/대상) 여부. 1=조인(드라이버 콜 증가), 0=미조인(저호출<10)
 PARTY_JOIN_ACTOR=1
 # 파티 출력에 맵ID/지역명/부분지역명 포함 여부. 1=포함(기본), 0=생략
 PARTY_SHOW_MAP=1
@@ -1134,8 +1162,8 @@ PARTY_SHOW_MAP=1
 # =============================================================================
 
 # --- ATSSubsystem ---
-ATS_VFT_PRIMARY=0x121A3B8
-ATS_VFT_SECONDARY=0x121A3B8
+ATS_VFT_PRIMARY=0x1231E60
+ATS_VFT_SECONDARY=0x1231E60
 ATS_COL_PRIMARY=0x1334AE0
 ATS_COL_SECONDARY=0x1334B08
 ATS_CD=0x1313F18
@@ -1150,22 +1178,22 @@ ATS_MEMBER_620=0x620
 ATS_MEMBER_628=0x628
 
 # --- bt 노드 vtable (slot3 = Execute) ---
-BT_NODE_VFT=0x121A5D0
-BT_COMPOSITE_VFT=0x121A718
-BT_SELECTOR_VFT=0x121A748
-BT_SEQUENCE_VFT=0x121A778
-BT_PARALLEL_VFT=0x121A7A8
-BT_CUSTOM_VFT=0x121AA00
-BT_FINDTARGET_VFT=0x121A9D0
-BT_MOVETOTARGET_VFT=0x121AA30
-BT_INTERACT_VFT=0x121AA60
-BT_ROAM_VFT=0x121AA90
-BT_USEBUFF_VFT=0x121AAF0
-BT_USEBUFFSPELL_VFT=0x121AB20
-BT_RETURNTOTOWN_VFT=0x121AB80
-BT_WAIT_VFT=0x121AB50
-BT_HANDLEUSERINPUT_VFT=0x121AAC0
-BT_WAITUNTIL_VFT=0x11E00E8
+BT_NODE_VFT=0x1231FD8
+BT_COMPOSITE_VFT=0x1232098
+BT_SELECTOR_VFT=0x1232038
+BT_SEQUENCE_VFT=0x1232068
+BT_PARALLEL_VFT=0x1232008
+BT_CUSTOM_VFT=0x1232440
+BT_FINDTARGET_VFT=0x1232470
+BT_MOVETOTARGET_VFT=0x1232380
+BT_INTERACT_VFT=0x12323B0
+BT_ROAM_VFT=0x12323E0
+BT_USEBUFF_VFT=0x12322C0
+BT_USEBUFFSPELL_VFT=0x12322F0
+BT_RETURNTOTOWN_VFT=0x1232350
+BT_WAIT_VFT=0x1232320
+BT_HANDLEUSERINPUT_VFT=0x1232410
+BT_WAITUNTIL_VFT=0x11F7590
 # Execute 함수
 BT_FINDTARGET_EXEC=0x44AC70
 BT_MOVETOTARGET_EXEC=0x44C460
@@ -1344,7 +1372,7 @@ LCDT_INFO_SUFFIX=LC_CONTENT_V1
 # --- RTTI / vtable ---
 WMS_TD_STR=0x1764050
 WMS_COL=0x1303170
-WMS_VFT=0x11EC0C8
+WMS_VFT=0x12030E0
 WMS_VFT_SLOTS=155
 WMS_OBJSIZE=0x4E0
 WMS_DRAW_VSLOT=94
@@ -1358,7 +1386,7 @@ MHM_DEL_PORTAL_TD=0x172BFD0
 MHM_DEL_UITYPE_TD=0x172C040
 MHM_DEL_VOID_TD=0x172C100
 MHM_DEL_RECTSET_TD=0x172C2E0
-MHM_DEL_INTSET_TD=0x172C540
+MHM_DEL_INTSET_TD=0x1749C00
 
 # --- WorldMapScene 필드 ---
 WMS_OFF_340_LIST=0x340
@@ -1417,10 +1445,10 @@ WMS_PACK_X_SHIFT=16
 #   RTTI -> vtable -> 힙인스턴스 -> 델리게이트 클로저 -> 라이브 디스어셈블
 # =============================================================================
 # --- vtable / COL ---
-HZL_VFT=0x1282640
+HZL_VFT=0x129A5E0
 HZL_COL=0x13C0E80
-HZL_MOBILE_VFT=0x12828C0
-HZL_PC_VFT=0x12829E8
+HZL_MOBILE_VFT=0x129A860
+HZL_PC_VFT=0x129A9B0
 HZL_PC_COL=0x13C14B0
 # 실제 로드된 힙 인스턴스 (PC 버전)
 HZL_PC_INSTANCE=0x192718FE830
@@ -1468,7 +1496,7 @@ HZL_FNV64_PRIME=0x100000001B3
 # =============================================================================
 # [10/19 추가] 신규 키 (창고/상점/교환/창 확인 통보문/창문 읽기)
 # =============================================================================
-VFT_EXCHANGE=0x1226790
+VFT_EXCHANGE=0x123E120
 PLAYERSHOP_GATE=0x688
 PLAYERSHOP_SCAN_LEN=0x1000
 PLAYERSHOP_WIN_MATCH=Shop
@@ -1501,9 +1529,9 @@ UICONFIRM_IDLE_MS=250
 UICONFIRM_MSG_MS=500
 # 전체 창 열림상태 스캔 주기(ms) — confirm 과 무관한 비용 절감
 UIDLG_STATE_MS=1000
-UILAY_PlayerShopLayoutPCImpl=0x12A0A10
-UILAY_CommonMessagePopup=0x1281DA0
-UILAY_CommonBigMessagePopup=0x1281BF8
+UILAY_PlayerShopLayoutPCImpl=0x12AE5B8
+UILAY_CommonMessagePopup=0x128F848
+UILAY_CommonBigMessagePopup=0x128F5F8
 # [2026-10-21 실측] 찾기(RET) = std::map<int, ItemInfo@LIN>
 #   ctx(StorageRetrieveInfo): +0x8 total/max, +0x18 head 노드, +0x20 size(29)
 #   head->left = leftmost, node: _Isnil@0x19 key@0x20 value(ItemInfo)@0x28
@@ -1524,7 +1552,7 @@ RET_NAME_PTR=0x58
 # 컨트롤 블록 클래스 = _Ref_count_obj2<StorageRetrieveInfo> (ctx-0x10)
 STORE_RET_CLASS=lineage::StorageRetrieveInfo
 # [LEGACY 2026-10-21, 미사용] STORE_RET_CTRL_VFT=0x13405C8 — 신빌드 RTTI 없음
-STORE_RET_CTRL_TD=0x17B5D20
+STORE_RET_CTRL_TD=0x17D39D0
 # ── 창문(ListSlot) 표시 문자열 직접 읽기 (2026-10-19 확정) ──
 #   창 = UISubsystem 컨테이너 walk 로 클래스명 WINSLOT_WINCLS 탐색
 #   slot = 창+WINSLOT_VEC 벡터(stride WINSLOT_STRIDE) 원소
@@ -1582,3 +1610,28 @@ DOOR_GFX_OFF=0x38
 DOOR_GFX_NORMAL=0x800A
 DOOR_GFX_LOCKED=0xFFFFFFFF
 DOOR_AC_FLAG_OFF=0x110
+
+# =============================================================================
+# [SEC-20] UIMessage (block notification) - CommonMessageSubsystem  [NEW 2026-11-09]
+#   anchor : MGR -> holder(+HOLDER_OFF) -> subs(+SUBB) -> subs[CMS_SUB_INDEX]
+#   message: CommonMessageSubsystem + CMS_MSG_OFF = std::string (UTF-8)
+#            ptr@CMS_STR_PTR_OFF, len@CMS_STR_LEN_OFF, cap@CMS_STR_CAP_OFF
+#   popup  : CommonMessagePopup (single ok) / CommonBigMessagePopup
+#            text@CMS_POPUP_TEXT_OFF, visible@VIS_FLAG (byte & VIS_MASK == VIS_OPEN)
+# =============================================================================
+CMS_VFT=0x11FA130
+CMS_SUB_INDEX=6
+CMS_MSG_OFF=0x28
+CMS_FLAG1_OFF=0x18
+CMS_FLAG2_OFF=0xC8
+CMS_STR_PTR_OFF=0x00
+CMS_STR_LEN_OFF=0x10
+CMS_STR_CAP_OFF=0x18
+CMS_PAGE_SIZE=0x1000
+UIMSG_POLL_MS=250
+CMS_POPUP_VFT=0x128F848
+CMS_POPUP_BIG_VFT=0x128F5F8
+CMS_POPUP_TEXT_OFF=0xD0
+# driver IOCTL (client also defines these in signeddrv_ioctl.h)
+SD_IOCTL_IMAGE_BASE=0x222048
+SD_IOCTL_READ=0x222060

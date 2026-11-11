@@ -19,9 +19,9 @@ static uint32_t P_SSO, P_MAXMEM, P_BFSMAX, P_RESCAN, P_ENTLVL;
 static uint32_t M_MAPID, M_F54, M_F60;
 
 static void load_cfg(void){
-    P_VFT_SUBS=lcreg_u32("PARTY_VFT_SUBS",0x12293B8u);
-    P_VFT_RC  =lcreg_u32("PARTY_VFT_RC",0x1229350u);
-    P_VFT_RCP =lcreg_u32("PARTY_VFT_RC_PLAYER",0x1229328u);
+    P_VFT_SUBS=lcreg_u32("PARTY_VFT_SUBS",0x1240D60u);
+    P_VFT_RC  =lcreg_u32("PARTY_VFT_RC",0x1240CD8u);
+    P_VFT_RCP =lcreg_u32("PARTY_VFT_RC_PLAYER",0x1240C70u);
     P_REF     =lcreg_u32("PARTY_REF_OFF",0x4A0);
     P_HOP1    =lcreg_u32("PARTY_HOP1_OFF",0x00);
     P_HOP2    =lcreg_u32("PARTY_HOP2_OFF",0x28);

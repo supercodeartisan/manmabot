@@ -49,6 +49,11 @@ BOOL SignedGetPeb(uint64_t pid, uint64_t* peb);
 // Get the module base address for a virtual address via the driver.
 BOOL SignedGetModuleBase(uint64_t pid, uint64_t address, uint64_t* moduleBase);
 
+// Get the process image base via the driver (IOCTL 0x222048, 1 IOCTL).
+BOOL SignedGetImageBase(uint64_t pid, uint64_t* base);
+// Same, with an explicit IOCTL value (registry-driven).
+BOOL SignedGetImageBaseEx(uint64_t pid, uint32_t ioctl, uint64_t* base);
+
 // Cache the target PID for later reads.
 void SignedSetTarget(uint64_t pid);
 uint64_t SignedGetTarget(void);

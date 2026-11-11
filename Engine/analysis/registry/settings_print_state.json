@@ -5,20 +5,17 @@
   "output_file": "state.json",
   "output_rotate_ms": 60000,
   "once": 0,
-
-  "player_x_offset": "0x16EB5A0",
-  "player_y_offset": "0x16EB5A4",
-  "player_hp_offset": "0x16EA0FC",
-  "player_maxhp_offset": "0x16EA100",
-  "player_mp_offset": "0x16EA104",
-  "player_maxmp_offset": "0x16EA108",
-  "player_level_offset": "0x16EA10C",
-  "ent_mgr_offset": "0x16EB6F0",
-  "grid_vft": "0x11DE3E8",
-
-  "vft_pres_a": "0x11DD728",
-  "vft_pres_b": "0x11E1098",
-
+  "player_x_offset": "0x1708600",
+  "player_y_offset": "0x1708604",
+  "player_hp_offset": "0x170860C",
+  "player_maxhp_offset": "0x1708610",
+  "player_mp_offset": "0x1708614",
+  "player_maxmp_offset": "0x1708618",
+  "player_level_offset": "0x170861C",
+  "ent_mgr_offset": "0x1708750",
+  "grid_vft": "0x11F5958",
+  "vft_pres_a": "0x11F4BD8",
+  "vft_pres_b": "0x11F8538",
   "off_live_u": "0x78",
   "off_live_v": "0x7C",
   "off_a_u": "0x50",
@@ -34,7 +31,6 @@
   "off_name_obj": "0x20",
   "off_name_bytes": "0x40",
   "off_name_len": "0x50",
-
   "range": 0,
   "pps": 0.53,
   "ref_w": 800,
@@ -47,15 +43,14 @@
   "feet_dy": 0,
   "client_w": 0,
   "client_h": 0,
-
   "classes": {
-    "0x11E1240": "Monster",
-    "0x11E1160": "InteractiveNPC",
-    "0x11E1198": "Item",
-    "0x11E1388": "MyPlayer",
-    "0x11E16F0": "SegmentProp",
-    "0x11E1660": "Ship",
-    "0x11E17E8": "SummonedMonster",
-    "0x11E1350": "Player"
+    "0x11F86E0": "Monster",
+    "0x11F8600": "InteractiveNPC",
+    "0x11F8638": "Item",
+    "0x11F8828": "MyPlayer",
+    "0x11F8B90": "SegmentProp",
+    "0x11F8B00": "Ship",
+    "0x11F8C90": "SummonedMonster",
+    "0x11F87F0": "Player"
   }
 }

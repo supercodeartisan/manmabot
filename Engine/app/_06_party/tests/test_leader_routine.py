@@ -460,9 +460,22 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         edge = LeaderStartRally(Rally(), log=lambda _message: None)
         edge.begin({"poorboy"}, travel=False, pose=None)
         _run(33199, 33435, edge)
-        assert edge.state == "done"
+        assert edge.state == "waiting"
         assert walked == []
+        assert farmed == []
+        assert decision.blackboard.scratch.get("party_rally_wait") is True
+        edge.update(
+            1,
+            {
+                "members": [
+                    {"name": "poorboy", "map_id": 4, "x": 33198, "y": 33435}
+                ]
+            },
+        )
+        assert edge.state == "done"
+        _run(33199, 33435, edge)
         assert farmed == [1]
+        assert decision.blackboard.scratch.get("party_rally_wait") is False
     finally:
         nav_session.live_pose_from_state = real_pose
 
