@@ -359,10 +359,8 @@ class HuntTab(QWidget):
         body.addLayout(cols, stretch=1)
         left = QVBoxLayout()
         mid = QVBoxLayout()
-        right = QVBoxLayout()
         cols.addLayout(left, 1)
         cols.addLayout(mid, 1)
-        cols.addLayout(right, 1)
 
         assist = card(host, self.t.get("combat_assist", "Assist"))
         left.addWidget(assist)
@@ -469,10 +467,9 @@ class HuntTab(QWidget):
             "area_player_count", 3, 1, 20, self.t.get("area_players_suffix", ""),
             on_change=self._refresh_attack_summary,
         )
-        mid.addStretch(1)
 
         summary = card(host, self.t.get("settings_summary", "Summary"))
-        right.addWidget(summary)
+        mid.addWidget(summary, stretch=1)
         sum_l = summary.layout()
         assert isinstance(sum_l, QVBoxLayout)
         self.attack_summary = QTextEdit()

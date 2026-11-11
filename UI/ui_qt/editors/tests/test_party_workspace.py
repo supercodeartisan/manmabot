@@ -34,6 +34,8 @@ from ui_qt.editors.move_tab import MoveTab
 from ui_qt.editors.party_routine_panel import PartyRoutinePanel
 from ui_qt.editors.party_tab import PartyTab
 from ui_qt.editors.party_workspace import PartyWorkspace
+from ui_qt.editors.task_editor import TaskEditor
+from ui_qt.shell.schedule_shell import ScheduleShell
 from ui_qt.viewmodels.settings_bag import SettingsBag
 
 
@@ -719,6 +721,233 @@ def test_roster_name_role_and_loot_edit_in_place() -> None:
     assert saved[0]["enabled"] == "0"
     assert reopened.roster_table.item(0, 3).text() == "상점"
     assert reopened.roster_table.columnCount() == 7
+
+
+_RUNNING = "실행 중에는 역할을 바꿀 수 없습니다."
+
+
+def _reason_workspace(role: str) -> tuple[PartyWorkspace, dict[str, str]]:
+    state = {"reason": ""}
+    workspace = _workspace(role)
+    workspace._lock_reason = lambda: state["reason"]
+    return workspace, state
+
+
+def _party_snapshot(tab: PartyTab) -> dict:
+    party = tab.bag.section("party")
+    return {
+        "role": party.get("role"),
+        "enabled": party.get("enabled"),
+        "roster": copy.deepcopy(party.get("roster")),
+        "routine": copy.deepcopy(party.get("routine")),
+        "ws_port": party.get("ws_port"),
+        "farm_mode": party.get("farm_mode"),
+        "random_loot": party.get("random_loot"),
+    }
+
+
+def test_stopped_reentry_shows_the_picker_for_a_saved_leader() -> None:
+    workspace, _state = _reason_workspace("leader")
+    workspace._show_role("leader")
+    workspace._locked = True
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    assert workspace._locked is False
+    assert workspace.role_ready() is False
+    assert workspace.saved_role() == "leader"
+    assert workspace._picker.leader_card._saved.isHidden() is False
+    assert workspace.tab._party_on() is False
+
+
+def test_stopped_reentry_shows_the_picker_for_a_saved_member() -> None:
+    workspace, _state = _reason_workspace("member")
+    workspace._show_role("member")
+    workspace._locked = True
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    assert workspace.role_ready() is False
+    assert workspace.saved_role() == "member"
+    assert workspace._picker.member_card._saved.isHidden() is False
+    assert workspace.tab._party_on() is False
+
+
+def test_leader_cycle_returns_to_the_picker_without_dropping_settings() -> None:
+    workspace, state = _reason_workspace("leader")
+    tab = workspace.tab
+    roster = [
+        {"name": "알파", "role": "mage", "loot": "none", "enabled": "1", "required": "1"},
+    ]
+    routine = [{"id": "row1", "map_id": "map-a", "kind": "battle", "duration_minutes": 60}]
+    tab.bag.set("party", "roster", copy.deepcopy(roster))
+    tab.bag.set("party", "routine", copy.deepcopy(routine))
+    tab.bag.set("party", "ws_port", 9001)
+    tab.bag.set("party", "farm_mode", "party")
+    tab.bag.set("party", "random_loot", True)
+    workspace._on_role_chosen("leader")
+    assert workspace.role_ready() is True
+    state["reason"] = _RUNNING
+    workspace.set_locked(True, state["reason"])
+    state["reason"] = ""
+    workspace.set_locked(False, "")
+    tab.set_master_enabled(False)
+    kept = _party_snapshot(tab)
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    assert workspace.role_ready() is False
+    assert workspace.saved_role() == "leader"
+    assert _party_snapshot(tab) == kept
+    workspace.set_locked(False, "")
+    assert workspace.current_page() == "picker"
+
+
+def test_member_cycle_returns_to_the_picker_without_dropping_settings() -> None:
+    workspace, state = _reason_workspace("member")
+    workspace._on_role_chosen("member")
+    state["reason"] = _RUNNING
+    workspace.set_locked(True, state["reason"])
+    state["reason"] = ""
+    workspace.set_locked(False, "")
+    workspace.tab.set_master_enabled(False)
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    assert workspace.role_ready() is False
+    assert workspace.saved_role() == "member"
+    assert workspace.tab._party_on() is False
+
+
+def test_solo_running_keeps_party_role_changes_locked() -> None:
+    workspace, state = _reason_workspace("leader")
+    state["reason"] = _RUNNING
+    workspace.present()
+    assert workspace.current_page() == "leader"
+    assert workspace._back.isEnabled() is False
+    assert workspace.role_ready() is False
+    workspace._on_role_chosen("member")
+    assert workspace.saved_role() == "leader"
+    assert workspace.tab._party_on() is False
+
+
+def test_running_party_survives_a_solo_view_and_return() -> None:
+    workspace, state = _reason_workspace("leader")
+    workspace._on_role_chosen("leader")
+    state["reason"] = _RUNNING
+    workspace.set_locked(True, state["reason"])
+    workspace.tab.set_master_enabled(False)
+    workspace.present()
+    assert workspace.current_page() == "leader"
+    assert workspace.role_ready() is True
+    assert workspace.saved_role() == "leader"
+    assert workspace._confirmed is True
+    workspace.show_picker()
+    assert workspace.current_page() == "leader"
+    workspace._on_role_chosen("member")
+    assert workspace.saved_role() == "leader"
+
+
+def test_stopped_picker_survives_the_following_lock_sync() -> None:
+    workspace, _state = _reason_workspace("leader")
+    workspace._show_role("leader")
+    workspace._locked = True
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    workspace.set_locked(False, "")
+    assert workspace.current_page() == "picker"
+    assert workspace.role_ready() is False
+    workspace.set_locked(True, _RUNNING)
+    assert workspace.current_page() == "leader"
+    assert workspace._back.isEnabled() is False
+
+
+def test_start_warns_until_a_role_card_enables_party() -> None:
+    workspace, _state = _reason_workspace("leader")
+    workspace.present()
+    editor = TaskEditor.__new__(TaskEditor)
+    editor.party_workspace = workspace
+    editor.t = {}
+    assert workspace.role_ready() is False
+    assert editor.party_start_block_message() == "역할을 선택한 뒤 파티봇을 시작할 수 없습니다."
+    assert workspace.tab._party_on() is False
+    workspace._on_role_chosen("leader")
+    assert workspace.role_ready() is True
+    assert workspace.current_page() == "leader"
+    assert workspace.tab._party_on() is True
+    assert editor.party_start_block_message() is None
+
+
+def test_repeated_stopped_entry_keeps_party_settings() -> None:
+    workspace, _state = _reason_workspace("leader")
+    tab = workspace.tab
+    tab.bag.set(
+        "party",
+        "roster",
+        [{"name": "알파", "role": "mage", "loot": "responsible", "enabled": "1", "required": "1"}],
+    )
+    tab.bag.set("party", "routine", [{"id": "row1", "map_id": "4", "kind": "battle"}])
+    tab.bag.set("party", "ws_port", 8770)
+    tab.set_master_enabled(False)
+    before = _party_snapshot(tab)
+    workspace._show_role("leader")
+    workspace.present()
+    workspace.present()
+    assert workspace.current_page() == "picker"
+    assert _party_snapshot(tab) == before
+
+
+def test_party_entry_reads_the_live_lock_before_opening_settings() -> None:
+    calls: list[str] = []
+
+    class _Stack:
+        def setCurrentIndex(self, index: int) -> None:
+            calls.append(f"stack:{index}")
+
+    class _Tab:
+        def reload_from_bag(self) -> None:
+            calls.append("reload")
+
+    class _Workspace:
+        def present(self) -> None:
+            calls.append("present")
+
+    editor = TaskEditor.__new__(TaskEditor)
+    editor._settings_stack = _Stack()
+    editor.party_tab = _Tab()
+    editor.party_workspace = _Workspace()
+    editor.sync_party_role_lock = lambda: calls.append("sync")
+    editor.set_settings_mode("party")
+    assert calls == ["stack:1", "sync", "reload", "present"]
+    calls.clear()
+    editor.set_settings_mode("solo")
+    assert calls == ["stack:0"]
+
+
+def test_solo_mode_button_turns_party_off_and_does_not_open_party() -> None:
+    events: list[tuple[str, object]] = []
+
+    class _Tab:
+        def set_master_enabled(self, on: bool) -> None:
+            events.append(("master", bool(on)))
+
+    class _Editor:
+        party_tab = _Tab()
+
+        def set_settings_mode(self, mode: str) -> None:
+            events.append(("mode", mode))
+
+        def sync_party_role_lock(self) -> None:
+            events.append(("sync", None))
+
+    shell = ScheduleShell.__new__(ScheduleShell)
+    shell.editor = _Editor()
+    shell._apply_schedule_pane_mode = lambda: events.append(("pane", None))
+    shell._paint_mode_buttons = lambda: events.append(("paint", None))
+    shell._on_mode_button(0)
+    assert ("master", False) in events
+    assert ("mode", "solo") in events
+    assert events.index(("sync", None)) < events.index(("mode", "solo"))
+    assert all(name != "present" for name, _value in events)
+    shell._on_mode_button(1)
+    assert ("mode", "party") in events
+    assert ("master", True) not in events
 
 
 def test_supply_tables_split_self_shop_and_party_give() -> None:

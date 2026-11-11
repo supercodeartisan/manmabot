@@ -472,10 +472,10 @@ class ScheduleShell(QMainWindow):
     def _on_mode_button(self, index: int) -> None:
         mode = "party" if int(index) == 1 else "solo"
         self._settings_mode = mode
-        self.editor.set_settings_mode(mode)
         if mode != "party":
             self._set_party_switch(False)
         self.editor.sync_party_role_lock()
+        self.editor.set_settings_mode(mode)
         self._apply_schedule_pane_mode()
         self._paint_mode_buttons()
 
@@ -520,7 +520,7 @@ class ScheduleShell(QMainWindow):
         self._party_mode_btn.setStyleSheet(off if solo_on else on)
 
     def _build_header(self) -> QWidget:
-        # Classic order: strip · … · accounts · language · topmost · debug · power · stop
+        # Header order: strip · … · accounts · language · topmost · party · power · stop
         bar = QFrame()
         bar.setObjectName("chrome")
         row = QHBoxLayout(bar)
@@ -602,11 +602,6 @@ class ScheduleShell(QMainWindow):
         row.addWidget(self.hunt_input)
         row.addWidget(self.pico_port)
         self._sync_pico_port_visible()
-
-        if not is_portable():
-            debug_btn = QPushButton(self.t.get("debug", "Debug"))
-            debug_btn.clicked.connect(self.open_debug)
-            row.addWidget(debug_btn)
 
         # Party etview — BitBlt + markers/ATK like etview.exe + party status.
         party_btn = QPushButton(self.t.get("party_monitor", "Party"))
