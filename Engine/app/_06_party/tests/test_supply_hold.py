@@ -2132,3 +2132,234 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     assert finished.runtime.supply_hold is None
     assert finished.runtime.last_reason == "hp dropped"
     assert _apply_leader_drop_recheck(finished, two, planned) is None
+
+
+def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -> None:
+    """An empty or unreadable leader row keeps the stand. Another map that still projects waits."""
+    from app._06_party.arrow_duty import (
+        STAND_WAIT_S,
+        _apply_leader_drop_recheck,
+        _beside_member,
+        _coord_on_map,
+        _leader_drop_recheck,
+        _map_nav_frame,
+        _tick_drop,
+    )
+
+    stand = {
+        "id": "hold:hp:poorboy",
+        "for": "poorboy",
+        "map_id": 0,
+        "x": 32624,
+        "y": 33148,
+        "confirmed": True,
+    }
+    duty = {"name": "poorboy", "item": "hp", "guid": "0x10", "qty": 10, "min": 1}
+
+    def _near_stand(tile: tuple[int, int]) -> bool:
+        return max(abs(int(tile[0]) - 368), abs(int(tile[1]) - 444)) <= 4
+
+    planned = plan_supply_drop(duty, stand, _near_stand)
+    assert planned is not None
+    frame = _map_nav_frame(0)
+    assert frame is not None
+    ox, oy, width, height = frame
+    unread = (int(ox) + int(width) + 50, int(oy) + int(height) + 50)
+    assert _coord_on_map(0, unread[0], unread[1]) is None
+
+    missing = {
+        "in_party": True,
+        "members": [{"name": "poorboy", "guid": "0x10", "is_leader": True, "map_id": 0}],
+    }
+    assert _leader_drop_recheck(type("S", (), {"last_party": missing})(), planned) is None
+    assert _leader_drop_recheck(type("S", (), {"last_party": _leader_party(0, 0, 0)})(), planned) is None
+    unreadable = type("S", (), {"last_party": _leader_party(0, unread[0], unread[1])})()
+    assert _leader_drop_recheck(unreadable, planned) is None
+
+    empty_drop = _Manager()
+    import app._06_party.arrow_duty as arrow_duty
+
+    real_beside = arrow_duty._beside_member
+    arrow_duty._beside_member = lambda *_args, **_kwargs: True
+    try:
+        announced = _tick_drop(
+            empty_drop, type("S", (), {"last_party": missing})(), planned
+        )
+    finally:
+        arrow_duty._beside_member = real_beside
+    assert getattr(announced, "reason", "") == "party_member:supply drop"
+    assert empty_drop.runtime.last_reason == "supply drop"
+
+    other = {
+        "in_party": True,
+        "leader": {"name": "Boss", "guid": "0x1", "is_leader": True, "map_id": 4, "x": 10, "y": 10},
+        "members": [{"name": "Mage", "guid": "0x20", "map_id": 4}],
+    }
+    member = dict(planned)
+    member["name"] = "Mage"
+    member["guid"] = "0x20"
+    assert _leader_drop_recheck(type("S", (), {"last_party": other})(), member) is None
+
+    clock = {"t": 5000.0}
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    wrong_map = type("S", (), {"last_party": _leader_party(4, 32624, 33148)})()
+    waiting = _Manager()
+    waiting._nav_blackboard.scratch["party_supply_attempt"] = {
+        "key": ("poorboy", "hp"),
+        "n": 0,
+        "since": 0.0,
+        "shifts": 0,
+    }
+    held = _tick_drop(waiting, wrong_map, planned)
+    assert getattr(held, "reason", "") == "party_member:supply drop held"
+    assert waiting.runtime.supply_hold is not None
+    attempt = waiting._nav_blackboard.scratch["party_supply_attempt"]
+    assert attempt["defer_since"] == 5000.0
+    assert attempt["since"] == 0.0
+
+    clock["t"] = 5000.0 + STAND_WAIT_S
+    attempt["since"] = 0.0
+    timed_out = _tick_drop(waiting, wrong_map, planned)
+    assert timed_out is None
+    assert waiting.runtime.supply_hold is None
+    assert waiting.runtime.last_reason == "stand timeout"
+    assert "defer_since" not in waiting._nav_blackboard.scratch["party_supply_attempt"]
+
+    matched = _Manager()
+    matched.runtime.last_reason = "supply drop"
+    matched._nav_blackboard.scratch["party_supply_attempt"] = {
+        "key": ("poorboy", "hp"),
+        "n": 0,
+        "since": clock["t"] - 30.0,
+        "shifts": 0,
+    }
+    same = type("S", (), {"last_party": _leader_party(0, 32624, 33148)})()
+    assert _apply_leader_drop_recheck(matched, same, planned) is not None
+    assert matched.runtime.last_reason == "supply drop"
+    assert matched._nav_blackboard.scratch["party_supply_attempt"]["since"] == clock["t"] - 30.0
+
+    label = _Manager()
+    label.runtime.last_reason = "supply drop held"
+    label._nav_blackboard.world_origin = type("O", (), {"x": 1, "y": 1})()
+    label._nav_blackboard.nav_goal = None
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), {"map_id": 0, "x": 1, "y": 1})(),
+    )
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.travel.start_travel",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.travel.emit_travel_hop",
+        lambda *_args, **_kwargs: False,
+    )
+    walked = _beside_member(label, same, planned)
+    assert getattr(walked, "reason", "") == "party_member:arrow drop walk"
+    assert label.runtime.last_reason == "arrow drop walk"
+
+    kept = _Manager()
+    kept.runtime.last_reason = "walk to member"
+    kept._nav_blackboard.world_origin = type("O", (), {"x": 1, "y": 1})()
+    kept._nav_blackboard.nav_goal = (planned["x"], planned["y"])
+    stayed = _beside_member(kept, same, planned)
+    assert getattr(stayed, "reason", "") == "party_member:arrow drop walk"
+    assert kept.runtime.last_reason == "walk to member"
+
+
+def test_a_drop_with_no_click_expires_without_using_the_walk_clock(monkeypatch) -> None:
+    """Eight seconds without a hop releases the hold. A hop resets that wait."""
+    from app._06_party.arrow_duty import STAND_WAIT_S, _beside_member
+
+    duty = {
+        "kind": "drop",
+        "item": "hp",
+        "name": "Mage",
+        "qty": 10,
+        "min": 1,
+        "map_id": 4,
+        "x": 10,
+        "y": 20,
+        "exact": True,
+    }
+    state = type("S", (), {})()
+    clock = {"t": 8000.0}
+    hops = {"emit": False}
+    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state, fresh=False: type("P", (), {"map_id": 4, "x": 1, "y": 1})(),
+    )
+    monkeypatch.setattr(
+        "app._04_decision.behaviors.travel.start_travel",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def _emit(board, *_args, **_kwargs):
+        if not hops["emit"]:
+            return False
+        board.intent = type("I", (), {"reason": "hop"})()
+        return True
+
+    monkeypatch.setattr("app._04_decision.behaviors.travel.emit_travel_hop", _emit)
+
+    manager = _Manager()
+    manager.runtime.supply_hold = {"id": "hold:hp:Mage", "for": "Mage"}
+    manager._nav_blackboard.world_origin = type("O", (), {"x": 1, "y": 1})()
+    manager._nav_blackboard.nav_goal = None
+    manager._nav_blackboard.scratch["party_supply_attempt"] = {
+        "key": ("mage", "hp"),
+        "n": 0,
+        "since": 0.0,
+        "shifts": 0,
+    }
+    waiting = _beside_member(manager, state, duty)
+    assert getattr(waiting, "reason", "") == "party_member:arrow drop walk"
+    attempt = manager._nav_blackboard.scratch["party_supply_attempt"]
+    assert attempt["walk_idle_since"] == 8000.0
+    assert attempt["since"] == 0.0
+    assert manager.runtime.supply_hold is not None
+
+    clock["t"] = 8000.0 + STAND_WAIT_S - 0.1
+    attempt["since"] = 0.0
+    still = _beside_member(manager, state, duty)
+    assert getattr(still, "reason", "") == "party_member:arrow drop walk"
+    assert manager.runtime.supply_hold is not None
+    assert manager._nav_blackboard.scratch["party_supply_attempt"]["since"] == 0.0
+
+    hops["emit"] = True
+    clock["t"] = 8000.0 + STAND_WAIT_S
+    stepped = _beside_member(manager, state, duty)
+    assert getattr(stepped, "reason", "") == "hop"
+    assert manager.runtime.last_reason == "walk to member"
+    assert manager.runtime.supply_hold is not None
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch["party_supply_attempt"]
+
+    hops["emit"] = False
+    manager._nav_blackboard.nav_goal = (10, 20)
+    restarted = _beside_member(manager, state, duty)
+    assert getattr(restarted, "reason", "") == "party_member:arrow drop walk"
+    assert (
+        manager._nav_blackboard.scratch["party_supply_attempt"]["walk_idle_since"]
+        == clock["t"]
+    )
+
+    clock["t"] += STAND_WAIT_S
+    manager._nav_blackboard.scratch["party_supply_attempt"]["since"] = 0.0
+    expired = _beside_member(manager, state, duty)
+    assert expired is None
+    assert manager.runtime.supply_hold is None
+    assert manager.runtime.last_reason == "stand timeout"
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch["party_supply_attempt"]
+
+    arrived = _Manager()
+    arrived.runtime.supply_hold = {"id": "hold:hp:Mage", "for": "Mage"}
+    arrived._nav_blackboard.world_origin = type("O", (), {"x": 10, "y": 20})()
+    arrived._nav_blackboard.scratch["party_supply_attempt"] = {
+        "since": 0.0,
+        "walk_idle_since": clock["t"] - STAND_WAIT_S,
+    }
+    assert _beside_member(arrived, state, duty) is True
+    assert arrived.runtime.supply_hold is not None
+    assert arrived.runtime.last_reason != "stand timeout"
+    assert "walk_idle_since" not in arrived._nav_blackboard.scratch["party_supply_attempt"]

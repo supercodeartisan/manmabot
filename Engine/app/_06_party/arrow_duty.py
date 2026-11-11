@@ -653,6 +653,8 @@ def cancel_supply_delivery(
     st["shifts"] = 0
     st["blocks"] = 0
     st.pop("stand_at", None)
+    st.pop("defer_since", None)
+    st.pop("walk_idle_since", None)
     board.scratch[_ATTEMPT] = st
     if pause:
         pauses = dict(board.scratch.get(_PAUSE) or {})
@@ -1422,13 +1424,14 @@ def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
 
 
 def _leader_drop_recheck(state: Any, duty: dict) -> Any:
-    """Refresh a leader drop when the party row confirms a one-tile step.
+    """Refresh a leader drop against the party row.
 
-    None means the planned tile still matches, or this recipient is not the
-    leader. ``"cancel"`` means the party row confirms a map change or a move
-    of two or more tiles. ``"defer"`` means the latest tile is not confirmed,
-    so the drop waits and the hold stays. A dict is a stand rebuilt on the
-    live tile.
+    None means drop on the already confirmed stand: the recipient is not the
+    leader, the leader row has no readable tile, or the live nav tile still
+    matches. ``"cancel"`` means the party row confirms a map change or a move
+    of two or more tiles. ``"defer"`` means a different map id still projects
+    onto the stand, so the drop waits. A dict is a stand rebuilt on a
+    one-tile step.
     """
     from .leader import supply_member_row
 
@@ -1443,9 +1446,9 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
     try:
         live = (int(row["map_id"]), int(row["x"]), int(row["y"]))
     except (TypeError, ValueError, KeyError):
-        return "defer"
+        return None
     if live[1] == 0 and live[2] == 0:
-        return "defer"
+        return None
     try:
         planned = (
             int(duty["member_map"]),
@@ -1460,7 +1463,7 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
     on_stand = _coord_on_map(planned[0], live[1], live[2])
     if int(planned[0]) == int(live[0]):
         if on_stand is None:
-            return "defer"
+            return None
         if on_stand == stand_nav:
             return None
         if _tile_gap(stand_nav, on_stand) >= 2:
@@ -1480,30 +1483,121 @@ def _leader_drop_recheck(state: Any, duty: dict) -> Any:
         return "cancel"
     if on_stand is not None and _tile_gap(stand_nav, on_stand) >= 2:
         return "cancel"
+    if on_stand is None:
+        return None
     return "defer"
+
+
+def _clear_defer_clock(board: Any) -> None:
+    """Drop the ambiguous-map wait. The walk clock in ``since`` stays."""
+    st = _attempt(board)
+    if "defer_since" not in st or board is None:
+        return
+    st.pop("defer_since", None)
+    board.scratch[_ATTEMPT] = st
+
+
+def _hold_ambiguous_leader_drop(manager: Any, duty: dict) -> Any:
+    """Wait while a leader row on another map still looks like the stand.
+
+    ``defer_since`` is not ``since``. A walk that already took longer than
+    ``STAND_WAIT_S`` is not cancelled by this wait, and a planned drop tick
+    that zeroes ``since`` does not restart it.
+    """
+    runtime = manager.runtime
+    board = manager._nav_blackboard
+    _clear_walk_idle_clock(board)
+    st = _attempt(board)
+    now = time.time()
+    try:
+        started = float(st.get("defer_since") or 0.0)
+    except (TypeError, ValueError):
+        started = 0.0
+    if started > 0.0 and now - started >= STAND_WAIT_S:
+        cancel_supply_delivery(
+            board, runtime, duty, now=now, reason="stand timeout"
+        )
+        runtime.last_kind = "supply"
+        runtime.last_reason = "stand timeout"
+        return None
+    if started <= 0.0:
+        st["defer_since"] = now
+    board.scratch[_ATTEMPT] = st
+    if str(getattr(runtime, "last_reason", "") or "") != "supply drop held":
+        _log.info(
+            "supply drop held for=%s map=%s",
+            duty.get("name"),
+            duty.get("member_map"),
+        )
+    runtime.supply_hold = _hold_with_phase(board, duty)
+    runtime.duty_phase = DUTY_SUPPLY
+    runtime.last_kind = "supply"
+    runtime.last_reason = "supply drop held"
+    from .intents import idle
+
+    return idle("supply drop held")
+
+
+def _release_held_drop_label(manager: Any, reason: str) -> None:
+    """A passed leader check must not stay labeled as a held drop."""
+    runtime = getattr(manager, "runtime", None)
+    if runtime is None:
+        return
+    if str(getattr(runtime, "last_reason", "") or "") != "supply drop held":
+        return
+    runtime.last_kind = "supply"
+    runtime.last_reason = reason
+
+
+def _clear_walk_idle_clock(board: Any) -> None:
+    """Drop the no-click wait. The walk clock in ``since`` stays."""
+    st = _attempt(board)
+    if "walk_idle_since" not in st or board is None:
+        return
+    st.pop("walk_idle_since", None)
+    board.scratch[_ATTEMPT] = st
+
+
+def _idle_drop_walk(manager: Any, duty: dict, reason: str) -> Any:
+    """Same-map drop with no hop. Eight seconds of this releases the hold.
+
+    ``walk_idle_since`` is not ``since``. A planned tick zeroes ``since``, and
+    a hop that is actually emitted clears this clock instead of expiring it.
+    """
+    runtime = manager.runtime
+    board = manager._nav_blackboard
+    st = _attempt(board)
+    now = time.time()
+    try:
+        started = float(st.get("walk_idle_since") or 0.0)
+    except (TypeError, ValueError):
+        started = 0.0
+    if started > 0.0 and now - started >= STAND_WAIT_S:
+        cancel_supply_delivery(
+            board, runtime, duty, now=now, reason="stand timeout"
+        )
+        runtime.last_kind = "supply"
+        runtime.last_reason = "stand timeout"
+        return None
+    if started <= 0.0:
+        st["walk_idle_since"] = now
+    board.scratch[_ATTEMPT] = st
+    _release_held_drop_label(manager, reason)
+    from .intents import idle
+
+    return idle(reason)
 
 
 def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
     """Aim the drop at the leader's live tile. None means the hold was cleared."""
     recheck = _leader_drop_recheck(state, duty)
-    if recheck is None:
-        return duty
     runtime = manager.runtime
     board = manager._nav_blackboard
+    if recheck is None:
+        _clear_defer_clock(board)
+        return duty
     if recheck == "defer":
-        if str(getattr(runtime, "last_reason", "") or "") != "supply drop held":
-            _log.info(
-                "supply drop held for=%s map=%s",
-                duty.get("name"),
-                duty.get("member_map"),
-            )
-        runtime.supply_hold = _hold_with_phase(board, duty)
-        runtime.duty_phase = DUTY_SUPPLY
-        runtime.last_kind = "supply"
-        runtime.last_reason = "supply drop held"
-        from .intents import idle
-
-        return idle("supply drop held")
+        return _hold_ambiguous_leader_drop(manager, duty)
     if recheck == "cancel":
         cancel_supply_delivery(
             board, runtime, duty, reason="stand moved"
@@ -1511,6 +1605,8 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
         runtime.last_kind = "supply"
         runtime.last_reason = "stand moved"
         return None
+    _clear_defer_clock(board)
+    _clear_walk_idle_clock(board)
     shifts = int(_attempt(board).get("shifts") or 0)
     replanned = plan_supply_drop(duty, recheck, _tile_open, ring=shifts)
     _log.info(
@@ -1731,11 +1827,10 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
 
     pose = live_pose_from_state(state)
     if pose is None or origin is None:
-        from .intents import idle
-
-        return idle("arrow drop no pose")
+        return _idle_drop_walk(manager, duty, "arrow drop no pose")
     if int(pose.map_id) != mid:
         # World nav wants the report's game xy. Do not convert that branch.
+        _clear_walk_idle_clock(board)
         return _tick_nav(manager, state, mid, mx, my, reason="party_supply_walk")
     from app._03_world.merge.memory_sync import game_to_nav
     from app._03_world.space.world_coords import tile_chebyshev
@@ -1747,6 +1842,7 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
     # exact: stand on the tile that makes the drag land on the empty neighbor.
     limit = 0 if bool(duty.get("exact")) else _NEAR
     if dist <= limit:
+        _clear_walk_idle_clock(board)
         return True
     from app._04_decision.behaviors.travel import emit_travel_hop, start_travel
 
@@ -1756,12 +1852,11 @@ def _beside_member(manager: Any, state: Any, duty: dict) -> Any:
     if emit_travel_hop(board, reason="party arrow drop", priority=0.6, state=state):
         intent = getattr(board, "intent", None)
         if intent is not None:
+            _clear_walk_idle_clock(board)
             manager.runtime.last_kind = "supply"
             manager.runtime.last_reason = "walk to member"
             return intent
-    from .intents import idle
-
-    return idle("arrow drop walk")
+    return _idle_drop_walk(manager, duty, "arrow drop walk")
 
 
 def _expire_notice(runtime: Any, rows: Any) -> None:
