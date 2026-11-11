@@ -6,7 +6,12 @@ from types import SimpleNamespace
 from app._04_decision import player_mode as pm
 from app._04_decision.behaviors.mode_actions import party_leader_pile_ok
 from app._06_party.config import PartyMemberConfig
-from app._06_party.loot import party_loot_ownership_filter, party_loot_radius
+from app._06_party.loot import (
+    party_loot_ownership_filter,
+    party_loot_radius,
+    party_may_start_loot,
+    party_should_drop_loot,
+)
 
 
 def _pile(rx: int, on_screen: bool):
@@ -67,6 +72,16 @@ def test_random_loot_is_party_drops_without_an_ownership_gate() -> None:
     assert party_loot_ownership_filter(cfg) is False
 
 
+def test_loot_beats_follow_and_assist_drops_it() -> None:
+    assert party_may_start_loot("follow", allowed=True)
+    assert party_may_start_loot("hold", allowed=True)
+    assert not party_may_start_loot("assist", allowed=True)
+    assert not party_may_start_loot("follow", allowed=False)
+    assert not party_should_drop_loot("follow", allowed=True)
+    assert party_should_drop_loot("assist", allowed=True)
+    assert party_should_drop_loot("follow", allowed=False)
+
+
 def test_leader_policy_does_not_carry_a_loot_priority() -> None:
     cfg = PartyMemberConfig(farm_mode="solo").merge_leader_policy(
         {
@@ -89,5 +104,6 @@ if __name__ == "__main__":
     test_other_members_loot_their_own_piles()
     test_near_radius_is_shared_and_responsible_is_wider()
     test_random_loot_is_party_drops_without_an_ownership_gate()
+    test_loot_beats_follow_and_assist_drops_it()
     test_leader_policy_does_not_carry_a_loot_priority()
     print("OK")

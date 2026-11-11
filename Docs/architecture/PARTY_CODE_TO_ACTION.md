@@ -267,11 +267,11 @@ Formation: `choose_formation_goal`.
 
 `engage_like_solo` writes through `continue_or_start_combat`. The returned object is `blackboard.intent`. That is the same combat emitter solo uses, pointed at a monster the party already chose.
 
-Loot, only when the leader looks stopped, this seat may loot, and the kind is `HOLD` or `FOLLOW`:
+Loot, when this seat may loot and the kind is `HOLD` or `FOLLOW`. A moving leader does not close it:
 
 - `arm_party_loot_side` puts a `PICKUP` on `side_intents`. `execute` runs that pickup before the primary.
 - `try_party_hold_loot` can also return a loot intent as the primary and skip the follow click.
-- A moving leader calls `clear_party_loot_sticky`. Assist, defend, join, heal, buff, potion, wait, and stop also clear it.
+- Assist, defend, join, heal, buff, potion, wait, and stop call `clear_party_loot_sticky`. Follow does not.
 
 Join nav (`PartyJoinNav.tick`):
 

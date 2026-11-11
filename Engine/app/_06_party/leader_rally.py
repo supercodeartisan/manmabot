@@ -1,9 +1,11 @@
-"""Leader start rally: reach the party schedule mark, wait, then hunt.
+"""Leader start rally: meet, wait, then take the route into the hunt.
 
-The walk to the mark is not paused at the current tile or the first teleporter.
-``note_arrived`` stands the leader on that mark. The stand ends when every
-expected member is at the mark, or after 3 minutes. Members are not sent the
-tile. Once party memory shows them in the party, they follow the leader's live tile.
+The meet tile is chosen when the hunt route is planned. A route with an NPC
+teleporter or a talking scroll uses the departure tile of the first of those
+steps. A walk-only route uses the tile the leader is on when that plan is made.
+The stand ends when every expected member is within 7 tiles of that tile, or
+after 3 minutes. Members are not sent the tile. Once party memory shows them
+in the party, they follow the leader's live tile.
 """
 from __future__ import annotations
 
@@ -72,8 +74,21 @@ def plan_start(plan: Any) -> Optional[tuple[int, int, int]]:
     return _point((getattr(plan, "meta", None) or {}).get("start"))
 
 
+def _near_meet(pose: Any, point: Optional[tuple[int, int, int]]) -> bool:
+    """True within one tile of the meet tile. That matches a finished walk step."""
+    if pose is None or point is None:
+        return False
+    try:
+        if int(pose.map_id) != int(point[0]):
+            return False
+        gap = max(abs(int(pose.x) - int(point[1])), abs(int(pose.y) - int(point[2])))
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return gap <= 1
+
+
 class LeaderStartRally:
-    """off → await_mark → waiting → done. The mark opens a 3 minute stand."""
+    """off → await_mark → waiting → done. The meet tile opens a 3 minute stand."""
 
     def __init__(
         self,
@@ -91,6 +106,8 @@ class LeaderStartRally:
         self.state = "off"
         self.expected: set[str] = set()
         self.hold_step: Optional[int] = None
+        self.meet: Optional[tuple[int, int, int]] = None
+        self.had_teleport = False
         self._want: Optional[dict[str, Any]] = None
         self._wait_started: Optional[float] = None
         # Leader start-wait end (clock time); None = WAIT_TIMEOUT_S from wait start.
@@ -147,26 +164,56 @@ class LeaderStartRally:
             return
         del travel, pose
         self.state = "await_mark"
-        self._log("Party start rally walks to the party mark")
+        self._log("Party start rally walks toward the hunt")
 
     def note_arrived(self, point: tuple[int, int, int]) -> None:
-        """The leader is on the mark. Stand until the roster is here, or 3 minutes."""
+        """The leader is on the meet tile. Stand until the roster is here, or 3 minutes."""
         if self.state != "await_mark":
             return
         self._arm(STAGE_START, point)
         self._enter_waiting()
         self._log(
-            "Party start rally at the mark — wait up to 3 min for members"
+            "Party start rally at the meet tile — wait up to 3 min for members"
         )
 
     def on_plan(self, plan: Any) -> None:
-        """Travel owns the route. A plan does not start this wait."""
-        del plan
+        """Remember the meet tile. The stand starts when the body reaches it."""
+        if self.state != "await_mark" or self.meet is not None:
+            return
+        steps = _steps(plan)
+        index = first_teleport_index(plan)
+        if index is not None:
+            point = departure_point(steps[index])
+            if point is None:
+                return
+            self.hold_step = index
+            self.meet = point
+            self.had_teleport = True
+            return
+        point = plan_start(plan)
+        if point is None:
+            return
+        self.hold_step = 0
+        self.meet = point
+        self.had_teleport = False
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
-        """The leader does not stand for members. The walk to the mark continues."""
-        del step_i, pose
-        return False
+        """Pause the route on the meet tile until the stand ends."""
+        if self.state in ("off", "done"):
+            return False
+        if self.state == "waiting":
+            return True
+        if self.state != "await_mark" or self.meet is None or self.hold_step is None:
+            return False
+        try:
+            if int(step_i) != int(self.hold_step):
+                return False
+        except (TypeError, ValueError):
+            return False
+        if not _near_meet(pose, self.meet):
+            return False
+        self.note_arrived(self.meet)
+        return self.state == "waiting"
 
     def update(self, connected: int, snapshot: Any) -> None:
         """Each tick: resend if needed, count arrivals, finish when all are in."""

@@ -1781,12 +1781,14 @@ class BotController:
 
         self._start_rally = LeaderStartRally(rally, log=_note)
         WorldNavHooks.on_plan = self._start_rally.on_plan
+        WorldNavHooks.should_hold = self._start_rally.should_hold
 
     def _clear_party_nav_hooks(self) -> None:
         from app._04_decision.world_nav.session import WorldNavHooks
         from app._06_party.comms.orders import reset_orders
 
         WorldNavHooks.on_plan = None
+        WorldNavHooks.should_hold = None
         self._start_rally = None
         reset_orders()
         self._party_tree_trip = ""

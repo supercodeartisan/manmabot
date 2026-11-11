@@ -64,6 +64,38 @@ def party_may_loot(cfg: PartyMemberConfig) -> bool:
     return party_loot_ownership_filter(cfg) is not None
 
 
+# Hold and follow yield to a pile. Assist and survival kinds do not.
+_LOOT_AFTER_KINDS = frozenset({"hold", "follow"})
+_LOOT_DROP_KINDS = frozenset(
+    {
+        "assist",
+        "join_map",
+        "defend",
+        "wait",
+        "stop",
+        "heal",
+        "buff",
+        "potion",
+    }
+)
+
+
+def party_may_start_loot(kind: str, *, allowed: bool) -> bool:
+    """True when this tick's kind loses to a pile.
+
+    Leader movement and a seat catch-up do not close it. Assist never
+    reaches this as an open kind.
+    """
+    return bool(allowed) and str(kind or "") in _LOOT_AFTER_KINDS
+
+
+def party_should_drop_loot(kind: str, *, allowed: bool) -> bool:
+    """Drop a walk already started when this seat cannot loot, or a higher kind won."""
+    if not allowed:
+        return True
+    return str(kind or "") in _LOOT_DROP_KINDS
+
+
 def party_closest_looter_filter(
     state: "GameState",
     origin: Any,
@@ -570,5 +602,7 @@ __all__ = [
     "party_loot_ownership_filter",
     "party_loot_radius",
     "party_may_loot",
+    "party_may_start_loot",
+    "party_should_drop_loot",
     "try_party_hold_loot",
 ]

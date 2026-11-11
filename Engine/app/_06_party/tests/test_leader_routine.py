@@ -433,7 +433,6 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
     )
     walked: list[int] = []
     farmed: list[int] = []
-    manager._arrival_point = lambda row, pose: (4, 33198, 33435)  # type: ignore[method-assign]
     manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
     manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
     manager._inside = lambda row, pose: True  # type: ignore[method-assign]
@@ -460,8 +459,19 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         edge = LeaderStartRally(Rally(), log=lambda _message: None)
         edge.begin({"poorboy"}, travel=False, pose=None)
         _run(33199, 33435, edge)
+        assert edge.state == "await_mark"
+        assert walked == [1]
+        assert farmed == []
+
+        class _Plan:
+            def __init__(self) -> None:
+                self.steps = []
+                self.meta = {"start": {"mapId": 4, "x": 33199, "y": 33435}}
+
+        edge.on_plan(_Plan())
+        assert edge.should_hold(0, SimpleNamespace(map_id=4, x=33199, y=33435)) is True
         assert edge.state == "waiting"
-        assert walked == []
+        _run(33199, 33435, edge)
         assert farmed == []
         assert decision.blackboard.scratch.get("party_rally_wait") is True
         edge.update(
@@ -476,6 +486,89 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         _run(33199, 33435, edge)
         assert farmed == [1]
         assert decision.blackboard.scratch.get("party_rally_wait") is False
+    finally:
+        nav_session.live_pose_from_state = real_pose
+
+
+def test_walk_arrival_stands_before_the_farm_handoff() -> None:
+    from types import SimpleNamespace
+
+    from app._03_world import ActionType
+    from app._04_decision.behavior_tree import Status
+    from app._04_decision.behaviors.mode_ticks import _step_party_rally_wait
+    from app._04_decision.world_nav import session as nav_session
+    from app._04_decision.world_nav.hooks import _on_world_nav_arrived
+    from app._06_party.leader_rally import LeaderStartRally
+    from websocket.party_orders import Rally
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "duration_minutes": 60,
+                "areas": [
+                    {
+                        "name": "field",
+                        "shape": "area",
+                        "x0": 1,
+                        "y0": 1,
+                        "x1": 50,
+                        "y1": 50,
+                    }
+                ],
+            }
+        ]
+    )
+    manager._arm_travel = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._inside = lambda row, pose: True  # type: ignore[method-assign]
+    manager._apply_place = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._clear_travel = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    real_pose = nav_session.live_pose_from_state
+    rally = LeaderStartRally(Rally(), log=lambda _message: None)
+    rally.begin({"poorboy"}, travel=False, pose=None)
+
+    def _pose(x: int, y: int):
+        nav_session.live_pose_from_state = (
+            lambda state, fresh=False: SimpleNamespace(map_id=4, x=x, y=y)
+        )
+
+    try:
+        _pose(33202, 33414)
+        manager.prepare(object(), rally)
+        assert rally.state == "await_mark"
+        decision.blackboard.scratch["_world_nav_pose_state"] = object()
+        _on_world_nav_arrived(decision.blackboard, reason="party_schedule")
+        assert rally.state == "await_mark"
+        assert decision.blackboard.scratch.get("party_rally_wait") is not True
+
+        class _Plan:
+            def __init__(self) -> None:
+                self.steps = []
+                self.meta = {"start": {"mapId": 4, "x": 33202, "y": 33414}}
+
+        rally.on_plan(_Plan())
+        assert rally.should_hold(0, SimpleNamespace(map_id=4, x=33202, y=33414)) is True
+        assert rally.state == "waiting"
+        _pose(33202, 33414)
+        manager.prepare(object(), rally)
+        assert decision.blackboard.scratch.get("party_rally_wait") is True
+
+        class _Emit:
+            def __init__(self) -> None:
+                self.scratch = decision.blackboard.scratch
+                self.current_goal = ""
+                self.emitted: list = []
+
+            def emit(self, kind, priority, reason) -> None:
+                self.emitted.append((kind, priority, reason))
+
+        standing = _Emit()
+        assert _step_party_rally_wait(object(), standing) is Status.SUCCESS
+        assert standing.emitted == [(ActionType.IDLE, 0.45, "party rally wait")]
     finally:
         nav_session.live_pose_from_state = real_pose
 
