@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-11 — a drop with no hop releases the hold after 8 seconds
+
+Intent: On a same-map supply drop, eight seconds without an emitted hop clears the hold through the existing stand timeout. A hop, or arrival on the exact drop tile, clears that wait. A walk that keeps emitting hops is not cut at 8 seconds. The potion is still dropped only from the exact tile.
+Shared: `_beside_member` and `cancel_supply_delivery`. The clock is `walk_idle_since`, so `tick_shopkeeper_duty` still zeroes `since` on a planned tick. Buy, pickup, the leader party-row recheck, and a cross-map walk are unchanged.
+Affects: the shopkeeper's drop for the party leader and for any other recipient, once the stand is already planned and the shopkeeper is on that map.
+Consent: user ("yes" after the no-click wait was the remaining freeze).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a leader supply drop does not wait forever on an unread party row
+
+Intent: When the supply recipient is the party leader, drop on the already confirmed stand if that leader's party row has no tile, is `0,0`, or does not convert to a nav tile. A live nav tile that matches the stand still drops, and a passed check leaves the `supply drop held` label. One tile still retargets. Two or more tiles, or a map that converts somewhere else, still cancels. A different map id that still projects onto the stand still waits, on its own 8 second clock, then the existing stand timeout. That clock is not the walk clock.
+Shared: `_leader_drop_recheck`, `_apply_leader_drop_recheck`, and the held-label rewrite in `_beside_member`. `tick_shopkeeper_duty`, `leader_supply_stand`, buy, pickup, and a drop for anyone who is not the party leader are unchanged.
+Affects: the shopkeeper's drop when the recipient is the party leader. Other members still drop from the published stand with no party-row recheck.
+Consent: user (proceed with the proposed plan; asked to confirm the leader-only scope).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-11 — the stand grid waits until the leader tile has been still for 2 seconds
 
 Intent: Keep the side line while the leader tile is still changing, or has been still for less than 2 seconds. A 0.7 second sample gap no longer switches the member onto the 5×5 stand cell. When a new walk slot's first hop would step farther from the leader, that tick keeps the previous slot. A leader who has been still for 2 seconds, and turret, still use the stand grid.
