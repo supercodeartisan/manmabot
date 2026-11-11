@@ -18,7 +18,7 @@ from .config import PartyMemberConfig
 from .follow_route import choose_follow_route, estimate_walk_cost
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
-from .formation_goal import choose_formation_goal
+from .formation_goal import choose_formation_goal, closing_slot
 from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
 from .join_map import (
     PartyJoinNav,
@@ -70,6 +70,8 @@ def mage_list_heal_request(
 _DECISION_HISTORY = 20
 # A gap longer than this is not continued stationary evidence.
 _MOTION_GAP_S = 30.0
+# Side line stays until the leader tile has been still this long.
+FORMATION_STAND_SETTLE_S = 2.0
 
 
 def _terrain_or_none() -> Any:
@@ -851,6 +853,10 @@ class PartyMemberManager:
         leader_stopped = self._leader_looks_stopped(
             leader_tile=leader_tile if leader_present else None,
         )
+        formation_stopped = self._leader_looks_stopped(
+            leader_tile=leader_tile if leader_present else None,
+            settle_sec=FORMATION_STAND_SETTLE_S,
+        )
         leader_moving = self._leader_is_moving(
             leader_tile if leader_present else None
         )
@@ -880,7 +886,7 @@ class PartyMemberManager:
                 int(cfg.formation_anchor_dy),
             )
         trail_tile = self._formation_trail_tile(cfg, leader_tile=form_leader)
-        held = bool(leader_stopped or cfg.turret_farm)
+        held = bool(formation_stopped or cfg.turret_farm)
         bodies: set[tuple[int, int]] = set()
         if game_state is not None and origin_ok:
             try:
@@ -893,6 +899,9 @@ class PartyMemberManager:
                 bodies = set()
         if cfg.formation_reform:
             self.runtime.scratch.pop("formation_slot", None)
+        prev_form = str(self.runtime.formation or "")
+        prev_kind = prev_form.split(":", 1)[0]
+        prev_slot = self.runtime.scratch.get("formation_slot")
         formed = choose_formation_goal(
             form_leader,
             forward=form_forward,
@@ -902,8 +911,41 @@ class PartyMemberManager:
             trail_tile=None if held else trail_tile,
             terrain=_terrain_or_none(),
             occupied=bodies,
-            previous=None if cfg.formation_reform else self.runtime.scratch.get("formation_slot"),
+            previous=None if cfg.formation_reform else prev_slot,
             previous_leader=self.runtime.scratch.get("formation_leader"),
+        )
+        previous_tile = None
+        if isinstance(prev_slot, tuple) and len(prev_slot) == 2:
+            previous_tile = (int(prev_slot[0]), int(prev_slot[1]))
+        hop = None
+        if (
+            not held
+            and origin_ok
+            and leader_tile is not None
+            and formed.tile is not None
+            and previous_tile is not None
+            and previous_tile != formed.tile
+        ):
+            try:
+                _intent, _goal, _detail, hop = plan_slot_hop(
+                    origin,
+                    formed.tile,
+                    previous_goal=self.runtime.approach_goal,
+                    previous_hop=self.runtime.follow_hop,
+                    kind=formed.kind,
+                    leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
+                )
+            except Exception as exc:
+                _log.debug("party slot probe failed: %s", exc)
+                hop = None
+        formed = closing_slot(
+            held=held,
+            previous=previous_tile,
+            previous_kind=prev_kind,
+            chosen=formed,
+            origin=(int(origin.x), int(origin.y)) if origin_ok else None,
+            hop=hop if isinstance(hop, tuple) else None,
+            leader=leader_tile,
         )
         slot_tile = formed.tile
         if slot_tile is not None and leader_tile is not None:

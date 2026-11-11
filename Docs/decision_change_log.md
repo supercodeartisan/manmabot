@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — the stand grid waits until the leader tile has been still for 2 seconds
+
+Intent: Keep the side line while the leader tile is still changing, or has been still for less than 2 seconds. A 0.7 second sample gap no longer switches the member onto the 5×5 stand cell. When a new walk slot's first hop would step farther from the leader, that tick keeps the previous slot. A leader who has been still for 2 seconds, and turret, still use the stand grid.
+Shared: `_leader_looks_stopped` for the formation slot only (`FORMATION_STAND_SETTLE_S`), `choose_formation_goal`, and `closing_slot` before `plan_slot_hop`. The 0.7 second follow-band flag, loot, assist, heal, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: every party member's walking follow. After a real stop, the walk to the stand cell starts at 2 seconds instead of 0.7.
+Consent: user ("yes, let's update" after the 2 second cases).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`. Not run in game.
+
 ## 2026-11-11 — party replans after a scroll land; pause time is not confined
 
 Intent: A party route built on the pre-land tile is dropped once the live tile has stayed more than 24 tiles away for 1 second, and the next plan uses the landing. No new party route starts while a talking scroll landing is still open. The 13 s confined clock counts decide ticks only, so a hotkey pause does not fire a talking scroll. Solo world-nav's gate wait is unchanged.

@@ -272,6 +272,34 @@ def _reachable(start: Tile, goal: Tile, terrain: Any, blocked: set[Tile]) -> boo
     return False
 
 
+def closing_slot(
+    *,
+    held: bool,
+    previous: Optional[Tile],
+    previous_kind: str,
+    chosen: FormationGoal,
+    origin: Optional[Tile],
+    hop: Optional[Tile],
+    leader: Optional[Tile],
+) -> FormationGoal:
+    """Keep the previous walk slot when the new hop steps away from the leader.
+
+    A real stand (``held``) keeps the new grid cell. No previous slot, or a
+    hop that does not move farther from the leader, keeps ``chosen``.
+    """
+    if held or previous is None or chosen.tile is None or hop is None:
+        return chosen
+    if origin is None or leader is None:
+        return chosen
+    prev = (int(previous[0]), int(previous[1]))
+    if prev == (int(chosen.tile[0]), int(chosen.tile[1])):
+        return chosen
+    if cheb(hop, leader) > cheb(origin, leader):
+        kind = previous_kind if previous_kind in ("side", "trail", "stand") else "side"
+        return FormationGoal(kind, prev, "keep_closing")
+    return chosen
+
+
 def _free(terrain: Any, tile: Tile, blocked: set[Tile]) -> bool:
     if tile in blocked:
         return False
@@ -283,6 +311,7 @@ def _free(terrain: Any, tile: Tile, blocked: set[Tile]) -> bool:
 __all__ = [
     "FormationGoal",
     "choose_formation_goal",
+    "closing_slot",
     "primary_lateral",
     "right_of",
     "stand_radius",
