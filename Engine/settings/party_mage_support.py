@@ -183,11 +183,16 @@ def normalize_saved(raw: object) -> dict[str, bool]:
 
 
 def checked_skill_ids(raw: object) -> set[int]:
-    """Checked spell ids. An empty save keeps heal, matching the party screen."""
+    """Checked spell ids. A missing heal stays on, matching the party screen.
+
+    ``mage_0: false`` is the only save that turns heal off. Other saved spells
+    do not drop a heal key that was never written.
+    """
     saved = normalize_saved(raw)
-    if not saved:
-        return {0}
-    return {int(key[5:]) for key, value in saved.items() if value}
+    ids = {int(key[5:]) for key, value in saved.items() if value}
+    if "mage_0" not in saved:
+        ids.add(0)
+    return ids
 
 
 def party_mage_support_rows(language: str = "ko") -> list[dict[str, str]]:
