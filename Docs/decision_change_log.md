@@ -1,6 +1,37 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-11 — a live pile holds the world-nav route click
+
+Intent: Starting a loot approach clears the armed route hop. While that pile is still the current item and still in memory, a tick that emits no loot click does not click the route. The route goal and the world-nav session stay. The route resumes when the pile is no longer the current item. The one-tile travel arrival rule is unchanged.
+Shared: `_quiet_route_click` beside `_quiet_search_click`, and `_drive_world_nav` while `phase == walk`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a world-nav walk, including the party leader's schedule walk, while a pile is the current loot. A pile that cannot be clicked stands on the existing loot unstick instead of stepping back onto the route. Solo farm loot outside world nav is unchanged.
+Consent: user ("yes" after the 16:11 adena shuffle).
+Result: `Engine/app/_04_decision/tests/test_loot_route_hold.py`. Not run in game.
+
+## 2026-11-11 — arrow shop entry uses bundles
+
+Intent: The arrow buy setting stays an arrow count. The shop dialog is typed in bundles. Normal arrows type count // 10 (200 types 20). Silver arrows type count // 5 (200 types 40). A remainder is dropped. A count under one bundle still types 1. Potion digits, the drop split, and the return-arrow threshold stay arrow or potion counts.
+Shared: `arrow_shop_units`, `buy_qty_for_behavior`, and the arrow return of `party_shop_buy_qty`. The recover arrow buy converts only when the intent has no `shop_qty`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: solo normal and silver arrow purchases, and the party shopkeeper's silver-arrow purchase, including the Adena clamp that uses that same typed count. Giving arrows to a member still types the arrow count.
+Consent: user (set 200, type 40 for silver and 20 for normal).
+Result: `Engine/app/_04_decision/tests/test_arrow_shop_units.py`, `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-11 — the next party-list key waits two seconds after the row click
+
+Intent: A party-list heal, heal-all, or buff does not press again until 2 seconds after the previous party-list row click. A press at 0.3 or 0.5 seconds left a circle that appeared after the 1 second aim wait. The aim wait is now 1.5 seconds, so a circle that appears around 1.2 seconds still clicks the row. A view right-click that leaves the circle up is not repeated until the cursor drops. The skill key is not pressed to clear it. A normal cursor during the 2 seconds is not cancelled.
+Shared: `_heal`, `_party_list_buff`, `_party_list_recast_waiting`, `PARTY_LIST_AIM_WAIT_S`, and `cancel_spell_aim`. `MAGIC_COOLDOWN_S`, the self-heal double press, solo mage attack, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party mage heal and party-list buff cadence, and any later cancel of a circle that already survived one view right-click. A member under 80 is healed once per landed click plus 2 seconds. A true aim miss blocks that action for 1.5 seconds. A circle Esc cannot clear still blocks walking until the client drops it.
+Consent: user ("okay" after the 10:20 late circle).
+Result: `Engine/app/_05_action/tests/test_party_list_press_hold.py`, `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+
+## 2026-11-11 — a party-list key waits while the spell cursor is already up
+
+Intent: A party-list heal, heal-all, or buff does not press its skill key while the cursor is already a spell circle. That second key clears the circle, so this tick only cancels and leaves the row unclicked. The next tick presses once after the cursor is down. The 0.5 second magic gap stays. A self heal still uses its double press.
+Shared: `_heal`, `_party_list_buff`, and `_party_list_press_held`. `MAGIC_COOLDOWN_S`, solo mage attack, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party mage heal and party-list buff cadence. A leftover circle delays the next key until it drops. Self heal is unchanged.
+Consent: user ("yes" after the 09:09 alternating aim miss).
+Result: `Engine/app/_05_action/tests/test_party_list_press_hold.py`. Not run in game.
+
 ## 2026-11-11 — a missed party-list cast clears the spell cursor
 
 Intent: A party-list buff or heal presses the skill key once, then clicks the row only after the spell cursor is up. When that wait misses, or a later walk still sees the circle, Esc runs first. If the circle remains, a right-click lands inside the game view. The walk click waits until the cursor is no longer a spell circle. The skill key is not pressed again.
@@ -16,7 +47,7 @@ Shared: `checked_skill_ids`. The party table writes the default through `_write_
 Affects: party mage heal and buff selection. A profile that saved another party spell without ever saving 힐 starts healing.
 Consent: user ("yes, please update").
 Result: `Engine/settings/tests/test_party_mage_support.py`, `UI/ui_qt/editors/tests/test_party_workspace.py`. Not run in game.
-=======
+
 ## 2026-11-11 — party hunt keeps its mark, and party clicks miss player sprites
 
 Intent: After a map reload, the party leader's hunt rect is the party mark again, not the solo yaml farm. A point stays its 5×5. Inside that mark the leader does not walk toward the solo area. Outside it, the return walk uses the mark. During a party session, a click is not placed on a memory player's center or on any of the eight tiles that touch it. Solo clicks still avoid only living centers. Monster neighbors stay clickable.
@@ -24,7 +55,6 @@ Shared: `PartyLeaderManager._mount`, `click_bodies` (travel, loot approach, sear
 Affects: the party leader after a talking scroll lands, and party move, follow, loot approach, and search while another player is beside the click. Solo hunting is unchanged.
 Consent: user (the neighbor exclusion is party-only; the farm-edge walk must be fixed; do it on a new branch).
 Result: `Engine/app/_06_party/tests/test_leader_routine.py`, `Engine/app/_04_decision/tests/test_party_click_ring.py`. Not run in game.
->>>>>>> origin/main
 
 ## 2026-11-11 — after the rally stand the leader walks
 

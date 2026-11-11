@@ -1280,9 +1280,10 @@ class ActionExecutor:
         A party-list heal presses the key once, waits until the spell cursor
         is up, then clicks that member's row. A click before the cursor
         selects the row and leaves the circle for the next ground hop. A
-        second press before the click clears the target cursor. A self heal
-        keeps the double press. The point is client pixels; the window origin
-        turns it into a desktop click.
+        second press before the click clears the target cursor, so a circle
+        that is already up holds this press. A self heal keeps the double
+        press. The point is client pixels; the window origin turns it into a
+        desktop click.
         """
         forced: tuple[int, str] | None = None
         if intent is not None and intent.hotbar_box and intent.hotbar_key:
@@ -1291,6 +1292,10 @@ class ActionExecutor:
         cy = getattr(intent, "click_y", None) if intent is not None else None
         list_target = cx is not None and cy is not None and bounds.valid
         heal_all = "heal all" in str(getattr(intent, "reason", "") or "")
+        if (list_target or heal_all) and self._party_list_recast_waiting(reason="heal"):
+            return
+        if (list_target or heal_all) and self._party_list_press_held(reason="heal"):
+            return
         before = float(self._last_magic_at or 0.0)
         self._press_assigned_skill(
             "heal", forced_slot=forced, once=list_target or heal_all
@@ -1318,6 +1323,7 @@ class ActionExecutor:
             int(screen_y),
         )
         self.mouse.click(screen_x, screen_y, snap=True)
+        self._party_list_click_at = time.time()
 
     def _buff(
         self,
@@ -1385,7 +1391,11 @@ class ActionExecutor:
         self._last_magic_at = time.time()
 
     def _party_list_buff(self, intent: ActionIntent, bounds: WindowBounds | None = None) -> bool:
-        """True when this buff aims at a party-list row and the press was handled."""
+        """True when this buff aims at a party-list row and the press was handled.
+
+        A circle that is already up holds the key. The next tick presses once
+        after the cursor is down.
+        """
         cx = getattr(intent, "click_x", None)
         cy = getattr(intent, "click_y", None)
         if cx is None or cy is None:
@@ -1398,6 +1408,11 @@ class ActionExecutor:
 
         world = getattr(self, "_world", None)
         if world is not None and not can_cast_spell(world):
+            return True
+        buff_reason = str(getattr(intent, "reason", "") or "party buff")
+        if self._party_list_recast_waiting(reason=buff_reason):
+            return True
+        if self._party_list_press_held(reason=buff_reason):
             return True
         if self._last_magic_at > 0:
             wait = sb.MAGIC_COOLDOWN_S - (time.time() - self._last_magic_at)
@@ -1438,6 +1453,48 @@ class ActionExecutor:
             int(screen_y),
         )
         self.mouse.click(screen_x, screen_y, snap=True)
+        self._party_list_click_at = time.time()
+        return True
+
+    def _party_list_recast_waiting(self, *, reason: str) -> bool:
+        """True when the previous party-list click is still inside the settle.
+
+        The next heal, heal-all, or buff key waits out ``PARTY_LIST_RECAST_S``.
+        A normal cursor is left alone. A spell circle falls through to the hold.
+        """
+        clicked = float(getattr(self, "_party_list_click_at", 0.0) or 0.0)
+        if clicked <= 0.0:
+            return False
+        from app._05_action.cursor_verify import PARTY_LIST_RECAST_S, cursor_is_spell_aim
+
+        if (time.time() - clicked) >= float(PARTY_LIST_RECAST_S):
+            return False
+        if cursor_is_spell_aim(self):
+            return False
+        label = str(reason or "party").strip() or "party"
+        from app.bot_log import get_logger
+
+        get_logger("action").info("party list press held reason=%s settle", label)
+        return True
+
+    def _party_list_press_held(self, *, reason: str) -> bool:
+        """True when this tick must not press a party-list skill key.
+
+        The cursor is already a spell circle. Another skill key clears that
+        circle, so this tick only cancels and leaves the row unclicked.
+        """
+        from app._05_action.cursor_verify import cancel_spell_aim, cursor_is_spell_aim
+
+        if not cursor_is_spell_aim(self):
+            return False
+        label = str(reason or "party").strip() or "party"
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "party list press held reason=%s cursor=spell",
+            label,
+        )
+        cancel_spell_aim(self, reason=f"press held:{label}")
         return True
 
     def _catalog_buff_is_double(self, buff) -> bool:

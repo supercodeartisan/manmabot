@@ -230,8 +230,11 @@ def verify_mage_cast_aim(executor: "ActionExecutor", x: float, y: float) -> bool
     )
 
 
-PARTY_LIST_AIM_WAIT_S = 1.0
+PARTY_LIST_AIM_WAIT_S = 1.5
 PARTY_LIST_AIM_POLL_S = 0.05
+# A party-list key waits this long after the previous row click.
+# A press at 0.3s or 0.5s leaves a late circle; a press near 1.9s lands.
+PARTY_LIST_RECAST_S = 2.0
 
 
 def wait_party_spell_aim(
@@ -326,11 +329,13 @@ def cancel_spell_aim(
     """Leave cast-target mode. Esc first; a view right-click if the circle remains.
 
     Returns whether aim looked active. The right-click is inside the game
-    view, so a missing or off-window last pixel cannot skip it. The caller
-    walks only after the cursor is no longer a spell circle.
+    view, so a missing or off-window last pixel cannot skip it. A right-click
+    that leaves the circle up is not repeated until the cursor drops. The
+    caller walks only after the cursor is no longer a spell circle.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
+        executor._spell_view_cancel_used = False
         return False
     try:
         executor.keyboard.press("esc")
@@ -339,11 +344,16 @@ def cancel_spell_aim(
     settle = float(CURSOR_SEARCH_SETTLE_S or 0.0)
     if settle > 0:
         time.sleep(settle)
-    if cursor_is_spell_aim(executor):
-        _right_click_view(executor)
+    if cursor_is_spell_aim(executor) and not getattr(
+        executor, "_spell_view_cancel_used", False
+    ):
+        if _right_click_view(executor):
+            executor._spell_view_cancel_used = True
         if settle > 0:
             time.sleep(settle)
     still = cursor_is_spell_aim(executor)
+    if not still:
+        executor._spell_view_cancel_used = False
     try:
         from app.bot_log import get_logger
 
@@ -1328,6 +1338,7 @@ __all__ = [
     "verify_mage_cast_aim",
     "PARTY_LIST_AIM_WAIT_S",
     "PARTY_LIST_AIM_POLL_S",
+    "PARTY_LIST_RECAST_S",
     "wait_party_spell_aim",
     "cursor_is_spell_aim",
     "cancel_spell_aim",

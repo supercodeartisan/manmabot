@@ -2032,6 +2032,18 @@ def _quiet_search_click(blackboard: "Blackboard") -> None:
     blackboard.search_waypoint = None
 
 
+def _quiet_route_click(blackboard: "Blackboard") -> None:
+    """Drop an armed route hop so it cannot click away from the pile.
+
+    The route goal and the world-nav session stay. The 5 s unstick sweep
+    is not reset.
+    """
+    blackboard.travel_hop_active = False
+    blackboard.nav_waypoint = None
+    blackboard.travel_destination = None
+    blackboard.travel_unstick_active = False
+
+
 def _loot_guid(obj: object) -> str:
     return str(getattr(obj, "memory_guid", None) or "").strip()
 
@@ -2219,6 +2231,7 @@ def continue_or_start_loot(
         )
         if resolved == _LOOT_TRACK_HOLD:
             _quiet_search_click(blackboard)
+            _quiet_route_click(blackboard)
             blackboard.current_goal = "loot"
             blackboard.emit(
                 ActionType.IDLE,
@@ -2306,6 +2319,7 @@ def continue_or_start_loot(
                 blackboard.current_item_id = None
             else:
                 _quiet_search_click(blackboard)
+                _quiet_route_click(blackboard)
                 status = tick_loot_item(
                     state, blackboard, sticky, fresh=False
                 )
@@ -2362,6 +2376,7 @@ def continue_or_start_loot(
         return None
     begin_loot_item(blackboard, item.track_id, item)
     _quiet_search_click(blackboard)
+    _quiet_route_click(blackboard)
     status = tick_loot_item(state, blackboard, item, fresh=True)
     if status is Status.SUCCESS:
         return Status.SUCCESS
