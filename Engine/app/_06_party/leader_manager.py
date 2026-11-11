@@ -66,27 +66,20 @@ class PartyLeaderManager:
         scratch["party_rally_wait"] = False
         scratch.pop("routine_cursor", None)
         scratch["party_point_arrival"] = self._on_point_arrival
-        scratch["party_rally_arrival"] = (
-            lambda bb, reason, rally=rally: self._on_rally_walk_arrived(
-                bb, reason, rally
-            )
-        )
         # Arrived turret stays the hunt. A step outside the 5×5 walks back
         # through that module. It does not open another world-nav route.
         point_held = self._point_routine_held(blackboard)
         if point_held:
             self._drop_open_travel(scratch)
         now = time.monotonic()
-        if (
-            rally is not None
-            and str(getattr(rally, "state", "") or "") == "await_mark"
-            and self._at_rally_point(row, pose)
-        ):
-            rally.note_arrived(self._arrival_point(row, pose))
         if rally is not None and str(getattr(rally, "state", "") or "") == "waiting":
             scratch["party_rally_wait"] = True
-            self._drop_open_travel(scratch)
             inside = self._inside(row, pose)
+            # Already inside the farm, with no teleporter on the route: hunt
+            # from this tile after the stand. A teleporter route, and a walk
+            # that has not entered the farm, keeps the plan so it can resume.
+            if inside and not bool(getattr(rally, "had_teleport", False)):
+                self._drop_open_travel(scratch)
             schedule.note_inside(now, inside, holding=True)
             schedule.note_mark(now, inside, holding=True)
             self._mount(blackboard, row)
@@ -144,14 +137,17 @@ class PartyLeaderManager:
         self._arm_travel(blackboard, world, pose)
 
     def _rally_walk_pending(self, rally: Any, row: dict[str, Any], pose: Any) -> bool:
-        """Start-rally still owes the walk to the mark point."""
+        """Start-rally still owes the walk that reveals the meet tile."""
+        del row
         if rally is None or str(getattr(rally, "state", "") or "") != "await_mark":
             return False
-        return not self._at_rally_point(row, pose)
+        return not self._at_meet(rally, pose)
 
-    def _at_rally_point(self, row: dict[str, Any], pose: Any) -> bool:
-        """True within one tile of the mark point. That matches the walk arrival."""
-        point = self._arrival_point(row, pose)
+    def _at_meet(self, rally: Any, pose: Any) -> bool:
+        """True within one tile of the meet tile chosen from the route."""
+        point = getattr(rally, "meet", None)
+        if point is None:
+            return False
         try:
             if int(pose.map_id) != int(point[0]):
                 return False
@@ -198,31 +194,6 @@ class PartyLeaderManager:
         self.hunt_mode = "turret" if mode == "turret" else "moving"
         self.on_area = bool(on_area) and self.hunt_mode != "turret"
         self.turret_anchor = anchor if self.hunt_mode == "turret" else None
-
-    def _on_rally_walk_arrived(self, blackboard: Any, reason: str, rally: Any) -> None:
-        """Stand when the mark walk ends inside ``decide``.
-
-        ``prepare`` already returned while that walk was still active. The
-        same tick then hands off to farming. Enter the stand here so the
-        farming column idles instead of searching.
-        """
-        if str(reason or "") != "party_schedule":
-            return
-        if rally is None or str(getattr(rally, "state", "") or "") != "await_mark":
-            return
-        row = self.schedule.current()
-        if row is None:
-            return
-        from app._04_decision.world_nav.session import live_pose_from_state
-
-        pose = live_pose_from_state(blackboard.scratch.get("_world_nav_pose_state"))
-        if pose is None:
-            return
-        rally.note_arrived(self._arrival_point(row, pose))
-        if str(getattr(rally, "state", "") or "") != "waiting":
-            return
-        blackboard.scratch["party_rally_wait"] = True
-        self._drop_open_travel(blackboard.scratch)
 
     def _on_point_arrival(self, blackboard: Any, reason: str) -> bool:
         """Arm turret when a party-point walk ends inside that dot's 5×5.
@@ -330,18 +301,6 @@ class PartyLeaderManager:
             return pack_ids.abs_to_nav(pack_id, int(pose.x), int(pose.y))
         except (TypeError, ValueError, AttributeError):
             return None
-
-    def _arrival_point(self, row: dict[str, Any], pose: Any) -> tuple[int, int, int]:
-        from app._04_decision.world_nav import pack_ids
-
-        goal = self.schedule.goal_nav()
-        if goal is not None:
-            pack_id, nx, ny = goal
-            abs_xy = pack_ids.nav_to_abs(pack_id, nx, ny)
-            mid = pack_ids.pack_id_to_map_id(pack_id)
-            if abs_xy is not None and mid is not None:
-                return int(mid), int(abs_xy[0]), int(abs_xy[1])
-        return int(pose.map_id), int(pose.x), int(pose.y)
 
     def _mount(self, blackboard: Any, row: dict[str, Any]) -> None:
         marks = self.schedule.marks()

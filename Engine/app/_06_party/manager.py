@@ -975,71 +975,33 @@ class PartyMemberManager:
         if view.source and result.kind is MemberKind.FOLLOW:
             reason = f"{reason} via={view.source}"
 
-        if leader_moving or loot_own is None or returning:
-            can_loot_now = False
-            loot_max_tiles = 0
-        else:
-            # Leader is standing. Assist, defend, and join still come first.
-            can_loot_now = result.kind in (
-                MemberKind.HOLD,
-                MemberKind.FOLLOW,
-            )
-            from .loot import party_loot_radius
+        # Assist already won above. Hold and follow yield to a pile.
+        # A moving leader and a seat catch-up do not cancel that pile.
+        from .loot import party_loot_radius, party_may_start_loot, party_should_drop_loot
 
-            loot_max_tiles = party_loot_radius(cfg)
-            if (
-                can_loot_now
-                and game_state is not None
-                and self._nav_blackboard is not None
-            ):
-                from .loot import arm_party_loot_side
-
-                try:
-                    arm_party_loot_side(
-                        game_state,
-                        self._nav_blackboard,
-                        ownership_filter=bool(loot_own),
-                        item_ok=loot_item_ok,
-                    )
-                except Exception as exc:
-                    _log.debug("party loot side failed: %s", exc)
-
-        # Turret idle, before the first swing: pick up, otherwise self-hunt.
+        can_loot_now = party_may_start_loot(
+            result.kind.value, allowed=loot_own is not None
+        )
+        loot_max_tiles = party_loot_radius(cfg) if can_loot_now else 0
         if (
-            not returning
-            and not leader_moving
-            and loot_own is not None
-            and cfg.turret_farm
-            and not cfg.solo_farm
-            and not bool(view.farming)
-            and self.runtime.own_hunt_id is None
-            and getattr(self, "_turret_own_pending", None)
+            can_loot_now
+            and game_state is not None
+            and self._nav_blackboard is not None
         ):
-            can_loot_now = True
-            from .loot import party_loot_radius
+            from .loot import arm_party_loot_side
 
-            loot_max_tiles = party_loot_radius(cfg)
+            try:
+                arm_party_loot_side(
+                    game_state,
+                    self._nav_blackboard,
+                    ownership_filter=bool(loot_own),
+                    item_ok=loot_item_ok,
+                )
+            except Exception as exc:
+                _log.debug("party loot side failed: %s", exc)
 
-        if leader_moving and self._nav_blackboard is not None:
-            from .loot import clear_party_loot_sticky
-
-            clear_party_loot_sticky(self._nav_blackboard)
-
-        # Abort sticky loot when movement / combat / defend must win.
         if (
-            not can_loot_now
-            and result.kind
-            in (
-                MemberKind.FOLLOW,
-                MemberKind.ASSIST,
-                MemberKind.JOIN_MAP,
-                MemberKind.DEFEND,
-                MemberKind.WAIT,
-                MemberKind.STOP,
-                MemberKind.HEAL,
-                MemberKind.BUFF,
-                MemberKind.POTION,
-            )
+            party_should_drop_loot(result.kind.value, allowed=loot_own is not None)
             and self._nav_blackboard is not None
         ):
             from .loot import clear_party_loot_sticky

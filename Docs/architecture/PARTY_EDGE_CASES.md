@@ -169,7 +169,7 @@ Each case is one branch that changes the tick's action or the next tick's state.
 
 **F10. Assist target in range, and not deferred.** `engage_like_solo` emits `ATTACK` on a clear line. Leader sources `leader_attack`, `leader_strike`, and `external` ignore the species blacklist. Self-defense does not. A closed line does not pick another monster.
 
-**F11. Hunt deferred.** A new assist waits while catch-up is latched, and while the leader is moving and this member is off the slot. An already-running attack is a later combat question. The policy itself will not start a new one.
+**F11. Assist stays first.** A new assist starts while catch-up is latched and while the leader is moving, including off the slot. Out of attack range still follows. An already-running attack is a later combat question.
 
 **F12. Stale leader pose.** `IDLE` `leader_pose_stale`. The sticky tile is stored and is not copied back onto the view, so it cannot become the click goal.
 
@@ -189,7 +189,7 @@ Each case is one branch that changes the tick's action or the next tick's state.
 
 **F20. No terrain or no path.** `IDLE` `no_terrain` or `no_path`. A follow `no_path` clears `approach_goal` so the next tick may pick another tile.
 
-**F21. Leader stopped for loot.** Stopped means the same fresh tile for 0.7 seconds. The first sample of a tile is not stopped. A gap over 30 seconds is not a continued sample: stopped becomes false, and `_leader_is_moving` treats the gap as movement. Loot is armed only when stopped, the seat may loot, and the kind is `HOLD` or `FOLLOW`. Any other kind, or a moving leader, clears sticky loot.
+**F21. Leader movement does not cancel member loot.** Stopped means the same fresh tile for 0.7 seconds. The first sample of a tile is not stopped. A gap over 30 seconds is not a continued sample: stopped becomes false, and `_leader_is_moving` treats the gap as movement. That flag still moves the formation slot. Loot stays armed when the seat may loot and the kind is `HOLD` or `FOLLOW`. Assist and the survival kinds clear sticky loot. Follow does not.
 
 **F22. Sample says the leader is farming.** Outside `assist_leash_tiles`: `FOLLOW`. Inside: the slot, else follow outside `stop_tiles`, else `HOLD`. Turret yard rejoin is earlier: inside the leash and outside the yard is `FOLLOW` `turret_rejoin_yard`.
 
@@ -229,7 +229,7 @@ Each case is one branch that changes the tick's action or the next tick's state.
 
 **M6. New leader session id.** Overlay cleared, formation reset. A socket reconnect does not do this. The member keeps the overlay and waits for a fresh `member_state`.
 
-**M7. Leader loot versus member loot.** The leader uses S11. A member uses `party_loot_ownership_filter`. `random_loot` with ownership refused uses the closest-looter filter. A supply pile reserved for someone else is refused. Loot never starts while the leader looks moving (F21).
+**M7. Leader loot versus member loot.** The leader uses S11. A member uses `party_loot_ownership_filter`. `random_loot` with ownership refused uses the closest-looter filter. A supply pile reserved for someone else is refused. Member loot stays open while the leader looks moving (F21). Assist still comes first.
 
 ## 7. Supply
 

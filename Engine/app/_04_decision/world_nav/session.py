@@ -266,7 +266,8 @@ def live_pose_from_state(state: Any, *, fresh: bool = False) -> Any | None:
 class WorldNavHooks:
     """Optional party hooks. Unset for solo, so a plan never waits on a rally."""
 
-    on_plan = None  # callable(plan) — leader announces the rally point
+    on_plan = None  # callable(plan) — leader stores the meet tile
+    should_hold = None  # callable(step_i, pose) -> bool — pause before that step
 
 
 @dataclass
@@ -419,6 +420,20 @@ class WorldNavSession:
         step = self.plan.steps[self.step_i]
         tokens = api.state_tokens()
         if self.phase == "ready":
+            hold = WorldNavHooks.should_hold
+            if hold is not None:
+                try:
+                    paused = bool(hold(self.step_i, pose))
+                except Exception:
+                    paused = False
+                if paused:
+                    blackboard.current_goal = "rally"
+                    blackboard.emit(
+                        ActionType.IDLE,
+                        priority=0.45,
+                        reason="party rally wait",
+                    )
+                    return Status.SUCCESS
             api.emit_state(
                 tokens.STEP_BEGIN,
                 i=self.step_i + 1,

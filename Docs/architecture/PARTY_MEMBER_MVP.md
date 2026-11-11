@@ -23,7 +23,7 @@ The 2026-10-13 MVP was follow, assist, and hold, with cross-map, invites, healin
 7. `JOIN_MAP` or a far follow opens `PartyJoinNav`.
 8. Otherwise follow a formation slot with a click of at most 2 tiles, or hold.
 
-Loot is on when the leader tile has been unchanged for 0.7 seconds and the kind is hold or follow. A moving leader clears sticky loot.
+Loot is on when the kind is hold or follow and this seat may loot. A moving leader does not clear it. Assist does.
 
 Death in this loop is `IDLE` (`STOP`). This loop does not run the solo `survival.death` column.
 

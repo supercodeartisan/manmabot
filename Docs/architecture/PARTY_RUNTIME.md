@@ -217,7 +217,7 @@ Talking-scroll arrival runs on a member only while `joining_map()` is true (`Par
 9. Formation slot from `choose_formation_goal` (seat index, party size, trail, terrain, occupied tiles).
 10. `decide_policy`.
 11. Heal or buff support returns. A mage list-heal can replace any kind except `STOP`, `DEFEND`, `POTION`, and a formation catch-up.
-12. Loot is armed only when the leader looks stopped, this seat is allowed to loot, and the kind is `HOLD` or `FOLLOW`. A moving leader clears sticky loot. Assist, defend, and join stay ahead of loot.
+12. Loot is armed when this seat may loot and the kind is `HOLD` or `FOLLOW`. Assist, defend, heal, buff, potion, join, wait, and stop clear a pile walk. A moving leader does not.
 13. The kind is turned into one follow, assist, defend, join, wait, or stop intent.
 
 `decide_policy` itself, first match:
@@ -228,7 +228,7 @@ Talking-scroll arrival runs on a member only while `joining_map()` is true (`Par
 4. `DEFEND` if `defend_self` and a threat exists.
 5. `JOIN_MAP` if the leader map id and the local map id are both known and differ.
 6. `WAIT` if the leader is absent.
-7. `ASSIST` when a target exists, no combat step is required, and hunt is not deferred. Hunt is deferred while catching the slot, and while the leader is moving and this seat is off the slot.
+7. `ASSIST` when a target exists and no combat step is required. A leader step and a seat catch-up do not defer it.
 8. `WAIT` if the leader pose is stale.
 9. Turret yard rejoin (`FOLLOW`) when `turret_farm` and this seat is inside the assist leash but outside the yard.
 10. While the leader is farming: follow outside the assist leash; otherwise the formation slot; otherwise follow outside `stop_tiles`; otherwise `HOLD`.

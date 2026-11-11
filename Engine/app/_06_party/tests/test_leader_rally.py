@@ -37,7 +37,14 @@ def _rally():
     return start, rally
 
 
-def test_plan_does_not_start_the_wait():
+class _Pose:
+    def __init__(self, map_id, x, y):
+        self.map_id = map_id
+        self.x = x
+        self.y = y
+
+
+def test_walk_only_plan_meets_at_the_current_tile():
     start, rally = _rally()
     plan = _Plan(
         [_Step("walk", {"from": {"mapId": 0, "x": 1, "y": 2}, "to": {"mapId": 0, "x": 9, "y": 9}})],
@@ -46,15 +53,21 @@ def test_plan_does_not_start_the_wait():
     start.state = "await_mark"
     start.on_plan(plan)
     assert start.state == "await_mark"
+    assert start.had_teleport is False
+    assert start.hold_step == 0
+    assert start.meet == (0, 1, 2)
     assert rally.body is None
     assert start.should_hold(0, None) is False
-    start.note_arrived((0, 9, 9))
+    assert start.should_hold(0, _Pose(0, 9, 9)) is False
+    assert start.should_hold(0, _Pose(0, 1, 2)) is True
     assert start.state == "waiting"
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 9, 9)
-    assert start.should_hold(0, None) is False
+    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 1, 2)
+    assert start.should_hold(0, _Pose(0, 1, 2)) is True
+    start.state = "done"
+    assert start.should_hold(0, _Pose(0, 1, 2)) is False
 
 
-def test_teleport_plan_does_not_move_the_wait():
+def test_teleport_plan_meets_at_the_departure_tile():
     start, rally = _rally()
     plan = _Plan(
         [
@@ -71,11 +84,15 @@ def test_teleport_plan_does_not_move_the_wait():
     )
     start.state = "await_mark"
     start.on_plan(plan)
-    assert start.hold_step is None
+    assert start.had_teleport is True
+    assert start.hold_step == 1
+    assert start.meet == (4, 20, 20)
     assert start.state == "await_mark"
-    start.note_arrived((0, 3, 4))
+    assert start.should_hold(0, _Pose(4, 10, 10)) is False
+    assert start.should_hold(1, _Pose(4, 80, 80)) is False
+    assert start.should_hold(1, _Pose(4, 20, 20)) is True
     assert start.state == "waiting"
-    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (0, 3, 4)
+    assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (4, 20, 20)
 
 
 def test_everyone_at_the_mark_leaves_immediately():
@@ -166,8 +183,8 @@ def test_rally_point_is_not_sent_to_members():
 
 
 if __name__ == "__main__":
-    test_plan_does_not_start_the_wait()
-    test_teleport_plan_does_not_move_the_wait()
+    test_walk_only_plan_meets_at_the_current_tile()
+    test_teleport_plan_meets_at_the_departure_tile()
     test_everyone_at_the_mark_leaves_immediately()
     test_a_missing_member_holds_the_stand_for_three_minutes()
     test_rally_wait_stands_before_the_hunt_walk()

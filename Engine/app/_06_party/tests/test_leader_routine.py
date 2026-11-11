@@ -433,7 +433,6 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
     )
     walked: list[int] = []
     farmed: list[int] = []
-    manager._arrival_point = lambda row, pose: (4, 33198, 33435)  # type: ignore[method-assign]
     manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
     manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
     manager._inside = lambda row, pose: True  # type: ignore[method-assign]
@@ -460,8 +459,19 @@ def test_rally_walks_to_the_mark_before_waiting() -> None:
         edge = LeaderStartRally(Rally(), log=lambda _message: None)
         edge.begin({"poorboy"}, travel=False, pose=None)
         _run(33199, 33435, edge)
+        assert edge.state == "await_mark"
+        assert walked == [1]
+        assert farmed == []
+
+        class _Plan:
+            def __init__(self) -> None:
+                self.steps = []
+                self.meta = {"start": {"mapId": 4, "x": 33199, "y": 33435}}
+
+        edge.on_plan(_Plan())
+        assert edge.should_hold(0, SimpleNamespace(map_id=4, x=33199, y=33435)) is True
         assert edge.state == "waiting"
-        assert walked == []
+        _run(33199, 33435, edge)
         assert farmed == []
         assert decision.blackboard.scratch.get("party_rally_wait") is True
         edge.update(
@@ -511,7 +521,6 @@ def test_walk_arrival_stands_before_the_farm_handoff() -> None:
             }
         ]
     )
-    manager._arrival_point = lambda row, pose: (4, 33198, 33435)  # type: ignore[method-assign]
     manager._arm_travel = lambda *args, **kwargs: None  # type: ignore[method-assign]
     manager._farm = lambda *args, **kwargs: None  # type: ignore[method-assign]
     manager._inside = lambda row, pose: True  # type: ignore[method-assign]
@@ -531,14 +540,21 @@ def test_walk_arrival_stands_before_the_farm_handoff() -> None:
         _pose(33202, 33414)
         manager.prepare(object(), rally)
         assert rally.state == "await_mark"
-        assert decision.blackboard.scratch.get("party_rally_wait") is not True
-        _on_world_nav_arrived(decision.blackboard, reason="farm_area")
-        assert rally.state == "await_mark"
-
-        _pose(33199, 33435)
         decision.blackboard.scratch["_world_nav_pose_state"] = object()
         _on_world_nav_arrived(decision.blackboard, reason="party_schedule")
+        assert rally.state == "await_mark"
+        assert decision.blackboard.scratch.get("party_rally_wait") is not True
+
+        class _Plan:
+            def __init__(self) -> None:
+                self.steps = []
+                self.meta = {"start": {"mapId": 4, "x": 33202, "y": 33414}}
+
+        rally.on_plan(_Plan())
+        assert rally.should_hold(0, SimpleNamespace(map_id=4, x=33202, y=33414)) is True
         assert rally.state == "waiting"
+        _pose(33202, 33414)
+        manager.prepare(object(), rally)
         assert decision.blackboard.scratch.get("party_rally_wait") is True
 
         class _Emit:

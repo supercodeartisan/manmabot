@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-10 — member order is assist, then loot, then follow
+
+Intent: A party member attacks when an assist target is in range, then picks up, then follows. A leader step and a seat catch-up no longer cancel that attack or that pile. Heal, a potion, and self-defense stay first. A buff still waits while the member is walking back to the seat.
+Shared: `decide_policy`, `party_may_start_loot`, `party_should_drop_loot`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Leader hunt and leader loot are unchanged.
+Affects: party member assist, loot, and follow. Solo hunt is unchanged.
+Consent: user ("go" — assist, then loot, then follow).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`, `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
+## 2026-11-10 — rally meet tile is the first teleporter, or the current tile
+
+Intent: The party meets where the 2026-11-03 rule said. A route with an NPC teleporter or a talking scroll stands on the departure tile of the first of those steps, then continues that same route. A walk-only route stands on the tile where the plan was made. If that tile is already inside the farm and the route has no teleporter, the leader hunts from there after the stand instead of walking to the area center. The 3-minute stand and the immediate leave when every expected member is within 7 tiles stay.
+Shared: `LeaderStartRally.on_plan` / `should_hold`, `WorldNavSession.tick` before a ready step, and `PartyLeaderManager.prepare`. Solo world nav has no rally hook. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's start, from the hunt route being planned until the stand ends.
+Consent: user (fix like above; if already in the farming area, stand on the current tile).
+Result: `Engine/app/_06_party/tests/test_leader_rally.py`, `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-10 — rally stand starts on the walk-arrival tick
 
 Intent: When the party leader's walk to the rally mark finishes, stand on that tick. The same tick used to switch to farming and click into the farm before `party_rally_wait` existed. The 3-minute stand and the immediate leave when everyone is there are unchanged.

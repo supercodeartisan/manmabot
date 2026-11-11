@@ -81,10 +81,11 @@ CATCH_UP_EXIT_TILES = 1
 
 
 def formation_returning(slot_dist: Optional[int], *, latched: bool) -> bool:
-    """True while this member should walk back before a new hunt or loot.
+    """True while this member is still walking back to the seat.
 
     Enter at ``CATCH_UP_ENTER_TILES``. Stay until the slot is within
-    ``CATCH_UP_EXIT_TILES``. No slot keeps the previous latch.
+    ``CATCH_UP_EXIT_TILES``. No slot keeps the previous latch. Assist and
+    loot do not wait on this. A buff still does.
     """
     if slot_dist is None:
         return bool(latched)
@@ -152,15 +153,9 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
 
     dist = int(inp.leader_dist)
 
-    # In the solo hunt range: attack from here. Out of range: follow the leader.
-    # A new hunt waits while this member is catching the slot, and while the
-    # leader is walking and this member is off the allowed seat.
-    off_slot = (
-        inp.slot_dist is not None
-        and int(inp.slot_dist) > max(0, int(inp.slot_arrive))
-    )
-    defer_hunt = returning or (bool(inp.leader_moving) and off_slot)
-    if inp.assist_ready and not inp.need_combat_step and not defer_hunt:
+    # Assist beats loot and follow. A leader step or a seat catch-up does not
+    # defer it. Out of attack range still follows instead of closing in.
+    if inp.assist_ready and not inp.need_combat_step:
         yard = "turret_" if cfg.turret_farm else ""
         out = "_out_of_yard" if cfg.turret_farm and not inp.target_in_yard else ""
         what = "solo_farm" if inp.solo_farm else "assist"

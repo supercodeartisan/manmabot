@@ -12,6 +12,15 @@ FARM_MODES = ("party", "solo")
 LEADER_MODES = ("turret", "moving")
 
 
+def _coord(value: Any) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 @dataclass
 class PartyMemberConfig:
     """Settings for one member bot that mirrors a leader."""
@@ -39,11 +48,11 @@ class PartyMemberConfig:
     external_target_ent: str = ""
     # Loot comes from the leader policy. The near radius is
     # ``farm.loot_max_tiles``: the leader walks that far, and every other
-    # member loots their own piles inside it. Hunt and assist stay first.
+    # member loots their own piles inside it. Assist stays ahead of loot,
+    # and loot stays ahead of follow, including while the leader is moving.
     # Random ON: closest eligible member takes party drops.
     # Random OFF: ``responsible`` uses the wider engage radius and takes
     # every party pile, including a colleague's.
-    # Members do not loot while the leader is moving.
     random_loot: bool = False
     loot_role: str = "none"
     farm_mode: str = "party"
@@ -358,14 +367,6 @@ class PartyMemberConfig:
             return raw.clamped()
         if not isinstance(raw, dict):
             return cls().clamped()
-
-        def _coord(value: Any) -> Optional[int]:
-            if value is None or value == "":
-                return None
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                return None
 
         tid = raw.get("leader_track_id")
         try:

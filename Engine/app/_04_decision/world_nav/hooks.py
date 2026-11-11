@@ -471,19 +471,7 @@ def _on_world_nav_arrived(blackboard: Any, *, reason: str = "") -> None:
     _clear_finished_world_nav_purpose(blackboard)
     _note_field_nav_arrived(blackboard, reason)
     get_logger("nav").info("world nav arrived reason=%s", reason or "-")
-    _arm_party_rally_on_arrival(blackboard, reason)
     _arm_party_point_on_arrival(blackboard, reason)
-
-
-def _arm_party_rally_on_arrival(blackboard: Any, reason: str) -> None:
-    """Start the rally stand before this tick's farming handoff can search."""
-    fn = blackboard.scratch.get("party_rally_arrival")
-    if not callable(fn):
-        return
-    try:
-        fn(blackboard, reason)
-    except Exception:
-        get_logger("nav").exception("party rally arrival failed")
 
 
 def _arm_party_point_on_arrival(blackboard: Any, reason: str) -> None:
