@@ -428,6 +428,22 @@ def _support_row(tab: PartyTab, name: str) -> int:
     raise AssertionError(name)
 
 
+def test_missing_party_heal_is_saved_and_an_explicit_off_stays_off() -> None:
+    workspace = _workspace()
+    tab = workspace.tab
+    assert tab.bag.get("party", "mage_support_skills", {}).get("mage_0") is True
+    heal = _support_row(tab, "힐")
+    heal_box = tab.member_support_magic_table.cellWidget(heal, 0).findChild(QCheckBox)
+    assert heal_box is not None and heal_box.isChecked() is True
+    heal_box.setChecked(False)
+    assert tab.bag.get("party", "mage_support_skills", {}).get("mage_0") is False
+    tab._refresh_party_heal()
+    heal_box = tab.member_support_magic_table.cellWidget(heal, 0).findChild(QCheckBox)
+    assert heal_box is not None and heal_box.isChecked() is False
+    heal_box.setChecked(True)
+    assert tab.bag.get("party", "mage_support_skills", {}).get("mage_0") is True
+
+
 def test_mage_party_support_skills_are_selectable_without_touching_solo() -> None:
     workspace = _workspace()
     tab = workspace.tab

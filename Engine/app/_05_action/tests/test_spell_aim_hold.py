@@ -95,6 +95,58 @@ def test_party_list_waits_for_the_spell_cursor() -> None:
     assert seen["n"] >= 2
 
 
+class _Keys:
+    def __init__(self) -> None:
+        self.pressed: list[str] = []
+
+    def press(self, key: str) -> None:
+        self.pressed.append(key)
+
+
+class _ClickMouse:
+    def __init__(self) -> None:
+        self._last_pos = (1.0, 1.0)
+        self.clicks: list[tuple[float, float, str]] = []
+
+    def click(self, x: float, y: float, button: str = "left", *, snap: bool = False) -> None:
+        del snap
+        self.clicks.append((float(x), float(y), button))
+
+
+class _Bounds:
+    valid = True
+    left = 100
+    top = 50
+    width = 800
+    height = 600
+
+
+class _Capture:
+    content_bounds = _Bounds()
+
+
+def test_stuck_spell_right_clicks_inside_the_view() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.mouse = _ClickMouse()
+    executor._perception_capture = _Capture()
+    seen = {"n": 0}
+
+    def _aim(_executor: object = None) -> bool:
+        seen["n"] += 1
+        return seen["n"] < 4
+
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        active = cv.cancel_spell_aim(executor, reason="party buff")
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert active is True
+    assert executor.keyboard.pressed == ["esc"]
+    assert executor.mouse.clicks == [(100 + 800 * 0.62, 50 + 600 * 0.45, "right")]
+
+
 def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:
     original = cv.cursor_is_spell_aim
     try:
@@ -110,4 +162,5 @@ if __name__ == "__main__":
     test_out_of_range_circle_cancels_without_a_miss()
     test_party_list_waits_for_the_spell_cursor()
     test_party_list_skips_the_click_when_the_cursor_stays_down()
+    test_stuck_spell_right_clicks_inside_the_view()
     print("spell aim hold tests ok")

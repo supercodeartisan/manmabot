@@ -287,18 +287,35 @@ def cursor_is_spell_aim(executor: "ActionExecutor" | None = None) -> bool:
     )
 
 
-def _right_click_here(executor: "ActionExecutor") -> None:
-    """Right-click the current pixel. Cast aim cancels; it is not an attack."""
-    mouse = getattr(executor, "mouse", None)
-    if mouse is None:
-        return
-    pos = getattr(mouse, "_last_pos", None)
-    if not isinstance(pos, tuple) or len(pos) < 2:
-        return
+def _view_cancel_point(executor: "ActionExecutor") -> tuple[float, float] | None:
+    """A point in the game view, clear of the party list on the left."""
+    capture = getattr(executor, "_perception_capture", None)
+    bounds = getattr(capture, "content_bounds", None) if capture is not None else None
+    if bounds is None or not getattr(bounds, "valid", False):
+        return None
     try:
-        mouse.click(float(pos[0]), float(pos[1]), button="right", snap=True)
+        width = float(bounds.width)
+        height = float(bounds.height)
+        left = float(bounds.left)
+        top = float(bounds.top)
+    except (TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return (left + width * 0.62, top + height * 0.45)
+
+
+def _right_click_view(executor: "ActionExecutor") -> bool:
+    """Right-click inside the game view. Cast aim cancels; it is not an attack."""
+    mouse = getattr(executor, "mouse", None)
+    point = _view_cancel_point(executor)
+    if mouse is None or point is None:
+        return False
+    try:
+        mouse.click(float(point[0]), float(point[1]), button="right", snap=True)
     except Exception:
-        return
+        return False
+    return True
 
 
 def cancel_spell_aim(
@@ -306,10 +323,11 @@ def cancel_spell_aim(
     *,
     reason: str = "",
 ) -> bool:
-    """Leave cast-target mode. Esc first; a right-click if the circle remains.
+    """Leave cast-target mode. Esc first; a view right-click if the circle remains.
 
-    Returns whether aim looked active. The right-click stays on the current
-    pixel so it does not become an attack click.
+    Returns whether aim looked active. The right-click is inside the game
+    view, so a missing or off-window last pixel cannot skip it. The caller
+    walks only after the cursor is no longer a spell circle.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
@@ -322,15 +340,17 @@ def cancel_spell_aim(
     if settle > 0:
         time.sleep(settle)
     if cursor_is_spell_aim(executor):
-        _right_click_here(executor)
+        _right_click_view(executor)
         if settle > 0:
             time.sleep(settle)
+    still = cursor_is_spell_aim(executor)
     try:
         from app.bot_log import get_logger
 
         get_logger("action").info(
-            "spell aim cancel reason=%s",
+            "spell aim cancel reason=%s still=%s",
             str(reason or "spell").strip() or "spell",
+            "spell" if still else "clear",
         )
     except Exception:
         pass

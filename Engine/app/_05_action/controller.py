@@ -817,6 +817,7 @@ class ActionExecutor:
             click_closed_door,
             sweep_click_closed_door,
             cancel_spell_aim,
+            cursor_is_spell_aim,
             travel_click,
         )
         from app._05_action.travel_click import (
@@ -947,6 +948,8 @@ class ActionExecutor:
                 cancel_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
                 spell_cancels += 1
                 probes += 1
+                if cursor_is_spell_aim(self):
+                    break
                 index -= 1
                 if travel_click(self, x, y):
                     self.last_travel_click_relative = rel
@@ -1299,6 +1302,9 @@ class ActionExecutor:
         from app._05_action.cursor_verify import wait_party_spell_aim
 
         if not wait_party_spell_aim(self, reason="heal"):
+            from app._05_action.cursor_verify import cancel_spell_aim
+
+            cancel_spell_aim(self, reason="heal aim missed")
             return
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)
@@ -1415,6 +1421,12 @@ class ActionExecutor:
             self,
             reason=str(getattr(intent, "reason", "") or "party buff"),
         ):
+            from app._05_action.cursor_verify import cancel_spell_aim
+
+            cancel_spell_aim(
+                self,
+                reason=str(getattr(intent, "reason", "") or "party buff"),
+            )
             return True
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)
