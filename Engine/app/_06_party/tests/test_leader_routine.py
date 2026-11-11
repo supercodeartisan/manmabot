@@ -983,6 +983,140 @@ def test_party_drops_a_pre_land_walk_and_arms_from_the_landing() -> None:
     assert armed == [1]
 
 
+def _prepare_at(manager, decision, session, pose, *, since: float) -> None:
+    import time
+
+    from app._04_decision.world_nav import session as nav_session
+
+    manager._from_far_since = time.monotonic() - since
+    decision.blackboard.scratch["world_nav_session"] = session
+    real = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = lambda state, fresh=False: pose
+    try:
+        manager.prepare(object(), None)
+    finally:
+        nav_session.live_pose_from_state = real
+
+
+def test_party_keeps_a_walk_after_the_body_leaves_its_start() -> None:
+    from types import SimpleNamespace
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    session = _pre_land_walk((33044, 33291))
+    start = SimpleNamespace(map_id=4, x=33044, y=33291)
+    walked = SimpleNamespace(map_id=4, x=33044, y=33340)
+    _prepare_at(manager, decision, session, start, since=2.0)
+    _prepare_at(manager, decision, session, walked, since=2.0)
+    assert decision.blackboard.scratch["world_nav_session"] is session
+    assert session.phase == "ready"
+
+
+def test_party_drops_a_walk_whose_start_map_never_matches() -> None:
+    from types import SimpleNamespace
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    session = _pre_land_walk((33044, 33291))
+    armed: list[int] = []
+    manager._arm_travel = lambda *args, **kwargs: armed.append(1)  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: False  # type: ignore[method-assign]
+    other_map = SimpleNamespace(map_id=0, x=33044, y=33291)
+    _prepare_at(manager, decision, session, other_map, since=0.2)
+    assert decision.blackboard.scratch["world_nav_session"] is session
+    assert session.phase == "ready"
+    _prepare_at(manager, decision, session, other_map, since=2.0)
+    assert "world_nav_session" not in decision.blackboard.scratch
+    assert session.phase == "fail"
+    assert armed == [1]
+
+
+def test_after_the_rally_stand_a_new_route_walks() -> None:
+    from types import SimpleNamespace
+
+    import app._04_decision.world_nav.session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "mainland",
+                "areas": [
+                    {
+                        "name": "area_1",
+                        "shape": "area",
+                        "x0": 590,
+                        "y0": 1034,
+                        "x1": 777,
+                        "y1": 1162,
+                    }
+                ],
+                "selected_farms": ["area_1"],
+            }
+        ]
+    )
+    seen: dict = {}
+
+    class _Session:
+        plan = SimpleNamespace(steps=[])
+        error = ""
+
+        def begin(self, pose, goal, **kwargs):
+            seen.update(kwargs)
+            return True
+
+    real = nav_session.WorldNavSession
+    nav_session.WorldNavSession = _Session  # type: ignore[misc]
+    try:
+        decision.blackboard.scratch["party_rally_walk_only"] = True
+        manager._arm_travel(
+            decision.blackboard,
+            object(),
+            SimpleNamespace(map_id=4, x=33100, y=33200),
+        )
+    finally:
+        nav_session.WorldNavSession = real
+    assert seen["has_talking_scroll"] is False
+    assert seen["use_npc_teleporters"] is False
+
+
 def test_party_does_not_arm_while_a_scroll_landing_is_open() -> None:
     from types import SimpleNamespace
 
@@ -1041,5 +1175,8 @@ if __name__ == "__main__":
     test_other_nav_reasons_do_not_arm_turret()
     test_party_keeps_a_walk_during_the_gate_lag()
     test_party_drops_a_pre_land_walk_and_arms_from_the_landing()
+    test_party_keeps_a_walk_after_the_body_leaves_its_start()
+    test_party_drops_a_walk_whose_start_map_never_matches()
+    test_after_the_rally_stand_a_new_route_walks()
     test_party_does_not_arm_while_a_scroll_landing_is_open()
     print("OK")

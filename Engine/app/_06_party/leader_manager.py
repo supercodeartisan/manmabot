@@ -14,10 +14,10 @@ from app._06_party.party_log import get_logger as _party_logger
 
 _log = _party_logger("leader")
 
-# WorldNavSession._start_walk idles while live xy is this far from the walk's
-# ``from``. That wait is for a gate whose map id flips one tick before xy.
-# A party talking-scroll land is a different tile on purpose. If the gap is
-# still there after this long, the plan was built on the pre-land tile.
+# A party walk is dropped only when the body has never stood on its start.
+# The first second covers a gate whose map id flips before xy, and a scroll
+# land whose pose is still the old tile. Once the body has been within this
+# many tiles of ``from`` on that map, walking farther is the route itself.
 _WALK_FROM_LAG_TILES = 24
 _WALK_FROM_LAG_S = 1.0
 
@@ -31,6 +31,7 @@ class PartyLeaderManager:
         self._mounted: Optional[tuple] = None
         self._retry_at = 0.0
         self._from_far_since = 0.0
+        self._walk_start_near: Optional[tuple] = None
         # turret only while the live tile is a party-map point.
         self.hunt_mode = "moving"
         self.on_area = False
@@ -45,6 +46,7 @@ class PartyLeaderManager:
         self._mounted = None
         self._retry_at = 0.0
         self._from_far_since = 0.0
+        self._walk_start_near = None
         self._set_place("moving")
         blackboard = self.decision.blackboard
         scratch = getattr(blackboard, "scratch", None)
@@ -73,6 +75,18 @@ class PartyLeaderManager:
             return
         scratch = blackboard.scratch
         scratch["party_rally_wait"] = False
+        # After the stand, a new party route walks. Scroll and NPC teleport
+        # already ran to reach that stand. Inside the farm, later marks may
+        # scroll again.
+        if (
+            rally is not None
+            and bool(getattr(rally, "stood", False))
+            and bool(getattr(rally, "done", False))
+        ):
+            if self._inside(row, pose):
+                scratch.pop("party_rally_walk_only", None)
+            else:
+                scratch["party_rally_walk_only"] = True
         scratch.pop("routine_cursor", None)
         scratch["party_point_arrival"] = self._on_point_arrival
         # Arrived turret stays the hunt. A step outside the 5×5 walks back
@@ -377,8 +391,24 @@ class PartyLeaderManager:
 
         return bool(scratch.get(SCRATCH_SCROLL_ARRIVAL))
 
+    def _walk_start_key(self, session: Any, step_i: int, frm: dict) -> tuple:
+        try:
+            mid = int(frm["mapId"])
+        except (TypeError, ValueError, KeyError):
+            mid = None
+        try:
+            xy = (int(frm["x"]), int(frm["y"]))
+        except (TypeError, ValueError, KeyError):
+            xy = None
+        return (id(session), int(step_i), mid, xy)
+
     def _party_walk_from_far(self, session: Any, pose: Any) -> bool:
-        """True when this party walk still starts far from the live tile."""
+        """True when this walk's start has never been the live tile.
+
+        A start the body has already stood on stays, including after the body
+        walks away from it. A different map, or a same-map gap past the lag,
+        is a start the body has not reached.
+        """
         if str(getattr(session, "reason", "") or "") != "party_schedule":
             return False
         plan = getattr(session, "plan", None)
@@ -398,22 +428,29 @@ class PartyLeaderManager:
         frm = detail.get("from")
         if not isinstance(frm, dict):
             return False
+        key = self._walk_start_key(session, step_i, frm)
+        if key == self._walk_start_near:
+            return False
         try:
             if int(frm.get("mapId", pose.map_id)) != int(pose.map_id):
-                return False
+                return True
             gap = max(
                 abs(int(pose.x) - int(frm["x"])),
                 abs(int(pose.y) - int(frm["y"])),
             )
         except (TypeError, ValueError, AttributeError):
             return False
-        return gap > _WALK_FROM_LAG_TILES
+        if gap > _WALK_FROM_LAG_TILES:
+            return True
+        self._walk_start_near = key
+        return False
 
     def _release_stale_party_walk(self, scratch: dict, pose: Any) -> bool:
-        """Drop a party walk that is still waiting on a pre-land start tile.
+        """Drop a party walk whose start the body has never reached.
 
         The first second matches the gate-lag idle in ``_start_walk``. After
         that the live tile is the landing, so the next ``prepare`` arms from it.
+        A walk that already began on the live tile is left to finish.
         """
         session = scratch.get("world_nav_session")
         if session is None or not self._party_walk_from_far(session, pose):
@@ -426,6 +463,7 @@ class PartyLeaderManager:
         if now - self._from_far_since < _WALK_FROM_LAG_S:
             return False
         self._from_far_since = 0.0
+        self._walk_start_near = None
         session.fail("party walk from is not the live tile")
         self._clear_travel(scratch)
         _log.info(
@@ -457,12 +495,14 @@ class PartyLeaderManager:
             adena = current_adena(world)
         except Exception:
             adena = None
+        walk_only = bool(scratch.get("party_rally_walk_only"))
         ok = session.begin(
             pose,
             goal,
             reason="party_schedule",
-            has_talking_scroll=talking_scroll_available(),
+            has_talking_scroll=False if walk_only else talking_scroll_available(),
             adena=adena,
+            use_npc_teleporters=not walk_only,
         )
         if not ok:
             if bool(goal.is_satisfied(pose)):

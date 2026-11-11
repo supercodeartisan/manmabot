@@ -1,11 +1,12 @@
 """Leader start rally: meet, wait, then take the route into the hunt.
 
 The meet tile is chosen when the hunt route is planned. A route with an NPC
-teleporter or a talking scroll uses the departure tile of the first of those
-steps. A walk-only route uses the tile the leader is on when that plan is made.
-The stand ends when every expected member is within 7 tiles of that tile, or
-after 3 minutes. Members are not sent the tile. Once party memory shows them
-in the party, they follow the leader's live tile.
+teleporter or a talking scroll runs those steps first, then stands on the
+landing of the last one. The steps after that stand are walks. A walk-only
+route stands on the tile the leader is on when that plan is made. The stand
+ends when every expected member is within 7 tiles of that tile, or after 3
+minutes. Members are not sent the tile. Once party memory shows them in the
+party, they follow the leader's live tile.
 """
 from __future__ import annotations
 
@@ -19,6 +20,9 @@ from app._06_party.comms.orders import (
 )
 
 TELEPORT_OPS = ("npc_teleporter", "talking_scroll")
+# A talking scroll counts as landed inside this radius. Same radius here,
+# so the stand opens on that landing instead of the departure tile.
+LANDING_SLACK = 8
 WAIT_LOG_EVERY_S = 5.0
 WAIT_TIMEOUT_S = 10 * 60
 # Stand on the rally mark for members, then walk into the farm.
@@ -74,8 +78,12 @@ def plan_start(plan: Any) -> Optional[tuple[int, int, int]]:
     return _point((getattr(plan, "meta", None) or {}).get("start"))
 
 
-def _near_meet(pose: Any, point: Optional[tuple[int, int, int]]) -> bool:
-    """True within one tile of the meet tile. That matches a finished walk step."""
+def _near_meet(
+    pose: Any,
+    point: Optional[tuple[int, int, int]],
+    slack: int = 1,
+) -> bool:
+    """True within ``slack`` tiles of the meet tile."""
     if pose is None or point is None:
         return False
     try:
@@ -84,7 +92,7 @@ def _near_meet(pose: Any, point: Optional[tuple[int, int, int]]) -> bool:
         gap = max(abs(int(pose.x) - int(point[1])), abs(int(pose.y) - int(point[2])))
     except (TypeError, ValueError, AttributeError):
         return False
-    return gap <= 1
+    return gap <= int(slack)
 
 
 class LeaderStartRally:
@@ -108,6 +116,8 @@ class LeaderStartRally:
         self.hold_step: Optional[int] = None
         self.meet: Optional[tuple[int, int, int]] = None
         self.had_teleport = False
+        # True once the stand has started. After it ends, the next plan walks.
+        self.stood = False
         self._want: Optional[dict[str, Any]] = None
         self._wait_started: Optional[float] = None
         # Leader start-wait end (clock time); None = WAIT_TIMEOUT_S from wait start.
@@ -120,6 +130,7 @@ class LeaderStartRally:
     def _enter_waiting(self) -> None:
         if self._wait_started is None:
             self._wait_started = self._clock()
+        self.stood = True
         self.state = "waiting"
 
     @property
@@ -177,16 +188,18 @@ class LeaderStartRally:
         )
 
     def on_plan(self, plan: Any) -> None:
-        """Remember the meet tile. The stand starts when the body reaches it."""
+        """Remember the meet tile. Teleports run, then the stand, then walks."""
         if self.state != "await_mark" or self.meet is not None:
             return
         steps = _steps(plan)
-        index = first_teleport_index(plan)
+        index = last_teleport_index(plan)
         if index is not None:
-            point = departure_point(steps[index])
+            point = planned_landing(steps[index])
             if point is None:
                 return
-            self.hold_step = index
+            # The step after the last teleport. Equal to len(steps) when that
+            # teleport is the end of the route; the session pauses there.
+            self.hold_step = index + 1
             self.meet = point
             self.had_teleport = True
             return
@@ -198,7 +211,7 @@ class LeaderStartRally:
         self.had_teleport = False
 
     def should_hold(self, step_i: int, pose: Any) -> bool:
-        """Pause the route on the meet tile until the stand ends."""
+        """Pause after the last teleport, until the stand ends."""
         if self.state in ("off", "done"):
             return False
         if self.state == "waiting":
@@ -210,7 +223,10 @@ class LeaderStartRally:
                 return False
         except (TypeError, ValueError):
             return False
-        if not _near_meet(pose, self.meet):
+        # A scroll lands within a few tiles of the planned cell. A walk-only
+        # route still requires the exact tile.
+        slack = LANDING_SLACK if self.had_teleport else 1
+        if not _near_meet(pose, self.meet, slack):
             return False
         self.note_arrived(self.meet)
         return self.state == "waiting"

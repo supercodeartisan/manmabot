@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-11 — after the rally stand the leader walks
+
+Intent: A party start route still uses an NPC teleporter or a talking scroll to reach the meet tile. The stand is on the landing of the last of those steps. After that stand, the same route's remaining steps are walks, and a new party route armed before the leader is inside the farm does not use a talking scroll or an NPC teleporter. A walk-only route still stands on the tile where the plan was made.
+Shared: `LeaderStartRally.on_plan` / `should_hold`, `WorldNavSession._pause_for_rally` (solo leaves the hook empty), and `PartyLeaderManager._arm_travel`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader from the hunt route being planned until the leader is inside the farm. Members still follow the leader's live tile, so they meet at the landing.
+Consent: user (once the party has gathered at the rally, the leader must not take a teleport or a talking scroll again).
+Result: `Engine/app/_06_party/tests/test_leader_rally.py`, `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-11 — a party walk that already started is not dropped at 24 tiles
+
+Intent: Drop a party walk only when the body has never stood on that walk's start. A start the body has already reached stays until the goal, including after the body walks more than 24 tiles away. A start that is still another map, or more than 24 tiles away on the same map, waits 1 second and then the route is dropped and planned from the live tile. The first second still covers the gate pose lag.
+Shared: `PartyLeaderManager._party_walk_from_far` and `_release_stale_party_walk`. Solo world-nav, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's walk after a talking scroll, and any later party walk whose start the body has already reached.
+Consent: user (create a branch and apply the start-tile rule).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-11 — a drop with no hop releases the hold after 8 seconds
 
 Intent: On a same-map supply drop, eight seconds without an emitted hop clears the hold through the existing stand timeout. A hop, or arrival on the exact drop tile, clears that wait. A walk that keeps emitting hops is not cut at 8 seconds. The potion is still dropped only from the exact tile.
