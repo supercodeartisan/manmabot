@@ -502,6 +502,19 @@ def _mark_supply_seen(blackboard: Any, claim: dict) -> None:
         scratch[_SEEN] = _claim_key(claim)
 
 
+def _drop_pickup_travel(blackboard: Any) -> None:
+    """Drop the pile tile so the schedule walk does not inherit it as arrival."""
+    scratch = getattr(blackboard, "scratch", None)
+    if not isinstance(scratch, dict):
+        return
+    if str(scratch.get("travel_reason") or "") != "party supply pickup":
+        return
+    from app._04_decision.behaviors.travel import clear_travel
+
+    clear_travel(blackboard)
+    scratch.pop("travel_reason", None)
+
+
 def _drop_combat_lock(blackboard: Any) -> None:
     """Stop the swing that was in progress so pickup or the stand can own the tick."""
     if blackboard is None:
@@ -2561,6 +2574,12 @@ def leader_supply_action(
         pickup = leader_supply_pickup(world, blackboard, claim if isinstance(claim, dict) else None)
         if pickup is not None:
             return pickup
+        # A drop that still names the leader keeps this tick. The hunt runs
+        # after the pile has been seen and has left the ground.
+        if isinstance(claim, dict) and not _supply_seen(blackboard, claim):
+            from .intents import idle
+
+            return idle("supply pickup")
     if claim_names_me(hold, name, guid):
         if leader_hold_displaced(blackboard, world, hold):
             return None
@@ -2591,7 +2610,13 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
     pose = live_pose_from_state(state)
     origin = getattr(blackboard, "world_origin", None)
     if pose is None or origin is None or int(pose.map_id) != mid:
-        return None
+        # The claim still names this body. A missing pose is not the hunt.
+        from .intents import idle
+
+        if runtime is not None:
+            runtime.last_kind = "supply"
+            runtime.last_reason = "supply pickup"
+        return idle("supply pickup")
     from app._03_world.space.world_coords import tile_chebyshev
     from app._04_decision.combat_query import is_adena, list_lootable, object_absolute_tile
 
@@ -2635,8 +2660,9 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
             reason=f"party_member:supply {claim.get('item') or 'arrows'}",
         )
     if dist <= _NEAR and pile is None:
-        # Stay only until the pile appears. Once it has been picked up, hunt resumes.
+        # Stay until the pile appears. Once it was seen and is gone, hunt resumes.
         if _supply_seen(blackboard, claim):
+            _drop_pickup_travel(blackboard)
             return None
         _drop_combat_lock(blackboard)
         from .intents import idle

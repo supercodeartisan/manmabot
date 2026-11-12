@@ -81,6 +81,89 @@ def test_stamp_settings_follows_class() -> None:
     assert stamp_settings_character(settings, "nope") is False
 
 
+def test_snapshot_keeps_party_supply() -> None:
+    profile = Profile(
+        party_member_arrow_min=1600,
+        party_member_arrow_give=200,
+        party_shopkeeper_arrow_min=300,
+        party_shopkeeper_arrow_buy=200,
+        party_member_hp_min=3,
+        party_member_hp_give=5,
+        party_shopkeeper_hp_min=5,
+        party_shopkeeper_hp_buy=5,
+    )
+    party = profile_snapshot(profile)["party"]
+    assert party["member_arrow_min"] == 1600
+    assert party["member_arrow_give"] == 200
+    assert party["shopkeeper_arrow_min"] == 300
+    assert party["shopkeeper_arrow_buy"] == 200
+    assert party["member_hp_min"] == 3
+    assert party["member_hp_give"] == 5
+    assert party["shopkeeper_hp_min"] == 5
+    assert party["shopkeeper_hp_buy"] == 5
+    fresh = Profile()
+    apply_runtime_settings(ScheduleTask(settings={"party": party}), fresh)
+    assert fresh.party_member_arrow_min == 1600
+    assert fresh.party_member_arrow_give == 200
+    assert fresh.party_member_hp_min == 3
+    assert fresh.party_shopkeeper_hp_buy == 5
+
+
+def test_snapshot_keeps_the_rest_of_the_party_screen() -> None:
+    profile = Profile(
+        party_mage_heal_pct=65,
+        party_member_heal_pct=55,
+        party_member_potion_pct=40,
+        party_retreat_pct=25,
+        party_mother_tree=False,
+        party_talking_scroll=False,
+        party_safe_zone=False,
+        party_tree_hp_to_mp=False,
+        party_tree_hp_to_mp_hp=70,
+        party_tree_hp_to_mp_mp=60,
+        party_tree_heal=False,
+        party_tree_heal_hp=35,
+        party_tree_heal_mp=75,
+        party_loot_pickup="adena",
+        party_loot_weight_pct=45,
+        party_member_mp_min=7,
+        party_member_mp_give=4,
+        party_shopkeeper_mp_min=12,
+        party_shopkeeper_mp_buy=8,
+        party_member_depoison_min=3,
+        party_member_depoison_give=2,
+        party_shopkeeper_depoison_min=4,
+        party_shopkeeper_depoison_buy=6,
+        party_routine=[
+            {
+                "id": "hunt-1",
+                "map_id": "talking_island",
+                "kind": "battle",
+                "duration_minutes": 30,
+            }
+        ],
+    )
+    party = profile_snapshot(profile)["party"]
+    assert party["mage_heal_pct"] == 65
+    assert party["member_heal_pct"] == 55
+    assert party["retreat_pct"] == 25
+    assert party["mother_tree"] is False
+    assert party["tree_hp_to_mp_hp"] == 70
+    assert party["loot_pickup"] == "adena"
+    assert party["loot_weight_pct"] == 45
+    assert party["member_mp_min"] == 7
+    assert party["shopkeeper_depoison_buy"] == 6
+    assert party["routine"][0]["map_id"] == "talking_island"
+    fresh = Profile()
+    apply_runtime_settings(ScheduleTask(settings={"party": party}), fresh)
+    assert fresh.party_mage_heal_pct == 65
+    assert fresh.party_loot_pickup == "adena"
+    assert fresh.party_loot_weight_pct == 45
+    assert fresh.party_mother_tree is False
+    assert fresh.party_member_mp_min == 7
+    assert fresh.party_routine[0]["map_id"] == "talking_island"
+
+
 def test_snapshot_follows_class() -> None:
     snap = profile_snapshot(Profile(character="mage", attack_mode="ranged"))
     assert snap["hunt"]["attack_mode"] == "magic"
@@ -95,5 +178,7 @@ if __name__ == "__main__":
     test_account_class_sets_the_profile()
     test_stamp_keeps_party_seat_and_other_fields()
     test_stamp_settings_follows_class()
+    test_snapshot_keeps_party_supply()
+    test_snapshot_keeps_the_rest_of_the_party_screen()
     test_snapshot_follows_class()
     print("attack mode tests ok")

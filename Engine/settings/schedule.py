@@ -190,6 +190,58 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
+            # Party-boss "마을 및 보급". Bag keys match task_runtime.
+            "member_hp_min": int(getattr(profile, "party_member_hp_min", 10)),
+            "shopkeeper_hp_min": int(getattr(profile, "party_shopkeeper_hp_min", 20)),
+            "member_hp_give": int(getattr(profile, "party_member_hp_give", 10)),
+            "shopkeeper_hp_buy": int(getattr(profile, "party_shopkeeper_hp_buy", 20)),
+            "member_arrow_min": int(getattr(profile, "party_member_arrow_min", 300)),
+            "shopkeeper_arrow_min": int(
+                getattr(profile, "party_shopkeeper_arrow_min", 300)
+            ),
+            "member_arrow_give": int(getattr(profile, "party_member_arrow_give", 100)),
+            "shopkeeper_arrow_buy": int(
+                getattr(profile, "party_shopkeeper_arrow_buy", 200)
+            ),
+            "member_depoison_min": int(
+                getattr(profile, "party_member_depoison_min", 1)
+            ),
+            "shopkeeper_depoison_min": int(
+                getattr(profile, "party_shopkeeper_depoison_min", 2)
+            ),
+            "member_depoison_give": int(
+                getattr(profile, "party_member_depoison_give", 1)
+            ),
+            "shopkeeper_depoison_buy": int(
+                getattr(profile, "party_shopkeeper_depoison_buy", 5)
+            ),
+            "member_mp_min": int(getattr(profile, "party_member_mp_min", 5)),
+            "shopkeeper_mp_min": int(getattr(profile, "party_shopkeeper_mp_min", 10)),
+            "member_mp_give": int(getattr(profile, "party_member_mp_give", 5)),
+            "shopkeeper_mp_buy": int(getattr(profile, "party_shopkeeper_mp_buy", 10)),
+            "member_heal_pct": int(getattr(profile, "party_member_heal_pct", 70)),
+            "member_potion_pct": int(getattr(profile, "party_member_potion_pct", 50)),
+            "mage_heal_pct": int(getattr(profile, "party_mage_heal_pct", 80)),
+            "retreat_pct": int(getattr(profile, "party_retreat_pct", 30)),
+            "mother_tree": bool(getattr(profile, "party_mother_tree", True)),
+            "talking_scroll": bool(getattr(profile, "party_talking_scroll", True)),
+            "safe_zone": bool(getattr(profile, "party_safe_zone", True)),
+            "tree_hp_to_mp": bool(getattr(profile, "party_tree_hp_to_mp", True)),
+            "tree_hp_to_mp_hp": int(getattr(profile, "party_tree_hp_to_mp_hp", 85)),
+            "tree_hp_to_mp_mp": int(getattr(profile, "party_tree_hp_to_mp_mp", 80)),
+            "tree_heal": bool(getattr(profile, "party_tree_heal", True)),
+            "tree_heal_hp": int(getattr(profile, "party_tree_heal_hp", 40)),
+            "tree_heal_mp": int(getattr(profile, "party_tree_heal_mp", 80)),
+            "loot_pickup": (
+                "adena"
+                if str(getattr(profile, "party_loot_pickup", "all") or "all")
+                .strip()
+                .lower()
+                == "adena"
+                else "all"
+            ),
+            "loot_weight_pct": int(getattr(profile, "party_loot_weight_pct", 30)),
+            "routine": normalize_party_routine(getattr(profile, "party_routine", None)),
             "mage_support_skills": dict(
                 getattr(profile, "party_mage_support_skills", None) or {}
             ),

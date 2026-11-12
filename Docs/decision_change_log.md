@@ -1,6 +1,29 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-11 — a supply pause does not finish the leader's walk
+
+Intent: A party schedule walk finishes when the body is on the planned cell, or on the snapped walk tile that walk still owns. A supply hold that clears the travel goal, and a supply pickup that writes the pile tile, restart that walk. While a drop claim still names the leader, that tick stays on the pickup until the pile has been seen and has left the ground. The seen pile then clears the pickup travel so the hunt does not inherit it.
+Shared: `_tick_walk`, `_start_walk`, `_pickup_claim`, and `leader_supply_action`. `clear_travel` still runs on a real arrival and when the seen pile is gone. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader's schedule walk after a supply hold or a supply pickup. A real arrival at the planned cell still enters the farm. Member follow and solo walks are unchanged.
+Consent: user ("yes" after the meet-tile pacing plan).
+Result: `Engine/app/_04_decision/tests/test_walk_supply_arrival.py`, `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — the rest of the party screen stays on the profile
+
+Intent: Party values that the profile already loads, and that a profile save used to drop, are written with the rest of the profile. That covers heal and retreat percents, mother-tree and scroll checks, loot pickup and the weight line, MP and depoison counts, and the party hunt route. Supply choice, follow, and combat stay as they are.
+Shared: `profile_snapshot`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the saved trial profile and a party tab opened from that profile. A schedule file that already stored these values is unchanged. Succession, absence, hit support, and heal targets stay on the schedule file only; the bot does not read them.
+Consent: user ("and any other datas that are not correctly saving in the party mode as well as above ones did?").
+Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
+## 2026-11-11 — party supply counts stay on the profile
+
+Intent: The party-boss supply page (체력 물약 and 은화살: 담당 유지, 사는 수, 미만이면 줌, 주는 수) is written with the rest of the profile. A later load uses those counts. Supply choice, the drop, and the shop trip stay as they are.
+Shared: `profile_snapshot`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the saved trial profile and the party tab opened from that profile. A schedule that already stored these counts is unchanged.
+Consent: user ("need to save those values which are in the 마을 및 보급 in the party boss window as well").
+Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
 ## 2026-11-11 — an account class updates that account's hunt
 
 Intent: Saving an account's character type writes that class onto every schedule for the same account, and onto the selected hunt profile. Mage hunts with magic, elf hunts ranged, and knight or royal hunts in melee. A party start does this for a leader and for a member. The roster seat stays a seat. A bot that is already running keeps the class it started with.
@@ -8,7 +31,7 @@ Shared: `stamp_character_fields`, `stamp_settings_character`, and `_sync_party_l
 Affects: the schedule row and the trial hunt class for the saved account. Other accounts stay. Combat strategy code is unchanged.
 Consent: user ("plz implement" after the account-class plan).
 Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
-=======
+
 ## 2026-11-11 — stand within two tiles of the leader, and click that approach once
 
 Intent: A member stands when the Chebyshev distance to the leader is 2 or less. A formation slot one tile off does not start another walk, and the click is never the leader's own tile. Outside that band, one click goes toward the leader. The same tile is not clicked again until the body stands on it, or the travel click is judged failed.
@@ -16,7 +39,6 @@ Shared: `decide_policy`, `plan_leader_hop`, and the member follow click. `hold_f
 Affects: party follow and the stand beside the leader. Assist, a combat leash beyond the stop band, turret yard rejoin, and supply delivery are unchanged.
 Consent: user ("위의 규칙대로 수정하라" after the two-tile stand and one-click approach).
 Result: `Engine/app/_06_party/tests/test_close_follow.py`, `test_formation_goal.py`. Not run in game.
->>>>>>> origin/main
 
 ## 2026-11-11 — a supply drop phase reaches the recipient
 

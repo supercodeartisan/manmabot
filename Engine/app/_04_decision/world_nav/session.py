@@ -288,6 +288,9 @@ class WorldNavSession:
     tp_settle_started_at: float = 0.0
     tp_baseline_xy: tuple[int, int] | None = None
     done_ok: bool = False
+    # Snapped nav tile of the walk that is in progress. A supply pickup writes
+    # a different tile into nav_goal; that tile is not this walk's arrival.
+    walk_nav: tuple[int, int] | None = None
 
     def begin(
         self,
@@ -505,6 +508,33 @@ class WorldNavSession:
         blackboard.world_origin = WorldOrigin(x=snapped[0], y=snapped[1])
         return True
 
+    def _nav_goal_pair(self, blackboard: Any) -> tuple[int, int] | None:
+        goal = getattr(blackboard, "nav_goal", None)
+        if goal is None:
+            return None
+        try:
+            return (int(goal[0]), int(goal[1]))
+        except (TypeError, ValueError, IndexError):
+            return None
+
+    def _walk_tile_held(self, blackboard: Any) -> bool:
+        """True when nav_goal is still the snapped tile this walk started."""
+        snapped = self.walk_nav
+        if snapped is None:
+            return False
+        return self._nav_goal_pair(blackboard) == (int(snapped[0]), int(snapped[1]))
+
+    def _walk_reached(self, pose: Any, blackboard: Any, gx: int, gy: int) -> bool:
+        """Arrive at the planned cell, or on the snapped tile this walk still owns.
+
+        An empty goal is not arrival. A supply pickup's tile is not arrival.
+        """
+        if _chev(int(pose.x), int(pose.y), int(gx), int(gy)) <= ARRIVE_TILES:
+            return True
+        if not self._walk_tile_held(blackboard):
+            return False
+        return travel_arrived(blackboard)
+
     def _finish_walk_step(self, blackboard: Any, *, map_id: int, gx: int, gy: int) -> Status:
         tokens = api.state_tokens()
         api.emit_state(tokens.WALK_ARRIVE, map=map_id, x=gx, y=gy)
@@ -516,6 +546,7 @@ class WorldNavSession:
         )
         clear_travel(blackboard)
         blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
+        self.walk_nav = None
         self.step_i += 1
         self.phase = "ready"
         return Status.SUCCESS
@@ -581,6 +612,7 @@ class WorldNavSession:
                 ARRIVE_TILES,
             )
             nav = snapped
+        self.walk_nav = (int(nav[0]), int(nav[1]))
         # Landing / transition cells are often non-walkable — snap live origin too.
         if not self._snap_live_origin(blackboard):
             return self._idle(blackboard, "world nav wait start walkable")
@@ -620,8 +652,12 @@ class WorldNavSession:
             _remember_stale_exit_landing(blackboard, map_id, pose)
             self.fail(f"left map during walk (map{pose.map_id})")
             return Status.FAILURE
-        if _chev(pose.x, pose.y, gx, gy) <= ARRIVE_TILES or travel_arrived(blackboard):
+        if self._walk_reached(pose, blackboard, gx, gy):
             return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
+        # Supply hold clears the goal. Supply pickup writes the pile tile.
+        # Either one used to finish this step while the body was still at the meet.
+        if not self._walk_tile_held(blackboard):
+            return self._start_walk(step, pose, blackboard, state)
         ok = emit_travel_hop(
             blackboard, reason="world nav walk", priority=0.6, state=state
         )
@@ -629,9 +665,14 @@ class WorldNavSession:
             return Status.SUCCESS
         if not ok:
             miss = str(blackboard.scratch.get("travel_hop_miss") or "hop_false")
-            # Snapped goal: travel may say arrived while abs chev to transition is 3.
-            if miss in ("already_arrived", "hop_arrive_final"):
+            # Snapped goal: travel may say arrived while abs chev to the exact
+            # cell is 1. That counts only while nav_goal is still this walk.
+            if miss in ("already_arrived", "hop_arrive_final") and self._walk_tile_held(
+                blackboard
+            ):
                 return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
+            if not self._walk_tile_held(blackboard):
+                return self._start_walk(step, pose, blackboard, state)
             tokens = api.state_tokens()
             api.emit_state(tokens.WALK_FAIL, map=map_id, x=gx, y=gy, error=miss)
             blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
