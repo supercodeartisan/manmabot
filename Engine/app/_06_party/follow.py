@@ -340,6 +340,41 @@ def hold_follow_click(
     return follow_hop_still_closes(member, slot, hop)
 
 
+def leader_hop_pending(
+    member: tuple[int, int],
+    hop: Optional[tuple[int, int]],
+    *,
+    click_failed: bool,
+) -> bool:
+    """True while this hop was clicked and the body is not standing on it.
+
+    A failed travel click releases the hop. The next tick may click again.
+    """
+    if click_failed or hop is None:
+        return False
+    return (int(member[0]), int(member[1])) != (int(hop[0]), int(hop[1]))
+
+
+def follow_hop_off_leader(
+    member: tuple[int, int],
+    leader: tuple[int, int],
+    hop: Optional[tuple[int, int]],
+    *,
+    limit: int = FOLLOW_CLICK_TILES,
+) -> Optional[tuple[int, int]]:
+    """One click toward the leader. Never the leader tile, never the member tile."""
+    if hop is None:
+        return None
+    mx, my = int(member[0]), int(member[1])
+    lx, ly = int(leader[0]), int(leader[1])
+    hx, hy = int(hop[0]), int(hop[1])
+    if (hx, hy) in ((lx, ly), (mx, my)):
+        return None
+    if max(abs(hx - mx), abs(hy - my)) > int(limit):
+        return None
+    return (hx, hy)
+
+
 __all__ = [
     "ARRIVAL_TOLERANCE",
     "STAND_ARRIVE_TILES",
@@ -353,6 +388,8 @@ __all__ = [
     "choose_approach_tile",
     "choose_settle_stand",
     "follow_hop_still_closes",
+    "follow_hop_off_leader",
+    "leader_hop_pending",
     "hold_follow_click",
     "follow_kind",
     "formation_slot_offset",

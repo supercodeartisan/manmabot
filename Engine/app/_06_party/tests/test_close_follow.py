@@ -3,9 +3,11 @@ from app._06_party.config import PartyMemberConfig
 from app._06_party.follow import (
     FOLLOW_CLICK_TILES,
     follow_extend_hop,
+    follow_hop_off_leader,
     follow_hop_still_closes,
     follow_kind,
     hold_follow_click,
+    leader_hop_pending,
 )
 from app._06_party.policy import MemberKind, PolicyInput, decide_policy
 
@@ -129,6 +131,33 @@ def test_a_leader_step_keeps_a_hop_that_still_closes():
     )
 
 
+def test_a_leader_hop_waits_until_the_body_steps_or_the_click_fails():
+    assert leader_hop_pending((0, 0), (2, 0), click_failed=False) is True
+    assert leader_hop_pending((2, 0), (2, 0), click_failed=False) is False
+    assert leader_hop_pending((0, 0), (2, 0), click_failed=True) is False
+    assert follow_hop_off_leader((0, 0), (5, 0), (2, 0)) == (2, 0)
+    assert follow_hop_off_leader((0, 0), (5, 0), (5, 0)) is None
+    assert follow_hop_off_leader((0, 0), (5, 0), (0, 0)) is None
+
+
+def test_an_open_leader_hop_does_not_click_again():
+    from app._06_party.intents import plan_leader_hop
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    _intent, goal, detail, hop = plan_leader_hop(
+        _Origin(),
+        (6, 0),
+        previous_hop=(2, 0),
+        click_failed=False,
+    )
+    assert detail == "follow_in_transit"
+    assert goal == (6, 0)
+    assert hop == (2, 0)
+
+
 def test_same_delta_keeps_the_hop_and_a_turn_does_not():
     assert follow_hop_still_closes((0, 0), (5, 0), (2, 0)) is True
     assert follow_hop_still_closes((0, 0), (1, 0), (2, 0)) is False
@@ -143,6 +172,8 @@ if __name__ == "__main__":
     test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()
     test_a_leader_step_keeps_a_hop_that_still_closes()
+    test_a_leader_hop_waits_until_the_body_steps_or_the_click_fails()
+    test_an_open_leader_hop_does_not_click_again()
     test_same_delta_keeps_the_hop_and_a_turn_does_not()
     test_straight_line_chains_one_tile_and_a_trail_does_not()
     test_assist_beats_follow_while_moving_or_off_seat()

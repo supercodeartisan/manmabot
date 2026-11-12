@@ -2169,6 +2169,80 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     assert manager.runtime.last_reason == "stand timeout"
 
 
+def test_dropping_rides_the_shopkeeper_live_and_nudges(monkeypatch) -> None:
+    """The recipient can enter supply receive only if this flag leaves the shopkeeper."""
+    from session.bot_controller import BotController
+
+    sent: list[dict] = []
+    monkeypatch.setattr(
+        "app._06_party.comms.publish.publish_body",
+        lambda body: sent.append(dict(body)) or 1,
+    )
+    hold = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "item": "arrow",
+        "qty": 100,
+        "min": 300,
+        "dropping": False,
+    }
+    runtime = type(
+        "R",
+        (),
+        {
+            "last_kind": "supply",
+            "last_reason": "supply hold",
+            "duty_phase": "supply",
+            "supply_notice": None,
+            "supply_hold": hold,
+            "supply_stand": None,
+        },
+    )()
+    nudged = {"n": 0}
+
+    class _Reporter:
+        def nudge(self) -> None:
+            nudged["n"] += 1
+
+    member = type(
+        "M",
+        (),
+        {
+            "state": type("S", (), {"value": "running"})(),
+            "_party_brain_ref": type("B", (), {"runtime": runtime})(),
+            "_member_state_reporter": _Reporter(),
+            "_supply_live_key": None,
+        },
+    )()
+    BotController._nudge_supply_live(member)
+    assert nudged["n"] == 1
+    BotController._nudge_supply_live(member)
+    assert nudged["n"] == 1
+    live = BotController._member_live_view(member, object())
+    assert live["supply_hold"]["dropping"] is False
+
+    hold["dropping"] = True
+    BotController._nudge_supply_live(member)
+    assert nudged["n"] == 2
+    live = BotController._member_live_view(member, object())
+    assert live["supply_hold"]["dropping"] is True
+
+    leader = type(
+        "L",
+        (),
+        {
+            "_party_hold_id": hold["id"],
+            "_party_hold_drop": False,
+            "_party_stand_key": None,
+            "_leader_supply_hold": lambda self: dict(live["supply_hold"]),
+        },
+    )()
+    BotController._publish_supply_hold(leader)
+    assert sent[0]["type"] == "supply_hold"
+    assert sent[0]["dropping"] is True
+    assert sent[0]["for"] == "Elf"
+
+
 def test_a_member_stand_keeps_confirmed_so_the_leader_can_publish_it(monkeypatch) -> None:
     """The mage's settled tile is useless to the shopkeeper without confirmed."""
     from session.bot_controller import BotController

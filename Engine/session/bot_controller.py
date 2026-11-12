@@ -2330,28 +2330,32 @@ class BotController:
         if sent:
             self.log(f"Party reports sent to shopkeeper ({sent})")
 
-    def _arm_party_arrow_cover(self, blackboard) -> None:
-        """While the shopkeeper socket is up, the leader does not start an arrow shop."""
-        if not self._party_leader_on():
-            blackboard.scratch.pop("party_arrow_shop_covered", None)
+    def _arm_party_self_shop(self, blackboard, seat_role: str) -> None:
+        """A roster shopkeeper is the only party seat that starts its own shop.
+
+        The socket may be down. No shopkeeper name leaves personal shopping on.
+        HP retreat sell does not read the flag.
+        """
+        scratch = getattr(blackboard, "scratch", None)
+        if not isinstance(scratch, dict):
             return
-        from app._06_party.arrow_policy import shopkeeper_socket_live
+        if not self._party_enabled():
+            scratch.pop("party_self_shop_blocked", None)
+            scratch.pop("party_arrow_shop_covered", None)
+            return
         from app._06_party.comms.publish import _shopkeeper_names
-        from app._06_party.sync import member_states
         from settings.profile import normalize_party_roster
 
         names = _shopkeeper_names(
             normalize_party_roster(getattr(self._profile, "party_roster", None))
         )
-        live = shopkeeper_socket_live(
-            names[:1],
-            member_states.peer_for,
-            member_states.awaiting_fresh,
-        )
-        if live:
-            blackboard.scratch["party_arrow_shop_covered"] = True
+        seat = str(seat_role or "").strip().lower()
+        if names and seat != "shopkeeper":
+            scratch["party_self_shop_blocked"] = True
+            scratch["party_arrow_shop_covered"] = True
         else:
-            blackboard.scratch.pop("party_arrow_shop_covered", None)
+            scratch.pop("party_self_shop_blocked", None)
+            scratch.pop("party_arrow_shop_covered", None)
 
     def _leader_supply_claim(self) -> dict | None:
         from app._06_party.comms.publish import _shopkeeper_names
@@ -2530,7 +2534,7 @@ class BotController:
         self._party_stand_key = key
 
     def _nudge_supply_live(self) -> None:
-        """Send member_state on the tick a hold or stand tile changes."""
+        """Send member_state on the tick a hold, its drop phase, or a stand tile changes."""
         reporter = getattr(self, "_member_state_reporter", None)
         if reporter is None:
             return
@@ -2540,6 +2544,7 @@ class BotController:
         stand = getattr(runtime, "supply_stand", None) if runtime is not None else None
         key = (
             str(hold.get("id") or "") if isinstance(hold, dict) else "",
+            bool(hold.get("dropping")) if isinstance(hold, dict) else False,
             str(stand.get("id") or "") if isinstance(stand, dict) else "",
             stand.get("x") if isinstance(stand, dict) else None,
             stand.get("y") if isinstance(stand, dict) else None,
@@ -2953,6 +2958,7 @@ class BotController:
                     "item": hold.get("item") or "arrow",
                     "qty": hold.get("qty"),
                     "min": hold.get("min"),
+                    "dropping": bool(hold.get("dropping")),
                 }
                 if str(hold.get("guid") or "").strip():
                     reported["guid"] = hold.get("guid")
@@ -3914,6 +3920,13 @@ class BotController:
                         party_brain=party_brain,
                         skip_accept=chat_kind == "accept",
                     )
+                    self._arm_party_self_shop(
+                        decision.blackboard,
+                        str(getattr(party_brain.config, "seat_role", "") or ""),
+                    )
+                    party_brain.note_travel_click_failed(
+                        bool(getattr(executor, "last_travel_click_failed", False))
+                    )
                     action = party_brain.decide(world)
                     if self._party_comms.client is not None:
                         try:
@@ -3934,7 +3947,7 @@ class BotController:
                         note="decide",
                     )
                 elif leader_brain is not None:
-                    self._arm_party_arrow_cover(decision.blackboard)
+                    self._arm_party_self_shop(decision.blackboard, "leader")
                     if self._party_leader_on():
                         try:
                             self._drain_party_reports(world)
@@ -3972,6 +3985,8 @@ class BotController:
                         except Exception as party_exc:
                             self.log(f"Party leader decision send failed: {party_exc}")
                 else:
+                    decision.blackboard.scratch.pop("party_self_shop_blocked", None)
+                    decision.blackboard.scratch.pop("party_arrow_shop_covered", None)
                     action = decision.decide(world)
                 if self._party_enabled() and party_role in ("member", "leader"):
                     try:
