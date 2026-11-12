@@ -10,6 +10,9 @@ from .config import PartyMemberConfig
 PARTY_CLS_WIZARD = 3
 # A party row this close to ``world_origin`` is the local character.
 _SELF_ROW_TILES = 2
+# The responsible looter walks this many steps to a pile, walls and fences
+# counted. Solo keeps ``farm.loot_engage_max_tiles``.
+PARTY_LOOT_WALK_TILES = 12
 
 if TYPE_CHECKING:
     from app._02_state.objects import WorldObject
@@ -43,25 +46,80 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
     return True
 
 
+def party_loot_walks(cfg: PartyMemberConfig) -> bool:
+    """True for the responsible looter: its radius is walk steps."""
+    role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
+    return not bool(getattr(cfg, "random_loot", False)) and role in (
+        "responsible",
+        "self",
+        "looter",
+    )
+
+
 def party_loot_radius(cfg: PartyMemberConfig) -> int:
     """Tiles this member will walk to a pile.
 
-    The near radius is ``farm.loot_max_tiles``, the same cap the leader
-    uses to notice a pile and to walk to it. The responsible looter uses
-    the wider ``farm.loot_engage_max_tiles``.
+    The near radius is ``farm.loot_max_tiles`` (Chebyshev), the same cap the
+    leader uses to notice a pile and to walk to it. The responsible looter
+    uses ``PARTY_LOOT_WALK_TILES`` walk steps.
     """
     from app._04_decision import player_mode as pm
 
-    role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
-    wide = (
-        not bool(getattr(cfg, "random_loot", False))
-        and role in ("responsible", "self", "looter")
-    )
-    raw = pm.LOOT_ENGAGE_MAX_TILES if wide else pm.LOOT_MAX_TILES
+    if party_loot_walks(cfg):
+        return int(PARTY_LOOT_WALK_TILES)
     try:
-        return max(1, int(raw))
+        return max(1, int(pm.LOOT_MAX_TILES))
     except (TypeError, ValueError):
         return 1
+
+
+def party_loot_walk_meter(
+    origin: Any,
+    max_steps: int,
+) -> Optional[Callable[[Any], int]]:
+    """Walk steps from the character to a pile, walls and fences counted.
+
+    Bodies do not block. A pile the walk does not reach inside
+    ``max_steps`` reads ``max_steps + 1``. ``None`` without terrain or origin.
+    """
+    if origin is None:
+        return None
+    try:
+        from app._04_decision.nav_config import get_terrain_map
+
+        terrain = get_terrain_map()
+    except Exception:
+        terrain = None
+    if terrain is None:
+        return None
+    from app._04_decision.combat_query import (
+        object_absolute_tile,
+        tile_distance_from_player,
+    )
+
+    from .follow_field import build_follow_field
+
+    radius = max(1, int(max_steps))
+    me = (int(origin.x), int(origin.y))
+    try:
+        field = build_follow_field(terrain, me, radius)
+    except Exception:
+        return None
+
+    def steps(obj: Any) -> int:
+        cheb = int(tile_distance_from_player(obj))
+        if cheb > radius:
+            return max(cheb, radius + 1)
+        try:
+            tile = object_absolute_tile(obj, origin)
+        except (TypeError, ValueError, AttributeError):
+            return cheb
+        d = field.member_steps((int(tile[0]), int(tile[1])))
+        if d is None:
+            return radius + 1
+        return max(int(d), cheb)
+
+    return steps
 
 
 def party_may_loot(cfg: PartyMemberConfig) -> bool:
@@ -447,9 +505,12 @@ def try_party_hold_loot(
     ownership_filter: bool,
     max_tiles: int = 8,
     item_ok: Optional[Callable[[Any], bool]] = None,
+    measure_walk: bool = False,
 ) -> Any:
     """Primary walk-to-item / pickup while HOLD near the leader.
 
+    ``measure_walk`` reads ``max_tiles`` as walk steps from the character;
+    without terrain it falls back to Chebyshev.
     Returns an ActionIntent when loot won this tick, else None.
     """
     from app._03_world import ObjectType
@@ -487,6 +548,12 @@ def try_party_hold_loot(
         for tid in blackboard.loot_clicked_ids
         if recently_clicked_loot(blackboard, tid)
     )
+    walk_of = (
+        party_loot_walk_meter(blackboard.world_origin, int(max_tiles))
+        if measure_walk
+        else None
+    )
+    distance = walk_of if walk_of is not None else tile_distance_from_player
 
     if blackboard.current_item_id is not None:
         sticky = state.get_object(int(blackboard.current_item_id))
@@ -500,7 +567,7 @@ def try_party_hold_loot(
             drop = True
         elif ownership_filter and not loot_ownership_allowed(sticky):
             drop = True
-        elif tile_distance_from_player(sticky) > int(max_tiles):
+        elif distance(sticky) > int(max_tiles):
             drop = True
         if drop:
             clear_loot_hop(blackboard)
@@ -514,7 +581,36 @@ def try_party_hold_loot(
                     return intent
             return None
 
-    if item_ok is None:
+    if walk_of is not None:
+        from app._04_decision.combat_query import is_adena, list_lootable
+
+        reach: list[tuple[int, Any]] = []
+        for o in list_lootable(
+            state,
+            loot_mode=loot_mode,
+            farm=None,
+            origin=blackboard.world_origin,
+            check_path=False,
+            exclude=skip,
+            screen_only=False,
+            ownership_filter=ownership_filter,
+        ):
+            if item_ok is not None and not item_ok(o):
+                continue
+            steps = walk_of(o)
+            if steps <= int(max_tiles):
+                reach.append((steps, o))
+        if not reach:
+            return None
+        item = min(
+            reach,
+            key=lambda pair: (
+                0 if is_adena(pair[1]) else 1,
+                pair[0],
+                int(getattr(pair[1], "track_id", 0)),
+            ),
+        )[1]
+    elif item_ok is None:
         item = nearest_lootable(
             state,
             loot_mode=loot_mode,
@@ -555,7 +651,7 @@ def try_party_hold_loot(
         )
     if item is None:
         return None
-    if tile_distance_from_player(item) > int(max_tiles):
+    if distance(item) > int(max_tiles):
         return None
     begin_loot_item(blackboard, int(item.track_id), item)
     status = tick_loot_item(state, blackboard, item, fresh=True)
@@ -605,6 +701,8 @@ __all__ = [
     "party_closest_looter_filter",
     "party_loot_ownership_filter",
     "party_loot_radius",
+    "party_loot_walk_meter",
+    "party_loot_walks",
     "party_may_loot",
     "party_may_start_loot",
     "party_should_drop_loot",

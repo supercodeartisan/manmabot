@@ -29,6 +29,7 @@ _LEADER_TYPES = frozenset({
     "supply_drop",
     "supply_hold",
     "supply_stand",
+    "make_way",
 })
 
 

@@ -588,6 +588,8 @@ class MemberOrders:
         self.supply_stand: Optional[dict[str, Any]] = None
         # Leader hunt has started. Supply stays closed until this is true.
         self.supply_open: bool = False
+        # Blocked leader's step-off request, stamped ``_at`` (monotonic) on arrival.
+        self.make_way: Optional[dict[str, Any]] = None
 
     @property
     def order_kind(self) -> str:
@@ -607,6 +609,13 @@ class MemberOrders:
         self.supply_hold = None
         self.supply_stand = None
         self.supply_open = False
+        self.make_way = None
+
+    def take_make_way(self) -> Optional[dict[str, Any]]:
+        """The latest step-off request once, then None until the next one."""
+        body = self.make_way
+        self.make_way = None
+        return body
 
     def clear(self) -> None:
         self._drop_orders()
@@ -677,6 +686,9 @@ class MemberOrders:
                     self.supply_stand = None
                 else:
                     self.supply_stand = dict(body)
+                continue
+            if kind == "make_way":
+                self.make_way = {**body, "_at": time.monotonic()}
                 continue
             if kind == "party_reports":
                 rows = body.get("reports")

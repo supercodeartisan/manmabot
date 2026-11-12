@@ -2219,6 +2219,87 @@ class BotController:
         self._publish_supply_hold()
         self._publish_supply_stand(world, map_id, blackboard)
 
+    def _leader_walk_party(self, world, blackboard, action, map_id):
+        """Leader travel with members: ask for room when blocked, pace when they lag.
+
+        A guide with no click for 3 seconds sends ``make_way`` (once per 5 s).
+        A travel click waits up to 1 second while the farthest same-map member
+        within 12 tiles is past ``PACE_GAP_TILES``, then clicks freely for 2.
+        Unstick clicks, retreat, and the walk before the start rally ends are
+        not paced. Other actions pass through.
+        """
+        from app._02_state.enums import ActionType
+        from app._04_decision.player_mode import PlayerMode
+        from app._06_party.leader_pace import PACE_GAP_TILES, LeaderPace, pace_gap
+        from app._06_party.make_way import (
+            BLOCKED_NOTES,
+            LeaderBlockWatch,
+            guide_ahead,
+            make_way_message,
+        )
+
+        if not self._party_leader_on() or action is None or blackboard is None:
+            return action
+        watch = getattr(self, "_party_block_watch", None)
+        if not isinstance(watch, LeaderBlockWatch):
+            watch = self._party_block_watch = LeaderBlockWatch()
+        pace = getattr(self, "_party_pace", None)
+        if not isinstance(pace, LeaderPace):
+            pace = self._party_pace = LeaderPace()
+        origin = getattr(blackboard, "world_origin", None)
+        kind = getattr(action, "action", None)
+        reason = str(getattr(action, "reason", "") or "")
+        blocked = kind is ActionType.IDLE and reason in BLOCKED_NOTES
+        if watch.note(blocked) and origin is not None:
+            here = (int(origin.x), int(origin.y))
+            guide = guide_ahead(getattr(blackboard, "nav_path", None) or [], here)
+            sent = self._party_comms_publish_body(
+                make_way_message(map_id=map_id, x=here[0], y=here[1], guide=guide)
+            )
+            self.log(f"Party: leader blocked at {here}, make way sent to {sent}")
+        if (
+            kind is not ActionType.TRAVELING
+            or "unstick" in reason
+            or origin is None
+            or getattr(blackboard, "player_mode", None) is PlayerMode.RETREATING
+        ):
+            pace.reset()
+            return action
+        rally = getattr(self, "_start_rally", None)
+        if rally is None or str(getattr(rally, "state", "") or "") != "done":
+            pace.reset()
+            return action
+        if getattr(world, "party_read_ok", None) is not True:
+            return action
+        from app._06_party.formation import followers_from_party
+
+        snap = getattr(world, "last_party", None)
+        followers = followers_from_party(
+            snap, map_id, self_name=_player_chat_name(world, snap)
+        )
+        gap = pace_gap((int(origin.x), int(origin.y)), followers)
+        limit = int(PACE_GAP_TILES)
+        was = pace.holding
+        if not pace.check(behind=gap is not None and gap > limit):
+            if was and not pace.holding:
+                self.log(f"Party: pace released, farthest member {gap} tiles")
+            return action
+        if not was:
+            self.log(f"Party: pace wait, farthest member {gap} tiles (limit {limit})")
+        from app._06_party.types import ActionIntent
+
+        return ActionIntent(
+            action=ActionType.IDLE,
+            priority=float(getattr(action, "priority", 0.0) or 0.0),
+            reason=f"party pace wait gap={gap} limit={limit}",
+        )
+
+    @staticmethod
+    def _party_comms_publish_body(body) -> int:
+        from app._06_party.comms.publish import publish_body
+
+        return int(publish_body(body) or 0)
+
     def _leader_blackboard(self):
         board = getattr(getattr(self, "_party_leader_ref", None), "decision", None)
         blackboard = getattr(board, "blackboard", None)
@@ -3967,6 +4048,12 @@ class BotController:
                     )
                     if action is None:
                         action = leader_brain.decide(world)
+                        try:
+                            action = self._leader_walk_party(
+                                world, decision.blackboard, action, last_logged_map_id
+                            )
+                        except Exception as pace_exc:
+                            self.log(f"Party leader pace failed: {pace_exc}")
                     try:
                         self._leader_party_tick(
                             world, decision.blackboard, last_logged_map_id

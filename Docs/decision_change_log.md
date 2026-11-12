@@ -1,6 +1,29 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-12 — a blocked leader asks the members to step off his line
+
+Intent: When the leader's travel has had no safe click for 3 seconds, the leader sends `make_way` with its tile and the next six guide tiles, at most once every 5 seconds. A member in HOLD or FOLLOW within 3 tiles of that leader tile, on the same map, clicks one open tile within 3 of itself and at least 2 tiles from the leader's line. The party click ring closes a player's eight neighbors, so one tile off the line does not free it. Behind the leader is preferred, then beside, then ahead. A walk that would cross the leader tile is not used. With no tile off the line, a member behind the leader backs up along the heading and a member ahead walks on ahead. After the click, the member stands 2 seconds, plus 0.7 seconds per tile of the step, before following again. A request older than 2 seconds is ignored. A member already 2 tiles clear of the line does not move.
+Shared: new `make_way.py` (`LeaderBlockWatch`, `plan_make_way`), `MemberOrders.make_way` / `take_make_way`, the `make_way` leader frame type, `PartyMemberManager._make_way` ahead of the follow plan, and `BotController._leader_walk_party` after the leader's own decide. The party click ring, `emit_travel_hop`, patrol skip, `try_movement_unstick`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. Solo never sends or reads the frame.
+Affects: party members standing or following in a narrow passage while the leader is blocked. Assist, defend, heal, potion, supply, and the other-map join run before it and are unchanged.
+Consent: user ("멤버비켜주기가 제일 좋을것같애, 그런데 시간간격도 주어야 할것 같애 3-5 초" and "이것과 함께 수정하라").
+Result: `Engine/app/_06_party/tests/test_make_way_pace.py`. Not run in game.
+
+## 2026-11-12 — the leader paces a lagging party; a turned follow clicks again at once
+
+Intent: After the start rally is done, a leader travel click waits while the farthest same-map member within 12 tiles is more than 3 tiles away. A wait lasts at most 1 second; after it, or once that member is back within 3, the leader clicks freely for 2 seconds. The body still walks out the click it already has, so this is a short pause, not a stand. Unstick clicks, retreat, and actions other than travel are not paced. A member more than 12 tiles away (stuck, busy, or lost) and a member on another map do not slow the leader. This is not the nearest-member stand removed on 2026-11-08 (`_leader_near_hold`), and it does not read the removed `party_near_tiles` form value. On the member side the follow click stays at most 2 tiles. While walking, when the hop cannot grow one tile on its line (the leader turned, or the next tile is closed), a fresh 2-tile hop that ends nearer the leader is clicked at once instead of walking the old hop out and stopping.
+Shared: new `leader_pace.py` (`LeaderPace`, `pace_gap`, `PACE_GAP_TILES`), `BotController._leader_walk_party`, `plan_leader_hop` and its new `_fresh_leader_hop`. `FOLLOW_CLICK_TILES`, `FOLLOW_EXTEND_TILES`, travel, `emit_travel_hop`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party leader travel after the rally, and party member follow while the leader turns. Solo travel and the leader's combat, loot, and supply actions are unchanged.
+Consent: user ("멤버는 2칸 유지하면서 끊김 없이 다시 클릭, 파티장은 클릭을 최대 1초 늦추기 ... 이것과 함께 수정하라").
+Result: `Engine/app/_06_party/tests/test_make_way_pace.py`, `test_close_follow.py`. Not run in game.
+
+## 2026-11-12 — the responsible looter walks 12 steps to a pile
+
+Intent: A party member with the responsible loot role (random loot off) takes a pile only when the walk to it is 12 steps or fewer, with walls and fences counted. Before this, the limit was 30 tiles of Chebyshev distance from `farm.loot_engage_max_tiles`. A pile two tiles away behind a wall is out of range. Bodies do not block the walk. A sticky pile whose walk grows past 12 is dropped. Among piles in range, adena comes first, then the shortest walk. Without a terrain map, the limit is 12 tiles of Chebyshev distance.
+Shared: `party_loot_radius`, new `party_loot_walks` and `party_loot_walk_meter`, and `try_party_hold_loot` (new `measure_walk` option). `build_follow_field` is reused, seeded from the member's own tile. Solo loot and `LOOT_ENGAGE_MAX_TILES` in `combat_query`, the leader's pile check, other members' near radius, random loot, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the responsible looter's pile choice, inside the party member tick.
+Consent: user ("룻팅을 담당한 파티봇의 룻팅범위를 walkable 거리로 12칸으로 설정하라").
+Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+
 ## 2026-11-12 — heal and buff wait for an open line
 
 Intent: A party heal, heal all, or buff casts only when no wall or fence lies on the straight line to the member. A body is not a blocker. A member already inside nine tiles but behind that line is not cast, and the mage does not walk away from them. Cure, curse, and resurrect stay on distance.
@@ -9,7 +32,6 @@ Affects: the mage seat's party support. Follow, attack targeting, and the shopke
 Consent: user ("okay, 스킬. 힐과 버프 usage, let's update it.").
 Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
 
-=======
 ## 2026-11-12 — party follow measures the walk, not Chebyshev
 
 Intent: A member stands beside the leader only when the walk steps to him are within the stop band. Two tiles across a wall or fence follows around it. The fighting-leader leash and the turret yard band use the same walk steps. Walls and fences count; bodies do not, so a crowd beside the leader does not move the member off. Every follow click, including the one-tile extension, the player sidestep, and the fallback path tile, must be a line the client can walk without crossing a wall or fence corner. A leader on a nav-blocked cell is reached through the open tile beside him on the member's side. A follow that stays on one tile for 2.5 seconds clicks one open tile within 3 that shortens the walk, and remembers it so the next try picks another. The walk cost the scroll and TP compare against is the walk steps (a windowed A* beyond the field window), not Chebyshev.
@@ -18,8 +40,6 @@ Affects: party member follow, the stand beside the leader, the combat leash, the
 Consent: user ("솔로에는 영향을 주지 않으면서 우의 내용을 수정하라. 깊이 있게 수정하라" after the walk-distance diagnosis).
 Result: `Engine/app/_06_party/tests/test_walk_distance_follow.py`, `test_close_follow.py`, `test_formation_goal.py`. Not run in game.
 
-<<<<<<< HEAD
->>>>>>> origin/main
 ## 2026-11-11 — an open walk restarts without the gate land wait
 
 Intent: The 24-tile land wait runs only on the first start of a walk step, while the step is still ready. That wait exists because a gate can write the new map id before the new xy. Once the walk is open, a supply hold or a supply pickup may clear or replace nav_goal. The restart opens travel from the live tile to the same destination and does not compare the body to the step's original start cell.
