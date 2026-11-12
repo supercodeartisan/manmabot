@@ -11,7 +11,9 @@ from .follow import (
     choose_approach_tile,
     choose_settle_stand,
     follow_extend_hop,
+    follow_hop_off_leader,
     hold_follow_click,
+    leader_hop_pending,
 )
 from .policy import MemberKind
 
@@ -445,6 +447,57 @@ def plan_field_follow(
     return intent, goal, detail, hop
 
 
+def plan_leader_hop(
+    origin: Any,
+    leader: tuple[int, int],
+    *,
+    previous_hop: Optional[tuple[int, int]],
+    click_failed: bool = False,
+    state: Any = None,
+) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
+    """One click toward the leader. The leader tile itself is not a click.
+
+    The same hop is not clicked again until the body stands on it, or the
+    travel click is judged failed.
+    """
+    from app._04_decision.nav_config import get_terrain_map
+    from app._04_decision.pathfinding import plan_travel_click
+
+    ox, oy = int(origin.x), int(origin.y)
+    goal = (int(leader[0]), int(leader[1]))
+    if leader_hop_pending((ox, oy), previous_hop, click_failed=click_failed):
+        return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+    if (ox, oy) == goal:
+        return idle("on_leader"), goal, "on_leader", None
+    terrain = get_terrain_map()
+    if terrain is None:
+        return idle("no_terrain"), goal, "no_terrain", None
+    _dest, path, waypoint = plan_travel_click(
+        terrain, origin, goal, max_hop=FOLLOW_CLICK_TILES
+    )
+    hop = follow_hop_off_leader((ox, oy), goal, waypoint)
+    if hop is None:
+        best = None
+        best_gap = None
+        for tile in path or []:
+            candidate = follow_hop_off_leader((ox, oy), goal, tile)
+            if candidate is None:
+                continue
+            gap = max(abs(candidate[0] - goal[0]), abs(candidate[1] - goal[1]))
+            if best_gap is None or gap < best_gap:
+                best = candidate
+                best_gap = gap
+        hop = best
+    if hop is None:
+        return idle("no_path"), None, "no_path", None
+    if _hop_on_player(state, origin, hop):
+        hop = _closing_hop_off_player(origin, goal, hop, state, terrain)
+        hop = follow_hop_off_leader((ox, oy), goal, hop)
+    if hop is None:
+        return idle("player_beside"), goal, "player_beside", None
+    return _emit_follow_hop(origin, hop, goal, "leader")
+
+
 def plan_slot_hop(
     origin: Any,
     slot: tuple[int, int],
@@ -625,5 +678,6 @@ __all__ = [
     "pick_settle_stand",
     "plan_field_follow",
     "plan_follow_intent",
+    "plan_leader_hop",
     "potion",
 ]

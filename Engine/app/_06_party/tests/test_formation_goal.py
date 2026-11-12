@@ -128,16 +128,15 @@ def test_stopped_grid_excludes_the_leader():
     assert max(abs(wide.tile[0] - 20), abs(wide.tile[1] - 20)) <= 3
 
 
-def test_slot_distance_replaces_the_leader_band():
-    hold = decide_policy(_policy(leader_dist=1, slot_dist=0))
-    assert hold.kind is MemberKind.HOLD
-    assert hold.reason.startswith("hold_slot")
-    follow = decide_policy(_policy(leader_dist=1, slot_dist=1))
-    assert follow.kind is MemberKind.FOLLOW
-    assert follow.reason.startswith("follow_slot")
+def test_leader_distance_holds_inside_two_tiles():
+    near = decide_policy(_policy(leader_dist=1, slot_dist=1))
+    assert near.kind is MemberKind.HOLD
+    assert near.reason.startswith("hold dist=")
+    edge = decide_policy(_policy(leader_dist=2, slot_dist=2, slot_arrive=0))
+    assert edge.kind is MemberKind.HOLD
     stand = decide_policy(_policy(leader_dist=1, slot_dist=1, slot_arrive=1))
     assert stand.kind is MemberKind.HOLD
-    outside = decide_policy(_policy(leader_dist=1, slot_dist=2, slot_arrive=1))
+    outside = decide_policy(_policy(leader_dist=3, slot_dist=2, slot_arrive=1))
     assert outside.kind is MemberKind.FOLLOW
 
 
@@ -284,7 +283,7 @@ if __name__ == "__main__":
     test_side_line_wins_while_a_trail_tile_exists()
     test_trail_is_used_only_when_the_side_is_blocked()
     test_stopped_grid_excludes_the_leader()
-    test_slot_distance_replaces_the_leader_band()
+    test_leader_distance_holds_inside_two_tiles()
     test_one_leader_step_moves_the_side_slot()
     test_a_backward_hop_keeps_the_side_slot_until_the_leader_has_stopped()
     test_the_stand_grid_waits_two_seconds()

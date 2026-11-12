@@ -3914,6 +3914,9 @@ class BotController:
                         party_brain=party_brain,
                         skip_accept=chat_kind == "accept",
                     )
+                    party_brain.note_travel_click_failed(
+                        bool(getattr(executor, "last_travel_click_failed", False))
+                    )
                     action = party_brain.decide(world)
                     if self._party_comms.client is not None:
                         try:
