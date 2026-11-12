@@ -2318,6 +2318,32 @@ def _step_dungeon_patrol(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
     from app._04_decision.patrol import begin_or_continue_patrol, get_patrol_waypoints
+    from app._06_party.leader_schedule import party_plan_motion
+
+    owned = party_plan_motion(getattr(blackboard, "scratch", None))
+    if owned is not None:
+        # The party plan owns this hop. Solo patrol.yaml stays unused.
+        if owned.get("kind") != "patrol" or not owned.get("goal"):
+            return None
+        goal = (int(owned["goal"][0]), int(owned["goal"][1]))
+        from app._04_decision.mode_control import begin_travel, set_mode
+        from app._04_decision.patrol import PURPOSE_PATROL
+        from app._04_decision.player_mode import PlayerMode
+
+        if (
+            blackboard.nav_goal == goal
+            and blackboard.travel_purpose == PURPOSE_PATROL
+        ):
+            if blackboard.player_mode is not PlayerMode.TRAVELING:
+                set_mode(blackboard, PlayerMode.TRAVELING)
+            return tick_traveling(state, blackboard)
+        begin_travel(
+            blackboard,
+            goal,
+            purpose=PURPOSE_PATROL,
+            reason=f"party plan patrol {owned.get('id') or ''}",
+        )
+        return tick_traveling(state, blackboard)
 
     if not get_patrol_waypoints():
         # Fall through to dungeon.idle_nudge (last on the ladder).
