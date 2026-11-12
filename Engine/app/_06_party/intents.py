@@ -8,6 +8,7 @@ from .config import PartyMemberConfig
 from .follow import (
     ARRIVAL_TOLERANCE,
     FOLLOW_CLICK_TILES,
+    FOLLOW_EXTEND_TILES,
     choose_approach_tile,
     choose_settle_stand,
     follow_extend_hop,
@@ -447,6 +448,31 @@ def plan_field_follow(
     return intent, goal, detail, hop
 
 
+def _leader_extend(
+    origin: Any,
+    goal: tuple[int, int],
+    hop: tuple[int, int],
+    state: Any,
+) -> Optional[tuple[int, int]]:
+    """One tile past ``hop`` toward the leader, or None when that click is closed.
+
+    The leader tile itself is not a click. A player sprite steps aside.
+    """
+    ox, oy = int(origin.x), int(origin.y)
+    extended = follow_extend_hop((ox, oy), hop, goal, kind="leader")
+    extended = follow_hop_off_leader(
+        (ox, oy), goal, extended, limit=FOLLOW_EXTEND_TILES
+    )
+    if extended is None or not _follow_hop_clickable(origin, extended):
+        return None
+    if _hop_on_player(state, origin, extended):
+        extended = _closing_hop_off_player(origin, goal, extended, state)
+        extended = follow_hop_off_leader(
+            (ox, oy), goal, extended, limit=FOLLOW_EXTEND_TILES
+        )
+    return extended
+
+
 def plan_leader_hop(
     origin: Any,
     leader: tuple[int, int],
@@ -455,10 +481,11 @@ def plan_leader_hop(
     click_failed: bool = False,
     state: Any = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
-    """One click toward the leader. The leader tile itself is not a click.
+    """Click toward the leader. The leader tile itself is not a click.
 
-    The same hop is not clicked again until the body stands on it, or the
-    travel click is judged failed.
+    Before the body is moving, the same hop is not clicked again. Once it is
+    moving, the hop grows one tile along the line so the walk does not stop
+    at the first two tiles. A failed travel click clicks again.
     """
     from app._04_decision.nav_config import get_terrain_map
     from app._04_decision.pathfinding import plan_travel_click
@@ -466,7 +493,25 @@ def plan_leader_hop(
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(leader[0]), int(leader[1]))
     if leader_hop_pending((ox, oy), previous_hop, click_failed=click_failed):
-        return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+        assert previous_hop is not None
+        if not _body_moving():
+            return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+        if hold_follow_click(
+            (ox, oy),
+            goal,
+            previous_hop,
+            body_moving=True,
+            leader_moved=False,
+        ):
+            extended = _leader_extend(origin, goal, previous_hop, state)
+            if extended is None:
+                return (
+                    idle("follow_in_transit"),
+                    goal,
+                    "follow_in_transit",
+                    previous_hop,
+                )
+            return _emit_follow_hop(origin, extended, goal, "leader")
     if (ox, oy) == goal:
         return idle("on_leader"), goal, "on_leader", None
     terrain = get_terrain_map()

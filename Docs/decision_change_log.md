@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — a moving follow extends, a still click does not repeat
+
+Intent: Standing within two tiles of the leader stays. Before the body is moving, the same follow hop is not clicked again. Once the body is moving, that hop extends one tile toward the leader so the walk does not stop every two tiles. The click is still never the leader's own tile.
+Shared: `plan_leader_hop`. `decide_policy` still holds at distance 2 or less. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow while the leader is more than two tiles away. The stand beside the leader, assist, supply, and the field-follow fallback are unchanged.
+Consent: user ("이 두개를 완벽하게 해결해라" after the stand rule had stopped the walk every two tiles).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-11 — a supply pause does not finish the leader's walk
 
 Intent: A party schedule walk finishes when the body is on the planned cell, or on the snapped walk tile that walk still owns. A supply hold that clears the travel goal, and a supply pickup that writes the pile tile, restart that walk. While a drop claim still names the leader, that tick stays on the pickup until the pile has been seen and has left the ground. The seen pile then clears the pickup travel so the hunt does not inherit it.

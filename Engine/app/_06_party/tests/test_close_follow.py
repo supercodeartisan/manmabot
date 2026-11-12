@@ -158,6 +158,45 @@ def test_an_open_leader_hop_does_not_click_again():
     assert hop == (2, 0)
 
 
+def test_a_moving_leader_hop_extends_one_tile(monkeypatch):
+    from app._06_party import intents
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    monkeypatch.setattr(intents, "_body_moving", lambda: True)
+    monkeypatch.setattr(intents, "_follow_hop_clickable", lambda *_a, **_k: True)
+    _intent, goal, detail, hop = intents.plan_leader_hop(
+        _Origin(),
+        (8, 0),
+        previous_hop=(2, 0),
+        click_failed=False,
+    )
+    assert hop == (3, 0)
+    assert goal == (8, 0)
+    assert detail == "leader hop 3,0 → 8,0"
+
+
+def test_a_moving_hop_does_not_click_the_leader_tile(monkeypatch):
+    from app._06_party import intents
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    monkeypatch.setattr(intents, "_body_moving", lambda: True)
+    monkeypatch.setattr(intents, "_follow_hop_clickable", lambda *_a, **_k: True)
+    _intent, _goal, detail, hop = intents.plan_leader_hop(
+        _Origin(),
+        (3, 0),
+        previous_hop=(2, 0),
+        click_failed=False,
+    )
+    assert detail == "follow_in_transit"
+    assert hop == (2, 0)
+
+
 def test_same_delta_keeps_the_hop_and_a_turn_does_not():
     assert follow_hop_still_closes((0, 0), (5, 0), (2, 0)) is True
     assert follow_hop_still_closes((0, 0), (1, 0), (2, 0)) is False
