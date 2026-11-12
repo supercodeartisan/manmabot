@@ -457,6 +457,131 @@ def test_close_claim_without_a_pile_does_not_hand_the_tick_back() -> None:
     assert supply_hold_for(_duty())["id"] == "hold:arrow:Elf"
 
 
+def test_a_claim_on_another_map_does_not_hand_the_tick_back() -> None:
+    from app._06_party import arrow_duty
+
+    class _Origin:
+        x = 10
+        y = 10
+
+    class _Pose:
+        map_id = 4
+        x = 10
+        y = 10
+
+    class _Blackboard:
+        def __init__(self) -> None:
+            self.world_origin = _Origin()
+            self.nav_goal = (10, 10)
+            self.intent = None
+            self.scratch: dict = {}
+            self.current_target_id = None
+
+    import app._04_decision.world_nav.session as session
+
+    real_pose = session.live_pose_from_state
+    session.live_pose_from_state = lambda _state, fresh=False: _Pose()
+    try:
+        action = arrow_duty._pickup_claim(
+            object(),
+            _Blackboard(),
+            {"for": "Boss", "item": "hp", "map_id": 0, "x": 10, "y": 10},
+            None,
+        )
+    finally:
+        session.live_pose_from_state = real_pose
+    assert action is not None
+    assert "supply pickup" in str(getattr(action, "reason", ""))
+
+
+def test_a_seen_pile_that_is_gone_releases_and_drops_the_pickup_goal(monkeypatch) -> None:
+    from app._06_party import arrow_duty
+
+    class _Origin:
+        x = 10
+        y = 10
+
+    class _Pose:
+        map_id = 4
+        x = 10
+        y = 10
+
+    class _Blackboard:
+        def __init__(self) -> None:
+            self.world_origin = _Origin()
+            self.nav_goal = (11, 10)
+            self.intent = None
+            self.scratch = {"travel_reason": "party supply pickup"}
+            self.current_target_id = None
+
+    board = _Blackboard()
+    claim = {"id": "hp:Boss:1", "for": "Boss", "item": "hp", "map_id": 4, "x": 10, "y": 10}
+    arrow_duty._mark_supply_seen(board, claim)
+    cleared = []
+
+    def _clear(target) -> None:
+        cleared.append(target.nav_goal)
+        target.nav_goal = None
+
+    monkeypatch.setattr("app._04_decision.behaviors.travel.clear_travel", _clear)
+    import app._04_decision.world_nav.session as session
+    import app._04_decision.combat_query as combat_query
+
+    real_pose = session.live_pose_from_state
+    real_loot = combat_query.list_lootable
+    session.live_pose_from_state = lambda _state, fresh=False: _Pose()
+    combat_query.list_lootable = lambda *_args, **_kwargs: []
+    try:
+        action = arrow_duty._pickup_claim(object(), board, claim, None)
+    finally:
+        session.live_pose_from_state = real_pose
+        combat_query.list_lootable = real_loot
+    assert action is None
+    assert cleared == [(11, 10)]
+    assert board.nav_goal is None
+    assert "travel_reason" not in board.scratch
+
+
+def test_an_unseen_drop_keeps_the_leader_off_the_schedule(monkeypatch) -> None:
+    from app._06_party.arrow_duty import _mark_supply_seen, leader_supply_action
+
+    monkeypatch.setattr(
+        "app._06_party.arrow_duty.leader_supply_pickup",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.party_critical_escape",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "app._06_party.support.urgent_self_survival",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "app._06_party.loot.stable_self_identity",
+        lambda *_args, **_kwargs: ("Boss", ""),
+    )
+    world = type(
+        "W",
+        (),
+        {"last_party": None, "player": None, "last_print_state": None},
+    )()
+    board = type(
+        "B",
+        (),
+        {
+            "world_origin": type("O", (), {"x": 1, "y": 1})(),
+            "scratch": {},
+        },
+    )()
+    claim = {"id": "hp:Boss:1", "for": "Boss", "item": "hp", "map_id": 0, "x": 1, "y": 1}
+    held = leader_supply_action(world, board, None, claim)
+    assert held is not None
+    assert "supply pickup" in str(getattr(held, "reason", ""))
+    _mark_supply_seen(board, claim)
+    assert leader_supply_action(world, board, None, claim) is None
+
+
 def _pose(map_id: int, x: int, y: int):
     return type("P", (), {"map_id": map_id, "x": x, "y": y})()
 
