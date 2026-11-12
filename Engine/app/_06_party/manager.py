@@ -70,14 +70,15 @@ def mage_list_heal_request(
 ) -> Optional[tuple[bool, bool]]:
     """``(cast_only, heals_only)`` for a mage's party-list support this tick.
 
-    Catch-up asks only for a heal that can be cast from here. A buff, and a
-    walk toward someone outside that range, wait until the slot. Stop, defend,
-    and a potion do not ask.
+    Catch-up still casts only from here. A checked buff, cure, curse, or
+    resurrect within range goes out on its usual clock, and a heal under the
+    line still comes first. The mage does not walk off the follow for one.
+    Stop, defend, and a potion do not ask.
     """
     if kind in (MemberKind.STOP, MemberKind.DEFEND, MemberKind.POTION):
         return None
     if returning:
-        return (True, True)
+        return (True, False)
     return (False, False)
 
 _DECISION_HISTORY = 20
