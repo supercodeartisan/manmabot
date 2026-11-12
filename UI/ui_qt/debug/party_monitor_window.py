@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any, Callable
 
 from PySide6.QtCore import Qt, QTimer
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from session.bot_controller import BotController
+from ui_qt.debug.party_buff_lines import party_buff_lines
 from ui_qt.debug.party_dashboard import PartyDashboard, split_messages
 from ui_qt.debug.party_etview import PartyEtView, capture_lc_client
 
@@ -100,6 +102,21 @@ def _fill_messages(view: QPlainTextEdit, lines: list[Any]) -> None:
     view.setPlainText(text)
     if at_end:
         bar.setValue(bar.maximum())
+
+
+def _fill_buffs(table: QTableWidget, rows: Any, now: float, empty: str) -> None:
+    lines = party_buff_lines(rows, now)
+    if not lines:
+        lines = [("—", empty, "—")]
+    signature = tuple(lines)
+    if getattr(table, "_buff_sig", None) == signature:
+        return
+    table._buff_sig = signature
+    table.setRowCount(len(lines))
+    for index, (name, buffs, age) in enumerate(lines):
+        table.setItem(index, 0, QTableWidgetItem(name))
+        table.setItem(index, 1, QTableWidgetItem(buffs))
+        table.setItem(index, 2, QTableWidgetItem(age))
 
 
 def _socket_banner(snap: dict[str, Any]) -> tuple[str, str]:
@@ -491,6 +508,30 @@ class PartyMonitorWindow(QMainWindow):
         self.etview.setFixedSize(_LIVE_W, _LIVE_H)
         right_l.addWidget(self.etview, alignment=Qt.AlignmentFlag.AlignHCenter)
 
+        self.buff_title = _log_title(self.t.get("party_buffs_title", "Received buffs"))
+        self.buff_title.setToolTip(
+            self.t.get(
+                "party_buffs_tip",
+                "The party_buffs list this bot received from the leader. Open this monitor on the mage.",
+            )
+        )
+        right_l.addWidget(self.buff_title)
+        self.buffs = QTableWidget(0, 3)
+        self.buffs.setHorizontalHeaderLabels(
+            [
+                self.t.get("party_buffs_col_name", "Name"),
+                self.t.get("party_buffs_col_buffs", "Buffs"),
+                self.t.get("party_buffs_col_age", "Age"),
+            ]
+        )
+        self.buffs.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.buffs.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.buffs.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.buffs.verticalHeader().setVisible(False)
+        self.buffs.setFixedHeight(120)
+        self.buffs.setToolTip(self.buff_title.toolTip())
+        right_l.addWidget(self.buffs)
+
         logs = QSplitter(Qt.Orientation.Vertical)
         logs.setChildrenCollapsible(False)
         top_box = QWidget()
@@ -640,6 +681,12 @@ class PartyMonitorWindow(QMainWindow):
         top, bottom = split_messages(list(snap.get("messages") or []), role)
         _fill_messages(self.out_messages, top)
         _fill_messages(self.in_messages, bottom)
+        _fill_buffs(
+            self.buffs,
+            snap.get("party_buffs"),
+            time.time(),
+            self.t.get("party_buffs_empty", "none received"),
+        )
         if self.live_on.isChecked():
             self._refresh_etview(snap, _status_bits(snap))
 

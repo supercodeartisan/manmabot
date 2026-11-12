@@ -1,6 +1,8 @@
 """A live spell circle is a cast point. An out-of-range circle is not a miss."""
 from __future__ import annotations
 
+import time
+
 from app._05_action import cursor_verify as cv
 from app._05_action.cursor_catalog import CursorCategory
 from app._05_action.cursor_match import CursorMatch
@@ -171,6 +173,48 @@ def test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops() -> None:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
     assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
     assert executor.keyboard.pressed == ["esc", "esc", "esc"]
+
+
+def test_a_stuck_circle_presses_the_party_key_once_and_retries_the_view() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.mouse = _ClickMouse()
+    executor._perception_capture = _Capture()
+    cv.remember_spell_aim_key(executor, "f10", 1)
+
+    def _aim(_executor: object = None) -> bool:
+        return True
+
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        cv.cancel_spell_aim(executor, reason="party buff")
+        cv.cancel_spell_aim(executor, reason="party buff")
+        assert executor.keyboard.pressed == ["esc", "f10", "esc"]
+        assert len(executor.mouse.clicks) == 1
+        executor._spell_view_click_at = time.monotonic() - cv.SPELL_AIM_VIEW_RETRY_S
+        cv.cancel_spell_aim(executor, reason="party buff")
+        cv.cancel_spell_aim(executor, reason="party buff")
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
+    assert executor.keyboard.pressed == ["esc", "f10", "esc", "esc", "esc"]
+
+
+def test_a_late_circle_keeps_the_party_key_until_it_appears() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    cv.remember_spell_aim_key(executor, "f10", 1)
+    original = cv.cursor_is_spell_aim
+    try:
+        cv.cursor_is_spell_aim = lambda *_args, **_kwargs: False  # type: ignore[assignment]
+        assert cv.cancel_spell_aim(executor, reason="aim missed") is False
+        assert executor._spell_aim_key == "f10"
+        executor._spell_aim_key_at = time.monotonic() - cv.SPELL_AIM_KEY_GRACE_S
+        assert cv.cancel_spell_aim(executor, reason="aim missed") is False
+    finally:
+        cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+    assert executor._spell_aim_key == ""
 
 
 def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:

@@ -90,6 +90,8 @@ def _body_text(body: Any) -> str:
             return _fmt_decision(body)
         if kind == "member_state":
             return _fmt_member_state(body)
+        if kind == "party_buffs":
+            return _fmt_party_buffs(body)
         return _fmt_generic(body)
     if isinstance(body, list):
         return " · ".join(_fmt_value(x) for x in body[:8])
@@ -158,6 +160,41 @@ def _fmt_generic(body: dict[str, Any]) -> str:
         parts.append(f"{key}={_fmt_value(value)}")
         if len(parts) >= 6:
             break
+    return " · ".join(parts)
+
+
+def _fmt_party_buffs(body: dict[str, Any]) -> str:
+    """Every member and every buff. Other frames stay on the short generic line."""
+    parts = ["party_buffs", f"from={body.get('from') or 'leader'}"]
+    rows = body.get("rows")
+    if not isinstance(rows, list) or not rows:
+        parts.append("rows=0")
+    else:
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("from") or "").strip() or "—"
+            bits: list[str] = []
+            buffs = row.get("buffs")
+            if isinstance(buffs, list):
+                for buff in buffs:
+                    if not isinstance(buff, dict):
+                        continue
+                    label = str(buff.get("name") or "").strip()
+                    skill = buff.get("skill")
+                    if skill not in (None, "", 0, "0"):
+                        label = f"{label} {skill}".strip()
+                    duration = buff.get("duration")
+                    if duration not in (None, ""):
+                        label = f"{label} {duration}s".strip()
+                    if label:
+                        bits.append(label)
+            if bool(row.get("poisoned")):
+                bits.append("poison")
+            parts.append(f"{name}: {', '.join(bits) if bits else '—'}")
+    session = str(body.get("session") or "").strip()
+    if session:
+        parts.append(f"session={session}")
     return " · ".join(parts)
 
 

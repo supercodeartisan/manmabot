@@ -1,6 +1,21 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-12 — a missing buff report keeps the cast clock
+
+Intent: A party buff recasts when its reported time is down to 10 seconds, or when three newer reports in a row omit it. One report that omits the buff keeps the cast clock while more than 10 seconds remain. Holy weapon, haste, and every other party buff share this clock.
+Shared: `_remain`. `choose_party_support` still calls it for every party buff. Heal, cure, curse, resurrect, follow, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the mage seat's party buffs. A missed aim or a removed buff is tried again after about 30 seconds. A report that lists the buff with time left holds for that time.
+Consent: user ("plz implement" after the missing-report clock plan, including other buffs).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
+
+## 2026-11-12 — a leftover spell circle is cancelled again
+
+Intent: A party heal or buff key is remembered. A spell circle that is still up gets Esc, then that key once, and no party-list row click. A view right-click that leaves the circle up may run once more after half a second. A circle that has not appeared yet keeps the key. When the cursor is normal again, the record is cleared.
+Shared: `cancel_spell_aim` and the party-list heal and buff press. Travel and loot already call that cancel. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, follow hops, and login clicks are unchanged.
+Affects: a mage party heal or buff whose aim circle stays up. The two-tile stand, the one-second follow retry, supply, and retreat are unchanged.
+Consent: user ("yes" after the leftover spell-circle plan).
+Result: `Engine/app/_05_action/tests/test_spell_aim_hold.py`, `test_party_list_press_hold.py`. Not run in game.
+
 ## 2026-11-12 — heal and buff wait for an open line
 
 Intent: A party heal, heal all, or buff casts only when no wall or fence lies on the straight line to the member. A body is not a blocker. A member already inside nine tiles but behind that line is not cast, and the mage does not walk away from them. Cure, curse, and resurrect stay on distance.
@@ -9,7 +24,6 @@ Affects: the mage seat's party support. Follow, attack targeting, and the shopke
 Consent: user ("okay, 스킬. 힐과 버프 usage, let's update it.").
 Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
 
-=======
 ## 2026-11-12 — party follow measures the walk, not Chebyshev
 
 Intent: A member stands beside the leader only when the walk steps to him are within the stop band. Two tiles across a wall or fence follows around it. The fighting-leader leash and the turret yard band use the same walk steps. Walls and fences count; bodies do not, so a crowd beside the leader does not move the member off. Every follow click, including the one-tile extension, the player sidestep, and the fallback path tile, must be a line the client can walk without crossing a wall or fence corner. A leader on a nav-blocked cell is reached through the open tile beside him on the member's side. A follow that stays on one tile for 2.5 seconds clicks one open tile within 3 that shortens the walk, and remembers it so the next try picks another. The walk cost the scroll and TP compare against is the walk steps (a windowed A* beyond the field window), not Chebyshev.
@@ -18,8 +32,6 @@ Affects: party member follow, the stand beside the leader, the combat leash, the
 Consent: user ("솔로에는 영향을 주지 않으면서 우의 내용을 수정하라. 깊이 있게 수정하라" after the walk-distance diagnosis).
 Result: `Engine/app/_06_party/tests/test_walk_distance_follow.py`, `test_close_follow.py`, `test_formation_goal.py`. Not run in game.
 
-<<<<<<< HEAD
->>>>>>> origin/main
 ## 2026-11-11 — an open walk restarts without the gate land wait
 
 Intent: The 24-tile land wait runs only on the first start of a walk step, while the step is still ready. That wait exists because a gate can write the new map id before the new xy. Once the walk is open, a supply hold or a supply pickup may clear or replace nav_goal. The restart opens travel from the live tile to the same destination and does not compare the body to the step's original start cell.
