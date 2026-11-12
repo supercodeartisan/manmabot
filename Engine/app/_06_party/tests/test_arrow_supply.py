@@ -761,6 +761,56 @@ def test_party_supply_does_not_handle_mp() -> None:
     assert duty is None
 
 
+def test_party_seat_does_not_start_its_own_shop() -> None:
+    from app._04_decision.player_mode import PlayerMode
+    from app._04_decision.shop_trip import (
+        SCRATCH_HP_SELL_BEFORE_RETREAT,
+        SCRATCH_SHOP_BEHAVIOR,
+        SCRATCH_SHOP_TRIP,
+        choose_shopping_behavior,
+    )
+
+    class Board:
+        def __init__(self) -> None:
+            self.scratch: dict = {}
+            self.needs_potion = True
+            self.needs_arrows = False
+            self.needs_depoison = False
+            self.player_mode = PlayerMode.FARMING
+            self.potion_suppress_until = 0.0
+            self.depoison_suppress_until = 0.0
+
+    blocked = Board()
+    blocked.scratch["party_self_shop_blocked"] = True
+    assert choose_shopping_behavior(object(), blocked) is None
+
+    started = Board()
+    started.scratch["party_self_shop_blocked"] = True
+    started.scratch[SCRATCH_SHOP_BEHAVIOR] = "buy_hp_potions_mainland"
+    started.scratch[SCRATCH_SHOP_TRIP] = True
+    started.scratch["party_pin_shop_behavior"] = "buy_hp_potions_mainland"
+    assert choose_shopping_behavior(object(), started) is None
+    assert SCRATCH_SHOP_TRIP not in started.scratch
+    assert "party_pin_shop_behavior" not in started.scratch
+
+    selling = Board()
+    selling.scratch["party_self_shop_blocked"] = True
+    selling.scratch[SCRATCH_HP_SELL_BEFORE_RETREAT] = "selling"
+    selling.scratch[SCRATCH_SHOP_BEHAVIOR] = "sell_garbage"
+    selling.scratch[SCRATCH_SHOP_TRIP] = True
+    assert choose_shopping_behavior(object(), selling) == "sell_garbage"
+    assert selling.scratch[SCRATCH_SHOP_TRIP] is True
+
+    open_seat = Board()
+    bought = choose_shopping_behavior(object(), open_seat)
+    assert bought is not None and "hp_potion" in bought
+
+    keeper = Board()
+    keeper.needs_potion = False
+    keeper.scratch["party_pin_shop_behavior"] = "buy_hp_potions_mainland"
+    assert choose_shopping_behavior(object(), keeper) == "buy_hp_potions_mainland"
+
+
 def test_brains_adopt_the_manager_and_the_session_keeps_it() -> None:
     from pathlib import Path
 
@@ -812,5 +862,6 @@ if __name__ == "__main__":
     test_a_drop_updates_the_count_until_the_report_changes()
     test_a_covered_spare_still_drops_and_a_short_spare_buys()
     test_mp_is_not_bought_without_a_shop_behavior()
+    test_party_seat_does_not_start_its_own_shop()
     test_brains_adopt_the_manager_and_the_session_keeps_it()
     print("ok")

@@ -741,8 +741,13 @@ def complete_travel_arrival(blackboard: "Blackboard") -> None:
             PURPOSE_PATROL as _PP,
             advance_patrol,
         )
+        from app._06_party.leader_schedule import party_plan_motion
 
         del _PP
+        if party_plan_motion(getattr(blackboard, "scratch", None)) is not None:
+            # The party plan advances its own waypoint. Solo patrol_index stays.
+            set_mode(blackboard, PlayerMode.FARMING)
+            return
         nxt = advance_patrol(blackboard)
         if nxt is not None:
             begin_travel(
