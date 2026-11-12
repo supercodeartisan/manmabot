@@ -261,6 +261,20 @@ def _ring_offsets(ring: int) -> tuple:
     return tuple(spots)
 
 
+def _drop_pairs(member_x: int, member_y: int, ring: int) -> list:
+    """``(ox, oy, stand, drop, member)`` for one Chebyshev ring."""
+    from .supply_drop import _DROP_TILES
+
+    dx, dy = int(_DROP_TILES[0][0]), int(_DROP_TILES[0][1])
+    member = (int(member_x), int(member_y))
+    pairs = []
+    for ox, oy in _ring_offsets(ring):
+        drop = (member[0] + int(ox), member[1] + int(oy))
+        stand = (drop[0] - dx, drop[1] - dy)
+        pairs.append((int(ox), int(oy), stand, drop, member))
+    return pairs
+
+
 def choose_drop_stand(
     member_x: int,
     member_y: int,
@@ -274,13 +288,7 @@ def choose_drop_stand(
     it is never the recipient's tile. A blocked ring returns nothing so the
     shopkeeper can step aside and try the next ring.
     """
-    from .supply_drop import _DROP_TILES
-
-    dx, dy = int(_DROP_TILES[0][0]), int(_DROP_TILES[0][1])
-    member = (int(member_x), int(member_y))
-    for ox, oy in _ring_offsets(ring):
-        drop = (member[0] + int(ox), member[1] + int(oy))
-        stand = (drop[0] - dx, drop[1] - dy)
+    for _ox, _oy, stand, drop, member in _drop_pairs(member_x, member_y, ring):
         if drop == member or stand == member:
             continue
         if walkable is not None and (
@@ -652,6 +660,8 @@ def cancel_supply_delivery(
     st["since"] = 0.0
     st["shifts"] = 0
     st["blocks"] = 0
+    st.pop("spots", None)
+    st.pop("spot_order", None)
     st.pop("stand_at", None)
     st.pop("defer_since", None)
     st.pop("walk_idle_since", None)
@@ -964,6 +974,203 @@ def _stand_left(board: Any, stand: dict) -> bool:
     return True
 
 
+def _drop_block_tiles(state: Any, origin: Any) -> set[tuple[int, int]]:
+    """Living body centers the drop stand must not use.
+
+    This is the avoid list's own tiles: a player, an NPC, or a monster.
+    The eight tiles around a player are not included. The shopkeeper's tile
+    is already left out of that list.
+    """
+    if state is None or origin is None:
+        return set()
+    try:
+        from app._04_decision.avoidance import collect_body_tiles
+
+        tiles = collect_body_tiles(state, origin)
+    except Exception:
+        return set()
+    blocked: set[tuple[int, int]] = set()
+    for tile in tiles:
+        try:
+            blocked.add((int(tile[0]), int(tile[1])))
+        except (TypeError, ValueError, IndexError):
+            continue
+    return blocked
+
+
+def _spot_key(map_id: int, x: int, y: int) -> str:
+    return f"{int(map_id)}:{int(x)}:{int(y)}"
+
+
+def _stored_spots(st: dict) -> dict:
+    raw = st.get("spots")
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def _spot_open(stand: tuple[int, int], drop: tuple[int, int], occupied: set) -> bool:
+    if stand in occupied or drop in occupied:
+        return False
+    return _tile_open(stand) and _tile_open(drop)
+
+
+def _spot_record(
+    ring: int,
+    ox: int,
+    oy: int,
+    stand: tuple[int, int],
+    drop: tuple[int, int],
+    map_id: int,
+    member_x: int,
+    member_y: int,
+) -> dict:
+    return {
+        "ring": int(ring),
+        "ox": int(ox),
+        "oy": int(oy),
+        "stand_x": int(stand[0]),
+        "stand_y": int(stand[1]),
+        "drop_x": int(drop[0]),
+        "drop_y": int(drop[1]),
+        "map_id": int(map_id),
+        "member_x": int(member_x),
+        "member_y": int(member_y),
+    }
+
+
+def _remember_spot(board: Any, spot: dict) -> None:
+    """Keep this pair until a body or a wall takes it. The ring counter stays."""
+    st = _attempt(board)
+    key = _spot_key(spot["map_id"], spot["member_x"], spot["member_y"])
+    spots = _stored_spots(st)
+    spots[key] = spot
+    order = [item for item in list(st.get("spot_order") or []) if item != key]
+    order.append(key)
+    order = order[-4:]
+    st["spots"] = {item: spots[item] for item in order if item in spots}
+    st["spot_order"] = order
+    board.scratch[_ATTEMPT] = st
+
+
+def _select_drop_spot(
+    board: Any,
+    map_id: int,
+    mx: int,
+    my: int,
+    occupied: set[tuple[int, int]],
+) -> tuple[str, Optional[dict]]:
+    """The stand to keep, the next open pair, or why this ring cannot drop.
+
+    ``keep`` and ``found`` carry the pair. ``terrain`` means this ring has no
+    walkable pair, so the shopkeeper still steps aside. ``exhausted`` means a
+    body took the open pairs through the last ring: no aside step.
+    """
+    st = _attempt(board)
+    stored = _stored_spots(st).get(_spot_key(map_id, mx, my))
+    cursor = None
+    if isinstance(stored, dict):
+        try:
+            stand = (int(stored["stand_x"]), int(stored["stand_y"]))
+            drop = (int(stored["drop_x"]), int(stored["drop_y"]))
+            cursor = (
+                int(stored.get("ring") or 0),
+                int(stored.get("ox")),
+                int(stored.get("oy")),
+            )
+        except (TypeError, ValueError, KeyError):
+            cursor = None
+        else:
+            if _spot_open(stand, drop, occupied):
+                return ("keep", stored)
+    start_ring = cursor[0] if cursor is not None else int(st.get("shifts") or 0)
+    if start_ring < 0:
+        start_ring = 0
+    if start_ring > DROP_SHIFT_MAX:
+        return ("exhausted", None)
+    saw_body = False
+    for ring in range(start_ring, DROP_SHIFT_MAX + 1):
+        passed = cursor is None or ring != cursor[0]
+        terrain_any = False
+        chosen = None
+        for ox, oy, stand, drop, member in _drop_pairs(mx, my, ring):
+            if not passed:
+                if (ox, oy) == (cursor[1], cursor[2]):
+                    passed = True
+                continue
+            if stand == member or drop == member:
+                continue
+            if not _tile_open(stand) or not _tile_open(drop):
+                continue
+            terrain_any = True
+            if stand in occupied or drop in occupied:
+                saw_body = True
+                continue
+            chosen = (ox, oy, stand, drop)
+            break
+        if chosen is not None:
+            ox, oy, stand, drop = chosen
+            return (
+                "found",
+                _spot_record(ring, ox, oy, stand, drop, map_id, mx, my),
+            )
+        if cursor is None and ring == start_ring and not terrain_any:
+            return ("terrain", None)
+        if terrain_any:
+            saw_body = True
+    if cursor is not None or saw_body:
+        return ("exhausted", None)
+    return ("terrain", None)
+
+
+def _duty_on_spot(duty: dict, stand: dict, spot: dict) -> dict:
+    planned = dict(duty)
+    planned["map_id"] = int(stand["map_id"])
+    planned["x"] = int(spot["stand_x"])
+    planned["y"] = int(spot["stand_y"])
+    planned["exact"] = True
+    planned["drop_x"] = int(spot["drop_x"])
+    planned["drop_y"] = int(spot["drop_y"])
+    planned["member_map"] = int(stand["map_id"])
+    planned["member_x"] = int(stand["x"])
+    planned["member_y"] = int(stand["y"])
+    return planned
+
+
+def _plan_body_drop(
+    board: Any,
+    state: Any,
+    duty: dict,
+    stand: Any,
+) -> tuple[str, Optional[dict]]:
+    """Plan the drop, skipping tiles a living body already stands on."""
+    if not isinstance(stand, dict) or not _stand_ready(duty, stand):
+        return ("unready", None)
+    try:
+        mx = int(stand["x"])
+        my = int(stand["y"])
+        mid = int(stand["map_id"])
+    except (TypeError, ValueError, KeyError):
+        return ("terrain", None)
+    nav = _coord_on_map(mid, mx, my)
+    if nav is None:
+        return ("terrain", None)
+    occupied = _drop_block_tiles(state, getattr(board, "world_origin", None))
+    kind, spot = _select_drop_spot(board, mid, nav[0], nav[1], occupied)
+    if kind in ("keep", "found") and isinstance(spot, dict):
+        if kind == "found":
+            _log.info(
+                "supply stand for=%s stand=%s,%s drop=%s,%s ring=%s",
+                str(duty.get("name") or ""),
+                spot["stand_x"],
+                spot["stand_y"],
+                spot["drop_x"],
+                spot["drop_y"],
+                spot["ring"],
+            )
+        _remember_spot(board, spot)
+        return ("go", _duty_on_spot(duty, stand, spot))
+    return (kind, None)
+
+
 def tick_shopkeeper_duty(
     manager: Any,
     state: Any,
@@ -1068,11 +1275,9 @@ def tick_shopkeeper_duty(
         runtime.last_kind = "supply"
         runtime.last_reason = "stand moved"
         return None
-    shifts = int(_attempt(board).get("shifts") or 0)
-    planned = plan_supply_drop(duty, stand, _tile_open, ring=shifts)
-    if planned is not None:
+    kind, planned = _plan_body_drop(board, state, duty, stand)
+    if kind == "go" and isinstance(planned, dict):
         st = _attempt(board)
-        st["shifts"] = 0
         st["since"] = 0.0
         st["latched"] = True
         board.scratch[_ATTEMPT] = st
@@ -1105,6 +1310,11 @@ def tick_shopkeeper_duty(
         runtime.supply_hold = None
         return close
     if _stand_ready(duty, stand):
+        if kind == "exhausted":
+            cancel_supply_delivery(board, runtime, duty, reason="no drop tile")
+            runtime.last_kind = "supply"
+            runtime.last_reason = "no drop tile"
+            return None
         return _shift_drop_search(manager, state, duty, stand)
     return _wait_for_stand(manager, duty)
 
@@ -1582,8 +1792,7 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
         return None
     _clear_defer_clock(board)
     _clear_walk_idle_clock(board)
-    shifts = int(_attempt(board).get("shifts") or 0)
-    replanned = plan_supply_drop(duty, recheck, _tile_open, ring=shifts)
+    kind, replanned = _plan_body_drop(board, state, duty, recheck)
     _log.info(
         "supply drop recheck %s,%s -> %s,%s",
         duty.get("member_x"),
@@ -1591,9 +1800,14 @@ def _apply_leader_drop_recheck(manager: Any, state: Any, duty: dict) -> Any:
         recheck.get("x"),
         recheck.get("y"),
     )
-    if replanned is None:
-        return _shift_drop_search(manager, state, duty, recheck)
-    return replanned
+    if kind == "go" and isinstance(replanned, dict):
+        return replanned
+    if kind == "exhausted":
+        cancel_supply_delivery(board, runtime, duty, reason="no drop tile")
+        runtime.last_kind = "supply"
+        runtime.last_reason = "no drop tile"
+        return None
+    return _shift_drop_search(manager, state, duty, recheck)
 
 
 def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — a body on the drop stand takes the next empty neighbor
+
+Intent: A living monster, player, or NPC standing on the shopkeeper's stand or on the drop tile is skipped the same way a wall is. The check runs every tick from the avoid list's body centers, not the eight tiles around a player. A chosen pair stays until that stand or drop tile is taken. The next neighbor is then used, through the existing four-ring limit, without stepping the shopkeeper aside and without the 8 second wait. No pair left ends the delivery as `no drop tile`. The 8 second wait remains only when the chosen tile is empty and the walk emits no click. A ring with no walkable tile still steps aside.
+Shared: `_plan_body_drop`, `_select_drop_spot`, and the shopkeeper tick. `choose_drop_stand` still reads terrain only. `plan_body_click`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the shopkeeper's drop tile while a body stands on a neighbor of the recipient. A body blocking the path, with the chosen tile itself empty, still waits out the 8 second stand timeout.
+Consent: user ("yes" after the occupied-tile supply plan).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
 ## 2026-11-11 — a same-map party row does not cancel a confirmed stand
 
 Intent: The shopkeeper drops on the recipient's confirmed stand. A party row two or more tiles away on the same map does not cancel that drop, and the drop does not adopt a 3×3 around the first party-memory tile. One tile still retargets the drop to that party row. A map change still cancels. The 8 second stand timeout stays. The leader still publishes the anchored stop, and a two-tile step before the drop is announced does not return him to the hunt.
