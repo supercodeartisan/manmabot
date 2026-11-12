@@ -38,8 +38,10 @@ LOOT_CURSOR_NEAR_PX = 48.0
 LOOT_CURSOR_CLEAR_SETTLE_S = 0.03
 # Single short nudge off leftover attack hover (corpse/empty arrow).
 LOOT_CURSOR_CLEAR_RADII_PX: tuple[float, ...] = (30.0,)
-# A view right-click that leaves the spell circle up may run once more after this.
+# A view right-click that leaves the spell circle up waits this long, then clicks again.
 SPELL_AIM_VIEW_RETRY_S = 0.5
+# After the skill key or a view click, wait before reading the cursor again.
+SPELL_AIM_SETTLE_S = 0.2
 # A party-list key is forgotten when the circle never appears.
 SPELL_AIM_KEY_GRACE_S = 8.0
 # Body UV + tight pixel ring (cardinal-first). No memory-tile jump.
@@ -275,8 +277,8 @@ def cursor_is_spell_aim(executor: "ActionExecutor" | None = None) -> bool:
     """True when the live cursor is still in cast-target (spell) mode.
 
     After ``mage_attack`` / buff / heal the client keeps a spell circle until
-    the cast lands or Esc cancels. Travel needs NORMAL, so leftover aim must
-    be detected without moving the mouse.
+    the cast lands or the aim is cancelled. Travel needs NORMAL, so leftover
+    aim must be detected without moving the mouse.
     """
     if not CURSOR_VERIFY_ENABLED:
         return False
@@ -353,38 +355,28 @@ def _clear_spell_aim_episode(executor: "ActionExecutor") -> None:
 
 
 def _press_spell_aim_key(executor: "ActionExecutor") -> bool:
-    """Press the remembered party-list key once. Does not click the row."""
+    """Press the remembered skill key once. The box key stays up.
+
+    The circle is already armed on the current page, so F1/F2/F3 is not
+    sent. A second press of this key turns the circle back on.
+    """
     key = str(getattr(executor, "_spell_aim_key", "") or "").strip().lower()
     if not key or getattr(executor, "_spell_aim_key_used", False):
         return False
-    box = int(getattr(executor, "_spell_aim_box", 0) or 0)
-    pressed = False
-    if box in (1, 2, 3):
-        press_box = getattr(executor, "_press_box_skill", None)
-        if press_box is not None:
-            try:
-                press_box(box, key)
-                pressed = True
-            except Exception:
-                pressed = False
-    if not pressed:
-        try:
-            executor.keyboard.press(key)
-            pressed = True
-        except Exception:
-            return False
+    try:
+        executor.keyboard.press(key)
+    except Exception:
+        return False
     executor._spell_aim_key_used = True
     return True
 
 
 def _right_click_spell_view(executor: "ActionExecutor") -> bool:
-    """One view right-click now, and one more after ``SPELL_AIM_VIEW_RETRY_S``."""
+    """Right-click the game view. Repeat after ``SPELL_AIM_VIEW_RETRY_S``."""
     clicks = int(getattr(executor, "_spell_view_clicks", 0) or 0)
-    if clicks >= 2:
-        return False
     last = float(getattr(executor, "_spell_view_click_at", 0.0) or 0.0)
     now = time.monotonic()
-    if clicks == 1 and (now - last) < SPELL_AIM_VIEW_RETRY_S:
+    if clicks >= 1 and (now - last) < SPELL_AIM_VIEW_RETRY_S:
         return False
     if not _right_click_view(executor):
         return False
@@ -394,17 +386,23 @@ def _right_click_spell_view(executor: "ActionExecutor") -> bool:
     return True
 
 
+def _settle_spell_aim() -> None:
+    if SPELL_AIM_SETTLE_S > 0:
+        time.sleep(SPELL_AIM_SETTLE_S)
+
+
 def cancel_spell_aim(
     executor: "ActionExecutor",
     *,
     reason: str = "",
 ) -> bool:
-    """Leave cast-target mode. Esc, then the party-list key, then a view click.
+    """Leave cast-target mode. The skill key once, then view right-clicks.
 
-    Returns whether aim looked active. The right-click is inside the game
-    view. A second view click waits ``SPELL_AIM_VIEW_RETRY_S`` and does not
-    repeat after that until the cursor drops. The caller walks only after
-    the cursor is no longer a spell circle.
+    Esc is not pressed: it opens the system menu and the circle stays up.
+    The remembered skill key is pressed once, without the box key. While the
+    circle remains, a view right-click repeats every ``SPELL_AIM_VIEW_RETRY_S``.
+    Returns whether aim looked active. The caller walks only after the cursor
+    is no longer a spell circle.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
@@ -422,20 +420,10 @@ def cancel_spell_aim(
                 executor._spell_aim_key_used = False
         return False
     executor._spell_aim_seen = True
-    try:
-        executor.keyboard.press("esc")
-    except Exception:
-        return active
-    settle = float(CURSOR_SEARCH_SETTLE_S or 0.0)
-    if settle > 0:
-        time.sleep(settle)
-    if cursor_is_spell_aim(executor):
-        _press_spell_aim_key(executor)
-        if settle > 0:
-            time.sleep(settle)
-    if cursor_is_spell_aim(executor):
-        if _right_click_spell_view(executor) and settle > 0:
-            time.sleep(settle)
+    if _press_spell_aim_key(executor):
+        _settle_spell_aim()
+    if cursor_is_spell_aim(executor) and _right_click_spell_view(executor):
+        _settle_spell_aim()
     still = cursor_is_spell_aim(executor)
     if not still:
         _clear_spell_aim_episode(executor)

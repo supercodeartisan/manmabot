@@ -1,5 +1,22 @@
 # Decision change log
 
+<<<<<<< HEAD
+## 2026-11-12 — a follow casts an in-range buff
+
+Intent: While the mage is catching up, a checked buff, cure, curse, or resurrect still casts when the member is within 9 tiles and the line is open. The usual remain clock applies. A heal under 80% still comes first. The mage does not leave the follow to walk to someone outside that range.
+Shared: `mage_list_heal_request`. `choose_party_support` is unchanged and still receives `cast_only`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, follow hop length, and login clicks are unchanged.
+Affects: the mage seat during catch-up follow. A due cast uses that tick instead of the follow click. Standing within 1 tile of the seat keeps the existing support, including a walk toward an on-screen member.
+Consent: user ("yes" after the in-range buff during follow plan).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`, `test_close_follow.py`. Not run in game.
+
+## 2026-11-12 — a leftover spell circle is toggled off, then right-clicked
+
+Intent: A spell circle that is still up is cleared without Esc. Esc opens the system menu and leaves the circle. The remembered skill key is pressed once, with no box key, then the cursor is read again after 0.2s. While the circle remains, a right-click inside the game view repeats every 0.5s. The skill key is not pressed again.
+Shared: `cancel_spell_aim`, `_press_spell_aim_key`, `_right_click_spell_view`. Travel, loot, party-list heal and buff, and a mage attack cast miss already call that cancel. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, follow hops, and login clicks are unchanged.
+Affects: a mage party heal or buff whose aim circle stays up, and a mage attack whose spell circle is still up after a miss. Follow starts walking once the cursor is normal.
+Consent: user ("yes" after the no-Esc, one skill key, repeated view right-click plan).
+Result: `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+=======
 ## 2026-11-12 — a follow that does not start walks a different closer tile
 
 Intent: When a member's follow click is the same tile again and the body is still standing, the next click is a different tile closer to the leader, out to the same length already used for that distance (5 when the walk is 6 or more, 2 when it is closer). A click whose tile or client line steps on a living body is not used. When every closer line is blocked, the click steps sideways on the leader's half so the walk continues. The leader tile stays unclicked. If no other open tile exists, the open same tile is clicked again.
@@ -7,6 +24,7 @@ Shared: `plan_leader_hop`, `_fresh_leader_hop`, `_closing_hop_off_player` (`limi
 Affects: party member follow toward the leader. Solo travel and the leader's own clicks are unchanged.
 Consent: user (follow is the priority; the mouse-gate body set and the hunt confined scroll stay as they are).
 Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+>>>>>>> origin/main
 
 <<<<<<< HEAD
 ## 2026-11-12 — a far follow clicks five tiles, a near one clicks two

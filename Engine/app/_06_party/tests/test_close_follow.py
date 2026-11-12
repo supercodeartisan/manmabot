@@ -108,7 +108,7 @@ def test_assist_beats_follow_while_moving_or_off_seat():
 def test_catch_up_asks_only_for_an_in_range_heal():
     from app._06_party.manager import mage_list_heal_request
 
-    assert mage_list_heal_request(True, MemberKind.FOLLOW) == (True, True)
+    assert mage_list_heal_request(True, MemberKind.FOLLOW) == (True, False)
     assert mage_list_heal_request(False, MemberKind.FOLLOW) == (False, False)
     assert mage_list_heal_request(False, MemberKind.HOLD) == (False, False)
     assert mage_list_heal_request(True, MemberKind.POTION) is None

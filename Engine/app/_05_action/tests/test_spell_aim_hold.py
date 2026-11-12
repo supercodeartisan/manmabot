@@ -145,7 +145,7 @@ def test_stuck_spell_right_clicks_inside_the_view() -> None:
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
     assert active is True
-    assert executor.keyboard.pressed == ["esc"]
+    assert executor.keyboard.pressed == []
     assert executor.mouse.clicks == [(100 + 800 * 0.62, 50 + 600 * 0.45, "right")]
 
 
@@ -172,7 +172,7 @@ def test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops() -> None:
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
     assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
-    assert executor.keyboard.pressed == ["esc", "esc", "esc"]
+    assert executor.keyboard.pressed == []
 
 
 def test_a_stuck_circle_presses_the_party_key_once_and_retries_the_view() -> None:
@@ -190,7 +190,7 @@ def test_a_stuck_circle_presses_the_party_key_once_and_retries_the_view() -> Non
         cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
         cv.cancel_spell_aim(executor, reason="party buff")
         cv.cancel_spell_aim(executor, reason="party buff")
-        assert executor.keyboard.pressed == ["esc", "f10", "esc"]
+        assert executor.keyboard.pressed == ["f10"]
         assert len(executor.mouse.clicks) == 1
         executor._spell_view_click_at = time.monotonic() - cv.SPELL_AIM_VIEW_RETRY_S
         cv.cancel_spell_aim(executor, reason="party buff")
@@ -198,7 +198,7 @@ def test_a_stuck_circle_presses_the_party_key_once_and_retries_the_view() -> Non
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
     assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
-    assert executor.keyboard.pressed == ["esc", "f10", "esc", "esc", "esc"]
+    assert executor.keyboard.pressed == ["f10"]
 
 
 def test_a_late_circle_keeps_the_party_key_until_it_appears() -> None:

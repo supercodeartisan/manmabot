@@ -268,6 +268,50 @@ def test_catch_up_heal_stays_in_range_and_leaves_the_buff() -> None:
     assert seated["spell"] == "heal"
 
 
+def test_follow_casts_an_in_range_buff_and_does_not_walk_for_one() -> None:
+    near = [
+        _member("mage", "0x1", 100, 100),
+        _member("knight", "0x2", 100, 104),
+    ]
+    buff, _note = _choose(
+        members=near,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+        cast_only=True,
+        heals_only=False,
+    )
+    assert buff["spell"] == "buff"
+    assert buff["skill_id"] == 7
+    far = [
+        _member("mage", "0x1", 100, 100),
+        _member("knight", "0x2", 100, 120),
+    ]
+    walked, note = _choose(
+        members=far,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+        cast_only=True,
+        heals_only=False,
+    )
+    assert walked is None
+    assert "step" not in note
+    low_near = [
+        _member("mage", "0x1", 100, 100),
+        _member("knight", "0x2", 40, 104),
+    ]
+    heal, _note = _choose(
+        members=low_near,
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+        cast_only=True,
+        heals_only=False,
+    )
+    assert heal["spell"] == "heal"
+
+
 class _Fence:
     """Open cells with one north fence between y=101 and y=102 at x=100."""
 
