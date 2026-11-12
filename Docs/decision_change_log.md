@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-11 — an account class updates that account's hunt
 
 Intent: Saving an account's character type writes that class onto every schedule for the same account, and onto the selected hunt profile. Mage hunts with magic, elf hunts ranged, and knight or royal hunts in melee. A party start does this for a leader and for a member. The roster seat stays a seat. A bot that is already running keeps the class it started with.
@@ -7,6 +8,15 @@ Shared: `stamp_character_fields`, `stamp_settings_character`, and `_sync_party_l
 Affects: the schedule row and the trial hunt class for the saved account. Other accounts stay. Combat strategy code is unchanged.
 Consent: user ("plz implement" after the account-class plan).
 Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+=======
+## 2026-11-11 — stand within two tiles of the leader, and click that approach once
+
+Intent: A member stands when the Chebyshev distance to the leader is 2 or less. A formation slot one tile off does not start another walk, and the click is never the leader's own tile. Outside that band, one click goes toward the leader. The same tile is not clicked again until the body stands on it, or the travel click is judged failed.
+Shared: `decide_policy`, `plan_leader_hop`, and the member follow click. `hold_follow_click` still serves the field fallback. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow and the stand beside the leader. Assist, a combat leash beyond the stop band, turret yard rejoin, and supply delivery are unchanged.
+Consent: user ("위의 규칙대로 수정하라" after the two-tile stand and one-click approach).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`, `test_formation_goal.py`. Not run in game.
+>>>>>>> origin/main
 
 ## 2026-11-11 — a supply drop phase reaches the recipient
 

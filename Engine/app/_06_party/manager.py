@@ -25,7 +25,7 @@ from .formation_goal import (
     nearer_lateral,
     signed_lateral,
 )
-from .intents import intent_for_kind, plan_field_follow, plan_slot_hop
+from .intents import intent_for_kind, plan_field_follow, plan_leader_hop, plan_slot_hop
 from .join_map import (
     PartyJoinNav,
     memory_leader_confirmed,
@@ -266,6 +266,10 @@ class PartyMemberManager:
                 "assist_name": str(self.runtime.assist_name or ""),
             }
         )
+
+    def note_travel_click_failed(self, failed: bool) -> None:
+        """Previous travel click had no ground cursor. The next hop may click."""
+        self.runtime.scratch["follow_click_failed"] = bool(failed)
 
     def decide(self, game_state: Any) -> Any:
         """Same contract as ``DecisionManager.decide`` → one ActionIntent.
@@ -1273,21 +1277,21 @@ class PartyMemberManager:
             field_plan = None
             if (
                 result.kind is MemberKind.FOLLOW
-                and slot_tile is not None
+                and leader_tile is not None
                 and origin_ok
             ):
                 try:
-                    field_plan = plan_slot_hop(
+                    field_plan = plan_leader_hop(
                         origin,
-                        slot_tile,
-                        previous_goal=self.runtime.approach_goal,
+                        leader_tile,
                         previous_hop=self.runtime.follow_hop,
-                        kind=formed.kind,
-                        leader_moved=bool(self.runtime.scratch.get("leader_stepped")),
+                        click_failed=bool(
+                            self.runtime.scratch.get("follow_click_failed")
+                        ),
                         state=game_state,
                     )
                 except Exception as exc:
-                    _log.debug("party slot hop failed: %s", exc)
+                    _log.debug("party leader hop failed: %s", exc)
                     field_plan = None
             elif (
                 result.kind is MemberKind.FOLLOW
