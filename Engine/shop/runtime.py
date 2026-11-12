@@ -897,10 +897,14 @@ def execute_recover_arrow_buy(executor, bounds, action) -> bool:
 
     qty = getattr(action, "shop_qty", None)
     try:
-        qty_i = int(qty) if qty is not None else int(ARROW_BUY_QTY)
+        qty_i = int(qty) if qty is not None else None
     except (TypeError, ValueError):
-        qty_i = int(ARROW_BUY_QTY)
-    qty_i = max(1, min(999, qty_i))
+        qty_i = None
+    if qty_i is None:
+        from app._04_decision.shops import arrow_shop_units
+
+        qty_i = arrow_shop_units("buy_normal_arrows", int(ARROW_BUY_QTY))
+    qty_i = max(1, min(999, int(qty_i or 1)))
     executor.keyboard.tap("backspace", count=3)
     for digit in str(qty_i):
         executor.keyboard.press(digit)

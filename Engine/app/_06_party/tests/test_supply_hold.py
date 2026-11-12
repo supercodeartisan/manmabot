@@ -763,6 +763,198 @@ def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
     assert "no drop tile" in caplog.text
 
 
+def test_a_body_on_the_stand_takes_the_next_pair_and_keeps_it() -> None:
+    from app._06_party import arrow_duty
+
+    board = _Board()
+    real_open = arrow_duty._tile_open
+    arrow_duty._tile_open = lambda _tile: True
+    try:
+        first = choose_drop_stand(100, 100, lambda _tile: True)
+        assert first is not None
+        taken = {(int(first["stand_x"]), int(first["stand_y"]))}
+        kind, spot = arrow_duty._select_drop_spot(board, 4, 100, 100, taken)
+        assert kind == "found"
+        assert spot is not None
+        assert (spot["stand_x"], spot["stand_y"]) != (
+            first["stand_x"],
+            first["stand_y"],
+        )
+        assert int(spot["ring"]) == 0
+        arrow_duty._remember_spot(board, spot)
+        kept, again = arrow_duty._select_drop_spot(board, 4, 100, 100, set())
+        assert kept == "keep"
+        assert (again["stand_x"], again["stand_y"]) == (
+            spot["stand_x"],
+            spot["stand_y"],
+        )
+        landed, nxt = arrow_duty._select_drop_spot(
+            board, 4, 100, 100, {(spot["stand_x"], spot["stand_y"])}
+        )
+        assert landed == "found"
+        assert (nxt["stand_x"], nxt["stand_y"]) != (
+            spot["stand_x"],
+            spot["stand_y"],
+        )
+        assert (nxt["stand_x"], nxt["stand_y"]) != (
+            first["stand_x"],
+            first["stand_y"],
+        )
+        assert int(board.scratch["party_supply_attempt"].get("shifts") or 0) == 0
+    finally:
+        arrow_duty._tile_open = real_open
+
+
+def test_bodies_on_every_ring_end_the_drop_without_a_ring_step() -> None:
+    from app._06_party import arrow_duty
+
+    board = _Board()
+    blocked: set[tuple[int, int]] = set()
+    for ring in range(arrow_duty.DROP_SHIFT_MAX + 1):
+        for _ox, _oy, stand, drop, _member in arrow_duty._drop_pairs(100, 100, ring):
+            blocked.add(stand)
+            blocked.add(drop)
+    real_open = arrow_duty._tile_open
+    arrow_duty._tile_open = lambda _tile: True
+    try:
+        kind, spot = arrow_duty._select_drop_spot(board, 4, 100, 100, blocked)
+    finally:
+        arrow_duty._tile_open = real_open
+    assert kind == "exhausted"
+    assert spot is None
+    assert board.scratch == {}
+
+
+def test_drop_blocks_are_the_body_centers() -> None:
+    from app._06_party import arrow_duty
+
+    def _centers(_state, _origin):
+        return {(5, 5), (6, 6)}
+
+    import app._04_decision.avoidance as avoidance
+
+    real = avoidance.collect_body_tiles
+    avoidance.collect_body_tiles = _centers
+    try:
+        got = arrow_duty._drop_block_tiles(object(), object())
+    finally:
+        avoidance.collect_body_tiles = real
+    assert got == {(5, 5), (6, 6)}
+
+
+def test_a_blocked_stand_walks_to_the_next_tile_without_stepping_aside() -> None:
+    from app._06_party import arrow_duty
+
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    stand = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 100,
+        "y": 100,
+        "confirmed": True,
+    }
+    manager = _close_supply(reports, stand)
+    first = choose_drop_stand(100, 100, lambda _tile: True)
+    assert first is not None
+    seen: dict = {}
+
+    def _beside(_manager, _state, duty):
+        seen["xy"] = (int(duty["x"]), int(duty["y"]))
+        return type("W", (), {"reason": "walk to member"})()
+
+    real_open = arrow_duty._tile_open
+    real_coord = arrow_duty._coord_on_map
+    real_blocks = arrow_duty._drop_block_tiles
+    real_beside = arrow_duty._beside_member
+    arrow_duty._tile_open = lambda _tile: True
+    arrow_duty._coord_on_map = lambda _map, x, y: (int(x), int(y))
+    arrow_duty._drop_block_tiles = lambda _state, _origin: {
+        (int(first["stand_x"]), int(first["stand_y"]))
+    }
+    arrow_duty._beside_member = _beside
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        arrow_duty._tile_open = real_open
+        arrow_duty._coord_on_map = real_coord
+        arrow_duty._drop_block_tiles = real_blocks
+        arrow_duty._beside_member = real_beside
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert getattr(action, "reason", "") == "walk to member"
+    assert seen["xy"] != (first["stand_x"], first["stand_y"])
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "shift for drop"
+    assert manager._nav_blackboard.scratch["party_supply_attempt"]["shifts"] == 0
+
+
+def test_bodies_on_every_ring_cancel_without_stepping_aside() -> None:
+    from app._06_party import arrow_duty
+    import app._04_decision.world_nav.session as session
+
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    stand = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 100,
+        "y": 100,
+        "confirmed": True,
+    }
+    manager = _close_supply(reports, stand)
+    blocked: set[tuple[int, int]] = set()
+    for ring in range(arrow_duty.DROP_SHIFT_MAX + 1):
+        for _ox, _oy, tile_stand, drop, _member in arrow_duty._drop_pairs(100, 100, ring):
+            blocked.add(tile_stand)
+            blocked.add(drop)
+    real_open = arrow_duty._tile_open
+    real_coord = arrow_duty._coord_on_map
+    real_blocks = arrow_duty._drop_block_tiles
+    real_pose = session.live_pose_from_state
+    arrow_duty._tile_open = lambda _tile: True
+    arrow_duty._coord_on_map = lambda _map, x, y: (int(x), int(y))
+    arrow_duty._drop_block_tiles = lambda _state, _origin: blocked
+    session.live_pose_from_state = lambda _state, fresh=False: _pose(4, 100, 100)
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        arrow_duty._tile_open = real_open
+        arrow_duty._coord_on_map = real_coord
+        arrow_duty._drop_block_tiles = real_blocks
+        session.live_pose_from_state = real_pose
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert action is None
+    assert manager.runtime.supply_hold is None
+    assert manager.runtime.last_reason == "no drop tile"
+    assert manager._nav_blackboard.nav_goal is None
+
+
 def test_every_neighbor_blocked_is_not_a_drop() -> None:
     assert choose_drop_stand(10, 20, lambda _tile: False) is None
     assert (
@@ -1274,9 +1466,16 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
     shifted = leader_supply_stand(board, world.last_party, hold)
     assert shifted is not None
     assert shifted["map_id"] == 4
-    assert (shifted["x"], shifted["y"]) == (10, 41)
+    assert (shifted["x"], shifted["y"]) == (10, 40)
 
     pose["y"] = 42
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (10, 40)
+
     hold["dropping"] = True
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
@@ -1318,6 +1517,57 @@ def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
     assert claim_names_me({"for": "Elf"}, "Elf", "") is True
 
 
+def test_a_far_party_row_keeps_the_confirmed_stand() -> None:
+    from app._06_party.arrow_duty import _apply_leader_drop_recheck, _leader_drop_recheck
+
+    duty = {
+        "kind": "drop",
+        "item": "hp",
+        "name": "Boss",
+        "qty": 10,
+        "min": 1,
+        "guid": "0x10",
+        "attempt": 0,
+        "member_map": 4,
+        "member_x": 10,
+        "member_y": 20,
+    }
+
+    def _party(y: int) -> dict:
+        return {
+            "in_party": True,
+            "leader": {
+                "name": "Boss",
+                "guid": "0x10",
+                "is_leader": True,
+                "map_id": 4,
+                "x": 10,
+                "y": y,
+            },
+            "members": [],
+        }
+
+    far = type("S", (), {"last_party": _party(24)})()
+    manager = _Manager()
+    manager.runtime.supply_hold = {"id": "hold:hp:Boss", "for": "Boss"}
+    assert _leader_drop_recheck(far, dict(duty), manager._nav_blackboard) is None
+    kept = _apply_leader_drop_recheck(manager, far, dict(duty))
+    assert kept is not None
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "stand moved"
+
+    same = type("S", (), {"last_party": _party(20)})()
+    assert _leader_drop_recheck(same, dict(duty), manager._nav_blackboard) is None
+
+    two = type("S", (), {"last_party": _party(22)})()
+    assert _leader_drop_recheck(two, dict(duty), manager._nav_blackboard) is None
+    kept_after = _apply_leader_drop_recheck(manager, two, dict(duty))
+    assert kept_after is not None
+    assert (kept_after["member_x"], kept_after["member_y"]) == (10, 20)
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "stand moved"
+
+
 def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -> None:
     from app._06_party.arrow_duty import _leader_drop_recheck, _tick_drop
 
@@ -1354,7 +1604,7 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
         "leader": {"name": "Boss", "guid": "0x10", "is_leader": True, "map_id": 4, "x": 10, "y": 22},
         "members": [],
     }
-    assert _leader_drop_recheck(type("S", (), {"last_party": two})(), duty) == "cancel"
+    assert _leader_drop_recheck(type("S", (), {"last_party": two})(), duty) is None
 
     manager = _Manager()
     manager.runtime.supply_hold = {"id": "hold:arrow:Boss", "for": "Boss"}
@@ -1386,6 +1636,38 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
     assert manager.runtime.supply_hold is not None
 
 
+def test_a_one_tile_party_row_retargets_the_drop_again() -> None:
+    from app._06_party.arrow_duty import _ATTEMPT, _apply_leader_drop_recheck
+
+    stand = {
+        "id": "hold:hp:poorboy",
+        "for": "poorboy",
+        "map_id": 0,
+        "x": 32624,
+        "y": 33148,
+        "confirmed": True,
+    }
+    duty = {"name": "poorboy", "item": "hp", "guid": "0x10", "qty": 10, "min": 1}
+
+    def _near_stand(tile: tuple[int, int]) -> bool:
+        return max(abs(int(tile[0]) - 368), abs(int(tile[1]) - 444)) <= 4
+
+    planned = plan_supply_drop(duty, stand, _near_stand)
+    assert planned is not None
+    one = type("S", (), {"last_party": _leader_party(0, 32625, 33148)})()
+    manager = _Manager()
+    manager._nav_blackboard.scratch[_ATTEMPT] = {"walk_idle_since": 10.0}
+    first = _apply_leader_drop_recheck(manager, one, planned)
+    assert first is not None
+    assert (first["member_x"], first["member_y"]) == (32625, 33148)
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch[_ATTEMPT]
+    manager._nav_blackboard.scratch[_ATTEMPT]["walk_idle_since"] = 12345.0
+    second = _apply_leader_drop_recheck(manager, one, planned)
+    assert second is not None
+    assert (second["member_x"], second["member_y"]) == (32625, 33148)
+    assert "walk_idle_since" not in manager._nav_blackboard.scratch[_ATTEMPT]
+
+
 def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) -> None:
     from app._06_party.manager import PartyMemberManager
 
@@ -1394,7 +1676,7 @@ def test_a_mage_shopkeeper_heals_only_when_the_cast_is_immediate(monkeypatch) ->
     manager._nav_blackboard = board
     seen: dict = {}
 
-    def _heal(_state, _origin, cast_only=False, below=None):
+    def _heal(_state, _origin, cast_only=False, below=None, **_extra):
         seen["cast_only"] = cast_only
         seen["below"] = below
         return type("I", (), {"reason": "list heal"})()
@@ -1621,8 +1903,12 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
     assert stand["map_id"] == 4
     assert (stand["x"], stand["y"]) == (10, 40)
     pose["y"] = 42
-    assert leader_supply_action(world, board, hold, None) is None
-    assert board.scratch["party_leader_hold_pose"]["moved"] is True
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (10, 40)
 
 
 def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
@@ -1726,7 +2012,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
         tick_shopkeeper_duty,
     )
 
-    pose = {"ready": True, "x": 381, "y": 442}
+    pose = {"ready": True, "map": 0, "x": 381, "y": 442}
     body = {"moving": True, "standing": False}
     clock = {"t": 4000.0}
     sent: list[dict] = []
@@ -1746,7 +2032,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
         lambda _state, fresh=False: (
             None
             if not pose["ready"]
-            else type("P", (), {"map_id": 0, "x": pose["x"], "y": pose["y"]})()
+            else type("P", (), {"map_id": pose["map"], "x": pose["x"], "y": pose["y"]})()
         ),
     )
     monkeypatch.setattr(
@@ -1819,8 +2105,16 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     assert (stepped["x"], stepped["y"]) == (381, 443)
 
     pose["y"] = 444
+    stayed = leader_supply_action(world, board, hold, None)
+    assert stayed is not None
+    assert board.scratch["party_leader_hold_pose"]["moved"] is False
+    frozen = leader_supply_stand(board, world.last_party, hold)
+    assert frozen is not None
+    assert (frozen["x"], frozen["y"]) == (381, 442)
+    pose["map"] = 4
     assert leader_supply_action(world, board, hold, None) is None
     assert board.scratch["party_leader_hold_pose"]["moved"] is True
+    pose["map"] = 0
 
     pose["x"], pose["y"] = 0, 0
     fresh = {"id": "hold:hp:Boss:1", "for": "Boss", "item": "hp"}
@@ -2098,7 +2392,7 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     ) == 1
 
     two = type("S", (), {"last_party": _leader_party(0, 32626, 33148)})()
-    assert _leader_drop_recheck(two, planned) == "cancel"
+    assert _leader_drop_recheck(two, planned) is None
 
     finished = _Manager()
     finished.runtime.supply_hold = {"id": "hold:hp:poorboy", "for": "poorboy"}
@@ -2131,7 +2425,10 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     assert drops["n"] == 1
     assert finished.runtime.supply_hold is None
     assert finished.runtime.last_reason == "hp dropped"
-    assert _apply_leader_drop_recheck(finished, two, planned) is None
+    kept = _apply_leader_drop_recheck(finished, two, planned)
+    assert kept is planned
+    assert finished.runtime.last_reason == "hp dropped"
+    assert finished.runtime.supply_hold is None
 
 
 def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -> None:

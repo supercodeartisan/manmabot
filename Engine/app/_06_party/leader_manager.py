@@ -57,6 +57,7 @@ class PartyLeaderManager:
             scratch.pop("need_world_nav", None)
             scratch["party_player_ring"] = True
             scratch["party_point_arrival"] = self._on_point_arrival
+            scratch.pop("party_area_border", None)
             from app._04_decision.behaviors.party_turret import release_turret_routine
 
             release_turret_routine(blackboard)
@@ -95,7 +96,8 @@ class PartyLeaderManager:
         # Arrived turret stays the hunt. A step outside the 5×5 walks back
         # through that module. It does not open another world-nav route.
         point_held = self._point_routine_held(blackboard)
-        if point_held:
+        border_held = self._area_border_held(blackboard)
+        if point_held or border_held:
             self._drop_open_travel(scratch)
         now = time.monotonic()
         if rally is not None and str(getattr(rally, "state", "") or "") == "waiting":
@@ -130,6 +132,7 @@ class PartyLeaderManager:
             self._drive_dungeon_plan(world, row, pose, now)
             return
         if self._inside(row, pose):
+            scratch.pop("party_area_border", None)
             self._apply_place(row, pose)
             if self.hunt_mode == "turret":
                 self._hold_turret_routine(blackboard)
@@ -167,6 +170,12 @@ class PartyLeaderManager:
             schedule.note_inside(now, False)
             schedule.note_mark(now, False)
             self._clear_travel(scratch)
+            self._farm(blackboard)
+            return
+        if border_held:
+            self._mount(blackboard, row)
+            schedule.note_inside(now, False)
+            schedule.note_mark(now, False)
             self._farm(blackboard)
             return
         schedule.note_inside(now, False)
@@ -241,6 +250,7 @@ class PartyLeaderManager:
         """
         if str(reason or "") != "party_schedule":
             return False
+        self._note_area_border(blackboard)
         row = self.schedule.current()
         if row is None:
             return False
@@ -280,6 +290,74 @@ class PartyLeaderManager:
             anchor=(ax, ay),
         )
         self._hold_turret_routine(blackboard)
+        return True
+
+    def _note_area_border(self, blackboard: Any) -> None:
+        """Remember a walk that ended one tile outside the current area.
+
+        The walk is already finished by the one-tile arrival rule. The same
+        mark is not armed again while that arrival is still the route. Entering
+        the area clears it. A point mark keeps its own 5×5 hold.
+        """
+        row = self.schedule.current()
+        mark = self.schedule.current_mark()
+        if row is None or mark is None or str(mark.get("shape") or "") == "point":
+            return
+        goal = self.schedule.goal_nav()
+        origin = getattr(blackboard, "world_origin", None)
+        if goal is None or origin is None:
+            return
+        from app._04_decision.world_nav.session import ARRIVE_TILES
+
+        try:
+            gap = max(
+                abs(int(origin.x) - int(goal[1])),
+                abs(int(origin.y) - int(goal[2])),
+            )
+        except (TypeError, ValueError):
+            return
+        if gap > int(ARRIVE_TILES):
+            return
+        blackboard.scratch["party_area_border"] = (
+            str(row.get("map_id") or ""),
+            int(self.schedule.index),
+            int(self.schedule.mark_index),
+            int(goal[1]),
+            int(goal[2]),
+        )
+        _log.info(
+            "party schedule border hold goal=%s,%s at=%s,%s",
+            int(goal[1]),
+            int(goal[2]),
+            int(origin.x),
+            int(origin.y),
+        )
+
+    def _area_border_held(self, blackboard: Any) -> bool:
+        """True after this area's walk arrived on the tile just outside it."""
+        scratch = getattr(blackboard, "scratch", None)
+        if not isinstance(scratch, dict):
+            return False
+        held = scratch.get("party_area_border")
+        row = self.schedule.current()
+        mark = self.schedule.current_mark()
+        goal = self.schedule.goal_nav()
+        if row is None or mark is None or goal is None or not isinstance(held, tuple):
+            scratch.pop("party_area_border", None)
+            return False
+        if str(mark.get("shape") or "") == "point":
+            scratch.pop("party_area_border", None)
+            return False
+        current = (
+            str(row.get("map_id") or ""),
+            int(self.schedule.index),
+            int(self.schedule.mark_index),
+            int(goal[1]),
+            int(goal[2]),
+        )
+        if tuple(held) != current:
+            scratch.pop("party_area_border", None)
+            return False
         return True
 
     def _apply_place(self, row: dict[str, Any], pose: Any) -> None:

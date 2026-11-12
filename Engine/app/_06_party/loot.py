@@ -26,14 +26,18 @@ def party_loot_ownership_filter(cfg: PartyMemberConfig) -> Optional[bool]:
     (False), out to the wide engage radius. The closest-member split is
     not applied.
     Any other member → own piles only (True), inside the near radius.
+
+    A shopkeeper who is also the loot seat uses that same rule. A shopkeeper
+    who is not the loot seat still leaves ordinary piles. An active supply
+    tick returns before loot, and ``pile_reserved`` leaves the announced
+    supply pile for the recipient.
     """
-    # The shopkeeper seat does not take ordinary ground loot.
-    # A supply pile aimed at someone else is handled by the caller.
-    if str(getattr(cfg, "seat_role", "") or "").strip().lower() == "shopkeeper":
+    role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
+    seat = str(getattr(cfg, "seat_role", "") or "").strip().lower()
+    if seat == "shopkeeper" and role not in ("responsible", "self", "looter"):
         return None
     if bool(getattr(cfg, "random_loot", False)):
         return False
-    role = str(getattr(cfg, "loot_role", "none") or "none").strip().lower()
     if role in ("responsible", "self", "looter"):
         return False
     return True

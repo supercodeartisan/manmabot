@@ -48,6 +48,56 @@ def _hop_on_player(state: Any, origin: Any, hop: Optional[tuple[int, int]]) -> b
         return False
 
 
+def _closing_hop_off_player(
+    origin: Any,
+    goal: tuple[int, int],
+    rejected: tuple[int, int],
+    state: Any,
+    terrain: Any = None,
+) -> Optional[tuple[int, int]]:
+    """Another short hop toward ``goal`` that is not on a player sprite.
+
+    The hop must still close and stay on the goal's side of the member.
+    Nothing is written down as a wall.
+    """
+    from app._06_party.tactics._grid import walkable
+
+    from .follow import FOLLOW_CLICK_TILES
+
+    ox, oy = int(origin.x), int(origin.y)
+    gx, gy = int(goal[0]), int(goal[1])
+    dx, dy = gx - ox, gy - oy
+    span = max(abs(dx), abs(dy))
+    if span <= 0:
+        return None
+    best: Optional[tuple[int, int]] = None
+    best_key: Optional[tuple[int, int]] = None
+    limit = int(FOLLOW_CLICK_TILES)
+    for y in range(oy - limit, oy + limit + 1):
+        for x in range(ox - limit, ox + limit + 1):
+            hop = (x, y)
+            if hop == (ox, oy) or hop == (int(rejected[0]), int(rejected[1])):
+                continue
+            if max(abs(x - ox), abs(y - oy)) > limit:
+                continue
+            if (x - ox) * dx + (y - oy) * dy <= 0:
+                continue
+            if max(abs(gx - x), abs(gy - y)) >= span:
+                continue
+            if terrain is not None and not walkable(terrain, x, y):
+                continue
+            if _hop_on_player(state, origin, hop):
+                continue
+            key = (
+                abs((x - ox) * dy - (y - oy) * dx),
+                max(abs(gx - x), abs(gy - y)),
+            )
+            if best_key is None or key < best_key:
+                best_key = key
+                best = hop
+    return best
+
+
 def _emit_follow_hop(
     origin: Any,
     hop: tuple[int, int],
@@ -409,8 +459,6 @@ def plan_slot_hop(
     from app._04_decision.nav_config import get_terrain_map
     from app._04_decision.pathfinding import plan_travel_click
 
-    from .types import ActionIntent, ActionType
-
     from .follow import STAND_ARRIVE_TILES
 
     ox, oy = int(origin.x), int(origin.y)
@@ -430,6 +478,10 @@ def plan_slot_hop(
         extended = follow_extend_hop((ox, oy), previous_hop, goal, kind=kind)
         if extended is not None and _follow_hop_clickable(origin, extended):
             if _hop_on_player(state, origin, extended):
+                extended = _closing_hop_off_player(
+                    origin, goal, extended, state
+                )
+            if extended is None:
                 return idle("player_beside"), goal, "player_beside", None
             return _emit_follow_hop(origin, extended, goal, kind)
         return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
@@ -443,15 +495,10 @@ def plan_slot_hop(
         return idle("no_path"), None, "no_path", None
     hop = waypoint if waypoint is not None else goal
     if _hop_on_player(state, origin, hop):
+        hop = _closing_hop_off_player(origin, goal, hop, state, terrain)
+    if hop is None:
         return idle("player_beside"), goal, "player_beside", None
-    intent = ActionIntent(
-        action=ActionType.TRAVELING,
-        destination=dest,
-        priority=0.55,
-        reason=f"party_member:{kind} {goal[0]},{goal[1]}",
-    )
-    detail = f"{kind} hop {hop[0]},{hop[1]} → {goal[0]},{goal[1]}"
-    return intent, goal, detail, hop
+    return _emit_follow_hop(origin, hop, goal, kind)
 
 
 def pick_settle_stand(

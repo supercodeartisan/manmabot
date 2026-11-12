@@ -661,7 +661,12 @@ def party_shop_buy_qty(
     solo_qty: Optional[int],
     state: Any = None,
 ) -> Optional[int]:
-    """Party supply shop uses the configured buy count. Every other shop keeps ``solo_qty``."""
+    """Party supply shop uses the configured buy count. Every other shop keeps ``solo_qty``.
+
+    An arrow setting is an arrow count. Silver types that count // 5.
+    Potions type the configured count unchanged. ``solo_qty`` is already
+    in shop units when the caller converted it.
+    """
     if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
         return solo_qty
     item = str(scratch.get("party_supply_item") or "arrow")
@@ -676,16 +681,25 @@ def party_shop_buy_qty(
     raw = scratch.get("party_arrow_buy_qty")
     configured = scratch.get("party_supply_configured", raw)
     keep = scratch.get("party_supply_keep")
+
+    def _typed(count: int) -> int:
+        if item != "arrow":
+            return count
+        from app._04_decision.shops import arrow_shop_units
+
+        units = arrow_shop_units(bid, count)
+        return count if units is None else units
+
     if state is not None and keep is not None and configured is not None:
         own = bag_supply_counts(state).get(item)
         try:
-            return supply_fill_qty(own, int(keep), int(configured))
+            return _typed(supply_fill_qty(own, int(keep), int(configured)))
         except (TypeError, ValueError):
             pass
     if raw is None:
         return solo_qty
     try:
-        return max(1, min(999, int(raw)))
+        return _typed(max(1, min(999, int(raw))))
     except (TypeError, ValueError):
         return solo_qty
 

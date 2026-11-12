@@ -1,6 +1,93 @@
 # Decision change log
 
-<<<<<<< HEAD
+## 2026-11-11 — an area walk that arrives on the border does not re-arm
+
+Intent: A party area walk that finishes within the existing one-tile arrival radius, on the tile just outside that area, does not arm the same goal again. Farming and enter-farm walk into the area. Stepping inside clears the hold and the stay clock runs. Leaving after that arms the walk as before. A point mark still uses its 5×5 hold.
+Shared: `PartyLeaderManager.prepare` and `_on_point_arrival`. `ARRIVE_TILES`, `travel_arrived`, exact goal satisfaction, `_enter_farm_if_needed`, and door clicks are unchanged.
+Affects: the party leader when a schedule area's center is one tile outside the farm rect. A walk that is still more than one tile away, the next mark, and a return after leaving the area are unchanged.
+Consent: user ("yes" after the farm-border oscillation plan).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
+## 2026-11-11 — a body on the drop stand takes the next empty neighbor
+
+Intent: A living monster, player, or NPC standing on the shopkeeper's stand or on the drop tile is skipped the same way a wall is. The check runs every tick from the avoid list's body centers, not the eight tiles around a player. A chosen pair stays until that stand or drop tile is taken. The next neighbor is then used, through the existing four-ring limit, without stepping the shopkeeper aside and without the 8 second wait. No pair left ends the delivery as `no drop tile`. The 8 second wait remains only when the chosen tile is empty and the walk emits no click. A ring with no walkable tile still steps aside.
+Shared: `_plan_body_drop`, `_select_drop_spot`, and the shopkeeper tick. `choose_drop_stand` still reads terrain only. `plan_body_click`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the shopkeeper's drop tile while a body stands on a neighbor of the recipient. A body blocking the path, with the chosen tile itself empty, still waits out the 8 second stand timeout.
+Consent: user ("yes" after the occupied-tile supply plan).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a same-map party row does not cancel a confirmed stand
+
+Intent: The shopkeeper drops on the recipient's confirmed stand. A party row two or more tiles away on the same map does not cancel that drop, and the drop does not adopt a 3×3 around the first party-memory tile. One tile still retargets the drop to that party row. A map change still cancels. The 8 second stand timeout stays. The leader still publishes the anchored stop, and a two-tile step before the drop is announced does not return him to the hunt.
+Shared: `_leader_drop_recheck` and `_apply_leader_drop_recheck`. Formation heading, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a shopkeeper drop to the party leader. Other members already drop on their confirmed stand. A leader who walks off on the same map waits out the 8 second timeout.
+Consent: user ("수정은 진행하자" after dropping the 3×3 supply aim).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a confirmed supply stand waits for the party row
+
+Intent: The confirmed stop tile stays the drop target until the drop ends. The leader publishes that anchored tile, not each later live step. A party row that is still two or more tiles away does not cancel the delivery until that row has landed on the stand. A map change still cancels. After the row has matched, two or more tiles cancel. One tile still retargets the drop. Before the drop is announced, a two-tile live step does not send the leader back to the hunt. A map change does. After the drop is announced, two tiles do too. The 8 second stand timeout stays.
+Shared: `_leader_drop_recheck`, `leader_supply_stand`, and `leader_hold_displaced`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party HP and arrow supply to the leader. A member stand is unchanged. The leader stays on the hold through a two-tile step until the drop is announced or the hold is cleared.
+Consent: user ("ok, then let's update as discussed" after the stand-moved explanation).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a confirmed pile is finished before the next aim
+
+Intent: Once a pile is the current loot and still in memory, screen, farm bounds, ownership, the party-leader near radius, small adena, and a second pile do not clear it. The same pile is walked and picked up. The route and a new hunt target wait. It is released when the pile leaves memory, the bag count rises, the pickup give-up fires, or the path abandon clears it. A monster that is attacking me, and a monster hitting a party member, still run before that loot.
+Shared: `continue_or_start_loot` and `farm_loot_or_combat`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. The one-tile travel arrival rule is unchanged.
+Affects: party-leader schedule walks, solo world-nav walks, and in-farm loot. A confirmed pile can be walked past the leader near radius. The next pile and a screen monster wait until that pickup ends.
+Consent: user ("yes" after the party leader left adena 195).
+Result: `Engine/app/_04_decision/tests/test_loot_route_hold.py`, `Engine/app/_04_decision/tests/test_farm_loot_bounds.py`. Not run in game.
+
+## 2026-11-11 — formation heading stays put, and a supply aim sticks inside 3×3
+
+Intent: A party member keeps one side of the leader. The leader's current tile moves that side immediately. One strafe or backstep does not swap the side, and a two-second stop does not replace it with an angle-sorted cell. A new heading is adopted after two tiles in that direction, on the side closer to the member. A follow click stays while its hop still closes. A hop on a player sprite tries another closing hop on the same side, then waits. A supply drop adopts the leader's live tile once when it is inside the confirmed stand's 3×3. While the leader stays inside that adopted 3×3 the aim and the wait clock stay. Leaving the box cancels the attempt.
+Shared: `choose_formation_goal`, `advance_heading`, `hold_follow_click`, `plan_slot_hop`, and `_apply_leader_drop_recheck`. Arrival stays exact on a moving slot. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow beside a leader who sidesteps or pauses, and a shopkeeper drop when the leader's party row is one tile off the confirmed stand. Solo movement is unchanged.
+Consent: user ("fix" after the 3×3 supply rule and the trimmed formation scope).
+Result: `Engine/app/_06_party/tests/test_formation_goal.py`, `test_close_follow.py`, `test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a loot-seat shopkeeper picks up between supply attempts
+
+Intent: A shopkeeper who is also the responsible looter picks up party piles on follow and hold. A shopkeeper who is not the loot seat still leaves ordinary piles. Buying, walking to a recipient, waiting for the stand, and dropping still return before loot, so those ticks do not pick up. The announced supply pile stays reserved for the recipient.
+Shared: `party_loot_ownership_filter`. `tick_shopkeeper_duty`, `pile_reserved`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a party member whose seat is shopkeeper and whose loot role is responsible, self, or looter. Solo loot and a shopkeeper without that loot role are unchanged.
+Consent: user ("fix it" after the shopkeeper loot lock).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-11 — a live pile holds the world-nav route click
+
+Intent: Starting a loot approach clears the armed route hop. While that pile is still the current item and still in memory, a tick that emits no loot click does not click the route. The route goal and the world-nav session stay. The route resumes when the pile is no longer the current item. The one-tile travel arrival rule is unchanged.
+Shared: `_quiet_route_click` beside `_quiet_search_click`, and `_drive_world_nav` while `phase == walk`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a world-nav walk, including the party leader's schedule walk, while a pile is the current loot. A pile that cannot be clicked stands on the existing loot unstick instead of stepping back onto the route. Solo farm loot outside world nav is unchanged.
+Consent: user ("yes" after the 16:11 adena shuffle).
+Result: `Engine/app/_04_decision/tests/test_loot_route_hold.py`. Not run in game.
+
+## 2026-11-11 — arrow shop entry uses bundles
+
+Intent: The arrow buy setting stays an arrow count. The shop dialog is typed in bundles. Normal arrows type count // 10 (200 types 20). Silver arrows type count // 5 (200 types 40). A remainder is dropped. A count under one bundle still types 1. Potion digits, the drop split, and the return-arrow threshold stay arrow or potion counts.
+Shared: `arrow_shop_units`, `buy_qty_for_behavior`, and the arrow return of `party_shop_buy_qty`. The recover arrow buy converts only when the intent has no `shop_qty`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: solo normal and silver arrow purchases, and the party shopkeeper's silver-arrow purchase, including the Adena clamp that uses that same typed count. Giving arrows to a member still types the arrow count.
+Consent: user (set 200, type 40 for silver and 20 for normal).
+Result: `Engine/app/_04_decision/tests/test_arrow_shop_units.py`, `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
+## 2026-11-11 — the next party-list key waits two seconds after the row click
+
+Intent: A party-list heal, heal-all, or buff does not press again until 2 seconds after the previous party-list row click. A press at 0.3 or 0.5 seconds left a circle that appeared after the 1 second aim wait. The aim wait is now 1.5 seconds, so a circle that appears around 1.2 seconds still clicks the row. A view right-click that leaves the circle up is not repeated until the cursor drops. The skill key is not pressed to clear it. A normal cursor during the 2 seconds is not cancelled.
+Shared: `_heal`, `_party_list_buff`, `_party_list_recast_waiting`, `PARTY_LIST_AIM_WAIT_S`, and `cancel_spell_aim`. `MAGIC_COOLDOWN_S`, the self-heal double press, solo mage attack, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party mage heal and party-list buff cadence, and any later cancel of a circle that already survived one view right-click. A member under 80 is healed once per landed click plus 2 seconds. A true aim miss blocks that action for 1.5 seconds. A circle Esc cannot clear still blocks walking until the client drops it.
+Consent: user ("okay" after the 10:20 late circle).
+Result: `Engine/app/_05_action/tests/test_party_list_press_hold.py`, `Engine/app/_05_action/tests/test_spell_aim_hold.py`. Not run in game.
+
+## 2026-11-11 — a party-list key waits while the spell cursor is already up
+
+Intent: A party-list heal, heal-all, or buff does not press its skill key while the cursor is already a spell circle. That second key clears the circle, so this tick only cancels and leaves the row unclicked. The next tick presses once after the cursor is down. The 0.5 second magic gap stays. A self heal still uses its double press.
+Shared: `_heal`, `_party_list_buff`, and `_party_list_press_held`. `MAGIC_COOLDOWN_S`, solo mage attack, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party mage heal and party-list buff cadence. A leftover circle delays the next key until it drops. Self heal is unchanged.
+Consent: user ("yes" after the 09:09 alternating aim miss).
+Result: `Engine/app/_05_action/tests/test_party_list_press_hold.py`. Not run in game.
+
 ## 2026-11-11 — a missed party-list cast clears the spell cursor
 
 Intent: A party-list buff or heal presses the skill key once, then clicks the row only after the spell cursor is up. When that wait misses, or a later walk still sees the circle, Esc runs first. If the circle remains, a right-click lands inside the game view. The walk click waits until the cursor is no longer a spell circle. The skill key is not pressed again.
@@ -16,7 +103,7 @@ Shared: `checked_skill_ids`. The party table writes the default through `_write_
 Affects: party mage heal and buff selection. A profile that saved another party spell without ever saving 힐 starts healing.
 Consent: user ("yes, please update").
 Result: `Engine/settings/tests/test_party_mage_support.py`, `UI/ui_qt/editors/tests/test_party_workspace.py`. Not run in game.
-=======
+
 ## 2026-11-11 — party hunt keeps its mark, and party clicks miss player sprites
 
 Intent: After a map reload, the party leader's hunt rect is the party mark again, not the solo yaml farm. A point stays its 5×5. Inside that mark the leader does not walk toward the solo area. Outside it, the return walk uses the mark. During a party session, a click is not placed on a memory player's center or on any of the eight tiles that touch it. Solo clicks still avoid only living centers. Monster neighbors stay clickable.
@@ -24,7 +111,6 @@ Shared: `PartyLeaderManager._mount`, `click_bodies` (travel, loot approach, sear
 Affects: the party leader after a talking scroll lands, and party move, follow, loot approach, and search while another player is beside the click. Solo hunting is unchanged.
 Consent: user (the neighbor exclusion is party-only; the farm-edge walk must be fixed; do it on a new branch).
 Result: `Engine/app/_06_party/tests/test_leader_routine.py`, `Engine/app/_04_decision/tests/test_party_click_ring.py`. Not run in game.
->>>>>>> origin/main
 
 ## 2026-11-11 — after the rally stand the leader walks
 
