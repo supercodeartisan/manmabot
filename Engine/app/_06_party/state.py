@@ -52,6 +52,8 @@ class MemberRuntime:
     travel_offset: Optional[tuple[int, int]] = None
     # Last travel click tile on the walk path (in-transit check).
     follow_hop: Optional[tuple[int, int]] = None
+    # monotonic time of that click. 0 means the clock has not started.
+    follow_hop_at: float = 0.0
     # Turret radial seat around the leader; last seat that had no path.
     turret_seat: Optional[tuple[int, int]] = None
     turret_seat_bad: Optional[tuple[int, int]] = None

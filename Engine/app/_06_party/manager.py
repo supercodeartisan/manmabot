@@ -271,6 +271,27 @@ class PartyMemberManager:
         """Previous travel click had no ground cursor. The next hop may click."""
         self.runtime.scratch["follow_click_failed"] = bool(failed)
 
+    def _follow_hop_age(self) -> Optional[float]:
+        """Seconds since the last follow click. None when no clock is running."""
+        if self.runtime.follow_hop is None or self.runtime.follow_hop_at <= 0:
+            return None
+        return time.monotonic() - float(self.runtime.follow_hop_at)
+
+    def _store_follow_hop(self, hop: Any, intent: Any) -> None:
+        """Keep the hop. A new travel click restarts the one-second walk clock."""
+        from app._02_state.enums import ActionType
+
+        tile = None
+        if isinstance(hop, tuple) and len(hop) == 2:
+            tile = (int(hop[0]), int(hop[1]))
+        self.runtime.follow_hop = tile
+        clicked = getattr(intent, "action", None) is ActionType.TRAVELING
+        if tile is None or not clicked:
+            if tile is None:
+                self.runtime.follow_hop_at = 0.0
+            return
+        self.runtime.follow_hop_at = time.monotonic()
+
     def decide(self, game_state: Any) -> Any:
         """Same contract as ``DecisionManager.decide`` → one ActionIntent.
 
@@ -1288,6 +1309,7 @@ class PartyMemberManager:
                         click_failed=bool(
                             self.runtime.scratch.get("follow_click_failed")
                         ),
+                        hop_age_s=self._follow_hop_age(),
                         state=game_state,
                     )
                 except Exception as exc:
@@ -1313,9 +1335,10 @@ class PartyMemberManager:
                     _log.debug("party field follow failed: %s", exc)
                     field_plan = None
             if field_plan is not None:
-                intent, goal, detail, self.runtime.follow_hop = field_plan
+                intent, goal, detail, hop = field_plan
+                self._store_follow_hop(hop, intent)
             else:
-                self.runtime.follow_hop = None
+                self._store_follow_hop(None, None)
                 combat_obj = None
                 if result.kind is MemberKind.ASSIST:
                     combat_obj = assist_obj
@@ -1634,7 +1657,7 @@ class PartyMemberManager:
                 self._note_list_heal(f"skip step {exc}")
                 return None
             self._join_nav.clear()
-            self.runtime.follow_hop = hop
+            self._store_follow_hop(hop, intent)
             self.runtime.approach_goal = goal
             self.runtime.chasing = False
             self.runtime.last_kind = "heal_step"

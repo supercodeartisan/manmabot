@@ -9,6 +9,7 @@ from .follow import (
     ARRIVAL_TOLERANCE,
     FOLLOW_CLICK_TILES,
     FOLLOW_EXTEND_TILES,
+    FOLLOW_HOP_START_S,
     choose_approach_tile,
     choose_settle_stand,
     follow_extend_hop,
@@ -479,13 +480,15 @@ def plan_leader_hop(
     *,
     previous_hop: Optional[tuple[int, int]],
     click_failed: bool = False,
+    hop_age_s: Optional[float] = None,
     state: Any = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
     """Click toward the leader. The leader tile itself is not a click.
 
     Before the body is moving, the same hop is not clicked again. Once it is
     moving, the hop grows one tile along the line so the walk does not stop
-    at the first two tiles. A failed travel click clicks again.
+    at the first two tiles. A failed travel click clicks again. A hop that is
+    still not a walk after ``FOLLOW_HOP_START_S`` is dropped and clicked anew.
     """
     from app._04_decision.nav_config import get_terrain_map
     from app._04_decision.pathfinding import plan_travel_click
@@ -495,8 +498,10 @@ def plan_leader_hop(
     if leader_hop_pending((ox, oy), previous_hop, click_failed=click_failed):
         assert previous_hop is not None
         if not _body_moving():
-            return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
-        if hold_follow_click(
+            age = None if hop_age_s is None else float(hop_age_s)
+            if age is None or age < FOLLOW_HOP_START_S:
+                return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+        elif hold_follow_click(
             (ox, oy),
             goal,
             previous_hop,
