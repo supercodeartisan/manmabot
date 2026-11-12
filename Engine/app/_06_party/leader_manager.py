@@ -36,6 +36,7 @@ class PartyLeaderManager:
         self.hunt_mode = "moving"
         self.on_area = False
         self.turret_anchor: Optional[tuple[int, int]] = None
+        self._plan_motion: Optional[str] = None
 
     def decide(self, world: Any) -> Any:
         return self.decision.decide(world)
@@ -47,6 +48,7 @@ class PartyLeaderManager:
         self._retry_at = 0.0
         self._from_far_since = 0.0
         self._walk_start_near = None
+        self._plan_motion = None
         self._set_place("moving")
         blackboard = self.decision.blackboard
         scratch = getattr(blackboard, "scratch", None)
@@ -108,16 +110,26 @@ class PartyLeaderManager:
                 self._drop_open_travel(scratch)
             schedule.note_inside(now, inside, holding=True)
             schedule.note_mark(now, inside, holding=True)
+            if schedule.dungeon_plan():
+                schedule.note_plan_stage(now, running=False, at_point=False)
             self._mount(blackboard, row)
             return
         if not point_held and self._travel_active(scratch):
-            if not self._release_stale_party_walk(scratch, pose):
+            if (
+                not self._release_stale_party_walk(scratch, pose)
+                and not schedule.dungeon_plan()
+            ):
                 return
         if not point_held and self._rally_walk_pending(rally, row, pose):
             schedule.note_inside(now, False)
             schedule.note_mark(now, False)
+            if schedule.dungeon_plan():
+                schedule.note_plan_stage(now, running=False, at_point=False)
             self._set_place("moving")
             self._arm_travel(blackboard, world, pose)
+            return
+        if schedule.dungeon_plan():
+            self._drive_dungeon_plan(world, row, pose, now)
             return
         if self._inside(row, pose):
             scratch.pop("party_area_border", None)
@@ -240,8 +252,7 @@ class PartyLeaderManager:
             return False
         self._note_area_border(blackboard)
         row = self.schedule.current()
-        mark = self.schedule.current_mark()
-        if row is None or mark is None or str(mark.get("shape") or "") != "point":
+        if row is None:
             return False
         origin = getattr(blackboard, "world_origin", None)
         if origin is None:
@@ -250,7 +261,18 @@ class PartyLeaderManager:
         from app._04_decision.world_nav import pack_ids
         from app._06_party.leader_schedule import POINT_BOX_TILES, mark_center
 
-        ax, ay = mark_center(mark)
+        if self.schedule.dungeon_plan():
+            if str((self.schedule.current_plan_entry() or {}).get("type") or "") != "point":
+                return False
+            center = self.schedule.plan_point_xy()
+            if center is None:
+                return False
+            ax, ay = center
+        else:
+            mark = self.schedule.current_mark()
+            if mark is None or str(mark.get("shape") or "") != "point":
+                return False
+            ax, ay = mark_center(mark)
         try:
             gap = max(abs(int(origin.x) - ax), abs(int(origin.y) - ay))
         except (TypeError, ValueError):
@@ -625,6 +647,262 @@ class PartyLeaderManager:
             len(session.plan.steps) if session.plan else 0,
         )
 
+    def _drive_dungeon_plan(self, world: Any, row: dict[str, Any], pose: Any, now: float) -> None:
+        """Run the saved dungeon_plan entry. Legacy rows never reach this."""
+        schedule = self.schedule
+        blackboard = self.decision.blackboard
+        scratch = blackboard.scratch
+        paused = self._plan_clock_paused(world, row, pose)
+        on_map = self._on_row_map(row, pose) and self._plan_map_identity_ok(row)
+        nav = self._nav_xy(str(row.get("map_id") or ""), pose) if on_map else None
+        schedule.note_inside(now, on_map and not paused)
+        if schedule.due(now) and schedule.advance():
+            self._mounted = None
+            self._set_place("moving")
+            self._clear_plan_motion(blackboard)
+            self._release_turret_routine(blackboard)
+            self._clear_plan_scratch(scratch)
+            nxt = schedule.current()
+            if nxt is not None and schedule.dungeon_plan():
+                self._drive_dungeon_plan(world, nxt, pose, now)
+            elif nxt is not None:
+                self._arm_travel(blackboard, world, pose)
+            return
+        was_bound = schedule.patrol_waypoint_index is not None
+        if nav is not None:
+            schedule.bind_patrol_waypoint(nav[0], nav[1])
+            if was_bound:
+                schedule.note_patrol_arrival(nav[0], nav[1])
+        at_point = nav is not None and schedule.point_contains(nav[0], nav[1])
+        schedule.note_plan_stage(now, running=on_map and not paused, at_point=at_point)
+        self._log_plan_errors()
+        if not schedule.finished and schedule.stage_due(now):
+            schedule.advance_plan_stage()
+            self._log_plan_errors()
+            self._clear_plan_motion(blackboard)
+            if nav is not None:
+                schedule.bind_patrol_waypoint(nav[0], nav[1])
+        self._publish_plan(blackboard)
+        if paused or not on_map or schedule.plan_invalid:
+            # A published tile is this pack's nav grid. On another map it would
+            # be a different origin, so the hop stays unpublished.
+            snap = scratch.get("party_dungeon_plan")
+            if isinstance(snap, dict):
+                scratch["party_dungeon_plan"] = {**snap, "goal": None}
+        if on_map and not paused and not schedule.plan_invalid:
+            entry_now = schedule.current_plan_entry()
+            kind_now = "" if entry_now is None else str(entry_now.get("type") or "")
+            self._drop_plan_conflicting_walk(
+                scratch,
+                allow_point_walk=kind_now == "point" and not schedule.point_arrived,
+            )
+        if paused or not on_map or schedule.plan_invalid:
+            self._release_turret_routine(blackboard)
+            self._set_place("moving")
+            return
+        entry = schedule.current_plan_entry()
+        kind = "" if entry is None else str(entry.get("type") or "")
+        combat = self._hunt_target_alive(world)
+        if kind == "point" and schedule.point_arrived:
+            center = schedule.plan_point_xy()
+            if center is not None:
+                self._hold_plan_turret(blackboard, row, center)
+            self._drop_open_travel(scratch)
+            self._install_plan_farms(blackboard, row, self._plan_point_rects())
+            self._farm(blackboard)
+            return
+        if combat:
+            schedule.stage_state = "transition"
+            self._farm(blackboard)
+            return
+        if kind == "point":
+            self._release_turret_routine(blackboard)
+            self._set_place("moving")
+            self._install_plan_farms(blackboard, row, self._plan_point_rects())
+            self._plan_motion = "point"
+            self._arm_travel(blackboard, world, pose)
+            self._plan_motion = None
+            return
+        self._release_turret_routine(blackboard)
+        self._set_place("moving")
+        self._install_plan_farms(blackboard, row, [])
+        self._farm(blackboard)
+
+    def _plan_map_identity_ok(self, row: dict[str, Any]) -> bool:
+        """The active entry's pack and game map id name this row's grid.
+
+        Live map id is compared with the row pack before any tile is read.
+        An entry that names another pack or another game map id does not
+        borrow this origin.
+        """
+        entry = self.schedule.current_plan_entry()
+        if entry is None:
+            return True
+        from app._04_decision.world_nav import pack_ids
+
+        row_pack = str(row.get("map_id") or "").strip()
+        ident = str(entry.get("id") or self.schedule.plan_index)
+        entry_pack = entry.get("pack_id")
+        if isinstance(entry_pack, str) and entry_pack.strip() and entry_pack.strip() != row_pack:
+            self.schedule._remember_plan_error(
+                f"dungeon plan {ident} pack {entry_pack.strip()} does not match row {row_pack}"
+            )
+            return False
+        if "game_map_id" not in entry:
+            return True
+        raw_game = entry.get("game_map_id")
+        try:
+            game_id = int(raw_game)
+        except (TypeError, ValueError):
+            game_id = None
+        mid = pack_ids.pack_id_to_map_id(row_pack)
+        if game_id is None or mid is None or isinstance(raw_game, bool) or int(mid) != game_id:
+            self.schedule._remember_plan_error(
+                f"dungeon plan {ident} game map {raw_game} does not match row {row_pack}"
+            )
+            return False
+        return True
+
+    def _plan_clock_paused(self, world: Any, row: dict[str, Any], pose: Any) -> bool:
+        """Retreat, death, and a floor or map exit pause the stage clock."""
+        del row, pose
+        blackboard = self.decision.blackboard
+        mode = getattr(blackboard, "player_mode", None)
+        if str(getattr(mode, "value", mode) or "") == "retreating":
+            return True
+        scratch = getattr(blackboard, "scratch", None)
+        if isinstance(scratch, dict) and scratch.get("post_respawn_retreat"):
+            return True
+        try:
+            from app._04_decision.mode_control import is_hp_zero
+
+            if is_hp_zero(world):
+                return True
+        except Exception:
+            return False
+        return False
+
+    def _plan_point_rects(self) -> list[dict[str, int | str]]:
+        from app._06_party.leader_schedule import point_farm_bounds
+
+        center = self.schedule.plan_point_xy()
+        if center is None:
+            return []
+        mark = {
+            "name": str((self.schedule.current_plan_entry() or {}).get("name") or "point"),
+            "shape": "point",
+            "x0": center[0],
+            "y0": center[1],
+            "x1": center[0],
+            "y1": center[1],
+        }
+        x0, y0, x1, y1 = point_farm_bounds(mark)
+        return [{"name": mark["name"], "region": "", "x0": x0, "y0": y0, "x1": x1, "y1": y1}]
+
+    def _hold_plan_turret(self, blackboard: Any, row: dict[str, Any], anchor: tuple[int, int]) -> None:
+        from app._04_decision.behaviors.party_turret import set_party_turret
+        from app._04_decision.world_nav import pack_ids
+
+        self._set_place("turret", anchor=anchor)
+        mid = pack_ids.pack_id_to_map_id(str(row.get("map_id") or ""))
+        if mid is None:
+            return
+        set_party_turret(blackboard, True, map_id=int(mid), anchor=anchor)
+        self._hold_turret_routine(blackboard)
+
+    def _install_plan_farms(
+        self, blackboard: Any, row: dict[str, Any], rects: list[dict[str, int | str]]
+    ) -> None:
+        scratch = blackboard.scratch
+        cfg = scratch.get("runtime_config")
+        if not isinstance(cfg, dict):
+            cfg = {}
+            scratch["runtime_config"] = cfg
+        nav = dict(cfg.get("navigation") or {})
+        nav["active_map"] = str(row.get("map_id") or "")
+        nav["farm_areas"] = list(rects)
+        nav.pop("farm_areas_file", None)
+        cfg["navigation"] = nav
+        scratch["runtime_config"] = cfg
+        if rects:
+            from app._04_decision.nav_config import _load_farms_and_home
+
+            _load_farms_and_home(nav)
+        from app._04_decision import player_mode as pm
+
+        pm.HUNT_MAP_ID = str(row.get("map_id") or "")
+        scratch["routine_kind"] = str(row.get("kind") or "battle")
+        blackboard.farm_area_index = 0
+
+    def _log_plan_errors(self) -> None:
+        pending = list(self.schedule.plan_errors)
+        if not pending:
+            return
+        self.schedule.plan_errors.clear()
+        for message in pending:
+            _log.error("%s", message)
+
+    def _publish_plan(self, blackboard: Any) -> None:
+        snap = self.schedule.motion_snapshot()
+        scratch = blackboard.scratch
+        previous = scratch.get("party_plan_generation")
+        if snap is None:
+            self._clear_plan_scratch(scratch)
+            return
+        scratch["party_dungeon_plan"] = snap
+        scratch["party_dungeon_plan_owns_motion"] = True
+        generation = snap.get("generation")
+        if previous is not None and generation != previous:
+            self._clear_plan_motion(blackboard)
+        scratch["party_plan_generation"] = generation
+
+    def _drop_plan_conflicting_walk(self, scratch: dict, *, allow_point_walk: bool) -> None:
+        """Drop a return route that is not the active point's own walk.
+
+        A retreat resume arms ``post_retreat`` toward the legacy mark. While a
+        dungeon plan is hunting, that session must not outrank the active entry.
+        The walk to the current point stays.
+        """
+        session = scratch.get("world_nav_session")
+        reason = str(getattr(session, "reason", "") or "")
+        keep_point = (
+            allow_point_walk
+            and session is not None
+            and self._travel_active(scratch)
+            and reason == "party_schedule"
+        )
+        if keep_point:
+            # The point walk is already a session. A retreat only leaves
+            # need_world_nav, and the next world-nav tick would arm that
+            # over this session once the session ends.
+            scratch.pop("need_world_nav", None)
+            return
+        if session is not None and self._travel_active(scratch):
+            self._drop_open_travel(scratch)
+            return
+        # finish_retreat only requests the return. The session is armed on
+        # the following world-nav tick, which runs before the plan hop.
+        scratch.pop("need_world_nav", None)
+
+    def _clear_plan_scratch(self, scratch: dict) -> None:
+        scratch.pop("party_dungeon_plan", None)
+        scratch.pop("party_dungeon_plan_owns_motion", None)
+        scratch.pop("party_plan_generation", None)
+
+    def _clear_plan_motion(self, blackboard: Any) -> None:
+        """Drop the previous stage's hop so it cannot retarget the new entry."""
+        self._drop_open_travel(blackboard.scratch)
+        if str(getattr(blackboard, "travel_purpose", "") or "") == "patrol":
+            from app._04_decision.behaviors.travel import clear_travel
+
+            clear_travel(blackboard)
+            blackboard.travel_purpose = None
+        from app._04_decision.mode_control import set_mode
+        from app._04_decision.player_mode import PlayerMode
+
+        if blackboard.player_mode is PlayerMode.TRAVELING:
+            set_mode(blackboard, PlayerMode.FARMING)
+
     def _travel_goal(self) -> Any:
         from app._04_decision.world_nav import pack_ids
         from app._04_decision.world_nav import planner_api as api
@@ -636,7 +914,12 @@ class PartyLeaderManager:
         mid = pack_ids.pack_id_to_map_id(pack_id)
         if mid is None:
             return None
-        goal_nav = self.schedule.goal_nav()
+        if self._plan_motion == "point":
+            goal_nav = self.schedule.plan_point_goal_nav()
+            if goal_nav is None:
+                return None
+        else:
+            goal_nav = self.schedule.goal_nav()
         if goal_nav is None:
             return api.map_goal(int(mid))
         _pack, nx, ny = goal_nav

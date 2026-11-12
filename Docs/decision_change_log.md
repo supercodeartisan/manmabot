@@ -3210,3 +3210,27 @@ Affected modes: party member invite accept, leader invite/joined bookkeeping and
 Side effects to watch: a popup closed by its own timeout right after Y counts as accepted; a member restarted after an accept is not joined until it accepts or its memory shows the party. When the leader name cannot be read at setup, the member accepts any invite popup.
 
 Live result: popup reading verified on a trade popup (ask 252). Invite accept and IME switch pending a live run on both PCs.
+
+## 2026-11-12 — party dungeon plan drives patrol and point stages
+
+Intent: A party dungeon row with `dungeon_plan` hunts that list in saved order. Each patrol uses its own waypoints and `duration_s`. Each point uses the existing stationary walk and starts `stay_s` on arrival. The row's `duration_minutes` still ends the visit. A row without `dungeon_plan` keeps the old mark walk.
+Shared: `PartyLeaderSchedule` plan cursor, `PartyLeaderManager._drive_dungeon_plan`, and the dungeon patrol arrival hook. Solo `patrol.yaml`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader while the current row has a dungeon plan. Field hunts, legacy patrol-only rows, solo dungeon patrol, and party members are unchanged.
+Consent: user (implement the dungeon_plan runtime, keep legacy rows, do not rewrite solo patrol).
+Result: `Engine/app/_06_party/tests/test_leader_dungeon_plan.py`. Not run in game.
+
+## 2026-11-12 — a dungeon plan is not blocked by the retreat return walk
+
+Intent: After a retreat, the existing world-nav return was resumed before the dungeon plan tick, so that walk could keep the legacy mark and skip the active patrol or point. A plan row now still runs its stage tick, and a return walk that is not the current point's own walk is dropped.
+Shared: `PartyLeaderManager.prepare` and `_drop_plan_conflicting_walk`. Legacy rows still leave an active party walk alone. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader only while the current row has a dungeon plan.
+Consent: user (audit the plan runtime and fix confirmed defects in that scope).
+Result: `Engine/app/_06_party/tests/test_leader_dungeon_plan.py`. Not run in game.
+
+## 2026-11-12 — dungeon plan return request and map grid
+
+Intent: `finish_retreat` only sets `need_world_nav`. The next world-nav tick armed that return before the plan hop. A plan that is on its own map now clears that request. On another map, or when the entry names another pack or game map id, the saved tile is not published as a hop.
+Shared: `PartyLeaderManager._drop_plan_conflicting_walk` and `_plan_map_identity_ok`. Retreat policy, `begin_retreat`, and solo patrol are unchanged.
+Affects: the party leader only while the current row has a dungeon plan.
+Consent: user (final review of the plan runtime; fix confirmed defects in that scope).
+Result: `Engine/app/_06_party/tests/test_leader_dungeon_plan.py`. Not run in game.

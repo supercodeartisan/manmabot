@@ -216,6 +216,19 @@ class UiStrings:
     menu_copy: str
     menu_duplicate: str
     menu_rename: str
+    menu_edit_coords: str
+    coord_store: str
+    coord_cancel: str
+    coord_invalid: str
+    coord_off_map: str
+    editor_world_xy: str  # format: x, y — game world, not the nav tile
+    editor_world_unavailable: str
+    point_stay: str  # format: minutes — per-point dwell, dungeon hunt points
+    point_stay_title: str
+    point_stay_prompt: str
+    tool_patrol_plus: str
+    plan_patrol: str  # format: n
+    plan_point: str  # format: n
     areas_overlap: str
     # species
     species_heading: str
@@ -573,6 +586,19 @@ _EN = UiStrings(
     menu_copy="Copy",
     menu_duplicate="Duplicate",
     menu_rename="Rename",
+    menu_edit_coords="Edit coordinates",
+    coord_store="Store",
+    coord_cancel="Cancel",
+    coord_invalid="World coordinates must be integers.",
+    coord_off_map="That coordinate is outside this map.",
+    editor_world_xy="{x}, {y}",
+    editor_world_unavailable="World coordinates are unavailable.",
+    point_stay="{minutes} min",
+    point_stay_title="Stay",
+    point_stay_prompt="Minutes",
+    tool_patrol_plus="Patrol +",
+    plan_patrol="Patrol {n}",
+    plan_point="Point {n}",
     areas_overlap="Farm areas cannot overlap.",
     species_heading="Species",
     species_hint=(
@@ -1090,6 +1116,19 @@ _KO = UiStrings(
     menu_copy="Copy",
     menu_duplicate="Duplicate",
     menu_rename="Rename",
+    menu_edit_coords="좌표편집",
+    coord_store="보관",
+    coord_cancel="취소",
+    coord_invalid="월드좌표는 정수여야 합니다.",
+    coord_off_map="이 맵 밖의 좌표입니다.",
+    editor_world_xy="{x}, {y}",
+    editor_world_unavailable="월드좌표를 알 수 없습니다.",
+    point_stay="{minutes}분",
+    point_stay_title="체류",
+    point_stay_prompt="분",
+    tool_patrol_plus="패트롤 +",
+    plan_patrol="패트롤 {n}",
+    plan_point="점 {n}",
     areas_overlap="사냥터는 서로 겹칠 수 없습니다.",
     species_heading="종",
     species_hint=(
@@ -1603,6 +1642,19 @@ _ZH = UiStrings(
     menu_copy="Copy",
     menu_duplicate="Duplicate",
     menu_rename="Rename",
+    menu_edit_coords="编辑坐标",
+    coord_store="保存",
+    coord_cancel="取消",
+    coord_invalid="世界坐标必须是整数。",
+    coord_off_map="该坐标不在当前地图内。",
+    editor_world_xy="{x}, {y}",
+    editor_world_unavailable="无法取得世界坐标。",
+    point_stay="{minutes}分钟",
+    point_stay_title="停留",
+    point_stay_prompt="分钟",
+    tool_patrol_plus="巡逻 +",
+    plan_patrol="巡逻 {n}",
+    plan_point="点 {n}",
     areas_overlap="猎场区域不能重叠。",
     species_heading="物种",
     species_hint=(
