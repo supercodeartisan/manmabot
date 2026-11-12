@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — stand within two tiles of the leader, and click that approach once
+
+Intent: A member stands when the Chebyshev distance to the leader is 2 or less. A formation slot one tile off does not start another walk, and the click is never the leader's own tile. Outside that band, one click goes toward the leader. The same tile is not clicked again until the body stands on it, or the travel click is judged failed.
+Shared: `decide_policy`, `plan_leader_hop`, and the member follow click. `hold_follow_click` still serves the field fallback. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow and the stand beside the leader. Assist, a combat leash beyond the stop band, turret yard rejoin, and supply delivery are unchanged.
+Consent: user ("위의 규칙대로 수정하라" after the two-tile stand and one-click approach).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`, `test_formation_goal.py`. Not run in game.
+
 ## 2026-11-11 — a supply drop phase reaches the recipient
 
 Intent: When the shopkeeper announces the drop, the hold sent to the leader carries `dropping`. The leader republishes that flag, and the recipient stands for the pile. The same change sends `member_state` on that tick. Buy quantity, the approach, the drop gesture, and the pickup coordinates stay as they are.

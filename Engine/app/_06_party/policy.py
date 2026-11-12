@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Optional
 
 from .config import PartyMemberConfig
-from .follow import follow_kind
 
 
 class MemberKind(str, Enum):
@@ -102,29 +101,6 @@ class PolicyResult:
     reason: str
 
 
-def _slot_hold(inp: PolicyInput) -> Optional[PolicyResult]:
-    """Hold on the formation slot. Follow when this member is off it.
-
-    ``None`` when the caller did not supply a slot, so the leader-distance
-    band stays in force.
-    """
-    if inp.slot_dist is None:
-        return None
-    slot = int(inp.slot_dist)
-    dist = int(inp.leader_dist or 0)
-    if slot <= max(0, int(inp.slot_arrive)):
-        return PolicyResult(
-            MemberKind.HOLD,
-            False,
-            f"hold_slot slot={slot} dist={dist}",
-        )
-    return PolicyResult(
-        MemberKind.FOLLOW,
-        True,
-        f"follow_slot slot={slot} dist={dist}",
-    )
-
-
 def decide_policy(inp: PolicyInput) -> PolicyResult:
     """Member brain: heal/buff/potion, defend, assist, then follow/hold."""
     cfg = inp.config
@@ -193,49 +169,34 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
                 True,
                 f"follow_combat_leash dist={dist}",
             )
-        # Farming but no live target yet — walk to the slot, not the leader tile.
-        slot_hold = _slot_hold(inp)
-        if slot_hold is not None:
-            return slot_hold
-        if dist > int(cfg.stop_tiles):
+        # Inside the stop band, stand. A side slot does not pull the member
+        # around the leader. Outside it, follow the leader tile.
+        if dist <= int(cfg.stop_tiles):
             return PolicyResult(
-                MemberKind.FOLLOW,
-                True,
-                f"follow_combat_near dist={dist}",
+                MemberKind.HOLD,
+                False,
+                f"hold dist={dist}",
             )
         return PolicyResult(
-            MemberKind.HOLD,
-            False,
-            f"hold_combat dist={dist}",
+            MemberKind.FOLLOW,
+            True,
+            f"follow_combat_near dist={dist}",
         )
 
     # --- Travel / idle ---
-    slot_hold = _slot_hold(inp)
-    if slot_hold is not None:
-        return slot_hold
-    walk = int(inp.leader_walk_dist) if inp.leader_walk_dist is not None else dist
-    band, chasing = follow_kind(
-        walk,
-        follow_tiles=cfg.follow_tiles,
-        stop_tiles=cfg.stop_tiles,
-        leader_farming=False,
-        leader_stopped=bool(inp.leader_stopped),
-        chasing=inp.chasing,
-        at_settle_stand=inp.at_settle_stand,
-        at_travel_spot=inp.at_travel_spot,
-    )
-    if band == "follow":
-        why = "follow_settle" if inp.leader_stopped else "follow_travel"
+    # Chebyshev to the leader. A formation slot is not a walk goal.
+    if dist <= int(cfg.stop_tiles):
         return PolicyResult(
-            MemberKind.FOLLOW,
-            chasing,
-            f"{why} walk={walk} dist={dist}",
+            MemberKind.HOLD,
+            False,
+            f"hold dist={dist}",
         )
-
+    walk = int(inp.leader_walk_dist) if inp.leader_walk_dist is not None else dist
+    why = "follow_settle" if inp.leader_stopped else "follow_travel"
     return PolicyResult(
-        MemberKind.HOLD,
-        False,
-        f"hold walk={walk} dist={dist}",
+        MemberKind.FOLLOW,
+        True,
+        f"{why} walk={walk} dist={dist}",
     )
 
 

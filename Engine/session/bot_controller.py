@@ -3924,6 +3924,9 @@ class BotController:
                         decision.blackboard,
                         str(getattr(party_brain.config, "seat_role", "") or ""),
                     )
+                    party_brain.note_travel_click_failed(
+                        bool(getattr(executor, "last_travel_click_failed", False))
+                    )
                     action = party_brain.decide(world)
                     if self._party_comms.client is not None:
                         try:
