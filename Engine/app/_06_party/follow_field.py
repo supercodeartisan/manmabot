@@ -50,12 +50,31 @@ class FollowField:
         d = self.dist[(int(tile[1]) - self.y0) * self.width + (int(tile[0]) - self.x0)]
         return None if d < 0 else d
 
-    def walk_distance(self, tile: tuple[int, int], chebyshev: int) -> int:
-        """Steps when reached; otherwise a value past the window (never "close")."""
+    def member_steps(self, tile: tuple[int, int]) -> Optional[int]:
+        """Steps from the member's tile. A nav-blocked tile under the body
+        counts through its nearest reached neighbor."""
         d = self.steps(tile)
         if d is not None:
             return d
+        if not self.in_window(tile):
+            return None
+        x, y = int(tile[0]), int(tile[1])
+        best: Optional[int] = None
+        for dx, dy in _STEPS:
+            n = self.steps((x + dx, y + dy))
+            if n is not None and (best is None or n + 1 < best):
+                best = n + 1
+        return best
+
+    def walk_distance(self, tile: tuple[int, int], chebyshev: int) -> int:
+        """Steps when reached; otherwise a value past the window (never "close")."""
+        d = self.member_steps(tile)
+        if d is not None:
+            return max(int(d), int(chebyshev))
         return max(int(chebyshev), self.radius + 1)
+
+    def reached(self, tile: tuple[int, int]) -> bool:
+        return self.member_steps(tile) is not None
 
     def descent(
         self,
@@ -206,7 +225,7 @@ def build_follow_field(
         if x0 <= int(x) < x1 and y0 <= int(y) < y1 and (int(x), int(y)) != (lx, ly)
     )
     dist = [-1] * (w * h)
-    if w == 0 or h == 0 or not terrain.is_walkable(lx, ly):
+    if w == 0 or h == 0 or not (x0 <= lx < x1 and y0 <= ly < y1):
         return FollowField((lx, ly), r, x0, y0, w, h, tuple(dist), body, terrain)
 
     walk = terrain.walkable[y0:y1, x0:x1].tolist()
@@ -218,11 +237,16 @@ def build_follow_field(
         return 0 <= x < w and 0 <= y < h and walk[y][x]
 
     sx, sy = lx - x0, ly - y0
+    # The leader stands there, so the tile is open even when nav.png says no.
+    # Its fence edges are unknown; the first ring only needs an open neighbor.
+    seed_open = bool(walk[sy][sx])
+    walk[sy][sx] = True
     dist[sy * w + sx] = 0
     queue: deque[tuple[int, int]] = deque([(sx, sy)])
     while queue:
         cx, cy = queue.popleft()
         nd = dist[cy * w + cx] + 1
+        from_seed = (cx, cy) == (sx, sy) and not seed_open
         for dx, dy in _STEPS:
             nx, ny = cx + dx, cy + dy
             if not open_(nx, ny):
@@ -231,7 +255,7 @@ def build_follow_field(
             if dist[idx] >= 0:
                 continue
             # The member walks neighbor → current, so test that direction.
-            if fences:
+            if fences and not from_seed:
                 if not _can_step(terrain, nx + x0, ny + y0, cx + x0, cy + y0):
                     continue
             elif dx and dy and not (open_(cx, ny) or open_(nx, cy)):
@@ -239,6 +263,51 @@ def build_follow_field(
             dist[idx] = nd
             queue.append((nx, ny))
     return FollowField((lx, ly), r, x0, y0, w, h, tuple(dist), body, terrain)
+
+
+def nearest_walkable(
+    terrain: Any,
+    tile: tuple[int, int],
+    *,
+    radius: int = 2,
+    toward: Optional[tuple[int, int]] = None,
+) -> Optional[tuple[int, int]]:
+    """``tile`` when walkable, else the closest walkable tile within ``radius``.
+
+    Ties go to the tile nearest ``toward`` (the member), so the goal is on
+    the member's side of a blocked leader cell.
+    """
+    x, y = int(tile[0]), int(tile[1])
+    try:
+        if terrain.is_walkable(x, y):
+            return (x, y)
+    except Exception:
+        return None
+    for r in range(1, max(1, int(radius)) + 1):
+        ring: list[tuple[int, int]] = []
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                if max(abs(dx), abs(dy)) != r:
+                    continue
+                try:
+                    if terrain.is_walkable(x + dx, y + dy):
+                        ring.append((x + dx, y + dy))
+                except Exception:
+                    continue
+        if ring:
+            if toward is None:
+                return ring[0]
+            tx, ty = int(toward[0]), int(toward[1])
+            return min(
+                ring,
+                key=lambda t: (
+                    max(abs(t[0] - tx), abs(t[1] - ty)),
+                    (t[0] - tx) ** 2 + (t[1] - ty) ** 2,
+                    t[1],
+                    t[0],
+                ),
+            )
+    return None
 
 
 class FollowFieldCache:
@@ -279,4 +348,5 @@ __all__ = [
     "MAX_FIELD_RADIUS",
     "build_follow_field",
     "field_radius",
+    "nearest_walkable",
 ]

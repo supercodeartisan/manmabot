@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-12 — party follow measures the walk, not Chebyshev
+
+Intent: A member stands beside the leader only when the walk steps to him are within the stop band. Two tiles across a wall or fence follows around it. The fighting-leader leash and the turret yard band use the same walk steps. Walls and fences count; bodies do not, so a crowd beside the leader does not move the member off. Every follow click, including the one-tile extension, the player sidestep, and the fallback path tile, must be a line the client can walk without crossing a wall or fence corner. A leader on a nav-blocked cell is reached through the open tile beside him on the member's side. A follow that stays on one tile for 2.5 seconds clicks one open tile within 3 that shortens the walk, and remembers it so the next try picks another. The walk cost the scroll and TP compare against is the walk steps (a windowed A* beyond the field window), not Chebyshev.
+Shared: `decide_policy`, `plan_leader_hop`, `_leader_extend`, `_follow_hop_clickable`, `_closing_hop_off_player`, new `plan_follow_unstick`, `build_follow_field` (leader cell seeded open), `FollowField.member_steps`, new `estimate_walk_steps`, and the member manager's walk field, walk cost, and stuck clock. Solo travel, `emit_travel_hop`, `try_movement_unstick`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. No module under `_04_decision` imports the changed party modules.
+Affects: party member follow, the stand beside the leader, the combat leash, the turret yard rejoin, and the same-map scroll/TP follow choice. Assist target choice, supply, loot, and the other-map join are unchanged.
+Consent: user ("솔로에는 영향을 주지 않으면서 우의 내용을 수정하라. 깊이 있게 수정하라" after the walk-distance diagnosis).
+Result: `Engine/app/_06_party/tests/test_walk_distance_follow.py`, `test_close_follow.py`, `test_formation_goal.py`. Not run in game.
+
 <<<<<<< HEAD
 ## 2026-11-11 — an open walk restarts without the gate land wait
 
