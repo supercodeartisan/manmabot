@@ -12,6 +12,8 @@ CLOSE_RESTART_GAP = 1
 FOLLOW_CLICK_TILES = 2
 # Open straight ground only: one tile past the current hop, still short of a long click.
 FOLLOW_EXTEND_TILES = 3
+# A click that never becomes a walk is dropped after this, then a new tile is clicked.
+FOLLOW_HOP_START_S = 1.0
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
 # A stand seat is a 3×3. The member holds on the center tile or any neighbor.
