@@ -763,6 +763,198 @@ def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
     assert "no drop tile" in caplog.text
 
 
+def test_a_body_on_the_stand_takes_the_next_pair_and_keeps_it() -> None:
+    from app._06_party import arrow_duty
+
+    board = _Board()
+    real_open = arrow_duty._tile_open
+    arrow_duty._tile_open = lambda _tile: True
+    try:
+        first = choose_drop_stand(100, 100, lambda _tile: True)
+        assert first is not None
+        taken = {(int(first["stand_x"]), int(first["stand_y"]))}
+        kind, spot = arrow_duty._select_drop_spot(board, 4, 100, 100, taken)
+        assert kind == "found"
+        assert spot is not None
+        assert (spot["stand_x"], spot["stand_y"]) != (
+            first["stand_x"],
+            first["stand_y"],
+        )
+        assert int(spot["ring"]) == 0
+        arrow_duty._remember_spot(board, spot)
+        kept, again = arrow_duty._select_drop_spot(board, 4, 100, 100, set())
+        assert kept == "keep"
+        assert (again["stand_x"], again["stand_y"]) == (
+            spot["stand_x"],
+            spot["stand_y"],
+        )
+        landed, nxt = arrow_duty._select_drop_spot(
+            board, 4, 100, 100, {(spot["stand_x"], spot["stand_y"])}
+        )
+        assert landed == "found"
+        assert (nxt["stand_x"], nxt["stand_y"]) != (
+            spot["stand_x"],
+            spot["stand_y"],
+        )
+        assert (nxt["stand_x"], nxt["stand_y"]) != (
+            first["stand_x"],
+            first["stand_y"],
+        )
+        assert int(board.scratch["party_supply_attempt"].get("shifts") or 0) == 0
+    finally:
+        arrow_duty._tile_open = real_open
+
+
+def test_bodies_on_every_ring_end_the_drop_without_a_ring_step() -> None:
+    from app._06_party import arrow_duty
+
+    board = _Board()
+    blocked: set[tuple[int, int]] = set()
+    for ring in range(arrow_duty.DROP_SHIFT_MAX + 1):
+        for _ox, _oy, stand, drop, _member in arrow_duty._drop_pairs(100, 100, ring):
+            blocked.add(stand)
+            blocked.add(drop)
+    real_open = arrow_duty._tile_open
+    arrow_duty._tile_open = lambda _tile: True
+    try:
+        kind, spot = arrow_duty._select_drop_spot(board, 4, 100, 100, blocked)
+    finally:
+        arrow_duty._tile_open = real_open
+    assert kind == "exhausted"
+    assert spot is None
+    assert board.scratch == {}
+
+
+def test_drop_blocks_are_the_body_centers() -> None:
+    from app._06_party import arrow_duty
+
+    def _centers(_state, _origin):
+        return {(5, 5), (6, 6)}
+
+    import app._04_decision.avoidance as avoidance
+
+    real = avoidance.collect_body_tiles
+    avoidance.collect_body_tiles = _centers
+    try:
+        got = arrow_duty._drop_block_tiles(object(), object())
+    finally:
+        avoidance.collect_body_tiles = real
+    assert got == {(5, 5), (6, 6)}
+
+
+def test_a_blocked_stand_walks_to_the_next_tile_without_stepping_aside() -> None:
+    from app._06_party import arrow_duty
+
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    stand = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 100,
+        "y": 100,
+        "confirmed": True,
+    }
+    manager = _close_supply(reports, stand)
+    first = choose_drop_stand(100, 100, lambda _tile: True)
+    assert first is not None
+    seen: dict = {}
+
+    def _beside(_manager, _state, duty):
+        seen["xy"] = (int(duty["x"]), int(duty["y"]))
+        return type("W", (), {"reason": "walk to member"})()
+
+    real_open = arrow_duty._tile_open
+    real_coord = arrow_duty._coord_on_map
+    real_blocks = arrow_duty._drop_block_tiles
+    real_beside = arrow_duty._beside_member
+    arrow_duty._tile_open = lambda _tile: True
+    arrow_duty._coord_on_map = lambda _map, x, y: (int(x), int(y))
+    arrow_duty._drop_block_tiles = lambda _state, _origin: {
+        (int(first["stand_x"]), int(first["stand_y"]))
+    }
+    arrow_duty._beside_member = _beside
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        arrow_duty._tile_open = real_open
+        arrow_duty._coord_on_map = real_coord
+        arrow_duty._drop_block_tiles = real_blocks
+        arrow_duty._beside_member = real_beside
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert getattr(action, "reason", "") == "walk to member"
+    assert seen["xy"] != (first["stand_x"], first["stand_y"])
+    assert manager.runtime.supply_hold is not None
+    assert manager.runtime.last_reason != "shift for drop"
+    assert manager._nav_blackboard.scratch["party_supply_attempt"]["shifts"] == 0
+
+
+def test_bodies_on_every_ring_cancel_without_stepping_aside() -> None:
+    from app._06_party import arrow_duty
+    import app._04_decision.world_nav.session as session
+
+    saved_reports = list(member_orders.party_reports)
+    saved_stand = member_orders.supply_stand
+    saved_open = bool(member_orders.supply_open)
+    reports = [
+        {
+            "from": "Elf",
+            "items": {"arrows": 500, "silver_arrows": 0, "hp": 50, "depoison": 5, "mp": 20},
+            "map_id": 4,
+            "x": 100,
+            "y": 100,
+        }
+    ]
+    stand = {
+        "id": "hold:arrow:Elf",
+        "for": "Elf",
+        "map_id": 4,
+        "x": 100,
+        "y": 100,
+        "confirmed": True,
+    }
+    manager = _close_supply(reports, stand)
+    blocked: set[tuple[int, int]] = set()
+    for ring in range(arrow_duty.DROP_SHIFT_MAX + 1):
+        for _ox, _oy, tile_stand, drop, _member in arrow_duty._drop_pairs(100, 100, ring):
+            blocked.add(tile_stand)
+            blocked.add(drop)
+    real_open = arrow_duty._tile_open
+    real_coord = arrow_duty._coord_on_map
+    real_blocks = arrow_duty._drop_block_tiles
+    real_pose = session.live_pose_from_state
+    arrow_duty._tile_open = lambda _tile: True
+    arrow_duty._coord_on_map = lambda _map, x, y: (int(x), int(y))
+    arrow_duty._drop_block_tiles = lambda _state, _origin: blocked
+    session.live_pose_from_state = lambda _state, fresh=False: _pose(4, 100, 100)
+    try:
+        action = tick_shopkeeper_duty(manager, _State(), self_name="Keeper")
+    finally:
+        arrow_duty._tile_open = real_open
+        arrow_duty._coord_on_map = real_coord
+        arrow_duty._drop_block_tiles = real_blocks
+        session.live_pose_from_state = real_pose
+        member_orders.party_reports = saved_reports
+        member_orders.supply_stand = saved_stand
+        member_orders.supply_open = saved_open
+    assert action is None
+    assert manager.runtime.supply_hold is None
+    assert manager.runtime.last_reason == "no drop tile"
+    assert manager._nav_blackboard.nav_goal is None
+
+
 def test_every_neighbor_blocked_is_not_a_drop() -> None:
     assert choose_drop_stand(10, 20, lambda _tile: False) is None
     assert (
