@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSplitter,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -199,24 +200,72 @@ class _OrderRow(QWidget):
         title: str,
         *,
         selected: bool,
+        depth: int = 0,
+        marker: str = "",
+        toggle=None,
+        expanded: bool | None = None,
+        route: int | None = None,
     ) -> None:
         super().__init__()
         self._editor = editor
         self._kind = kind
         self._idx = idx
+        self._route = route
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(6, 1, 6, 1)
-        lay.setSpacing(2)
-        label = QLabel(title)
+        # The fold mark occupies the same left column on every top-level row.
+        # Waypoints start to the right of that column and the title.
+        fold_slot = 18
+        if int(depth) == 0:
+            lay.setContentsMargins(4, 1, 6, 1)
+        else:
+            lay.setContentsMargins(4 + fold_slot + 16, 1, 6, 1)
+        lay.setSpacing(4)
+        if toggle is not None:
+            fold = QToolButton()
+            fold.setObjectName("plan_fold")
+            fold.setAutoRaise(True)
+            fold.setFixedSize(fold_slot, fold_slot)
+            fold.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            fold.setCursor(Qt.CursorShape.PointingHandCursor)
+            fold.setText("⌄" if expanded else "›")
+            fold.setStyleSheet(
+                "QToolButton#plan_fold {"
+                " background: transparent; border: none; padding: 0px;"
+                " color: #475569; font-size: 14px;"
+                "}"
+                "QToolButton#plan_fold:hover { background: transparent; color: #0f172a; }"
+                "QToolButton#plan_fold:pressed { background: transparent; color: #64748b; }"
+            )
+            fold.clicked.connect(lambda: QTimer.singleShot(0, toggle))
+            lay.addWidget(fold)
+        elif int(depth) == 0:
+            gap = QWidget()
+            gap.setObjectName("plan_fold_gap")
+            gap.setFixedSize(fold_slot, fold_slot)
+            gap.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            gap.setStyleSheet(
+                "QWidget#plan_fold_gap { background: transparent; border: none; }"
+            )
+            lay.addWidget(gap)
+        shown = " ".join(part for part in (marker, title) if part)
+        label = QLabel(shown)
+        label.setObjectName("row_title")
         label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         lay.addWidget(label, stretch=1)
         for up, delta in ((True, -1), (False, 1)):
             btn = _ChevronButton(up=up)
-            btn.clicked.connect(
-                lambda _=False, d=delta: QTimer.singleShot(
-                    0, lambda d=d: editor._nudge_at(kind, idx, d)
+            if route is not None and kind == "patrol":
+                btn.clicked.connect(
+                    lambda _=False, d=delta, route_i=route: QTimer.singleShot(
+                        0, lambda d=d, route_i=route_i: editor._nudge_waypoint(route_i, idx, d)
+                    )
                 )
-            )
+            else:
+                btn.clicked.connect(
+                    lambda _=False, d=delta: QTimer.singleShot(
+                        0, lambda d=d: editor._nudge_at(kind, idx, d)
+                    )
+                )
             lay.addWidget(btn)
         self.setMinimumHeight(24)
         if kind in ("patrol", "plan"):
@@ -239,8 +288,11 @@ class _OrderRow(QWidget):
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            kind, idx = self._kind, self._idx
-            QTimer.singleShot(0, lambda: self._editor._select(kind, idx))
+            kind, idx, route = self._kind, self._idx, self._route
+            if route is not None and kind == "patrol":
+                QTimer.singleShot(0, lambda: self._editor._select_waypoint(route, idx))
+            else:
+                QTimer.singleShot(0, lambda: self._editor._select(kind, idx))
         super().mousePressEvent(event)
 
 
@@ -373,6 +425,7 @@ class MapEditorWidget(QWidget):
         # list is ``self.patrol`` itself.
         self._plan: list[dict] = []
         self._active_route_id: str | None = None
+        self._collapsed_plan_ids: set[str] = set()
         self._routine_minutes: int | None = None
         self.selected: tuple[str, int] | None = None
         self.tool = "select"
@@ -527,7 +580,7 @@ class MapEditorWidget(QWidget):
     def _sync_tools(self) -> None:
         """Button visibility follows the editor kind, not the active tool.
 
-        Party dungeon (``plan``): 패트롤 + and 점 + stay visible together.
+        Party dungeon (``plan``): 경유점 + and 점 + stay visible together.
         Solo dungeon: the original 패트롤 배치 button, no 점 +.
         Field map: 구역 + and 점 +, no patrol button.
         ``self.tool`` only changes which of those buttons is highlighted.
@@ -569,15 +622,38 @@ class MapEditorWidget(QWidget):
             self.list_title.setText(self._area_title())
         if hasattr(self, "title_label"):
             self.title_label.setText(self._area_title())
+        if hasattr(self, "subtitle"):
+            self.subtitle.setText(self._subtitle_text())
+        if self._dungeon_plan_mode():
+            host = self.window()
+            if host is not None and host is not self:
+                try:
+                    host.setWindowTitle(self.s.edit_dungeon_plan)
+                except RuntimeError:
+                    pass
 
     def _area_title(self) -> str:
+        if self._dungeon_plan_mode():
+            return self.s.edit_dungeon_plan
         if self._dungeon:
             return self.s.edit_patrol
         if self._area_kind == "safe":
             return self.s.edit_rest
         return self.s.edit_farms
 
+    def _subtitle_text(self) -> str:
+        """Muted guide under the title. Solo and rest editors keep their own text."""
+        if self._dungeon_plan_mode():
+            return self.s.editor_hint_dungeon_plan
+        if self._spot_tools_active():
+            return self.s.editor_hint_field
+        if self._dungeon:
+            return self.s.editor_hint_dungeon
+        return self.s.editor_hint_island
+
     def _hint(self) -> str:
+        if self._dungeon_plan_mode() or self._spot_tools_active():
+            return self._subtitle_text()
         base = (
             self.s.editor_hint_dungeon if self._dungeon else self.s.editor_hint_island
         )
@@ -630,6 +706,7 @@ class MapEditorWidget(QWidget):
         self._patrol_paths = []
         self._plan = []
         self._active_route_id = None
+        self._collapsed_plan_ids = set()
         self._routine_minutes = None
         self._live_nav = None
         self._live_world = None
@@ -645,9 +722,7 @@ class MapEditorWidget(QWidget):
             self._dungeon = is_dungeon_map_id(self.map_id)
         else:
             self._dungeon = bool(dungeon)
-        self.subtitle.setText(
-            self.s.editor_hint_dungeon if self._dungeon else self.s.editor_hint_island
-        )
+        self.subtitle.setText(self._subtitle_text())
         if self._dungeon:
             self.tool = "patrol"
         elif self._spot_tools_active():
@@ -852,16 +927,22 @@ class MapEditorWidget(QWidget):
         return self._routine_default_minutes()
 
     def _on_patrol_plus(self) -> None:
-        """Patrol tool. A second click while it is already active starts a new route."""
+        """Waypoint tool. Another press adds to the one patrol, never a second route."""
         if not self._can_edit():
             self.status.setText(self.s.editor_readonly)
             return
-        if self._dungeon_plan_mode() and self.tool == "patrol":
+        self._set_tool("patrol")
+        if not self._dungeon_plan_mode():
+            return
+        routes = [entry for entry in self._plan if entry.get("type") == "patrol"]
+        if not routes:
             self._begin_patrol_route()
             return
-        self._set_tool("patrol")
-        if self._dungeon_plan_mode() and self._active_route() is None:
-            self._begin_patrol_route()
+        active = self._active_route()
+        target = active if active is not None else routes[0]
+        self._collapsed_plan_ids.discard(str(target.get("id") or ""))
+        self._use_route(target)
+        self._focus_plan(self._plan.index(target))
 
     def _begin_patrol_route(self) -> dict:
         route = {
@@ -913,6 +994,7 @@ class MapEditorWidget(QWidget):
         self._plan = []
         self.patrol = []
         self._active_route_id = None
+        self._collapsed_plan_ids = set()
         for item in dungeon_plan_from_document(source):
             if item.get("type") == "patrol":
                 waypoints = [
@@ -2385,6 +2467,9 @@ class MapEditorWidget(QWidget):
         data = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
         if isinstance(data, tuple) and len(data) >= 2:
             kind, idx = str(data[0]), int(data[1])
+            if kind == "patrol" and len(data) >= 3:
+                self._select_waypoint(int(data[2]), idx)
+                return
             if kind == "plan":
                 if self.selected != ("plan", idx):
                     self._focus_plan(idx)
@@ -2430,28 +2515,46 @@ class MapEditorWidget(QWidget):
         finally:
             self._fitting_rows = False
 
-    def _plan_rows(self) -> list[tuple[str, str, int]]:
-        rows: list[tuple[str, str, int]] = []
-        patrol_number = 0
+    def _plan_rows(self) -> list[dict]:
+        """Top-level points and the one patrol. Waypoints stay under that patrol."""
+        rows: list[dict] = []
         point_number = 0
-        active = self._active_route()
+        patrols = [entry for entry in self._plan if entry.get("type") == "patrol"]
         for index, entry in enumerate(self._plan):
             if entry.get("type") == "patrol":
-                patrol_number += 1
+                waypoints = list(entry.get("waypoints") or [])
+                label = self.s.plan_patrol_label
+                if len(patrols) > 1:
+                    label = f"{label} ({entry.get('id') or ''})"
                 title = (
-                    f"{self.s.plan_patrol.format(n=patrol_number)}  "
-                    f"{self.s.point_stay.format(minutes=self._route_minutes(entry))}"
+                    f"{label} · {self.s.point_stay.format(minutes=self._route_minutes(entry))}"
+                    f" · {self.s.plan_waypoint_count.format(n=len(waypoints))}"
                 )
-                rows.append((title, "plan", index))
-                if entry is active:
-                    for waypoint, (_x, _y, name) in enumerate(entry.get("waypoints") or []):
-                        rows.append(
-                            (
-                                route_point_display_name(str(name), self.language),
-                                "patrol",
-                                waypoint,
-                            )
-                        )
+                route_id = str(entry.get("id") or "")
+                expanded = route_id not in self._collapsed_plan_ids
+                rows.append(
+                    {
+                        "title": title,
+                        "kind": "plan",
+                        "idx": index,
+                        "toggle_id": route_id,
+                        "expanded": expanded,
+                    }
+                )
+                if not expanded:
+                    continue
+                for waypoint, (_x, _y, name) in enumerate(waypoints):
+                    last = waypoint == len(waypoints) - 1
+                    rows.append(
+                        {
+                            "title": route_point_display_name(str(name), self.language),
+                            "kind": "patrol",
+                            "idx": waypoint,
+                            "route": index,
+                            "depth": 1,
+                            "marker": "└─" if last else "├─",
+                        }
+                    )
                 continue
             if entry.get("type") != "point":
                 continue
@@ -2459,11 +2562,52 @@ class MapEditorWidget(QWidget):
             pair = self._world_pair_text(int(entry["x"]), int(entry["y"]))
             shown = pair if pair is not None else self.s.editor_world_unavailable
             title = (
-                f"{self.s.plan_point.format(n=point_number)}  ({shown})  "
-                f"{self._point_stay_label(entry)}"
+                f"{self.s.plan_point.format(n=point_number)} · "
+                f"{self._point_stay_label(entry)} · {shown}"
             )
-            rows.append((title, "plan", index))
+            rows.append(
+                {
+                    "title": title,
+                    "kind": "plan",
+                    "idx": index,
+                }
+            )
         return rows
+
+    def _toggle_plan_route(self, route_id: str) -> None:
+        key = str(route_id or "")
+        if key in self._collapsed_plan_ids:
+            self._collapsed_plan_ids.discard(key)
+        else:
+            self._collapsed_plan_ids.add(key)
+        self._refresh_list()
+
+    def _select_waypoint(self, plan_index: int, waypoint: int) -> None:
+        if not (0 <= plan_index < len(self._plan)):
+            return
+        route = self._plan[plan_index]
+        if route.get("type") != "patrol":
+            return
+        self._use_route(route)
+        self._select("patrol", waypoint)
+
+    def _nudge_waypoint(self, plan_index: int, waypoint: int, delta: int) -> None:
+        """Reorder one patrol's waypoints. The top-level plan order stays put."""
+        if not self._can_edit() or not (0 <= plan_index < len(self._plan)):
+            self.status.setText(self.s.editor_readonly)
+            return
+        route = self._plan[plan_index]
+        points = route.get("waypoints")
+        if route.get("type") != "patrol" or not isinstance(points, list):
+            return
+        target = int(waypoint) + int(delta)
+        if target < 0 or target >= len(points) or not (0 <= waypoint < len(points)):
+            return
+        points[waypoint], points[target] = points[target], points[waypoint]
+        self._use_route(route)
+        self._mark_dirty()
+        self._recompute_patrol_paths()
+        self._select("patrol", target)
 
     def _refresh_list(self) -> None:
         self.item_list.blockSignals(True)
@@ -2503,12 +2647,29 @@ class MapEditorWidget(QWidget):
                     kind = "farm"
                 rows.append((title, kind, i))
         self.list_count.setText(str(len(rows)))
-        for title, kind, idx in rows:
+        for row in rows:
+            if isinstance(row, dict):
+                title = str(row["title"])
+                kind = str(row["kind"])
+                idx = int(row["idx"])
+                route = row.get("route")
+            else:
+                title, kind, idx = row
+                route = None
             item = QListWidgetItem()
-            item.setData(Qt.ItemDataRole.UserRole, (kind, idx))
+            role = (kind, idx) if route is None else (kind, idx, int(route))
+            item.setData(Qt.ItemDataRole.UserRole, role)
             item.setSizeHint(QSize(self._list_row_width(), 26))
             self.item_list.addItem(item)
             selected = self.selected == (kind, idx)
+            if kind == "patrol" and route is not None:
+                active = self._active_route()
+                selected = (
+                    selected
+                    and active is not None
+                    and 0 <= int(route) < len(self._plan)
+                    and self._plan[int(route)] is active
+                )
             if (
                 not selected
                 and kind == "plan"
@@ -2519,9 +2680,20 @@ class MapEditorWidget(QWidget):
                 and self._plan[idx] is self.farms[self.selected[1]]
             ):
                 selected = True
+            extra = {}
+            if isinstance(row, dict):
+                extra = {
+                    "depth": int(row.get("depth") or 0),
+                    "marker": str(row.get("marker") or ""),
+                    "route": None if route is None else int(route),
+                }
+                toggle_id = row.get("toggle_id")
+                if toggle_id is not None:
+                    extra["toggle"] = lambda key=str(toggle_id): self._toggle_plan_route(key)
+                    extra["expanded"] = bool(row.get("expanded"))
             self.item_list.setItemWidget(
                 item,
-                _OrderRow(self, kind, idx, title, selected=selected),
+                _OrderRow(self, kind, idx, title, selected=selected, **extra),
             )
             if selected:
                 self.item_list.setCurrentItem(item)
