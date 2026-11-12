@@ -1,4 +1,6 @@
 """Checked party-support spells: heal order, heal all, and buff remain."""
+import numpy as np
+
 from app._06_party.config import PartyMemberConfig
 from app._06_party.mage_support import (
     choose_party_support,
@@ -258,6 +260,76 @@ def test_catch_up_heal_stays_in_range_and_leaves_the_buff() -> None:
         hotbar=_bar("힐", "홀리 웨폰"),
     )
     assert seated["spell"] == "heal"
+
+
+class _Fence:
+    """Open cells with one north fence between y=101 and y=102 at x=100."""
+
+    has_edge_fences = True
+
+    def __init__(self) -> None:
+        self.block_n = np.zeros((120, 120), dtype=bool)
+        self.block_e = np.zeros((120, 120), dtype=bool)
+        self.block_n[102, 100] = True
+
+    def is_walkable(self, x: int, y: int) -> bool:
+        return True
+
+
+def _use_fence(monkeypatch) -> None:
+    fence = _Fence()
+    monkeypatch.setattr(
+        "app._04_decision.nav_config.get_terrain_map",
+        lambda: fence,
+    )
+
+
+def test_a_fence_holds_the_heal_and_the_buff(monkeypatch) -> None:
+    _use_fence(monkeypatch)
+    held, note = _choose(
+        members=[_member("mage", "0x1", 100, 100), _member("knight", "0x2", 40, 104)],
+        slots=_slots("0x2"),
+        checked={0, 7},
+        hotbar=_bar("힐", "홀리 웨폰"),
+    )
+    assert held is None
+    assert note == "skip line blocked"
+    buff, buff_note = _choose(
+        members=[_member("mage", "0x1", 100, 100), _member("knight", "0x2", 100, 104)],
+        slots=_slots("0x2"),
+        checked={7},
+        hotbar=_bar("홀리 웨폰"),
+    )
+    assert buff is None
+    assert buff_note == "skip line blocked"
+
+
+def test_a_clear_side_of_the_fence_still_gets_the_heal(monkeypatch) -> None:
+    _use_fence(monkeypatch)
+    choice, _note = _choose(
+        members=[
+            _member("mage", "0x1", 100, 100),
+            _member("knight", "0x2", 40, 101),
+            _member("elf", "0x3", 30, 104),
+        ],
+        slots=_slots("0x2", "0x3"),
+        checked={0, 48},
+        hotbar=_bar("힐", "힐 올"),
+    )
+    assert choice["spell"] == "heal"
+    assert choice["name"] == "knight"
+
+
+def test_cure_still_casts_across_the_fence(monkeypatch) -> None:
+    _use_fence(monkeypatch)
+    choice, _note = _choose(
+        members=[_member("mage", "0x1", 100, 100), _member("knight", "0x2", 100, 104)],
+        slots=_slots("0x2"),
+        checked={8},
+        hotbar=_bar("큐어 포이즌"),
+        reports=[{"from": "knight", "noted_at": 1_000.0, "buffs": [], "poisoned": True}],
+    )
+    assert choice["spell"] == "cure"
 
 
 def test_leader_policy_keeps_the_mages_own_checks() -> None:

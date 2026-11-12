@@ -343,6 +343,22 @@ def _place(
     )
 
 
+def _line_open(pair: tuple[int, int, int, int, int]) -> bool:
+    """True when no wall or fence sits between the mage and the member.
+
+    Missing terrain stays open, the same rule as an attack line. Another
+    character's body is not a blocker.
+    """
+    from app._04_decision.dungeon import line_of_sight_clear
+    from app._04_decision.nav_config import get_terrain_map
+
+    terrain = get_terrain_map()
+    if terrain is None:
+        return True
+    mx, my, qx, qy, _dist = pair
+    return line_of_sight_clear(terrain, (int(qx), int(qy)), (int(mx), int(my)))
+
+
 def _buff_ids(checked: set[int]) -> list[int]:
     chosen: list[int] = []
     for group in (_WEAPON, _HASTE):
@@ -426,7 +442,11 @@ def choose_party_support(
     allow_heals: bool = True,
     reach: int = HEAL_RANGE_TILES,
 ) -> tuple[Optional[dict[str, Any]], str]:
-    """The one party-support action for this tick, or ``(None, note)``."""
+    """The one party-support action for this tick, or ``(None, note)``.
+
+    Heal, heal all, and buffs cast only when the straight line is open.
+    A wall or a fence holds the cast. Cure, curse, and resurrect stay on distance.
+    """
     book = ledger if isinstance(ledger, dict) else empty_ledger()
     clock = time.time() if now is None else float(now)
     ids = set(checked or ())
@@ -451,6 +471,7 @@ def choose_party_support(
 
     low_in_range: list[tuple[int, int, dict[str, Any], int]] = []
     low_screen: list[tuple[int, int, dict[str, Any], tuple[int, int, int, int, int]]] = []
+    line_blocked = False
     for member in people:
         hp = _hp(member)
         gid = guid_int(member.get("guid"))
@@ -461,6 +482,9 @@ def choose_party_support(
             continue
         dist = int(pair[4])
         if dist <= int(reach):
+            if not _line_open(pair):
+                line_blocked = True
+                continue
             if gid in boxes:
                 low_in_range.append((hp, gid, member, dist))
             continue
@@ -482,6 +506,7 @@ def choose_party_support(
         and (_hp(member) or 100) < int(below)
         and (pair := _place(member, here)) is not None
         and int(pair[4]) <= int(reach)
+        and _line_open(pair)
     ]
     if all_press is not None and len(ranged_low) >= 2:
         return (
@@ -518,6 +543,8 @@ def choose_party_support(
 
     if heals_only:
         if not low_in_range and not low_screen:
+            if line_blocked:
+                return None, "skip line blocked"
             return None, f"skip no member under {int(below)}"
         return None, "skip heal not ready"
 
@@ -611,6 +638,9 @@ def choose_party_support(
             if pair is None:
                 continue
             dist = int(pair[4])
+            if dist <= int(reach) and not _line_open(pair):
+                line_blocked = True
+                continue
             in_range = dist <= int(reach)
             if not in_range:
                 if cast_only:
@@ -624,6 +654,8 @@ def choose_party_support(
                 continue
             due.append((remain, hp, gid, skill_id, member, dist, in_range, pair, press))
     if not due:
+        if line_blocked:
+            return None, "skip line blocked"
         if _buff_ids(ids) or _CURE in ids or _CURSE in ids or _RESURRECT in ids:
             return None, "skip support held"
         return None, f"skip no member under {int(below)}"

@@ -1,5 +1,15 @@
 # Decision change log
 
+<<<<<<< HEAD
+## 2026-11-12 — heal and buff wait for an open line
+
+Intent: A party heal, heal all, or buff casts only when no wall or fence lies on the straight line to the member. A body is not a blocker. A member already inside nine tiles but behind that line is not cast, and the mage does not walk away from them. Cure, curse, and resurrect stay on distance.
+Shared: `choose_party_support` and `line_of_sight_clear`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, follow hops, and login clicks are unchanged.
+Affects: the mage seat's party support. Follow, attack targeting, and the shopkeeper buff list are unchanged.
+Consent: user ("okay, 스킬. 힐과 버프 usage, let's update it.").
+Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
+
+=======
 ## 2026-11-12 — party follow measures the walk, not Chebyshev
 
 Intent: A member stands beside the leader only when the walk steps to him are within the stop band. Two tiles across a wall or fence follows around it. The fighting-leader leash and the turret yard band use the same walk steps. Walls and fences count; bodies do not, so a crowd beside the leader does not move the member off. Every follow click, including the one-tile extension, the player sidestep, and the fallback path tile, must be a line the client can walk without crossing a wall or fence corner. A leader on a nav-blocked cell is reached through the open tile beside him on the member's side. A follow that stays on one tile for 2.5 seconds clicks one open tile within 3 that shortens the walk, and remembers it so the next try picks another. The walk cost the scroll and TP compare against is the walk steps (a windowed A* beyond the field window), not Chebyshev.
@@ -9,6 +19,7 @@ Consent: user ("솔로에는 영향을 주지 않으면서 우의 내용을 수�
 Result: `Engine/app/_06_party/tests/test_walk_distance_follow.py`, `test_close_follow.py`, `test_formation_goal.py`. Not run in game.
 
 <<<<<<< HEAD
+>>>>>>> origin/main
 ## 2026-11-11 — an open walk restarts without the gate land wait
 
 Intent: The 24-tile land wait runs only on the first start of a walk step, while the step is still ready. That wait exists because a gate can write the new map id before the new xy. Once the walk is open, a supply hold or a supply pickup may clear or replace nav_goal. The restart opens travel from the live tile to the same destination and does not compare the body to the step's original start cell.
@@ -16,7 +27,7 @@ Shared: `_start_walk` and `_tick_walk`. Supply pickup, follow hops, the 13-secon
 Affects: a world-nav walk that is already in progress when nav_goal is cleared or replaced. The first start after a gate still waits until xy is within 24 tiles of the planned start cell.
 Consent: user ("fix it" after the land-wait restart plan).
 Result: `Engine/app/_04_decision/tests/test_walk_supply_arrival.py`. Not run in game.
-=======
+
 ## 2026-11-11 — a follow click that never walks is clicked again
 
 Intent: A party follow click that is still not a walk after one second is dropped, and a new tile toward the leader is clicked. A walk that starts within that second keeps extending one tile at a time. Standing within two tiles of the leader stays.
@@ -32,7 +43,6 @@ Shared: `plan_leader_hop`. `decide_policy` still holds at distance 2 or less. `t
 Affects: party follow while the leader is more than two tiles away. The stand beside the leader, assist, supply, and the field-follow fallback are unchanged.
 Consent: user ("이 두개를 완벽하게 해결해라" after the stand rule had stopped the walk every two tiles).
 Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
->>>>>>> origin/main
 
 ## 2026-11-11 — a supply pause does not finish the leader's walk
 
