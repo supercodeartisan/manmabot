@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — an account class updates that account's hunt
+
+Intent: Saving an account's character type writes that class onto every schedule for the same account, and onto the selected hunt profile. Mage hunts with magic, elf hunts ranged, and knight or royal hunts in melee. A party start does this for a leader and for a member. The roster seat stays a seat. A bot that is already running keeps the class it started with.
+Shared: `stamp_character_fields`, `stamp_settings_character`, and `_sync_party_leader_character`. The party start no longer rewrites the whole trial snapshot. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the schedule row and the trial hunt class for the saved account. Other accounts stay. Combat strategy code is unchanged.
+Consent: user ("plz implement" after the account-class plan).
+Result: `Engine/settings/tests/test_attack_mode.py`. Not run in game.
+
 ## 2026-11-11 — a supply drop phase reaches the recipient
 
 Intent: When the shopkeeper announces the drop, the hold sent to the leader carries `dropping`. The leader republishes that flag, and the recipient stands for the pile. The same change sends `member_state` on that tick. Buy quantity, the approach, the drop gesture, and the pickup coordinates stay as they are.

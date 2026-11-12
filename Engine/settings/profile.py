@@ -73,6 +73,62 @@ def apply_account_character(profile: Any, account: Any) -> str | None:
     profile.character = char
     profile.attack_mode = attack_mode_for_character(char)
     return char
+
+
+def stamp_settings_character(settings: Any, character: str) -> bool:
+    """Set ``magic.class`` and ``hunt.attack_mode`` for one class.
+
+    Other hunt, magic, and party fields stay. Returns True when a value changed.
+    """
+    char = str(character or "").strip().lower()
+    if char == "prince":
+        char = "royal"
+    if char not in CHARACTER_IDS or not isinstance(settings, dict):
+        return False
+    return _stamp_class_blocks(settings, char, attack_mode_for_character(char))
+
+
+def stamp_character_fields(task: Any, character: str) -> bool:
+    """Write one class onto a schedule row and its attack mode.
+
+    The party seat on that row is not a class and is left as saved.
+    """
+    char = str(character or "").strip().lower()
+    if char == "prince":
+        char = "royal"
+    if char not in CHARACTER_IDS or task is None:
+        return False
+    changed = False
+    if str(getattr(task, "character", "") or "") != char:
+        task.character = char
+        changed = True
+    settings = getattr(task, "settings", None)
+    if _stamp_class_blocks(settings, char, attack_mode_for_character(char)):
+        changed = True
+    return changed
+
+
+def _stamp_class_blocks(settings: Any, char: str, mode: str) -> bool:
+    if not isinstance(settings, dict):
+        return False
+    changed = False
+    magic = settings.get("magic")
+    if not isinstance(magic, dict):
+        magic = {}
+        settings["magic"] = magic
+        changed = True
+    if magic.get("class") != char:
+        magic["class"] = char
+        changed = True
+    hunt = settings.get("hunt")
+    if not isinstance(hunt, dict):
+        hunt = {}
+        settings["hunt"] = hunt
+        changed = True
+    if hunt.get("attack_mode") != mode:
+        hunt["attack_mode"] = mode
+        changed = True
+    return changed
 # Shop-return bag weight threshold choices (GUI listbox / combo only).
 RETURN_WEIGHT_PCT_CHOICES = (50, 60, 70)
 DEFAULT_RETURN_WEIGHT_ABOVE = 70

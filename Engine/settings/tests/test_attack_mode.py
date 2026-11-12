@@ -1,7 +1,13 @@
 """Account class chooses hunt attack mode. A saved ranged value does not."""
 from __future__ import annotations
 
-from settings.profile import Profile, apply_account_character, attack_mode_for_character
+from settings.profile import (
+    Profile,
+    apply_account_character,
+    attack_mode_for_character,
+    stamp_character_fields,
+    stamp_settings_character,
+)
 from settings.schedule import ScheduleTask, profile_snapshot
 from settings.task_runtime import apply_runtime_settings
 
@@ -46,6 +52,35 @@ def test_account_class_sets_the_profile() -> None:
     assert profile.character == "elf"
 
 
+def test_stamp_keeps_party_seat_and_other_fields() -> None:
+    task = ScheduleTask(
+        account_id="acct",
+        character="elf",
+        settings={
+            "magic": {"class": "elf", "skills": {"heal": True}},
+            "hunt": {"attack_mode": "ranged", "attack_range": 16},
+            "party": {"seat_role": "mage"},
+        },
+    )
+    assert stamp_character_fields(task, "mage")
+    assert task.character == "mage"
+    assert task.settings["magic"]["class"] == "mage"
+    assert task.settings["magic"]["skills"] == {"heal": True}
+    assert task.settings["hunt"]["attack_mode"] == "magic"
+    assert task.settings["hunt"]["attack_range"] == 16
+    assert task.settings["party"]["seat_role"] == "mage"
+    assert stamp_character_fields(task, "mage") is False
+    assert stamp_character_fields(task, "") is False
+
+
+def test_stamp_settings_follows_class() -> None:
+    settings = {"magic": {"class": "elf"}, "hunt": {"attack_mode": "ranged"}}
+    assert stamp_settings_character(settings, "knight")
+    assert settings["magic"]["class"] == "knight"
+    assert settings["hunt"]["attack_mode"] == "melee"
+    assert stamp_settings_character(settings, "nope") is False
+
+
 def test_snapshot_follows_class() -> None:
     snap = profile_snapshot(Profile(character="mage", attack_mode="ranged"))
     assert snap["hunt"]["attack_mode"] == "magic"
@@ -58,5 +93,7 @@ if __name__ == "__main__":
     test_stale_hunt_value_does_not_override_mage()
     test_elf_stays_ranged()
     test_account_class_sets_the_profile()
+    test_stamp_keeps_party_seat_and_other_fields()
+    test_stamp_settings_follows_class()
     test_snapshot_follows_class()
     print("attack mode tests ok")

@@ -645,6 +645,7 @@ class ScheduleShell(QMainWindow):
         )
         dialog.exec()
         _changed()
+        self._sync_saved_account_classes()
 
     def _bind_schedule_dirty_signals(self) -> None:
         pane = self.schedule_list
@@ -1784,68 +1785,127 @@ class ScheduleShell(QMainWindow):
         )
         self._refresh_operator(force=True)
 
-    def _sync_party_leader_character(self) -> None:
-        """Party leader hunt class follows the selected account."""
-        if str(getattr(self.profile, "party_role", "") or "") != "leader":
-            return
-        account_id = None
+    def _active_account_id(self) -> str:
         combo = getattr(self.editor, "account_combo", None)
-        if combo is not None:
-            account_id = combo.currentData()
-        if not account_id:
-            account_id = getattr(self.profile, "selected_account_id", None)
-        if not account_id:
-            self._append_log("Party leader class left as saved: no account selected")
-            return
-        try:
-            account = AccountStore().get(str(account_id))
-        except Exception:
-            account = None
-        if account is None:
-            return
-        from settings.profile import apply_account_character, attack_mode_for_character
+        if combo is not None and combo.currentData():
+            return str(combo.currentData())
+        editor_task = getattr(self.editor, "task", None)
+        task_account = getattr(editor_task, "account_id", None)
+        if task_account:
+            return str(task_account)
+        selected = getattr(self.profile, "selected_account_id", None)
+        return str(selected) if selected else ""
 
+    def _sync_saved_account_classes(self) -> None:
+        """One account's class updates that account's schedules and the live hunt."""
+        try:
+            accounts = AccountStore().load()
+        except Exception as exc:
+            self._append_log(f"Account class sync skipped: {exc}")
+            return
+        active = self._active_account_id()
+        schedules_changed = False
+        for account in accounts:
+            aid = str(getattr(account, "account_id", "") or "")
+            if not aid:
+                continue
+            if self._stamp_account_tasks(account):
+                schedules_changed = True
+            if active and aid == active:
+                self._apply_live_hunt_class(account, announce=False)
+        if schedules_changed:
+            self._save_stamped_schedules()
+            self.schedule_list.refresh(
+                select=self.schedule_list.selected_index(),
+                reload_accounts=False,
+                announce=False,
+            )
+
+    def _stamp_account_tasks(self, account: object) -> bool:
+        from settings.profile import account_character_id, stamp_character_fields
+
+        char = account_character_id(account)
+        aid = str(getattr(account, "account_id", "") or "")
+        if not char or not aid:
+            return False
+        changed = False
+        seen: set[int] = set()
+        editor_task = getattr(self.editor, "task", None)
+        for task in list(self.tasks) + [editor_task]:
+            if task is None or id(task) in seen:
+                continue
+            seen.add(id(task))
+            if str(getattr(task, "account_id", "") or "") != aid:
+                continue
+            if stamp_character_fields(task, char):
+                changed = True
+        return changed
+
+    def _apply_live_hunt_class(self, account: object, *, announce: bool) -> None:
+        """Selected account's class becomes the hunt profile. A running bot keeps its start class."""
+        from settings.profile import (
+            apply_account_character,
+            attack_mode_for_character,
+            stamp_settings_character,
+        )
+        from settings.trial_store import load_trial, save_trial
+
+        before = (
+            str(getattr(self.profile, "character", "") or ""),
+            str(getattr(self.profile, "attack_mode", "") or ""),
+        )
         char = apply_account_character(self.profile, account)
         if not char:
             return
-        save_profile(self.profile)
         self.bridge.profile = self.profile
-        self.bridge.coordinator.profile = self.profile
+        coordinator = getattr(self.bridge, "coordinator", None)
+        if coordinator is not None:
+            coordinator.profile = self.profile
+        mode = attack_mode_for_character(char)
+        trial_changed = False
+        try:
+            settings, routine = load_trial()
+            trial_changed = stamp_settings_character(settings, char)
+            if trial_changed:
+                save_trial(settings, routine)
+        except Exception as exc:
+            self._append_log(f"Hunt class saved on profile; trial write failed: {exc}")
         bag = getattr(self.editor, "bag", None)
         if bag is not None:
-            bag.set("magic", "class", char)
-        mode = attack_mode_for_character(char)
-        changed = False
-        for task in self.tasks:
-            if str(getattr(task, "account_id", "") or "") != str(account_id):
-                continue
-            if task.character != char:
-                task.character = char
-                changed = True
-            settings = task.settings if isinstance(task.settings, dict) else None
-            if settings is None:
-                continue
-            magic = settings.get("magic")
-            if isinstance(magic, dict) and magic.get("class") != char:
-                magic["class"] = char
-                changed = True
-            hunt = settings.get("hunt")
-            if isinstance(hunt, dict) and hunt.get("attack_mode") != mode:
-                hunt["attack_mode"] = mode
-                changed = True
-        editor_task = getattr(self.editor, "task", None)
-        if editor_task is not None and str(
-            getattr(editor_task, "account_id", "") or ""
-        ) == str(account_id):
-            editor_task.character = char
-        if changed:
-            try:
-                self.schedule_list.store.save(self.tasks)
-            except Exception as exc:
-                self._append_log(
-                    f"Party leader class saved on profile; schedule write failed: {exc}"
-                )
-        self._append_log(f"Party leader class={char} from account")
+            bag.set("hunt", "attack_mode", mode)
+        sync = getattr(self.editor, "_sync_magic_class", None)
+        if callable(sync):
+            sync()
+        if announce or trial_changed or before != (char, mode):
+            self._append_log(f"Hunt class={char} attack={mode} from account")
+
+    def _save_stamped_schedules(self) -> None:
+        try:
+            self.schedule_list.store.save(self.tasks)
+        except Exception as exc:
+            self._append_log(f"Schedule class write failed: {exc}")
+
+    def _sync_party_leader_character(self) -> None:
+        """Party start, leader or member, hunts as the selected account's class."""
+        account_id = self._active_account_id()
+        if not account_id:
+            self._append_log("Hunt class left as saved: no account selected")
+            return
+        try:
+            account = AccountStore().get(account_id)
+        except Exception:
+            account = None
+        if account is None:
+            self._append_log("Hunt class left as saved: account missing")
+            return
+        if self._stamp_account_tasks(account):
+            self._save_stamped_schedules()
+            self.schedule_list.refresh(
+                select=self.schedule_list.selected_index(),
+                reload_accounts=False,
+                announce=False,
+            )
+        self._apply_live_hunt_class(account, announce=True)
 
     def _start_party(self) -> None:
         """Start the party bot without arming the solo schedule clock."""
