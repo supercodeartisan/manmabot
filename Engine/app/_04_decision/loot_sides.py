@@ -40,8 +40,7 @@ def arm_loot_side_intent(state: "GameState", blackboard: "Blackboard") -> None:
 
     Combat and travel keep their primary click. A pile already being walked
     or confirmed stays on the normal loot path so a side F4 cannot clear it.
-    The party leader does not take this standing F4. An on-screen pile
-    inside the near loot radius stays on the main loot path.
+    The party leader does not take this standing F4.
     """
     if blackboard.scratch.get("party_leader_no_loot"):
         return

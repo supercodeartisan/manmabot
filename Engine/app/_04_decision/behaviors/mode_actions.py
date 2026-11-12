@@ -2189,24 +2189,10 @@ def open_loot_pile(state: "GameState", blackboard: "Blackboard") -> object | Non
 
 
 def party_leader_pile_ok(blackboard: "Blackboard", obj: object | None) -> bool:
-    """Solo loot is unchanged. A party leader starts an on-screen pile inside the near radius.
-
-    The radius is ``LOOT_MAX_TILES`` (``farm.loot_max_tiles``). A pile already
-    chosen is not dropped when it leaves that radius.
-    """
-    if not blackboard.scratch.get("party_leader_no_loot"):
-        return obj is not None
-    if obj is None:
+    """Solo loot is unchanged. A party leader does not take a ground pile."""
+    if blackboard.scratch.get("party_leader_no_loot"):
         return False
-    from app._04_decision import player_mode as pm
-    from app._04_decision.combat_query import object_on_screen, tile_distance_from_player
-
-    if not object_on_screen(obj):
-        return False
-    try:
-        return int(tile_distance_from_player(obj)) <= max(1, int(pm.LOOT_MAX_TILES))
-    except (TypeError, ValueError):
-        return False
+    return obj is not None
 
 
 def continue_or_start_loot(
@@ -2219,12 +2205,19 @@ def continue_or_start_loot(
 ) -> Status | None:
     """Sticky loot as walk-to-item then pickup; None if no loot this tick.
 
-    A party leader starts only an on-screen pile within ``LOOT_MAX_TILES``.
-    A pile already chosen stays until it leaves memory, the bag count rises,
-    the pickup give-up fires, or the path abandon clears it. Screen, farm,
-    ownership, and a second pile do not drop it first.
+    A party leader drops the current pile and does not start another. A pile
+    already chosen by anyone else stays until it leaves memory, the bag count
+    rises, the pickup give-up fires, or the path abandon clears it. Screen,
+    farm, ownership, and a second pile do not drop it first.
     """
-    leader_near = bool(blackboard.scratch.get("party_leader_no_loot"))
+    if blackboard.scratch.get("party_leader_no_loot"):
+        from app._04_decision.behaviors.loot_hop import clear_loot_await
+
+        clear_loot_hop(blackboard)
+        clear_loot_await(blackboard)
+        blackboard.current_item_id = None
+        _clear_loot_track(blackboard)
+        return None
     # Clicked pile still in memory: re-click / walk back — do not roam away.
     pending = try_finish_pending_pickup(state, blackboard)
     if pending is not None:
@@ -2232,9 +2225,7 @@ def continue_or_start_loot(
 
     loot_mode = _effective_loot_mode(state)
     farm, _farm_origin = (
-        (None, None)
-        if leader_near
-        else (_farm_loot_bounds(blackboard) if restrict_to_farm else (None, None))
+        _farm_loot_bounds(blackboard) if restrict_to_farm else (None, None)
     )
     origin = blackboard.world_origin
     if blackboard.current_item_id is not None:
@@ -2291,42 +2282,14 @@ def continue_or_start_loot(
         for tid in blackboard.loot_clicked_ids
         if recently_clicked_loot(blackboard, tid)
     )
-    if leader_near:
-        from app._04_decision.combat_query import list_lootable, tile_distance_from_player
-
-        near = [
-            obj
-            for obj in list_lootable(
-                state,
-                loot_mode=loot_mode,
-                farm=None,
-                origin=origin,
-                exclude=skip,
-                screen_only=True,
-                ownership_filter=False,
-            )
-            if party_leader_pile_ok(blackboard, obj)
-        ]
-        item = (
-            min(
-                near,
-                key=lambda obj: (
-                    tile_distance_from_player(obj),
-                    int(getattr(obj, "track_id", 0) or 0),
-                ),
-            )
-            if near
-            else None
-        )
-    else:
-        item = nearest_lootable(
-            state,
-            loot_mode=loot_mode,
-            farm=farm,
-            origin=origin,
-            exclude=skip,
-            screen_only=screen_only,
-        )
+    item = nearest_lootable(
+        state,
+        loot_mode=loot_mode,
+        farm=farm,
+        origin=origin,
+        exclude=skip,
+        screen_only=screen_only,
+    )
     if item is None:
         return None
     begin_loot_item(blackboard, item.track_id, item)

@@ -163,7 +163,7 @@ def test_route_walks_when_the_pile_is_gone(monkeypatch) -> None:
     assert board.nav_goal == (382, 478)
 
 
-def test_confirmed_pile_stays_past_the_leader_radius(monkeypatch) -> None:
+def test_the_leader_drops_a_pile_it_already_chose(monkeypatch) -> None:
     state = _state()
     far = _adena(195)
     far.world_rx = 20
@@ -186,10 +186,9 @@ def test_confirmed_pile_stays_past_the_leader_radius(monkeypatch) -> None:
 
     result = continue_or_start_loot(state, board, restrict_to_farm=False)
 
-    assert result is Status.SUCCESS
-    assert seen == [195]
-    assert board.current_item_id == 195
-    assert board.travel_hop_active is False
+    assert result is None
+    assert seen == []
+    assert board.current_item_id is None
     assert board.nav_goal == (382, 478)
 
 
