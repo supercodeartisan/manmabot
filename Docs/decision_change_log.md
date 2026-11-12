@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — a follow click that never walks is clicked again
+
+Intent: A party follow click that is still not a walk after one second is dropped, and a new tile toward the leader is clicked. A walk that starts within that second keeps extending one tile at a time. Standing within two tiles of the leader stays.
+Shared: `plan_leader_hop` and the member manager's follow-hop clock. `decide_policy` still holds at distance 2 or less. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party follow while the leader is more than two tiles away, for every seat. Heal and buff stay ahead of follow. Supply, retreat, and combat strategy are unchanged.
+Consent: user ("yes" after the one-second follow retry).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-11 — a moving follow extends, a still click does not repeat
 
 Intent: Standing within two tiles of the leader stays. Before the body is moving, the same follow hop is not clicked again. Once the body is moving, that hop extends one tile toward the leader so the walk does not stop every two tiles. The click is still never the leader's own tile.
