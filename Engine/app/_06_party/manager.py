@@ -1347,6 +1347,7 @@ class PartyMemberManager:
                         ),
                         hop_age_s=self._follow_hop_age(),
                         state=game_state,
+                        walk_steps=leader_walk_dist,
                     )
                 except Exception as exc:
                     _log.debug("party leader hop failed: %s", exc)

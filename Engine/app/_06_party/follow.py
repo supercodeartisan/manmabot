@@ -10,6 +10,9 @@ TRAVEL_LEAD_TILES = 2
 CLOSE_RESTART_GAP = 1
 # A follow click stays inside this many tiles so the hop cannot walk past the leader.
 FOLLOW_CLICK_TILES = 2
+# Farther than this many walk steps, one click may run out to the long hop.
+FOLLOW_FAR_WALK_STEPS = 6
+FOLLOW_FAR_CLICK_TILES = 5
 # Open straight ground only: one tile past the current hop, still short of a long click.
 FOLLOW_EXTEND_TILES = 3
 # A click that never becomes a walk is dropped after this, then a new tile is clicked.
@@ -66,6 +69,23 @@ def follow_kind(
     if chasing:
         return "follow", True
     return "near", False
+
+
+def follow_click_limit(walk_steps: Optional[int]) -> int:
+    """Click length from the live walk to the leader.
+
+    Six or more walk steps: up to five tiles, so the catch-up is one click.
+    Five or fewer: two tiles, so the click cannot step onto the leader.
+    """
+    if walk_steps is None:
+        return int(FOLLOW_CLICK_TILES)
+    try:
+        steps = int(walk_steps)
+    except (TypeError, ValueError):
+        return int(FOLLOW_CLICK_TILES)
+    if steps >= int(FOLLOW_FAR_WALK_STEPS):
+        return int(FOLLOW_FAR_CLICK_TILES)
+    return int(FOLLOW_CLICK_TILES)
 
 
 def travel_band(follow_tiles: int) -> int:
@@ -390,6 +410,9 @@ __all__ = [
     "CLOSE_RESTART_GAP",
     "FOLLOW_CLICK_TILES",
     "FOLLOW_EXTEND_TILES",
+    "FOLLOW_FAR_CLICK_TILES",
+    "FOLLOW_FAR_WALK_STEPS",
+    "follow_click_limit",
     "FOLLOW_STUCK_S",
     "FOLLOW_UNSTICK_MEMORY",
     "FOLLOW_UNSTICK_TILES",

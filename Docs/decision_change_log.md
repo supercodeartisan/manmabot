@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-12 — a far follow clicks five tiles, a near one clicks two
+
+Intent: A new follow click is up to 5 tiles when the live walk to the leader is 6 or more, and 2 tiles when it is 5 or fewer. The walk count, walls and fences included, is the one already measured every tick. A click that still aims at the leader and is more than one tile ahead is not clicked again; the distance keeps updating and chooses the length of the next click only. When the leader turns and that click no longer aims at him, it is replaced once at the length for the distance then. A 5-tile line closed by a wall is shortened by the existing path. The one-tile extend, and the fresh click while that extend failed, are not used on this hop: a 5-tile click would have been re-clicked every tick, because the extend stops at 3.
+Shared: `follow_click_limit`, `plan_leader_hop` (`walk_steps`), `_fresh_leader_hop` (`limit`). The member manager passes `leader_walk_dist`. The stand at 2 walk steps, leader pace, make-way, `FOLLOW_CLICK_TILES` for other hops, `emit_travel_hop`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party member follow clicks toward the leader. Solo travel is unchanged.
+Consent: user ("update" after the far-5 / near-2 plan).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 ## 2026-11-12 — a blocked leader asks the members to step off his line
 
 Intent: When the leader's travel has had no safe click for 3 seconds, the leader sends `make_way` with its tile and the next six guide tiles, at most once every 5 seconds. A member in HOLD or FOLLOW within 3 tiles of that leader tile, on the same map, clicks one open tile within 3 of itself and at least 2 tiles from the leader's line. The party click ring closes a player's eight neighbors, so one tile off the line does not free it. Behind the leader is preferred, then beside, then ahead. A walk that would cross the leader tile is not used. With no tile off the line, a member behind the leader backs up along the heading and a member ahead walks on ahead. After the click, the member stands 2 seconds, plus 0.7 seconds per tile of the step, before following again. A request older than 2 seconds is ignored. A member already 2 tiles clear of the line does not move.
