@@ -728,6 +728,99 @@ def test_point_arrival_arms_turret_inside_the_box() -> None:
     assert turret_routine_held(board)
 
 
+def test_area_border_arrival_hunts_instead_of_walking_back() -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.world_nav import session as nav_session
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "areas": [
+                    {
+                        "name": "남쪽해안",
+                        "shape": "area",
+                        "x0": 370,
+                        "y0": 440,
+                        "x1": 371,
+                        "y1": 452,
+                    }
+                ],
+            }
+        ]
+    )
+    board = decision.blackboard
+    board.world_origin = SimpleNamespace(x=369, y=446)
+    assert manager._on_point_arrival(board, "party_schedule") is False
+    assert board.scratch["party_area_border"] == ("talking_island", 0, 0, 370, 446)
+    walked: list[int] = []
+    farmed: list[int] = []
+    manager._arm_travel = lambda *args, **kwargs: walked.append(1)  # type: ignore[method-assign]
+    manager._farm = lambda *args, **kwargs: farmed.append(1)  # type: ignore[method-assign]
+    manager._mount = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    manager._on_row_map = lambda row, pose: True  # type: ignore[method-assign]
+    manager._nav_xy = lambda pack_id, pose: (int(pose.x), int(pose.y))  # type: ignore[method-assign]
+    board.scratch["world_nav_session"] = SimpleNamespace(phase="walk")
+    real_pose = nav_session.live_pose_from_state
+
+    def _pose(x: int, y: int) -> None:
+        nav_session.live_pose_from_state = (
+            lambda state, fresh=False: SimpleNamespace(map_id=0, x=x, y=y)
+        )
+
+    try:
+        _pose(369, 446)
+        manager.prepare(object(), None)
+        assert walked == []
+        assert farmed == [1]
+        assert "world_nav_session" not in board.scratch
+        _pose(360, 440)
+        manager.prepare(object(), None)
+        assert walked == []
+        assert farmed == [1, 1]
+        assert "party_area_border" in board.scratch
+        _pose(370, 446)
+        manager.prepare(object(), None)
+        assert "party_area_border" not in board.scratch
+        assert walked == []
+        _pose(369, 446)
+        manager.prepare(object(), None)
+        assert walked == [1]
+    finally:
+        nav_session.live_pose_from_state = real_pose
+
+
+def test_area_arrival_two_tiles_out_still_arms_the_walk() -> None:
+    from types import SimpleNamespace
+
+    decision = _Decision()
+    manager = PartyLeaderManager(decision)
+    manager.arm(
+        [
+            {
+                "map_id": "talking_island",
+                "areas": [
+                    {
+                        "name": "남쪽해안",
+                        "shape": "area",
+                        "x0": 370,
+                        "y0": 440,
+                        "x1": 371,
+                        "y1": 452,
+                    }
+                ],
+            }
+        ]
+    )
+    board = decision.blackboard
+    board.world_origin = SimpleNamespace(x=368, y=446)
+    assert manager._on_point_arrival(board, "party_schedule") is False
+    assert "party_area_border" not in board.scratch
+
+
 def test_point_arrival_stays_off_outside_the_box() -> None:
     from types import SimpleNamespace
 

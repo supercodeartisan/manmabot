@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — an area walk that arrives on the border does not re-arm
+
+Intent: A party area walk that finishes within the existing one-tile arrival radius, on the tile just outside that area, does not arm the same goal again. Farming and enter-farm walk into the area. Stepping inside clears the hold and the stay clock runs. Leaving after that arms the walk as before. A point mark still uses its 5×5 hold.
+Shared: `PartyLeaderManager.prepare` and `_on_point_arrival`. `ARRIVE_TILES`, `travel_arrived`, exact goal satisfaction, `_enter_farm_if_needed`, and door clicks are unchanged.
+Affects: the party leader when a schedule area's center is one tile outside the farm rect. A walk that is still more than one tile away, the next mark, and a return after leaving the area are unchanged.
+Consent: user ("yes" after the farm-border oscillation plan).
+Result: `Engine/app/_06_party/tests/test_leader_routine.py`. Not run in game.
+
 ## 2026-11-11 — a body on the drop stand takes the next empty neighbor
 
 Intent: A living monster, player, or NPC standing on the shopkeeper's stand or on the drop tile is skipped the same way a wall is. The check runs every tick from the avoid list's body centers, not the eight tiles around a player. A chosen pair stays until that stand or drop tile is taken. The next neighbor is then used, through the existing four-ring limit, without stepping the shopkeeper aside and without the 8 second wait. No pair left ends the delivery as `no drop tile`. The 8 second wait remains only when the chosen tile is empty and the walk emits no click. A ring with no walkable tile still steps aside.
