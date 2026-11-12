@@ -29,6 +29,24 @@ def _body_moving() -> bool:
         return False
 
 
+def _client_walk_clear(terrain: Any, origin: Any, hop: tuple[int, int]) -> bool:
+    """True when the client's own walk line to ``hop`` crosses no wall or fence.
+
+    The client walks diagonal first, then straight. A walkable hop behind a
+    fence corner stops the body halfway. A nav-blocked tile under the body
+    cannot be judged, so it passes.
+    """
+    from app._04_decision.pathfinding import is_game_walk_clear
+
+    ox, oy = int(origin.x), int(origin.y)
+    try:
+        if not terrain.is_walkable(ox, oy):
+            return True
+        return bool(is_game_walk_clear(terrain, (ox, oy), (int(hop[0]), int(hop[1]))))
+    except Exception:
+        return False
+
+
 def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
     from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
     from app._04_decision.nav_config import get_terrain_map
@@ -37,7 +55,9 @@ def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
     if terrain is None or not terrain.is_walkable(int(hop[0]), int(hop[1])):
         return False
     rx, ry = absolute_to_relative(int(hop[0]), int(hop[1]), origin)
-    return bool(in_battle_click_region(rx, ry))
+    if not in_battle_click_region(rx, ry):
+        return False
+    return _client_walk_clear(terrain, origin, hop)
 
 
 def _hop_on_player(state: Any, origin: Any, hop: Optional[tuple[int, int]]) -> bool:
@@ -68,6 +88,10 @@ def _closing_hop_off_player(
 
     from .follow import FOLLOW_CLICK_TILES
 
+    if terrain is None:
+        from app._04_decision.nav_config import get_terrain_map
+
+        terrain = get_terrain_map()
     ox, oy = int(origin.x), int(origin.y)
     gx, gy = int(goal[0]), int(goal[1])
     dx, dy = gx - ox, gy - oy
@@ -89,6 +113,8 @@ def _closing_hop_off_player(
             if max(abs(gx - x), abs(gy - y)) >= span:
                 continue
             if terrain is not None and not walkable(terrain, x, y):
+                continue
+            if terrain is not None and not _client_walk_clear(terrain, origin, hop):
                 continue
             if _hop_on_player(state, origin, hop):
                 continue
@@ -522,8 +548,13 @@ def plan_leader_hop(
     terrain = get_terrain_map()
     if terrain is None:
         return idle("no_terrain"), goal, "no_terrain", None
+    from .follow_field import nearest_walkable
+
+    # A leader on a nav-blocked cell has no A* goal. Path to the open tile
+    # beside him on the member's side instead.
+    path_goal = nearest_walkable(terrain, goal, toward=(ox, oy)) or goal
     _dest, path, waypoint = plan_travel_click(
-        terrain, origin, goal, max_hop=FOLLOW_CLICK_TILES
+        terrain, origin, path_goal, max_hop=FOLLOW_CLICK_TILES
     )
     hop = follow_hop_off_leader((ox, oy), goal, waypoint)
     if hop is None:
@@ -532,6 +563,8 @@ def plan_leader_hop(
         for tile in path or []:
             candidate = follow_hop_off_leader((ox, oy), goal, tile)
             if candidate is None:
+                continue
+            if not _follow_hop_clickable(origin, candidate):
                 continue
             gap = max(abs(candidate[0] - goal[0]), abs(candidate[1] - goal[1]))
             if best_gap is None or gap < best_gap:
@@ -546,6 +579,78 @@ def plan_leader_hop(
     if hop is None:
         return idle("player_beside"), goal, "player_beside", None
     return _emit_follow_hop(origin, hop, goal, "leader")
+
+
+def plan_follow_unstick(
+    origin: Any,
+    leader: tuple[int, int],
+    *,
+    walk_steps: Any = None,
+    tried: Iterable[tuple[int, int]] = (),
+    state: Any = None,
+    rng: Optional[random.Random] = None,
+) -> Optional[tuple[Any, tuple[int, int], str, tuple[int, int]]]:
+    """One click off a tile the follow cannot leave.
+
+    Candidates are open tiles within ``FOLLOW_UNSTICK_TILES`` that the client
+    can walk to in a line. The pick has the fewest walk steps to the leader
+    (``walk_steps(tile)``), then the shortest Chebyshev. Tiles already tried
+    from this spot, the leader tile, and player sprites are skipped. A body
+    on a nav-blocked cell takes any open tile in reach.
+    """
+    from app._03_world.space.world_coords import absolute_to_relative, in_battle_click_region
+    from app._04_decision.nav_config import get_terrain_map
+
+    from .follow import FOLLOW_UNSTICK_TILES
+
+    terrain = get_terrain_map()
+    if terrain is None:
+        return None
+    ox, oy = int(origin.x), int(origin.y)
+    lx, ly = int(leader[0]), int(leader[1])
+    skip = {(int(t[0]), int(t[1])) for t in tried}
+    skip.add((lx, ly))
+    r = rng or random
+    best: Optional[tuple[int, int]] = None
+    best_key: Optional[tuple[int, int, float]] = None
+    for y in range(oy - FOLLOW_UNSTICK_TILES, oy + FOLLOW_UNSTICK_TILES + 1):
+        for x in range(ox - FOLLOW_UNSTICK_TILES, ox + FOLLOW_UNSTICK_TILES + 1):
+            tile = (x, y)
+            if tile == (ox, oy) or tile in skip:
+                continue
+            try:
+                if not terrain.is_walkable(x, y):
+                    continue
+            except Exception:
+                continue
+            rx, ry = absolute_to_relative(x, y, origin)
+            if not in_battle_click_region(rx, ry):
+                continue
+            if not _client_walk_clear(terrain, origin, tile):
+                continue
+            if _hop_on_player(state, origin, tile):
+                continue
+            steps = walk_steps(tile) if walk_steps is not None else None
+            key = (
+                int(steps) if steps is not None else 10_000,
+                max(abs(x - lx), abs(y - ly)),
+                r.random(),
+            )
+            if best_key is None or key < best_key:
+                best, best_key = tile, key
+    if best is None:
+        return None
+    from .types import ActionIntent, ActionType
+    from app._04_decision.pathfinding import waypoint_to_content
+
+    intent = ActionIntent(
+        action=ActionType.TRAVELING,
+        destination=waypoint_to_content(best, origin),
+        priority=0.55,
+        reason=f"party_member:follow_unstick {lx},{ly}",
+    )
+    detail = f"unstick hop {best[0]},{best[1]} → {lx},{ly}"
+    return intent, (lx, ly), detail, best
 
 
 def plan_slot_hop(

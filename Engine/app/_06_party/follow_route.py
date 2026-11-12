@@ -33,6 +33,54 @@ def estimate_walk_cost(leader_dist: Optional[int]) -> Optional[int]:
         return None
 
 
+# Walk steps beyond the follow field: A* inside this margin around both ends.
+WALK_WINDOW_MARGIN = 48
+# Past this Chebyshev the window A* is too large; the planner compares instead.
+WALK_WINDOW_MAX_CHEBYSHEV = 64
+# No walk on this map reaches the leader. Large enough that any scroll or TP wins.
+UNREACHABLE_WALK = 9999
+
+
+def estimate_walk_steps(
+    terrain: Any,
+    start: tuple[int, int],
+    goal: tuple[int, int],
+) -> Optional[int]:
+    """Walk steps from ``start`` to ``goal`` on the nav map, not Chebyshev.
+
+    Returns ``UNREACHABLE_WALK`` when the portal graph says no walk exists,
+    and ``None`` when the distance is too far to measure here.
+    """
+    from app._03_world.space.world_coords import tile_chebyshev
+    from app._04_decision.hierarchical_path import _clamp_window, find_path_in_window
+
+    from .follow_field import nearest_walkable
+
+    s = nearest_walkable(terrain, start, toward=goal)
+    g = nearest_walkable(terrain, goal, toward=start)
+    if s is None or g is None:
+        return None
+    cheb = tile_chebyshev(s[0], s[1], g[0], g[1])
+    if cheb > WALK_WINDOW_MAX_CHEBYSHEV:
+        return None
+    window = _clamp_window(terrain, s, g, WALK_WINDOW_MARGIN)
+    path = find_path_in_window(terrain, s, g, window)
+    if path:
+        return max(cheb, len(path) - 1)
+    try:
+        from app._04_decision.nav_config import get_portal_graph
+
+        graph = get_portal_graph()
+    except Exception:
+        graph = None
+    if graph is not None:
+        if graph.node_at(*s) is not None and graph.node_at(*g) is not None:
+            if not graph.find_abstract_path(s, g):
+                return UNREACHABLE_WALK
+    # A walk exists only outside the window: longer than the window allows.
+    return cheb + 2 * WALK_WINDOW_MARGIN
+
+
 def choose_follow_route(
     game_state: Any,
     *,
@@ -136,4 +184,6 @@ __all__ = [
     "FollowRouteChoice",
     "choose_follow_route",
     "estimate_walk_cost",
+    "estimate_walk_steps",
+    "UNREACHABLE_WALK",
 ]
