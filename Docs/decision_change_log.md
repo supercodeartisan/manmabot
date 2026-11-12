@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-11 — a supply drop phase reaches the recipient
+
+Intent: When the shopkeeper announces the drop, the hold sent to the leader carries `dropping`. The leader republishes that flag, and the recipient stands for the pile. The same change sends `member_state` on that tick. Buy quantity, the approach, the drop gesture, and the pickup coordinates stay as they are.
+Shared: `_member_live_view` and `_nudge_supply_live`. `recipient_hold_intent`, `_publish_supply_hold`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party member, including the leader, who is the recipient of an HP or silver-arrow drop. In-range attacks stop once the drop is announced. Urgent retreat, a potion, and self-heal stay first.
+Consent: user ("yes, plz" after the dropping-flag plan).
+Result: `Engine/app/_06_party/tests/test_supply_hold.py`. Not run in game.
+
+## 2026-11-11 — a party seat other than the shopkeeper does not shop
+
+Intent: In party mode, only the shopkeeper starts a buy or a weight sell. The leader, a mage, and any other member do not. An HP retreat that sells before leaving still runs on every seat. The shopkeeper's supply buy stays. If the roster has no shopkeeper, personal shopping stays on. Solo is unchanged.
+Shared: `choose_shopping_behavior` and `_arm_party_self_shop`. `arm_sell_before_hp_retreat`, `tick_shopkeeper_duty`, and `party_pin_shop_behavior` stay. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party characters while a shopkeeper name is on the roster, including when that socket is down. A personal trip already started is cleared. The sell that runs before an HP retreat is not cleared.
+Consent: user ("HP 후퇴 전에 팔고 빠지는 판매는 남겨두자" after the party-shop scope).
+Result: `Engine/app/_06_party/tests/test_arrow_supply.py`. Not run in game.
+
 ## 2026-11-11 — an area walk that arrives on the border does not re-arm
 
 Intent: A party area walk that finishes within the existing one-tile arrival radius, on the tile just outside that area, does not arm the same goal again. Farming and enter-farm walk into the area. Stepping inside clears the hold and the stay clock runs. Leaving after that arms the walk as before. A point mark still uses its 5×5 hold.

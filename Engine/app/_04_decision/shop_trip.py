@@ -120,9 +120,30 @@ def needs_depoison_buy(blackboard: "Blackboard") -> bool:
     return bool(getattr(blackboard, "needs_depoison", False))
 
 
+def _party_self_shop_blocked(blackboard: "Blackboard") -> bool:
+    """Party seat other than the shopkeeper. Solo never sets the flag.
+
+    A shopkeeper name on the roster is enough. The shopkeeper socket may be
+    down. HP retreat sell does not read this.
+    """
+    return bool(blackboard.scratch.get("party_self_shop_blocked"))
+
+
+def _drop_blocked_personal_shop(blackboard: "Blackboard") -> None:
+    """Drop a personal buy or weight-sell trip. Leave an HP retreat sell."""
+    if blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT) == "selling":
+        return
+    if (
+        blackboard.scratch.get(SCRATCH_SHOP_TRIP)
+        or blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR)
+        or blackboard.scratch.get(SCRATCH_SELL_QUEUE)
+    ):
+        clear_shop_trip(blackboard)
+    blackboard.scratch.pop("party_pin_shop_behavior", None)
+
+
 def needs_arrow_buy(blackboard: "Blackboard") -> bool:
-    # Party leader sets this while a shopkeeper socket is still up.
-    # Sell, potions, and depoison do not read it. Solo never sets it.
+    # Same gate as potions and weight sell. Solo never sets it.
     if blackboard.scratch.get("party_arrow_shop_covered"):
         return False
     if not bool(getattr(blackboard, "needs_arrows", False)):
@@ -247,26 +268,43 @@ def advance_sell_trip(
     return None
 
 
-def choose_shopping_behavior(
-    state: "GameState", blackboard: "Blackboard"
-) -> Optional[str]:
-    """Highest-priority needed behavior id, or sticky mid-trip id."""
-    sticky = str(blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip()
-    if sticky:
-        return sticky
-    # Shopkeeper arrow trip only. Absent on solo and on the party leader.
-    pinned = str(blackboard.scratch.get("party_pin_shop_behavior") or "").strip()
-    if pinned:
-        return pinned
+def _resume_sell_queue(blackboard: "Blackboard") -> Optional[str]:
     remaining = blackboard.scratch.get(SCRATCH_SELL_QUEUE)
     if isinstance(remaining, list) and remaining:
-        # Resume a sell chain if sticky was lost mid-trip.
         nxt = str(remaining[0] or "").strip()
         blackboard.scratch[SCRATCH_SELL_QUEUE] = [
             str(x) for x in remaining[1:] if str(x).strip()
         ]
         if nxt:
             return nxt
+    return None
+
+
+def choose_shopping_behavior(
+    state: "GameState", blackboard: "Blackboard"
+) -> Optional[str]:
+    """Highest-priority needed behavior id, or sticky mid-trip id.
+
+    A party seat that is not the shopkeeper does not start a personal buy or
+    a weight sell. An HP retreat sell already in progress still runs.
+    """
+    blocked = _party_self_shop_blocked(blackboard)
+    hp_sell = blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT) == "selling"
+    sticky = str(blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "").strip()
+    if sticky and (hp_sell or not blocked):
+        return sticky
+    if blocked:
+        if hp_sell:
+            return _resume_sell_queue(blackboard)
+        _drop_blocked_personal_shop(blackboard)
+        return None
+    # Shopkeeper supply trip. Absent on solo and on every other party seat.
+    pinned = str(blackboard.scratch.get("party_pin_shop_behavior") or "").strip()
+    if pinned:
+        return pinned
+    queued = _resume_sell_queue(blackboard)
+    if queued:
+        return queued
     # Overweight sell first so perpetual potion/arrow restock cannot block it.
     # No sell_npc picker — the four merchants are shuffled per trip.
     if needs_sell(state):
