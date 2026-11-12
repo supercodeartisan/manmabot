@@ -14,6 +14,12 @@ FOLLOW_CLICK_TILES = 2
 FOLLOW_EXTEND_TILES = 3
 # A click that never becomes a walk is dropped after this, then a new tile is clicked.
 FOLLOW_HOP_START_S = 1.0
+# Following and still on the same tile this long: click an open tile beside it.
+FOLLOW_STUCK_S = 2.5
+# The escape click stays within this many tiles of the body.
+FOLLOW_UNSTICK_TILES = 3
+# Escape tiles remembered per stuck spot, so the next try picks another one.
+FOLLOW_UNSTICK_MEMORY = 4
 # On the formation slot. One tile off follows at once, including a one-tile leader step.
 ARRIVAL_TOLERANCE = 0
 # A stand seat is a 3×3. The member holds on the center tile or any neighbor.
@@ -384,6 +390,9 @@ __all__ = [
     "CLOSE_RESTART_GAP",
     "FOLLOW_CLICK_TILES",
     "FOLLOW_EXTEND_TILES",
+    "FOLLOW_STUCK_S",
+    "FOLLOW_UNSTICK_MEMORY",
+    "FOLLOW_UNSTICK_TILES",
     "follow_extend_hop",
     "TRAVEL_LEAD_TILES",
     "cardinal_tiles",

@@ -34,7 +34,7 @@ def _policy(**kwargs):
         self_threat=False,
         assist_ready=False,
         config=PartyMemberConfig(),
-        leader_walk_dist=4,
+        leader_walk_dist=None,
     )
     base.update(kwargs)
     return PolicyInput(**base)

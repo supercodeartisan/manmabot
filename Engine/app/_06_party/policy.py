@@ -44,7 +44,8 @@ class PolicyInput:
     # Kept for callers; follow_kind ignores slot/stand (close on the leader).
     at_settle_stand: Optional[bool] = None
     at_travel_spot: Optional[bool] = None
-    # Walk steps to the leader (bodies/walls count). Travel + settle bands only.
+    # Walk steps to the leader on the nav map (walls and fences count, bodies
+    # do not). The stand, leash, and follow bands use it when it is known.
     leader_walk_dist: Optional[int] = None
     # Assist target exists but is outside the solo hunt range, so follow.
     need_combat_step: bool = False
@@ -128,6 +129,12 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         return PolicyResult(MemberKind.WAIT, False, "leader_missing")
 
     dist = int(inp.leader_dist)
+    # Across a wall the Chebyshev distance is short and the walk is not.
+    walk = (
+        max(dist, int(inp.leader_walk_dist))
+        if inp.leader_walk_dist is not None
+        else dist
+    )
 
     # Assist beats loot and follow. A leader step or a seat catch-up does not
     # defer it. Out of attack range still follows instead of closing in.
@@ -148,7 +155,7 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         )
 
     # On-screen and off-screen fresh poses share the stop/start band below.
-    in_leash = dist <= int(cfg.assist_leash_tiles)
+    in_leash = walk <= int(cfg.assist_leash_tiles)
 
     # --- Leader turret mode: back into the yard ---
     if cfg.turret_farm and in_leash and not inp.in_farm_yard:
@@ -163,35 +170,35 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
 
     # --- Combat leash: leader fighting but no live assist target yet ---
     if inp.leader_farming:
-        if dist > int(cfg.assist_leash_tiles):
+        if not in_leash:
             return PolicyResult(
                 MemberKind.FOLLOW,
                 True,
-                f"follow_combat_leash dist={dist}",
+                f"follow_combat_leash walk={walk} dist={dist}",
             )
         # Inside the stop band, stand. A side slot does not pull the member
         # around the leader. Outside it, follow the leader tile.
-        if dist <= int(cfg.stop_tiles):
+        if walk <= int(cfg.stop_tiles):
             return PolicyResult(
                 MemberKind.HOLD,
                 False,
-                f"hold dist={dist}",
+                f"hold dist={dist} walk={walk}",
             )
         return PolicyResult(
             MemberKind.FOLLOW,
             True,
-            f"follow_combat_near dist={dist}",
+            f"follow_combat_near walk={walk} dist={dist}",
         )
 
     # --- Travel / idle ---
-    # Chebyshev to the leader. A formation slot is not a walk goal.
-    if dist <= int(cfg.stop_tiles):
+    # Walk steps to the leader. Two tiles across a wall is not beside him.
+    # A formation slot is not a walk goal.
+    if walk <= int(cfg.stop_tiles):
         return PolicyResult(
             MemberKind.HOLD,
             False,
-            f"hold dist={dist}",
+            f"hold dist={dist} walk={walk}",
         )
-    walk = int(inp.leader_walk_dist) if inp.leader_walk_dist is not None else dist
     why = "follow_settle" if inp.leader_stopped else "follow_travel"
     return PolicyResult(
         MemberKind.FOLLOW,

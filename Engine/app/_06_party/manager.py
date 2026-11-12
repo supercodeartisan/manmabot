@@ -15,7 +15,8 @@ from .assist import (
     turret_member_focus,
 )
 from .config import PartyMemberConfig
-from .follow_route import choose_follow_route, estimate_walk_cost
+from .follow import FOLLOW_STUCK_S, FOLLOW_UNSTICK_MEMORY
+from .follow_route import choose_follow_route, estimate_walk_cost, estimate_walk_steps
 from .follow_field import FollowField, FollowFieldCache, field_radius
 from .formation import MemberFormation
 from .formation_goal import (
@@ -25,7 +26,13 @@ from .formation_goal import (
     nearer_lateral,
     signed_lateral,
 )
-from .intents import intent_for_kind, plan_field_follow, plan_leader_hop, plan_slot_hop
+from .intents import (
+    intent_for_kind,
+    plan_field_follow,
+    plan_follow_unstick,
+    plan_leader_hop,
+    plan_slot_hop,
+)
 from .join_map import (
     PartyJoinNav,
     memory_leader_confirmed,
@@ -76,6 +83,8 @@ def mage_list_heal_request(
 _DECISION_HISTORY = 20
 # A gap longer than this is not continued stationary evidence.
 _MOTION_GAP_S = 30.0
+# Follow ticks further apart than this do not add up to a stuck follow.
+_FOLLOW_STUCK_GAP_S = 1.0
 # Side line stays until the leader tile has been still this long.
 FORMATION_STAND_SETTLE_S = 2.0
 
@@ -122,6 +131,9 @@ class PartyMemberManager:
         self.decision_history: deque[dict[str, Any]] = deque(maxlen=_DECISION_HISTORY)
         self._join_nav = PartyJoinNav()
         self._field_cache = FollowFieldCache()
+        # Same window without bodies: walls and fences only. Stand and leash read it.
+        self._walk_cache = FollowFieldCache()
+        self._walk_cost_memo: Optional[tuple[tuple[int, int, int, int], float, Optional[int]]] = None
         self._formation = MemberFormation()
         # Solo DecisionManager blackboard — required for WORLD_NAV join (scroll/gate).
         self._nav_blackboard: Any = None
@@ -371,6 +383,7 @@ class PartyMemberManager:
         self.runtime.leader_dist = leader_dist
 
         follow_field: Optional[FollowField] = None
+        walk_field: Optional[FollowField] = None
         leader_walk_dist: Optional[int] = None
         if (
             leader_tile is not None
@@ -379,12 +392,14 @@ class PartyMemberManager:
             and game_state is not None
         ):
             follow_field = self._follow_field(game_state, origin, leader_tile, cfg)
-            if follow_field is not None:
-                leader_walk_dist = follow_field.walk_distance(
+            walk_field = self._walk_field(leader_tile, cfg)
+            if walk_field is not None:
+                leader_walk_dist = walk_field.walk_distance(
                     (int(origin.x), int(origin.y)), int(leader_dist)
                 )
         else:
             self._field_cache.clear()
+            self._walk_cache.clear()
         self.runtime.leader_walk_dist = leader_walk_dist
 
         # Retreat HP gate uses the solo survival line. Heal / buff stay in place.
@@ -1254,7 +1269,9 @@ class PartyMemberManager:
             and party_xy is not None
             and leader_dist is not None
         ):
-            walk_cost = estimate_walk_cost(leader_dist) or int(leader_dist)
+            walk_cost = self._follow_walk_cost(
+                origin, leader_tile, int(leader_dist), walk_field
+            )
             choice = choose_follow_route(
                 game_state,
                 walk_cost=walk_cost,
@@ -1291,6 +1308,7 @@ class PartyMemberManager:
                 detail = f"{detail} | {route_detail}"
             goal = None
             self.runtime.approach_goal = None
+            self.runtime.scratch.pop("follow_stuck", None)
         else:
             # Local walk / hold / assist — abort any open WORLD_NAV session.
             self._join_nav.clear()
@@ -1334,6 +1352,22 @@ class PartyMemberManager:
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)
                     field_plan = None
+            if (
+                result.kind is MemberKind.FOLLOW
+                and leader_tile is not None
+                and origin_ok
+            ):
+                try:
+                    escape = self._follow_stuck_escape(
+                        origin, leader_tile, walk_field, game_state
+                    )
+                except Exception as exc:
+                    _log.debug("party follow unstick failed: %s", exc)
+                    escape = None
+                if escape is not None:
+                    field_plan = escape
+            else:
+                self.runtime.scratch.pop("follow_stuck", None)
             if field_plan is not None:
                 intent, goal, detail, hop = field_plan
                 self._store_follow_hop(hop, intent)
@@ -1769,6 +1803,132 @@ class PartyMemberManager:
         except Exception as exc:
             _log.debug("party follow field failed: %s", exc)
             return None
+
+    def _walk_field(
+        self,
+        leader_tile: tuple[int, int],
+        cfg: PartyMemberConfig,
+    ) -> Optional[FollowField]:
+        """Walk steps to the leader through walls and fences. Bodies do not block,
+        so a crowd beside the leader does not make the member walk off."""
+        try:
+            from app._04_decision.nav_config import get_terrain_map
+
+            terrain = get_terrain_map()
+            if terrain is None:
+                return None
+            return self._walk_cache.get(
+                terrain,
+                (int(leader_tile[0]), int(leader_tile[1])),
+                field_radius(cfg.follow_tiles),
+            )
+        except Exception as exc:
+            _log.debug("party walk field failed: %s", exc)
+            return None
+
+    def _follow_walk_cost(
+        self,
+        origin: Any,
+        leader_tile: Optional[tuple[int, int]],
+        leader_dist: int,
+        walk_field: Optional[FollowField],
+    ) -> int:
+        """Walk cost the scroll and TP compare against: walk steps, not Chebyshev.
+
+        Inside the field window the steps are exact. Beyond it, a windowed A*
+        is measured about every two seconds. Too far to measure keeps Chebyshev.
+        """
+        cheb = max(0, int(leader_dist))
+        if leader_tile is None or origin is None:
+            return estimate_walk_cost(cheb) or cheb
+        me = (int(origin.x), int(origin.y))
+        if walk_field is not None and walk_field.reached(me):
+            return walk_field.walk_distance(me, cheb)
+        key = (me[0] // 2, me[1] // 2, int(leader_tile[0]) // 2, int(leader_tile[1]) // 2)
+        now = time.monotonic()
+        memo = self._walk_cost_memo
+        if memo is not None and memo[0] == key and now - memo[1] < 2.0:
+            steps = memo[2]
+        else:
+            steps = None
+            try:
+                from app._04_decision.nav_config import get_terrain_map
+
+                terrain = get_terrain_map()
+                if terrain is not None:
+                    steps = estimate_walk_steps(
+                        terrain, me, (int(leader_tile[0]), int(leader_tile[1]))
+                    )
+            except Exception as exc:
+                _log.debug("party walk cost failed: %s", exc)
+                steps = None
+            self._walk_cost_memo = (key, now, steps)
+        if steps is None:
+            return estimate_walk_cost(cheb) or cheb
+        return max(cheb, int(steps))
+
+    def _follow_stuck_escape(
+        self,
+        origin: Any,
+        leader_tile: tuple[int, int],
+        walk_field: Optional[FollowField],
+        game_state: Any,
+    ) -> Any:
+        """Following, yet on the same tile for ``FOLLOW_STUCK_S``: one escape click.
+
+        The clock runs on the body's tile only. A new tile, or another kind than
+        follow, starts it again. Each try remembers its tile so the next one
+        picks a different open tile.
+        """
+        now = time.monotonic()
+        me = (int(origin.x), int(origin.y))
+        st = self.runtime.scratch.get("follow_stuck")
+        # A heal, potion, or supply tick in between is not time spent following.
+        gap = now - float(st.get("last") or 0.0) if isinstance(st, dict) else None
+        if (
+            not isinstance(st, dict)
+            or st.get("tile") != me
+            or gap is None
+            or gap > _FOLLOW_STUCK_GAP_S
+        ):
+            tried = (
+                list(st.get("tried") or [])
+                if isinstance(st, dict) and st.get("tile") == me
+                else []
+            )
+            self.runtime.scratch["follow_stuck"] = {
+                "tile": me,
+                "since": now,
+                "last": now,
+                "tried": tried,
+            }
+            return None
+        st["last"] = now
+        if now - float(st.get("since") or now) < FOLLOW_STUCK_S:
+            return None
+        walk_steps = walk_field.member_steps if walk_field is not None else None
+        picked = plan_follow_unstick(
+            origin,
+            leader_tile,
+            walk_steps=walk_steps,
+            tried=st.get("tried") or [],
+            state=game_state,
+            rng=self._rng,
+        )
+        st["since"] = now
+        if picked is None:
+            st["tried"] = []
+            _log.info("follow unstick none from=%s leader=%s", me, leader_tile)
+            return None
+        tried = list(st.get("tried") or []) + [picked[3]]
+        st["tried"] = tried[-FOLLOW_UNSTICK_MEMORY:]
+        _log.info(
+            "follow unstick from=%s hop=%s leader=%s",
+            me,
+            picked[3],
+            leader_tile,
+        )
+        return picked
 
     def _formation_trail_tile(
         self,
