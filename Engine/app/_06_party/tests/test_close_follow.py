@@ -41,8 +41,13 @@ def test_walk_starts_one_tile_outside_the_stop_band():
     assert band == "follow"
 
 
-def test_follow_click_stays_short():
+def test_follow_click_stays_short_until_the_walk_is_far():
+    from app._06_party.follow import follow_click_limit
+
     assert FOLLOW_CLICK_TILES == 2
+    assert follow_click_limit(5) == 2
+    assert follow_click_limit(6) == 5
+    assert follow_click_limit(None) == 2
 
 
 def test_offscreen_fresh_pose_uses_the_same_band():
@@ -199,7 +204,7 @@ def test_a_still_hop_clicks_again_after_one_second(monkeypatch):
     assert detail == "leader hop 1,0 → 6,0"
 
 
-def test_a_moving_hop_still_extends_after_one_second(monkeypatch):
+def test_a_moving_hop_that_still_aims_at_the_leader_is_not_clicked_again(monkeypatch):
     from app._06_party import intents
 
     class _Origin:
@@ -207,37 +212,74 @@ def test_a_moving_hop_still_extends_after_one_second(monkeypatch):
         y = 0
 
     monkeypatch.setattr(intents, "_body_moving", lambda: True)
-    monkeypatch.setattr(intents, "_follow_hop_clickable", lambda *_a, **_k: True)
     _intent, goal, detail, hop = intents.plan_leader_hop(
         _Origin(),
         (8, 0),
         previous_hop=(2, 0),
         click_failed=False,
         hop_age_s=2.0,
+        walk_steps=8,
     )
-    assert hop == (3, 0)
+    assert detail == "follow_in_transit"
+    assert hop == (2, 0)
     assert goal == (8, 0)
-    assert detail == "leader hop 3,0 → 8,0"
 
 
-def test_a_moving_leader_hop_extends_one_tile(monkeypatch):
+def test_a_turn_clicks_once_at_the_live_distance(monkeypatch):
     from app._06_party import intents
 
     class _Origin:
         x = 0
         y = 0
 
+    seen = {}
+
+    def _plan(*_args, **kwargs):
+        seen["max_hop"] = kwargs.get("max_hop")
+        return (0, 5), [(0, 5)], (0, 5)
+
     monkeypatch.setattr(intents, "_body_moving", lambda: True)
     monkeypatch.setattr(intents, "_follow_hop_clickable", lambda *_a, **_k: True)
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
     _intent, goal, detail, hop = intents.plan_leader_hop(
         _Origin(),
-        (8, 0),
+        (0, 8),
         previous_hop=(2, 0),
         click_failed=False,
+        walk_steps=8,
     )
-    assert hop == (3, 0)
-    assert goal == (8, 0)
-    assert detail == "leader hop 3,0 → 8,0"
+    assert seen["max_hop"] == 5
+    assert hop == (0, 5)
+    assert goal == (0, 8)
+    assert detail == "leader hop 0,5 → 0,8"
+
+
+def test_a_near_walk_clicks_two_tiles(monkeypatch):
+    from app._06_party import intents
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    seen = {}
+
+    def _plan(*_args, **kwargs):
+        seen["max_hop"] = kwargs.get("max_hop")
+        return (2, 0), [(2, 0)], (2, 0)
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
+    _intent, _goal, detail, hop = intents.plan_leader_hop(
+        _Origin(),
+        (5, 0),
+        previous_hop=None,
+        click_failed=False,
+        walk_steps=5,
+    )
+    assert seen["max_hop"] == 2
+    assert hop == (2, 0)
+    assert detail == "leader hop 2,0 → 5,0"
 
 
 def test_a_moving_hop_does_not_click_the_leader_tile(monkeypatch):
@@ -268,7 +310,7 @@ def test_same_delta_keeps_the_hop_and_a_turn_does_not():
 
 if __name__ == "__main__":
     test_walk_starts_one_tile_outside_the_stop_band()
-    test_follow_click_stays_short()
+    test_follow_click_stays_short_until_the_walk_is_far()
     test_offscreen_fresh_pose_uses_the_same_band()
     test_out_of_hunt_range_follows_instead_of_closing_in()
     test_stale_pose_does_not_follow()

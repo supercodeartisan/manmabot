@@ -134,6 +134,8 @@ class PartyMemberManager:
         # Same window without bodies: walls and fences only. Stand and leash read it.
         self._walk_cache = FollowFieldCache()
         self._walk_cost_memo: Optional[tuple[tuple[int, int, int, int], float, Optional[int]]] = None
+        self._make_way_until = 0.0
+        self._make_way_leader: Optional[tuple[int, int]] = None
         self._formation = MemberFormation()
         # Solo DecisionManager blackboard — required for WORLD_NAV join (scroll/gate).
         self._nav_blackboard: Any = None
@@ -1149,7 +1151,12 @@ class PartyMemberManager:
 
         # Assist already won above. Hold and follow yield to a pile.
         # A moving leader and a seat catch-up do not cancel that pile.
-        from .loot import party_loot_radius, party_may_start_loot, party_should_drop_loot
+        from .loot import (
+            party_loot_radius,
+            party_loot_walks,
+            party_may_start_loot,
+            party_should_drop_loot,
+        )
 
         can_loot_now = party_may_start_loot(
             result.kind.value, allowed=loot_own is not None
@@ -1195,6 +1202,7 @@ class PartyMemberManager:
                     ownership_filter=bool(loot_own),
                     max_tiles=loot_max_tiles,
                     item_ok=loot_item_ok,
+                    measure_walk=party_loot_walks(cfg),
                 )
             except Exception as exc:
                 _log.debug("party hold loot failed: %s", exc)
@@ -1314,7 +1322,17 @@ class PartyMemberManager:
             self._join_nav.clear()
             self.runtime.last_kind = result.kind.value
             field_plan = None
-            if (
+            make_way = None
+            if result.kind in (MemberKind.HOLD, MemberKind.FOLLOW) and origin_ok:
+                try:
+                    make_way = self._make_way(origin, game_state)
+                except Exception as exc:
+                    _log.debug("party make way failed: %s", exc)
+                    make_way = None
+            if make_way is not None:
+                field_plan = make_way
+                self.runtime.last_kind = "make_way"
+            elif (
                 result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
                 and origin_ok
@@ -1329,6 +1347,7 @@ class PartyMemberManager:
                         ),
                         hop_age_s=self._follow_hop_age(),
                         state=game_state,
+                        walk_steps=leader_walk_dist,
                     )
                 except Exception as exc:
                     _log.debug("party leader hop failed: %s", exc)
@@ -1353,7 +1372,8 @@ class PartyMemberManager:
                     _log.debug("party field follow failed: %s", exc)
                     field_plan = None
             if (
-                result.kind is MemberKind.FOLLOW
+                make_way is None
+                and result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
                 and origin_ok
             ):
@@ -1866,6 +1886,68 @@ class PartyMemberManager:
         if steps is None:
             return estimate_walk_cost(cheb) or cheb
         return max(cheb, int(steps))
+
+    def _make_way(self, origin: Any, game_state: Any) -> Any:
+        """Blocked leader asked for room: one click off his line, then stand.
+
+        Returns ``(intent, goal, detail, hop)`` or None. The stand after the
+        click holds follow for ``MAKE_WAY_HOLD_S`` so the member does not walk
+        straight back into the same spot.
+        """
+        from app._04_decision.nav_config import get_terrain_map
+
+        from .comms.orders import member_orders
+        from .intents import _emit_follow_hop, _follow_hop_clickable, _hop_on_player, idle
+        from .make_way import (
+            MAKE_WAY_FRESH_S,
+            MAKE_WAY_HOLD_S,
+            MAKE_WAY_RADIUS,
+            MAKE_WAY_WALK_S_PER_TILE,
+            parse_make_way,
+            plan_make_way,
+        )
+
+        now = time.monotonic()
+        if now < self._make_way_until:
+            goal = self._make_way_leader
+            return idle("make_way_wait"), goal, "make_way_wait", None
+        body = member_orders.take_make_way()
+        if body is None:
+            return None
+        try:
+            age = now - float(body.get("_at") or 0.0)
+        except (TypeError, ValueError):
+            return None
+        if age > MAKE_WAY_FRESH_S:
+            return None
+        parsed = parse_make_way(body)
+        if parsed is None:
+            return None
+        map_id, leader, guide = parsed
+        local = self.runtime.local_map_id
+        if map_id is not None and local is not None and int(map_id) != int(local):
+            return None
+        me = (int(origin.x), int(origin.y))
+        if max(abs(me[0] - leader[0]), abs(me[1] - leader[1])) > MAKE_WAY_RADIUS:
+            return None
+        terrain = get_terrain_map()
+        if terrain is None:
+            return None
+
+        def open_tile(tile: tuple[int, int]) -> bool:
+            return _follow_hop_clickable(origin, tile) and not _hop_on_player(
+                game_state, origin, tile
+            )
+
+        tile = plan_make_way(me, leader, guide, open_tile=open_tile)
+        if tile is None:
+            _log.info("make way none from=%s leader=%s", me, leader)
+            return None
+        steps = max(abs(tile[0] - me[0]), abs(tile[1] - me[1]))
+        self._make_way_until = now + steps * MAKE_WAY_WALK_S_PER_TILE + MAKE_WAY_HOLD_S
+        self._make_way_leader = leader
+        _log.info("make way from=%s hop=%s leader=%s", me, tile, leader)
+        return _emit_follow_hop(origin, tile, leader, "make_way")
 
     def _follow_stuck_escape(
         self,

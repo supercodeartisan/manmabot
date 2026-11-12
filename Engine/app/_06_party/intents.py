@@ -9,6 +9,7 @@ from .follow import (
     ARRIVAL_TOLERANCE,
     FOLLOW_CLICK_TILES,
     FOLLOW_EXTEND_TILES,
+    follow_click_limit,
     FOLLOW_HOP_START_S,
     choose_approach_tile,
     choose_settle_stand,
@@ -508,17 +509,19 @@ def plan_leader_hop(
     click_failed: bool = False,
     hop_age_s: Optional[float] = None,
     state: Any = None,
+    walk_steps: Optional[int] = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
     """Click toward the leader. The leader tile itself is not a click.
 
-    Before the body is moving, the same hop is not clicked again. Once it is
-    moving, the hop grows one tile along the line so the walk does not stop
-    at the first two tiles. A failed travel click clicks again. A hop that is
-    still not a walk after ``FOLLOW_HOP_START_S`` is dropped and clicked anew.
+    A new click is five tiles when the live walk is six or more, and two
+    tiles when it is closer. A click that still aims at the leader and is
+    more than one tile ahead is kept until that walk finishes; the distance
+    is read again only for the next click. A click that no longer aims at
+    the leader is replaced once, at the length for the distance now.
+    Before the body is moving, the same hop is not clicked again. A failed
+    travel click clicks again. A hop that is still not a walk after
+    ``FOLLOW_HOP_START_S`` is dropped and clicked anew.
     """
-    from app._04_decision.nav_config import get_terrain_map
-    from app._04_decision.pathfinding import plan_travel_click
-
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(leader[0]), int(leader[1]))
     if leader_hop_pending((ox, oy), previous_hop, click_failed=click_failed):
@@ -534,34 +537,61 @@ def plan_leader_hop(
             body_moving=True,
             leader_moved=False,
         ):
-            extended = _leader_extend(origin, goal, previous_hop, state)
-            if extended is None:
-                return (
-                    idle("follow_in_transit"),
-                    goal,
-                    "follow_in_transit",
-                    previous_hop,
-                )
-            return _emit_follow_hop(origin, extended, goal, "leader")
+            return (
+                idle("follow_in_transit"),
+                goal,
+                "follow_in_transit",
+                previous_hop,
+            )
     if (ox, oy) == goal:
         return idle("on_leader"), goal, "on_leader", None
+    measured = _gap((ox, oy), goal) if walk_steps is None else walk_steps
+    hop, why = _fresh_leader_hop(
+        origin, goal, state, limit=follow_click_limit(measured)
+    )
+    if hop is None:
+        return idle(why), (None if why == "no_path" else goal), why, None
+    return _emit_follow_hop(origin, hop, goal, "leader")
+
+
+def _gap(a: tuple[int, int], b: tuple[int, int]) -> int:
+    return max(abs(int(a[0]) - int(b[0])), abs(int(a[1]) - int(b[1])))
+
+
+def _fresh_leader_hop(
+    origin: Any,
+    goal: tuple[int, int],
+    state: Any,
+    *,
+    limit: int = FOLLOW_CLICK_TILES,
+) -> tuple[Optional[tuple[int, int]], str]:
+    """A new hop of at most ``limit`` tiles toward the leader.
+
+    ``(hop, "")`` or ``(None, why)`` with why ``no_terrain``, ``no_path``, or
+    ``player_beside``. Walls shorten the hop inside ``plan_travel_click``.
+    """
+    from app._04_decision.nav_config import get_terrain_map
+    from app._04_decision.pathfinding import plan_travel_click
+
+    ox, oy = int(origin.x), int(origin.y)
     terrain = get_terrain_map()
     if terrain is None:
-        return idle("no_terrain"), goal, "no_terrain", None
+        return None, "no_terrain"
     from .follow_field import nearest_walkable
 
     # A leader on a nav-blocked cell has no A* goal. Path to the open tile
     # beside him on the member's side instead.
     path_goal = nearest_walkable(terrain, goal, toward=(ox, oy)) or goal
+    hop_limit = max(1, int(limit))
     _dest, path, waypoint = plan_travel_click(
-        terrain, origin, path_goal, max_hop=FOLLOW_CLICK_TILES
+        terrain, origin, path_goal, max_hop=hop_limit
     )
-    hop = follow_hop_off_leader((ox, oy), goal, waypoint)
+    hop = follow_hop_off_leader((ox, oy), goal, waypoint, limit=hop_limit)
     if hop is None:
         best = None
         best_gap = None
         for tile in path or []:
-            candidate = follow_hop_off_leader((ox, oy), goal, tile)
+            candidate = follow_hop_off_leader((ox, oy), goal, tile, limit=hop_limit)
             if candidate is None:
                 continue
             if not _follow_hop_clickable(origin, candidate):
@@ -572,13 +602,13 @@ def plan_leader_hop(
                 best_gap = gap
         hop = best
     if hop is None:
-        return idle("no_path"), None, "no_path", None
+        return None, "no_path"
     if _hop_on_player(state, origin, hop):
         hop = _closing_hop_off_player(origin, goal, hop, state, terrain)
-        hop = follow_hop_off_leader((ox, oy), goal, hop)
+        hop = follow_hop_off_leader((ox, oy), goal, hop, limit=hop_limit)
     if hop is None:
-        return idle("player_beside"), goal, "player_beside", None
-    return _emit_follow_hop(origin, hop, goal, "leader")
+        return None, "player_beside"
+    return hop, ""
 
 
 def plan_follow_unstick(
