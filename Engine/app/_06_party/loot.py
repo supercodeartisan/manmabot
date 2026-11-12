@@ -59,9 +59,9 @@ def party_loot_walks(cfg: PartyMemberConfig) -> bool:
 def party_loot_radius(cfg: PartyMemberConfig) -> int:
     """Tiles this member will walk to a pile.
 
-    The near radius is ``farm.loot_max_tiles`` (Chebyshev), the same cap the
-    leader uses to notice a pile and to walk to it. The responsible looter
-    uses ``PARTY_LOOT_WALK_TILES`` walk steps.
+    The near radius is ``farm.loot_max_tiles`` (Chebyshev). The responsible
+    looter uses ``PARTY_LOOT_WALK_TILES`` walk steps. The party leader does
+    not pick up ground piles.
     """
     from app._04_decision import player_mode as pm
 

@@ -546,16 +546,19 @@ def _follow_body_click(
 ) -> bool:
     """Hold or repeat the current click. False asks the caller to replan.
 
-    A walking body is left alone. A body that is not walking gets the same
-    absolute tile again every 0.1s. Hold and repeat both rebuild the screen
-    point from the absolute tile and the current origin. A blocked click
-    line returns False so the next interim waypoint can be chosen. Walls are
-    checked even when ``state`` is missing; living bodies need ``state``.
+    A body that is not walking gets the same absolute tile again every 0.1s.
+    While it is walking, monsters on the line are left alone. A party
+    member's sprite on that line drops the click so the next plan steps
+    aside. Hold and repeat both rebuild the screen point from the absolute
+    tile and the current origin. A blocked click line returns False so the
+    next interim waypoint can be chosen. Walls are checked even when
+    ``state`` is missing; living bodies need ``state``.
     """
     from app._04_decision.avoidance import (
         classify_ground_reclick,
         click_bodies,
         click_clear,
+        player_click_tiles,
     )
     from app._05_action.body_pose import body_is_moving
 
@@ -563,26 +566,32 @@ def _follow_body_click(
     start = (int(origin.x), int(origin.y))
     moving = body_is_moving()
     _watch_hop_motion(blackboard, moving)
-    if moving is not True:
-        bodies = click_bodies(state, origin, blackboard)
-        if not click_clear(terrain, bodies, start, waypoint):
-            from app.bot_log import event
+    # A walk already moving is left alone for monsters. A party member who
+    # steps onto the click line is not clicked again; the next plan steps aside.
+    if moving is True and blackboard.scratch.get("party_player_ring"):
+        blocked = player_click_tiles(state, origin) if state is not None else set()
+    elif moving is not True:
+        blocked = click_bodies(state, origin, blackboard)
+    else:
+        blocked = None
+    if blocked is not None and not click_clear(terrain, blocked, start, waypoint):
+        from app.bot_log import event
 
-            event(
-                "avoid",
-                "line closed kind=travel wp=%s bodies=%d from=%s",
-                waypoint,
-                len(bodies),
-                start,
-            )
-            from app._04_decision.behaviors.unstick import note_confined_line_closed
+        event(
+            "avoid",
+            "line closed kind=travel wp=%s bodies=%d from=%s",
+            waypoint,
+            len(blocked),
+            start,
+        )
+        from app._04_decision.behaviors.unstick import note_confined_line_closed
 
-            note_confined_line_closed(blackboard)
-            blackboard.travel_hop_active = False
-            blackboard.travel_destination = None
-            blackboard.nav_waypoint = None
-            blackboard.travel_unstick_active = False
-            return False
+        note_confined_line_closed(blackboard)
+        blackboard.travel_hop_active = False
+        blackboard.travel_destination = None
+        blackboard.nav_waypoint = None
+        blackboard.travel_unstick_active = False
+        return False
     now = time.time()
     follow = classify_ground_reclick(
         moving,

@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-12 — the party leader does not pick up ground piles
+
+Intent: A party leader drops a pile it already chose and does not start another. The farm "loot until pickup" hold and the world-nav "loot before route" hold stop once that pile is cleared. Members still loot. A supply drop claimed for the leader still uses `leader_supply_pickup`.
+Shared: `continue_or_start_loot`, `party_leader_pile_ok`. `leader_supply_pickup`, member loot, solo loot, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged. `party_leader_no_loot` still keeps the leader off solo mage spell aim.
+Affects: party leader farm loot, the walk into a farm, retreat loot when no enemy is up, and a world-nav walk that was waiting on a pile.
+Consent: user ("그렇게 하라").
+Result: `Engine/app/_06_party/tests/test_party_loot.py`, `Engine/app/_04_decision/tests/test_loot_route_hold.py`. Not run in game.
+
+## 2026-11-12 — a moving click does not press a party member's sprite
+
+Intent: The click check immediately before the mouse uses the same body set the planner already uses. In a party that set is each living center plus the eight tiles that touch a player's center. Solo stays centers only. A cursor fallback point and an arrival-tile correction use that same set. While the body is already walking, monsters on the line are left alone, but a repeat click whose line steps on a party member's sprite is dropped and the next click steps aside.
+Shared: `_aim_ground_click`, `_clear_ring_points`, `_ground_click_shift_reason`, `_follow_body_click`. `click_bodies` and `player_click_tiles` are unchanged. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, and the confined scroll are unchanged.
+Affects: party travel, search, and loot hops, including a hop that is already moving. Solo clicks are unchanged.
+Consent: user ("수정하라" — while moving, the cursor keeps pressing team members).
+Result: `Engine/app/_04_decision/tests/test_party_click_ring.py`. Not run in game.
+
 <<<<<<< HEAD
 ## 2026-11-12 — a follow casts an in-range buff
 

@@ -53,3 +53,36 @@ def test_party_click_closes_the_tiles_touching_a_player() -> None:
     assert (10, 10) not in tiles
     assert (14, 10) in tiles
     assert (15, 10) not in tiles
+
+
+def test_a_moving_party_click_drops_when_the_line_hits_a_player(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from app._04_decision.behaviors.travel import _follow_body_click
+
+    class _Open:
+        def is_walkable(self, _x, _y):
+            return True
+
+        def can_step(self, _a, _b, _c, _d):
+            return True
+
+    board = SimpleNamespace(
+        scratch={"party_player_ring": True},
+        world_origin=WorldOrigin(x=10, y=10),
+        travel_hop_active=True,
+        travel_destination=(12, 10),
+        nav_waypoint=(12, 10),
+        travel_unstick_active=False,
+    )
+    monkeypatch.setattr("app._05_action.body_pose.body_is_moving", lambda: True)
+    ok = _follow_body_click(
+        board,
+        _State(),
+        _Open(),
+        (12, 10),
+        reason="world nav walk",
+        priority=0.5,
+    )
+    assert ok is False
+    assert board.travel_hop_active is False

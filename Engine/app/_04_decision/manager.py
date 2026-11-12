@@ -445,7 +445,7 @@ class DecisionManager:
         """
         from app._03_world.space.world_coords import tile_chebyshev
         from app._04_decision import player_mode as pm
-        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.avoidance import click_bodies, click_clear
         from app._04_decision.nav_config import get_terrain_map
 
         px, py = int(planned[0]), int(planned[1])
@@ -460,7 +460,9 @@ class DecisionManager:
         if origin is None:
             origin = self.blackboard.world_origin
         start = (int(origin.x), int(origin.y))
-        bodies = collect_body_tiles(state, origin) if state is not None else set()
+        bodies = (
+            click_bodies(state, origin, self.blackboard) if state is not None else set()
+        )
         if not click_clear(terrain, bodies, start, (cx, cy)):
             return "line"
         if kind == "travel":

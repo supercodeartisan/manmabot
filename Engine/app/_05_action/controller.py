@@ -681,7 +681,7 @@ class ActionExecutor:
             pass
         origin = bb.world_origin
         self.last_travel_click_origin = (int(origin.x), int(origin.y))
-        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.avoidance import click_bodies, click_clear
         from app._04_decision.nav_config import get_terrain_map
         from app._04_decision.pathfinding import waypoint_to_content
 
@@ -695,7 +695,7 @@ class ActionExecutor:
                 reason = "here"
             elif not terrain.is_walkable(waypoint[0], waypoint[1]) or not click_clear(
                 terrain,
-                collect_body_tiles(self._world, origin),
+                click_bodies(self._world, origin, bb),
                 start,
                 waypoint,
             ):
@@ -743,13 +743,13 @@ class ActionExecutor:
         The primary point stays. It was already accepted for the hop tile.
         """
         from app._03_world.space.world_coords import content_to_world, relative_to_absolute
-        from app._04_decision.avoidance import click_clear, collect_body_tiles
+        from app._04_decision.avoidance import click_bodies, click_clear
         from app._04_decision.nav_config import get_terrain_map
 
         terrain = get_terrain_map()
         if terrain is None or len(dests) <= 1:
             return dests
-        bodies = collect_body_tiles(self._world, origin)
+        bodies = click_bodies(self._world, origin, self._blackboard)
         start = (int(origin.x), int(origin.y))
         kept = [dests[0]]
         for content in dests[1:]:

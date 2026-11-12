@@ -29,16 +29,11 @@ def _leader_board():
     return SimpleNamespace(scratch={"party_leader_no_loot": True})
 
 
-def test_leader_uses_the_near_loot_radius() -> None:
+def test_leader_takes_no_pile() -> None:
     board = _leader_board()
-    saved = pm.LOOT_MAX_TILES
-    pm.LOOT_MAX_TILES = 4
-    try:
-        assert party_leader_pile_ok(board, _pile(4, True))
-        assert not party_leader_pile_ok(board, _pile(5, True))
-        assert not party_leader_pile_ok(board, _pile(2, False))
-    finally:
-        pm.LOOT_MAX_TILES = saved
+    assert not party_leader_pile_ok(board, _pile(1, True))
+    assert not party_leader_pile_ok(board, _pile(4, True))
+    assert not party_leader_pile_ok(board, None)
 
 
 def test_solo_pile_check_does_not_apply_the_leader_cap() -> None:
@@ -146,7 +141,7 @@ def test_leader_policy_does_not_carry_a_loot_priority() -> None:
 
 
 if __name__ == "__main__":
-    test_leader_uses_the_near_loot_radius()
+    test_leader_takes_no_pile()
     test_solo_pile_check_does_not_apply_the_leader_cap()
     test_responsible_loots_party_drops_not_only_own()
     test_other_members_loot_their_own_piles()
