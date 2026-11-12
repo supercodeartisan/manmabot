@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-12 — a far follow clicks five tiles, a near one clicks two
 
 Intent: A new follow click is up to 5 tiles when the live walk to the leader is 6 or more, and 2 tiles when it is 5 or fewer. The walk count, walls and fences included, is the one already measured every tick. A click that still aims at the leader and is more than one tile ahead is not clicked again; the distance keeps updating and chooses the length of the next click only. When the leader turns and that click no longer aims at him, it is replaced once at the length for the distance then. A 5-tile line closed by a wall is shortened by the existing path. The one-tile extend, and the fresh click while that extend failed, are not used on this hop: a 5-tile click would have been re-clicked every tick, because the extend stops at 3.
@@ -31,6 +32,23 @@ Shared: `party_loot_radius`, new `party_loot_walks` and `party_loot_walk_meter`,
 Affects: the responsible looter's pile choice, inside the party member tick.
 Consent: user ("룻팅을 담당한 파티봇의 룻팅범위를 walkable 거리로 12칸으로 설정하라").
 Result: `Engine/app/_06_party/tests/test_party_loot.py`. Not run in game.
+=======
+## 2026-11-12 — a missing buff report keeps the cast clock
+
+Intent: A party buff recasts when its reported time is down to 10 seconds, or when three newer reports in a row omit it. One report that omits the buff keeps the cast clock while more than 10 seconds remain. Holy weapon, haste, and every other party buff share this clock.
+Shared: `_remain`. `choose_party_support` still calls it for every party buff. Heal, cure, curse, resurrect, follow, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the mage seat's party buffs. A missed aim or a removed buff is tried again after about 30 seconds. A report that lists the buff with time left holds for that time.
+Consent: user ("plz implement" after the missing-report clock plan, including other buffs).
+Result: `Engine/app/_06_party/tests/test_mage_support.py`. Not run in game.
+
+## 2026-11-12 — a leftover spell circle is cancelled again
+
+Intent: A party heal or buff key is remembered. A spell circle that is still up gets Esc, then that key once, and no party-list row click. A view right-click that leaves the circle up may run once more after half a second. A circle that has not appeared yet keeps the key. When the cursor is normal again, the record is cleared.
+Shared: `cancel_spell_aim` and the party-list heal and buff press. Travel and loot already call that cancel. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, follow hops, and login clicks are unchanged.
+Affects: a mage party heal or buff whose aim circle stays up. The two-tile stand, the one-second follow retry, supply, and retreat are unchanged.
+Consent: user ("yes" after the leftover spell-circle plan).
+Result: `Engine/app/_05_action/tests/test_spell_aim_hold.py`, `test_party_list_press_hold.py`. Not run in game.
+>>>>>>> origin/main
 
 ## 2026-11-12 — heal and buff wait for an open line
 

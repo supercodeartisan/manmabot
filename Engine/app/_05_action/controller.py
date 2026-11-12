@@ -1300,6 +1300,11 @@ class ActionExecutor:
         self._press_assigned_skill(
             "heal", forced_slot=forced, once=list_target or heal_all
         )
+        if (list_target or heal_all) and forced is not None:
+            if float(self._last_magic_at or 0.0) > before:
+                from app._05_action.cursor_verify import remember_spell_aim_key
+
+                remember_spell_aim_key(self, forced[1], int(forced[0]))
         if not list_target:
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
@@ -1428,6 +1433,9 @@ class ActionExecutor:
         )
         self._press_box_skill(box, key)
         self._last_magic_at = time.time()
+        from app._05_action.cursor_verify import remember_spell_aim_key
+
+        remember_spell_aim_key(self, key, box)
         if bounds is None or not bounds.valid:
             return True
         from app._05_action.cursor_verify import wait_party_spell_aim

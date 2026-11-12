@@ -35,7 +35,6 @@ _RECAST_S = 10.0
 # A report older than this is not evidence the buff is missing.
 _REPORT_TRUST_S = 20.0
 _MISS_LIMIT = 3
-_PARK_S = 30.0
 _POISON = ("독", "포이즌", "poison", "중독")
 _CURSE_WORDS = ("커스", "저주", "curse")
 
@@ -230,7 +229,12 @@ def _remain(
     report: Optional[dict[str, Any]],
     now: float,
 ) -> float:
-    """Seconds left. Missing is 0. A parked skill stays out of the queue."""
+    """Seconds left. A listed buff uses its reported time.
+
+    A report that omits the buff keeps the cast clock while more than
+    ``_RECAST_S`` remains. Three newer reports in a row that omit it clear
+    the clock. A parked skill stays out of the queue.
+    """
     row = _spell_row(ledger, guid, skill_id)
     try:
         park = float(row.get("park_until") or 0.0)
@@ -272,9 +276,18 @@ def _remain(
                 row["misses"] = misses
                 row["counted_at"] = noted
                 if misses >= _MISS_LIMIT:
-                    row["park_until"] = now + _PARK_S
+                    row["misses"] = 0
                     row["at"] = 0.0
-                    return 1.0e9
+                    row["park_until"] = 0.0
+                    return 0.0
+            if cast_at > 0.0:
+                try:
+                    duration = float(row.get("duration") or _duration(skill_id))
+                except (TypeError, ValueError):
+                    duration = _duration(skill_id)
+                left = max(0.0, duration - (now - cast_at))
+                if left > _RECAST_S:
+                    return left
             return 0.0
         row["misses"] = 0
         row["park_until"] = 0.0

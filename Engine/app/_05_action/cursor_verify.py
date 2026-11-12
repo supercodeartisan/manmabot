@@ -38,6 +38,10 @@ LOOT_CURSOR_NEAR_PX = 48.0
 LOOT_CURSOR_CLEAR_SETTLE_S = 0.03
 # Single short nudge off leftover attack hover (corpse/empty arrow).
 LOOT_CURSOR_CLEAR_RADII_PX: tuple[float, ...] = (30.0,)
+# A view right-click that leaves the spell circle up may run once more after this.
+SPELL_AIM_VIEW_RETRY_S = 0.5
+# A party-list key is forgotten when the circle never appears.
+SPELL_AIM_KEY_GRACE_S = 8.0
 # Body UV + tight pixel ring (cardinal-first). No memory-tile jump.
 ATTACK_PIXEL_RADII_PX = (10.0,)
 ATTACK_PIXEL_RING_N = 4
@@ -321,22 +325,103 @@ def _right_click_view(executor: "ActionExecutor") -> bool:
     return True
 
 
+def remember_spell_aim_key(
+    executor: "ActionExecutor",
+    key: str,
+    box: int = 0,
+) -> None:
+    """Remember the party-list key that can still leave a late spell circle."""
+    text = str(key or "").strip().lower()
+    if not text:
+        return
+    executor._spell_aim_key = text
+    executor._spell_aim_box = int(box or 0)
+    executor._spell_aim_key_at = time.monotonic()
+    executor._spell_aim_key_used = False
+    executor._spell_aim_seen = False
+
+
+def _clear_spell_aim_episode(executor: "ActionExecutor") -> None:
+    executor._spell_view_cancel_used = False
+    executor._spell_view_clicks = 0
+    executor._spell_view_click_at = 0.0
+    executor._spell_aim_key = ""
+    executor._spell_aim_box = 0
+    executor._spell_aim_key_at = 0.0
+    executor._spell_aim_key_used = False
+    executor._spell_aim_seen = False
+
+
+def _press_spell_aim_key(executor: "ActionExecutor") -> bool:
+    """Press the remembered party-list key once. Does not click the row."""
+    key = str(getattr(executor, "_spell_aim_key", "") or "").strip().lower()
+    if not key or getattr(executor, "_spell_aim_key_used", False):
+        return False
+    box = int(getattr(executor, "_spell_aim_box", 0) or 0)
+    pressed = False
+    if box in (1, 2, 3):
+        press_box = getattr(executor, "_press_box_skill", None)
+        if press_box is not None:
+            try:
+                press_box(box, key)
+                pressed = True
+            except Exception:
+                pressed = False
+    if not pressed:
+        try:
+            executor.keyboard.press(key)
+            pressed = True
+        except Exception:
+            return False
+    executor._spell_aim_key_used = True
+    return True
+
+
+def _right_click_spell_view(executor: "ActionExecutor") -> bool:
+    """One view right-click now, and one more after ``SPELL_AIM_VIEW_RETRY_S``."""
+    clicks = int(getattr(executor, "_spell_view_clicks", 0) or 0)
+    if clicks >= 2:
+        return False
+    last = float(getattr(executor, "_spell_view_click_at", 0.0) or 0.0)
+    now = time.monotonic()
+    if clicks == 1 and (now - last) < SPELL_AIM_VIEW_RETRY_S:
+        return False
+    if not _right_click_view(executor):
+        return False
+    executor._spell_view_clicks = clicks + 1
+    executor._spell_view_click_at = now
+    executor._spell_view_cancel_used = True
+    return True
+
+
 def cancel_spell_aim(
     executor: "ActionExecutor",
     *,
     reason: str = "",
 ) -> bool:
-    """Leave cast-target mode. Esc first; a view right-click if the circle remains.
+    """Leave cast-target mode. Esc, then the party-list key, then a view click.
 
     Returns whether aim looked active. The right-click is inside the game
-    view, so a missing or off-window last pixel cannot skip it. A right-click
-    that leaves the circle up is not repeated until the cursor drops. The
-    caller walks only after the cursor is no longer a spell circle.
+    view. A second view click waits ``SPELL_AIM_VIEW_RETRY_S`` and does not
+    repeat after that until the cursor drops. The caller walks only after
+    the cursor is no longer a spell circle.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
-        executor._spell_view_cancel_used = False
+        if getattr(executor, "_spell_aim_seen", False):
+            _clear_spell_aim_episode(executor)
+        else:
+            executor._spell_view_cancel_used = False
+            executor._spell_view_clicks = 0
+            executor._spell_view_click_at = 0.0
+            opened = float(getattr(executor, "_spell_aim_key_at", 0.0) or 0.0)
+            if opened > 0 and (time.monotonic() - opened) >= SPELL_AIM_KEY_GRACE_S:
+                executor._spell_aim_key = ""
+                executor._spell_aim_box = 0
+                executor._spell_aim_key_at = 0.0
+                executor._spell_aim_key_used = False
         return False
+    executor._spell_aim_seen = True
     try:
         executor.keyboard.press("esc")
     except Exception:
@@ -344,16 +429,16 @@ def cancel_spell_aim(
     settle = float(CURSOR_SEARCH_SETTLE_S or 0.0)
     if settle > 0:
         time.sleep(settle)
-    if cursor_is_spell_aim(executor) and not getattr(
-        executor, "_spell_view_cancel_used", False
-    ):
-        if _right_click_view(executor):
-            executor._spell_view_cancel_used = True
+    if cursor_is_spell_aim(executor):
+        _press_spell_aim_key(executor)
         if settle > 0:
+            time.sleep(settle)
+    if cursor_is_spell_aim(executor):
+        if _right_click_spell_view(executor) and settle > 0:
             time.sleep(settle)
     still = cursor_is_spell_aim(executor)
     if not still:
-        executor._spell_view_cancel_used = False
+        _clear_spell_aim_episode(executor)
     try:
         from app.bot_log import get_logger
 
@@ -1341,6 +1426,7 @@ __all__ = [
     "PARTY_LIST_RECAST_S",
     "wait_party_spell_aim",
     "cursor_is_spell_aim",
+    "remember_spell_aim_key",
     "cancel_spell_aim",
     "verify_loot_aim",
     "attack_click",

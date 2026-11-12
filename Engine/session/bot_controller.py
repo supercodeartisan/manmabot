@@ -658,6 +658,16 @@ class BotController:
         except Exception:
             snap.setdefault("messages", [])
         try:
+            from websocket.party_orders import member_orders
+
+            snap["party_buffs"] = [
+                dict(row)
+                for row in (getattr(member_orders, "party_buffs", None) or [])
+                if isinstance(row, dict)
+            ]
+        except Exception:
+            snap["party_buffs"] = []
+        try:
             snap["socket"] = self._party_socket_snapshot()
         except Exception as exc:
             snap["socket"] = {"role": "none", "state": "error", "error": str(exc)}
