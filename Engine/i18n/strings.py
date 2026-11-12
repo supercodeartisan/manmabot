@@ -142,6 +142,8 @@ class UiStrings:
     save_areas: str
     editor_hint_island: str
     editor_hint_dungeon: str
+    editor_hint_dungeon_plan: str
+    editor_hint_field: str
     editor_readonly: str
     saved_areas: str
     saved_rest: str
@@ -227,8 +229,11 @@ class UiStrings:
     point_stay_title: str
     point_stay_prompt: str
     tool_patrol_plus: str
-    plan_patrol: str  # format: n
+    plan_patrol: str  # format: n — setting table, one number per stored route
+    plan_patrol_label: str
+    plan_waypoint_count: str  # format: n
     plan_point: str  # format: n
+    edit_dungeon_plan: str
     areas_overlap: str
     # species
     species_heading: str
@@ -506,6 +511,8 @@ _EN = UiStrings(
     save_areas="Save",
     editor_hint_island="Drag empty ground to draw a farm. Drag a farm to move it. Right-click a farm to copy, delete, or rename.",
     editor_hint_dungeon="Place patrol: click walkable tiles. Drag a marker to move it.",
+    editor_hint_dungeon_plan="Use Waypoint + to add a patrol route, and Point + to add a stationary hunt point. Right-click a point to edit its world coordinates. Drag a marker to move it, and use the wheel to zoom or drag empty ground to move the map.",
+    editor_hint_field="Use Area + to draw a hunt area, and Point + to add a stationary hunt point. Right-click a point to edit its world coordinates. Drag an area to move it, and right-click to copy, delete, or rename it. Use the wheel to zoom and drag empty ground to move the map.",
     editor_readonly="Stop ZF to edit farms or patrol points.",
     saved_areas="Saved farm areas for this map.",
     saved_rest="Saved rest areas for this map.",
@@ -526,6 +533,7 @@ _EN = UiStrings(
     edit_farms="Edit farms",
     edit_rest="Edit rest areas",
     edit_patrol="Edit patrol",
+    edit_dungeon_plan="Dungeon hunt plan",
     edit_done="Done",
     editor_close="Close",
     editor_list="Items",
@@ -596,8 +604,10 @@ _EN = UiStrings(
     point_stay="{minutes} min",
     point_stay_title="Stay",
     point_stay_prompt="Minutes",
-    tool_patrol_plus="Patrol +",
+    tool_patrol_plus="Waypoint +",
     plan_patrol="Patrol {n}",
+    plan_patrol_label="Patrol",
+    plan_waypoint_count="{n} waypoints",
     plan_point="Point {n}",
     areas_overlap="Farm areas cannot overlap.",
     species_heading="Species",
@@ -1036,6 +1046,8 @@ _KO = UiStrings(
     save_areas="저장",
     editor_hint_island="빈 곳을 드래그하면 사냥터가 그려집니다. 구역 위에서 드래그하면 이동합니다. 오른쪽 클릭으로 복사, 삭제, 이름 변경.",
     editor_hint_dungeon="패트롤 배치: 이동 가능한 타일을 클릭하세요. 마커를 끌어 옮깁니다.",
+    editor_hint_dungeon_plan="경유점+으로 패트롤 경로를 추가하고, 점+으로 말뚝사냥 지점을 추가하세요. 점을 오른쪽 클릭하면 월드좌표를 직접 편집할 수 있습니다. 마커를 드래그해 이동하고, 휠로 확대하거나 빈 곳을 드래그해 지도를 이동하세요.",
+    editor_hint_field="구역+으로 사냥 구역을 그리고, 점+으로 말뚝사냥 지점을 추가하세요. 점을 오른쪽 클릭하면 월드좌표를 직접 편집할 수 있습니다. 구역은 드래그해 이동하고, 오른쪽 클릭으로 복사·삭제·이름 변경할 수 있습니다. 휠로 확대하고 빈 곳을 드래그해 지도를 이동하세요.",
     editor_readonly="종횡을 중지한 뒤에 사냥터·패트롤을 편집할 수 있습니다.",
     saved_areas="이 맵의 사냥터를 저장했습니다.",
     saved_rest="이 맵의 휴식 지역을 저장했습니다.",
@@ -1056,6 +1068,7 @@ _KO = UiStrings(
     edit_farms="사냥터 편집",
     edit_rest="휴식 지역 편집",
     edit_patrol="패트롤 편집",
+    edit_dungeon_plan="던전 사냥 계획 편집기",
     edit_done="완료",
     editor_close="닫기",
     editor_list="목록",
@@ -1126,8 +1139,10 @@ _KO = UiStrings(
     point_stay="{minutes}분",
     point_stay_title="체류",
     point_stay_prompt="분",
-    tool_patrol_plus="패트롤 +",
+    tool_patrol_plus="경유점 +",
     plan_patrol="패트롤 {n}",
+    plan_patrol_label="패트롤",
+    plan_waypoint_count="경유점 {n}개",
     plan_point="점 {n}",
     areas_overlap="사냥터는 서로 겹칠 수 없습니다.",
     species_heading="종",
@@ -1564,6 +1579,8 @@ _ZH = UiStrings(
     save_areas="保存",
     editor_hint_island="在空白处拖动绘制猎场。在区域上拖动可移动。右键可复制、删除或重命名。",
     editor_hint_dungeon="放置巡逻点：点击可行走格子。拖动标记可移动。",
+    editor_hint_dungeon_plan="使用途经点+添加巡逻路线，使用点+添加定点狩猎位置。右键点击点可直接编辑世界坐标。拖动标记可移动，用滚轮缩放，或拖动空白处移动地图。",
+    editor_hint_field="使用区域+绘制狩猎区域，使用点+添加定点狩猎位置。右键点击点可直接编辑世界坐标。拖动区域可移动，右键可复制、删除或重命名。用滚轮缩放，并拖动空白处移动地图。",
     editor_readonly="请先停止纵锋，再编辑猎场或巡逻点。",
     saved_areas="已保存此地图的猎场。",
     saved_rest="已保存此地图的休息区域。",
@@ -1582,6 +1599,7 @@ _ZH = UiStrings(
     edit_farms="编辑猎场",
     edit_rest="编辑休息区域",
     edit_patrol="编辑巡逻",
+    edit_dungeon_plan="地下城狩猎计划编辑器",
     edit_done="完成",
     editor_close="关闭",
     editor_list="列表",
@@ -1652,8 +1670,10 @@ _ZH = UiStrings(
     point_stay="{minutes}分钟",
     point_stay_title="停留",
     point_stay_prompt="分钟",
-    tool_patrol_plus="巡逻 +",
+    tool_patrol_plus="途经点 +",
     plan_patrol="巡逻 {n}",
+    plan_patrol_label="巡逻",
+    plan_waypoint_count="途经点 {n}个",
     plan_point="点 {n}",
     areas_overlap="猎场区域不能重叠。",
     species_heading="物种",
