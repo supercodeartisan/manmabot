@@ -61,6 +61,56 @@ def _follow_hop_clickable(origin: Any, hop: tuple[int, int]) -> bool:
     return _client_walk_clear(terrain, origin, hop)
 
 
+def _follow_body_tiles(state: Any, origin: Any) -> set[tuple[int, int]]:
+    """Living centers and the party player ring, for one follow click."""
+    if state is None or origin is None:
+        return set()
+    from app._04_decision.avoidance import collect_body_tiles, player_click_tiles
+
+    try:
+        tiles = set(collect_body_tiles(state, origin))
+        tiles |= set(player_click_tiles(state, origin))
+    except (TypeError, ValueError, AttributeError):
+        return set()
+    return tiles
+
+
+def _line_misses_bodies(
+    terrain: Any,
+    start: tuple[int, int],
+    hop: tuple[int, int],
+    bodies: set[tuple[int, int]],
+) -> bool:
+    from app._04_decision.avoidance import click_clear
+
+    try:
+        return bool(click_clear(terrain, bodies, start, hop))
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def _hop_blocks_follow(
+    state: Any,
+    origin: Any,
+    hop: Optional[tuple[int, int]],
+    terrain: Any,
+) -> bool:
+    """True when this click tile or its client line steps on a living body."""
+    if hop is None:
+        return False
+    if _hop_on_player(state, origin, hop):
+        return True
+    blocked = _follow_body_tiles(state, origin)
+    if not blocked or terrain is None:
+        return False
+    return not _line_misses_bodies(
+        terrain,
+        (int(origin.x), int(origin.y)),
+        (int(hop[0]), int(hop[1])),
+        blocked,
+    )
+
+
 def _hop_on_player(state: Any, origin: Any, hop: Optional[tuple[int, int]]) -> bool:
     """True when this click tile is a player's center or a tile that touches it."""
     if state is None or origin is None or hop is None:
@@ -79,15 +129,17 @@ def _closing_hop_off_player(
     rejected: tuple[int, int],
     state: Any,
     terrain: Any = None,
+    limit: int = FOLLOW_CLICK_TILES,
 ) -> Optional[tuple[int, int]]:
-    """Another short hop toward ``goal`` that is not on a player sprite.
+    """Another hop toward ``goal`` that is not on a player sprite.
 
-    The hop must still close and stay on the goal's side of the member.
-    Nothing is written down as a wall.
+    The hop closes and stays on the goal's side of the member. When every
+    closer line steps on a body, a sideways step on that same side is used
+    so the walk continues. ``limit`` is the same click length as the follow
+    hop (two when near, five when the walk is far). Nothing is written down
+    as a wall.
     """
     from app._06_party.tactics._grid import walkable
-
-    from .follow import FOLLOW_CLICK_TILES
 
     if terrain is None:
         from app._04_decision.nav_config import get_terrain_map
@@ -101,7 +153,8 @@ def _closing_hop_off_player(
         return None
     best: Optional[tuple[int, int]] = None
     best_key: Optional[tuple[int, int]] = None
-    limit = int(FOLLOW_CLICK_TILES)
+    limit = max(1, int(limit))
+    blocked = _follow_body_tiles(state, origin)
     for y in range(oy - limit, oy + limit + 1):
         for x in range(ox - limit, ox + limit + 1):
             hop = (x, y)
@@ -119,9 +172,44 @@ def _closing_hop_off_player(
                 continue
             if _hop_on_player(state, origin, hop):
                 continue
+            if blocked and terrain is not None and not _line_misses_bodies(
+                terrain, (ox, oy), hop, blocked
+            ):
+                continue
             key = (
                 abs((x - ox) * dy - (y - oy) * dx),
                 max(abs(gx - x), abs(gy - y)),
+            )
+            if best_key is None or key < best_key:
+                best_key = key
+                best = hop
+    if best is not None:
+        return best
+    # Every closer line steps on a body. A sideways step on the leader's
+    # half still walks, and the next click can close.
+    best_key = None
+    for y in range(oy - limit, oy + limit + 1):
+        for x in range(ox - limit, ox + limit + 1):
+            hop = (x, y)
+            if hop == (ox, oy) or hop == (int(rejected[0]), int(rejected[1])):
+                continue
+            if max(abs(x - ox), abs(y - oy)) > limit:
+                continue
+            if (x - ox) * dx + (y - oy) * dy < 0:
+                continue
+            if terrain is not None and not walkable(terrain, x, y):
+                continue
+            if terrain is not None and not _client_walk_clear(terrain, origin, hop):
+                continue
+            if _hop_on_player(state, origin, hop):
+                continue
+            if blocked and terrain is not None and not _line_misses_bodies(
+                terrain, (ox, oy), hop, blocked
+            ):
+                continue
+            key = (
+                max(abs(gx - x), abs(gy - y)),
+                abs((x - ox) * dy - (y - oy) * dx),
             )
             if best_key is None or key < best_key:
                 best_key = key
@@ -520,7 +608,11 @@ def plan_leader_hop(
     the leader is replaced once, at the length for the distance now.
     Before the body is moving, the same hop is not clicked again. A failed
     travel click clicks again. A hop that is still not a walk after
-    ``FOLLOW_HOP_START_S`` is dropped and clicked anew.
+    ``FOLLOW_HOP_START_S`` is dropped and clicked anew. When that new click
+    is the same tile and the body is still standing, a different tile that
+    is closer to the leader is used, out to the same 2- or 5-tile length.
+    When every closer line steps on a living body, the click steps sideways
+    on the leader's side instead of standing.
     """
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(leader[0]), int(leader[1]))
@@ -551,6 +643,23 @@ def plan_leader_hop(
     )
     if hop is None:
         return idle(why), (None if why == "no_path" else goal), why, None
+    if (
+        previous_hop is not None
+        and (int(hop[0]), int(hop[1])) == (int(previous_hop[0]), int(previous_hop[1]))
+        and not _body_moving()
+    ):
+        alt = _closing_hop_off_player(
+            origin,
+            goal,
+            hop,
+            state,
+            limit=follow_click_limit(measured),
+        )
+        alt = follow_hop_off_leader(
+            (ox, oy), goal, alt, limit=follow_click_limit(measured)
+        )
+        if alt is not None and not _hop_on_player(state, origin, alt):
+            hop = alt
     return _emit_follow_hop(origin, hop, goal, "leader")
 
 
@@ -603,8 +712,10 @@ def _fresh_leader_hop(
         hop = best
     if hop is None:
         return None, "no_path"
-    if _hop_on_player(state, origin, hop):
-        hop = _closing_hop_off_player(origin, goal, hop, state, terrain)
+    if _hop_blocks_follow(state, origin, hop, terrain):
+        hop = _closing_hop_off_player(
+            origin, goal, hop, state, terrain, limit=hop_limit
+        )
         hop = follow_hop_off_leader((ox, oy), goal, hop, limit=hop_limit)
     if hop is None:
         return None, "player_beside"

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-12 — a follow that does not start walks a different closer tile
+
+Intent: When a member's follow click is the same tile again and the body is still standing, the next click is a different tile closer to the leader, out to the same length already used for that distance (5 when the walk is 6 or more, 2 when it is closer). A click whose tile or client line steps on a living body is not used. When every closer line is blocked, the click steps sideways on the leader's half so the walk continues. The leader tile stays unclicked. If no other open tile exists, the open same tile is clicked again.
+Shared: `plan_leader_hop`, `_fresh_leader_hop`, `_closing_hop_off_player` (`limit`). `click_bodies`, `_aim_ground_click`, `_ground_click_shift_reason`, `_maybe_confined_escape`, `try_unstick_escape`, leader pace, make-way, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party member follow toward the leader. Solo travel and the leader's own clicks are unchanged.
+Consent: user (follow is the priority; the mouse-gate body set and the hunt confined scroll stay as they are).
+Result: `Engine/app/_06_party/tests/test_close_follow.py`. Not run in game.
+
 <<<<<<< HEAD
 ## 2026-11-12 — a far follow clicks five tiles, a near one clicks two
 

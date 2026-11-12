@@ -301,6 +301,91 @@ def test_a_moving_hop_does_not_click_the_leader_tile(monkeypatch):
     assert hop == (2, 0)
 
 
+def test_a_repeated_still_hop_steps_closer_when_the_walk_is_far(monkeypatch):
+    from app._06_party import intents
+    from app._06_party.follow import FOLLOW_HOP_START_S
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    class _Open:
+        def is_walkable(self, _x, _y):
+            return True
+
+        def can_step(self, _x1, _y1, _x2, _y2):
+            return True
+
+    def _plan(*_args, **_kwargs):
+        return (2, 0), [(2, 0)], (2, 0)
+
+    monkeypatch.setattr(intents, "_body_moving", lambda: False)
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: _Open())
+    _intent, goal, detail, hop = intents.plan_leader_hop(
+        _Origin(),
+        (8, 0),
+        previous_hop=(2, 0),
+        click_failed=False,
+        hop_age_s=FOLLOW_HOP_START_S,
+        walk_steps=8,
+    )
+    assert goal == (8, 0)
+    assert hop == (5, 0)
+    assert detail == "leader hop 5,0 → 8,0"
+
+
+def test_a_player_on_the_hop_is_stepped_around(monkeypatch):
+    from app._02_state.objects import ObjectStatus, ObjectType, Relationship
+    from app._06_party import intents
+
+    class _Origin:
+        x = 0
+        y = 0
+
+    class _Open:
+        def is_walkable(self, _x, _y):
+            return True
+
+        def can_step(self, _x1, _y1, _x2, _y2):
+            return True
+
+    class _Player:
+        object_type = ObjectType.PLAYER
+        status = ObjectStatus.ALIVE
+        relationship = Relationship.NEUTRAL
+        track_id = 1
+        world_cx = 2
+        world_cy = 0
+        memory_class = "player"
+
+    class _State:
+        def __init__(self):
+            self.objects = self
+
+        def all_objects(self):
+            return [_Player()]
+
+    def _plan(*_args, **_kwargs):
+        return (2, 0), [(2, 0)], (2, 0)
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: _Open())
+    _intent, goal, detail, hop = intents.plan_leader_hop(
+        _Origin(),
+        (8, 0),
+        previous_hop=None,
+        click_failed=False,
+        walk_steps=8,
+        state=_State(),
+    )
+    assert goal == (8, 0)
+    assert hop is not None and hop != (2, 0)
+    assert "player_beside" not in detail
+    assert max(abs(hop[0]), abs(hop[1])) <= 5
+    assert hop[0] >= 0
+
+
 def test_same_delta_keeps_the_hop_and_a_turn_does_not():
     assert follow_hop_still_closes((0, 0), (5, 0), (2, 0)) is True
     assert follow_hop_still_closes((0, 0), (1, 0), (2, 0)) is False
