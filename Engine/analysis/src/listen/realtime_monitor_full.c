@@ -53,7 +53,7 @@ static uint64_t offPosX         = 0x1668640ULL;  // PosXAbs (module-relative, 9.
 static uint64_t offPosY         = 0x1668644ULL;  // PosYAbs (9.30)
 static uint64_t offPosZ         = 0x1668648ULL;  // PosZAbs (9.30)
 static uint64_t offTick         = 0x1668638ULL;  // ServerTick (u64 ms, 9.30)
-static uint64_t offExpPct       = 0x1636BD0ULL;  // ExperiencePct64 (moving f64, 26.10.14.2; twin at -0x10 stays behind)
+static uint64_t offExpPct       = 0x16604C8ULL;  // ExperiencePct64 pointer slot (26.11.10; f64 is at the address it holds)
 static uint64_t offSkills       = 0;             // SkillListBase (stale, zeroed)
 static uint64_t offParty        = 0;             // PartyBase (stale, zeroed)
 static uint64_t offBuffList     = 0;             // BuffListBase (stale, zeroed)
@@ -172,6 +172,33 @@ static int chIsMod(uint64_t a) {
 static uint32_t chVrva(uint64_t o) {
     uint64_t v = rd64(o);
     return chIsMod(v) ? (uint32_t)(v - g_base) : 0;
+}
+
+/* Live percent is the HudCharacterInfo LoadingBar float. ExperiencePct64 on
+   26.11.10 is only a pointer slot; reading those bits as a double prints 0.0%.
+   The slot is a fallback for an older client that still stores the f64 there. */
+static int expPctInRange(double v) {
+    return isfinite(v) && v >= 0.0 && v <= 100.0;
+}
+
+static int readHudExp(double* out);
+
+static double readExpPct(void) {
+    double hud = 0.0;
+    uint64_t bits = 0;
+    double direct = 0.0;
+    if (readHudExp(&hud))
+        return hud;
+    if (!g_base || !offExpPct || !readMem(g_base + offExpPct, &bits, 8))
+        return 0.0;
+    if (chIsMod(bits)) {
+        double followed = 0.0;
+        if (readMem(bits, &followed, 8) && expPctInRange(followed))
+            return followed;
+        return 0.0;
+    }
+    memcpy(&direct, &bits, sizeof(direct));
+    return expPctInRange(direct) ? direct : 0.0;
 }
 
 // Directory of the offsets file. The exe still defaults to the working
@@ -418,7 +445,8 @@ static uint32_t decodeAt(uint64_t obj, uint32_t off, int* ok) {
     return u8 - (k * g_chKMul ^ g_chKXor);
 }
 
-static uint64_t g_cachedChar = 0, g_cachedMap = 0;
+static uint64_t g_cachedChar = 0, g_cachedMap = 0, g_cachedUi = 0;
+static uint64_t g_cachedHudChar = 0;
 
 static uint64_t findSubsystem(uint32_t wantVft, uint64_t* cache) {
     uint64_t mgr, holder, bgn, end, e;
@@ -447,6 +475,101 @@ static uint64_t findCharDataSubsystem(void) {
 
 static uint64_t findMapSubsystem(void) {
     return findSubsystem(g_mapSubVft, &g_cachedMap);
+}
+
+/* HudCharacterInfo LoadingBar. The CharacterData zone slot is null while that
+   window is not linked, but the layout stays in the UISubsystem container and
+   its bar float stays current. Defaults match registry v37. */
+static uint32_t g_uiSubVft = 0x11FA180u;
+static uint32_t g_hudCharVft = 0x1296628u;
+static uint32_t g_loadBarVft = 0x12C3AA8u;
+static uint32_t g_expBarOff = 0xE8u;
+static uint32_t g_expPctOff = 0x704u;
+static uint32_t g_uiContHead[2] = { 0x38u, 0x28u };
+static uint32_t g_uiContNext[2] = { 0x18u, 0x28u };
+static uint32_t g_uiContVal = 0x38u;
+static int g_uiNCont = 2;
+static int g_expRegLoaded = 0;
+
+static int expHeap(uint64_t a) {
+    if (!a) return 0;
+    if (g_validPtrLo && g_validPtrHi)
+        return a >= g_validPtrLo && a < g_validPtrHi;
+    return a >= 0x10000000000ULL && a < 0x80000000000ULL;
+}
+
+static void loadExpRegistry(void) {
+    char path[MAX_PATH];
+    char line[256];
+    FILE* f;
+    if (g_expRegLoaded) return;
+    g_expRegLoaded = 1;
+    pathInDataDir(path, sizeof(path), "LC930_REGISTRY.txt");
+    f = fopen(path, "r");
+    if (!f) return;
+    while (fgets(line, sizeof(line), f)) {
+        char k[80];
+        unsigned v = 0;
+        unsigned h0, n0, h1, n1;
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+        if (!strncmp(line, "UIDLG_CONT=", 11) &&
+            sscanf(line + 11, "%x:%x,%x:%x", &h0, &n0, &h1, &n1) == 4) {
+            g_uiContHead[0] = h0; g_uiContNext[0] = n0;
+            g_uiContHead[1] = h1; g_uiContNext[1] = n1;
+            g_uiNCont = 2;
+            continue;
+        }
+        if (sscanf(line, " %79[^= \t]=%x", k, &v) != 2) continue;
+        if (!strcmp(k, "VFT_UISUBSYSTEM")) g_uiSubVft = v;
+        else if (!strcmp(k, "VFT_HUDCHARINFO")) g_hudCharVft = v;
+        else if (!strcmp(k, "UILAY_HudCharacterInfoLayoutPCImpl")) g_hudCharVft = v;
+        else if (!strcmp(k, "VFT_LOADINGBAR")) g_loadBarVft = v;
+        else if (!strcmp(k, "EXP_HUD_BAR")) g_expBarOff = v;
+        else if (!strcmp(k, "EXP_BAR_PCT")) g_expPctOff = v;
+        else if (!strcmp(k, "UIDLG_CONT_VAL")) g_uiContVal = v;
+    }
+    fclose(f);
+}
+
+static uint64_t findHudCharacterInfo(void) {
+    uint64_t ui;
+    int c;
+    loadExpRegistry();
+    if (g_cachedHudChar && chVrva(g_cachedHudChar) == g_hudCharVft)
+        return g_cachedHudChar;
+    g_cachedHudChar = 0;
+    ui = findSubsystem(g_uiSubVft, &g_cachedUi);
+    if (!ui) return 0;
+    for (c = 0; c < g_uiNCont; c++) {
+        uint64_t node = rd64(ui + g_uiContHead[c]);
+        int n;
+        for (n = 0; n < 256 && expHeap(node); n++) {
+            uint64_t lay = rd64(node + g_uiContVal);
+            uint64_t next;
+            if (expHeap(lay) && chVrva(lay) == g_hudCharVft) {
+                g_cachedHudChar = lay;
+                return lay;
+            }
+            next = rd64(node + g_uiContNext[c]);
+            if (next == node) break;
+            node = next;
+        }
+    }
+    return 0;
+}
+
+static int readHudExp(double* out) {
+    uint64_t lay, bar;
+    float pct = 0.f;
+    if (!out) return 0;
+    lay = findHudCharacterInfo();
+    if (!lay) return 0;
+    bar = rd64(lay + g_expBarOff);
+    if (!expHeap(bar) || chVrva(bar) != g_loadBarVft) return 0;
+    if (!readMem(bar + g_expPctOff, &pct, 4)) return 0;
+    if (!expPctInRange((double)pct)) return 0;
+    *out = (double)pct;
+    return 1;
 }
 
 /* Live current map id: MapSubsystem + MapIdOff (pair at MapIdPairOff).
@@ -637,7 +760,7 @@ static void readPlayer(PlayerData* p) {
             readMem(g_base + offTick, &p->tickMs, 8);
         }
     }
-    readMem(g_base + offExpPct, &p->expPct, 8);
+    p->expPct = readExpPct();
     // Lawful/Weight/MaxWeight/Food from offsets.json are module-relative globals
     // (large offsets >= 0x400000); discovered ones are player-relative (small).
     uint64_t lawfulA = (g_offLawful >= 0) ? (uint64_t)(g_offLawful >= 0x400000 ? g_base + g_offLawful : pb + g_offLawful) : 0;

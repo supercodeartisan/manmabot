@@ -16,8 +16,9 @@ for _path in (_ROOT / "UI", _ROOT / "Engine"):
     if text not in sys.path:
         sys.path.insert(0, text)
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QImage
-from PySide6.QtWidgets import QApplication, QLabel, QMenu, QTableWidget
+from PySide6.QtWidgets import QApplication, QLabel, QMenu, QTableWidget, QToolButton, QWidget
 
 from i18n.strings import ui_strings
 from settings.party_routine import normalize_party_routine
@@ -149,6 +150,7 @@ def test_field_maps_still_show_point_and_keep_world_coordinates() -> None:
             }
         ]
         editor._refresh_list()
+        assert editor.subtitle.text().startswith("구역+으로 사냥 구역을 그리고")
         assert world in _titles(editor)[0]
         assert "분" not in _titles(editor)[0]
         assert editor.save()
@@ -173,6 +175,7 @@ def test_solo_dungeon_keeps_the_original_patrol_button() -> None:
     editor._sync_tools()
     assert editor._tool_buttons["patrol"].isHidden() is False
     assert editor._tool_buttons["patrol_plus"].isHidden() is True
+    assert editor.subtitle.text().startswith("패트롤 배치")
     assert editor._tool_buttons["point"].isHidden() is True
     editor.hide()
 
@@ -215,8 +218,10 @@ def test_party_dungeon_keeps_patrol_and_adds_points(tmp_path: Path) -> None:
     editor._apply_point_stay(2, 8)
 
     titles = "\n".join(_titles(editor))
-    assert "패트롤 1" in titles
-    assert "패트롤 2" in titles
+    assert "패트롤 ·" in titles
+    assert "패트롤 1" not in titles
+    assert "패트롤 2" not in titles
+    assert [entry.get("type") for entry in editor._plan].count("patrol") == 1
     assert "점 1" in titles
     assert "점 2" in titles
     assert "점 3" in titles
@@ -239,7 +244,7 @@ def test_party_dungeon_keeps_patrol_and_adds_points(tmp_path: Path) -> None:
     editor.selected = ("plan", point_row)
     editor._delete_selected()
     assert [entry.get("type") for entry in editor._plan].count("point") == 2
-    assert [entry.get("type") for entry in editor._plan].count("patrol") == 2
+    assert [entry.get("type") for entry in editor._plan].count("patrol") == 1
 
     assert editor.save()
     payload = editor._writes[-1]
@@ -250,16 +255,16 @@ def test_party_dungeon_keeps_patrol_and_adds_points(tmp_path: Path) -> None:
     assert "game_map_id" not in payload["patrol"][0]
     assert "stay_s" not in payload["patrol"][0]
     plan = payload["dungeon_plan"]
-    assert [item["type"] for item in plan] == ["patrol", "point", "point", "patrol"]
+    assert [item["type"] for item in plan] == ["patrol", "point", "point"]
     assert plan[0]["duration_s"] == 1800.0
     assert plan[0]["game_map_id"] == 53
     assert plan[0]["pack_id"] == folder
     assert plan[0]["waypoints"][0] == {"x": 10, "y": 20, "name": payload["patrol"][0]["name"]}
-    assert [item["game_map_id"] for item in plan] == [53, 53, 53, 53]
+    assert plan[0]["waypoints"][1]["x"] == 150
+    assert [item["game_map_id"] for item in plan] == [53, 53, 53]
     assert plan[1]["stay_s"] == 600.0
     assert plan[1]["x"] == 85
     assert plan[2]["stay_s"] == 900.0
-    assert plan[3]["waypoints"][0]["x"] == 150
     assert plan[1]["game_map_id"] != folder
 
     restored = normalize_party_routine(
@@ -286,7 +291,7 @@ def test_party_dungeon_keeps_patrol_and_adds_points(tmp_path: Path) -> None:
     )
     reopened._refresh_list()
     again = "\n".join(_titles(reopened))
-    assert "패트롤 1" in again and "패트롤 2" in again
+    assert "패트롤 ·" in again and "패트롤 2" not in again
     assert "점 1" in again and "점 2" in again
     assert "point_" not in again
     assert reopened._plan[0]["duration_s"] == 1800.0
@@ -306,7 +311,7 @@ def test_legacy_patrol_reloads_as_one_route_without_a_new_document(tmp_path: Pat
     )
     editor._refresh_list()
     titles = "\n".join(_titles(editor))
-    assert "패트롤 1" in titles
+    assert "패트롤 ·" in titles
     assert "45분" in titles
     assert "길" in titles
     assert "duration_s" not in editor._plan[0]
@@ -338,7 +343,7 @@ def test_previous_point_only_save_loads_as_stationary_points(tmp_path: Path) -> 
     )
     editor._refresh_list()
     titles = "\n".join(_titles(editor))
-    assert "패트롤 1" in titles
+    assert "패트롤 ·" in titles
     assert "점 1" in titles
     assert "point_1" not in titles
     assert editor._plan[1]["stay_s"] == 480
@@ -582,19 +587,23 @@ def test_legacy_route_survives_points_edits_and_reload(tmp_path: Path) -> None:
     assert payload["patrol"] == [
         {"x": 70, "y": 80, "name": "mid_3"},
         {"x": 40, "y": 50, "name": "mid_2"},
+        {"x": 150, "y": 160, "name": "mid_3"},
     ]
     assert [item["type"] for item in payload["dungeon_plan"]] == [
         "patrol",
         "point",
-        "patrol",
         "point",
     ]
     assert payload["dungeon_plan"][0]["duration_s"] == 1500.0
     assert payload["dungeon_plan"][0]["waypoints"] == payload["patrol"]
+    assert payload["dungeon_plan"][0]["waypoints"][-1] == {
+        "x": 150,
+        "y": 160,
+        "name": "mid_3",
+    }
     assert payload["dungeon_plan"][1]["stay_s"] == 720.0
     assert (payload["dungeon_plan"][1]["x"], payload["dungeon_plan"][1]["y"]) == (110, 120)
-    assert payload["dungeon_plan"][2]["waypoints"] == [{"x": 150, "y": 160, "name": "mid_1"}]
-    assert payload["dungeon_plan"][3]["stay_s"] == 540.0
+    assert payload["dungeon_plan"][2]["stay_s"] == 540.0
     assert {item["game_map_id"] for item in payload["dungeon_plan"]} == {53}
 
     reopened = _party_editor(folder, editor._pack)
@@ -606,12 +615,19 @@ def test_legacy_route_survives_points_edits_and_reload(tmp_path: Path) -> None:
         }
     )
     reopened._refresh_list()
-    titles = [line.split("  ")[0] for line in _titles(reopened)]
-    assert titles == ["패트롤 1", "중간점 3", "중간점 2", "점 1", "패트롤 2", "점 2"]
+    titles = _titles(reopened)
+    assert "패트롤 ·" in titles[0]
+    assert "중간점 3" in titles[1]
+    assert "중간점 2" in titles[2]
+    assert "중간점 3" in titles[3]
+    assert "점 1" in titles[4]
+    assert "점 2" in titles[5]
+    assert all("패트롤 2" not in line for line in titles)
     assert "point_" not in titles
     assert reopened._plan[0]["waypoints"] == [
         (70, 80, "mid_3"),
         (40, 50, "mid_2"),
+        (150, 160, "mid_3"),
     ]
     assert reopened._plan[0]["duration_s"] == 1500.0
     assert reopened._routine_minutes == 80
@@ -620,4 +636,233 @@ def test_legacy_route_survives_points_edits_and_reload(tmp_path: Path) -> None:
     _both_dungeon_buttons(reopened)
     editor.hide()
     reopened.hide()
+
+
+def test_hunt_plan_tree_keeps_one_patrol_and_the_saved_order(tmp_path: Path) -> None:
+    from PySide6.QtWidgets import QDialog
+
+    from app._06_party.leader_schedule import PartyLeaderSchedule
+
+    folder = "giran_dungeon_F1"
+    pack = _pack(tmp_path / folder, folder, "53", 32640, 32640)
+    editor = _party_editor(folder, pack)
+    dialog = QDialog()
+    editor.setParent(dialog)
+    editor._sync_tools()
+    assert dialog.windowTitle() == "던전 사냥 계획 편집기"
+    assert editor._area_title() == "던전 사냥 계획 편집기"
+    assert editor.subtitle.text().startswith("경유점+으로 패트롤 경로를 추가하고")
+    assert ui_strings("en").editor_hint_dungeon_plan.startswith("Use Waypoint +")
+    assert ui_strings("zh").editor_hint_dungeon_plan.startswith("使用途经点+")
+    assert ui_strings("en").editor_hint_field.startswith("Use Area +")
+    assert ui_strings("zh").editor_hint_field.startswith("使用区域+")
+    assert editor._tool_buttons["patrol_plus"].text() == "경유점 +"
+    assert editor._tool_buttons["point"].text() == "점 +"
+
+    editor.tool = "point"
+    editor._place_stationary(10, 20)
+    editor._on_patrol_plus()
+    for index in range(6):
+        editor._drop_patrol_at(30 + index * 8, 40)
+    editor._on_patrol_plus()
+    editor._on_patrol_plus()
+    editor.tool = "point"
+    editor._place_stationary(90, 100)
+    editor._place_stationary(110, 120)
+    assert [entry["type"] for entry in editor._plan] == ["point", "patrol", "point", "point"]
+    assert len(editor._plan[1]["waypoints"]) == 6
+    editor._apply_point_stay(0, 10)
+    editor._apply_route_duration(1, 60)
+    editor._apply_point_stay(1, 10)
+    editor._apply_point_stay(2, 10)
+    assert editor._apply_world_to_point(editor.farms[0], "32650", "32660")
+
+    titles = _titles(editor)
+    assert titles[0].startswith("점 1 · 10분")
+    assert "●" not in titles[0] and "◆" not in titles[0]
+    assert titles[1].startswith("패트롤 · 60분 · 경유점 6개")
+    assert "◆" not in titles[1] and "●" not in titles[1]
+    assert [line for line in titles if "├─" in line or "└─" in line] == [
+        "├─ 중간점 1",
+        "├─ 중간점 2",
+        "├─ 중간점 3",
+        "├─ 중간점 4",
+        "├─ 중간점 5",
+        "└─ 중간점 6",
+    ]
+    assert titles[8].startswith("점 2 · 10분")
+    assert titles[9].startswith("점 3 · 10분")
+
+    def _row(index: int):
+        return editor.item_list.itemWidget(editor.item_list.item(index))
+
+    editor.item_list.resize(360, 420)
+    editor.item_list.show()
+    _app().processEvents()
+    point_row = _row(0)
+    patrol_row = _row(1)
+    waypoint_row = _row(2)
+
+    def _title_x(row):
+        label = row.findChild(QLabel, "row_title")
+        return label.mapTo(editor.item_list.viewport(), label.rect().topLeft()).x()
+
+    assert point_row.findChild(QToolButton) is None
+    gap = point_row.findChild(QWidget, "plan_fold_gap")
+    fold = patrol_row.findChild(QToolButton, "plan_fold")
+    assert gap is not None and fold is not None
+    assert gap.width() == fold.width() == 18
+    assert fold.text() == "⌄"
+    assert "background: transparent" in fold.styleSheet()
+    assert "border: none" in fold.styleSheet()
+    assert _title_x(point_row) == _title_x(patrol_row)
+    assert _title_x(waypoint_row) > _title_x(patrol_row)
+    fold.click()
+    _app().processEvents()
+    folded = _titles(editor)
+    assert folded == [
+        titles[0],
+        titles[1],
+        titles[8],
+        titles[9],
+    ]
+    assert "60분" in folded[1] and "경유점 6개" in folded[1]
+    assert "중간점" not in "\n".join(folded)
+    closed = _row(1).findChild(QToolButton, "plan_fold")
+    assert closed is not None and closed.text() == "›"
+    closed.click()
+    _app().processEvents()
+    assert "중간점 1" in "\n".join(_titles(editor))
+
+    editor._nudge_at("plan", 1, -1)
+    assert [entry["type"] for entry in editor._plan] == ["patrol", "point", "point", "point"]
+    assert len(editor._plan[0]["waypoints"]) == 6
+    editor._nudge_waypoint(0, 5, -1)
+    names = [point[2] for point in editor._plan[0]["waypoints"]]
+    assert names == ["mid_1", "mid_2", "mid_3", "mid_4", "mid_6", "mid_5"]
+    assert [entry["type"] for entry in editor._plan] == ["patrol", "point", "point", "point"]
+
+    assert editor.save()
+    payload = editor._writes[-1]
+    assert [item["type"] for item in payload["dungeon_plan"]] == [
+        "patrol",
+        "point",
+        "point",
+        "point",
+    ]
+    assert payload["dungeon_plan"][0]["duration_s"] == 3600.0
+    assert len(payload["dungeon_plan"][0]["waypoints"]) == 6
+    assert payload["dungeon_plan"][1]["stay_s"] == 600.0
+    assert (payload["dungeon_plan"][1]["x"], payload["dungeon_plan"][1]["y"]) == (10, 20)
+    assert payload["dungeon_plan"][0]["pack_id"] == folder
+    assert payload["dungeon_plan"][0]["game_map_id"] == 53
+
+    schedule = PartyLeaderSchedule(
+        [
+            {
+                "id": "row",
+                "map_id": folder,
+                "duration_minutes": 60,
+                "areas": [],
+                "patrol": payload["patrol"],
+                "dungeon_plan": payload["dungeon_plan"],
+            }
+        ]
+    )
+    assert [entry["type"] for entry in schedule.dungeon_plan()] == [
+        "patrol",
+        "point",
+        "point",
+        "point",
+    ]
+    assert schedule.dungeon_plan()[0]["waypoints"][4]["name"] == "mid_6"
+
+    stored = {
+        "patrol": payload["patrol"],
+        "dungeon_plan": [
+            {
+                "type": "point",
+                "id": "point_1",
+                "name": "point_1",
+                "x": 1,
+                "y": 2,
+                "stay_s": 600,
+                "pack_id": folder,
+                "game_map_id": 53,
+            },
+            {
+                "type": "patrol",
+                "id": "patrol_1",
+                "duration_s": 1500,
+                "pack_id": folder,
+                "game_map_id": 53,
+                "waypoints": [
+                    {"x": 3, "y": 4, "name": "mid_1"},
+                    {"x": 5, "y": 6, "name": "mid_2"},
+                ],
+            },
+            {
+                "type": "patrol",
+                "id": "patrol_2",
+                "duration_s": 900,
+                "pack_id": folder,
+                "game_map_id": 53,
+                "waypoints": [{"x": 7, "y": 8, "name": "mid_1"}],
+            },
+            {
+                "type": "point",
+                "id": "point_2",
+                "name": "point_2",
+                "x": 9,
+                "y": 10,
+                "stay_s": 300,
+                "pack_id": folder,
+                "game_map_id": 53,
+            },
+        ],
+    }
+    editor._apply_loaded_plan(stored)
+    editor._refresh_list()
+    loaded = _titles(editor)
+    assert "점 1" in loaded[0]
+    assert "패트롤 (patrol_1)" in loaded[1]
+    assert "패트롤 (patrol_2)" in loaded[4]
+    assert "점 2" in loaded[-1]
+    assert [entry["id"] for entry in editor._plan] == [
+        "point_1",
+        "patrol_1",
+        "patrol_2",
+        "point_2",
+    ]
+    editor._on_patrol_plus()
+    assert [entry["id"] for entry in editor._plan] == [
+        "point_1",
+        "patrol_1",
+        "patrol_2",
+        "point_2",
+    ]
+    editor.hide()
+    dialog.close()
+
+
+def test_solo_and_field_editors_keep_their_own_lists(tmp_path: Path) -> None:
+    solo = MapEditorWidget(strings=ui_strings("ko"), can_edit=lambda: True, language="ko")
+    solo._dungeon = True
+    solo._sync_tools()
+    assert solo._area_title() == "패트롤 편집"
+    assert solo._tool_buttons["patrol"].text() == "패트롤 배치"
+    assert solo._tool_buttons["patrol_plus"].isHidden() is True
+    solo.patrol = [(1, 2, "mid_1"), (3, 4, "mid_2")]
+    solo._refresh_list()
+    assert _titles(solo) == ["중간점 1", "중간점 2"]
+    solo.hide()
+
+    field = _field_editor("mainland", _pack(tmp_path / "mainland", "mainland", "4", 32448, 32128))
+    field.farms = [
+        {"name": "yard", "shape": "area", "region": "", "x0": 1, "y0": 2, "x1": 3, "y1": 4}
+    ]
+    field._refresh_list()
+    assert "구역" in _titles(field)[0]
+    assert "패트롤" not in _titles(field)[0]
+    field.hide()
 
