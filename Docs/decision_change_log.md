@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-11 — an open walk restarts without the gate land wait
+
+Intent: The 24-tile land wait runs only on the first start of a walk step, while the step is still ready. That wait exists because a gate can write the new map id before the new xy. Once the walk is open, a supply hold or a supply pickup may clear or replace nav_goal. The restart opens travel from the live tile to the same destination and does not compare the body to the step's original start cell.
+Shared: `_start_walk` and `_tick_walk`. Supply pickup, follow hops, the 13-second confined escape, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: a world-nav walk that is already in progress when nav_goal is cleared or replaced. The first start after a gate still waits until xy is within 24 tiles of the planned start cell.
+Consent: user ("fix it" after the land-wait restart plan).
+Result: `Engine/app/_04_decision/tests/test_walk_supply_arrival.py`. Not run in game.
+
 ## 2026-11-11 — a supply pause does not finish the leader's walk
 
 Intent: A party schedule walk finishes when the body is on the planned cell, or on the snapped walk tile that walk still owns. A supply hold that clears the travel goal, and a supply pickup that writes the pile tile, restart that walk. While a drop claim still names the leader, that tick stays on the pickup until the pile has been seen and has left the ground. The seen pile then clears the pickup travel so the hunt does not inherit it.

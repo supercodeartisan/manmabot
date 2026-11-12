@@ -551,7 +551,15 @@ class WorldNavSession:
         self.phase = "ready"
         return Status.SUCCESS
 
-    def _start_walk(self, step: Any, pose: Any, blackboard: Any, state: Any) -> Status:
+    def _start_walk(
+        self,
+        step: Any,
+        pose: Any,
+        blackboard: Any,
+        state: Any,
+        *,
+        wait_for_land: bool = True,
+    ) -> Status:
         det = step.detail
         to = det["to"]
         map_id = int(to["mapId"])
@@ -562,8 +570,10 @@ class WorldNavSession:
             return Status.FAILURE
         # After a gate, mapId can update a tick before absolute xy. Walking from
         # the old cell on the new pack yields no_path (e.g. TI 32477 on F1).
+        # That wait is only the first start of this step. An open walk whose
+        # goal was cleared by a supply pickup restarts from the live tile.
         frm = det.get("from")
-        if isinstance(frm, dict):
+        if wait_for_land and isinstance(frm, dict):
             try:
                 fx, fy = int(frm["x"]), int(frm["y"])
             except (TypeError, ValueError):
@@ -655,9 +665,11 @@ class WorldNavSession:
         if self._walk_reached(pose, blackboard, gx, gy):
             return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
         # Supply hold clears the goal. Supply pickup writes the pile tile.
-        # Either one used to finish this step while the body was still at the meet.
+        # The walk is already open, so the restart does not wait on the gate cell.
         if not self._walk_tile_held(blackboard):
-            return self._start_walk(step, pose, blackboard, state)
+            return self._start_walk(
+                step, pose, blackboard, state, wait_for_land=False
+            )
         ok = emit_travel_hop(
             blackboard, reason="world nav walk", priority=0.6, state=state
         )
@@ -672,7 +684,9 @@ class WorldNavSession:
             ):
                 return self._finish_walk_step(blackboard, map_id=map_id, gx=gx, gy=gy)
             if not self._walk_tile_held(blackboard):
-                return self._start_walk(step, pose, blackboard, state)
+                return self._start_walk(
+                    step, pose, blackboard, state, wait_for_land=False
+                )
             tokens = api.state_tokens()
             api.emit_state(tokens.WALK_FAIL, map=map_id, x=gx, y=gy, error=miss)
             blackboard.scratch.pop(SCRATCH_WORLD_NAV_SHORT_WALK, None)
