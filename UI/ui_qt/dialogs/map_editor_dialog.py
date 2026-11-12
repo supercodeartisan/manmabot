@@ -6,7 +6,7 @@ import sys
 import time
 from typing import Callable, Optional
 
-from PySide6.QtCore import QEvent, QSize, Qt, QPointF, QRectF, QTimer
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QPointF, QRectF, QTimer
 from PySide6.QtGui import (
     QCloseEvent,
     QColor,
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QAbstractButton,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMenu,
@@ -54,6 +55,21 @@ from ui_qt.dialogs.mainland_region_overlay import (
     MainlandRegionOverlay,
     build_mainland_overlay,
     draw_visible_image,
+)
+from app._03_world.space.tile_world import (
+    PackAxes,
+    axes_from_pack,
+    clamp_popup_top_left,
+    parse_world_int,
+    raw_map_id_from_pack,
+)
+from settings.farm_schedule import (
+    DEFAULT_FARM_STAY_S,
+    MAX_FARM_STAY_MIN,
+    MIN_FARM_STAY_MIN,
+    clamp_farm_stay_s,
+    stay_minutes_from_s,
+    stay_s_from_minutes,
 )
 from ui_qt.theme import tokens
 
@@ -203,7 +219,7 @@ class _OrderRow(QWidget):
             )
             lay.addWidget(btn)
         self.setMinimumHeight(24)
-        if kind == "patrol":
+        if kind in ("patrol", "plan"):
             self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.customContextMenuRequested.connect(self._open_patrol_menu)
         if selected:
@@ -214,7 +230,11 @@ class _OrderRow(QWidget):
 
     def _open_patrol_menu(self, pos) -> None:
         idx = self._idx
+        kind = self._kind
         global_pos = self.mapToGlobal(pos)
+        if kind == "plan":
+            QTimer.singleShot(0, lambda: self._editor._plan_row_menu(idx, global_pos))
+            return
         QTimer.singleShot(0, lambda: self._editor._patrol_row_menu(idx, global_pos))
 
     def mousePressEvent(self, event) -> None:
@@ -222,6 +242,91 @@ class _OrderRow(QWidget):
             kind, idx = self._kind, self._idx
             QTimer.singleShot(0, lambda: self._editor._select(kind, idx))
         super().mousePressEvent(event)
+
+
+class _PointWorldEditor(QDialog):
+    """Small world-coordinate editor. Its top-left sits on the map point."""
+
+    def __init__(self, editor: "MapEditorWidget", farm: dict) -> None:
+        super().__init__(editor)
+        self._editor = editor
+        self.farm = farm
+        self.setWindowFlags(
+            Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+        axes = editor._display_axes()
+        world_x, world_y = (0, 0)
+        if axes is not None:
+            world_x, world_y = axes.tile_to_world(int(farm["x"]), int(farm["y"]))
+        row = QHBoxLayout(self)
+        row.setContentsMargins(6, 6, 6, 6)
+        row.setSpacing(4)
+        self.x_edit = QLineEdit(str(world_x))
+        self.y_edit = QLineEdit(str(world_y))
+        digit_width = self.fontMetrics().horizontalAdvance("00000") + 16
+        for edit in (self.x_edit, self.y_edit):
+            edit.setFixedWidth(digit_width)
+            edit.setMaxLength(7)
+        row.addWidget(QLabel("X"))
+        row.addWidget(self.x_edit)
+        row.addWidget(QLabel("Y"))
+        row.addWidget(self.y_edit)
+        store = QPushButton(editor.s.coord_store)
+        cancel = QPushButton(editor.s.coord_cancel)
+        store.setObjectName("coord_store")
+        cancel.setObjectName("coord_cancel")
+        store.clicked.connect(self._store)
+        cancel.clicked.connect(self._cancel)
+        store.setDefault(True)
+        store.setAutoDefault(True)
+        row.addWidget(store)
+        row.addWidget(cancel)
+        self.setStyleSheet(
+            "QDialog { background: #ffffff; border: 1px solid #94a3b8; }"
+        )
+        for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            shortcut = QShortcut(QKeySequence(key), self)
+            shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(self._store)
+        escape = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
+        escape.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        escape.activated.connect(self._cancel)
+        self.x_edit.installEventFilter(self)
+        self.y_edit.installEventFilter(self)
+        self.x_edit.setFocus()
+        self.x_edit.selectAll()
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802
+        if event.type() == QEvent.Type.KeyPress and watched in (self.x_edit, self.y_edit):
+            if event.key() == Qt.Key.Key_Escape:
+                self._cancel()
+                return True
+            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                self._store()
+                return True
+        return super().eventFilter(watched, event)
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._store()
+            event.accept()
+            return
+        if event.key() == Qt.Key.Key_Escape:
+            self._cancel()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def _store(self) -> None:
+        if self._editor._coord_popup is not self:
+            return
+        self._editor._apply_world_to_point(self.farm, self.x_edit.text(), self.y_edit.text())
+
+    def _cancel(self) -> None:
+        if self._editor._coord_popup is not self:
+            return
+        self._editor._close_coord_popup()
 
 
 class MapEditorWidget(QWidget):
@@ -263,6 +368,12 @@ class MapEditorWidget(QWidget):
         self.farms: list[dict] = []
         self.patrol: list[tuple[int, int, str]] = []
         self._patrol_paths: list[list[tuple[int, int]]] = []
+        # Party dungeon: routes and stationary points in list order.
+        # Solo dungeon keeps ``patrol`` only. The active route's waypoint
+        # list is ``self.patrol`` itself.
+        self._plan: list[dict] = []
+        self._active_route_id: str | None = None
+        self._routine_minutes: int | None = None
         self.selected: tuple[str, int] | None = None
         self.tool = "select"
         self._drag: Handle = None
@@ -275,6 +386,8 @@ class MapEditorWidget(QWidget):
         self._defer_gen = 0
         self._image_loading = True
         self._live_nav: tuple[int, int] | None = None
+        self._live_world: tuple[int, int] | None = None
+        self._coord_popup: _PointWorldEditor | None = None
         self._live_timer: QTimer | None = None
         self._live_anim_timer: QTimer | None = None
         self._dirty = False
@@ -315,6 +428,10 @@ class MapEditorWidget(QWidget):
             tools.addWidget(btn)
             self._tool_buttons[key] = btn
         tools.addStretch(1)
+        patrol_plus = QPushButton(self.s.tool_patrol_plus)
+        patrol_plus.clicked.connect(self._on_patrol_plus)
+        tools.addWidget(patrol_plus)
+        self._tool_buttons["patrol_plus"] = patrol_plus
         area_btn = QPushButton(self._shape_label("area") + " +")
         point_btn = QPushButton(self._shape_label("point") + " +")
         area_btn.clicked.connect(lambda: self._set_tool("area"))
@@ -354,6 +471,7 @@ class MapEditorWidget(QWidget):
         self.item_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.item_list.setMinimumWidth(230)
         self.item_list.currentRowChanged.connect(self._on_list_row)
+        self.item_list.itemDoubleClicked.connect(self._on_list_double)
         self.item_list.viewport().installEventFilter(self)
         side_layout.addWidget(self.item_list, stretch=1)
         split.addWidget(side)
@@ -407,27 +525,46 @@ class MapEditorWidget(QWidget):
         self.status.setText(self._hint())
 
     def _sync_tools(self) -> None:
+        """Button visibility follows the editor kind, not the active tool.
+
+        Party dungeon (``plan``): 패트롤 + and 점 + stay visible together.
+        Solo dungeon: the original 패트롤 배치 button, no 점 +.
+        Field map: 구역 + and 점 +, no patrol button.
+        ``self.tool`` only changes which of those buttons is highlighted.
+        """
         patrol = self._tool_buttons.get("patrol")
+        plan = self._dungeon_plan_mode()
+        show_patrol = self._dungeon and not plan
         if patrol is not None:
-            patrol.setVisible(self._dungeon)
+            patrol.setVisible(show_patrol)
             patrol.setStyleSheet(
                 f"background: {tokens.ACCENT}; color: white;"
-                if self._dungeon and self.tool == "patrol"
+                if show_patrol and self.tool == "patrol"
+                else ""
+            )
+        patrol_plus = self._tool_buttons.get("patrol_plus")
+        if patrol_plus is not None:
+            patrol_plus.setVisible(plan)
+            patrol_plus.setStyleSheet(
+                f"background: {tokens.ACCENT}; color: white;"
+                if plan and self.tool == "patrol"
                 else ""
             )
         spot = self._spot_tools_active()
+        points = self._point_tools_active()
         for key in ("area", "point"):
             button = self._tool_buttons.get(key)
             if button is None:
                 continue
-            button.setVisible(spot)
+            visible = points if key == "point" else spot
+            button.setVisible(visible)
             button.setStyleSheet(
                 f"background: {tokens.ACCENT}; color: white;"
-                if spot and self.tool == key
+                if visible and self.tool == key
                 else ""
             )
         if hasattr(self, "_list_side"):
-            self._list_side.setMinimumWidth(360 if spot else 250)
+            self._list_side.setMinimumWidth(360 if spot or points else 250)
         if hasattr(self, "list_title"):
             self.list_title.setText(self._area_title())
         if hasattr(self, "title_label"):
@@ -484,13 +621,18 @@ class MapEditorWidget(QWidget):
         return terrain
 
     def load_map(self, map_id: str, *, dungeon: bool | None = None) -> None:
+        self._close_coord_popup()
         self.map_id = str(map_id or "")
         self._pack = load_map_pack_safe(self.map_id)
         self.selected = None
         self.farms = []
         self.patrol = []
         self._patrol_paths = []
+        self._plan = []
+        self._active_route_id = None
+        self._routine_minutes = None
         self._live_nav = None
+        self._live_world = None
         self._terrain = None
         self._base = None
         self._region_overlay = None
@@ -556,7 +698,9 @@ class MapEditorWidget(QWidget):
         else:
             self.status.setText(self.s.map_missing_short)
         bound = self._bound_coords()
-        if not self._dungeon:
+        if self._dungeon_plan_mode():
+            self._apply_loaded_plan(bound)
+        elif not self._dungeon:
             try:
                 if bound is not None:
                     self.farms = self._farms_from_bound(bound)
@@ -564,10 +708,11 @@ class MapEditorWidget(QWidget):
                     self._load_farms()
             except Exception:
                 self.farms = []
-        if self._dungeon and bound is not None:
+            self.patrol = []
+        elif bound is not None:
             self.patrol = self._patrol_from_bound(bound)
         else:
-            self.patrol = list_patrol_entries(self.map_id) if self._dungeon else []
+            self.patrol = list_patrol_entries(self.map_id)
         self._image_loading = False
         self.status.setText(
             self.s.map_missing_short if self._base is None else self._hint()
@@ -658,13 +803,216 @@ class MapEditorWidget(QWidget):
             return "Area" if kind == "area" else "Point"
         return "구역" if kind == "area" else "점"
 
+    def _point_tools_active(self) -> bool:
+        """Party hunt points. Field maps and dungeon maps both use this.
+
+        Solo leaves ``coord_save`` unset, so a solo dungeon stays on patrol.
+        """
+        return self._coord_save is not None and self._area_kind == "farm"
+
     def _spot_tools_active(self) -> bool:
-        """Party hunt editor: rectangles and stake points. Solo stays rectangles."""
-        return (
-            self._coord_save is not None
-            and self._area_kind == "farm"
-            and not self._dungeon
+        """Party field hunt editor: rectangles and stake points."""
+        return self._point_tools_active() and not self._dungeon
+
+    def _dungeon_plan_mode(self) -> bool:
+        """Party dungeon: patrol routes and stationary points together.
+
+        Solo dungeons leave ``coord_save`` unset and keep the single patrol list.
+        """
+        return self._dungeon and self._point_tools_active()
+
+    def _active_route(self) -> dict | None:
+        for entry in self._plan:
+            if entry.get("type") == "patrol" and entry.get("waypoints") is self.patrol:
+                return entry
+        for entry in self._plan:
+            if entry.get("type") == "patrol" and entry.get("id") == self._active_route_id:
+                self.patrol = entry["waypoints"]
+                return entry
+        return None
+
+    def _next_plan_id(self, prefix: str) -> str:
+        taken = {str(entry.get("id") or "") for entry in self._plan}
+        number = 1
+        while f"{prefix}_{number}" in taken:
+            number += 1
+        return f"{prefix}_{number}"
+
+    def _sync_point_farms(self) -> None:
+        self.farms = [entry for entry in self._plan if entry.get("type") == "point"]
+
+    def _routine_default_minutes(self) -> int:
+        if self._routine_minutes is not None:
+            return stay_minutes_from_s(clamp_farm_stay_s(int(self._routine_minutes) * 60))
+        return stay_minutes_from_s(DEFAULT_FARM_STAY_S)
+
+    def _route_minutes(self, route: dict) -> int:
+        if "duration_s" in route:
+            return stay_minutes_from_s(clamp_farm_stay_s(route.get("duration_s")))
+        return self._routine_default_minutes()
+
+    def _on_patrol_plus(self) -> None:
+        """Patrol tool. A second click while it is already active starts a new route."""
+        if not self._can_edit():
+            self.status.setText(self.s.editor_readonly)
+            return
+        if self._dungeon_plan_mode() and self.tool == "patrol":
+            self._begin_patrol_route()
+            return
+        self._set_tool("patrol")
+        if self._dungeon_plan_mode() and self._active_route() is None:
+            self._begin_patrol_route()
+
+    def _begin_patrol_route(self) -> dict:
+        route = {
+            "type": "patrol",
+            "id": self._next_plan_id("patrol"),
+            "waypoints": [],
+        }
+        self._plan.append(route)
+        self._active_route_id = route["id"]
+        self.patrol = route["waypoints"]
+        self._recompute_patrol_paths()
+        self._mark_dirty()
+        self._select("plan", len(self._plan) - 1)
+        return route
+
+    def _use_route(self, route: dict) -> None:
+        if route.get("waypoints") is self.patrol:
+            self._active_route_id = str(route.get("id") or "")
+            return
+        self.patrol = route["waypoints"]
+        self._active_route_id = str(route.get("id") or "")
+        self._recompute_patrol_paths()
+
+    def _focus_plan(self, plan_index: int) -> None:
+        if not (0 <= plan_index < len(self._plan)):
+            return
+        entry = self._plan[plan_index]
+        if entry.get("type") == "patrol":
+            self._use_route(entry)
+        self._select("plan", plan_index)
+
+    def _apply_loaded_plan(self, bound: dict | None) -> None:
+        from settings.party_routine import dungeon_plan_from_document
+
+        self._routine_minutes = None
+        if isinstance(bound, dict) and bound.get("routine_minutes") is not None:
+            try:
+                self._routine_minutes = int(bound["routine_minutes"])
+            except (TypeError, ValueError):
+                self._routine_minutes = None
+        source = bound if isinstance(bound, dict) else {"patrol": []}
+        if bound is None:
+            source = {
+                "patrol": [
+                    {"x": int(x), "y": int(y), "name": str(name)}
+                    for x, y, name in list_patrol_entries(self.map_id)
+                ]
+            }
+        self._plan = []
+        self.patrol = []
+        self._active_route_id = None
+        for item in dungeon_plan_from_document(source):
+            if item.get("type") == "patrol":
+                waypoints = [
+                    (int(point["x"]), int(point["y"]), str(point.get("name") or ""))
+                    for point in item.get("waypoints") or []
+                    if isinstance(point, dict)
+                ]
+                route = {
+                    "type": "patrol",
+                    "id": str(item.get("id") or self._next_plan_id("patrol")),
+                    "waypoints": waypoints,
+                }
+                if "duration_s" in item:
+                    route["duration_s"] = item["duration_s"]
+                if "game_map_id" in item:
+                    route["game_map_id"] = item["game_map_id"]
+                if "pack_id" in item:
+                    route["pack_id"] = item["pack_id"]
+                self._plan.append(route)
+                if self._active_route_id is None:
+                    self._active_route_id = route["id"]
+                    self.patrol = route["waypoints"]
+                continue
+            point = {
+                "type": "point",
+                "shape": "point",
+                "id": str(item.get("id") or self._next_plan_id("point")),
+                "name": str(item.get("name") or item.get("id") or ""),
+                "region": "",
+                "x": int(item["x"]),
+                "y": int(item["y"]),
+            }
+            if "stay_s" in item:
+                point["stay_s"] = item["stay_s"]
+            if "game_map_id" in item:
+                point["game_map_id"] = item["game_map_id"]
+            if "pack_id" in item:
+                point["pack_id"] = item["pack_id"]
+            self._plan.append(point)
+        self._sync_point_farms()
+
+    def _plan_identity(self, entry: dict) -> dict:
+        """Pack folder plus this folder's raw_map. Never the folder name as a map id."""
+        record = dict(entry)
+        pack_id = str(self.map_id or getattr(self._pack, "id", "") or "").strip()
+        if pack_id:
+            record["pack_id"] = pack_id
+        game_id = raw_map_id_from_pack(self._pack)
+        if game_id is None and "game_map_id" in entry:
+            try:
+                stored = int(entry["game_map_id"])
+            except (TypeError, ValueError):
+                stored = None
+            if stored is not None and not isinstance(entry.get("game_map_id"), bool):
+                game_id = stored
+        if game_id is not None:
+            record["game_map_id"] = game_id
+        else:
+            record.pop("game_map_id", None)
+        return record
+
+    def _dungeon_save_payload(self) -> dict:
+        from settings.party_routine import dungeon_plan_extends_legacy
+
+        routes_and_points: list[dict] = []
+        for entry in self._plan:
+            if entry.get("type") == "patrol":
+                item: dict = {
+                    "type": "patrol",
+                    "id": str(entry.get("id") or ""),
+                    "waypoints": [
+                        {"x": int(x), "y": int(y), "name": str(name)}
+                        for x, y, name in entry.get("waypoints") or []
+                    ],
+                }
+                if "duration_s" in entry:
+                    item["duration_s"] = clamp_farm_stay_s(entry.get("duration_s"))
+                routes_and_points.append(self._plan_identity(item))
+                continue
+            if entry.get("type") != "point":
+                continue
+            item = {
+                "type": "point",
+                "id": str(entry.get("id") or ""),
+                "name": str(entry.get("name") or entry.get("id") or ""),
+                "x": int(entry["x"]),
+                "y": int(entry["y"]),
+            }
+            if "stay_s" in entry:
+                item["stay_s"] = clamp_farm_stay_s(entry.get("stay_s"))
+            routes_and_points.append(self._plan_identity(item))
+        first = next(
+            (item for item in routes_and_points if item.get("type") == "patrol"),
+            None,
         )
+        legacy = list(first.get("waypoints") or []) if first is not None else []
+        payload: dict = {"areas": [], "patrol": legacy}
+        if dungeon_plan_extends_legacy(routes_and_points):
+            payload["dungeon_plan"] = routes_and_points
+        return payload
 
     def _is_point(self, farm: dict) -> bool:
         return str(farm.get("shape") or "") == "point"
@@ -717,44 +1065,118 @@ class MapEditorWidget(QWidget):
                 continue
         return points
 
+    def _points_from_patrol(self, raw) -> list[dict]:
+        """Dungeon hunt points kept as the same point marks the field editor uses."""
+        farms: list[dict] = []
+        if not isinstance(raw, list):
+            return farms
+        for index, item in enumerate(raw):
+            if not isinstance(item, dict):
+                continue
+            try:
+                x = int(item["x"])
+                y = int(item["y"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            farm: dict = {
+                "shape": "point",
+                "name": str(item.get("name") or f"point_{index + 1}"),
+                "region": "",
+                "x": x,
+                "y": y,
+            }
+            if "stay_s" in item:
+                farm["stay_s"] = clamp_farm_stay_s(item.get("stay_s"))
+            if "game_map_id" in item:
+                try:
+                    game_id = int(item["game_map_id"])
+                except (TypeError, ValueError):
+                    game_id = None
+                if game_id is not None and not isinstance(item["game_map_id"], bool):
+                    farm["game_map_id"] = game_id
+            farms.append(farm)
+        return farms
+
+    def _patrol_record(self, farm: dict) -> dict:
+        """One dungeon point in the party patrol list.
+
+        ``x``/``y`` stay nav tiles. ``game_map_id`` is this folder's ``raw_map``.
+        ``pack_id`` is the folder the editor opened. A missing ``stay_s`` is
+        left missing so an untouched legacy point is not rewritten.
+        """
+        record: dict = {
+            "x": int(farm["x"]),
+            "y": int(farm["y"]),
+            "name": str(farm.get("name") or ""),
+        }
+        pack_id = str(self.map_id or getattr(self._pack, "id", "") or "").strip()
+        if pack_id:
+            record["pack_id"] = pack_id
+        if "stay_s" in farm:
+            record["stay_s"] = clamp_farm_stay_s(farm.get("stay_s"))
+        game_id = raw_map_id_from_pack(self._pack)
+        if game_id is None and "game_map_id" in farm:
+            try:
+                stored = int(farm["game_map_id"])
+            except (TypeError, ValueError):
+                stored = None
+            if stored is not None and not isinstance(farm.get("game_map_id"), bool):
+                game_id = stored
+        if game_id is not None:
+            record["game_map_id"] = game_id
+        return record
+
     def _save_coord_document(self) -> bool:
         """Write overlays to the party routine document. Does not touch map yaml."""
         if self._coord_save is None:
             return False
         try:
-            areas: list[dict] = []
-            for farm in self.farms:
-                if farm.get("_preview"):
-                    continue
-                name = str(farm.get("name") or "").strip() or f"area_{len(areas) + 1}"
-                region = str(farm.get("region") or "")
-                if self._is_point(farm):
-                    areas.append(
-                        {
-                            "name": name,
-                            "shape": "point",
-                            "region": region,
-                            "x": int(farm["x"]),
-                            "y": int(farm["y"]),
-                        }
-                    )
-                else:
-                    areas.append(
-                        {
-                            "name": name,
-                            "shape": "area",
-                            "region": region,
-                            "x0": int(farm["x0"]),
-                            "y0": int(farm["y0"]),
-                            "x1": int(farm["x1"]),
-                            "y1": int(farm["y1"]),
-                        }
-                    )
-            patrol = [
-                {"x": int(x), "y": int(y), "name": str(name)}
-                for x, y, name in self.patrol
-            ]
-            self._coord_save({"areas": areas, "patrol": patrol})
+            if self._dungeon_plan_mode():
+                payload = self._dungeon_save_payload()
+                areas = payload["areas"]
+                patrol = payload["patrol"]
+                extra = (
+                    {"dungeon_plan": payload["dungeon_plan"]}
+                    if "dungeon_plan" in payload
+                    else {}
+                )
+            else:
+                extra = {}
+                areas = []
+                for farm in self.farms:
+                    if farm.get("_preview"):
+                        continue
+                    name = str(farm.get("name") or "").strip() or f"area_{len(areas) + 1}"
+                    region = str(farm.get("region") or "")
+                    if self._is_point(farm):
+                        areas.append(
+                            {
+                                "name": name,
+                                "shape": "point",
+                                "region": region,
+                                "x": int(farm["x"]),
+                                "y": int(farm["y"]),
+                            }
+                        )
+                    else:
+                        areas.append(
+                            {
+                                "name": name,
+                                "shape": "area",
+                                "region": region,
+                                "x0": int(farm["x0"]),
+                                "y0": int(farm["y0"]),
+                                "x1": int(farm["x1"]),
+                                "y1": int(farm["y1"]),
+                            }
+                        )
+                patrol = [
+                    {"x": int(x), "y": int(y), "name": str(name)}
+                    for x, y, name in self.patrol
+                ]
+            saved = {"areas": areas, "patrol": patrol}
+            saved.update(extra)
+            self._coord_save(saved)
         except Exception as exc:
             QMessageBox.warning(self, self.s.tab_farms, str(exc))
             self.status.setText(str(exc))
@@ -948,37 +1370,38 @@ class MapEditorWidget(QWidget):
         draw_visible_image(
             painter, self._base, ox, oy, self._scale, widget.width(), widget.height()
         )
-        if not self._dungeon:
+        if not self._dungeon or self._point_tools_active():
             visible = [
                 i
                 for i, farm in enumerate(self.farms)
                 if not farm.get("_preview")
             ]
             order_of = {index: n for n, index in enumerate(visible, start=1)}
-            for i, f in enumerate(self.farms):
-                if self._is_point(f):
-                    continue
-                x0, y0 = self._tile_to_canvas(f["x0"], f["y0"])
-                x1, y1 = self._tile_to_canvas(f["x1"] + 1, f["y1"] + 1)
-                selected = self.selected == ("farm", i)
-                preview = bool(f.get("_preview"))
-                outline = QColor(202, 138, 4) if preview else QColor("#dc2626")
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.setPen(QPen(outline, 2))
-                painter.drawRect(QRectF(x0, y0, x1 - x0, y1 - y0))
-                if not preview:
-                    painter.setPen(outline)
-                    label = (
-                        f"{self._shape_label('area')} {order_of.get(i, '')}"
-                        if self._spot_tools_active()
-                        else route_point_display_name(str(f["name"]), self.language)
-                    )
-                    painter.drawText(int(x0 + 4), int(max(12, y0 - 4)), label)
-                if selected:
-                    for hx, hy in self._handle_points(f).values():
-                        painter.setBrush(QColor("white"))
-                        painter.setPen(QPen(QColor("#dc2626"), 2))
-                        painter.drawEllipse(QPointF(hx, hy), 5, 5)
+            if not self._dungeon:
+                for i, f in enumerate(self.farms):
+                    if self._is_point(f):
+                        continue
+                    x0, y0 = self._tile_to_canvas(f["x0"], f["y0"])
+                    x1, y1 = self._tile_to_canvas(f["x1"] + 1, f["y1"] + 1)
+                    selected = self.selected == ("farm", i)
+                    preview = bool(f.get("_preview"))
+                    outline = QColor(202, 138, 4) if preview else QColor("#dc2626")
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.setPen(QPen(outline, 2))
+                    painter.drawRect(QRectF(x0, y0, x1 - x0, y1 - y0))
+                    if not preview:
+                        painter.setPen(outline)
+                        label = (
+                            f"{self._shape_label('area')} {order_of.get(i, '')}"
+                            if self._spot_tools_active()
+                            else route_point_display_name(str(f["name"]), self.language)
+                        )
+                        painter.drawText(int(x0 + 4), int(max(12, y0 - 4)), label)
+                    if selected:
+                        for hx, hy in self._handle_points(f).values():
+                            painter.setBrush(QColor("white"))
+                            painter.setPen(QPen(QColor("#dc2626"), 2))
+                            painter.drawEllipse(QPointF(hx, hy), 5, 5)
             for i, f in enumerate(self.farms):
                 if not self._is_point(f):
                     continue
@@ -993,6 +1416,28 @@ class MapEditorWidget(QWidget):
                     int(cy - 8),
                     f"{self._shape_label('point')} {order_of.get(i, '')}",
                 )
+        if self._dungeon_plan_mode():
+            active = self._active_route()
+            for entry in self._plan:
+                if entry.get("type") != "patrol" or entry is active:
+                    continue
+                waypoints = entry.get("waypoints") or []
+                if len(waypoints) >= 2:
+                    painter.setPen(
+                        QPen(QColor(148, 163, 184, 180), max(1, int(2 * self._scale)))
+                    )
+                    pts = [
+                        self._tile_to_canvas(tx + 0.5, ty + 0.5)
+                        for tx, ty, _name in waypoints
+                    ]
+                    for i in range(len(pts) - 1):
+                        painter.drawLine(QPointF(*pts[i]), QPointF(*pts[i + 1]))
+                for i, (tx, ty, _name) in enumerate(waypoints):
+                    cx, cy = self._tile_to_canvas(tx + 0.5, ty + 0.5)
+                    painter.setPen(QPen(QColor("#94a3b8"), 2))
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawEllipse(QPointF(cx, cy), 5, 5)
+                    painter.drawText(int(cx + 8), int(cy - 8), str(i + 1))
         if len(self.patrol) >= 2:
             painter.setPen(QPen(QColor(56, 189, 248, 210), max(2, int(2 * self._scale))))
             paths = self._patrol_paths
@@ -1025,19 +1470,31 @@ class MapEditorWidget(QWidget):
             self._paint_live_marker(painter, cx, cy)
         self.zoom_label.setText(f"{int(round(self._zoom * 100))}%")
 
+    def _display_axes(self) -> PackAxes | None:
+        """Origin of the pack this editor already loaded. Never a map-id search."""
+        return axes_from_pack(self._pack)
+
+    def _world_pair_text(self, tile_x: int, tile_y: int) -> str | None:
+        axes = self._display_axes()
+        if axes is None:
+            return None
+        world_x, world_y = axes.tile_to_world(int(tile_x), int(tile_y))
+        return self.s.editor_world_xy.format(x=world_x, y=world_y)
+
     def _map_readout_text(self) -> str:
         parts: list[str] = []
         if self._hover_tile is not None:
             hx, hy = self._hover_tile
-            parts.append(self.s.editor_hover.format(x=hx, y=hy))
+            world = self._world_pair_text(hx, hy)
+            parts.append(world if world is not None else self.s.editor_world_unavailable)
             self._ensure_region_overlay()
             overlay = self._region_overlay
             if overlay is not None:
                 where = overlay.hover_text(hx, hy)
                 if where:
                     parts.append(where)
-        if self._live_nav is not None:
-            lx, ly = self._live_nav
+        if self._live_world is not None:
+            lx, ly = self._live_world
             parts.append(self.s.editor_you_tile.format(x=lx, y=ly))
         return "  ·  ".join(parts)
 
@@ -1054,8 +1511,13 @@ class MapEditorWidget(QWidget):
         self._ensure_live_timer()
 
     def hideEvent(self, event) -> None:
+        self._close_coord_popup()
         self._stop_live_timer()
         super().hideEvent(event)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._place_coord_popup()
 
     def _ensure_live_timer(self) -> None:
         if self._live_timer is None:
@@ -1116,6 +1578,7 @@ class MapEditorWidget(QWidget):
     def _poll_live_position(self) -> None:
         """Show the character when live MapSubsystem mapId matches this pack."""
         nav: tuple[int, int] | None = None
+        world: tuple[int, int] | None = None
         try:
             from app._01_perception.sensors import shared_sensors
             from app._03_world.merge.memory_sync import (
@@ -1138,10 +1601,13 @@ class MapEditorWidget(QWidget):
                         converted = abs_to_nav(self.map_id, int(xy[0]), int(xy[1]))
                         if converted is not None:
                             nav = (int(converted[0]), int(converted[1]))
+                            world = (int(xy[0]), int(xy[1]))
         except Exception:
             nav = None
-        changed = nav != self._live_nav
+            world = None
+        changed = nav != self._live_nav or world != self._live_world
         self._live_nav = nav
+        self._live_world = world
         self._sync_live_anim_timer()
         if changed:
             self._sync_map_readout()
@@ -1189,6 +1655,7 @@ class MapEditorWidget(QWidget):
         self._pan_to_place_image_point(img_x, img_y, ax2, ay2)
         self.zoom_label.setText(f"{int(round(self._zoom * 100))}%")
         self.canvas.update()
+        self._place_coord_popup()
 
     def _recenter_view(self) -> None:
         self._zoom = 1.0
@@ -1227,30 +1694,31 @@ class MapEditorWidget(QWidget):
         self._pan_to_place_image_point(img_x, img_y, ax, ay)
         self.zoom_label.setText(f"{int(round(self._zoom * 100))}%")
         self.canvas.update()
+        self._place_coord_popup()
 
     def on_mouse_press(self, event) -> None:
         # Right-click on a farm opens copy / duplicate / rename.
         # Empty ground and middle button pan. Do not reference SpaceModifier.
         if (
             event.button() == Qt.MouseButton.RightButton
-            and not self._dungeon
             and self._base is not None
             and self._can_edit()
         ):
             tx, ty = self._canvas_to_tile(event.position().x(), event.position().y())
-            if self._spot_tools_active():
+            if self._point_tools_active():
                 hit_point = self._hit_point(tx, ty)
                 if hit_point is not None:
                     self._select("point", hit_point)
                     self._point_menu(hit_point, event.globalPosition().toPoint())
                     event.accept()
                     return
-            hit = self._hit_farm(tx, ty)
-            if hit is not None:
-                self._select("farm", hit)
-                self._farm_menu(hit, event.globalPosition().toPoint())
-                event.accept()
-                return
+            if not self._dungeon:
+                hit = self._hit_farm(tx, ty)
+                if hit is not None:
+                    self._select("farm", hit)
+                    self._farm_menu(hit, event.globalPosition().toPoint())
+                    event.accept()
+                    return
         if event.button() in (
             Qt.MouseButton.MiddleButton,
             Qt.MouseButton.RightButton,
@@ -1269,23 +1737,14 @@ class MapEditorWidget(QWidget):
             return
         cx, cy = event.position().x(), event.position().y()
         tx, ty = self._canvas_to_tile(cx, cy)
-        if self._spot_tools_active() and self.tool == "point":
-            self._place_point(tx, ty)
+        if self._point_tools_active() and self.tool == "point":
+            if self._dungeon_plan_mode():
+                self._place_stationary(tx, ty)
+            else:
+                self._place_point(tx, ty)
             return
         if self._dungeon and self.tool == "patrol":
-            hit = self._hit_patrol(tx, ty)
-            if hit is not None:
-                self._select("patrol", hit)
-                self._drag = "move"
-                self._drag_origin = self.patrol[hit]
-                return
-            if self._terrain is not None and not self._terrain.is_walkable(tx, ty):
-                self.status.setText(self.s.patrol_not_walkable)
-                return
-            name = f"mid_{len(self.patrol) + 1}"
-            self.patrol.append((tx, ty, name))
-            self._mark_dirty()
-            self._select("patrol", len(self.patrol) - 1)
+            self._drop_patrol_at(tx, ty)
             return
         if self._dungeon:
             self._deselect()
@@ -1320,6 +1779,7 @@ class MapEditorWidget(QWidget):
             self._pan[1] = self._pan_origin[1] + (cy - self._pan_start[1])
             self._sync_canvas_cursor(cx, cy)
             self.canvas.update()
+            self._place_coord_popup()
             return
         if self._base is None:
             return
@@ -1363,6 +1823,7 @@ class MapEditorWidget(QWidget):
             self.farms[idx]["y"] = ty
             self._mark_dirty()
             self.canvas.update()
+            self._place_coord_popup()
             return
         if kind == "patrol":
             if self._terrain is not None and not self._terrain.is_walkable(tx, ty):
@@ -1559,6 +2020,19 @@ class MapEditorWidget(QWidget):
                 best_i = i
         return best_i
 
+    def _hit_inactive_patrol(self, tx: int, ty: int) -> tuple[dict, int] | None:
+        best: tuple[dict, int] | None = None
+        best_d = 3
+        for entry in self._plan:
+            if entry.get("type") != "patrol" or entry.get("waypoints") is self.patrol:
+                continue
+            for index, (x, y, _name) in enumerate(entry.get("waypoints") or []):
+                distance = max(abs(int(x) - tx), abs(int(y) - ty))
+                if distance <= best_d:
+                    best_d = distance
+                    best = (entry, index)
+        return best
+
     def _refuse_hunt_point(self, tx: int, ty: int) -> bool:
         """Party hunt dot: the nav grid must be able to step onto this tile."""
         from app._03_world.space.hunt_point import hunt_point_refused
@@ -1585,26 +2059,214 @@ class MapEditorWidget(QWidget):
         number = 1
         while f"point_{number}" in taken:
             number += 1
-        self.farms.append(
-            {
-                "shape": "point",
-                "name": f"point_{number}",
-                "region": self._pack.default_region if self._pack else "",
-                "x": tx,
-                "y": ty,
-            }
-        )
+        point = {
+            "shape": "point",
+            "name": f"point_{number}",
+            "region": self._pack.default_region if self._pack else "",
+            "x": tx,
+            "y": ty,
+        }
+        if self._dungeon:
+            point["stay_s"] = DEFAULT_FARM_STAY_S
+        self.farms.append(point)
         self._mark_dirty()
         self._select("point", len(self.farms) - 1)
         self._drag = "move"
         self._drag_origin = dict(self.farms[-1])
 
+    def _drop_patrol_at(self, tx: int, ty: int) -> None:
+        """Place or grab a waypoint on the active patrol route."""
+        other = self._hit_inactive_patrol(tx, ty) if self._dungeon_plan_mode() else None
+        if other is not None:
+            route, hit = other
+            self._use_route(route)
+            self._select("patrol", hit)
+            self._drag = "move"
+            self._drag_origin = self.patrol[hit]
+            return
+        hit = self._hit_patrol(tx, ty)
+        if hit is not None:
+            self._select("patrol", hit)
+            self._drag = "move"
+            self._drag_origin = self.patrol[hit]
+            return
+        if self._terrain is not None and not self._terrain.is_walkable(tx, ty):
+            self.status.setText(self.s.patrol_not_walkable)
+            return
+        if self._dungeon_plan_mode() and self._active_route() is None:
+            self._begin_patrol_route()
+        name = f"mid_{len(self.patrol) + 1}"
+        self.patrol.append((tx, ty, name))
+        self._mark_dirty()
+        self._recompute_patrol_paths()
+        self._select("patrol", len(self.patrol) - 1)
+
+    def _place_stationary(self, tx: int, ty: int) -> None:
+        """One dungeon hunt point. It is not a patrol waypoint."""
+        hit = self._hit_point(tx, ty)
+        if hit is not None:
+            self._select("point", hit)
+            self._drag = "move"
+            self._drag_origin = dict(self.farms[hit])
+            return
+        if self._refuse_hunt_point(tx, ty):
+            return
+        point_id = self._next_plan_id("point")
+        point = {
+            "type": "point",
+            "shape": "point",
+            "id": point_id,
+            "name": point_id,
+            "region": self._pack.default_region if self._pack else "",
+            "x": tx,
+            "y": ty,
+            "stay_s": DEFAULT_FARM_STAY_S,
+        }
+        self._plan.append(point)
+        self._sync_point_farms()
+        self._mark_dirty()
+        self._select("point", self.farms.index(point))
+        self._drag = "move"
+        self._drag_origin = dict(point)
+
+    def _point_menu_actions(self, menu: QMenu):
+        """Delete, then coordinate edit. Edit stays disabled until an origin exists."""
+        delete_act = menu.addAction(self.s.delete_selected)
+        edit_act = menu.addAction(self.s.menu_edit_coords)
+        if self._display_axes() is None:
+            edit_act.setEnabled(False)
+            self.status.setText(self.s.editor_world_unavailable)
+        return delete_act, edit_act
+
     def _point_menu(self, idx: int, global_pos) -> None:
         menu = QMenu(self)
-        delete_act = menu.addAction(self.s.delete_selected)
+        delete_act, edit_act = self._point_menu_actions(menu)
         chosen = menu.exec(global_pos)
         if chosen is delete_act:
             self._delete_selected()
+        elif chosen is edit_act:
+            self._open_coord_popup(idx)
+
+    def _tile_on_map(self, tile_x: int, tile_y: int) -> bool:
+        if self._terrain is None and self._base is None:
+            return False
+        limit_x, limit_y = self._map_limits()
+        return 0 <= int(tile_x) <= limit_x and 0 <= int(tile_y) <= limit_y
+
+    def _open_coord_popup(self, idx: int) -> None:
+        if not self._can_edit() or not (0 <= idx < len(self.farms)):
+            return
+        farm = self.farms[idx]
+        if not self._is_point(farm):
+            return
+        if self._display_axes() is None:
+            self.status.setText(self.s.editor_world_unavailable)
+            return
+        self._close_coord_popup()
+        self._select("point", idx)
+        popup = _PointWorldEditor(self, farm)
+        self._coord_popup = popup
+        popup.show()
+        popup.setFixedSize(popup.sizeHint())
+        self._place_coord_popup()
+        popup.raise_()
+        popup.activateWindow()
+        popup.x_edit.setFocus()
+        popup.x_edit.selectAll()
+
+    def _close_coord_popup(self) -> None:
+        popup = self._coord_popup
+        self._coord_popup = None
+        if popup is None:
+            return
+        try:
+            popup.hide()
+            popup.deleteLater()
+        except RuntimeError:
+            pass
+
+    def _point_global_anchor(self, farm: dict) -> QPoint | None:
+        try:
+            canvas_x, canvas_y = self._tile_to_canvas(
+                int(farm["x"]) + 0.5, int(farm["y"]) + 0.5
+            )
+        except (KeyError, TypeError, ValueError):
+            return None
+        return self.canvas.mapToGlobal(QPoint(int(round(canvas_x)), int(round(canvas_y))))
+
+    def _viewport_global_edges(self) -> tuple[int, int, int, int] | None:
+        try:
+            viewport = self._canvas_scroll.viewport()
+        except Exception:
+            return None
+        if viewport is None:
+            return None
+        origin = viewport.mapToGlobal(QPoint(0, 0))
+        return (
+            origin.x(),
+            origin.y(),
+            origin.x() + max(1, viewport.width()) - 1,
+            origin.y() + max(1, viewport.height()) - 1,
+        )
+
+    def _place_coord_popup(self) -> None:
+        popup = self._coord_popup
+        if popup is None:
+            return
+        farm = popup.farm
+        if farm not in self.farms or not self._is_point(farm):
+            self._close_coord_popup()
+            return
+        anchor = self._point_global_anchor(farm)
+        edges = self._viewport_global_edges()
+        if anchor is None or edges is None:
+            self._close_coord_popup()
+            return
+        popup.adjustSize()
+        size = popup.size()
+        if size.width() < 8 or size.height() < 8:
+            size = popup.sizeHint()
+        left, top, right, bottom = edges
+        x, y = clamp_popup_top_left(
+            anchor.x(),
+            anchor.y(),
+            size.width(),
+            size.height(),
+            left,
+            top,
+            right,
+            bottom,
+        )
+        popup.move(x, y)
+
+    def _apply_world_to_point(self, farm: dict, raw_x: str, raw_y: str) -> bool:
+        """Write a typed world coordinate back into the in-memory tile. No file write."""
+        if farm not in self.farms or not self._is_point(farm):
+            self._close_coord_popup()
+            return False
+        axes = self._display_axes()
+        if axes is None:
+            self.status.setText(self.s.editor_world_unavailable)
+            return False
+        world_x = parse_world_int(raw_x)
+        world_y = parse_world_int(raw_y)
+        if world_x is None or world_y is None:
+            self.status.setText(self.s.coord_invalid)
+            return False
+        tile_x, tile_y = axes.world_to_tile(world_x, world_y)
+        if not self._tile_on_map(tile_x, tile_y):
+            self.status.setText(self.s.coord_off_map)
+            return False
+        if self._refuse_hunt_point(tile_x, tile_y):
+            return False
+        if int(farm.get("x", tile_x)) != tile_x or int(farm.get("y", tile_y)) != tile_y:
+            farm["x"] = tile_x
+            farm["y"] = tile_y
+            self._mark_dirty()
+        self._close_coord_popup()
+        self._refresh_list()
+        self.canvas.update()
+        return True
 
     def _hit_patrol(self, tx: int, ty: int) -> Optional[int]:
         best_i = None
@@ -1633,15 +2295,102 @@ class MapEditorWidget(QWidget):
         self._fill_inspector()
         self.canvas.update()
 
+    def _point_stay_label(self, farm: dict) -> str:
+        seconds = farm["stay_s"] if "stay_s" in farm else DEFAULT_FARM_STAY_S
+        minutes = stay_minutes_from_s(clamp_farm_stay_s(seconds))
+        return self.s.point_stay.format(minutes=minutes)
+
+    def _on_list_double(self, item: QListWidgetItem) -> None:
+        """Dungeon point dwell. Field stays stay in the setting table."""
+        if not (self._dungeon_plan_mode() and self._can_edit()):
+            return
+        data = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if not (isinstance(data, tuple) and len(data) >= 2):
+            return
+        kind, idx = str(data[0]), int(data[1])
+        if kind == "plan" and 0 <= idx < len(self._plan):
+            entry = self._plan[idx]
+            if entry.get("type") == "patrol":
+                self._edit_route_duration(idx)
+                return
+            if entry.get("type") == "point" and entry in self.farms:
+                self._edit_point_stay(self.farms.index(entry))
+                return
+        if kind == "point":
+            self._edit_point_stay(idx)
+
+    def _edit_point_stay(self, idx: int) -> None:
+        if not (0 <= idx < len(self.farms)) or not self._is_point(self.farms[idx]):
+            return
+        farm = self.farms[idx]
+        initial = stay_minutes_from_s(
+            clamp_farm_stay_s(farm["stay_s"])
+            if "stay_s" in farm
+            else DEFAULT_FARM_STAY_S
+        )
+        value, ok = QInputDialog.getInt(
+            self,
+            self.s.point_stay_title,
+            self.s.point_stay_prompt,
+            initial,
+            MIN_FARM_STAY_MIN,
+            MAX_FARM_STAY_MIN,
+        )
+        if not ok:
+            return
+        self._apply_point_stay(idx, value)
+
+    def _apply_point_stay(self, idx: int, minutes: int) -> None:
+        if not (0 <= idx < len(self.farms)) or not self._is_point(self.farms[idx]):
+            return
+        self.farms[idx]["stay_s"] = stay_s_from_minutes(minutes)
+        self._mark_dirty()
+        self._refresh_list()
+        self.canvas.update()
+
+    def _edit_route_duration(self, plan_index: int) -> None:
+        if not (0 <= plan_index < len(self._plan)):
+            return
+        route = self._plan[plan_index]
+        if route.get("type") != "patrol":
+            return
+        initial = self._route_minutes(route)
+        value, ok = QInputDialog.getInt(
+            self,
+            self.s.point_stay_title,
+            self.s.point_stay_prompt,
+            initial,
+            MIN_FARM_STAY_MIN,
+            MAX_FARM_STAY_MIN,
+        )
+        if not ok:
+            return
+        self._apply_route_duration(plan_index, value)
+
+    def _apply_route_duration(self, plan_index: int, minutes: int) -> None:
+        if not (0 <= plan_index < len(self._plan)):
+            return
+        route = self._plan[plan_index]
+        if route.get("type") != "patrol":
+            return
+        route["duration_s"] = stay_s_from_minutes(minutes)
+        self._mark_dirty()
+        self._refresh_list()
+        self.canvas.update()
+
     def _on_list_row(self, row: int) -> None:
         if row < 0:
             return
         item = self.item_list.item(row)
         data = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
-        if isinstance(data, tuple) and len(data) == 2:
-            kind, idx = data
-            if self.selected != (kind, int(idx)):
-                self._select(str(kind), int(idx))
+        if isinstance(data, tuple) and len(data) >= 2:
+            kind, idx = str(data[0]), int(data[1])
+            if kind == "plan":
+                if self.selected != ("plan", idx):
+                    self._focus_plan(idx)
+                return
+            if self.selected != (kind, idx):
+                self._select(kind, idx)
             return
         if self._dungeon:
             if 0 <= row < len(self.patrol):
@@ -1681,10 +2430,47 @@ class MapEditorWidget(QWidget):
         finally:
             self._fitting_rows = False
 
+    def _plan_rows(self) -> list[tuple[str, str, int]]:
+        rows: list[tuple[str, str, int]] = []
+        patrol_number = 0
+        point_number = 0
+        active = self._active_route()
+        for index, entry in enumerate(self._plan):
+            if entry.get("type") == "patrol":
+                patrol_number += 1
+                title = (
+                    f"{self.s.plan_patrol.format(n=patrol_number)}  "
+                    f"{self.s.point_stay.format(minutes=self._route_minutes(entry))}"
+                )
+                rows.append((title, "plan", index))
+                if entry is active:
+                    for waypoint, (_x, _y, name) in enumerate(entry.get("waypoints") or []):
+                        rows.append(
+                            (
+                                route_point_display_name(str(name), self.language),
+                                "patrol",
+                                waypoint,
+                            )
+                        )
+                continue
+            if entry.get("type") != "point":
+                continue
+            point_number += 1
+            pair = self._world_pair_text(int(entry["x"]), int(entry["y"]))
+            shown = pair if pair is not None else self.s.editor_world_unavailable
+            title = (
+                f"{self.s.plan_point.format(n=point_number)}  ({shown})  "
+                f"{self._point_stay_label(entry)}"
+            )
+            rows.append((title, "plan", index))
+        return rows
+
     def _refresh_list(self) -> None:
         self.item_list.blockSignals(True)
         self.item_list.clear()
-        if self._dungeon:
+        if self._dungeon_plan_mode():
+            rows = self._plan_rows()
+        elif self._dungeon and not self._point_tools_active():
             rows = [
                 (route_point_display_name(name, self.language), "patrol", i)
                 for i, (_x, _y, name) in enumerate(self.patrol)
@@ -1696,18 +2482,21 @@ class MapEditorWidget(QWidget):
                 if f.get("_preview"):
                     continue
                 order += 1
-                if self._spot_tools_active() and self._is_point(f):
-                    title = (
-                        f"{order}. {self._shape_label('point')}  "
-                        f"({int(f['x'])}, {int(f['y'])})"
-                    )
+                if self._point_tools_active() and self._is_point(f):
+                    pair = self._world_pair_text(int(f["x"]), int(f["y"]))
+                    shown = pair if pair is not None else self.s.editor_world_unavailable
+                    title = f"{order}. {self._shape_label('point')}  ({shown})"
+                    if self._dungeon:
+                        title = f"{title}  {self._point_stay_label(f)}"
                     kind = "point"
                 elif self._spot_tools_active():
-                    title = (
-                        f"{order}. {self._shape_label('area')}  "
-                        f"({int(f['x0'])}, {int(f['y0'])} ~ "
-                        f"{int(f['x1'])}, {int(f['y1'])})"
-                    )
+                    start = self._world_pair_text(int(f["x0"]), int(f["y0"]))
+                    end = self._world_pair_text(int(f["x1"]), int(f["y1"]))
+                    if start is None or end is None:
+                        shown = self.s.editor_world_unavailable
+                    else:
+                        shown = f"{start} ~ {end}"
+                    title = f"{order}. {self._shape_label('area')}  ({shown})"
                     kind = "farm"
                 else:
                     title = route_point_display_name(str(f["name"]), self.language)
@@ -1720,6 +2509,16 @@ class MapEditorWidget(QWidget):
             item.setSizeHint(QSize(self._list_row_width(), 26))
             self.item_list.addItem(item)
             selected = self.selected == (kind, idx)
+            if (
+                not selected
+                and kind == "plan"
+                and self.selected
+                and self.selected[0] == "point"
+                and 0 <= idx < len(self._plan)
+                and 0 <= self.selected[1] < len(self.farms)
+                and self._plan[idx] is self.farms[self.selected[1]]
+            ):
+                selected = True
             self.item_list.setItemWidget(
                 item,
                 _OrderRow(self, kind, idx, title, selected=selected),
@@ -1874,11 +2673,30 @@ class MapEditorWidget(QWidget):
         if self.selected is None:
             return
         kind, idx = self.selected
+        if self._dungeon_plan_mode() and kind == "plan" and 0 <= idx < len(self._plan):
+            removed = self._plan.pop(idx)
+            if removed.get("type") == "patrol" and removed.get("waypoints") is self.patrol:
+                self.patrol = []
+                self._active_route_id = None
+                for entry in self._plan:
+                    if entry.get("type") == "patrol":
+                        self._use_route(entry)
+                        break
+                self._recompute_patrol_paths()
+            self._sync_point_farms()
+            self._mark_dirty()
+            self._deselect()
+            return
         if (
             kind in ("farm", "point")
             and 0 <= idx < len(self.farms)
             and not self.farms[idx].get("_preview")
         ):
+            removed = self.farms[idx]
+            if self._coord_popup is not None and self._coord_popup.farm is removed:
+                self._close_coord_popup()
+            if self._dungeon_plan_mode() and removed in self._plan:
+                self._plan.remove(removed)
             del self.farms[idx]
         elif kind == "patrol" and 0 <= idx < len(self.patrol):
             del self.patrol[idx]
@@ -1921,7 +2739,14 @@ class MapEditorWidget(QWidget):
             msg = self.s.confirm_clear_farms
         if QMessageBox.question(self, self.s.edit_farms, msg) != QMessageBox.StandardButton.Yes:
             return
-        if self._dungeon:
+        self._close_coord_popup()
+        if self._dungeon_plan_mode():
+            self._plan.clear()
+            self.patrol = []
+            self._active_route_id = None
+            self._sync_point_farms()
+            self._recompute_patrol_paths()
+        elif self._dungeon:
             self.patrol.clear()
             self._recompute_patrol_paths()
         else:
@@ -1931,9 +2756,33 @@ class MapEditorWidget(QWidget):
         self._refresh_list()
         self.canvas.update()
 
+    def _plan_row_menu(self, idx: int, global_pos) -> None:
+        if not self._can_edit() or not (0 <= idx < len(self._plan)):
+            return
+        entry = self._plan[idx]
+        self._focus_plan(idx)
+        if entry.get("type") == "point" and entry in self.farms:
+            self._point_menu(self.farms.index(entry), global_pos)
+            return
+        menu = QMenu(self)
+        delete_act = menu.addAction(self.s.delete_selected)
+        chosen = menu.exec(global_pos)
+        if chosen is delete_act:
+            self.selected = ("plan", self._plan.index(entry) if entry in self._plan else idx)
+            self._delete_selected()
+
     def _nudge_at(self, kind: str, idx: int, delta: int) -> None:
         if not self._can_edit():
             self.status.setText(self.s.editor_readonly)
+            return
+        if kind == "plan" and self._dungeon_plan_mode():
+            target = idx + int(delta)
+            if target < 0 or target >= len(self._plan) or not (0 <= idx < len(self._plan)):
+                return
+            self._plan[idx], self._plan[target] = self._plan[target], self._plan[idx]
+            self._sync_point_farms()
+            self._mark_dirty()
+            self._select("plan", target)
             return
         items = self.patrol if kind == "patrol" else self.farms
         target = idx + int(delta)

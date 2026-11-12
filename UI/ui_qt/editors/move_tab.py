@@ -125,6 +125,19 @@ class MoveTab(QWidget):
     def _patrol_entries_for(self, map_id: str, entry: dict) -> list:
         return list_patrol_entries(map_id)
 
+    def _shows_patrol_stay(self, entry: dict | None = None) -> bool:
+        """Solo patrol waypoints have no dwell column."""
+        del entry
+        return False
+
+    def _patrol_stay_minutes(self, entry: dict, index: int) -> int:
+        del entry, index
+        return stay_minutes_from_s(DEFAULT_FARM_STAY_S)
+
+    def _set_patrol_stay_minutes(self, entry: dict, index: int, minutes: int) -> None:
+        del entry, index, minutes
+        return
+
     def _farm_choice_label(self, name: str, note: str, index: int) -> str:
         return route_point_display_name(name, self.language)
 
@@ -467,13 +480,15 @@ class MoveTab(QWidget):
             )
             patrol_status = QLabel("")
             layout.addWidget(patrol_status)
-            patrol_table = QTableWidget(0, 2)
-            patrol_table.setHorizontalHeaderLabels(
-                [
-                    "#",
-                    self.t.get("patrol_name", self.t.get("name", "Name")),
-                ]
-            )
+            shows_stay = self._shows_patrol_stay(entry)
+            patrol_table = QTableWidget(0, 3 if shows_stay else 2)
+            headers = [
+                "#",
+                self.t.get("patrol_name", self.t.get("name", "Name")),
+            ]
+            if shows_stay:
+                headers.append(self.t.get("farm_stay", "Stay"))
+            patrol_table.setHorizontalHeaderLabels(headers)
             patrol_table.verticalHeader().setVisible(False)
             patrol_table.setSelectionBehavior(
                 QAbstractItemView.SelectionBehavior.SelectRows
@@ -484,7 +499,14 @@ class MoveTab(QWidget):
             patrol_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
             patrol_table.setColumnWidth(0, 48)
             patrol_table.setColumnWidth(1, 180)
-            patrol_table.horizontalHeader().setStretchLastSection(True)
+            if shows_stay:
+                patrol_table.setColumnWidth(2, 72)
+                patrol_table.horizontalHeader().setStretchLastSection(False)
+                patrol_table.horizontalHeader().setSectionResizeMode(
+                    1, QHeaderView.ResizeMode.Stretch
+                )
+            else:
+                patrol_table.horizontalHeader().setStretchLastSection(True)
 
             def _fill_patrol() -> None:
                 assert patrol_table is not None
@@ -503,6 +525,15 @@ class MoveTab(QWidget):
                             route_point_display_name(name, self.vm.language)
                         ),
                     )
+                    if shows_stay:
+                        minutes = self._patrol_stay_minutes(entry, index - 1)
+                        patrol_table.setItem(
+                            row,
+                            2,
+                            QTableWidgetItem(
+                                f"{minutes}{self.t.get('minutes', 'min')}"
+                            ),
+                        )
                 patrol_status.setText(
                     self.t.get(
                         "map_registered_patrol_line",
@@ -510,8 +541,27 @@ class MoveTab(QWidget):
                     ).format(n=len(entries))
                 )
 
+            def _edit_patrol_stay(row: int, column: int) -> None:
+                if not shows_stay or column != 2:
+                    return
+                initial = self._patrol_stay_minutes(entry, row)
+                value, ok = QInputDialog.getInt(
+                    dialog,
+                    self.t.get("farm_stay", "Stay"),
+                    self.t.get("farm_stay_prompt", "Minutes"),
+                    initial,
+                    MIN_FARM_STAY_MIN,
+                    MAX_FARM_STAY_MIN,
+                )
+                if not ok:
+                    return
+                self._set_patrol_stay_minutes(entry, row, value)
+                _fill_patrol()
+
             _fill_patrol()
             refill_list = _fill_patrol
+            if shows_stay:
+                patrol_table.cellDoubleClicked.connect(_edit_patrol_stay)
             layout.addWidget(patrol_table, stretch=1)
         else:
             details, _err = self._area_details_for(map_id, rest=rest, entry=entry)
