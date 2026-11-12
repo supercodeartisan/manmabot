@@ -239,6 +239,30 @@ def test_a_spell_circle_during_the_settle_still_holds_the_key() -> None:
     assert cancels == ["press held:heal"]
 
 
+def test_party_list_buff_remembers_the_key_when_the_circle_is_late() -> None:
+    executor = _executor()
+    intent = ActionIntent(
+        action=ActionType.BUFF,
+        reason="party_member:holy weapon",
+        hotbar_box=1,
+        hotbar_key="f10",
+        click_x=75,
+        click_y=227,
+    )
+    original_aim = cv.cursor_is_spell_aim
+    original_wait = cv.wait_party_spell_aim
+    try:
+        cv.cursor_is_spell_aim = lambda *_args, **_kwargs: False  # type: ignore[assignment]
+        cv.wait_party_spell_aim = lambda *_args, **_kwargs: False  # type: ignore[assignment]
+        handled = executor._party_list_buff(intent, _bounds())
+    finally:
+        cv.cursor_is_spell_aim = original_aim  # type: ignore[assignment]
+        cv.wait_party_spell_aim = original_wait  # type: ignore[assignment]
+    assert handled is True
+    assert executor._spell_aim_key == "f10"
+    assert executor._spell_aim_box == 1
+
+
 def test_party_list_cast_waits_match_the_late_circle() -> None:
     assert cv.PARTY_LIST_AIM_WAIT_S == 1.5
     assert cv.PARTY_LIST_RECAST_S == 2.0

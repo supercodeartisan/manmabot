@@ -152,11 +152,13 @@ def test_a_cast_is_remembered_until_its_duration_runs_down() -> None:
     assert again is None
 
 
-def test_three_missed_reports_park_the_spell() -> None:
+def test_two_missed_reports_keep_the_clock_and_the_third_casts() -> None:
     ledger = empty_ledger()
     remember_cast(ledger, 2, 42, 900.0)
     members = [_member("mage", "0x1", 100, 100), _member("knight", "0x2", 100, 104)]
     slots = _slots("0x2")
+    held = []
+    choice = None
     for index in range(3):
         choice, _note = _choose(
             members=members,
@@ -167,7 +169,11 @@ def test_three_missed_reports_park_the_spell() -> None:
             ledger=ledger,
             now=1_000.0 + index,
         )
-    assert choice is None
+        held.append(choice)
+    assert held[0] is None
+    assert held[1] is None
+    assert choice is not None
+    assert choice["skill_id"] == 42
 
 
 def test_death_clears_the_clock_and_resurrection_can_target_the_row() -> None:
