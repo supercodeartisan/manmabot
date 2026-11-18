@@ -1,4 +1,4 @@
-"""check_configs.py - verify 11-11analysis overlays against registry v37.
+"""check_configs.py - verify 11-18analysis overlays against registry v38.
 
 Each overlay file keeps its original value format (some use 0x, some plain hex),
 so checks are done on the exact expected line text plus JSON value equality.

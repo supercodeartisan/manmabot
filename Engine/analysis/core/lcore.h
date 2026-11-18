@@ -103,64 +103,64 @@ static int lc_attach(void)
 }
 
 /* ── 2. constants (vft RVAs refreshed 2026-10-07 via RTTI; live-verified) ── */
-#define VFT_SELF       0x11F8828u
-#define VFT_PLAYER       0x11F87F0u
-#define VFT_MONSTER       0x11F86E0u
-#define VFT_SUMMON       0x11F8C90u
-#define VFT_ITEM       0x11F8638u
-#define VFT_NPC       0x11F8600u
-#define VFT_SEGPROP       0x11F8B90u
-#define VFT_ACTOR       0x11F4C48u
-#define VFT_PRES_B       0x11F8538u   /* TransformComponent (PRES_B)          */
-#define VFT_AC       0x11F7C70u   /* ActionComponent                      */
+#define VFT_SELF       0x1210B90u
+#define VFT_PLAYER       0x1210BC8u
+#define VFT_MONSTER       0x1210A80u
+#define VFT_SUMMON       0x1211028u
+#define VFT_ITEM       0x12109D8u
+#define VFT_NPC       0x12109A0u
+#define VFT_SEGPROP       0x1210F30u
+#define VFT_ACTOR       0x120CE98u
+#define VFT_PRES_B       0x12108D8u   /* TransformComponent (PRES_B)          */
+#define VFT_AC       0x1210010u   /* ActionComponent                      */
 /* ActionComponent state fields (RESULTS_T2 sec14 / 9.30 entity.c isDead) */
 #define AC_DEAD_OFF   0x49u        /* byte  : 1 = dead/corpse              */
 #define AC_DEAD_VAL   1
 #define AC_BAIT_OFF   0x40u        /* dword : 0x78 = bait(dormant, not shown) */
 #define AC_BAIT_VAL   0x78u
-#define VFT_ATTACKACT       0x11F79B0u   /* AttackAction  +0x80 owner +0x88 target */
-#define VFT_DEATH       0x11F7800u
-#define VFT_DEADBODY       0x11F7890u
-#define VFT_MOVINGACT       0x11F7B28u
-#define VFT_MOVINGBACK       0x11F7AE0u
-#define VFT_ACTIONBASE       0x11F7A88u
-#define VFT_SPELLACT       0x11F77B8u
-#define VFT_CHANGEDIR       0x11F7698u
-#define VFT_CMDMOVE       0x11F7DB8u
-#define VFT_CMDATTACK       0x11F7F78u
-#define VFT_CMDINTERACT       0x11F7DF0u
-#define VFT_BREATHACT       0x11F79F8u
+#define VFT_ATTACKACT       0x120FD50u   /* AttackAction  +0x80 owner +0x88 target */
+#define VFT_DEATH       0x120FCC0u
+#define VFT_DEADBODY       0x120FA38u
+#define VFT_MOVINGACT       0x120FEC8u
+#define VFT_MOVINGBACK       0x120FE80u
+#define VFT_ACTIONBASE       0x120FE28u
+#define VFT_SPELLACT       0x120FC78u
+#define VFT_CHANGEDIR       0x120FA80u
+#define VFT_CMDMOVE       0x1210190u
+#define VFT_CMDATTACK       0x1210318u
+#define VFT_CMDINTERACT       0x1210158u
+#define VFT_BREATHACT       0x120FD98u
 #define VFT_MAPSUBSYS  0x1233630u   /* MapSubsystem   (live-verified)        */
-#define VFT_ACTORSUBS       0x11F5958u   /* ActorSubsystem (live-verified)        */
-#define VFT_BEHAVIORS       0x11F9AC8u   /* BehaviorSubsystem                    */
+#define VFT_ACTORSUBS       0x120DCD8u   /* ActorSubsystem (live-verified)        */
+#define VFT_BEHAVIORS       0x12123C8u   /* BehaviorSubsystem                    */
 #define VFT_CTLCOMP   0x11C1828u   /* ActorControllerComponent             */
-#define VFT_SHIP       0x11F8B00u   /* Ship   (RTTI-indexed, +0x30)          */
+#define VFT_SHIP       0x1210E88u   /* Ship   (RTTI-indexed, +0x30)          */
 
 /* ---- subsystems resolved OFFLINE by class-name lookup (delta_930.py) ----
  * These sit in the sub[64] array and are found by lc_subsGet(vft).  They are
  * RTTI-indexed in the 9.30 build (62 subsystems total), so the deltas below
  * are exact and were NOT guessed.  Regenerate on the next build with
  * T3_maps/delta_930.py -- game access is not required.                */
-#define VFT_CHARDATA       0x11FC560u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
-#define VFT_INVENTORY       0x123EE28u   /* InventorySubsystem   sub[26]  (-0x370) */
-#define VFT_HUDSLOT       0x11F9FE0u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
+#define VFT_CHARDATA       0x1214690u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
+#define VFT_INVENTORY       0x1257B50u   /* InventorySubsystem   sub[26]  (-0x370) */
+#define VFT_HUDSLOT       0x1212068u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
 #define VFT_ITEMENT   0x1207430u   /* ItemEntity    (live-verified, no RTTI)  */
-#define VFT_SHOP       0x1242258u   /* ShopSubsystem             sub[36] (+0x88)  */
-#define VFT_PLAYERSHOP       0x1241E80u  /* PlayerShopSubsystem               (+0x? ) */
+#define VFT_SHOP       0x125B028u   /* ShopSubsystem             sub[36] (+0x88)  */
+#define VFT_PLAYERSHOP       0x125ADF0u  /* PlayerShopSubsystem               (+0x? ) */
 #define VFT_BUYITEM   0x121F740u   /* BuyListItem record           (+0x558)  */
 #define VFT_SELLITEM  0x121F7A8u   /* SellListItem record          (+0x558)  */
-#define VFT_EQUIPINFO       0x123E728u   /* EquipmentInfoSubsystem  (UI foothold)   */
-#define VFT_DUNGEON       0x123DCE0u   /* DungeonSubsystem   (portal/dungeon)     */
-#define VFT_SPELL       0x12432D0u   /* SpellSubsystem                            */
-#define VFT_STORAGE       0x12438F8u   /* StorageSubsystem                           */
-#define VFT_BUFF       0x1233728u   /* BuffSubsystem                              */
-#define VFT_MAIL       0x11F9F90u   /* MailSubsystem                              */
-#define VFT_CAMERA       0x1202790u   /* CameraSubsystem                            */
-#define VFT_INPUT       0x11FA0E0u   /* InputSubsystem                             */
-#define VFT_GAMESTATE       0x11F9D80u   /* GameStateSubsystem                         */
-#define VFT_NETWORK       0x1211308u   /* NetworkSubsystem                           */
-#define VFT_CHAT       0x1233E38u   /* ChatSubsystem                              */
-#define VFT_PORTALACT       0x1200238u   /* PortalInteraction (portal track)           */
+#define VFT_EQUIPINFO       0x1257618u   /* EquipmentInfoSubsystem  (UI foothold)   */
+#define VFT_DUNGEON       0x1256AD8u   /* DungeonSubsystem   (portal/dungeon)     */
+#define VFT_SPELL       0x125C3B8u   /* SpellSubsystem                            */
+#define VFT_STORAGE       0x125C740u   /* StorageSubsystem                           */
+#define VFT_BUFF       0x124C668u   /* BuffSubsystem                              */
+#define VFT_MAIL       0x1211F88u   /* MailSubsystem                              */
+#define VFT_CAMERA       0x121AAF0u   /* CameraSubsystem                            */
+#define VFT_INPUT       0x1212148u   /* InputSubsystem                             */
+#define VFT_GAMESTATE       0x1212518u   /* GameStateSubsystem                         */
+#define VFT_NETWORK       0x1229D20u   /* NetworkSubsystem                           */
+#define VFT_CHAT       0x124CC00u   /* ChatSubsystem                              */
+#define VFT_PORTALACT       0x1218758u   /* PortalInteraction (portal track)           */
 
 /* enttrack / etview geometry */
 #define LC_MGR    0x16BBAE0u
@@ -246,6 +246,9 @@ static uint32_t LC_PRESB_BASE_V=0x40u, LC_PRESB_A_OFF_V=0x50u,
                 LC_PRESB_CELL_OFF_V=0x00u, LC_PRESB_CELL_DY_V=0x04u,
                 LC_STR_SSO_MAX_V=0x10u;
 static uint32_t LC_ACT_ATK_OWNER_V=0x80u, LC_ACT_ATK_TARGET_V=0x88u,
+                 /* 26.11.17.2002: ACT_ATK_TARGET 는 GUID 가 아니라 TargetInfo
+                  * 포인터를 담는다. 그 +0x00 이 대상 GUID. registry 에서만 관리. */
+                 LC_ACT_TGT_GUID_OFF_V=0x0u,
                 LC_AC_SCAN_V=0x140u, LC_AC_ACTION_OFF=0xC0u, LC_AC_ACTION_WIN=0x20u;
 static int LC_SELF_REVAL_TICKS = 32; /* bodyact FAST: sticky AC/CTL re-resolve ticks */
 /* ── Door(문) 개폐 상태 (2026-10-19 확정 · 동적 전이 관측) ───────────────
@@ -386,6 +389,7 @@ static void lc_reg_apply(void){
     LC_HEAP_HI         =lcreg_u64("HEAP_HI",        LC_HEAP_HI);
     LC_ACT_ATK_OWNER_V=lcreg_u32("ACT_ATK_OWNER", LC_ACT_ATK_OWNER_V);
     LC_ACT_ATK_TARGET_V=lcreg_u32("ACT_ATK_TARGET", LC_ACT_ATK_TARGET_V);
+    LC_ACT_TGT_GUID_OFF_V=lcreg_u32("ACT_TGT_GUID_OFF", LC_ACT_TGT_GUID_OFF_V);
     LC_AC_SCAN_V     =lcreg_u32("AC_SCAN_LEN", LC_AC_SCAN_V);
     LC_AC_ACTION_OFF =lcreg_u32("AC_ACTION_OFF", LC_AC_ACTION_OFF);
     LC_SELF_REVAL_TICKS = (int)lcreg_u32("POLL_BODYACT_REVAL_TICKS", (uint32_t)LC_SELF_REVAL_TICKS);
@@ -483,6 +487,8 @@ typedef struct {
     int      atkBlocked;    /* 1=LOS blocked (targetinfo flag B) */
     uint8_t  tgtFlagA;      /* targetinfo +0x46 */
     uint8_t  tgtFlagB;      /* targetinfo +0x47 */
+    int      tgtKnown;      /* 1 = tgtCellX/Y 유효 (이번 프레임 또는 최근 캐시) */
+    int      tgtCellX, tgtCellY;
     uint8_t  actorFlag59a;  /* actor +0x59A */
     int      deadSrc;       /* 1=AC+0x49  2=Death/DeadBody vft  0=alive */
     uint32_t itemType, itemQty;
@@ -515,8 +521,13 @@ typedef struct {
 #define LC_MAXE 512
 static uint32_t LC_ATK_RANGE_TILES = 10u;  /* registry ATK_RANGE_TILES */
 static LC_E *lc_findCur(uint64_t guid);    /* fwd decl (defined below) */
+static LC_E *lc_findCurPtr(uint64_t v);    /* fwd decl: guid OR entity base */
 static LC_E lc_cur[LC_MAXE]; static int lc_nc = 0;
 static LC_E lc_prev[LC_MAXE]; static int lc_npc = 0;
+/* 26.11.17.2002: 공격 대상의 마지막 알려진 좌표(목표가 프레임 목록에 없어도
+ * etview 가 선을 그을 수 있게). registry 가 아니라 런타임 캐시. */
+typedef struct { uint64_t guid; int x, y, t; } LC_TGTCELL;
+static LC_TGTCELL lcTgtCell[32];
 static uint64_t lc_meGuid = 0, lc_meE = 0;
 static uint64_t lc_actor = 0;
 static int lc_dbg = 0;
@@ -1234,7 +1245,18 @@ static void lc_pollFast(uint64_t *ptrs, int n, DWORD now)
         LC_E *X = &lc_cur[i];
         X->atkValid = -1; X->atkBlocked = 0;
         if (!X->hasAtk || !X->atkTgt) continue;
-        const LC_E *T = lc_findCur(X->atkTgt);
+        /* 26.11.17.2002: ACT_ATK_TARGET(+0x88) 는 대상 GUID 가 아니라
+         * "TargetInfo" 오브젝트 포인터다(실측: 그 +0x00 = 대상 GUID).
+         * 11_11 까지는 +0x88 가 GUID 라 lc_findCur 로 바로 됐지만, 이 빌드는
+         * 포인터라 GUID 매칭이 실패 → etview 가 선을 못 그었다.
+         * 여기서 대상 GUID 로 정규화해 하위 소비자(etview/lasthit/party)가
+         * 예전과 같은 GUID 규약을 보게 한다. */
+        const LC_E *T = lc_findCurPtr(X->atkTgt);
+        if (!T && isHeap(X->atkTgt)) {
+            uint64_t tg = q64(X->atkTgt + LC_ACT_TGT_GUID_OFF_V);
+            T = lc_findCur(tg);
+            if (T) X->atkTgt = tg;          /* 정규화 */
+        }
         if (!T) X->atkValid = -1;   /* target not collected -> unknown */
         else if (T->dead) X->atkValid = 0;
         else {
@@ -1242,6 +1264,27 @@ static void lc_pollFast(uint64_t *ptrs, int n, DWORD now)
             int adx = dx < 0 ? -dx : dx, ady = dy < 0 ? -dy : dy;
             int cheb = adx > ady ? adx : ady;
             X->atkValid = (cheb <= (int)LC_ATK_RANGE_TILES) ? 1 : 0;
+        }
+        /* 목표 좌표(마지막 알려진 위치) 저장: 목표가 이 프레임 목록에 없어도
+         * etview 가 선을 그을 수 있게 한다. */
+        if (T) { X->tgtKnown = 1; X->tgtCellX = T->cellx; X->tgtCellY = T->celly; }
+        else if (isHeap(X->atkTgt)) {
+            uint64_t tg = q64(X->atkTgt + LC_ACT_TGT_GUID_OFF_V);
+            for (int k = 0; k < 32; k++) {
+                if (lcTgtCell[k].guid == tg && lcTgtCell[k].t) {
+                    X->tgtKnown = 1; X->tgtCellX = lcTgtCell[k].x; X->tgtCellY = lcTgtCell[k].y;
+                    break;
+                }
+            }
+        }
+    }
+    /* 목표 좌표 캐시 갱신 (목록에 있는 대상만) */
+    for (int i = 0; i < lc_nc; i++) {
+        LC_E *X = &lc_cur[i];
+        if (X->vft == LC_VFT_ITEM || !X->guid) continue;
+        for (int k = 0; k < 32; k++) {
+            if (lcTgtCell[k].guid == X->guid) { lcTgtCell[k].x = X->cellx; lcTgtCell[k].y = X->celly; lcTgtCell[k].t = 1; break; }
+            if (!lcTgtCell[k].guid) { lcTgtCell[k].guid = X->guid; lcTgtCell[k].x = X->cellx; lcTgtCell[k].y = X->celly; lcTgtCell[k].t = 1; break; }
         }
     }
     static uint8_t ownbuf[0x200];
@@ -1372,6 +1415,15 @@ static void lc_pick_self(void)
 static LC_E *lc_findCur(uint64_t guid)
 {
     for (int i = 0; i < lc_nc; i++) if (lc_cur[i].guid == guid) return &lc_cur[i];
+    return NULL;
+}
+static LC_E *lc_findCurPtr(uint64_t v)
+{
+    if (!v) return NULL;
+    /* 26.11.17.2002: ACT_ATK_TARGET(+0x88) 는 GUID 가 아니라 엔티티 포인터를
+     * 가리킬 수 있다. 먼저 guid 매칭, 실패 시 entity base 로 매칭한다. */
+    for (int i = 0; i < lc_nc; i++) if (lc_cur[i].guid == v) return &lc_cur[i];
+    for (int i = 0; i < lc_nc; i++) if (lc_cur[i].e == v) return &lc_cur[i];
     return NULL;
 }
 static LC_E *lc_findPrev(uint64_t guid)
