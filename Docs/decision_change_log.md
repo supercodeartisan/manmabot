@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
+
+Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.
+Shared: `Engine/analysis/registry/*` overlays, `offsets.json` / `char_offsets.txt`, `core/lcore.h`, `src/party/lparty.h`, rebuilt listener DLLs (`realtime_monitor`, `print_state`, `party`, `partyhud`, `attacks_me`, `contested_mobs`, `shop_listen`). Map id stays MapSubsystem + `MapIdOff` `0x718` / pair `0x71C`. Decision, move, combat, HP, login, and click code were not edited.
+Affects: player xy/hp/status, mapId VFT, entity class VFTs, inventory/hotbar anchors, party VFTs, shop listen defaults. Structure-field offsets without v38 proof were left as in the drop.
+Consent: user (“okay, let's update current project's offsets & memory datas to the updated correct version”).
+Result: `python Engine/analysis/_build/check_configs.py` → **PASS**. Backup at `Engine/analysis.bak_v37_20261118`. Not run in game yet — restart the bot against 26.11.17.2002 to smoke-test.
+
 ## 2026-11-12 — the party leader does not pick up ground piles
 
 Intent: A party leader drops a pile it already chose and does not start another. The farm "loot until pickup" hold and the world-nav "loot before route" hold stop once that pile is cleared. Members still loot. A supply drop claimed for the leader still uses `leader_supply_pickup`.

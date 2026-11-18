@@ -122,6 +122,20 @@ static uint32_t g_mapSubVft = 0x11C7DF0u;
 static uint32_t g_mapIdOff = 0x718u;
 static uint32_t g_mapIdPairOff = 0x71Cu;
 
+/* HudCharacterInfo LoadingBar + CharData EXP chain + PLAYER_X/Y. Defaults = registry v38. */
+static uint32_t g_uiSubVft = 0x12121A8u;
+static uint32_t g_hudCharVft = 0x12B02A0u;
+static uint32_t g_loadBarVft = 0x12DDA28u;
+static uint32_t g_expBarOff = 0xE8u;
+static uint32_t g_expPctOff = 0x704u;
+static uint32_t g_expCd0 = 0x1B0u, g_expCd1 = 0x28u, g_expCd2 = 0x110u;
+static uint32_t g_playerX = 0x172A6F0u, g_playerY = 0x172A6F4u;
+static uint32_t g_uiContHead[2] = { 0x38u, 0x28u };
+static uint32_t g_uiContNext[2] = { 0x18u, 0x28u };
+static uint32_t g_uiContVal = 0x38u;
+static int g_uiNCont = 2;
+static int g_expRegLoaded = 0;
+
 // ---------------------------------------------------------------------------
 // Low-level helpers
 // ---------------------------------------------------------------------------
@@ -174,21 +188,27 @@ static uint32_t chVrva(uint64_t o) {
     return chIsMod(v) ? (uint32_t)(v - g_base) : 0;
 }
 
-/* Live percent is the HudCharacterInfo LoadingBar float. ExperiencePct64 on
-   26.11.10 is only a pointer slot; reading those bits as a double prints 0.0%.
-   The slot is a fallback for an older client that still stores the f64 there. */
+/* EXP%/POS follow 11_18 charread_930 (not the old offsets.json player block):
+ *   POS  = module globals PLAYER_X/Y (cell = world tile)
+ *   EXP% = CharData → EXP_CD_0/1/2 → LoadingBar+EXP_BAR_PCT (authoritative)
+ *          else UISubsystem HudCharacterInfoLayout → same bar
+ *          else ExperiencePct64 mirror (fallback only; may be UNVERIFIED)
+ */
 static int expPctInRange(double v) {
     return isfinite(v) && v >= 0.0 && v <= 100.0;
 }
 
 static int readHudExp(double* out);
+static int readCharDataExp(double* out);
 
 static double readExpPct(void) {
-    double hud = 0.0;
+    double v = 0.0;
     uint64_t bits = 0;
     double direct = 0.0;
-    if (readHudExp(&hud))
-        return hud;
+    if (readCharDataExp(&v))
+        return v;
+    if (readHudExp(&v))
+        return v;
     if (!g_base || !offExpPct || !readMem(g_base + offExpPct, &bits, 8))
         return 0.0;
     if (chIsMod(bits)) {
@@ -297,8 +317,14 @@ static void loadOffsets(const char* path) {
     while (fgets(line, sizeof(line), f)) {
         if ((v = jsonNum(line, "PlayerBase")) > 0)          offPlayerBase = (uint64_t)v;
         if ((v = jsonNum(line, "PlayerBaseDirect")) >= 0)   offPlayerDirect = (int)v;
-        if ((v = jsonNum(line, "PosXAbs")) > 0)             offPosX = (uint64_t)v;
-        if ((v = jsonNum(line, "PosYAbs")) > 0)             offPosY = (uint64_t)v;
+        if ((v = jsonNum(line, "PosXAbs")) > 0) {
+            offPosX = (uint64_t)v;
+            g_playerX = (uint32_t)v;
+        }
+        if ((v = jsonNum(line, "PosYAbs")) > 0) {
+            offPosY = (uint64_t)v;
+            g_playerY = (uint32_t)v;
+        }
         if ((v = jsonNum(line, "PosZAbs")) > 0)             offPosZ = (uint64_t)v;
         if ((v = jsonNum(line, "ServerTick")) > 0)          offTick = (uint64_t)v;
         if ((v = jsonNum(line, "ExperiencePct64")) > 0)     offExpPct = (uint64_t)v;
@@ -422,11 +448,19 @@ static void loadCharOffsets(const char* path) {
         else if (!strcmp(k, "DEX")) g_chDex = v;
         else if (!strcmp(k, "WIS")) g_chWis = v;
         else if (!strcmp(k, "CHA")) g_chCha = v;
-        else if (!strcmp(k, "LEVEL")) g_chLevel = v;
-        else if (!strcmp(k, "HP")) g_chHp = v;
-        else if (!strcmp(k, "MAXHP")) g_chMaxHp = v;
-        else if (!strcmp(k, "MP")) g_chMp = v;
-        else if (!strcmp(k, "MAXMP")) g_chMaxMp = v;
+        else if (!strcmp(k, "LEVEL") || !strcmp(k, "STAT_LEVEL")) g_chLevel = v;
+        else if (!strcmp(k, "HP") || !strcmp(k, "STAT_HP")) g_chHp = v;
+        else if (!strcmp(k, "MAXHP") || !strcmp(k, "STAT_MAXHP")) g_chMaxHp = v;
+        else if (!strcmp(k, "MP") || !strcmp(k, "STAT_MP")) g_chMp = v;
+        else if (!strcmp(k, "MAXMP") || !strcmp(k, "STAT_MAXMP")) g_chMaxMp = v;
+        else if (!strcmp(k, "PLAYER_X")) { g_playerX = v; offPosX = v; }
+        else if (!strcmp(k, "PLAYER_Y")) { g_playerY = v; offPosY = v; }
+        else if (!strcmp(k, "EXP_CD_0")) g_expCd0 = v;
+        else if (!strcmp(k, "EXP_CD_1")) g_expCd1 = v;
+        else if (!strcmp(k, "EXP_CD_2")) g_expCd2 = v;
+        else if (!strcmp(k, "EXP_HUD_BAR")) g_expBarOff = v;
+        else if (!strcmp(k, "EXP_BAR_PCT")) g_expPctOff = v;
+        else if (!strcmp(k, "ExperiencePct64")) offExpPct = v;
         else if (!strcmp(k, "FOOD")) g_chFood = v;
         else if (!strcmp(k, "WEIGHT")) g_chWeight = v;
         else if (!strcmp(k, "WEIGHT_CUR")) g_chWeightCur = v;
@@ -477,20 +511,6 @@ static uint64_t findMapSubsystem(void) {
     return findSubsystem(g_mapSubVft, &g_cachedMap);
 }
 
-/* HudCharacterInfo LoadingBar. The CharacterData zone slot is null while that
-   window is not linked, but the layout stays in the UISubsystem container and
-   its bar float stays current. Defaults match registry v37. */
-static uint32_t g_uiSubVft = 0x11FA180u;
-static uint32_t g_hudCharVft = 0x1296628u;
-static uint32_t g_loadBarVft = 0x12C3AA8u;
-static uint32_t g_expBarOff = 0xE8u;
-static uint32_t g_expPctOff = 0x704u;
-static uint32_t g_uiContHead[2] = { 0x38u, 0x28u };
-static uint32_t g_uiContNext[2] = { 0x18u, 0x28u };
-static uint32_t g_uiContVal = 0x38u;
-static int g_uiNCont = 2;
-static int g_expRegLoaded = 0;
-
 static int expHeap(uint64_t a) {
     if (!a) return 0;
     if (g_validPtrLo && g_validPtrHi)
@@ -526,7 +546,18 @@ static void loadExpRegistry(void) {
         else if (!strcmp(k, "VFT_LOADINGBAR")) g_loadBarVft = v;
         else if (!strcmp(k, "EXP_HUD_BAR")) g_expBarOff = v;
         else if (!strcmp(k, "EXP_BAR_PCT")) g_expPctOff = v;
+        else if (!strcmp(k, "EXP_CD_0")) g_expCd0 = v;
+        else if (!strcmp(k, "EXP_CD_1")) g_expCd1 = v;
+        else if (!strcmp(k, "EXP_CD_2")) g_expCd2 = v;
+        else if (!strcmp(k, "ExperiencePct64")) offExpPct = v;
+        else if (!strcmp(k, "PLAYER_X")) { g_playerX = v; offPosX = v; }
+        else if (!strcmp(k, "PLAYER_Y")) { g_playerY = v; offPosY = v; }
         else if (!strcmp(k, "UIDLG_CONT_VAL")) g_uiContVal = v;
+        else if (!strcmp(k, "MGR")) g_chMgr = v;
+        else if (!strcmp(k, "CD_VFT") || !strcmp(k, "VFT_CHARDATA")) g_chCdVft = v;
+        else if (!strcmp(k, "VFT_STATUS")) g_chVftStatus = v;
+        else if (!strcmp(k, "CD_OFF")) g_chCdOff = v;
+        else if (!strcmp(k, "VFT_MAPSUBS") || !strcmp(k, "VFT_MAPSUBSYS")) g_mapSubVft = v;
     }
     fclose(f);
 }
@@ -565,6 +596,26 @@ static int readHudExp(double* out) {
     lay = findHudCharacterInfo();
     if (!lay) return 0;
     bar = rd64(lay + g_expBarOff);
+    if (!expHeap(bar) || chVrva(bar) != g_loadBarVft) return 0;
+    if (!readMem(bar + g_expPctOff, &pct, 4)) return 0;
+    if (!expPctInRange((double)pct)) return 0;
+    *out = (double)pct;
+    return 1;
+}
+
+/* Same fixed chain as 11_18 charread_930: cd → EXP_CD_* → HudCharInfo → LoadingBar. */
+static int readCharDataExp(double* out) {
+    uint64_t cd, p0, p1, p2, bar;
+    float pct = 0.f;
+    if (!out) return 0;
+    loadExpRegistry();
+    cd = findCharDataSubsystem();
+    if (!cd) return 0;
+    p0 = rd64(cd + g_expCd0);
+    p1 = expHeap(p0) ? rd64(p0 + g_expCd1) : 0;
+    p2 = expHeap(p1) ? rd64(p1 + g_expCd2) : 0;
+    bar = expHeap(p2) ? rd64(p2 + g_expBarOff) : 0;
+    if (!expHeap(p2) || chVrva(p2) != g_hudCharVft) return 0;
     if (!expHeap(bar) || chVrva(bar) != g_loadBarVft) return 0;
     if (!readMem(bar + g_expPctOff, &pct, 4)) return 0;
     if (!expPctInRange((double)pct)) return 0;
@@ -741,24 +792,14 @@ static void readPlayer(PlayerData* p) {
     }
     p->mapId = readCurrentMapId(&p->mapIdOk);
     p->instanceId = p->mapId;
+    /* POS authority = PLAYER_X/Y (11_18 charread). offsets.json PosXAbs aliases them. */
     {
-        int posed = 0;
-        if (offPosX == offTick + 8 && offPosY == offPosX + 4 && offPosZ == offPosY + 4) {
-            uint8_t pose[0x14];
-            if (readMem(g_base + offTick, pose, sizeof(pose))) {
-                memcpy(&p->tickMs, pose, 8);
-                memcpy(&p->posX, pose + 8, 4);
-                memcpy(&p->posY, pose + 12, 4);
-                memcpy(&p->posZ, pose + 16, 4);
-                posed = 1;
-            }
-        }
-        if (!posed) {
-            readMem(g_base + offPosX, &p->posX, 4);
-            readMem(g_base + offPosY, &p->posY, 4);
-            readMem(g_base + offPosZ, &p->posZ, 4);
-            readMem(g_base + offTick, &p->tickMs, 8);
-        }
+        uint32_t pxRva = g_playerX ? g_playerX : (uint32_t)offPosX;
+        uint32_t pyRva = g_playerY ? g_playerY : (uint32_t)offPosY;
+        if (pxRva) readMem(g_base + pxRva, &p->posX, 4);
+        if (pyRva) readMem(g_base + pyRva, &p->posY, 4);
+        if (offPosZ) readMem(g_base + offPosZ, &p->posZ, 4);
+        if (offTick) readMem(g_base + offTick, &p->tickMs, 8);
     }
     p->expPct = readExpPct();
     // Lawful/Weight/MaxWeight/Food from offsets.json are module-relative globals
