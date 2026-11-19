@@ -2517,7 +2517,7 @@ class MainWindow(ctk.CTk):
             attempts = 3
         self._recovery_budget.max_attempts = attempts
 
-    def _begin_arming(self, *, recovery: bool) -> None:
+    def _begin_arming(self, *, recovery: bool, close_game_first: bool = False) -> None:
         if self._arming or self._closing:
             return
         account = self._selected_account()
@@ -2574,6 +2574,15 @@ class MainWindow(ctk.CTk):
                         break
                     time.sleep(0.1)
                 else:
+                    if close_game_first and not self._arming_cancel.is_set():
+                        try:
+                            from session.game_shutdown import close_game_client
+
+                            self.append_log("Closing game before relogin (UIMessage)…")
+                            close_game_client()
+                        except Exception as exc:
+                            self.append_log(f"Close game before relogin failed: {exc}")
+
                     def run_login(selected: object, cancel_event: threading.Event):
                         selected_account = selected
                         request = AutoLoginRequest(
@@ -2888,12 +2897,41 @@ class MainWindow(ctk.CTk):
         self._refresh_lamps()
         if self.controller.state in (RunState.RUNNING, RunState.PAUSED):
             event = self.controller.auto_pause_tick()
-            if event == "game_closed":
+            if event in ("game_closed", "session_disconnected"):
                 if bool(getattr(self.profile, "resume_after_relogin", True)):
-                    self._begin_arming(recovery=True)
+                    self._begin_arming(
+                        recovery=True,
+                        close_game_first=(event == "session_disconnected"),
+                    )
                 else:
-                    self.controller.reason = "Game closed; resume after relogin is off."
+                    self.controller.reason = (
+                        "Session ended; resume after relogin is off."
+                    )
                     self.append_log(self.controller.reason)
+            elif event == "session_policy_block":
+                reason = (
+                    self.controller.reason
+                    or "Account stopped by operator policy; not auto-recovering."
+                )
+                self.append_log(reason)
+                try:
+                    from session.game_shutdown import close_game_client
+
+                    threading.Thread(
+                        target=close_game_client,
+                        name="uimsg-close-game",
+                        daemon=True,
+                    ).start()
+                except Exception:
+                    pass
+                try:
+                    messagebox.showwarning(
+                        "Operator policy",
+                        reason,
+                        parent=self,
+                    )
+                except Exception:
+                    pass
         self._refresh_buttons()
         self.after(250, self._poll)
 

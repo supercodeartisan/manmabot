@@ -18,6 +18,7 @@ class QtBridge(QObject):
     logLine = Signal(str)
     hotbarUpdated = Signal(object, object)
     userStopped = Signal()
+    alertRequested = Signal(str, str)
     # Arming / hotkey / handover threads must not touch QTimer from foreign threads.
     _dispatchCall = Signal(object)
 
@@ -33,6 +34,9 @@ class QtBridge(QObject):
             on_change=lambda: self.stateChanged.emit(),
             on_log=lambda message: self.logLine.emit(str(message)),
             on_hotbar=lambda layout, slots: self.hotbarUpdated.emit(layout, slots),
+            on_alert=lambda title, message: self.alertRequested.emit(
+                str(title), str(message)
+            ),
         )
         self.coordinator.on_user_stop = self._on_user_stop
 

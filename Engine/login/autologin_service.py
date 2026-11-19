@@ -253,6 +253,12 @@ def build_transient_config(
         "character_number": request.character_number,
         "click_mode": request.click_mode,
         "use_pipeline": bool(template.get("use_pipeline", True)),
+        # Prefer explicit login.purple_engine; fall back to template top-level.
+        "purple_engine": str(
+            login.get("purple_engine")
+            or template.get("purple_engine")
+            or "v2"
+        ),
         "lang_policy": template.get("lang_policy", "L0"),
         "position_dict_writable": False,
         "require_elevation": True,

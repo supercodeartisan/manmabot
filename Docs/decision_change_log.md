@@ -1,5 +1,45 @@
 # Decision change log
 
+## 2026-11-19 — UIMessage via analysis DLL + close/relogin/resume
+
+Intent: Farm worker must detect connection vs operator-policy popups (KO/ZH body text) through the standard Engine/analysis LCAPI DLL path, not exe spawn. Policy → stop farm, close game, no autologin, warning. Disconnect → stop farm, close game, autologin, resume same map/time.
+Shared: `BotController._check_uimsg_session` / `auto_pause_tick`, `close_game_client`, `OperatorCoordinator.poll` / `main_window._poll`, `prepare_session` recovery arming. Hunt/move/HP helpers unchanged.
+Affects: RUNNING/PAUSED supervision only. Resume file `userdata/hunt_resume.json` restores `routine_cursor` index/elapsed + `farm_area_index` after relogin.
+Consent: user (“dll로 변환… 농장워커… 정책…경고… 연결…자동로그인…지도와 시간이력”).
+Result: `analysis/src/api/uimsg_api.c` → `dll/uimsg.dll`; `session/uimsg_probe.py` (CDLL count=1); `session/hunt_resume.py`; Qt/Tk policy alert. Unit tests for classify + resume apply. Live popup not re-run in this turn.
+
+## 2026-11-19 — UIMessage disconnect / policy stop (30s)
+
+Intent: While the LC window stays open, disconnect (`與伺服器連線中斷`) and operator-policy popups were invisible to `probe_game`; the farm worker kept hunting. Detect via `uimsg_1021` (CommonMessageSubsystem), not vitals.
+Shared: `BotController.auto_pause_tick` (+ `_check_uimsg_session`), `OperatorCoordinator.poll` / `main_window._poll`. Farm decision/move/HP helpers unchanged.
+Affects: RUNNING/PAUSED supervision. `session_disconnected` → same recovery arming as `game_closed` when `resume_after_relogin`. `session_policy_block` → stop, **no** auto-relogin.
+Consent: user (uimsg_1021 every 30s for connection + policy).
+Result: Superseded by DLL + close/relogin/resume entry above.
+
+## 2026-11-19 — AUTH relaunch: hand off before boot-status UI dies
+
+Intent: After AUTH close+relaunch, S1/v2 was blocking ~2 min (nested `_game_ready(120)` + long S4 focus) so boot-shake templates never reached S5. Guarantee shake can run without breaking normal login.
+Shared: `purple.engine` GLFW poll (single-shot, early handoff), S1 shake fast path when hwnd ready, `handoff.apply_handoff` / S4 keep `shake_armed` and shorten foreground when armed.
+Affects: Purple→game handoff timing after AUTH relaunch; normal cold login still waits for GLFW then S5. Farm/move/HP/recovery untouched.
+Consent: user (“좋다. 전체 프로젝트의 안정성을 보장하라”).
+Result: regression tests include S1 fast path + handoff preserve + non-blocking game poll. Live AUTH relaunch not re-run yet.
+
+## 2026-11-19 — Port 11_11 Purple UIA v2 + Interception + char select
+
+Intent: Bring every 11_11autologin advantage into Manmabot without breaking AutoLoginService / OperatorCoordinator / recovery / GameFlow AUTH·KO shake.
+Shared: S1–S3 now call `purple.facade` when `purple_engine=v2`; `handoff.apply_handoff` sets `_purple_logged_in` + GAME_LOGIN for S4/S5. `win/interception.py` injection-only + correct RIGHT/MIDDLE/WHEEL constants. `GameFlow._select_character` YOLO-first. S5 `shake_armed` syncs both ways from `_shake_after_relaunch`.
+Affects: Purple cold login path (UIA AutomationId instead of vision S2), mouse neutralize after login, character slot picking. Does not change farm/move/HP, session `restore_desktop_input`, or mapId.
+Consent: user (“11_11의 우점들을 모두 가져와서 … 흐름도를 분석한다음 구현”).
+Result: package `Engine/autologin/bot/purple/`, scripts `purple_probe`/`purple_contract`/`trace_common`, stages S1–S3 from 11_11, `launcher_config` + `build_transient_config` default `purple_engine=v2`. Also ported boot-shake hunt expiry / late-shake reject / AUTH detect after hunt, and YOLO-first char select. Regression `scripts/test_auth_and_interception_regressions.py` → **14 passed**. Live Purple/game not run yet.
+
+## 2026-11-19 — Korean boot-shake templates (matching only)
+
+Intent: AUTH relaunch shake must recognize Korean status pills as well as zh, via one shared template bank. No language priority in matching; keep match under ~1s.
+Shared: `GameFlow` boot_shake matching only (`_ANCHOR_FILES`, `_load_anchors`, `_match_boot_shake_status`). Hunt/pin/shake orchestration left as before. Purple S2, agree/server/char, HP/move helpers unchanged.
+Affects: which PNG bank boot_shake searches (zh + ko). Match path: grayscale ROI, short scales, early-exit, per-grab cache.
+Consent: user (KO templates; do not split ko/zh for matching; scope is template matching only).
+Result: `boot_shake_security_ko.png` / `boot_shake_device_ko.png` added. Watch-path experiments reverted. Not run in game yet.
+
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
 Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.
