@@ -563,26 +563,34 @@ class DecisionManager:
                     POTION_SUPPRESS_S
                 )
             if is_sell_behavior(bid) or is_store_behavior(bid):
-                advance_sell_trip(self.blackboard, state)
                 from app._04_decision.talking_scroll import (
                     SCRATCH_SHOP_TRIP,
                     mark_post_shop_return,
                 )
+                from app._04_decision.shop_trip import (
+                    SCRATCH_HP_SELL_BEFORE_RETREAT,
+                    schedule_sell_weight_settle,
+                )
 
-                # Sell queue finished → clear_shop_trip already ran inside advance.
-                # A pre-retreat sell must retreat, not world-nav back to the farm.
-                from app._04_decision.shop_trip import SCRATCH_HP_SELL_BEFORE_RETREAT
-
-                if (
-                    not self.blackboard.scratch.get(SCRATCH_SHOP_TRIP)
-                    and self.blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT)
-                    != "retreat"
-                ):
-                    if self.blackboard.scratch.get("party_shopkeeper_arrow"):
-                        self.blackboard.scratch["party_join_leader"] = True
-                        self.blackboard.scratch.pop("party_pin_shop_behavior", None)
-                    else:
-                        mark_post_shop_return(self.blackboard)
+                # Merchant sell: wait for WEIGHT/bag memory before early-stop,
+                # next stall, or the optional warehouse gate. Warehouse
+                # ``give_goods`` (store) itself advances immediately when done.
+                if is_sell_behavior(bid):
+                    schedule_sell_weight_settle(self.blackboard)
+                else:
+                    advance_sell_trip(self.blackboard, state)
+                    # Sell queue finished → clear_shop_trip already ran inside advance.
+                    # A pre-retreat sell must retreat, not world-nav back to the farm.
+                    if (
+                        not self.blackboard.scratch.get(SCRATCH_SHOP_TRIP)
+                        and self.blackboard.scratch.get(SCRATCH_HP_SELL_BEFORE_RETREAT)
+                        != "retreat"
+                    ):
+                        if self.blackboard.scratch.get("party_shopkeeper_arrow"):
+                            self.blackboard.scratch["party_join_leader"] = True
+                            self.blackboard.scratch.pop("party_pin_shop_behavior", None)
+                        else:
+                            mark_post_shop_return(self.blackboard)
             else:
                 from app._04_decision.shops import is_teleporter_behavior
                 from app._04_decision.world_nav.hooks import apply_npc_teleporter_result

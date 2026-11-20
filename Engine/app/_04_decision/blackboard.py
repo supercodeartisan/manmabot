@@ -38,7 +38,7 @@ class Blackboard:
 
     # -- current objectives -------------------------------------------------
     current_target_id: Optional[int] = None
-    # Survives TrackIds / heap-pointer churn: rebind by species + last cell.
+    # Survives TrackIds churn when guid is missing: rebind by species + cell.
     current_target_species: Optional[str] = None
     current_target_world: Optional[tuple[int, int]] = None
     current_item_id: Optional[int] = None

@@ -1,5 +1,144 @@
 # Decision change log
 
+## 2026-11-19 — Unify: UI wants role → find on live hotbar only
+
+Intent: Operator UI chooses which skills/items to use; the 24-slot hotbar list is the only source of press location. No Setup box/key alone.
+Shared: `resolve_hotbar_press` / `find_role_on_layout`; `_live_or_assigned_slot` + `heal_press_slot` + haste/antidote resolve; `slot_is_enabled` = checkbox only (box may be 0); merge with `cells=` keeps wants without inventing empty-cell keys; `_press_assigned_skill` re-resolves forced slots on the bar.
+Affects: heal, potions, buffs/roles via assigned skill, talking scroll (still boot-scan gated), teleport/mother_tree/etc.
+Side effects: role enabled but missing from bar → no press (correct).
+Consent: user (통일 — 핫바 목록에서 대면부 설정분만 찾아 씀).
+Result: resolve/merge/party/hp unit tests green; catalog buff + depoison + mage named also re-check live bar.
+
+## 2026-11-19 — Hotbar roles from live cells only (no stale Setup potion)
+
+Intent: Stop pressing Setup ``hp_potion@box2/f11`` when that cell is actually a spell (風刃). Live scan / layout name must own skill and item keys.
+Shared: `merge_detected_spell_slots(..., cells=)` blocks filled cells; `apply_recovery_to_spell_slots(..., layout=)` refuses mismatched rebind; `find_hp_restore_hotbar` no Setup fallback; `_can_potion_now` / potion side / `_use_hp_potion` / `_live_or_assigned_slot("hp_potion")` require live potion cell.
+Affects: HP potion side, heal slot prefer-live, hotbar boot merge. Buff/other roles still scan-first then empty-cell previous only.
+Side effects: no HP potion presses until a potion icon is on the bar.
+Consent: user (핫바에서 읽고 쓰지, 설정 허튼 칸 금지).
+Result: merge + live potion unit tests.
+
+## 2026-11-19 — All hotbar presses: no mouse interference
+
+Intent: Same as heal — any skill/item key (shield, potion, buff, heal, …) must not race a mouse move/click mid-press.
+Shared: `_begin_skill_mouse_quiet` / `_end_skill_mouse_quiet` on `_press_box_skill`, full double gap on `_press_assigned_skill` + `_press_catalog_buff`. `recover_cursor_heal_double` still quiets its own double. Party-list row click stays after aim wait (outside quiet).
+Affects: heal, armor/power buff, potions, teleport, mage key press, cursor recover.
+Consent: user (힐뿐 아니라 실드·포션 등 모든 스킬).
+Result: quiet gate on shared press path.
+
+## 2026-11-19 — Heal double: no mouse interference
+
+Intent: Heal-key double (self + cursor recover) must not race a mouse move/click; concurrent hop/attack click mid-press leaves the cast circle up.
+Shared: `MouseController.begin_quiet`/`end_quiet` (blocks move/click/hold; release still allowed), wrap self `_heal` double + `recover_cursor_heal_double` (drop_mouse then quiet). Party-list heal click unchanged (after aim wait).
+Affects: heal, cursor recover, any mouse path during that window.
+Consent: user (힐 두 번 누를 때 마우스 클릭 간섭 금지).
+Result: quiet gate test.
+
+## 2026-11-19 — Wrong-cursor recovery = heal key double
+
+Intent: When the mouse cursor is wrong (spell circle / failed attack verify), recover by pressing heal twice (same as self-cast), not skip-only / exclude.
+Shared: `recover_cursor_heal_double`, `clear_spell_aim` (heal-double first, then one cancel fallback), knight/elf attack fail path. Travel/heal leftover still call `clear_spell_aim`. 1s recover cooldown. Esc unused.
+Affects: combat attack reject, travel/loot spell clear, heal hotkey (may actually heal / spend MP).
+Side effects: heal double while stuck on a corpse; cooldown can delay a second recover.
+Consent: user (“복구처리는 힐건반을 다시 두번 누르라”).
+Result: unit tests for heal-double recover / clear.
+
+## 2026-11-19 — Eradicate leftover spell circle blocking travel
+
+Intent: After party-buff work (`ded020d`) cancel dropped Esc and self heal never remembered its key or checked the cursor, so a leftover cast circle stalled search/loot hops (`spell aim cancel still=spell`). Elf still arrow-attacked; the circle only blocked movement.
+Shared: `clear_spell_aim` (retry key toggle + view RMB), self `_heal` remember+clear, travel pre-clear + `clear_spell_aim` on spell probe, post potion-side clear. Esc still unused (system menu).
+Affects: heal, travel/search/loot hop, potion-side overlap. Not attack targeting / mage cast path.
+Side effects: up to 3 clear rounds of skill-key toggle + view right-click when a circle is stuck.
+Consent: user (“퇴치하라” — eradicate the new circle stall).
+Result: tests for clear + self-heal leftover.
+
+## 2026-11-19 — TrackIds prefer guid over heap ent (mainline)
+
+Intent: Farm loot walked to FREE/MINE piles then stalled (`loot track hold` / sticky release) because int `track_id` was keyed on print_state heap `ent`. Same game `guid` still in the roster got a new track id → false “gone.” Ownership gate was fine (`allowed=1`).
+Shared: `TrackIds` / `entities_to_handoff` / `_track_key` (`guid:…` when usable, else `ent:…`). Sticky APIs still int ids; loot blink hold (guid+kind+cell) kept as backup for guid-less rows. Combat species+cell rebind comments updated.
+Affects: **mainline** print_state→GameState tracks (loot, combat, players with guid). YOLO unchanged.
+**Not** shop / `modified_humanize_shop` (document separately; no shared shop files).
+Consent: user (fix ent-vs-guid track identity; then document as mainline, not shop branch).
+Detail: `Docs/decision/TRACK_ID_GUID.md`.
+Result: same guid keeps track_id across ent change; `test_track_ids_guid.py`.
+
+## 2026-11-19 — Policy: no sell re-open; verify via bag read
+
+Intent: Treat post-sell shop re-open/re-confirm as **forbidden**. Leftover check is bag/WEIGHT after settle, aligned with “no other shop state until bag was given a read window.”
+Shared: docs only (`SELL_TOUR.md` principle). Live path already one open + one confirm; warehouse skips on unread bag. No reopen loop restored.
+Consent: user (re-open must go; re-check via bag read; same as no-move-before-bag-read).
+Gap (not changed this turn): unread bag after settle **skips** warehouse rather than **holding** until `bag_ready`; next-merchant arm uses settle weight but does not hard-gate on `bag_ready`. Holding until ready would need a separate consent.
+Result: principle documented. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop stage wait jitter + pre-confirm fidget scroll
+
+Intent: Soften metronomic shop stage sleeps (±10–15%). After buy/sell row selection (and qty), before confirm, add 2–4 accidental down-right wheel glances at 0.3–0.5s gaps.
+Shared: `humanize.shop_stage_sleep` / `SHOP_STAGE_WAIT_JITTER`, `runtime._stage_sleep`, `_pre_confirm_fidget` on calibrated buy/sell + recover confirm. NPC aim, sell tour gates, buy memory match (still unimplemented), HP/login unchanged.
+Consent: user (stage wait 10–15% jitter; pre-confirm random 2–4 down-right scrolls at 0.3–0.5s).
+Result: `UI_AIM.md` notes. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Buy memory row match deferred (documented only)
+
+Intent: Record that calibrated buy still uses fixed YAML `item_index` (not live `shop_listen` buy rows) as an **unimplemented** follow-up. Also note buy does **not** tour multiple merchants — one resolved NPC per need kind.
+Shared: none (docs only). No `execute_calibrated_buy` / decide / sell changes.
+Consent: user (leave proposal documented as unimplemented; verify buy does not fixed-circuit merchants).
+Result: `Engine/shop/BUY.md`; `LOGIC_OVERVIEW` §10 pointer. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop-wide varied curves on every mouse click
+
+Intent: Every shop mouse move (Buy/Sell tab, rows, confirm, scroll hover, NPC dialog open/probe, recover UI) must use curved approach + fine adjust, with **randomly combined curve styles** so paths do not look like one fixed arc. NPC dialog click uses the same 0.10–0.15s hold (no snap re-aim).
+Shared: `humanize.shop_curve_points` / `SHOP_CURVE_STYLES`, `MouseController.move_with_budget(shop_curves=…)`, `ui_aim.shop_move_to` / `hold_in_place`, `npc_aim` rewritten onto that path, `execute_recover_arrow_buy` via `aim_and_click`. Combat Bezier/`MOVE_BUDGET_S` unchanged. Practice snap unchanged.
+Consent: user (same click logic on buy/sell buttons and NPC dialog; all shop clicks curved; vary curve forms randomly).
+Result: `UI_AIM.md` / tests updated. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — In-window shop UI aim (buy + sell)
+
+Intent: Buy and sell window clicks looked like snap macros. Use the same core as NPC aim (curve approach + fine adjust), without cursor verify; land with 1–2px screen-size error; hold click 0.10–0.15s; think 0.5–2s before scroll; type 0.2–0.3s after row click with ≤5 keys/s gaps; confirm uses the same aim path.
+Shared: `_click_uv`, `_scroll_list`, `_type_qty` via new `shop/ui_aim.py`. NPC `npc_aim`, combat `MOVE_BUDGET_S`, settle/warehouse gates, HP/login unchanged. Practice/`humanize=False` keeps snap.
+Affects: calibrated buy, merchant sell, warehouse store (same helpers). Teleporter option/confirm also go through `_click_uv`.
+Consent: user (curve+fine, 1–2px, hold 0.1–0.15, scroll think 0.5–2, confirm aim, type delay + rate; buy and sell together).
+Note: typing rate set to **5–6 characters/second** (`SHOP_UI_TYPE_KEY_GAP_S` = 1/6…1/5 s) per user follow-up.
+Result: `humanize.SHOP_UI_*`, `UI_AIM.md`, `test_ui_aim.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell decide jitter ~0.2s after weight settle
+
+Intent: After bag/weight settle, pause ~0.2s before adopting early-stop / next merchant / warehouse so the choice does not snap instantly. Timing only.
+Shared: `finish_sell_weight_settle` two-phase (settle → `SELL_DECIDE_JITTER_S` → `advance_sell_trip`). `bot_controller` still force-bags only on `sell_advance_pending` (not during decide). Thresholds, warehouse gates, sell clicks, buy, HP, login unchanged. Store/`give_goods` still advances immediately when that step finishes.
+Affects: delay between merchant sell success and arming the next shop step (~settle + ~0.2s).
+Consent: user (~0.2s; analyze so overall logic is untouched).
+Result: `shops.SELL_DECIDE_JITTER_S` (0.18–0.22); `SELL_TOUR.md`; `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Warehouse only after settle, weight ≥40%, leftovers
+
+Intent: After the sell merchant loop, visit `give_goods` only when bag/weight were read (same settle path as early-stop), weight is still ≥40%, and leftovers sit outside the keep list. Early-stop under 35% then skips warehouse naturally.
+Shared: `advance_sell_trip`, `_bag_needs_give_goods` (unread → skip), new `STORE_AFTER_SELL_MIN_RATIO` / `store_after_sell_weight_ok`. Sell clicks, buy, NPC aim, HP, login, combat unchanged. Merchant settle timing unchanged.
+Affects: solo / shopkeeper personal sell trip tail only. `store_after_sell` OFF still skips warehouse.
+Consent: user (warehouse when weight ≥40% + leftovers; only after bag/weight read like sell settle).
+Result: `shop_trip.py` / `shops.py` / `SELL_TOUR.md` / `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell weight settle before tour advance
+
+Intent: Early-stop / next-stall used WEIGHT before LC memory updated after sell. Wait ~0.75–1.35s (IDLE) with forced bag refresh, then `advance_sell_trip`.
+Shared: `schedule_sell_weight_settle` / `finish_sell_weight_settle`, `manager` sell feedback, `bot_controller` force bag while pending. Store/`give_goods` still advances immediately. NPC aim / buy / HP/login unchanged.
+Consent: user (slack timing between weight read and tour move so gauge is not missed).
+Result: settle constants `SELL_WEIGHT_SETTLE_S`; `SELL_TOUR.md` updated. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell tour random order + stop below 35% weight
+
+Intent: Sell circuit felt fixed; humanize by visiting all four merchants in a fresh random order each trip, and stop further merchants when bag weight falls below 35%.
+Shared: `_shuffled_sell_ids` (`random.sample`), `advance_sell_trip`, new `SELL_STOP_BELOW_RATIO` / `sell_tour_weight_done`. Buy path, NPC aim, party pin/block, HP/login unchanged. Optional `give_goods` after the merchant loop still runs.
+Affects: solo sell trips and party shopkeeper personal sell / HP-retreat sell queues. Start threshold remains Fix/Return `SELL_WEIGHT_RATIO` (~70%).
+Consent: user (randomize 4-shop order; stop tour when weight &lt; 35%).
+Result: `shop_trip.py` / `shops.py` / `configure.py`; `Engine/shop/SELL_TOUR.md`; tests `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop NPC human aim (approach + fine confirm)
+
+Intent: Live shop NPC open looked mechanical (0.02s move budget + snap + fixed 0.25s ring). Aim like a person: ~1s curved approach, micro-moves near the stall, irregular timing; keep combat move budget unchanged.
+Shared: `open_shop_npc`, new `shop.npc_aim`, `MouseController.move_with_budget` (shop-only long budget). `tick_shop_trip`, sell shuffle, in-window `_click_uv`, party pin/block, `try_unstick_escape` / HP / login unchanged.
+Affects: live shop/warehouse/teleporter NPC open when `executor.humanize`. Practice/`humanize=False` keeps legacy snap ring. `SHOP_RUN` blocks longer on open.
+Consent: user (curve ≥1s, fine repeats near NPC, non-metronomic timing; minimize side effects + document).
+Result: `Engine/shop/npc_aim.py`, `NPC_AIM.md`, humanize `SHOP_APPROACH_*` / `SHOP_FINE_*`, tests `shop/tests/test_npc_aim.py` (4 passed). Branch `modified_humanize_shop`.
+
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
 Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.

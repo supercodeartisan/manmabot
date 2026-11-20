@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping
 
-from app._05_action.spell_box import SKILL_KEYS, slot_is_enabled, slot_press
+from app._05_action.spell_box import SKILL_KEYS
 
 FIXED_HP_ACTION_IDS = ("hp_potion", "heal", "retreat")
 ITEM_ACTION_PREFIX = "item:"
@@ -431,8 +431,8 @@ def find_hp_restore_hotbar(
                     continue
                 return box, str(fkey).strip().lower()
 
-    if key == LEGACY_POTION_KEY and slot_is_enabled("hp_potion"):
-        return slot_press("hp_potion")
+    # No live/layout potion cell: do not fall back to Setup ``hp_potion``
+    # box/key — that binding can sit on an unrelated skill (wind blade).
     return None
 
 

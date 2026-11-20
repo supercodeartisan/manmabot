@@ -496,6 +496,13 @@ class ActionExecutor:
 
         if side_thread is not None:
             side_thread.join(timeout=2.0)
+            # Potion side shares F11 with heal on another box; a missed Fi can
+            # arm a cast circle under the mouse primary. Clear before the next
+            # tick tries to walk or attack.
+            from app._05_action.cursor_verify import clear_spell_aim, cursor_is_spell_aim
+
+            if cursor_is_spell_aim(self):
+                clear_spell_aim(self, reason="after potion side")
 
         self._maybe_init_skill_box(clicks_before)
         clicks_after = int(getattr(self.mouse, "button_events", 0) or 0)
@@ -816,7 +823,7 @@ class ActionExecutor:
         from app._05_action.cursor_verify import (
             click_closed_door,
             sweep_click_closed_door,
-            cancel_spell_aim,
+            clear_spell_aim,
             cursor_is_spell_aim,
             travel_click,
         )
@@ -897,6 +904,21 @@ class ActionExecutor:
         door_note = ""
         spell_cancels = 0
         intent_reason = str(getattr(action, "reason", "") or "")
+        # Circle already up (self-heal leftover, party miss, etc.): clear before
+        # the first ground probe so one failed cancel cannot stall the hop.
+        if cursor_is_spell_aim(self):
+            clear_spell_aim(self, reason=f"travel:pre:{intent_reason or 'hop'}")
+            if cursor_is_spell_aim(self):
+                self.last_travel_click_failed = True
+                self.last_travel_cursor_stats = {
+                    "ok": False,
+                    "probes": 0,
+                    "dialog_seen": 0,
+                    "labels_seen": ["spell"],
+                    "last_reject": "cursor=spell (pre-clear failed)",
+                    "intent_reason": intent_reason,
+                }
+                return
         index = 0
         while index < len(dests):
             content = dests[index]
@@ -941,11 +963,11 @@ class ActionExecutor:
                     seen_labels.append(label)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
-            # Leftover cast circle: Esc, then a right-click if it remains.
+            # Leftover cast circle: clear (key toggle + view right-clicks).
             if label.startswith("spell") or category is CursorCategory.SPELL:
                 if spell_cancels >= 3:
                     break
-                cancel_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
+                clear_spell_aim(self, reason=f"travel:{intent_reason or 'hop'}")
                 spell_cancels += 1
                 probes += 1
                 if cursor_is_spell_aim(self):
@@ -1077,40 +1099,24 @@ class ActionExecutor:
         self._search(action, bounds)
 
     def _use_hp_potion(self, action: ActionIntent | None = None) -> None:
-        """Press the F1–F3 page and F5–F12 key where that HP item sits."""
-        box = getattr(action, "hotbar_box", None) if action is not None else None
-        key = str(getattr(action, "hotbar_key", "") or "").strip().lower()
-        if box in (1, 2, 3) and key:
-            self._press_box_skill(int(box), key)
-            self.last_hp_potion_used = True
-            return
-        try:
-            from app._04_decision import player_mode as pm
-            from app._04_decision.hp_actions import action_row, assigned_hotbar_slot
+        """Press the F-key where the live/layout HP potion icon sits."""
+        from app._04_decision.hp_actions import (
+            find_hp_restore_hotbar,
+            item_key_from_action,
+        )
 
-            bound = assigned_hotbar_slot(
-                action_row(getattr(pm, "HP_ACTIONS", None) or [], "hp_potion")
-            )
-        except Exception:
-            bound = None
-        if bound is not None:
-            self._press_box_skill(bound[0], bound[1])
-            self.last_hp_potion_used = True
+        item_key = str(getattr(action, "item_key", "") or "").strip() or (
+            item_key_from_action("hp_potion") or "빨간 물약"
+        )
+        # Re-resolve on the bar every press. Intent box/key may be stale Setup.
+        slot = find_hp_restore_hotbar(
+            getattr(self, "_world", None),
+            item_key,
+            layout=getattr(self, "hotbar_layout", None),
+        )
+        if slot is None:
             return
-        item_key = str(getattr(action, "item_key", "") or "").strip()
-        if item_key:
-            from app._04_decision.hp_actions import find_hp_restore_hotbar
-
-            slot = find_hp_restore_hotbar(
-                getattr(self, "_world", None),
-                item_key,
-                layout=getattr(self, "hotbar_layout", None),
-            )
-            if slot is not None:
-                self._press_box_skill(slot[0], slot[1])
-                self.last_hp_potion_used = True
-                return
-        self._press_assigned_skill("hp_potion")
+        self._press_box_skill(int(slot[0]), str(slot[1]))
         self.last_hp_potion_used = True
 
     def _use_mp_potion(self) -> None:
@@ -1118,78 +1124,38 @@ class ActionExecutor:
         self._press_assigned_skill("mp_potion")
 
     def _use_depoison(self, action: ActionIntent | None = None) -> None:
-        """Antidote item — press the bound hotbar slot."""
-        box = getattr(action, "hotbar_box", None) if action is not None else None
-        key = str(getattr(action, "hotbar_key", "") or "").strip().lower()
-        if box in (1, 2, 3) and key:
-            self._press_box_skill(int(box), key)
-            return
+        """Antidote — live/layout cell only (UI enabled + on the bar)."""
+        del action  # intent box/key may be stale Setup; resolve on press
         self._press_assigned_skill("depoison")
 
     def _live_or_assigned_slot(self, name: str) -> tuple[int | None, str]:
-        """Prefer the live hotbar cell for this role; Setup slot if unread.
+        """UI-enabled role → press cell from the live hotbar list only.
 
-        Haste: hunt hotbar assignment wins; checkbox-only uses CSV role.
+        Operator checkboxes choose *what* to use. Memory/layout 24 slots
+        choose *where*. Setup box/key alone never selects a press cell.
         """
-        snap = getattr(getattr(self, "_world", None), "last_hotbar", None)
-        slots = snap.get("slots") if isinstance(snap, dict) else None
-        if str(name) == "talking_scroll" and sb.talking_scroll_boot_active():
+        role = str(name or "").strip()
+        if not role:
+            return None, ""
+        if role == "talking_scroll" and sb.talking_scroll_boot_active():
             if not sb.slot_is_enabled("talking_scroll"):
                 return None, ""
-            return sb.slot_press("talking_scroll")
-        if str(name) == "haste":
-            from app._04_decision.spells import HASTE_POTION_ITEM
-            from settings.haste_potion import resolve_haste_press_slot
+        elif role != "heal" and not sb.slot_is_enabled(role):
+            # Heal still allowed when decision already accepted (USE_HEAL).
+            return None, ""
+        from hotbar.inspect import resolve_hotbar_press
 
-            assigned = sb.slot_press("haste") if sb.slot_is_enabled("haste") else None
-            found = resolve_haste_press_slot(
-                item_key=HASTE_POTION_ITEM,
-                assigned_slot=assigned,
-                live_snap=snap if isinstance(snap, dict) else None,
-            )
-            if found is None:
-                return None, ""
-            return found
-        if str(name) == "depoison":
-            from app._04_decision.spells import ANTIDOTE_POTION_ITEM
-            from settings.antidote_potion import resolve_antidote_press_slot
-
-            assigned = (
-                sb.slot_press("depoison") if sb.slot_is_enabled("depoison") else None
-            )
-            found = resolve_antidote_press_slot(
-                item_key=ANTIDOTE_POTION_ITEM,
-                assigned_slot=assigned,
-                live_snap=snap if isinstance(snap, dict) else None,
-            )
-            if found is None:
-                return None, ""
-            return found
-        if str(name) in ("heal", "hp_potion"):
-            try:
-                from app._04_decision import player_mode as pm
-                from app._04_decision.hp_actions import (
-                    action_row,
-                    assigned_hotbar_slot,
-                )
-
-                bound = assigned_hotbar_slot(
-                    action_row(getattr(pm, "HP_ACTIONS", None) or [], name)
-                )
-            except Exception:
-                bound = None
-            if bound is not None:
-                return bound
-        if isinstance(slots, list) and slots:
-            from hotbar.inspect import find_role_on_hotbar
-
-            found = find_role_on_hotbar(snap, name)
-            if found is None:
-                if str(name) == "heal":
-                    return sb.slot_press("heal")
-                return None, ""
-            return found
-        return sb.slot_press(name)
+        world = getattr(self, "_world", None)
+        snap = getattr(world, "last_hotbar", None) if world is not None else None
+        layout = getattr(self, "hotbar_layout", None) or getattr(
+            world, "hotbar_layout", None
+        )
+        found = resolve_hotbar_press(
+            role, world=world, snap=snap, layout=layout
+        )
+        if found is None:
+            return None, ""
+        return found
 
     def _press_assigned_skill(
         self,
@@ -1238,41 +1204,57 @@ class ActionExecutor:
             if self._last_magic_at > 0 and wait > 0:
                 time.sleep(wait)
         if forced_slot is not None:
-            box, key = forced_slot
+            # Party-list / decision may pass a cell; still require it on the bar.
+            from hotbar.inspect import resolve_hotbar_press
+
+            live = resolve_hotbar_press(
+                name,
+                world=getattr(self, "_world", None),
+                snap=getattr(getattr(self, "_world", None), "last_hotbar", None),
+                layout=getattr(self, "hotbar_layout", None),
+            )
+            if live is None:
+                return
+            box, key = live
         else:
             box, key = self._live_or_assigned_slot(name)
-            if name == "heal" and (box is None or not key):
-                box, key = sb.slot_press("heal")
         if box is None or not key:
             return
         from app.bot_log import get_logger
 
         second = sb.slot_is_double(name) and not once
-        get_logger("action").info(
-            "skill press name=%s box=%s key=%s double=%s",
-            name,
-            int(box),
-            key,
-            0 if once else int(sb.slot_is_double(name)),
-        )
-        self._press_box_skill(box, key, duration=duration)
-        if second:
-            if self.humanize:
-                hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
-            else:
-                time.sleep(0.05)
-            self.keyboard.press(key)
+        # Quiet for the whole press (and double gap). A mouse click mid-skill
+        # leaves cast aim / wrong cursor — heal, shield, potion, buff alike.
+        self._begin_skill_mouse_quiet()
+        try:
             get_logger("action").info(
-                "skill press name=%s box=%s key=%s double=2",
+                "skill press name=%s box=%s key=%s double=%s",
                 name,
                 int(box),
                 key,
+                0 if once else int(sb.slot_is_double(name)),
             )
-        if sb.slot_is_magic(name):
-            now = time.time()
-            self._last_magic_at = now
-            if name == "mage_attack":
-                self._last_mage_cast = now
+            self._press_box_skill(box, key, duration=duration)
+            if second:
+                if self.humanize:
+                    hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
+                else:
+                    time.sleep(0.05)
+                self.keyboard.press(key)
+                get_logger("action").info(
+                    "skill press name=%s box=%s key=%s double=2",
+                    name,
+                    int(box),
+                    key,
+                )
+            self._last_skill_press = (str(name), int(box), str(key).strip().lower())
+            if sb.slot_is_magic(name):
+                now = time.time()
+                self._last_magic_at = now
+                if name == "mage_attack":
+                    self._last_mage_cast = now
+        finally:
+            self._end_skill_mouse_quiet()
 
     def _heal(self, bounds: WindowBounds, intent: ActionIntent | None = None) -> None:
         """Press the heal key decision already chose. No second veto.
@@ -1297,24 +1279,44 @@ class ActionExecutor:
         if (list_target or heal_all) and self._party_list_press_held(reason="heal"):
             return
         before = float(self._last_magic_at or 0.0)
+        # Skill presses (including self-heal double) quiet the mouse inside
+        # ``_press_assigned_skill`` / ``_press_box_skill``.
         self._press_assigned_skill(
             "heal", forced_slot=forced, once=list_target or heal_all
         )
-        if (list_target or heal_all) and forced is not None:
-            if float(self._last_magic_at or 0.0) > before:
-                from app._05_action.cursor_verify import remember_spell_aim_key
+        if float(self._last_magic_at or 0.0) > before:
+            from app._05_action.cursor_verify import remember_spell_aim_key
 
-                remember_spell_aim_key(self, forced[1], int(forced[0]))
+            last = getattr(self, "_last_skill_press", None)
+            if (
+                isinstance(last, tuple)
+                and len(last) >= 3
+                and str(last[0]) == "heal"
+            ):
+                remember_spell_aim_key(self, str(last[2]), int(last[1]))
+            else:
+                box, key = self._live_or_assigned_slot("heal")
+                if box is not None and key:
+                    remember_spell_aim_key(self, str(key), int(box))
         if not list_target:
+            # Self heal: double-press should leave NORMAL. If a circle remains,
+            # clear before the next hop/attack.
+            from app._05_action.cursor_verify import (
+                clear_spell_aim,
+                cursor_is_spell_aim,
+            )
+
+            if cursor_is_spell_aim(self):
+                clear_spell_aim(self, reason="self heal leftover")
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
             return
         from app._05_action.cursor_verify import wait_party_spell_aim
 
         if not wait_party_spell_aim(self, reason="heal"):
-            from app._05_action.cursor_verify import cancel_spell_aim
+            from app._05_action.cursor_verify import clear_spell_aim
 
-            cancel_spell_aim(self, reason="heal aim missed")
+            clear_spell_aim(self, reason="heal aim missed")
             return
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)
@@ -1346,23 +1348,30 @@ class ActionExecutor:
         if intent is not None and self._party_list_buff(intent, bounds):
             return
         if name.startswith("buff:") and intent is not None:
-            box = int(intent.hotbar_box or 0)
-            key = str(intent.hotbar_key or "").strip().lower()
-            if box in (1, 2, 3) and key:
-                self._press_catalog_buff(name, box, key)
+            self._press_catalog_buff(name)
             return
         if name not in ("power_up", "armor_up", "haste", "light"):
             return
         self._press_assigned_skill(name)
 
-    def _press_catalog_buff(self, token: str, box: int, key: str) -> None:
-        """Press one checked buff. Decision already chose the hotbar cell."""
+    def _press_catalog_buff(self, token: str) -> None:
+        """Press one UI-checked buff found again on the live hotbar list."""
         from app._04_decision.spells import _auto_buff, can_cast_spell
+        from settings.auto_buffs import press_for_buff
 
         buff = _auto_buff(token)
-        spell_name = buff.names[0] if buff is not None and buff.names else ""
+        if buff is None:
+            return
+        spell_name = buff.names[0] if buff.names else ""
         world = getattr(self, "_world", None)
         if world is not None and not can_cast_spell(world, role=spell_name or None):
+            return
+        snap = getattr(world, "last_hotbar", None) if world is not None else None
+        found = press_for_buff(snap, buff) if isinstance(snap, dict) else None
+        if found is None:
+            return
+        box, key = int(found[0]), str(found[1]).strip().lower()
+        if box not in (1, 2, 3) or not key:
             return
         if self._last_magic_at > 0:
             wait = sb.MAGIC_COOLDOWN_S - (time.time() - self._last_magic_at)
@@ -1371,29 +1380,33 @@ class ActionExecutor:
         from app.bot_log import get_logger
 
         double = self._catalog_buff_is_double(buff)
-        get_logger("action").info(
-            "skill press name=%s box=%s key=%s double=%s",
-            token,
-            int(box),
-            key,
-            int(double),
-        )
-        self._press_box_skill(box, key)
-        if double:
-            # Same second tap as Holy Weapon / Enchant Weapon (power_up).
-            # One press only leaves the round skill cursor.
-            if self.humanize:
-                hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
-            else:
-                time.sleep(0.05)
-            self.keyboard.press(key)
+        self._begin_skill_mouse_quiet()
+        try:
             get_logger("action").info(
-                "skill press name=%s box=%s key=%s double=2",
+                "skill press name=%s box=%s key=%s double=%s",
                 token,
                 int(box),
                 key,
+                int(double),
             )
-        self._last_magic_at = time.time()
+            self._press_box_skill(box, key)
+            if double:
+                # Same second tap as Holy Weapon / Enchant Weapon (power_up).
+                # One press only leaves the round skill cursor.
+                if self.humanize:
+                    hz.sleep_range(hz.HEAL_DOUBLE_GAP, self._rng)
+                else:
+                    time.sleep(0.05)
+                self.keyboard.press(key)
+                get_logger("action").info(
+                    "skill press name=%s box=%s key=%s double=2",
+                    token,
+                    int(box),
+                    key,
+                )
+            self._last_magic_at = time.time()
+        finally:
+            self._end_skill_mouse_quiet()
 
     def _party_list_buff(self, intent: ActionIntent, bounds: WindowBounds | None = None) -> bool:
         """True when this buff aims at a party-list row and the press was handled.
@@ -1405,16 +1418,32 @@ class ActionExecutor:
         cy = getattr(intent, "click_y", None)
         if cx is None or cy is None:
             return False
+        buff_reason = str(getattr(intent, "reason", "") or "party buff")
         box = int(getattr(intent, "hotbar_box", 0) or 0)
         key = str(getattr(intent, "hotbar_key", "") or "").strip().lower()
-        if box not in (1, 2, 3) or not key:
+        # Prefer live bar for catalog buffs; otherwise require intent cell on snap.
+        world = getattr(self, "_world", None)
+        snap = getattr(world, "last_hotbar", None) if world is not None else None
+        if str(buff_reason).startswith("buff:"):
+            from app._04_decision.spells import _auto_buff
+            from settings.auto_buffs import press_for_buff
+
+            buff = _auto_buff(buff_reason)
+            live = press_for_buff(snap, buff) if buff is not None else None
+            if live is None:
+                return True
+            box, key = int(live[0]), str(live[1]).strip().lower()
+        elif box not in (1, 2, 3) or not key:
             return True
+        elif isinstance(snap, dict):
+            from hotbar.inspect import hotbar_has_box_key
+
+            if not hotbar_has_box_key(snap, box, key):
+                return True
         from app._04_decision.spells import can_cast_spell
 
-        world = getattr(self, "_world", None)
         if world is not None and not can_cast_spell(world):
             return True
-        buff_reason = str(getattr(intent, "reason", "") or "party buff")
         if self._party_list_recast_waiting(reason=buff_reason):
             return True
         if self._party_list_press_held(reason=buff_reason):
@@ -1427,7 +1456,7 @@ class ActionExecutor:
 
         get_logger("action").info(
             "skill press name=%s box=%s key=%s double=0",
-            str(getattr(intent, "reason", "") or "party buff"),
+            buff_reason,
             int(box),
             key,
         )
@@ -1444,9 +1473,9 @@ class ActionExecutor:
             self,
             reason=str(getattr(intent, "reason", "") or "party buff"),
         ):
-            from app._05_action.cursor_verify import cancel_spell_aim
+            from app._05_action.cursor_verify import clear_spell_aim
 
-            cancel_spell_aim(
+            clear_spell_aim(
                 self,
                 reason=str(getattr(intent, "reason", "") or "party buff"),
             )
@@ -1553,15 +1582,31 @@ class ActionExecutor:
         if self.humanize and switched:
             hz.sleep_range(hz.BOX_SWITCH_WAIT, self._rng)
 
+    def _begin_skill_mouse_quiet(self) -> None:
+        """Drop held buttons and block mouse move/click for a hotbar press."""
+        self.drop_mouse()
+        self.mouse.begin_quiet()
+
+    def _end_skill_mouse_quiet(self) -> None:
+        self.mouse.end_quiet()
+
     def _press_box_skill(
         self,
         box: int,
         key: str,
         duration: float | None = None,
     ) -> None:
-        """Press box key Fi, then the skill/item key (F5–F12)."""
-        self.select_skill_box(box, force=True)
-        self.keyboard.press(key, duration=duration)
+        """Press box key Fi, then the skill/item key (F5–F12).
+
+        Mouse is quiet for the press. Heal / shield / potion / buff all share
+        this path so a hop or attack click cannot land mid-key.
+        """
+        self._begin_skill_mouse_quiet()
+        try:
+            self.select_skill_box(box, force=True)
+            self.keyboard.press(key, duration=duration)
+        finally:
+            self._end_skill_mouse_quiet()
 
     def _fixed_wait(self, seconds: float) -> None:
         """UI settle delay. Skipped in tests (humanize off)."""

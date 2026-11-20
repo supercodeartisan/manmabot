@@ -217,6 +217,89 @@ def test_a_late_circle_keeps_the_party_key_until_it_appears() -> None:
     assert executor._spell_aim_key == ""
 
 
+def test_clear_spell_aim_heal_doubles_then_drops() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.mouse = _ClickMouse()
+    executor._perception_capture = _Capture()
+    executor.humanize = False
+    executor.box_pressed: list[tuple[int, str]] = []
+
+    def _live(_name: str) -> tuple[int, str]:
+        return 1, "f11"
+
+    def _box(box: int, key: str, *_a, **_k) -> None:
+        executor.box_pressed.append((int(box), str(key)))
+
+    executor._live_or_assigned_slot = _live  # type: ignore[attr-defined]
+    executor._press_box_skill = _box  # type: ignore[attr-defined]
+    seen = {"n": 0}
+    original_aim = cv.cursor_is_spell_aim
+    original_settle = cv.SPELL_AIM_SETTLE_S
+    try:
+        cv.SPELL_AIM_SETTLE_S = 0.0
+
+        def _aim(_executor: object = None) -> bool:
+            seen["n"] += 1
+            # After heal double (box + key), cursor clears.
+            return len(executor.box_pressed) < 1
+
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        assert cv.clear_spell_aim(executor, reason="self heal leftover") is True
+    finally:
+        cv.cursor_is_spell_aim = original_aim  # type: ignore[assignment]
+        cv.SPELL_AIM_SETTLE_S = original_settle
+    assert executor.box_pressed == [(1, "f11")]
+    assert executor.keyboard.pressed == ["f11"]
+    assert executor.mouse.clicks == []
+
+
+def test_heal_double_quiet_blocks_mouse_click() -> None:
+    from app._05_action.mouse import MouseController
+
+    mouse = MouseController(enabled=False, humanize=False)
+    mouse.begin_quiet()
+    before = mouse.button_events
+    mouse.click(10.0, 20.0, snap=True)
+    mouse.move(30.0, 40.0, snap=True)
+    assert mouse.button_events == before
+    assert mouse.is_quiet is True
+    mouse.end_quiet()
+    assert mouse.is_quiet is False
+
+
+def test_recover_cursor_heal_double_presses_heal_twice() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.humanize = False
+    executor.box_pressed: list[tuple[int, str]] = []
+
+    def _live(_name: str) -> tuple[int, str]:
+        return 1, "f11"
+
+    def _box(box: int, key: str, *_a, **_k) -> None:
+        executor.box_pressed.append((int(box), str(key)))
+
+    executor._live_or_assigned_slot = _live  # type: ignore[attr-defined]
+    executor._press_box_skill = _box  # type: ignore[attr-defined]
+    original_settle = cv.SPELL_AIM_SETTLE_S
+    try:
+        cv.SPELL_AIM_SETTLE_S = 0.0
+        assert (
+            cv.recover_cursor_heal_double(executor, reason="attack:bad cursor")
+            is True
+        )
+        assert (
+            cv.recover_cursor_heal_double(executor, reason="attack:bad cursor")
+            is False
+        )  # cooldown
+    finally:
+        cv.SPELL_AIM_SETTLE_S = original_settle
+    assert executor.box_pressed == [(1, "f11")]
+    assert executor.keyboard.pressed == ["f11"]
+    assert executor._spell_aim_key == "f11"
+
+
 def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:
     original = cv.cursor_is_spell_aim
     try:
@@ -234,4 +317,7 @@ if __name__ == "__main__":
     test_party_list_skips_the_click_when_the_cursor_stays_down()
     test_stuck_spell_right_clicks_inside_the_view()
     test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops()
+    test_clear_spell_aim_heal_doubles_then_drops()
+    test_heal_double_quiet_blocks_mouse_click()
+    test_recover_cursor_heal_double_presses_heal_twice()
     print("spell aim hold tests ok")

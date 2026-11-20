@@ -81,13 +81,59 @@ def test_heal_all_does_not_press_while_the_cursor_is_spell() -> None:
 def test_self_heal_still_presses_while_the_cursor_is_spell() -> None:
     executor = _executor()
     intent = ActionIntent(action=ActionType.HEAL, reason="self heal")
+    clears: list[str] = []
     original = cv.cursor_is_spell_aim
+    original_clear = cv.clear_spell_aim
     try:
         cv.cursor_is_spell_aim = lambda *_args, **_kwargs: True  # type: ignore[assignment]
+
+        def _clear(_executor: object, *, reason: str = "") -> bool:
+            clears.append(reason)
+            return True
+
+        cv.clear_spell_aim = _clear  # type: ignore[assignment]
         executor._heal(_bounds(), intent)
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
+        cv.clear_spell_aim = original_clear  # type: ignore[assignment]
     assert executor.pressed == ["heal"]  # type: ignore[attr-defined]
+    assert clears == ["self heal leftover"]
+
+
+def test_self_heal_clears_leftover_circle_after_press() -> None:
+    executor = _executor()
+    executor._last_magic_at = 0.0
+    intent = ActionIntent(
+        action=ActionType.HEAL,
+        reason="self heal",
+        hotbar_box=1,
+        hotbar_key="f11",
+    )
+    clears: list[str] = []
+
+    def _press(name: str, *_args, **_kwargs) -> None:
+        executor.pressed.append(name)  # type: ignore[attr-defined]
+        executor._last_magic_at = time.time()
+        executor._last_skill_press = (str(name), 1, "f11")
+
+    executor._press_assigned_skill = _press  # type: ignore[method-assign]
+    original_aim = cv.cursor_is_spell_aim
+    original_clear = cv.clear_spell_aim
+    try:
+        cv.cursor_is_spell_aim = lambda *_args, **_kwargs: True  # type: ignore[assignment]
+
+        def _clear(_executor: object, *, reason: str = "") -> bool:
+            clears.append(reason)
+            return True
+
+        cv.clear_spell_aim = _clear  # type: ignore[assignment]
+        executor._heal(_bounds(), intent)
+    finally:
+        cv.cursor_is_spell_aim = original_aim  # type: ignore[assignment]
+        cv.clear_spell_aim = original_clear  # type: ignore[assignment]
+    assert executor.pressed == ["heal"]  # type: ignore[attr-defined]
+    assert executor._spell_aim_key == "f11"
+    assert clears == ["self heal leftover"]
 
 
 def test_party_list_heal_presses_once_the_cursor_is_down() -> None:
