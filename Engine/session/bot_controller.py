@@ -275,6 +275,8 @@ class BotController:
         from app._06_party.chat_queue import PartyChatQueue
 
         self._party_chat = PartyChatQueue()
+        self._party_kicks: dict[str, Any] = {}
+        self._kick_results: list[dict[str, str]] = []
         self._member_state_reporter = None
         # Monitor-only records (read by ``party_monitor_snapshot``).
         self._party_invites = None
@@ -1912,9 +1914,9 @@ class BotController:
         or minimized worker keeps the job until it is acting again.
         """
         kind_s = str(kind or "").strip().lower()
-        if kind_s not in ("invite", "accept"):
+        if kind_s not in ("invite", "accept", "kick"):
             return "rejected: unknown party action"
-        if kind_s == "invite" and not str(name or "").strip():
+        if kind_s in ("invite", "kick") and not str(name or "").strip():
             return "Enter a character name"
         if self.state != RunState.RUNNING or not (
             self._thread is not None and self._thread.is_alive()
@@ -1927,7 +1929,18 @@ class BotController:
             return text
         return "queued"
 
-    def _drain_party_chat(self) -> str:
+    def submit_party_kick(self, name: str) -> str:
+        """Queue /파티추방 for one name. The worker types it on the invite path."""
+        return self.submit_party_chat("kick", name)
+
+    def take_kick_results(self) -> list[dict[str, str]]:
+        """Names whose kick finished since the last take. UI thread reads this."""
+        with self._lock:
+            rows = list(self._kick_results)
+            self._kick_results.clear()
+            return rows
+
+    def _drain_party_chat(self, world: Any = None) -> str:
         """Run at most one queued manual party action. Returns its kind, or ""."""
         job = self._party_chat.pop()
         if job is None:
@@ -1959,6 +1972,32 @@ class BotController:
                     note = str(getattr(accept_mod, "_last_y_note", "") or "")
                     if note:
                         text += note
+            elif job.kind == "kick":
+                from app._06_party.invite import (
+                    KickWatch,
+                    action_party_snapshot,
+                    deliver_chat,
+                )
+
+                key = str(job.name or "").strip().casefold()
+                existing = self._party_kicks.get(key)
+                if existing is not None and existing.phase == "waiting":
+                    ok = True
+                    text = "queued"
+                else:
+                    watch = KickWatch(job.name)
+                    text = watch.begin(
+                        action_party_snapshot(world),
+                        lambda line: deliver_chat(line, log=self.log),
+                    )
+                    ok = watch.phase == "waiting" and not text.endswith(" failed")
+                    if watch.phase == "waiting":
+                        self._party_kicks[watch.key] = watch
+                        invites = getattr(self, "_party_invites", None)
+                        if invites is not None:
+                            invites.hold_kick(watch.name)
+                    elif watch.phase == "skipped":
+                        self._remember_kick(watch.name, "skipped")
             else:
                 ok = False
                 text = f"rejected: unknown party action {job.kind}"
@@ -1968,21 +2007,82 @@ class BotController:
         self._party_chat.finish(job, text, ok=ok)
         self.log(text)
         self._party_event("chat", text)
-        return job.kind if ok or job.kind in ("invite", "accept") else ""
+        attempted = job.kind == "kick" and str(job.name or "").strip().casefold() in self._party_kicks
+        return job.kind if ok or attempted or job.kind in ("invite", "accept") else ""
 
-    def _leader_invite_tick(self, world, last_action, *, hold_chat: bool = False) -> None:
+    def _remember_kick(self, name: str, phase: str) -> None:
+        who = str(name or "").strip()
+        if not who:
+            return
+        with self._lock:
+            self._kick_results.append({"name": who, "phase": phase})
+
+    def _finish_kick(self, name: str, phase: str) -> None:
+        key = str(name or "").strip().casefold()
+        self._party_kicks.pop(key, None)
+        invites = getattr(self, "_party_invites", None)
+        if phase == "left":
+            if invites is not None:
+                invites.drop_kicked(name)
+            self._clear_kicked_roster(name)
+            self.log(f'Party kick: "{name}" left — 사용 and 대기 cleared')
+        else:
+            if invites is not None:
+                invites.release_kick(name)
+            self.log(f'Party kick: "{name}" still in the party')
+        self._remember_kick(name, phase)
+
+    def _clear_kicked_roster(self, name: str) -> None:
+        from app._06_party.invite import clear_roster_flags
+        from settings.profile import normalize_party_roster
+
+        rows = normalize_party_roster(getattr(self._profile, "party_roster", None))
+        if not clear_roster_flags(rows, name):
+            return
+        self._profile.party_roster = rows
+
+    def _tick_party_kicks(self, world, last_action, *, hold_chat: bool) -> None:
+        """Confirm a kick, and send the line again when the name is still listed."""
+        if not self._party_kicks:
+            return
+        from app._06_party.invite import (
+            action_allows_chat,
+            action_party_snapshot,
+            deliver_chat,
+        )
+
+        snap = action_party_snapshot(world)
+        can_send = (not hold_chat) and action_allows_chat(last_action)
+        for watch in list(self._party_kicks.values()):
+            outcome = watch.tick(
+                snap,
+                lambda line: deliver_chat(line, log=self.log),
+                can_send=can_send,
+            )
+            if outcome == "left":
+                self._finish_kick(watch.name, "left")
+                continue
+            if outcome == "failed":
+                self._finish_kick(watch.name, "failed")
+                continue
+            if outcome:
+                self.log(outcome)
+                can_send = False
+
+    def _leader_invite_tick(self, world, last_action, *, hold_chat: bool = False):
         """One invite step per tick while the party window is open."""
         if not self._party_leader_on():
-            return
+            return None
         invites = getattr(self, "_party_invites", None)
-        if invites is not None:
-            from app._06_party.invite import action_party_snapshot
+        if invites is None:
+            return None
+        from app._06_party.invite import action_party_snapshot
 
-            invites.tick(
-                action_party_snapshot(world),
-                last_action,
-                hold_chat=hold_chat,
-            )
+        return invites.tick(
+            action_party_snapshot(world),
+            last_action,
+            hold_chat=hold_chat,
+        )
 
     def _log_party_until_farm(
         self,
@@ -3945,16 +4045,27 @@ class BotController:
                         self.log(f"Party invite setup failed: {setup_exc}")
                 chat_kind = ""
                 try:
-                    chat_kind = self._drain_party_chat()
+                    chat_kind = self._drain_party_chat(world)
                 except Exception as chat_exc:
                     self.log(f"Party chat queue failed: {chat_exc}")
                 if self._party_leader_on():
+                    invite_line = None
                     try:
-                        self._leader_invite_tick(
-                            world, last_action, hold_chat=chat_kind == "invite"
+                        invite_line = self._leader_invite_tick(
+                            world,
+                            last_action,
+                            hold_chat=chat_kind in ("invite", "kick"),
                         )
                     except Exception as invite_exc:
                         self.log(f"Party invite tick failed: {invite_exc}")
+                    try:
+                        self._tick_party_kicks(
+                            world,
+                            last_action,
+                            hold_chat=chat_kind in ("invite", "kick") or bool(invite_line),
+                        )
+                    except Exception as kick_exc:
+                        self.log(f"Party kick confirm failed: {kick_exc}")
 
                 start_rally = (
                     getattr(self, "_start_rally", None)

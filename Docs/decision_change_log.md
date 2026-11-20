@@ -8,6 +8,46 @@ Affects: player xy/hp/status, mapId VFT, entity class VFTs, inventory/hotbar anc
 Consent: user (“okay, let's update current project's offsets & memory datas to the updated correct version”).
 Result: `python Engine/analysis/_build/check_configs.py` → **PASS**. Backup at `Engine/analysis.bak_v37_20261118`. Not run in game yet — restart the bot against 26.11.17.2002 to smoke-test.
 
+## 2026-11-15 — party kick types /파티추방 and clears 사용 and 대기
+
+Intent: A 파티 추방 click types `/파티추방 이름` only when a confirmed party read lists that name. The line uses the same worker chat path as `/초대`. After the line, party memory is read again. Absence has to hold for the confirm wait, so one empty read does not clear the row. If the name is still listed after that wait, the line is sent two more times. When the absence holds, that roster row's 사용 and 대기 are turned off and this session stops inviting them. The roster row stays. A failed send or a name that never leaves does not clear those values. An unread memory does not type and does not count as a leave.
+Shared: `submit_party_kick`, `_drain_party_chat`, `_tick_party_kicks`, `KickWatch`, `deliver_chat`. `roster_invite_names` and `roster_required_names` still read the stored flags. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the leader party roster while the bot is running. The next Start does not auto-invite or wait for a name whose kick was confirmed.
+Consent: user (`/파티추방 이름`, only current members, same path as invite, confirm leave, repeat twice, then reset 사용 and 대기).
+Result: engine tests cover the send, the two repeats, and the flag clear. Not run in the live game.
+
+## 2026-11-15 — roster kick button replaces 사용 and 대기 columns
+
+Intent: The leader roster no longer shows 사용 and 대기. Each saved name has its own 파티 추방 button, so the button count follows the roster. Name, role, and loot stay editable on that row. 사용 and 대기 remain stored values: a new name and a party invite still turn both on, and the engine still reads them.
+Shared: `_fill_roster_table`, `_kick_named`. `roster_invite_names`, `roster_required_names`, `deliver_chat`, and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader roster screen. A kick still goes out only for a name the live party memory already contains.
+Consent: user (remove the 사용 and 대기 columns and put a per-account 파티 추방 button there).
+Result: UI change only. Not run in game.
+
+## 2026-11-14 — party invite turns 사용 and 대기 on
+
+Intent: Pressing 파티 초대 for a selected roster name stores that name as enabled and required. The operator does not also click 사용 and 대기. Clearing the select box leaves those two values as they are.
+Shared: `_invite_selected`, `_mark_invited_active`. `roster_invite_names`, `roster_required_names`, `deliver_chat`, and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the leader roster saved for the next automatic `/초대`, forming wait, and start rally. A leader already running keeps the invite list copied at Start.
+Consent: user (party invite click turns 사용 and 대기 on for the selected names).
+Result: UI change only. Not run in game.
+
+## 2026-11-14 — the first chat key follows the sentence order
+
+Intent: Before any character key, read the live IME and the language order of the sentence. A line that starts with `/` or Latin stays in 영 until that first run is typed. 한 is confirmed only when the first run is Hangul, and the start-commit right arrow runs only then. A later Hangul syllable still switches to 한 after that first run.
+Shared: `ec_run`, `ec_format_current_mode`, `ec_hangul_layout`, `ec_require_hangul`, `ec_english_prepare`. `deliver_chat` and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite, party leave, and any mixed line whose first character is not Hangul. An unread mode still fails the line before the first key.
+Consent: user ("수정하라" — read the current language and the sentence order before the first key).
+Result: `enter_chat.dll` rebuilt. `test_hangul` passed. Live LC.exe was on Russian English mode (`ru/영 hkl=0419`). `/초대 poorboy` (`order=영-한-영`, 11 chars, 13 keys) and `/초대 매력여기사` (`order=영-한-영-한`, 9 chars, 17 keys) both entered and the user confirmed both lines. A running bot keeps the previous DLL until restart.
+
+## 2026-11-14 — party chat keys wait until the IME mode is read back
+
+Intent: `/초대` types space, slash, and Latin as physical keys only after the game IME reads as English. Hangul runs type jamo only after it reads as Hangul. Invite Y is not pressed, and Enter is not pressed, unless English was read. A mode that cannot be read fails the line.
+Shared: `ec_run`, `ec_english_prepare`, `ec_require_hangul`. `deliver_chat` and `type_accept_key` are unchanged and already treat a non-OK result as failure. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite, party leave, and the member invite accept key. A Hangul-only line now fails instead of sending jamo when Hangul mode cannot be read.
+Consent: user ("진행하라", and the DLL built from these sources must be rebuilt).
+Result: `enter_chat.dll` rebuilt from the changed sources. Not run in game.
+
 ## 2026-11-12 — the party leader does not pick up ground piles
 
 Intent: A party leader drops a pile it already chose and does not start another. The farm "loot until pickup" hold and the world-nav "loot before route" hold stop once that pile is cleared. Members still loot. A supply drop claimed for the leader still uses `leader_supply_pickup`.
