@@ -1270,8 +1270,13 @@ class BotController:
         except Exception:
             pass
         merged = apply_recovery_to_spell_slots(
-            merge_detected_spell_slots(detected.spell_slots, previous_slots),
+            merge_detected_spell_slots(
+                detected.spell_slots,
+                previous_slots,
+                cells=list(getattr(detected, "cells", None) or []),
+            ),
             getattr(profile, "hp_actions", None),
+            layout=profile.hotbar_layout,
         )
         profile.spell_slots = spell_slot_bindings(
             apply_antidote_potion_to_spell_slots(
@@ -3991,6 +3996,9 @@ class BotController:
                 inv_idle = not sensors.inventory_scanning()
                 force_bag = False
                 trip = bool(decision.blackboard.scratch.get("shop_trip"))
+                sell_settle = bool(
+                    decision.blackboard.scratch.get("sell_advance_pending")
+                )
                 if trip and not shop_bag_armed and inv_idle:
                     force_bag = True
                     shop_bag_armed = True
@@ -3999,6 +4007,11 @@ class BotController:
                 if bag_after_shop and inv_idle:
                     force_bag = True
                     bag_after_shop = False
+                # WEIGHT settle only (sell_advance_pending). Decide jitter uses
+                # sell_decide_pending and must NOT force bag — adopt on the
+                # settled snapshot without refreshing mid-pause.
+                if sell_settle and inv_idle:
+                    force_bag = True
 
                 sense_buf = sensors.capture_tick(
                     force_inventory=force_bag,

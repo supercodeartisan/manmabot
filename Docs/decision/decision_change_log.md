@@ -3,9 +3,18 @@
 이 문서는 **한 곳의 텔레포트/회복/이동 규칙을 고치면 다른 모드가 같이 바뀌는** 이유를 기록한다.
 이후 로직 수정은 이 문서의 **영향 고지 → 사용자 동의 → 구현 → 결과 기록** 순서로만 한다.
 
-마지막 갱신: 2026-10-17 (회피만 메모리 몬스터 종류를 본다)
+마지막 갱신: 2026-11-19 (TrackIds = guid 우선, 메인라인)
 
 ---
+
+## 2026-11-19 — TrackIds를 guid 우선으로 (메인라인 루팅/전투 정체성)
+
+의도: FREE/MINE으로 고른 아데나로 `walk onto` 하다가 `loot track hold`·sticky 해제되는 문제를 고친다. print_state에 아이템이 없는 것이 아니라, `track_id`가 힙 `ent`라서 주소가 바뀌면 같은 `guid`인데도 “사라짐”으로 보였다. 소유권 게이트는 이미 통과(`allowed=1`).
+공유: `TrackIds`, `entities_to_handoff`, `_track_key`. Decision sticky API(int id)는 그대로. loot blink hold(guid+kind+cell)는 guid 없는 행 백업. 상점·humanize shop 경로 없음.
+영향: print_state→GameState 전 트랙(아이템·몬스터·guid 있는 플레이어). YOLO 비전 트랙 불변. **상점 브랜치와 별도** (`Docs/decision/TRACK_ID_GUID.md`).
+부작용 후보: 세션 중 핫 리로드 시 첫 틱에 track_id가 한 번 재부여될 수 있음. guid 없는 행은 예전처럼 ent 키.
+동의: 사용자 (ent 대신 guid로 트랙 신원 수정 → 메인라인으로 상세 문서화, 상점과 분리).
+결과: 구현·단위 테스트 `test_track_ids_guid.py`. 상세 `Docs/decision/TRACK_ID_GUID.md`. 영문 요약 `docs/decision_change_log.md` 동일 날짜 항목.
 
 ## 2026-10-17 — 회피만 메모리 몬스터 종류를 본다
 

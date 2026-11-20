@@ -347,6 +347,10 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             shops_mod.SELL_WEIGHT_RATIO = max(
                 0.0, min(1.0, float(shop["sell_weight_ratio"]))
             )
+        if "sell_stop_below_ratio" in shop:
+            shops_mod.SELL_STOP_BELOW_RATIO = max(
+                0.0, min(1.0, float(shop["sell_stop_below_ratio"]))
+            )
         if "potion_suppress_s" in shop:
             shops_mod.POTION_SUPPRESS_S = max(0.0, float(shop["potion_suppress_s"]))
         if "arrive_tiles" in shop:

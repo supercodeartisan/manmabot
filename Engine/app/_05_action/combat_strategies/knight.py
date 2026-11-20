@@ -58,6 +58,29 @@ class KnightCombatStrategy:
                 executor.last_arrow_lack = True
                 note_skip(f"attack id={action.target_id} why=arrow-lack")
                 return
+            # Wrong cursor: heal key twice (self-cast clears aim / mode), then
+            # retry next tick. Do not burn the reject streak on a recover press.
+            from app._05_action.cursor_verify import (
+                clear_spell_aim,
+                cursor_is_spell_aim,
+                recover_cursor_heal_double,
+            )
+
+            label = str(getattr(match, "label", "") or "")
+            if cursor_is_spell_aim(executor) or label.startswith("spell"):
+                clear_spell_aim(executor, reason=f"attack:{action.target_id}")
+                note_skip(
+                    f"attack id={action.target_id} why=cursor-recover-heal"
+                )
+                return
+            if recover_cursor_heal_double(
+                executor,
+                reason=f"attack:bad cursor:{action.target_id}",
+            ):
+                note_skip(
+                    f"attack id={action.target_id} why=cursor-recover-heal"
+                )
+                return
             executor.last_cursor_reject_target_id = action.target_id
             reason = getattr(executor, "last_cursor_reject_reason", None) or "cursor"
             note_skip(f"attack id={action.target_id} why={reason}")
