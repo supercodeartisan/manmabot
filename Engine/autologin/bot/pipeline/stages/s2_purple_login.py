@@ -14,6 +14,21 @@ class PurpleLoginStage(Stage):
     def snapshot(self, ctx: PipelineContext):
         snap = {"stage_id": self.id}
         bot = ctx.bot
+        # v2 engine already completed in S1 (handoff applied): report a
+        # positive state so the wrong_purple_window / unknown-screen rules do
+        # not block S2 after Purple was minimized by the game-foreground handoff.
+        try:
+            from purple.facade import engine_enabled
+            if engine_enabled(ctx.cfg or {}) and (
+                    getattr(bot, "_purple_logged_in", False)
+                    or ctx.purple_logged_in):
+                snap["purple_screen"] = "launcher"
+                snap["purple_too_small"] = False
+                snap["already_logged_in"] = True
+                snap["v2_done"] = True
+                return snap
+        except Exception:
+            pass
         if bot and getattr(bot, "purple", None) and bot.purple.valid:
             w = bot.purple.rect.width
             h = bot.purple.rect.height
@@ -74,6 +89,17 @@ class PurpleLoginStage(Stage):
     def run(self, ctx: PipelineContext) -> StageResult:
         bot = ctx.bot
         from base import Phase
+
+        # v2 engine already completed in S1 (handoff applied): skip.
+        try:
+            from purple.facade import engine_enabled
+            if engine_enabled(ctx.cfg or {}):
+                if getattr(bot, "_purple_logged_in", False) or ctx.purple_logged_in:
+                    if self._verify_not_login_form(bot):
+                        return StageResult.skip(
+                            self.id, "v2 engine already logged in")
+        except Exception:
+            pass
 
         # The login form means we are not logged in. Do not rewind a
         # credential tick back to WAIT_LOGIN_FORM — that loop never typed.

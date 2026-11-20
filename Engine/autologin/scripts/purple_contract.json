@@ -1,0 +1,129 @@
+{
+  "version": "P0-2026-11-06",
+  "purple_version": "2.26.1019.10",
+  "evidence": {
+    "cold_runs": [
+      "scripts/probe_out/cold_20261106-205949/run1",
+      "scripts/probe_out/cold_20261106-210202/run1",
+      "scripts/probe_out/cold_20261106-210202/run2"
+    ],
+    "gate_status": "pass",
+    "seed_presence": 1.0,
+    "seed_rect_std_px": 0.0,
+    "thresholds": {
+      "presence": 0.9,
+      "std_px": 3.0
+    }
+  },
+  "discovery": {
+    "process_images": ["Purple.exe", "PurpleLauncher.exe", "LC.exe"],
+    "window_filter": "visible AND not iconic AND >=50% of the rect on the virtual screen",
+    "max_uia_depth": 24,
+    "notes": [
+      "Purple keeps hidden login cards parked above the screen (y=-789); they are IsWindowVisible and must be filtered by screen intersection.",
+      "The largest PURPLE window is not the login card. Sample every on-screen Purple window.",
+      "The main window's UIA tree also exposes the embedded login card at an offset; prefer the foreground/smaller window when clicking."
+    ]
+  },
+  "states": [
+    "WINDOW_SEARCH",
+    "WINDOW_ATTACH",
+    "CLASSIFY",
+    "LOGIN_EMAIL",
+    "LOGIN_PASSWORD",
+    "LOGGING_IN",
+    "LAUNCHER_READY",
+    "LAUNCHER_GAME_CARD",
+    "GAME_STARTING",
+    "GAME_READY",
+    "HANDOFF",
+    "FAILED"
+  ],
+  "elements": {
+    "gate": {
+      "NcSignInButton": {
+        "control_type": "ButtonControl",
+        "rel_center": [741, 397],
+        "name": "",
+        "note": "disabled while SigningInOverlay is present"
+      },
+      "SigningInOverlay": {
+        "control_type": "PaneControl",
+        "note": "presence means login is in flight"
+      }
+    },
+    "login_email": {
+      "current-account": {
+        "control_type": "EditControl",
+        "depth": 16,
+        "rel_center": [225, 189],
+        "std": [0.0, 0.0],
+        "patterns": ["value"]
+      },
+      "btn-login-email": {
+        "control_type": "ButtonControl",
+        "name": "다음",
+        "rel_center": [225, 261],
+        "std": [0.0, 0.0]
+      }
+    },
+    "login_password": {
+      "current-password": {
+        "control_type": "EditControl",
+        "depth": 16,
+        "is_password": true,
+        "rel_center": [225, 230],
+        "std": [0.0, 0.0],
+        "patterns": ["value"],
+        "note": "value must never be read"
+      },
+      "btn-login-email": {
+        "control_type": "ButtonControl",
+        "name": "로그인",
+        "rel_center": [225, 302],
+        "std": [0.0, 0.0]
+      }
+    },
+    "launcher": {
+      "game_card": {
+        "automation_id": "리니지 클래식",
+        "name": "NGPClient.Models.GameCard.GameCardItem",
+        "control_type": "ListItemControl",
+        "rel_center": [414, 447],
+        "note": "clicking the card reveals PlayButton"
+      },
+      "PlayButton": {
+        "control_type": "ButtonControl",
+        "name": "게임 실행",
+        "rel_center": [1211, 929],
+        "size": [356, 60],
+        "note": "offscreen until the game card detail view opens"
+      },
+      "PlayingButton": {
+        "control_type": "ButtonControl",
+        "name": "게임 실행 중",
+        "rel_center": [1211, 929],
+        "size": [356, 60],
+        "note": "replaces PlayButton after the click; disabled"
+      },
+      "legacy_seed_note": "PlayButton/PlayingButton AutomationIds are still present in 2.26.1019.10, but only after the game card is opened."
+    }
+  },
+  "game": {
+    "process_image": "LC.exe",
+    "window_class": "GLFW30",
+    "title_prefix": "Lineage Classic",
+    "observed_title": "Lineage Classic - 26.11.03.2002 [LIVE]",
+    "observed_size": [1296, 999],
+    "start_latency_sec": [5, 15],
+    "note": "GLFW30 appears several seconds after PlayingButton; wait for the class, not the title."
+  },
+  "budgets_sec": {
+    "window": 30,
+    "login": 45,
+    "login_progress": 60,
+    "launcher": 60,
+    "game_window": 120
+  },
+  "retries_per_action": 2
+}

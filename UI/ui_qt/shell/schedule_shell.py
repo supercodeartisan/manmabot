@@ -203,6 +203,9 @@ class ScheduleShell(QMainWindow):
         self.bridge.userStopped.connect(
             self._on_user_stop, Qt.ConnectionType.DirectConnection
         )
+        self.bridge.alertRequested.connect(
+            self._on_operator_alert, Qt.ConnectionType.QueuedConnection
+        )
         self.bridge.rebind_hotkeys()
 
         self.setWindowTitle(self.t["console_title"])
@@ -1149,6 +1152,13 @@ class ScheduleShell(QMainWindow):
                         "Pico data port was not found. Plug in the board and try again.",
                     )
                 )
+
+    def _on_operator_alert(self, title: str, message: str) -> None:
+        QMessageBox.warning(
+            self,
+            str(title or "Alert"),
+            str(message or ""),
+        )
 
     def _on_user_stop(self) -> None:
         self._disarm_schedule()

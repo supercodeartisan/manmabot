@@ -298,6 +298,10 @@ class BotController:
         self._party_brain_ref = None
         self._party_leader_ref = None
         self._party_client_id = ""
+        # UIMessage (disconnect / policy popup) — window can stay open.
+        from session.uimsg_probe import UiMsgWatch
+
+        self._uimsg_watch = UiMsgWatch()
 
     def _ui(self):
         return ui_strings(getattr(self._profile, "language", None))
@@ -1580,6 +1584,12 @@ class BotController:
             self.stop(reason=self._reason("game_closed"))
             return "game_closed"
 
+        # Window still up: disconnect / policy popups live in UIMessage, not
+        # vitals. Throttled probe (default 30s) via analysis dll/uimsg.dll.
+        uimsg_event = self._check_uimsg_session()
+        if uimsg_event:
+            return uimsg_event
+
         if self.state == RunState.RUNNING:
             # Pause only when the game loses focus / is minimized.
             # Do NOT pause on cursor_outside: Start is clicked in our UI (often
@@ -1603,6 +1613,61 @@ class BotController:
             if self._pause_kind != "auto" and not self._resume_pending:
                 return None
             self._try_enter_running_locked(via="Auto-resume")
+        return None
+
+    def _check_uimsg_session(self) -> Optional[str]:
+        """Stop the worker when CommonMessage shows disconnect or policy block."""
+        watch = getattr(self, "_uimsg_watch", None)
+        if watch is None:
+            return None
+        try:
+            sample = watch.poll()
+        except Exception as exc:
+            self.log(f"UIMessage probe error: {exc}")
+            return None
+        if sample is None or not sample.ok:
+            detail = getattr(sample, "detail", "") if sample is not None else ""
+            if detail and detail not in ("ok", "empty"):
+                prev = getattr(self, "_uimsg_last_fail", "")
+                if detail != prev:
+                    self._uimsg_last_fail = detail
+                    self.log(f"UIMessage probe: {detail}")
+            return None
+        self._uimsg_last_fail = ""
+        from session.uimsg_probe import UiMsgKind
+
+        if sample.kind == UiMsgKind.DISCONNECT:
+            reason = self._ui().reason.get(
+                "session_disconnected",
+                "Server connection lost (UIMessage).",
+            )
+            if sample.text:
+                reason = f"{reason} [{sample.text[:80]}]"
+            try:
+                from session.hunt_resume import save_hunt_resume_from_controller
+
+                save_hunt_resume_from_controller(self)
+            except Exception:
+                pass
+            self.stop(reason=reason)
+            self.log(reason)
+            return "session_disconnected"
+        if sample.kind == UiMsgKind.POLICY_BLOCK:
+            reason = self._ui().reason.get(
+                "session_policy_block",
+                "Account stopped by operator policy (UIMessage).",
+            )
+            if sample.text:
+                reason = f"{reason} [{sample.text[:80]}]"
+            try:
+                from session.hunt_resume import clear_hunt_resume
+
+                clear_hunt_resume()
+            except Exception:
+                pass
+            self.stop(reason=reason)
+            self.log(reason)
+            return "session_policy_block"
         return None
 
     def _sync_party_handles(self) -> None:
@@ -3603,6 +3668,24 @@ class BotController:
                     farm_stays_s=dict(getattr(profile, "farm_stays_s", {}) or {}),
                     entries_normalized=True,
                 )
+                try:
+                    from session.hunt_resume import (
+                        apply_hunt_resume,
+                        clear_hunt_resume,
+                        load_hunt_resume,
+                    )
+
+                    resume = load_hunt_resume()
+                    if resume and apply_hunt_resume(decision.blackboard, resume):
+                        self.log(
+                            "Hunt resume restored "
+                            f"routine={resume.get('routine_index')} "
+                            f"elapsed={float(resume.get('elapsed_s') or 0):.0f}s "
+                            f"farm={resume.get('farm_area_index')}"
+                        )
+                        clear_hunt_resume()
+                except Exception as resume_exc:
+                    self.log(f"Hunt resume skipped: {resume_exc}")
                 begin_world_nav(decision.blackboard, "start")
                 self.log(
                     f"World nav armed for routine "

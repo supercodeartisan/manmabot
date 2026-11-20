@@ -31,7 +31,7 @@ _MOUSE_MAX = 20
 _STATE_MOVE = 0x000
 _STATE_LEFT_BUTTON_DOWN = 0x001
 _STATE_LEFT_BUTTON_UP = 0x002
-_STATE_WHEEL = 0x007
+_STATE_WHEEL = 0x400
 
 _WHEEL_DELTA = 120
 
@@ -45,8 +45,8 @@ _FLAG_MOVE_RELATIVE = 0x000
 _FLAG_MOVE_ABSOLUTE = 0x001
 
 _FILTER_MOUSE_ALL = 0xFFFF
-_STATE_RIGHT_BUTTON_UP = 0x004
-_STATE_MIDDLE_BUTTON_UP = 0x006
+_STATE_RIGHT_BUTTON_UP = 0x008
+_STATE_MIDDLE_BUTTON_UP = 0x020
 
 # VK -> PS/2 "make" scancode for the keys the bot injects into the game.
 # Values may be int (non-extended) or (scancode, extended:bool).
@@ -146,7 +146,6 @@ _screen_h = 1080
 _mouse_device = None      # probed device slot that actually accepts strokes
 _keyboard_device = None
 
-
 def _probe_devices():
     """Find the device slots that really exist on this machine.
 
@@ -184,7 +183,7 @@ def _probe_devices():
 
 
 def init():
-    global _lib, _ctx, _screen_w, _screen_h
+    global _lib, _ctx, _screen_w, _screen_h, _mouse_device, _keyboard_device
     if _ctx:
         return True
     # Cache the failure so a missing/blocked driver is not re-loaded and
@@ -216,7 +215,6 @@ def init():
             ctypes.c_void_p,
             ctypes.c_uint,
         ]
-
         _ctx = _lib.interception_create_context()
         if not _ctx:
             import logging
@@ -224,6 +222,9 @@ def init():
             init._failed = True
             return False
 
+        # Injection only: do not install a physical-input filter or start a
+        # competing receiver. set_filter's second argument is a predicate
+        # callback, not a device number; the old call was invalid.
         user32 = ctypes.windll.user32
         try:
             from win.ctypes_prototypes import bind_user32
@@ -234,10 +235,24 @@ def init():
         _screen_w = user32.GetSystemMetrics(0)
         _screen_h = user32.GetSystemMetrics(1)
         _probe_devices()
+        if _mouse_device is None:
+            import logging
+            logging.getLogger(__name__).warning(
+                "interception: no usable mouse device; disabling input")
+            _lib.interception_destroy_context(_ctx)
+            _ctx = None
+            _keyboard_device = None
+            init._failed = True
+            return False
         return True
     except Exception as _ex:
         import logging
         logging.getLogger(__name__).warning("interception init failed: %r", _ex)
+        if _ctx and _lib is not None:
+            try:
+                _lib.interception_destroy_context(_ctx)
+            except Exception:
+                pass
         _ctx = None
         init._failed = True
         return False
@@ -496,21 +511,20 @@ def type_string(text: str) -> bool:
 
 
 # ---- input capture (recording real hardware events) ---------------------
-# The driver delivers a copy of every REAL keyboard/mouse stroke to any open
-# context while the original still reaches the OS, so reading events here
-# never blocks or duplicates the user's own input. Injected (SendInput)
-# events are NOT visible on this channel — only physical hardware.
+# This injection-only context does not install capture filters; next_event
+# normally times out. Capturing physical input requires a separate, explicitly
+# managed filter and forwarding every intercepted event.
 
 MOUSE_STATE_NAMES = {
     0x000: "move",
     0x001: "left_down",
     0x002: "left_up",
-    0x003: "right_down",
-    0x004: "right_up",
-    0x005: "middle_down",
-    0x006: "middle_up",
-    0x007: "wheel",
-    0x008: "hwheel",
+    0x004: "right_down",
+    0x008: "right_up",
+    0x010: "middle_down",
+    0x020: "middle_up",
+    0x400: "wheel",
+    0x800: "hwheel",
 }
 
 FLAG_MOVE_ABSOLUTE = 0x001
