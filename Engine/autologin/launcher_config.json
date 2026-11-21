@@ -1,7 +1,7 @@
 {
   "purple_path": "C:/Program Files (x86)/NC/Purple/PurpleLauncher.exe",
-  "lineage_path": "C:/Program Files (x86)/NC/Lineage Classic/LC.exe",
-  "language": "한국어",
+  "lineage_path": "E:/Lineage Classic/LC.exe",
+  "language": "简体中文",
   "mode": "Single",
   "count": 2,
   "interval": 5,
@@ -17,6 +17,7 @@
     "yolo_model": "data/yolov8n.onnx",
     "click_map": "data/recorded_clicks.json",
     "debug_dir": ".",
+    "purple_engine": "v2",
     "page_positions": {
       "pages": {
         "1": {
@@ -111,11 +112,19 @@
       ]
     }
   },
-  "accounts": [],
+  "accounts": [
+    {
+      "id": "lurgyblimppoxed@gmail.com",
+      "pw": "adi7FD7#imc56F",
+      "region": "Korea",
+      "server": "데컨"
+    }
+  ],
   "click_mode": "dynamic",
   "purple_click_mode": "fixed",
   "game_click_mode": "fixed",
   "use_pipeline": true,
+  "purple_engine": "v2",
   "lang_policy": "L0",
   "position_dict_writable": false,
   "require_elevation": true,

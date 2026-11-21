@@ -12,6 +12,18 @@ class StartGameStage(Stage):
     def snapshot(self, ctx: PipelineContext):
         snap = {"stage_id": self.id}
         bot = ctx.bot
+        # v2 engine already completed in S1 (game-ready + handoff): report a
+        # positive screen so the purple_unknown_screen rule does not block S3.
+        try:
+            from purple.facade import engine_enabled
+            if engine_enabled(ctx.cfg or {}) and (
+                    getattr(bot, "_purple_logged_in", False)
+                    or ctx.purple_logged_in):
+                snap["purple_screen"] = "launcher"
+                snap["v2_done"] = True
+                return snap
+        except Exception:
+            pass
         if bot and getattr(bot, "purple", None) and bot.purple.valid:
             from .s1_window_gate import purple_unusable
             snap["purple_too_small"] = purple_unusable(
@@ -64,6 +76,17 @@ class StartGameStage(Stage):
         bot = ctx.bot
         from base import Phase
 
+        # v2 engine already started the game in S1 (game-ready + handoff).
+        try:
+            from purple.facade import engine_enabled
+            if engine_enabled(ctx.cfg or {}):
+                if self._hwnd_ready(bot):
+                    if getattr(bot, "phase", None) == Phase.GAME_LOGIN or ctx.purple_logged_in:
+                        return StageResult.ok(
+                            self.id, "v2 engine already reached game")
+        except Exception:
+            pass
+
         if ctx.extras.get("request_game_relaunch"):
             ctx.extras.pop("request_game_relaunch", None)
             try:
@@ -86,6 +109,24 @@ class StartGameStage(Stage):
                     pass
             return StageResult.retry(
                 self.id, "AUTH relaunch -> FIND_LINEAGE", after=1.0)
+
+        # A restart from S5 must use the same launcher engine as the initial
+        # start. Falling through to legacy OCR leaves v2 sessions stuck when
+        # the launcher is classified as unknown.
+        if (ctx.shake_armed and getattr(bot, "phase", None) == Phase.FIND_LINEAGE
+                and not self._hwnd_ready(bot)):
+            from purple.facade import engine_enabled, run_v2_engine
+            if engine_enabled(ctx.cfg or {}):
+                try:
+                    from purple.handoff import engine_succeeded
+                    eng = run_v2_engine(bot, ctx, timeout=360.0)
+                    if not engine_succeeded(eng):
+                        return StageResult.failed(
+                            self.id, "v2 AUTH relaunch failed: %s" %
+                            (getattr(eng, "last_error", "") or eng.state))
+                    return StageResult.ok(self.id, "v2 AUTH relaunch game ready")
+                except Exception as e:
+                    return StageResult.failed(self.id, "v2 AUTH relaunch error: %r" % e)
 
         phase = getattr(bot, "phase", None)
         # Gate: real hwnd required (process-only is NOT enough).

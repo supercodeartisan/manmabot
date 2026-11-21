@@ -81,14 +81,35 @@ BOOL ec_post_char(EcContext* ctx, WCHAR c)
 {
     HWND h;
     DWORD err;
+    DWORD focus_ms;
 
     if (!ctx) return FALSE;
+
+    /* Chinese / other BMP chars: Unicode SendInput to the foreground window
+     * is what DirectX chat actually consumes. PostMessage(WM_CHAR) often
+     * returns TRUE while the game ignores the character — that false OK is
+     * why invite lines with ZH names looked "typed" with no chat text. */
+    focus_ms = ctx->req.focus_timeout_ms
+             ? ctx->req.focus_timeout_ms : EC_DEFAULT_FOCUS_TIMEOUT;
+    if (ctx->hwnd) {
+        if (!ec_is_foreground(ctx->hwnd))
+            ec_force_foreground(ctx->hwnd, focus_ms);
+        if (ec_is_foreground(ctx->hwnd) && ec_send_unicode(ctx, c))
+            return TRUE;
+    }
+
     h = ctx->focus ? ctx->focus : ctx->hwnd;
     if (!h) return FALSE;
 
     SetLastError(0);
-    if (PostMessageW(h, WM_CHAR, (WPARAM)(unsigned short)c, 1))
+    if (PostMessageW(h, WM_CHAR, (WPARAM)(unsigned short)c, 1)) {
+        /* Foreground game already refused Unicode: do not report success on
+         * PostMessage alone (silent drop). Plain Win32 without a tracked
+         * top-level hwnd still accepts WM_CHAR. */
+        if (ctx->hwnd && ec_is_foreground(ctx->hwnd))
+            return FALSE;
         return TRUE;
+    }
 
     err = GetLastError();
     if (ctx->res && err) ctx->res->os_error = err;

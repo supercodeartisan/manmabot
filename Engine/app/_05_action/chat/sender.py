@@ -12,6 +12,7 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from .focus import prepare_game_chat_focus
 from .handoff import bot_input_released
 from .native import EcFlag, EcRequest, EcStatus, EnterChatLibrary
 
@@ -22,8 +23,8 @@ GAME_PROCESS = "LC.exe"
 class TypingPace:
     chars_per_second: float = 9.0
     jitter_ms: int = 35
-    jamo_delay_ms: int = 8
-    focus_timeout_ms: int = 1500
+    jamo_delay_ms: int = 12
+    focus_timeout_ms: int = 2500
 
 
 @dataclass(frozen=True)
@@ -87,7 +88,7 @@ class GameChat:
             return ChatResult(
                 text=line, status=EcStatus.PID, message=f"{GAME_PROCESS} window not found"
             )
-        flags = EcFlag.NONE
+        flags = EcFlag.SENDINPUT_FALLBACK
         if open_chat:
             flags |= EcFlag.OPEN_CHAT
         if dry_run:
@@ -107,8 +108,10 @@ class GameChat:
             if dry_run:
                 raw = self._library.run(request)
             else:
+                # Farm Interception off → drop bot always-on-top → LC front → type.
                 with self._input_handoff():
-                    raw = self._library.run(request)
+                    with prepare_game_chat_focus(int(hwnd)):
+                        raw = self._library.run(request)
         try:
             status = EcStatus(int(raw.status))
         except ValueError:
@@ -146,25 +149,26 @@ class GameChat:
         ime_note = ""
         with self._lock:
             with self._input_handoff():
-                if english:
-                    from .ime import english_ime
+                with prepare_game_chat_focus(int(hwnd)):
+                    if english:
+                        from .ime import english_ime
 
-                    with english_ime(int(hwnd)) as ime_note:
+                        with english_ime(int(hwnd)) as ime_note:
+                            raw = self._library.press_key(
+                                hwnd=int(hwnd),
+                                scancode=int(scancode),
+                                hold_ms=int(hold_ms),
+                                focus_timeout_ms=int(self._pace.focus_timeout_ms),
+                            )
+                            # The game reads the key after we return; keep English until then.
+                            time.sleep(0.15)
+                    else:
                         raw = self._library.press_key(
                             hwnd=int(hwnd),
                             scancode=int(scancode),
                             hold_ms=int(hold_ms),
                             focus_timeout_ms=int(self._pace.focus_timeout_ms),
                         )
-                        # The game reads the key after we return; keep English until then.
-                        time.sleep(0.15)
-                else:
-                    raw = self._library.press_key(
-                        hwnd=int(hwnd),
-                        scancode=int(scancode),
-                        hold_ms=int(hold_ms),
-                        focus_timeout_ms=int(self._pace.focus_timeout_ms),
-                    )
         try:
             status = EcStatus(int(raw.status))
         except ValueError:

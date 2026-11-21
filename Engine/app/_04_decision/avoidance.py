@@ -573,6 +573,7 @@ def _guide_to_goal(
     coarse: object | None,
     portal_graph: object | None,
     force_flat: bool = False,
+    sticky_path: list[tuple[int, int]] | tuple[tuple[int, int], ...] | None = None,
 ) -> list[tuple[int, int]]:
     if not force_flat and (coarse is not None or portal_graph is not None):
         from app._04_decision.hierarchical_path import (
@@ -588,6 +589,7 @@ def _guide_to_goal(
             coarse=coarse,
             portal_graph=portal_graph,
             max_hop=int(max_hop),
+            sticky_path=sticky_path,
         )
     else:
         from app._04_decision.pathfinding import plan_travel_click
@@ -599,6 +601,7 @@ def _guide_to_goal(
             cluster=cluster,
             max_hop=int(max_hop),
             force_flat=force_flat,
+            sticky_path=sticky_path,
         )
     return [(int(x), int(y)) for x, y in path]
 
@@ -614,12 +617,14 @@ def plan_body_click(
     coarse: object | None = None,
     portal_graph: object | None = None,
     force_flat: bool = False,
+    sticky_path: list[tuple[int, int]] | tuple[tuple[int, int], ...] | None = None,
 ) -> BodyClick:
     """Guide, interim waypoint, and the one hop click around living bodies.
 
     The guide is terrain only. Living bodies are not walls. The interim
     waypoint is the last free guide tile before the path leaves the avoid
     window. The returned click is inside the hop and the click region.
+    ``sticky_path`` keeps one equal-shortest choice across hops to the same goal.
     """
     sx, sy = int(origin.x), int(origin.y)
     gx, gy = int(goal[0]), int(goal[1])
@@ -635,6 +640,7 @@ def plan_body_click(
         coarse=coarse,
         portal_graph=portal_graph,
         force_flat=force_flat,
+        sticky_path=sticky_path,
     )
     near = {
         (int(x), int(y))
