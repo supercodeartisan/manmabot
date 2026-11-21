@@ -2383,15 +2383,19 @@ class BotController:
             )
         return sent
 
-    def _publish_party_focus(self) -> None:
-        """One shared hunt order from member sightings. Unseen mobs are not clicks."""
+    def _publish_party_focus(self, map_id=None) -> None:
+        """One shared hunt order from member sightings on this map. Unseen mobs are not clicks."""
         from app._06_party.sightings import book
 
         mode = "moving"
         info = getattr(self, "_party_policy_info", None)
         if isinstance(info, dict) and str(info.get("leader_mode") or "") == "turret":
             mode = "turret"
-        book.decide(mode=mode)
+        try:
+            mid = None if map_id is None else int(map_id)
+        except (TypeError, ValueError):
+            mid = None
+        book.decide(mode=mode, map_id=mid)
         body = book.take_message()
         if body is None:
             return
@@ -2428,7 +2432,7 @@ class BotController:
             from app._06_party.sightings import book as sighting_book
 
             sighting_book.set_connected(names)
-        self._publish_party_focus()
+        self._publish_party_focus(map_id)
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
         self._publish_supply_hold()
@@ -2549,8 +2553,8 @@ class BotController:
                     engaged_tiles.append(game_to_nav(int(member.get("x")), int(member.get("y"))))
                 except (TypeError, ValueError):
                     continue
-            profile = getattr(self, "_party_profile", None)
-            leash = int(getattr(profile, "assist_leash_tiles", 10) or 10)
+            profile = getattr(self, "_profile", None)
+            leash = int(getattr(profile, "party_assist_leash_tiles", 10) or 10)
             why = march_hold_reason(
                 leader_fighting=getattr(blackboard, "current_target_id", None) is not None,
                 rear_hot=hot,
@@ -4465,10 +4469,14 @@ class BotController:
                     try:
                         from app._06_party.sightings import book as sighting_book
 
-                        regroup = bool(
-                            sighting_book.order is not None
-                            and sighting_book.order.regroup
-                        )
+                        order = sighting_book.order
+                        same_map = False
+                        if order is not None and last_logged_map_id is not None:
+                            try:
+                                same_map = int(order.map_id) == int(last_logged_map_id)
+                            except (TypeError, ValueError):
+                                same_map = False
+                        regroup = bool(order is not None and order.regroup and same_map)
                     except Exception:
                         regroup = False
                     if regroup:

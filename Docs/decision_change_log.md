@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-21 — reconnect seq, map focus, profile leash, stable walk estimate
+
+Intent: A new member hello accepts seq 1. A frame or disconnect from the previous socket does not clear that report. The live socket dropping removes the report at once. Shared focus and turret regroup use the leader's current map, including map 0. The march hold reads `party_assist_leash_tiles` from the profile. Distance estimates use one path. A turret return does not click while the terrain map is missing.
+Shared: `SightingBook.note` / `note_hello` / `drop_peer` / `decide`, `drain_leader_reports`, `_publish_party_focus`, `_leader_walk_party`, `estimate_walk_steps`, `_walk_to`. Login clicks, retreat, and solo unstick were not changed.
+Affects: party sightings, turret regroup, march hold distance, follow distance checks, turret return.
+Consent: user (these four runtime fixes and the stable walk estimate).
+Result: `test_party_runtime.py`, turret look, and the existing sighting/rear tests passed (24). `app/_06_party/tests` passed 339; one loot-wall test and `test_walk_distance_follow.py` did not run here because `scipy` is not installed. `open_steps == 3` was left as the expectation. Click-path diversity was not changed. Not run in game. `ENGAGE_RADIUS` 6, `CHASE_RADIUS` 8, `TURRET_LOOK_S` 2.0, and `REPORT_FRESH_S` 2.0 were not changed.
+
 ## 2026-11-21 — leader stands in the rally area while the member socket is down
 
 Intent: After the last teleport, a pose that has not landed must not start the hunt walk. With no member socket the leader stays on that rally tile until the forming deadline. A member who is connected but not at the tile still has the 3 minute stand.

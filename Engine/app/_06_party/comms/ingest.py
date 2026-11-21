@@ -87,6 +87,9 @@ def drain_leader_reports(
         member_states.forget_peer(peer)
         if not held:
             continue
+        from ..sightings import book
+
+        book.drop_peer(held, str(peer))
         member_states.hold_until_fresh(held)
         note(
             f"Party socket dropped for {held} — "
@@ -131,13 +134,17 @@ def drain_leader_reports(
                 f"Party hello {hello_name or '—'} "
                 f"[{row.status.value}] id={cid or '—'}"
             )
+            if hello_name:
+                from ..sightings import book
+
+                book.note_hello(hello_name, peer, cid)
             if on_hello is not None and hello_name:
                 on_hello(hello_name)
             continue
         if kind == "sighting":
             from ..sightings import book
 
-            book.note(body)
+            book.note(body, peer=peer, client_id=cid)
             continue
         if kind == BEEP:
             why = str(body.get("why") or "already_in_party")

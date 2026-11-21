@@ -430,6 +430,9 @@ class SightingBook:
         self._sent: Optional[tuple] = None
         self._seq: dict[str, int] = {}
         self._session: dict[str, str] = {}
+        self._live_peer: dict[str, str] = {}
+        self._live_client: dict[str, str] = {}
+        self._retired: set[str] = set()
         self.connected: Optional[set[str]] = None
 
     def clear(self) -> None:
@@ -438,7 +441,44 @@ class SightingBook:
         self._sent = None
         self._seq.clear()
         self._session.clear()
+        self._live_peer.clear()
+        self._live_client.clear()
+        self._retired.clear()
         self.connected = None
+
+    def note_hello(self, who: str, peer: str = "", client_id: str = "") -> None:
+        """A new socket for this name. The next ``seq`` may start again at 1."""
+        key = str(who or "").strip().casefold()
+        token_peer = str(peer or "").strip()
+        token_client = str(client_id or "").strip()
+        if not key or not (token_peer or token_client):
+            return
+        if token_peer:
+            self._retired.discard(token_peer)
+        if token_client:
+            self._retired.discard(token_client)
+        self._live_peer[key] = token_peer
+        self._live_client[key] = token_client
+        self._seq.pop(key, None)
+
+    def drop_peer(self, who: str, peer: str) -> None:
+        """The live socket closed. An older socket closing does not clear the new report."""
+        key = str(who or "").strip().casefold()
+        token = str(peer or "").strip()
+        if not key:
+            return
+        live = self._live_peer.get(key, "")
+        if live and token and token != live:
+            return
+        if token:
+            self._retired.add(token)
+        client = self._live_client.get(key, "")
+        if client:
+            self._retired.add(client)
+        self.rows.pop(key, None)
+        self._live_peer.pop(key, None)
+        self._live_client.pop(key, None)
+        self._seq.pop(key, None)
 
     def set_connected(self, names: Optional[Sequence[str]]) -> None:
         """Names still on the wire. None means the leader has not checked."""
@@ -447,7 +487,28 @@ class SightingBook:
             return
         self.connected = {str(name).strip().casefold() for name in names if str(name).strip()}
 
-    def note(self, body: dict[str, Any]) -> None:
+    def _live_frame(self, key: str, peer: str, client_id: str) -> bool:
+        """False when this frame belongs to a socket that is not the current one."""
+        token_peer = str(peer or "").strip()
+        token_client = str(client_id or "").strip()
+        if token_peer in self._retired or token_client in self._retired:
+            live_peer = self._live_peer.get(key, "")
+            live_client = self._live_client.get(key, "")
+            if token_peer != live_peer and token_client != live_client:
+                return False
+        live_peer = self._live_peer.get(key, "")
+        live_client = self._live_client.get(key, "")
+        if not live_peer and not live_client:
+            return True
+        if token_peer and token_peer == live_peer:
+            return True
+        if token_client and token_client == live_client:
+            return True
+        if not token_peer and not token_client:
+            return True
+        return False
+
+    def note(self, body: dict[str, Any], peer: str = "", client_id: str = "") -> None:
         if str(body.get("type") or "") != SIGHTING:
             return
         who = str(body.get("from") or body.get("who") or "").strip()
@@ -456,6 +517,10 @@ class SightingBook:
         import time
 
         key = who.casefold()
+        conn_peer = str(peer or "").strip()
+        conn_client = str(client_id or body.get("client_id") or "").strip()
+        if not self._live_frame(key, conn_peer, conn_client):
+            return
         session = str(body.get("session") or "")
         seq = body.get("seq")
         prev = self._seq.get(key)
@@ -511,12 +576,22 @@ class SightingBook:
                 flat.append(row)
         return flat
 
-    def decide(self, *, mode: str, current: Optional[dict[str, Any]] = None) -> Optional[Focus]:
+    def decide(
+        self,
+        *,
+        mode: str,
+        current: Optional[dict[str, Any]] = None,
+        map_id: Optional[int] = None,
+    ) -> Optional[Focus]:
         import time
 
         from app._06_party.moving_fight import REPORT_FRESH_S
 
-        flat = self.fresh_rows(now=time.monotonic(), fresh_s=REPORT_FRESH_S)
+        flat = self.fresh_rows(
+            now=time.monotonic(),
+            fresh_s=REPORT_FRESH_S,
+            map_id=None if map_id is None else int(map_id),
+        )
         self.order = choose_focus(flat, mode=mode, current=current)
         return self.order
 

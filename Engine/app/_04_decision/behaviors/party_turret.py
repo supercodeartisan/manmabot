@@ -460,7 +460,7 @@ def _walk_to(blackboard: "Blackboard", goal: Tile, reason: str) -> Optional[Stat
     import time
 
     from app._04_decision.nav_config import get_terrain_map
-    from app._04_decision.pathfinding import plan_travel_click, waypoint_to_content
+    from app._04_decision.pathfinding import plan_travel_click
     from app._06_party.follow import FOLLOW_STUCK_S
 
     goal_t = (int(goal[0]), int(goal[1]))
@@ -514,11 +514,6 @@ def _walk_to(blackboard: "Blackboard", goal: Tile, reason: str) -> Optional[Stat
                 hop_tile = (int(wp[0]), int(wp[1]))
         except Exception:
             dest = None
-    if dest is None and terrain is not None:
-        return _idle("party turret no path")
-    if dest is None and origin is not None:
-        dest = waypoint_to_content(goal, origin)
-        hop_tile = goal_t
     if dest is None:
         return _idle("party turret no path")
     blackboard.scratch["party_turret_issued"] = goal_t

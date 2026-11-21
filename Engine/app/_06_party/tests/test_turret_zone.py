@@ -56,7 +56,14 @@ def test_edge_fight_continues_and_a_wall_detour_is_dropped() -> None:
     assert target_band((4, 0), (0, 0), anchor, engaged=False, can_hit=False, path_tiles=12) == "leave"
 
 
-def test_empty_zone_looks_inside_before_the_dot() -> None:
+def test_empty_zone_looks_inside_before_the_dot(monkeypatch) -> None:
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
+
+    def _plan(_terrain, _origin, goal):
+        hop = (int(goal[0]), int(goal[1]))
+        return ("click", [hop], hop)
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
     class _Board:
         def __init__(self) -> None:
             self.scratch: dict = {}

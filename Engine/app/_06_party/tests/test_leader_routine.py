@@ -344,7 +344,14 @@ def test_elf_turret_uses_the_solo_click_range() -> None:
     assert board.emitted == []
 
 
-def test_no_target_idles_on_the_dot() -> None:
+def test_no_target_idles_on_the_dot(monkeypatch) -> None:
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
+
+    def _plan(_terrain, _origin, goal):
+        hop = (int(goal[0]), int(goal[1]))
+        return ("click", [hop], hop)
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _plan)
     from types import SimpleNamespace
 
     from app._03_world import ActionType

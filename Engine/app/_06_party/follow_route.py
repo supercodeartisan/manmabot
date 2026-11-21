@@ -64,7 +64,7 @@ def estimate_walk_steps(
     if cheb > WALK_WINDOW_MAX_CHEBYSHEV:
         return None
     window = _clamp_window(terrain, s, g, WALK_WINDOW_MARGIN)
-    path = find_path_in_window(terrain, s, g, window)
+    path = find_path_in_window(terrain, s, g, window, diverse=False)
     if path:
         return max(cheb, len(path) - 1)
     try:
