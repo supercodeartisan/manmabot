@@ -42,7 +42,18 @@ def _verify_mmb2(data_pack: Path, errors: list[str]) -> None:
     from crypto.seller_cli.store import SellerStore
     from crypto.pack_format import Mmb2Reader, SimplePackSession
 
-    seller = Path(os.environ.get("MANMABOT_SELLER_DATA") or (ROOT / "SellerData"))
+    env = os.environ.get("MANMABOT_SELLER_DATA", "").strip()
+    if env:
+        seller = Path(env)
+    else:
+        nested = ROOT / "Seller" / "SellerData"
+        legacy = ROOT / "SellerData"
+        if (nested / "license.db").is_file() or (nested / "vault_key.bin").is_file():
+            seller = nested
+        elif (legacy / "license.db").is_file() or (legacy / "vault_key.bin").is_file():
+            seller = legacy
+        else:
+            seller = nested
     store = SellerStore(seller)
     try:
         cfg = store.config()

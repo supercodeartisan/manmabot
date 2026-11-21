@@ -31,20 +31,23 @@ def generate_artifact(
     if row is None:
         raise RuntimeError(f"unknown license_id: {license_id}")
     cfg = store.config()
+    keys = set(row.keys())
     artifact = {
         "format_version": 1,
         "product_id": row["product_id"],
         "license_id": license_id,
         "license_key": license_key,
         "cek_id": row["cek_id"],
+        "customer_label": row["customer_label"] if "customer_label" in keys else "",
+        "seller_note": row["seller_note"] if "seller_note" in keys else "",
         "signing": {
             "current_kid": cfg.get("current_kid"),
             "previous_kid": cfg.get("previous_kid"),
             "note": "Public keys are pinned in the client build, not this file.",
         },
         "activation": {
-            "mode": "hybrid_first_online",
-            "note": "Customer sends license_key + device SPKI; server returns ticket+envelope.",
+            "mode": "oob_file",
+            "note": "Customer sends activation_request; seller runs fulfill; customer applies response (no HTTP server).",
         },
     }
     verify_artifact_dict(artifact)

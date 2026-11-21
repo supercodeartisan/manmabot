@@ -378,18 +378,23 @@ def _os_exists(path, _orig=_orig_exists) -> bool:
     return rel in _FILES or rel in _DIRS
 
 
-def _os_listdir(path):
+def _os_listdir(path, _orig=_orig_listdir):
+    # Default arg + _BUSY: Nuitka may bind module _orig_listdir to the patch.
+    if _BUSY[0]:
+        return _orig(path)
     rel = _under(path)
     if rel is None or rel not in _DIRS:
-        return _orig_listdir(path)
+        return _orig(path)
     dirs, files = _child_names(rel)
     return dirs + files
 
 
-def _os_scandir(path):
+def _os_scandir(path, _orig=_orig_scandir):
+    if _BUSY[0]:
+        return _orig(path)
     rel = _under(path)
     if rel is None or rel not in _DIRS:
-        return _orig_scandir(path)
+        return _orig(path)
     parent = Path(path)
     dirs, files = _child_names(rel)
     entries = [_DirEntry(parent, name, is_file=False) for name in dirs]
@@ -397,10 +402,18 @@ def _os_scandir(path):
     return iter(entries)
 
 
-def _os_walk(top, topdown: bool = True, onerror=None, followlinks: bool = False):
+def _os_walk(
+    top,
+    topdown: bool = True,
+    onerror=None,
+    followlinks: bool = False,
+    _orig=_orig_walk,
+):
+    if _BUSY[0]:
+        return _orig(top, topdown, onerror, followlinks)
     rel = _under(top)
     if rel is None or rel not in _DIRS:
-        return _orig_walk(top, topdown, onerror, followlinks)
+        return _orig(top, topdown, onerror, followlinks)
     base = Path(top)
 
     def _recurse(directory: Path, directory_rel: str):
@@ -413,7 +426,9 @@ def _os_walk(top, topdown: bool = True, onerror=None, followlinks: bool = False)
     return _recurse(base, rel)
 
 
-def _builtin_open(file, mode="r", *args, **kwargs):
+def _builtin_open(file, mode="r", *args, _orig=_orig_open, **kwargs):
+    if _BUSY[0]:
+        return _orig(file, mode, *args, **kwargs)
     if _read_mode(str(mode)) and not hasattr(file, "read"):
         rel = _under(file)
         if rel is not None and rel in _FILES:
@@ -423,7 +438,7 @@ def _builtin_open(file, mode="r", *args, **kwargs):
             encoding = kwargs.get("encoding") or "utf-8"
             errors = kwargs.get("errors") or "strict"
             return io.StringIO(data.decode(encoding, errors))
-    return _orig_open(file, mode, *args, **kwargs)
+    return _orig(file, mode, *args, **kwargs)
 
 
 def _install_hooks() -> None:

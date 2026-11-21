@@ -10,9 +10,11 @@ from __future__ import annotations
 import ctypes
 import math
 import os
+import tempfile
 import threading
 import traceback
 from ctypes import wintypes
+from pathlib import Path
 
 _CLASS = "ZFStartupSplash"
 _BRAND_MARK = "纵锋"
@@ -303,18 +305,54 @@ def _startup_gdiplus() -> bool:
 
 
 def _load_logo() -> None:
+    """Load ``Engine/data/logo.png`` for the splash card.
+
+    Customer MMB2 builds keep ``logo.png`` only inside the RAM-mounted pack.
+    GDI+ ``GdipLoadImageFromFile`` bypasses Python hooks, so we materialize
+    bytes (via Path.read_bytes, which the asset store serves) to a temp file.
+    """
     global _logo
+    tmp: str | None = None
     try:
         from session.paths import data_root
 
         path = data_root() / "logo.png"
-        if not path.is_file():
+        raw: bytes | None = None
+        try:
+            if path.is_file():
+                raw = path.read_bytes()
+        except Exception:
+            raw = None
+        if not raw:
             return
+        # Real on-disk file: load directly. Packed/virtual: temp for GDI+.
+        load_path = str(path)
+        try:
+            # ntpath.isfile / CreateFile — detect whether Win32 sees the file.
+            import os as _os
+
+            if not _os.path.isfile(load_path) or _os.path.getsize(load_path) != len(raw):
+                fd, tmp = tempfile.mkstemp(prefix="manmabot_logo_", suffix=".png")
+                _os.close(fd)
+                Path(tmp).write_bytes(raw)
+                load_path = tmp
+        except Exception:
+            fd, tmp = tempfile.mkstemp(prefix="manmabot_logo_", suffix=".png")
+            os.close(fd)
+            Path(tmp).write_bytes(raw)
+            load_path = tmp
+
+        image = ctypes.c_void_p()
+        if _gdiplus.GdipLoadImageFromFile(load_path, ctypes.byref(image)) == 0 and image:
+            _logo = image
     except Exception:
         return
-    image = ctypes.c_void_p()
-    if _gdiplus.GdipLoadImageFromFile(str(path), ctypes.byref(image)) == 0 and image:
-        _logo = image
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
 
 
 def _make_font(

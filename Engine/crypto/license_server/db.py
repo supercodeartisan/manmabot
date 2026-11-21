@@ -86,12 +86,26 @@ def connect(path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate_license_labels(conn: sqlite3.Connection) -> None:
+    """Seller-only metadata: map licenses ↔ account/username (not shipped to customers)."""
+    cols = {str(row[1]) for row in conn.execute("PRAGMA table_info(licenses)").fetchall()}
+    if "customer_label" not in cols:
+        conn.execute(
+            "ALTER TABLE licenses ADD COLUMN customer_label TEXT NOT NULL DEFAULT ''"
+        )
+    if "seller_note" not in cols:
+        conn.execute(
+            "ALTER TABLE licenses ADD COLUMN seller_note TEXT NOT NULL DEFAULT ''"
+        )
+
+
 class LicenseDatabase:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = connect(self.path)
         self.conn.executescript(SCHEMA)
+        _migrate_license_labels(self.conn)
 
     def close(self) -> None:
         self.conn.close()

@@ -24,11 +24,11 @@ MAX_MANIFEST_SIZE = 64 * 1024 * 1024  # 64 MiB
 MIN_ENTRY_COUNT = 1
 MAX_ENTRY_COUNT = 100_000
 MAX_PATH_BYTES = 1024
-MAX_STORED_SIZE = 64 * 1024 * 1024  # 64 MiB per entry
+# Per-entry caps: raised after Stage-5 inventory (legacy nav.png ~78 MiB PNG).
+MAX_STORED_SIZE = 256 * 1024 * 1024  # 256 MiB per entry (matches raw; PNGs barely shrink)
 MAX_RAW_SIZE = 256 * 1024 * 1024  # 256 MiB per entry
 MAX_COMPRESSION_RATIO = 200  # stored:raw <= 200:1 when raw>0
 
-# Provisional until Stage-5 inventory measurement (spec §5.8).
 # Override via Mmb2Limits / write_pack(max_total_raw_size=...).
 PROVISIONAL_MAX_TOTAL_RAW_SIZE = 4 * 1024 * 1024 * 1024  # 4 GiB
 

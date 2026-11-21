@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import artifact as artifact_ops
 from . import cek_ops
+from . import fulfill_ops
 from . import license_ops
 from . import signing
 from .store import SellerStore
@@ -61,8 +62,18 @@ def build_parser() -> argparse.ArgumentParser:
     l_create.add_argument("--cek-id", required=True)
     l_create.add_argument("--product-id", default=None)
     l_create.add_argument("--license-id", default=None)
+    l_create.add_argument(
+        "--label",
+        default="",
+        help="Customer account / username label (seller ledger only)",
+    )
+    l_create.add_argument("--note", default="", help="Private seller note")
     l_ins = lic_sub.add_parser("inspect", help="Inspect license (no secrets)")
     l_ins.add_argument("license_id")
+    l_label = lic_sub.add_parser("set-label", help="Set customer account label")
+    l_label.add_argument("license_id")
+    l_label.add_argument("--label", required=True)
+    l_label.add_argument("--note", default=None)
     l_reset = lic_sub.add_parser("reset", help="Binding reset + audit")
     l_reset.add_argument("license_id")
     l_reset.add_argument("--reason", default="seller-cli")
@@ -77,6 +88,23 @@ def build_parser() -> argparse.ArgumentParser:
     a_gen.add_argument("--out", type=Path, default=None)
     a_ver = art_sub.add_parser("verify", help="Verify artifact has no secrets")
     a_ver.add_argument("path", type=Path)
+
+    # fulfill (OOB activation — no HTTP server)
+    ful = sub.add_parser(
+        "fulfill",
+        help="Fulfill customer activation_request → activation_response (OOB)",
+    )
+    ful.add_argument(
+        "--request",
+        required=True,
+        help="Path to activation_request.json or MMB-REQ1. wire string",
+    )
+    ful.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Response JSON path (default: SellerData/artifacts/response-<id>.json)",
+    )
 
     return p
 
@@ -115,10 +143,21 @@ def main(argv: list[str] | None = None) -> int:
                         cek_id=args.cek_id,
                         product_id=args.product_id,
                         license_id=args.license_id,
+                        customer_label=args.label,
+                        seller_note=args.note,
                     )
                 )
             if args.action == "inspect":
                 return _print(license_ops.inspect_license(store, args.license_id))
+            if args.action == "set-label":
+                return _print(
+                    license_ops.set_customer_label(
+                        store,
+                        args.license_id,
+                        customer_label=args.label,
+                        seller_note=args.note,
+                    )
+                )
             if args.action == "reset":
                 return _print(
                     license_ops.reset_license(
@@ -140,6 +179,10 @@ def main(argv: list[str] | None = None) -> int:
                 )
             if args.action == "verify":
                 return _print(artifact_ops.verify_artifact_file(args.path))
+        if args.cmd == "fulfill":
+            return _print(
+                fulfill_ops.fulfill(store, args.request, out_path=args.out)
+            )
         print("unknown command", file=sys.stderr)
         return 2
     except Exception as e:

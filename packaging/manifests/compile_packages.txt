@@ -13,5 +13,6 @@ Engine i18n
 Engine login
 Engine autologin
 Engine tool
+Engine crypto
 UI ui_qt
 UI ui

@@ -138,6 +138,28 @@ Python 3.14에서 `os.path.abspath`가 `os.path.isdir`를 호출한다. Stage 5 
 
 ---
 
+## FIX — Startup splash logo missing in MMB2 portable (2026-11-21)
+
+**Symptom.** `ZF.exe` / `ZF.bat` loading card shows brand text/spinner but not `logo.png`.
+
+**Cause.** Splash uses GDI+ `GdipLoadImageFromFile` on `Engine/data/logo.png`. Customer Stage 5 leaves data only in `data.pack` (RAM mount). Win32 cannot see that path; Python `Path.read_bytes` can.
+
+**Fix.** `session/startup_splash._load_logo` reads pack/mount bytes, writes a short-lived temp PNG for GDI+, then deletes it. No need to leave plain `Engine/data` or unpack `logo.png` for splash.
+
+**Release note.** Do **not** add a packaging step to extract logo for splash; the runtime fix is enough. Window/taskbar icon (`brand_icon_path`) may still prefer a real file for Qt native loaders — separate from splash.
+
+---
+
+## FIX — `os.listdir` RecursionError after MMB2 mount + cv2 import (2026-11-21)
+
+**Symptom.** After license activation, selecting hunt input (or any path that imports `cv2`) crashes with `RecursionError` in `asset_store._os_listdir` (thousands of frames: `_under` ↔ `_os_listdir`).
+
+**Cause.** `_os_isfile` / `_os_isdir` already used default-arg `_orig` + `_BUSY` because Nuitka can rebind module-level `_orig_*` to the patched function. `_os_listdir` / `_os_scandir` / `_os_walk` did not — so `return _orig_listdir(path)` called the hook again.
+
+**Fix.** Same pattern on listdir/scandir/walk/open: default-arg original + `_BUSY` early return.
+
+---
+
 ## NOTE — Stage 5 sensitive asset packs (2026-10-06)
 
 기능 추가(버그 아님). 맵 PNG·analysis 텍스트를 고객 폴더에서 평문으로 두지 않는다.

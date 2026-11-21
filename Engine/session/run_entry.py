@@ -43,6 +43,12 @@ def main() -> int:
 
         ensure_userdata()
         wipe_stale_analysis_temps()
+        # MMB2 customer packs: show license UI (key → request → response) before unpack.
+        # Does not change login / movement / combat / HP decision logic.
+        from session.license_gate import ensure_license_ui
+
+        if not ensure_license_ui():
+            return 2
         pack_info = ensure_packed_assets()
         for section in ("data", "analysis_text"):
             block = pack_info.get(section) or {}

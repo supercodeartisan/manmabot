@@ -187,6 +187,11 @@ def _zlib_wrap(raw: bytes) -> bytes:
         return b""
     co = zlib.compressobj(level=9, wbits=15)  # zlib-wrapped DEFLATE
     out = co.compress(raw) + co.flush()
+    # Highly compressible assets (maps/tables) can exceed the zip-bomb ratio
+    # check on round-trip verify. Fall back to zlib store (level 0).
+    if len(out) * MAX_COMPRESSION_RATIO < len(raw):
+        co0 = zlib.compressobj(level=0, wbits=15)
+        out = co0.compress(raw) + co0.flush()
     return out
 
 

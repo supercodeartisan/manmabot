@@ -27,6 +27,8 @@ Transition: `--legacy-mmba` still builds MMBA v1.
 
 Runtime (`ensure_packed_assets`) refuses MMB2 packs when BUILD.json is missing, signature fails (trusted kid), or sha256/pack_id mismatched (mixed-build + tamper protection).
 
+Startup splash logo (`Engine/data/logo.png`) lives inside the pack; GDI+ cannot read the RAM mount directly. Runtime materializes a temp file in `startup_splash._load_logo` — **no extra Stage 5 unpack step for logo.**
+
 ## E2E (unit / integration)
 
 `Engine/crypto/tests/test_e2e_customer_activation.py` — Seller → packs → activation → offline reload → TEMP.  

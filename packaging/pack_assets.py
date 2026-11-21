@@ -44,7 +44,14 @@ def _default_seller_root() -> Path:
     env = os.environ.get("MANMABOT_SELLER_DATA", "").strip()
     if env:
         return Path(env)
-    return REPO_ROOT / "SellerData"
+    # Prefer Seller/SellerData (tool+vault bundle); fall back to legacy root.
+    nested = REPO_ROOT / "Seller" / "SellerData"
+    legacy = REPO_ROOT / "SellerData"
+    if (nested / "license.db").is_file() or (nested / "vault_key.bin").is_file():
+        return nested
+    if (legacy / "license.db").is_file() or (legacy / "vault_key.bin").is_file():
+        return legacy
+    return nested
 
 
 def _should_pack_analysis_file(path: Path, analysis_root: Path) -> bool:

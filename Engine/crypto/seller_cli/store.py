@@ -12,13 +12,36 @@ from ..license_server.vault import CekVault
 DEFAULT_PRODUCT_ID = "00000000-0000-4000-8000-000000000001"
 
 
+def product_root() -> Path:
+    # Engine/crypto/seller_cli/store.py → parents[3] = product root
+    return Path(__file__).resolve().parents[3]
+
+
 def default_seller_root() -> Path:
+    """
+    Prefer ``<product>/Seller/SellerData`` (tool + vault together).
+    Fall back to legacy ``<product>/SellerData`` if that still has data.
+    Override with ``MANMABOT_SELLER_DATA``.
+    """
     env = os.environ.get("MANMABOT_SELLER_DATA", "").strip()
     if env:
         return Path(env)
-    # Product root / SellerData  (sibling of Engine, UserData)
-    # Engine/crypto/seller_cli/store.py → parents[3] = product root
-    return Path(__file__).resolve().parents[3] / "SellerData"
+    root = product_root()
+    nested = root / "Seller" / "SellerData"
+    legacy = root / "SellerData"
+
+    def _looks_populated(path: Path) -> bool:
+        return path.is_dir() and (
+            (path / "license.db").is_file()
+            or (path / "vault_key.bin").is_file()
+            or (path / "config.json").is_file()
+        )
+
+    if _looks_populated(nested):
+        return nested
+    if _looks_populated(legacy):
+        return legacy
+    return nested
 
 
 class SellerStore:
