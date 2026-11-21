@@ -203,6 +203,9 @@ class ScheduleShell(QMainWindow):
         self.bridge.userStopped.connect(
             self._on_user_stop, Qt.ConnectionType.DirectConnection
         )
+        self.bridge.alertRequested.connect(
+            self._on_operator_alert, Qt.ConnectionType.QueuedConnection
+        )
         self.bridge.rebind_hotkeys()
 
         self.setWindowTitle(self.t["console_title"])
@@ -1149,6 +1152,13 @@ class ScheduleShell(QMainWindow):
                         "Pico data port was not found. Plug in the board and try again.",
                     )
                 )
+
+    def _on_operator_alert(self, title: str, message: str) -> None:
+        QMessageBox.warning(
+            self,
+            str(title or "Alert"),
+            str(message or ""),
+        )
 
     def _on_user_stop(self) -> None:
         self._disarm_schedule()
@@ -2140,6 +2150,25 @@ class ScheduleShell(QMainWindow):
             return None
         return controller.farm_clock()
 
+    def _apply_kick_results(self) -> None:
+        """Copy a confirmed kick onto the roster the next Start will read."""
+        editor = getattr(self, "editor", None)
+        party = getattr(editor, "party_tab", None) if editor is not None else None
+        take = getattr(self.bridge.controller, "take_kick_results", None)
+        if party is None or not callable(take) or not hasattr(party, "apply_kick_results"):
+            return
+        try:
+            done = take()
+        except Exception:
+            return
+        if not done:
+            return
+        party.apply_kick_results(done)
+        try:
+            save_profile(self.profile)
+        except Exception as exc:
+            self._append_log(f"Party kick save failed: {exc}")
+
     def _on_poll(self) -> None:
         if self._closing:
             return
@@ -2158,6 +2187,7 @@ class ScheduleShell(QMainWindow):
             self._poll_timer.setInterval(1000)
         self._refresh_operator(force=False)
         self._sync_party_role_chrome()
+        self._apply_kick_results()
         self.schedule_list.paint_routine_timers()
         if self.editor.move_tab is not None:
             self.editor.move_tab.paint_farm_timers()

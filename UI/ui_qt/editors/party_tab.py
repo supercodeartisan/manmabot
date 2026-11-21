@@ -1157,7 +1157,7 @@ class PartyTab(QWidget):
         form.addWidget(remove_btn)
         box_lay.addLayout(form)
 
-        self.roster_table = QTableWidget(0, 7)
+        self.roster_table = QTableWidget(0, 6)
         self.roster_table.setHorizontalHeaderLabels(
             [
                 self._tx("party_ui_col_select", "선택"),
@@ -1165,8 +1165,7 @@ class PartyTab(QWidget):
                 self._tx("party_ui_name", "이름"),
                 self._tx("party_ui_role", "역할"),
                 self._tx("party_ui_loot_col", "루팅"),
-                self._tx("party_ui_col_use", "사용"),
-                self._tx("party_ui_col_wait", "대기"),
+                self._tx("party_ui_kick", "파티 추방"),
             ]
         )
         self.roster_table.itemChanged.connect(self._on_roster_flag)
@@ -1190,7 +1189,7 @@ class PartyTab(QWidget):
         configure_table_fill(
             self.roster_table,
             2,
-            fixed={0: 34, 1: 45, 3: 100, 4: 100, 5: 55, 6: 55},
+            fixed={0: 34, 1: 45, 3: 100, 4: 100, 5: 96},
         )
         box_lay.addWidget(self.roster_table)
 
@@ -1198,10 +1197,7 @@ class PartyTab(QWidget):
         actions.setContentsMargins(0, 0, 0, 0)
         self.roster_invite_btn = QPushButton(self._tx("party_ui_invite", "파티 초대"))
         self.roster_invite_btn.clicked.connect(self._invite_selected)
-        self.roster_kick_btn = QPushButton(self._tx("party_ui_kick", "파티 추방"))
-        self.roster_kick_btn.clicked.connect(self._kick_selected)
         actions.addWidget(self.roster_invite_btn)
-        actions.addWidget(self.roster_kick_btn)
         actions.addStretch(1)
         box_lay.addLayout(actions)
 
@@ -1487,7 +1483,7 @@ class PartyTab(QWidget):
         table.blockSignals(True)
         table.setRowCount(len(rows))
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        check_flags = flags | Qt.ItemFlag.ItemIsUserCheckable
+        row_h = table_row_height_for_controls()
         for index, row in enumerate(rows):
             number = QTableWidgetItem(str(index + 1))
             number.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1498,20 +1494,6 @@ class PartyTab(QWidget):
             loot = str(row.get("loot") or "none")
             loot_item = QTableWidgetItem(self._roster_loot_label(loot))
             loot_item.setData(Qt.ItemDataRole.UserRole, loot)
-            enabled = QTableWidgetItem("")
-            enabled.setFlags(check_flags)
-            enabled.setCheckState(
-                Qt.CheckState.Checked
-                if str(row.get("enabled", "1")) != "0"
-                else Qt.CheckState.Unchecked
-            )
-            required = QTableWidgetItem("")
-            required.setFlags(check_flags)
-            required.setCheckState(
-                Qt.CheckState.Checked
-                if str(row.get("required", "1")) != "0"
-                else Qt.CheckState.Unchecked
-            )
             number.setFlags(flags)
             edit_flags = flags | Qt.ItemFlag.ItemIsEditable
             for item in (name, role_item, loot_item):
@@ -1521,9 +1503,14 @@ class PartyTab(QWidget):
             table.setItem(index, 2, name)
             table.setItem(index, 3, role_item)
             table.setItem(index, 4, loot_item)
-            table.setItem(index, 5, enabled)
-            table.setItem(index, 6, required)
+            table.setCellWidget(index, 5, self._roster_kick_button(row["name"]))
+            table.setRowHeight(index, row_h)
         table.blockSignals(False)
+
+    def _roster_kick_button(self, name: str) -> QWidget:
+        button = QPushButton(self._tx("party_ui_kick", "파티 추방"))
+        button.clicked.connect(lambda _checked=False, who=name: self._kick_named(who))
+        return wrap_cell_widget(button)
 
     def _roster_select_box(self) -> QWidget:
         box = QCheckBox()
@@ -1581,7 +1568,7 @@ class PartyTab(QWidget):
         return submit if callable(submit) else None
 
     def _party_kick_submit(self):
-        """Existing expel entry point only. There is no invented kick call."""
+        """Queue /파티추방 on the running worker. Missing when the bot has no kick entry."""
         controller = self._party_controller()
         submit = getattr(controller, "submit_party_kick", None)
         return submit if callable(submit) else None
@@ -1607,6 +1594,27 @@ class PartyTab(QWidget):
             and str(row.get("name") or "").strip()
         }
 
+    def _mark_invited_active(self, names: list[str]) -> None:
+        """Party invite puts those names on 사용 and 대기. Other rows stay as saved."""
+        wanted = {str(name or "").strip().casefold() for name in names if str(name or "").strip()}
+        if not wanted:
+            return
+        rows = self._roster_rows()
+        changed = False
+        for row in rows:
+            key = str(row.get("name") or "").strip().casefold()
+            if key not in wanted:
+                continue
+            if row.get("enabled") == "1" and row.get("required") == "1":
+                continue
+            row["enabled"] = "1"
+            row["required"] = "1"
+            changed = True
+        if not changed:
+            return
+        self._store_roster(rows)
+        self._fill_roster_table()
+
     def _invite_selected(self) -> list[str]:
         names = self._checked_roster_names()
         if not names:
@@ -1614,6 +1622,7 @@ class PartyTab(QWidget):
         submit = self._party_chat_submit()
         if submit is None:
             return []
+        self._mark_invited_active(names)
         for name in names:
             reply = str(submit("invite", name) or "")
             self._append_party_action_result(name, "invite", reply)
@@ -1627,17 +1636,58 @@ class PartyTab(QWidget):
             if name.casefold() in confirmed
         ]
 
-    def _kick_selected(self) -> list[str]:
-        targets = self._kick_targets()
-        if not targets:
+    def _kick_named(self, name: str) -> list[str]:
+        """Kick one roster row. The select box is not required."""
+        who = str(name or "").strip()
+        if not who:
+            return []
+        if who.casefold() not in self._confirmed_party_names():
+            self._append_party_action_result(who, "kick", "rejected: not in party")
             return []
         submit = self._party_kick_submit()
         if submit is None:
             return []
-        for name in targets:
-            reply = str(submit(name) or "")
-            self._append_party_action_result(name, "kick", reply)
-        return list(targets)
+        reply = str(submit(who) or "")
+        self._append_party_action_result(who, "kick", reply)
+        return [who]
+
+    def apply_kick_results(self, rows: list) -> None:
+        """After a confirmed kick, clear that name's 사용 and 대기. The row stays."""
+        roster = self._roster_rows()
+        changed = False
+        for item in rows or []:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "").strip()
+            phase = str(item.get("phase") or "")
+            if not name:
+                continue
+            if phase == "left":
+                key = name.casefold()
+                for row in roster:
+                    if str(row.get("name") or "").strip().casefold() != key:
+                        continue
+                    if row.get("enabled") == "0" and row.get("required") == "0":
+                        continue
+                    row["enabled"] = "0"
+                    row["required"] = "0"
+                    changed = True
+                self._append_party_action_result(name, "kick", "left")
+            else:
+                reply = (
+                    "rejected: still in party"
+                    if phase == "failed"
+                    else "rejected: not in party"
+                )
+                self._append_party_action_result(name, "kick", reply)
+        if changed:
+            self._store_roster(roster)
+
+    def _kick_selected(self) -> list[str]:
+        kicked: list[str] = []
+        for name in self._kick_targets():
+            kicked.extend(self._kick_named(name))
+        return kicked
 
     def _append_party_action_result(self, name: str, action: str, reply: str) -> None:
         table = getattr(self, "roster_result", None)
@@ -1665,6 +1715,8 @@ class PartyTab(QWidget):
         text = str(reply or "").strip()
         lowered = text.casefold()
         invite = action == "invite"
+        if action == "kick" and lowered == "left":
+            return self._tx("party_ui_kick_done", "추방됨"), "", ""
         if lowered.startswith("queued"):
             status = (
                 self._tx("party_ui_invite_busy", "초대 진행 중")
@@ -1694,18 +1746,6 @@ class PartyTab(QWidget):
             return
         if column == 4:
             self._commit_roster_choice(item, "loot", _LOOT_ROLES, "none")
-            return
-        if column not in (5, 6):
-            return
-        rows = self._roster_rows()
-        index = item.row()
-        if index < 0 or index >= len(rows):
-            return
-        key = "enabled" if column == 5 else "required"
-        rows[index][key] = (
-            "1" if item.checkState() == Qt.CheckState.Checked else "0"
-        )
-        self._store_roster(rows)
 
     def _restore_roster_text(self, item: QTableWidgetItem, text: str) -> None:
         table = getattr(self, "roster_table", None)
@@ -1748,6 +1788,9 @@ class PartyTab(QWidget):
         if item.text() != new:
             self._restore_roster_text(item, new)
         self._store_roster(rows)
+        table = getattr(self, "roster_table", None)
+        if isinstance(table, QTableWidget):
+            table.setCellWidget(index, 5, self._roster_kick_button(new))
 
     def _rename_roster_links(self, old: str, new: str) -> None:
         """Point existing name keys at the renamed character. No new settings."""

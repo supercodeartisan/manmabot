@@ -17,7 +17,9 @@ from app._03_world.space.terrain_map import TerrainMap
 from app._03_world.space.world_coords import CLICK_PATH_SLACK, WorldOrigin, tile_chebyshev
 from app._04_decision.pathfinding import (
     find_path,
+    find_path_random_shortest,
     select_click_waypoint,
+    sticky_shortest_suffix,
     waypoint_to_content,
 )
 
@@ -213,6 +215,9 @@ def find_path_in_window(
     start: tuple[int, int],
     goal: tuple[int, int],
     window: tuple[int, int, int, int],
+    *,
+    sticky_path: list[tuple[int, int]] | tuple[tuple[int, int], ...] | None = None,
+    diverse: bool = True,
 ) -> list[tuple[int, int]]:
     """Fine A* restricted to ``window`` (x0,y0,x1,y1 half-open)."""
     x0, y0, x1, y1 = window
@@ -224,7 +229,20 @@ def find_path_in_window(
     local = terrain.submap(x0, y0, x1, y1)
     local_start = (start[0] - x0, start[1] - y0)
     local_goal = (goal[0] - x0, goal[1] - y0)
-    local_path = find_path(local, local_start, local_goal)
+    local_sticky = None
+    if sticky_path:
+        clipped = [
+            (int(x) - x0, int(y) - y0)
+            for x, y in sticky_path
+            if x0 <= int(x) < x1 and y0 <= int(y) < y1
+        ]
+        local_sticky = clipped or None
+    if diverse:
+        local_path = find_path_random_shortest(
+            local, local_start, local_goal, sticky_path=local_sticky
+        )
+    else:
+        local_path = find_path(local, local_start, local_goal)
     return [(x + x0, y + y0) for x, y in local_path]
 
 
@@ -238,6 +256,7 @@ def plan_travel_click_hierarchical(
     portal_graph: Optional["PortalGraph"] = None,
     slack: int = CLICK_PATH_SLACK,
     max_hop: int | None = None,
+    sticky_path: list[tuple[int, int]] | tuple[tuple[int, int], ...] | None = None,
 ) -> tuple[
     Optional[Position],
     list[tuple[int, int]],
@@ -250,6 +269,9 @@ def plan_travel_click_hierarchical(
     to legacy optimistic ``CoarseMap`` only when no portal graph is available.
     If corridor/window refine fails, falls back to full fine A* so planning
     does not return empty when a fine path exists.
+
+    Fine refine picks among equal-length shortest alternatives. ``sticky_path``
+    reuses a prior full guide to the same goal across hops.
 
     Returns ``(content_dest, fine_path, absolute_waypoint, coarse_cell_path)``.
     """
@@ -289,6 +311,15 @@ def plan_travel_click_hierarchical(
         goal_xy = snapped_goal
     goal = goal_xy
 
+    reused = sticky_shortest_suffix(sticky_path, terrain, start, goal)
+    if reused:
+        waypoint = select_click_waypoint(
+            reused, origin, slack=slack, terrain=terrain, max_hop=max_hop
+        )
+        if waypoint is None:
+            return None, reused, None, []
+        return waypoint_to_content(waypoint, origin), reused, waypoint, []
+
     graph = portal_graph
     coarse_cells: list[tuple[int, int]] = []
     abstract: list[int] = []
@@ -319,40 +350,60 @@ def plan_travel_click_hierarchical(
             look = min(len(abstract) - 1, idx + COARSE_LOOKAHEAD)
             hop_nodes = abstract[idx : look + 1]
             mask = graph.corridor_mask(hop_nodes)
-            fine_path = find_path_in_corridor(terrain, start, local_goal, mask)
+            fine_path = find_path_in_corridor(
+                terrain, start, local_goal, mask, sticky_path=sticky_path
+            )
             if not fine_path and local_goal != goal:
                 # Widen to the full abstract corridor (sound but larger).
                 mask = graph.corridor_mask(abstract)
-                fine_path = find_path_in_corridor(terrain, start, local_goal, mask)
+                fine_path = find_path_in_corridor(
+                    terrain, start, local_goal, mask, sticky_path=sticky_path
+                )
                 if not fine_path:
-                    fine_path = find_path_in_corridor(terrain, start, goal, mask)
+                    fine_path = find_path_in_corridor(
+                        terrain, start, goal, mask, sticky_path=sticky_path
+                    )
             if not fine_path:
                 radius = LOCAL_CLUSTER_RADIUS * cluster
                 window = _clamp_window(terrain, start, local_goal, radius)
-                fine_path = find_path_in_window(terrain, start, local_goal, window)
+                fine_path = find_path_in_window(
+                    terrain, start, local_goal, window, sticky_path=sticky_path
+                )
                 if not fine_path:
                     window = _clamp_window(terrain, start, local_goal, radius * 2)
                     fine_path = find_path_in_window(
-                        terrain, start, local_goal, window
+                        terrain,
+                        start,
+                        local_goal,
+                        window,
+                        sticky_path=sticky_path,
                     )
     else:
         # Legacy optimistic coarse (tests / tiny maps without portal build).
         cmap = coarse if coarse is not None else CoarseMap.from_terrain(terrain, cluster)
         coarse_cells = find_coarse_path(cmap, start, goal)
         if not coarse_cells:
-            fine_path = find_path(terrain, start, goal)
+            fine_path = find_path_random_shortest(
+                terrain, start, goal, sticky_path=sticky_path
+            )
         else:
             local_goal = _local_fine_goal(terrain, cmap, coarse_cells, start, goal)
             radius = LOCAL_CLUSTER_RADIUS * cmap.cluster
             window = _clamp_window(terrain, start, local_goal, radius)
-            fine_path = find_path_in_window(terrain, start, local_goal, window)
+            fine_path = find_path_in_window(
+                terrain, start, local_goal, window, sticky_path=sticky_path
+            )
             if not fine_path:
                 window = _clamp_window(terrain, start, local_goal, radius * 2)
-                fine_path = find_path_in_window(terrain, start, local_goal, window)
+                fine_path = find_path_in_window(
+                    terrain, start, local_goal, window, sticky_path=sticky_path
+                )
 
     # Must-not-fail: full fine A* when hierarchical refine finds nothing.
     if not fine_path:
-        fine_path = find_path(terrain, start, goal)
+        fine_path = find_path_random_shortest(
+            terrain, start, goal, sticky_path=sticky_path
+        )
         if not fine_path:
             return None, [], None, coarse_cells
 

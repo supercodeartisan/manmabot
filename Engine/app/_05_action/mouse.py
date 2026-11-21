@@ -103,12 +103,26 @@ class MouseController:
         self.button_events = 0
         # Cursor moves (hover probes and aim). Used for click-vs-hover diagnostics.
         self.move_events = 0
+        # Nesting gate: heal double-press must not race a ground/attack click.
+        self._quiet_depth = 0
 
     def enable(self):
         self.enabled = True
 
     def disable(self):
         self.enabled = False
+
+    def begin_quiet(self) -> None:
+        """Block move/click/hold until ``end_quiet`` (heal double window)."""
+        self._quiet_depth = int(self._quiet_depth or 0) + 1
+
+    def end_quiet(self) -> None:
+        depth = int(self._quiet_depth or 0) - 1
+        self._quiet_depth = depth if depth > 0 else 0
+
+    @property
+    def is_quiet(self) -> bool:
+        return int(self._quiet_depth or 0) > 0
 
     def _to_absolute(self, x: float, y: float) -> tuple[int, int]:
         """Convert normalized (0-1) or pixel coordinates to absolute (0-65535)."""
@@ -137,7 +151,10 @@ class MouseController:
         When ``humanize_move`` is on, walks a short curve that finishes within
         ``MOVE_BUDGET_S`` (0.02s), including attack and travel aims. ``snap``
         is ignored in that mode. When the toggle is off, the cursor jumps.
+        Quiet (heal double): no move — a hover change mid-press leaves aim up.
         """
+        if self.is_quiet:
+            return
         if not self.enabled:
             return
         _ensure_captured()
@@ -153,13 +170,59 @@ class MouseController:
 
     def _move_curved(self, px: int, py: int) -> None:
         """Bezier to ``(px, py)``. Sleeps stop once the 0.02s budget is spent."""
+        self.move_with_budget(
+            px,
+            py,
+            budget_s=float(hz.MOVE_BUDGET_S),
+            steps=hz.randint(hz.MOVE_STEPS, self._rng),
+        )
+
+    def move_with_budget(
+        self,
+        x: float,
+        y: float,
+        *,
+        budget_s: float,
+        steps: int | None = None,
+        curve_fraction: tuple[float, float] | None = None,
+        shop_curves: bool = False,
+    ) -> None:
+        """Bezier move that spends up to ``budget_s`` (shop approach uses ~1s).
+
+        Combat / travel keep calling ``move`` → ``MOVE_BUDGET_S`` (0.02s).
+        Shop callers pass ``shop_curves=True`` so path style/easing vary per move.
+        """
+        if not self.enabled:
+            return
+        _ensure_captured()
+        px, py = self._to_pixels(x, y)
+        n = int(steps) if steps is not None else hz.randint(hz.MOVE_STEPS, self._rng)
+        n = max(2, n)
         x0, y0 = self._start_pos()
-        steps = hz.randint(hz.MOVE_STEPS, self._rng)
-        points = hz.bezier_points(x0, y0, float(px), float(py), steps, self._rng)
+        if shop_curves:
+            points = hz.shop_curve_points(
+                x0,
+                y0,
+                float(px),
+                float(py),
+                n,
+                self._rng,
+                curve_fraction=curve_fraction,
+            )
+        else:
+            points = hz.bezier_points(
+                x0,
+                y0,
+                float(px),
+                float(py),
+                n,
+                self._rng,
+                curve_fraction=curve_fraction,
+            )
         if not points:
             points = [(px, py)]
         started = time.perf_counter()
-        budget = float(hz.MOVE_BUDGET_S)
+        budget = max(0.02, float(budget_s))
         last = len(points) - 1
         for i, (qx, qy) in enumerate(points):
             if i != last and (time.perf_counter() - started) >= budget:
@@ -176,7 +239,8 @@ class MouseController:
             slots = last - i
             if remain <= 0.0 or slots <= 0:
                 continue
-            delay = self._rng.uniform(0.0, remain * 0.5 / slots)
+            # Spend budget unevenly so the path is not metronomic.
+            delay = self._rng.uniform(0.0, remain * 0.65 / slots)
             if delay > 0.0:
                 time.sleep(min(delay, remain))
 
@@ -199,8 +263,11 @@ class MouseController:
         ``cursor_ok`` is checked before each until_walk *re*-click (not the
         first). Travel passes a NORMAL cursor gate so a mid-loop attack
         hover cannot fire.
+
+        Quiet (heal double): no click — a ground/attack click mid-press
+        leaves the cast circle up.
         """
-        if not self.enabled:
+        if self.is_quiet or not self.enabled:
             return
         _ensure_captured()
         px, py = self._to_pixels(x, y)
@@ -302,7 +369,7 @@ class MouseController:
 
     def hold(self, x: float, y: float, duration: float, button: str = "left") -> None:
         """Click and hold at position for duration seconds."""
-        if not self.enabled:
+        if self.is_quiet or not self.enabled:
             return
         _ensure_captured()
         px, py = self._to_pixels(x, y)
@@ -318,6 +385,32 @@ class MouseController:
             _send_button(button, down=False, px=px, py=py)
             if gap > 0.0:
                 time.sleep(gap)
+        self.button_events += 1
+
+    def hold_in_place(
+        self, x: float, y: float, duration: float, button: str = "left"
+    ) -> None:
+        """Button down/up at ``(x,y)`` without a second approach move.
+
+        Shop UI already curved+fined to this pixel; re-running ``move`` would
+        look like a snap correction.
+        """
+        if self.is_quiet or not self.enabled:
+            return
+        _ensure_captured()
+        px, py = self._to_pixels(x, y)
+        ib.aim(px, py)
+        gap = _button_gap_s()
+        _send_button(button, down=True, px=px, py=py)
+        if gap > 0.0:
+            time.sleep(gap)
+        try:
+            time.sleep(duration)
+        finally:
+            _send_button(button, down=False, px=px, py=py)
+            if gap > 0.0:
+                time.sleep(gap)
+        self._last_pos = (px, py)
         self.button_events += 1
 
     def move_and_click(

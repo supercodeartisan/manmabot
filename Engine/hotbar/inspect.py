@@ -325,6 +325,51 @@ def hotbar_has_role(snap: Any, role: str) -> bool:
     return next(_hotbar_cells_for_role(snap, role), None) is not None
 
 
+def hotbar_has_box_key(snap: Any, box: int, key: str) -> bool:
+    """True when the live 24-slot list still has ``box``+``key`` occupied."""
+    raw_slots = snap.get("slots") if isinstance(snap, dict) else None
+    if not isinstance(raw_slots, list):
+        return False
+    try:
+        want_box = int(box)
+    except (TypeError, ValueError):
+        return False
+    want_key = str(key or "").strip().lower()
+    if want_box not in (1, 2, 3) or want_key not in SKILL_KEYS:
+        return False
+    for raw in raw_slots:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            cell_box = int(raw.get("box") or 0)
+        except (TypeError, ValueError):
+            cell_box = 0
+        cell_key = str(raw.get("key") or "").strip().lower()
+        if cell_box == want_box and cell_key == want_key:
+            name = str(
+                raw.get("name")
+                or raw.get("label")
+                or raw.get("kr_name")
+                or ""
+            ).strip()
+            return bool(name)
+        try:
+            index = int(raw.get("slot", -1))
+        except (TypeError, ValueError):
+            index = -1
+        if 0 <= index <= 23:
+            mapped = slot_to_box_key(index)
+            if mapped == (want_box, want_key):
+                name = str(
+                    raw.get("name")
+                    or raw.get("label")
+                    or raw.get("kr_name")
+                    or ""
+                ).strip()
+                return bool(name)
+    return False
+
+
 def hotbar_spell_name_for_role(snap: Any, role: str) -> str:
     """Folded live spell name for ``role``, or empty when not on the bar."""
     for raw in _hotbar_cells_for_role(snap, role):
@@ -357,11 +402,106 @@ def find_role_on_hotbar(snap: Any, role: str) -> tuple[int, str] | None:
     return None
 
 
+def find_role_on_layout(
+    layout: Any, role: str
+) -> tuple[int, str] | None:
+    """Last-scan profile layout box/key for ``role``, or None."""
+    wanted = str(role or "").strip()
+    if not wanted or not isinstance(layout, dict):
+        return None
+    boxes = layout.get("boxes")
+    if not isinstance(boxes, dict):
+        return None
+    lookups = load_role_map()
+    icons: dict[str, str] = lookups.get("__icons__") or {}
+    for box_key in ("1", "2", "3"):
+        page = boxes.get(box_key)
+        if not isinstance(page, dict):
+            continue
+        try:
+            box = int(box_key)
+        except (TypeError, ValueError):
+            continue
+        for fkey, cell in page.items():
+            if not isinstance(cell, dict):
+                continue
+            key = str(fkey or cell.get("key") or "").strip().lower()
+            if key not in SKILL_KEYS:
+                continue
+            cell_role = str(cell.get("role") or "").strip()
+            if cell_role == wanted:
+                if wanted == "teleport" and not _is_escape_teleport_skill(cell):
+                    continue
+                return box, key
+            kr = str(cell.get("kr_name") or cell.get("label") or cell.get("name") or "")
+            zh = str(cell.get("zh_name") or "")
+            template = str(cell.get("template") or icons.get(kr, "") or "")
+            if wanted == "teleport":
+                if _is_escape_teleport_skill(cell):
+                    return box, key
+                continue
+            if resolve_role(template, kr, zh, lookups) == wanted:
+                return box, key
+    return None
+
+
+def resolve_hotbar_press(
+    role: str,
+    *,
+    world: Any = None,
+    snap: Any = None,
+    layout: Any = None,
+) -> tuple[int, str] | None:
+    """Find ``role`` on the live hotbar list. Never use Setup box/key alone.
+
+    Operator UI chooses *which* roles/items are wanted (enabled). The 24-slot
+    memory/layout list chooses *where* to press. Missing from the bar → None.
+    """
+    wanted = str(role or "").strip()
+    if not wanted:
+        return None
+    if layout is None and world is not None:
+        layout = getattr(world, "hotbar_layout", None)
+    if snap is None and world is not None:
+        snap = getattr(world, "last_hotbar", None)
+
+    if wanted == "hp_potion":
+        try:
+            from app._04_decision.hp_actions import (
+                find_hp_restore_hotbar,
+                item_key_from_action,
+            )
+
+            return find_hp_restore_hotbar(
+                world,
+                item_key_from_action("hp_potion") or "빨간 물약",
+                layout=layout if isinstance(layout, dict) else None,
+            )
+        except Exception:
+            return None
+
+    raw_slots = snap.get("slots") if isinstance(snap, dict) else None
+    if isinstance(raw_slots, list) and raw_slots:
+        found = find_role_on_hotbar(snap, wanted)
+        if found is not None:
+            return found
+        # Snap is present: role not on the bar. Do not fall back to Setup.
+        return None
+    return find_role_on_layout(layout, wanted)
+
+
 def merge_detected_spell_slots(
     detected: dict[str, dict[str, Any]] | None,
     previous: dict[str, dict[str, Any]] | None,
+    *,
+    cells: list[DetectedCell] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Keep operator bindings for roles the scan did not place on the bar."""
+    """Bind roles from the live scan. Do not park a role on a filled cell.
+
+    Previous/operator bindings are kept only when that box/key was empty in
+    this scan. A stale ``hp_potion@box2/f11`` must not survive on a cell the
+    scan already filled with another skill (e.g. wind blade).
+    """
     merged = _disabled_slots()
     prev = previous if isinstance(previous, dict) else {}
     found = detected if isinstance(detected, dict) else {}
@@ -375,13 +515,52 @@ def merge_detected_spell_slots(
             return False
 
     occupied: dict[tuple[int, str], str] = {}
+    for cell in cells or ():
+        try:
+            box = int(getattr(cell, "box", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        key = str(getattr(cell, "key", "") or "").strip().lower()
+        kind = str(getattr(cell, "kind", "") or "").upper()
+        name = str(getattr(cell, "kr_name", "") or getattr(cell, "label", "") or "")
+        if box not in (1, 2, 3) or key not in SKILL_KEYS:
+            continue
+        if kind in {"EMPTY", "?", ""} and not name.strip():
+            continue
+        # Any non-empty scanned cell blocks a stale role from landing here.
+        occupied[(box, key)] = str(getattr(cell, "role", "") or kind or "filled")
     for sid in SLOT_IDS:
         spec = found.get(sid)
         if not _usable(spec):
             continue
         row = dict(spec)
+        cell_key = (int(row["box"]), str(row["key"]).lower())
         merged[sid] = row
-        occupied[(int(row["box"]), str(row["key"]).lower())] = sid
+        occupied[cell_key] = sid
+    # Full scan present: keep only *enabled* wants from previous/UI. Never
+    # invent a press location for a cell the scan did not bind to this role.
+    if cells is not None:
+        for sid in SLOT_IDS:
+            prev_spec = prev.get(sid)
+            if not isinstance(prev_spec, dict):
+                continue
+            want = bool(prev_spec.get("enabled", False))
+            cur = merged.get(sid)
+            if not isinstance(cur, dict):
+                continue
+            if _usable(cur):
+                # Live scan placed it — keep location; honor UI enabled if off.
+                if sid in prev and prev_spec.get("enabled") is False:
+                    cur["enabled"] = False
+                continue
+            if want:
+                # Wanted in UI but not on this bar: enabled without a key.
+                cur["enabled"] = True
+                cur["box"] = 0
+            else:
+                cur["enabled"] = False
+                cur["box"] = 0
+        return merged
     for sid in SLOT_IDS:
         if sid in occupied.values():
             continue

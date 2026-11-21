@@ -9,8 +9,9 @@ import time
 from contextlib import contextmanager
 from typing import Callable, Iterator
 
-# Closed device handles need a beat before another context can open them.
-RELEASE_SETTLE_S = 0.1
+# Closed device handles need a beat before chat can open Interception again.
+# 0.1s was too short under the party bot: slot open raced the farm re-grab.
+RELEASE_SETTLE_S = 0.4
 
 
 @contextmanager

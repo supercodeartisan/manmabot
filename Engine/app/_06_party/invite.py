@@ -33,7 +33,12 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 INVITE_PREFIX = "/초대 "
+KICK_PREFIX = "/파티추방 "
 LEAVE_COMMAND = "파티탈퇴"
+# After the first /파티추방, two more sends if a confirmed read still lists them.
+KICK_RETRIES = 2
+# Wait this long after a kick line before treating a still-listed name as failed.
+KICK_CONFIRM_S = 2.0
 
 # Leader waits this long for invites + rally before the hunt; invites go on after.
 START_WAIT_S = 10 * 60
@@ -78,6 +83,122 @@ LEAVE_FAILED = "leave_failed"
 
 def invite_command(name: str) -> str:
     return f"{INVITE_PREFIX}{str(name or '').strip()}".rstrip()
+
+
+def kick_command(name: str) -> str:
+    return f"{KICK_PREFIX}{str(name or '').strip()}".rstrip()
+
+
+def member_listed(snapshot: Any, name: str) -> Optional[bool]:
+    """True when this read lists the name. False when a read confirms absence.
+
+    None means the read is unknown. Callers must not kick or treat that as a leave.
+    """
+    from app._06_party.sync import memory_in_party
+
+    if memory_in_party(snapshot) is None:
+        return None
+    key = str(name or "").strip().casefold()
+    if not key or memory_in_party(snapshot) is not True:
+        return False
+    return key in _member_names(snapshot)
+
+
+def clear_roster_flags(rows: Any, name: str) -> bool:
+    """Turn 사용 and 대기 off for one saved name. The row stays."""
+    key = str(name or "").strip().casefold()
+    if not key or not isinstance(rows, (list, tuple)):
+        return False
+    changed = False
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("name") or "").strip().casefold() != key:
+            continue
+        if str(row.get("enabled") or "") != "0" or str(row.get("required") or "") != "0":
+            row["enabled"] = "0"
+            row["required"] = "0"
+            changed = True
+    return changed
+
+
+class KickWatch:
+    """Type /파티추방, then confirm the name left party memory.
+
+    The first send happens only when a confirmed read lists them. If they are
+    still listed after the confirm wait, the line is sent again, up to two
+    more times. An unknown read does not count as left and does not spend a retry.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        confirm_s: float = KICK_CONFIRM_S,
+        retries: int = KICK_RETRIES,
+    ) -> None:
+        self.name = str(name or "").strip()
+        self.key = self.name.casefold()
+        self.sends = 0
+        self.typed_at: Optional[float] = None
+        self.absent_since: Optional[float] = None
+        self.phase = "armed"
+        self.confirm_s = float(confirm_s)
+        self.retries = int(retries)
+        self._clock = clock
+
+    def begin(self, snapshot: Any, send_line: Callable[[str], bool]) -> str:
+        listed = member_listed(snapshot, self.name)
+        if listed is not True:
+            self.phase = "skipped"
+            if listed is None:
+                return "rejected: party memory unread"
+            return "rejected: not in party"
+        return self._send(send_line)
+
+    def tick(
+        self,
+        snapshot: Any,
+        send_line: Callable[[str], bool],
+        *,
+        can_send: bool,
+    ) -> Optional[str]:
+        if self.phase != "waiting":
+            return None
+        listed = member_listed(snapshot, self.name)
+        if listed is None:
+            self.absent_since = None
+            return None
+        now = self._clock()
+        if not listed:
+            if self.absent_since is None:
+                self.absent_since = now
+            if now - self.absent_since < self.confirm_s:
+                return None
+            self.phase = "left"
+            return "left"
+        self.absent_since = None
+        if self.typed_at is None or now - self.typed_at < self.confirm_s:
+            return None
+        if self.sends >= 1 + self.retries:
+            self.phase = "failed"
+            return "failed"
+        if not can_send:
+            return None
+        return self._send(send_line)
+
+    def _send(self, send_line: Callable[[str], bool]) -> str:
+        line = kick_command(self.name)
+        try:
+            ok = bool(send_line(line))
+        except Exception:
+            ok = False
+        self.sends += 1
+        self.typed_at = self._clock()
+        self.absent_since = None
+        self.phase = "waiting"
+        return f"manual {line}" if ok else f"manual {line} failed"
 
 
 def _roster_on(item: Any, key: str, default: bool = True) -> bool:
@@ -586,6 +707,7 @@ class LeaderInvites:
         self._wanted: list[str] = []
         self._required: list[str] = []
         self._self_name = ""
+        self._kick_hold: set[str] = set()
 
     @property
     def active(self) -> bool:
@@ -721,6 +843,30 @@ class LeaderInvites:
             self.info = inviter.status()
             return
 
+    def hold_kick(self, name: str) -> None:
+        """Do not /초대 this name while a kick is still being confirmed."""
+        key = str(name or "").strip().casefold()
+        if key:
+            self._kick_hold.add(key)
+
+    def release_kick(self, name: str) -> None:
+        self._kick_hold.discard(str(name or "").strip().casefold())
+
+    def drop_kicked(self, name: str) -> None:
+        """Stop inviting a name this session. The saved roster row stays."""
+        key = str(name or "").strip().casefold()
+        self._kick_hold.discard(key)
+        if not key:
+            return
+        self._wanted = [n for n in self._wanted if n.casefold() != key]
+        self._required = [n for n in self._required if n.casefold() != key]
+        inviter = self.inviter
+        if inviter is None:
+            return
+        inviter.rows = [row for row in inviter.rows if row.name.casefold() != key]
+        inviter._update_state(self._clock())
+        self.info = inviter.status()
+
     def _acked(self, name: str) -> bool:
         try:
             return bool(self._policy_acked(name))
@@ -728,6 +874,8 @@ class LeaderInvites:
             return False
 
     def _ready(self, name: str) -> bool:
+        if str(name or "").strip().casefold() in self._kick_hold:
+            return False
         if not self._acked(name):
             return False
         return self._hold is None or bool(self._hold.may_invite(name))
@@ -817,6 +965,9 @@ __all__ = [
     "FORMING",
     "INVITE_EVERY_S",
     "INVITE_PREFIX",
+    "KICK_CONFIRM_S",
+    "KICK_PREFIX",
+    "KICK_RETRIES",
     "LEAVE_COMMAND",
     "LEAVE_FAILED",
     "LEFT_CONFIRM_S",
@@ -824,14 +975,18 @@ __all__ = [
     "START_WAIT_S",
     "UNSAFE_ACTIONS",
     "InviteRow",
+    "KickWatch",
     "LeaderInvites",
     "PartyInviter",
     "action_allows_chat",
     "action_is_combat",
     "action_party_snapshot",
     "already_in_party",
+    "clear_roster_flags",
     "deliver_chat",
     "invite_command",
+    "kick_command",
+    "member_listed",
     "needs_leave",
     "roster_invite_names",
     "roster_required_names",
