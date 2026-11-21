@@ -3,6 +3,7 @@
 이 문서는 **한 곳의 텔레포트/회복/이동 규칙을 고치면 다른 모드가 같이 바뀌는** 이유를 기록한다.
 이후 로직 수정은 이 문서의 **영향 고지 → 사용자 동의 → 구현 → 결과 기록** 순서로만 한다.
 
+<<<<<<< HEAD
 마지막 갱신: 2026-11-19 (TrackIds = guid 우선, 메인라인)
 
 ---
@@ -15,6 +16,27 @@
 부작용 후보: 세션 중 핫 리로드 시 첫 틱에 track_id가 한 번 재부여될 수 있음. guid 없는 행은 예전처럼 ent 키.
 동의: 사용자 (ent 대신 guid로 트랙 신원 수정 → 메인라인으로 상세 문서화, 상점과 분리).
 결과: 구현·단위 테스트 `test_track_ids_guid.py`. 상세 `Docs/decision/TRACK_ID_GUID.md`. 영문 요약 `docs/decision_change_log.md` 동일 날짜 항목.
+=======
+마지막 갱신: 2026-11-20 (최단 가이드 + 옆칸 1~2회)
+
+---
+
+## 2026-11-20 — 같은 맵: 최단 가이드에 옆칸 넛지 1~2회
+
+의도: 최단 가이드를 고른 뒤, 경로 **중간 정점 1~2개만** Chebyshev 1~2 옆칸으로 옮긴다. 전진(목표·코드방향) 유지. A* 추가 없음. sticky는 넛지된 가이드 유지.
+공유: `nudge_path_lateral`, `find_path_random_shortest`. unstick/후퇴/HP/로그인 불변.
+영향: 같은 맵 travel·수색·루팅 가이드.
+동의: 사용자 (“1~2타일변화는 경로에서 1~2번만 추가하자”).
+결과: 단위 테스트. 실기 대기.
+
+## 2026-11-20 — 같은 맵: 동일 길이 최단 경로 중 랜덤
+
+의도: 같은 맵 이동 가이드가 매번 같은 A* tie-break만 쓰지 않게 한다. 최단과 **같은 길이**인 경로를 최대 4개까지 모아 하나를 무작위로 고른다. 같은 목표의 다음 홉에서는 sticky로 유지한다. 더 긴 경로·맵 사이 월드내비·전투 거리용 `find_path`는 그대로다.
+공유: `find_path_random_shortest`, `plan_travel_click`, hierarchical fine, `plan_body_click(sticky_path)`, travel `nav_path`, search/loot scratch guide. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, 로그인 클릭 불변.
+영향: 같은 맵 travel·수색·루팅 접근, 월드내비 walk **실행** 홉. portal abstract·맵 전환 논리 불변.
+동의: 사용자 (“이 알고리듬을 구현하라”).
+결과: `test_shortest_path_alternatives.py` 4통과. 실기 대기.
+>>>>>>> navigation_random
 
 ## 2026-10-17 — 회피만 메모리 몬스터 종류를 본다
 

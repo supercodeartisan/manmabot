@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-20 — party bot chat: drop always-on-top, focus LC, longer IC handoff
 
 Intent: Standalone `enter_chat_cli_admin` typed `/초대` into LC, but the party bot logged `typed` with no game input. The bot UI kept always-on-top / foreground, and Interception handoff settle (0.1s) was too short.
@@ -196,6 +197,39 @@ Affects: live shop/warehouse/teleporter NPC open when `executor.humanize`. Pract
 Consent: user (curve ≥1s, fine repeats near NPC, non-metronomic timing; minimize side effects + document).
 Result: `Engine/shop/npc_aim.py`, `NPC_AIM.md`, humanize `SHOP_APPROACH_*` / `SHOP_FINE_*`, tests `shop/tests/test_npc_aim.py` (4 passed). Branch `modified_humanize_shop`.
 >>>>>>> modified_humanize_shop
+=======
+## 2026-11-20 — same-map guide: via offset then recompute shortest legs
+
+Intent: From a shortest guide, pick 1–2 arbitrary path points, move each onto a walkable tile within Chebyshev 1–2, then recompute shortest `start→via→goal` segments. The joined route need not be globally shortest. Sticky keeps that guide while walking. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral`, `find_path_random_shortest`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides.
+Consent: user (“임의의 점에서 1~2타일… 걸을 수 있는곳만… 매번 최단 경로를 다시 계산”).
+Result: unit tests. Not run in game.
+
+## 2026-11-20 — same-map guide: deform shortest with 1–2 side detours
+
+Intent: Start from a shortest same-map guide, then apply 1–2 side deformations (Chebyshev 1–2). The result need not stay shortest; short local reconnects may add a few steps. Soft forward only (no backtrack). Sticky keeps the deformed guide. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral` (splice via `_connect_tiles`), `find_path_random_shortest`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides.
+Consent: user clarified (“최단경로에 변형… 꼭 최단이 아니고 약간 변화된 경로”).
+Result: unit tests. Not run in game. (Superseded by via recompute above.)
+
+## 2026-11-20 — same-map guide: 1–2 lateral nudges on a shortest path
+
+Intent: After choosing a shortest same-map guide, move only 1–2 interior vertices onto a walkable side tile (Chebyshev 1–2) while keeping forward progress. Do not replan with longer A*. Sticky still reuses the nudged guide. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral`, `find_path_random_shortest` (post-pick nudge). Equal-length alt pick remains. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides via `plan_body_click`.
+Consent: user (“1~2타일변화는 경로에서 1~2번만 추가하자”).
+Result: `test_shortest_path_alternatives.py`. Not run in game. (Superseded by deform splice above.)
+
+## 2026-11-20 — same-map travel picks among equal-length shortest paths
+
+Intent: Same-map movement guides no longer always take the single deterministic A* tie-break. Among equal-length shortest paths, collect up to 4 alternatives and pick one at random. Keep that guide sticky across hops to the same goal. Longer (non-shortest) routes are not used. World-nav / cross-map planning and combat distance `find_path` stay deterministic.
+Shared: `find_path_random_shortest`, `list_shortest_paths`, `plan_travel_click`, hierarchical fine corridor/window/full refine, `plan_body_click` (`sticky_path`), travel `nav_path` sticky, search `scratch.search_guide`. `find_path` (combat/distance), `world_nav` `astar_nav`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: same-map travel, farm search hops, loot approach guides that use `plan_body_click`, and world-nav walk *execution* hops that reuse same-map planning. Abstract portal/coarse routing unchanged.
+Consent: user (“이 알고리듬을 구현하라” — equal-length under 5, random pick, same-map only).
+Result: `Engine/app/_04_decision/tests/test_shortest_path_alternatives.py` (4 passed). Not run in game.
+>>>>>>> navigation_random
 
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
