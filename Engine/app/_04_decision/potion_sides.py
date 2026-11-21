@@ -170,20 +170,19 @@ def _side_hp_potion(
         return None
     item_key = item_key_from_action("hp_potion")
     slot = find_hp_restore_hotbar(state, item_key)
-    # No potion icon on the live/layout bar → do not press a Setup key that
-    # may be a different skill (e.g. wind blade on box2/f11).
     if slot is None:
-        return None
-    if not slot_ready(blackboard, "hp_potion", urgent=True):
-        return None
-    box, key = slot
+        if not slot_ready(blackboard, "hp_potion", urgent=True):
+            return None
+        box, key = None, ""
+    else:
+        box, key = slot
     mark_slot_used(blackboard, "hp_potion")
     return ActionIntent(
         action=ActionType.USE_HP_POTION,
         priority=0.9,
         reason=hp_potion_reason(state),
         item_key=item_key or None,
-        hotbar_box=int(box),
+        hotbar_box=box,
         hotbar_key=str(key or "").strip().lower() or None,
     )
 
