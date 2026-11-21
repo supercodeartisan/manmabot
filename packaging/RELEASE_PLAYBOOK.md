@@ -6,7 +6,7 @@ When `release\portable\ManmabotV1` already exists, do not run this full copy aga
 
 The customer receives one folder: `release\portable\ManmabotV1`.  
 `Engine\data` in that folder is a normal directory (maps, catalog, cursors). It is **not** left as `data.pack`.  
-`Engine\analysis_text.pack` stays packed. Offset text is written only while the program is running and deleted on a normal exit.
+`Engine\analysis_text.pack` stays packed. Offset text is materialized under `%TEMP%/manmabot_an_*` while the program runs (overlay), then removed on a normal exit. After ensure, `body_pose.refresh_offsets()` binds find anchors / action VFTs from that overlay — see `RUNTIME_TEMP.md` and RBF-008 in `RELEASE_BUGFIX_LOG.md`.
 
 ---
 

@@ -506,21 +506,25 @@ def _hotbar_cell_press(raw: dict) -> tuple[int, str] | None:
 
 
 def heal_press_slot(state: "GameState | None") -> tuple[int, str] | None:
-    """Live/layout heal cell only. Setup box/key alone never wins."""
-    from hotbar.inspect import resolve_hotbar_press
+    """Box and key decision has chosen for a heal press.
 
-    layout = getattr(state, "hotbar_layout", None) if state is not None else None
+    A pinned HP-row cell wins. A live bar must contain a heal role or a heal
+    skill name. With no bar yet, the configured heal slot is the press.
+    """
+    from app._04_decision import player_mode as pm
+    from app._04_decision.hp_actions import _fold, action_row, assigned_hotbar_slot
+    from app._05_action.spell_box import slot_press
+    from hotbar.inspect import find_role_on_hotbar
+
+    assigned = assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "heal"))
+    if assigned is not None:
+        return assigned
     snap = getattr(state, "last_hotbar", None) if state is not None else None
-    found = resolve_hotbar_press(
-        "heal", world=state, snap=snap, layout=layout
-    )
+    if not isinstance(snap, dict):
+        return slot_press("heal")
+    found = find_role_on_hotbar(snap, "heal")
     if found is not None:
         return found
-    # Name aliases when role map missed the heal skill on the live bar.
-    from app._04_decision.hp_actions import _fold
-
-    if not isinstance(snap, dict):
-        return None
     for raw in snap.get("slots") or []:
         if not isinstance(raw, dict):
             continue
@@ -643,11 +647,15 @@ def _hp_potion_count(state: "GameState") -> int | None:
 
 def _can_item_now(state: "GameState", item_key: str) -> bool:
     from app._04_decision import player_mode as pm
-    from app._04_decision.hp_actions import find_hp_restore_hotbar
-
+    from app._04_decision.hp_actions import (
+        action_row,
+        assigned_hotbar_slot,
+        find_hp_restore_hotbar,
+    )
     if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
-    # Setup box/key alone is not enough — the live/layout cell must be the item.
+    if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
+        return True
     if find_hp_restore_hotbar(state, item_key) is None:
         return False
     count = _hp_item_count(state, item_key)
@@ -656,10 +664,15 @@ def _can_item_now(state: "GameState", item_key: str) -> bool:
 
 def _can_potion_now(state: "GameState") -> bool:
     from app._04_decision import player_mode as pm
-    from app._04_decision.hp_actions import hp_item_keys
-
+    from app._04_decision.hp_actions import (
+        action_row,
+        assigned_hotbar_slot,
+        hp_item_keys,
+    )
     if not _hp_recovery_allowed() or not pm.USE_HP_POTION:
         return False
+    if assigned_hotbar_slot(action_row(pm.HP_ACTIONS or [], "hp_potion")) is not None:
+        return True
     keys = hp_item_keys() or ("빨간 물약",)
     return any(_can_item_now(state, key) for key in keys)
 

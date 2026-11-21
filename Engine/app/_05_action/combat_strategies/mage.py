@@ -88,15 +88,11 @@ class MageCombatStrategy:
         already_armed = bool(getattr(executor, "mage_spell_ready", False))
         if not already_armed:
             if named:
-                box = int(action.hotbar_box)
-                key = str(action.hotbar_key).strip().lower()
-                snap = getattr(game_state, "last_hotbar", None)
-                from hotbar.inspect import hotbar_has_box_key
-
-                # Solo-mage rotation keys come from the live bar; refuse stale Setup.
-                if isinstance(snap, dict) and not hotbar_has_box_key(snap, box, key):
-                    return
-                executor._press_box_skill(box, key, duration=hold)
+                executor._press_box_skill(
+                    int(action.hotbar_box),
+                    str(action.hotbar_key).strip().lower(),
+                    duration=hold,
+                )
                 pressed = time.time()
                 executor._last_magic_at = pressed
                 executor._last_mage_cast = pressed

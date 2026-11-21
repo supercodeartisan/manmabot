@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-21 — reconnect seq, map focus, profile leash, stable walk estimate
 
 Intent: A new member hello accepts seq 1. A frame or disconnect from the previous socket does not clear that report. The live socket dropping removes the report at once. Shared focus and turret regroup use the leader's current map, including map 0. The march hold reads `party_assist_leash_tiles` from the profile. Distance estimates use one path. A turret return does not click while the terrain map is missing.
@@ -81,6 +82,63 @@ Affects: same-map party follow while a `formation_path` is active. No shared pat
 Consent: user ("구현해줘" / "update like this the party movement"), including the five-part scope and the decide() regression tests.
 Result: `python -m pytest app/_06_party/tests/test_formation_march.py app/_06_party/tests/test_close_follow.py app/_06_party/tests/test_make_way_pace.py` → 44 passed. Not run in game. `MARCH_GAP_TILES` (4) and the two-tile look-ahead are unmeasured assumptions. Click-to-first-position delay is not a timer; progress is recorded only from an observed tile.
 =======
+## 2026-11-21 — body_pose: pack overlay for find anchors / action VFTs
+
+Intent: Customer pack-only builds had `body pose: action slot unread` / `moving=unread` because `body_pose` read `Engine/analysis/registry/*` on disk while those texts live only in TEMP from `analysis_text.pack`. Main/dev trees with plain analysis files were fine.
+Shared: `body_pose._load_find` / `refresh_offsets`; `registry_apply.source_registry` (overlay first); `run_entry.main` calls `refresh_offsets` after `ensure_packed_assets`. No change to login, combat target, HP, party, or MapSubsystem decision logic.
+Affects: travel / loot / search hop “is moving?” reads on pack-only installs. Stale baked MGR/MyPlayer/VFT defaults no longer win when overlay has current registry.
+Side effects: once offsets bind, loot hop should reclick less on false “still” while walking.
+Consent: user (“yes” after unread root-cause / fix plan).
+Result: code wired + incremental release + Stage5 pack (`build_id` `97957950-…`, same CEK). Docs: `RELEASE_BUGFIX_LOG` RBF-008, `RUNTIME_TEMP`, `SENSITIVE_ASSETS`, `STAGE5_MMB2`, `RELEASE_PLAYBOOK`, `INCREMENTAL_RELEASE`, `Docs/architecture/ANALYSIS_MODULES`. Live pack-only confirm: after deploy, log should no longer show `body pose: action slot unread` / `moving=unread` once overlay binds.
+
+## 2026-11-21 — DeviceKey: TPM retry then Soft on first install
+
+Intent: Stop customer License “Create request” failures on laptops where TPM NCrypt returns transient/denied/unknown; prefer TPM, then Soft+DPAPI after short retries so activation works across PCs.
+Shared: `crypto.device_key._first_install` / `_probe_tpm_with_retries` (used by `session.oob_activation`, `licensed_runtime`, License UI). No change to login, movement, combat, HP, party, or MapSubsystem.
+Affects: first-time device binding only; Soft-bound PCs stay Soft; already `meta=tpm` installs still require TPM or seller reset (no silent Soft switch).
+Consent: user (“Yes” to option B + handbook/docs for later releases).
+Docs: `Engine/crypto/LICENSE_HANDBOOK.md`, `OOB_ACTIVATION.md`, `Seller/README.txt`, `packaging/templates/CUSTOMER_README.txt`, `STAGE5_MMB2.md`.
+Result: implemented + unit tests for transient→Soft. Portable `.pyd` needs incremental release before next customer zip.
+
+<<<<<<< HEAD
+## 2026-11-20 — Runtime TEMP / pack path wiring (data access only)
+
+Intent: Connect MMB2/legacy packs to `asset_store` + analysis TEMP materialize so pack-only builds can feed DLLs via absolute paths. No change to login, movement, combat, HP, or party *decision* code.
+Shared: `session.asset_pack`, `session.analysis_temp`, `session.analysis_overlay`, `session.licensed_runtime`, `session.run_entry` (ensure + stale wipe only). Perception/action readers resolve registry *text* through `analysis_registry_file` (DLL paths still `Engine/analysis/dll`).
+Affects: customer pack materialization path, offsets/registry file location (TEMP vs plain analysis). MapId still MapSubsystem-only.
+Consent: user (Runtime TEMP / run_entry next; “로그인·이동·전투·HP·파티 로직 수정 금지”).
+Result: unit tests `Engine/crypto/tests` include TEMP/MMB2 mount/overlay (50 OK). Full in-game Pack-only / hunting baseline still pending Stage5+license artifacts.
+=======
+<<<<<<< HEAD
+## 2026-11-21 — Spell cancel: key then left-click; drop heal-double recover
+
+Intent: Circle clear uses remembered skill key once, then a view **left**-click (right-click did not clear). Remove heal-key double recovery entirely.
+Shared: `cancel_spell_aim` / `_left_click_view`; `clear_spell_aim` retries cancel only (no `recover_cursor_heal_double`). Knight/elf attack spell fail → `cancel_spell_aim`. Self-heal leftover still calls `clear_spell_aim`. Real self-heal double press for HP is unchanged.
+Affects: travel/mage/party cancel, attack circle clear, leftover clear. Not login / retreat / HP gates / shop.
+Side effects: view left-click may walk or mis-click if the cancel point is busy; no heal/MP burn from recover.
+Consent: user (기억한 키 한번 → 안되면 좌클릭; 더블힐 없애라).
+Result: spell-aim / party_list unit tests.
+
+## 2026-11-21 — Self-heal leftover clear + remember spell aim key
+
+Intent: After 11-18 controller restore, re-add the two post-11-18 heal behaviors that party_list tests require: remember `_spell_aim_key` after a successful heal press, and clear leftover spell cursor on self heal (`self heal leftover`).
+Shared: `ActionExecutor._heal` (remember after press; clear when not list_target); `_press_assigned_skill` sets `_last_skill_press` for remember fallback. Party-list aim miss uses `clear_spell_aim` (same as shop-era). Hotbar press path stays 11-18 (`_live_or_assigned_slot`, no `resolve_hotbar_press`).
+Affects: self heal, party-list heal aim tracking/clear. Not movement/login/HP potion gates.
+Side effects: self heal may cancel a leftover circle that was intentional only if cursor still shows SPELL after double-press (intended).
+Consent: user (이 2개를 추가로 구현하자 — after confirming absent on 11-18 / present on shop branch).
+Result: `test_party_list_press_hold` + shop/sell smoke 49 passed.
+
+## 2026-11-21 — Restore 11-18 memory read spec; keep shop humanize
+
+Intent: `modified_humanize_shop` had re-added dual analysis module trees and consumer “bugfixes” (live-hotbar-only press, guid `TrackIds`) that were not required by the 11-18 memory contract. Restore **11-18** (`4e5913a` / `dll/`+`registry/`) memory structure and press/identity consumers; finish shop humanize on that base.
+Shared: analysis dual folders removed; `hotbar/inspect`, `controller._live_or_assigned_slot`, `memory_entities`/`TrackIds`, HP/haste/antidote resolve, `spell_box.slot_is_enabled`, `mode_actions` heal/potion gates restored from 11-18. Shop humanize (`shop/*`, `shop_trip`, `humanize`/`mouse`, sell settle bag force) kept. Knight cursor-heal recover + `cursor_verify` kept (not memory-structure).
+Affects: hotbar press again allows Setup/assigned fallbacks as in 11-18; entity `track_id` again keys heap `ent`. Shop NPC/UI aim and sell tour unchanged in intent.
+Side effects: symptoms those consumer patches targeted (stale Setup key, ent churn sticky) may reappear; treat on 11-18 semantics if needed later — do not reintroduce dual `Hotbar/`/`entities/` trees.
+Consent: user (restore 11-18 memory structure/spec; only extreme-needed edits; complete shop humanize on 11-18 main baseline; prior “error” fixes may not have been errors).
+Result: worktree restored vs `4e5913a` for memory paths; shop/humanize diff retained.
+
+>>>>>>> origin
+=======
 <<<<<<< HEAD
 ## 2026-11-20 — party bot chat: drop always-on-top, focus LC, longer IC handoff
 
@@ -139,6 +197,7 @@ Affects: which PNG bank boot_shake searches (zh + ko). Match path: grayscale ROI
 Consent: user (KO templates; do not split ko/zh for matching; scope is template matching only).
 Result: `boot_shake_security_ko.png` / `boot_shake_device_ko.png` added. Watch-path experiments reverted. Not run in game yet.
 =======
+>>>>>>> origin/main
 ## 2026-11-19 — Unify: UI wants role → find on live hotbar only
 
 Intent: Operator UI chooses which skills/items to use; the 24-slot hotbar list is the only source of press location. No Setup box/key alone.
@@ -311,6 +370,10 @@ Affects: same-map travel, farm search hops, loot approach guides that use `plan_
 Consent: user (“이 알고리듬을 구현하라” — equal-length under 5, random pick, same-map only).
 Result: `Engine/app/_04_decision/tests/test_shortest_path_alternatives.py` (4 passed). Not run in game.
 >>>>>>> navigation_random
+<<<<<<< HEAD
+>>>>>>> origin
+=======
+>>>>>>> origin/main
 >>>>>>> origin
 
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)

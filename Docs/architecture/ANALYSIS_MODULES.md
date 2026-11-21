@@ -30,7 +30,7 @@ Each reader is a thin class on `ModuleReader` (`lc_session.py`). It loads `Engin
 | `uidialog_listen_reader.py` | `uidialogmon.dll` | 200 ms | `windows`, `open` |
 | `party_listen_reader.py` | `party.dll` | 300 ms | `leader`, `members`, `in_party`, `subs_ok`. A failed read is not a live pose. Party decide uses that snapshot as described in `PARTY_RUNTIME.md` |
 
-`body_pose.py` is outside the tick buffer. Travel, unstick, search hops, and loot hops still call `body_is_moving()`. That function still returns `True`, `False`, or `None`. The live ids come from `bodyact.dll` (50 ms) through `read_action()`. The stand/walk/attack numbers it compares against are loaded at import from `registry/LC930_REGISTRY.txt` (`VFT_BREATHACT`, `VFT_MOVINGACT`, `VFT_MOVINGBACK`). `read_vitals()` and `read_progress()` use the `charread` sample. Decision code does not call those two; HP actions use the player block on the tick buffer.
+`body_pose.py` is outside the tick buffer. Travel, unstick, search hops, and loot hops still call `body_is_moving()`. That function still returns `True`, `False`, or `None`. The live action slot is a direct WinNotify walk (`ActionComponent+0xC8`), not `bodyact.dll`. Stand/walk/attack VFTs and find anchors (`MGR`, `ACTOR_VFT`, `MyPlayer`) come from `analysis_registry_file` / `source_registry` — TEMP overlay when `analysis_text.pack` is mounted, else plain `Engine/analysis/registry`. `run_entry` calls `refresh_offsets()` after `ensure_packed_assets` so pack-only startups rebind after the overlay exists. A failed slot read is `None` (`action slot unread` / `moving=unread`), never “standing”. `read_vitals()` and `read_progress()` use the monitor snapshot. Decision code does not call those two; HP actions use the player block on the tick buffer.
 
 A missing module sample stays “unread.” Map id is unread when `mapIdOk` is 0, so map 0 is not treated as Talking Island. The id is MapSubsystem plus registry `MAP_ID_OFF`, read by `map.dll`.
 
@@ -53,7 +53,7 @@ The first call for a module waits up to 1.5 seconds for a sample. Later ticks us
 
 `lc_session.py` sets `LCAPI_ROOT` to `Engine/analysis` before a DLL loads. `core/lcreg.h` uses that so `registry/` and `data/` resolve without moving the process working directory. Reads go through `signeddrv` (`WinNotify`).
 
-`registry_apply.py` is not run on startup. `body_pose` only parses the registry file to bind the stand/walk ids.
+`registry_apply.py` dist-rewrite is not run on every startup. `source_registry()` still resolves overlay-or-plain `LC930_REGISTRY.txt` for readers that parse it (including `body_pose.refresh_offsets` / import-time bind).
 
 ## Next dist drop
 

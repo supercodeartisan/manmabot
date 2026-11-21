@@ -19,7 +19,6 @@ _DLL_LOCK = threading.Lock()
 
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _DLL = _ANALYSIS / "dll"
-_REGISTRY = _ANALYSIS / "registry"
 
 
 def default_dll_path() -> Path:
@@ -36,7 +35,9 @@ def default_dll_path() -> Path:
 
 
 def default_settings_path() -> Path:
-    return _REGISTRY / "settings_print_state.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "settings_print_state.json")
 
 
 class PrintStateReader:

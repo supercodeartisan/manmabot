@@ -10,7 +10,7 @@
 | 자산 | 고객 빌드에서의 형태 | 런타임 |
 |------|----------------------|--------|
 | `Engine/data/**` (맵 PNG, cursors, catalog, world JSON 등) | **평문 `Engine/data/`.** Stage 5가 `data.pack`을 만든 뒤 `unpack_customer_data.py`가 풀고 팩을 지운다 | 디스크의 `Engine/data`를 직접 읽는다. `data.pack`이 없으면 RAM 마운트는 하지 않는다 |
-| `Engine/analysis/**` 민감 텍스트 (offsets.json, `*_offsets.txt`, zone_table, list JSON/MD 등) | `Engine/analysis_text.pack` | C DLL이 경로로 열어야 하므로 실행 중에만 `Engine/analysis/`에 쓰고, 프로세스 종료 시 삭제 |
+| `Engine/analysis/**` 민감 텍스트 (offsets.json, `*_offsets.txt`, zone_table, list JSON/MD 등) | `Engine/analysis_text.pack` | 실행 중 `%TEMP%/manmabot_an_*`에 materialize + overlay. Python은 `analysis_registry_file` / `source_registry`. C DLL은 절대 TEMP 경로. 정상 종료 시 TEMP 삭제 |
 | 분석 DLL / `.pyd` / 드라이버 | 평문 유지 | 그대로 로드 |
 
 의도적으로 **보호하지 않는 것**:
@@ -54,7 +54,7 @@
 
 3. **고객 PC**  
    - 맵·카탈로그는 `Engine/data` 평문이다. `data.pack`은 배포하지 않는다.  
-   - 오프셋 텍스트는 실행 중에만 생겼다가 종료 시 지워진다. 강제 종료로 남으면 다음 실행이 덮어쓰고, 정상 종료 때 다시 지운다.
+   - 오프셋 텍스트는 실행 중 `%TEMP%/manmabot_an_*`에만 생겼다가 정상 종료 시 지워진다. 강제 종료로 남으면 다음 기동의 stale wipe가 정리한다.
 
 4. **유실 시 복구**  
    - 개발 트리에서 Stage 1→5 재빌드.  
@@ -82,10 +82,10 @@ python\python.exe packaging\verify_stage5.py
 
 ## 6. 런타임 훅
 
-- `run.py` → `session.asset_pack.ensure_packed_assets()`
-- `session.asset_store` 가 `Engine/data` 읽기를 RAM으로 연결 (`Path`, `os.walk`, `PIL`, `cv2`)
-- 오프셋 텍스트는 실행 중에만 `Engine/analysis/`에 있고 종료 시 삭제
-- 개발 트리에 평문 `Engine/data`가 있으면 마운트하지 않음
+- `run_entry.main` → `ensure_packed_assets()` → `body_pose.refresh_offsets()`
+- `session.asset_store` 가 `Engine/data` 읽기를 RAM으로 연결 (`Path`, `os.walk`, `PIL`, `cv2`) when `data.pack` is present
+- Analysis text: TEMP overlay (`RUNTIME_TEMP.md`). `body_pose` / `source_registry` must read that overlay — disk-only `Engine/analysis/registry` breaks pack-only (RBF-008)
+- 개발 트리에 평문 `Engine/data`가 있으면 data 마운트는 하지 않음
 
 ---
 
