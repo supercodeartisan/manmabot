@@ -3,10 +3,11 @@
 The meet tile is chosen when the hunt route is planned. A route with an NPC
 teleporter or a talking scroll runs those steps first, then stands on the
 landing of the last one. The steps after that stand are walks. A walk-only
-route stands on the tile the leader is on when that plan is made. The stand
-ends when every expected member is within 7 tiles of that tile, or after 3
-minutes. Members are not sent the tile. Once party memory shows them in the
-party, they follow the leader's live tile.
+route stands on the tile the leader is on when that plan is made. That tile
+is sent to members. Each member plans a talking scroll or an NPC teleporter
+to it. The stand ends when every expected member is within 7 tiles of that
+tile, or after 3 minutes. A member who connects after the stand follows the
+leader's live tile.
 """
 from __future__ import annotations
 

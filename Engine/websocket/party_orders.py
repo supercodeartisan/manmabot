@@ -1,9 +1,9 @@
 """Party orders the leader sends the moment it decides, and the rally that follows.
 
-Rally (``rally``): the leader's own wait point. It is not sent to members.
-Members follow the leader's live party-memory tile once ``in_party`` is true.
-The leader waits on the point until party memory shows every roster member
-has arrived.
+Rally (``rally``): the meet tile. The leader sends it, and a member world-navs
+there with a talking scroll or an NPC teleporter. The leader waits on the
+point until party memory shows every roster member has arrived. After the
+stand ends, a member who connects later follows the live leader tile.
 
 Recovery (``recovery``): mother-tree decision. Sent immediately. Members do not
 act on it yet.
@@ -450,6 +450,12 @@ def self_name_from_party(
     return name
 
 
+def _publish(body: dict[str, Any]) -> int:
+    from .leader_decisions import publish_body
+
+    return int(publish_body(body) or 0)
+
+
 def _order_key(body: Optional[dict[str, Any]]) -> Optional[tuple]:
     if body is None:
         return None
@@ -486,20 +492,26 @@ class Rally:
         return str(self.body.get("stage") or "") if self.body is not None else ""
 
     def arm(self, body: dict[str, Any]) -> bool:
-        """Remember the wait point on this leader. Members are not told the tile."""
+        """Remember the meet tile and send it. False when this point is already announced."""
         key = _order_key(body)
         if key == self.key:
             return False
         self.key = key
         self.body = dict(body)
         self.arrived.clear()
-        self._told_clients = -1
+        self._told_clients = _publish(self.body)
         return True
 
     def repeat_if_members_joined(self, connected: int) -> bool:
-        """Members follow the live leader tile, so the wait point is not resent."""
-        del connected
-        return False
+        """Send the same meet tile again when a member connects after the first send."""
+        if not self.armed or self.body is None:
+            return False
+        n = max(0, int(connected))
+        if n <= self._told_clients:
+            return False
+        sent = _publish(self.body)
+        self._told_clients = max(self._told_clients, sent, n)
+        return True
 
     def note_report(
         self,
@@ -725,9 +737,8 @@ class MemberOrders:
                 ] if isinstance(rows, list) else []
                 continue
             if kind == RALLY:
-                # A rally pin is not a walk goal. Follow uses party memory.
-                if self.gather is not None:
-                    self.gather = None
+                if _order_key(body) != _order_key(self.gather):
+                    self.gather = dict(body)
                     self.arrived = False
                     self._reported = False
                     self._report_pending = False

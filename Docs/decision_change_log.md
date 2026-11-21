@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-21 — members world-nav to the rally meet tile
+
+Intent: A member receives the leader's meet tile and plans a talking scroll or an NPC teleporter to it, as before the rally pin was dropped. A same-map fight still yields to follow and assist. After the stand ends, a newly connected member is not sent the old point.
+Shared: `Rally.arm`, `Rally.repeat_if_members_joined`, `MemberOrders.ingest`, `PartyMemberManager._maybe_hunt_gather`, `drain_leader_reports`. Login clicks, retreat, and solo unstick were not changed.
+Affects: party start rally for members. The hunt march after the stand was not retuned.
+Consent: user (restore the member rally scroll and teleport to the meet tile).
+Result: `test_leader_rally.py` passed (9). Not run in game.
+
 <<<<<<< HEAD
 ## 2026-11-21 — reconnect seq, map focus, profile leash, stable walk estimate
 

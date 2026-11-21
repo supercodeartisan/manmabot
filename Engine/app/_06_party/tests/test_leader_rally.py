@@ -1,4 +1,6 @@
 """Start rally meets at one static point before the farm."""
+from types import SimpleNamespace
+
 from app._06_party.leader_rally import LeaderStartRally
 
 
@@ -221,21 +223,62 @@ def test_rally_wait_stands_before_the_hunt_walk():
     assert standing.emitted == [(ActionType.IDLE, 0.45, "party rally wait")]
 
 
-def test_rally_point_is_not_sent_to_members():
+def test_rally_point_is_sent_to_members(monkeypatch):
+    from websocket import party_orders
     from websocket.party_orders import MemberOrders, Rally, rally_message
 
+    sent = []
+    monkeypatch.setattr(party_orders, "_publish", lambda body: sent.append(dict(body)) or 0)
     rally = Rally()
     body = rally_message(stage="start", map_id=1, x=2, y=3)
     assert rally.arm(body) is True
     assert (rally.body["map_id"], rally.body["x"], rally.body["y"]) == (1, 2, 3)
-    assert rally.repeat_if_members_joined(4) is False
+    assert sent and sent[0]["map_id"] == 1
+    assert rally.repeat_if_members_joined(0) is False
+    assert rally.repeat_if_members_joined(1) is True
     member = MemberOrders()
 
     class _Frame:
         message = body
 
     member.ingest([_Frame()])
-    assert member.gather is None
+    assert (member.gather["map_id"], member.gather["x"], member.gather["y"]) == (1, 2, 3)
+
+
+def test_member_rally_plans_scroll_or_teleport_to_the_meet_tile(monkeypatch):
+    from app._02_state.enums import ActionType
+    from app._06_party.comms.orders import member_orders, rally_message
+    from app._06_party.manager import PartyMemberManager
+
+    class _Pose:
+        map_id = 4
+        x = 10
+        y = 10
+
+    class _Nav:
+        def tick(self, _state, _board, **kwargs):
+            self.kwargs = kwargs
+            return SimpleNamespace(action=ActionType.USE_TALKING_SCROLL, reason=kwargs["reason"])
+
+    monkeypatch.setattr(
+        "app._04_decision.world_nav.session.live_pose_from_state",
+        lambda _state: _Pose(),
+    )
+    member_orders.clear()
+    member_orders.gather = rally_message(stage="start", map_id=7, x=80, y=90)
+    manager = PartyMemberManager()
+    nav = _Nav()
+    manager._join_nav = nav
+    intent = manager._maybe_hunt_gather(object(), dead=False)
+    assert intent.action is ActionType.USE_TALKING_SCROLL
+    assert nav.kwargs["dest_map"] == 7
+    assert (nav.kwargs["dest_x"], nav.kwargs["dest_y"]) == (80, 90)
+    assert nav.kwargs["reason"] == "party_rally_start"
+    manager.runtime.leader_same_map = True
+    manager.runtime.leader_dist = 6
+    manager.runtime.leader_farming = True
+    assert manager._maybe_hunt_gather(object(), dead=False) is None
+    member_orders.clear()
 
 
 if __name__ == "__main__":
@@ -245,5 +288,4 @@ if __name__ == "__main__":
     test_everyone_at_the_mark_leaves_immediately()
     test_a_missing_member_holds_the_stand_for_three_minutes()
     test_rally_wait_stands_before_the_hunt_walk()
-    test_rally_point_is_not_sent_to_members()
     print("OK")
