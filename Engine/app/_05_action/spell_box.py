@@ -188,18 +188,22 @@ def slot_is_magic(name: str) -> bool:
 
 
 def slot_is_enabled(name: str) -> bool:
-    """True when the operator UI wants this role (checkbox / recovery).
-
-    Press location comes from the live hotbar list, not from Setup box/key.
-    ``box`` may be 0 when the role is wanted but not currently on the bar.
+    """False when the operator turned the role off or left it unassigned.
 
     During a bot run, talking scroll stays off until the startup hotbar scan
-    and then uses only that scan.
+    and then uses only that scan. A profile binding saved earlier does not
+    turn it on, and a later refresh does not replace it.
     """
     if name == "talking_scroll" and _BOOT_TALKING_SCROLL is _BOOT_PENDING:
         return False
     spec = _talking_scroll_spec() if name == "talking_scroll" else _slot(name)
-    return bool(spec.get("enabled", True))
+    if not bool(spec.get("enabled", True)):
+        return False
+    try:
+        box = int(spec.get("box", 1))
+    except (TypeError, ValueError):
+        return False
+    return box in (1, 2, 3)
 
 
 def slot_reuse_s(name: str) -> float:

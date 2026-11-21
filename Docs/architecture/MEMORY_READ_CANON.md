@@ -75,7 +75,3 @@ print_state의 느린 명단은 원래 이 시계다. 그 위에 두 번째 캐�
 - 단독 `realtime_monitor` exe는 `startDiscovery`를 스스로 호출한다
 
 핫바(1초), 인벤토리(60초), `body_pose`의 별도 읽기는 이번 정형 밖에 둔다.
-
-## Python track identity (mainline, not shop)
-
-print_state rows still expose heap `ent` and game `guid`. The live bot maps them to int `track_id` in `entities_to_handoff` / `TrackIds`. As of 2026-11-19 the key prefers **`guid`** when present (`guid:…`), else **`ent`** (`ent:…`), so loot/combat sticky does not false-miss on heap remaps while the same guid stays in the roster. Detail: `Docs/decision/TRACK_ID_GUID.md`. This is mainline farm identity — not shop-branch work.

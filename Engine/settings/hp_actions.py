@@ -370,67 +370,11 @@ def sync_legacy_from_actions(actions: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _layout_cell(
-    layout: Mapping[str, Any] | None, box: int, key: str
-) -> Mapping[str, Any] | None:
-    if not isinstance(layout, Mapping):
-        return None
-    boxes = layout.get("boxes")
-    if not isinstance(boxes, Mapping):
-        return None
-    page = boxes.get(str(int(box)))
-    if page is None:
-        page = boxes.get(int(box))  # type: ignore[arg-type]
-    if not isinstance(page, Mapping):
-        return None
-    cell = page.get(str(key).strip().lower())
-    return cell if isinstance(cell, Mapping) else None
-
-
-def _layout_binding_matches_role(
-    layout: Mapping[str, Any] | None,
-    box: int,
-    key: str,
-    role: str,
-) -> bool:
-    """True when the live layout cell at box/key is that recovery role."""
-    cell = _layout_cell(layout, box, key)
-    if cell is None:
-        # No layout yet: refuse Setup rebinding (avoids wind-blade-as-potion).
-        return False
-    cell_role = str(cell.get("role") or "").strip()
-    kind = str(cell.get("kind") or "").upper()
-    if role == "heal":
-        return cell_role == "heal"
-    if role == "hp_potion":
-        if cell_role == "hp_potion":
-            return True
-        if kind == "SPELL":
-            return False
-        # Item cell: name must look like the configured HP potion.
-        try:
-            from app._04_decision.hp_actions import (
-                LEGACY_POTION_KEY,
-                _any_name_matches,
-                item_match_sets,
-            )
-
-            aliases, _ids = item_match_sets(None, LEGACY_POTION_KEY)
-            return _any_name_matches(
-                cell, aliases, ("kr_name", "zh_name", "label", "name")
-            )
-        except Exception:
-            return False
-    return cell_role == role
-
-
 def apply_recovery_to_spell_slots(
     slots: dict[str, dict[str, Any]] | None,
     actions: Any,
-    *,
-    layout: Mapping[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Turn on Setup roles that Recovery enabled; bind only matching cells."""
+    """Turn on Setup roles that Recovery enabled; bind operator hotbar cells."""
     from settings.spell_defaults import merge_spell_slots
 
     # box/key/enabled from ``slots``; cast/reuse_s always engine defaults.
@@ -457,8 +401,6 @@ def apply_recovery_to_spell_slots(
         bound = hotbar_binding_from_row(row)
         if bound is None:
             continue
-        if not _layout_binding_matches_role(layout, bound[0], bound[1], role):
-            continue
         spec = merged.get(role)
         if not isinstance(spec, dict):
             continue
@@ -473,17 +415,8 @@ def apply_recovery_to_spell_slots(
             box = int(spec.get("box") or 0)
         except (TypeError, ValueError):
             continue
-        key = str(spec.get("key") or "").strip().lower()
-        if box not in (1, 2, 3) or not key:
-            continue
-        if layout is not None and not _layout_binding_matches_role(
-            layout, box, key, slot_id
-        ):
-            # Scan did not place this role; clear the stale Setup cell.
-            spec["box"] = 0
-            spec["enabled"] = False
-            continue
-        spec["enabled"] = True
+        if box in (1, 2, 3):
+            spec["enabled"] = True
     return merged
 
 
