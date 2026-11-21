@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-20 — Runtime TEMP / pack path wiring (data access only)
+
+Intent: Connect MMB2/legacy packs to `asset_store` + analysis TEMP materialize so pack-only builds can feed DLLs via absolute paths. No change to login, movement, combat, HP, or party *decision* code.
+Shared: `session.asset_pack`, `session.analysis_temp`, `session.analysis_overlay`, `session.licensed_runtime`, `session.run_entry` (ensure + stale wipe only). Perception/action readers resolve registry *text* through `analysis_registry_file` (DLL paths still `Engine/analysis/dll`).
+Affects: customer pack materialization path, offsets/registry file location (TEMP vs plain analysis). MapId still MapSubsystem-only.
+Consent: user (Runtime TEMP / run_entry next; “로그인·이동·전투·HP·파티 로직 수정 금지”).
+Result: unit tests `Engine/crypto/tests` include TEMP/MMB2 mount/overlay (50 OK). Full in-game Pack-only / hunting baseline still pending Stage5+license artifacts.
+
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
 Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.

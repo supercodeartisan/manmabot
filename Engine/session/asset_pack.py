@@ -1,20 +1,25 @@
-"""Runtime ensure for obfuscated Engine asset packs.
+"""Runtime ensure for Engine asset packs (MMBA v1 transition + MMB2).
 
 Dev tree: plain ``Engine/data`` present → no-op.
 Customer release:
-  ``Engine/data.pack`` is served from RAM (no ``Engine/data`` folder).
-  ``Engine/analysis_text.pack`` is written for the C offset readers and
-  removed when the process exits.
+  ``Engine/data.pack`` (MMBA or MMB2) → RAM via ``asset_store`` (no plain folder).
+  ``Engine/analysis_text.pack`` → ``%TEMP%/manmabot_an_<id>/`` for C DLL readers;
+  absolute paths via ``analysis_overlay``; wiped on exit.
 """
 from __future__ import annotations
 
-import atexit
-import ctypes
-import os
 import shutil
 from pathlib import Path
 
-from session.asset_pack_format import load_pack_bytes
+from session.analysis_overlay import analysis_registry_file, set_analysis_overlay
+from session.analysis_temp import (
+    active_analysis_temp,
+    cleanup_analysis_temp,
+    create_analysis_temp,
+    materialize_files,
+    wipe_stale_analysis_temps,
+)
+from session.licensed_runtime import LicensedRuntimeError, load_pack_files, pack_magic
 from session.paths import manmabot_root
 
 DATA_PACK_NAME = "data.pack"
@@ -28,6 +33,9 @@ def data_root() -> Path:
 
 
 def _is_reparse_point(path: Path) -> bool:
+    import ctypes
+    import os
+
     if os.name != "nt" or not path.exists():
         return path.is_symlink() if path.exists() else False
     attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))
@@ -40,7 +48,6 @@ def _dir_has_real_files(path: Path) -> bool:
     if not path.is_dir():
         return False
     if _is_reparse_point(path):
-        # Junction already points somewhere — treat as "present" if non-empty.
         try:
             return any(path.iterdir())
         except OSError:
@@ -51,34 +58,9 @@ def _dir_has_real_files(path: Path) -> bool:
         return False
 
 
-def _remove_junction_or_empty(path: Path) -> None:
-    if not path.exists() and not _is_reparse_point(path):
-        # broken junction may still "exist" via lexists
-        if path.is_symlink() or os.path.lexists(path):
-            try:
-                os.rmdir(path)
-            except OSError:
-                path.unlink(missing_ok=True)  # type: ignore[arg-type]
-        return
-    if _is_reparse_point(path) or path.is_symlink():
-        # rmdir removes the junction/symlink, not the target contents.
-        os.rmdir(path)
-        return
-    if path.is_dir() and not any(path.iterdir()):
-        path.rmdir()
-        return
-    raise RuntimeError(
-        f"Refusing to replace non-empty real directory: {path}"
-    )
-
-
-_ANALYSIS_CLEANUP: list[Path] = []
-_ANALYSIS_ROOT: Path | None = None
-_CLEANUP_ARMED = False
-
-
 def _drop_exported_data_cache(data_dir: Path) -> None:
-    """Remove a previous junction and the on-disk PNG cache."""
+    import os
+
     if _is_reparse_point(data_dir) or data_dir.is_symlink():
         os.rmdir(data_dir)
     cache = manmabot_root().parent / "UserData" / ".asset_cache"
@@ -90,33 +72,8 @@ def _drop_exported_data_cache(data_dir: Path) -> None:
         shutil.rmtree(staging, ignore_errors=True)
 
 
-def _cleanup_analysis_text() -> None:
-    root = _ANALYSIS_ROOT
-    for path in list(_ANALYSIS_CLEANUP):
-        try:
-            path.unlink()
-        except OSError:
-            continue
-        parent = path.parent
-        while root is not None and parent != root and parent.exists():
-            try:
-                parent.rmdir()
-            except OSError:
-                break
-            parent = parent.parent
-
-
-def _arm_analysis_cleanup(paths: list[Path], root: Path) -> None:
-    global _ANALYSIS_ROOT, _CLEANUP_ARMED
-    _ANALYSIS_ROOT = root
-    _ANALYSIS_CLEANUP[:] = paths
-    if not _CLEANUP_ARMED:
-        atexit.register(_cleanup_analysis_text)
-        _CLEANUP_ARMED = True
-
-
 def ensure_data_pack(*, force: bool = False) -> dict:
-    """Mount ``Engine/data.pack`` in RAM. Does not create ``Engine/data``."""
+    """Mount ``Engine/data.pack`` in RAM. Does not create plain ``Engine/data``."""
     engine = manmabot_root()
     pack_path = engine / DATA_PACK_NAME
     data_dir = engine / "data"
@@ -137,39 +94,71 @@ def ensure_data_pack(*, force: bool = False) -> dict:
     if is_mounted() and not force:
         return {"action": "memory", "root": str(data_dir), "reused": True}
 
-    files = load_pack_bytes(pack_path)
+    kind = pack_magic(pack_path)
+    try:
+        files = load_pack_files(pack_path)
+    except LicensedRuntimeError as e:
+        return {"action": "error", "reason": str(e), "pack_kind": kind}
+
     info = mount_bytes(data_dir, files)
     info["action"] = "memory"
+    info["pack_kind"] = kind
     return info
 
 
 def ensure_analysis_text_pack(*, force: bool = False) -> dict:
-    """Write analysis text for C DLL readers; delete those files on exit."""
+    """Materialize analysis text under per-instance TEMP; wire overlay paths."""
     engine = manmabot_root()
     pack_path = engine / ANALYSIS_PACK_NAME
-    analysis_dir = engine / "analysis"
     if not pack_path.is_file():
+        # Dev / unpack tree: plain analysis text under Engine/analysis.
+        set_analysis_overlay(None)
         return {"action": "skipped", "reason": "no_pack"}
 
-    files = load_pack_bytes(pack_path)
-    written: list[Path] = []
-    for rel, raw in files.items():
-        dst = analysis_dir / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_bytes(raw)
-        written.append(dst)
-    _arm_analysis_cleanup(written, analysis_dir)
+    kind = pack_magic(pack_path)
+    try:
+        files = load_pack_files(pack_path)
+    except LicensedRuntimeError as e:
+        return {"action": "error", "reason": str(e), "pack_kind": kind}
+
+    wipe_stale_analysis_temps(protect=active_analysis_temp())
+    root = create_analysis_temp()
+    written = materialize_files(root, files)
+    offsets = analysis_registry_file("registry", "offsets.json")
     return {
-        "action": "temp_overlay",
+        "action": "temp_materialize",
         "files": len(written),
-        "overlay": str(analysis_dir),
+        "overlay": str(root),
+        "offsets_abs": str(offsets) if offsets.is_file() else None,
+        "pack_kind": kind,
         "removed_on_exit": True,
     }
 
 
 def ensure_packed_assets(*, force: bool = False) -> dict:
     """Idempotent startup hook: materialize packed assets if present."""
+    from session.build_manifest import BuildManifestError, verify_engine_build_manifest
+
+    engine = manmabot_root()
+    try:
+        manifest = verify_engine_build_manifest(engine)
+    except BuildManifestError as e:
+        return {
+            "data": {"action": "error", "reason": str(e)},
+            "analysis_text": {"action": "error", "reason": str(e)},
+            "build": {"action": "error", "reason": str(e)},
+        }
     return {
         "data": ensure_data_pack(force=force),
         "analysis_text": ensure_analysis_text_pack(force=force),
+        "build": {
+            "action": "ok" if manifest else "skipped",
+            "build_id": (manifest or {}).get("build_id"),
+            "cek_id": (manifest or {}).get("cek_id"),
+        },
     }
+
+
+def shutdown_packed_assets() -> None:
+    """Explicit cleanup (also registered via atexit from analysis_temp)."""
+    cleanup_analysis_temp()

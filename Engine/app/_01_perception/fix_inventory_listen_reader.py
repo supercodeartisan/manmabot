@@ -24,7 +24,9 @@ def default_dll_path() -> Path:
 
 
 def default_offsets_path() -> Path:
-    return _ANALYSIS / "registry" / "inventory_offsets.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "inventory_offsets.json")
 
 
 class InventoryListenReader:

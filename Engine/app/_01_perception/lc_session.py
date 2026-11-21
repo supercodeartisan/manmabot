@@ -14,7 +14,18 @@ from pathlib import Path
 
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _DLL_DIR = _ANALYSIS / "dll"
-_REGISTRY = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
+
+
+def _registry_path() -> Path:
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "LC930_REGISTRY.txt")
+
+
+def _text_root() -> Path:
+    from session.analysis_overlay import analysis_text_root
+
+    return analysis_text_root()
 
 # interval_ms, optional extra KEY=VALUE params (registry names).
 # Party roster and the party-HUD list boxes. Player, entities, bag, and the
@@ -64,9 +75,11 @@ class LcSession:
         dll = _DLL_DIR / f"{name}.dll"
         if not dll.is_file():
             raise FileNotFoundError(f"memory module DLL is missing: {dll}")
-        if not _REGISTRY.is_file():
-            raise FileNotFoundError(f"registry is missing: {_REGISTRY}")
-        os.environ["LCAPI_ROOT"] = str(_ANALYSIS)
+        registry = _registry_path()
+        if not registry.is_file():
+            raise FileNotFoundError(f"registry is missing: {registry}")
+        # Text root may be TEMP overlay; DLLs stay under Engine/analysis/dll.
+        os.environ["LCAPI_ROOT"] = str(_text_root())
         with self._guard:
             thread = self._threads.get(name)
             if thread is not None and thread.is_alive():
@@ -123,7 +136,7 @@ class LcSession:
         slot: _Slot,
         run_id: int,
     ) -> None:
-        os.environ["LCAPI_ROOT"] = str(_ANALYSIS)
+        os.environ["LCAPI_ROOT"] = str(_text_root())
         interval, params = spec
         lib = ctypes.CDLL(str(dll))
         configure = lib.lcapi_configure
@@ -142,7 +155,7 @@ class LcSession:
         run = lib.lcapi_run
         run.argtypes = [_SINK, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
         run.restype = ctypes.c_int
-        registry = str(_REGISTRY).encode("utf-8")
+        registry = str(_registry_path()).encode("utf-8")
         param_bytes = params.encode("utf-8") if params else None
 
         @_SINK

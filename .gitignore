@@ -10,6 +10,8 @@ python/
 # Live operator data (accounts, schedules, logs, lock files)
 # ---------------------------------------------------------------------------
 UserData/
+SellerData/
+Engine/session/trusted_kids.json
 
 # ---------------------------------------------------------------------------
 # Logs and test caches
@@ -26,6 +28,7 @@ __pycache__/
 .coverage
 htmlcov/
 *.egg-info/
+Engine/crypto/tests/_generated/
 
 # ---------------------------------------------------------------------------
 # Editor state (also drops .cursor/rules)

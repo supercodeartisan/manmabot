@@ -486,7 +486,9 @@ def _load_hud() -> None:
     global _hud_ready
     if _hud_ready:
         return
-    table = _ANALYSIS / "registry" / "char_offsets.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    table = analysis_registry_file("registry", "char_offsets.txt")
     if table.is_file():
         for line in table.read_text(encoding="utf-8", errors="replace").splitlines():
             text = line.strip()
@@ -609,7 +611,9 @@ def _load_exp_rva() -> None:
     global _exp_ready, _EXP_RVA
     if _exp_ready:
         return
-    path = _ANALYSIS / "registry" / "offsets.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    path = analysis_registry_file("registry", "offsets.json")
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))

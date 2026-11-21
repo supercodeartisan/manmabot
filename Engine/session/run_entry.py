@@ -35,11 +35,21 @@ def main() -> int:
     try:
         # Customer builds ship Engine/data.pack (+ analysis_text.pack). Materialize
         # before any map/offset readers run. Dev trees with plain Engine/data no-op.
+        # Analysis text → %TEMP%/manmabot_an_* (absolute path for DLL inject).
+        # Does not change login / movement / combat / HP / party decision logic.
         from session.paths import ensure_userdata
         from session.asset_pack import ensure_packed_assets
+        from session.analysis_temp import wipe_stale_analysis_temps
 
         ensure_userdata()
-        ensure_packed_assets()
+        wipe_stale_analysis_temps()
+        pack_info = ensure_packed_assets()
+        for section in ("data", "analysis_text"):
+            block = pack_info.get(section) or {}
+            if block.get("action") == "error":
+                raise RuntimeError(
+                    f"asset pack {section} failed: {block.get('reason')}"
+                )
         from session.elevate import prepare_runtime
 
         prepare_runtime()

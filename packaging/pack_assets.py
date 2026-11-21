@@ -1,41 +1,38 @@
-"""Stage 5 — build obfuscated asset packs inside the portable tree.
+"""Stage 5 — build asset packs inside the portable tree.
+
+Default (Phase 1): **MMB2** via SellerData vault + pack_id reservation.
+Legacy MMBA v1: ``--legacy-mmba`` (transition only).
 
 Packs:
   Engine/data.pack           ← entire Engine/data (maps, cursors, catalog, world…)
   Engine/analysis_text.pack  ← sensitive analysis text/json (offsets, tables)
 
-After packing, plain sources are removed from the portable tree so customers
-cannot casually browse PNGs / offset files. DLLs and binaries under analysis
-remain on disk.
-
-Dev tree is never modified.
+After packing, plain sources are removed from the portable tree.
+Dev tree is never modified. Customer packs never contain CEK / signing private keys.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
+from mmb2_stage5 import (
+    build_mmb2_blob,
+    pack_directory_mmb2,
+    publish_verified_pack_pair,
+    snapshot_tree,
+)
+
 PACKAGING_DIR = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGING_DIR.parent
 PORTABLE = REPO_ROOT / "release" / "portable" / "ManmabotV1"
 
-# Sensitive analysis text/json kept out of plain folders in customer builds.
-# DLLs / .pyd / binaries are left alone.
 ANALYSIS_INCLUDE_SUFFIXES = {".json", ".txt", ".yaml", ".yml", ".md", ".bak"}
-ANALYSIS_INCLUDE_NAMES = {
-    "offsets.json",
-    "char_offsets.txt",
-    "zone_table.json",
-    "entity_offsets.txt",
-    "inventory_offsets.txt",
-    "skill_offsets.txt",
-}
 
 
 def _engine_on_sys_path() -> Path:
-    """Import format helpers from the *development* Engine (not portable .pyd)."""
     eng = REPO_ROOT / "Engine"
     text = str(eng)
     if text not in sys.path:
@@ -43,19 +40,132 @@ def _engine_on_sys_path() -> Path:
     return eng
 
 
+def _default_seller_root() -> Path:
+    env = os.environ.get("MANMABOT_SELLER_DATA", "").strip()
+    if env:
+        return Path(env)
+    return REPO_ROOT / "SellerData"
+
+
 def _should_pack_analysis_file(path: Path, analysis_root: Path) -> bool:
     if not path.is_file():
         return False
     if path.suffix.lower() not in ANALYSIS_INCLUDE_SUFFIXES:
         return False
-    # Skip huge image dumps under analysis/*/image if any remain.
     parts = {p.lower() for p in path.relative_to(analysis_root).parts}
     if "image" in parts and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
         return False
     return True
 
 
+def _snapshot_analysis_entries(analysis: Path) -> tuple[dict[str, bytes], list[str]]:
+    packed_rels: list[str] = []
+    entries: dict[str, bytes] = {}
+    for path in sorted(analysis.rglob("*")):
+        if not _should_pack_analysis_file(path, analysis):
+            continue
+        rel = path.relative_to(analysis).as_posix()
+        packed_rels.append(rel)
+        entries[rel] = path.read_bytes()
+    return entries, packed_rels
+
+
+def _build_mmb2_pair(
+    engine: Path,
+    *,
+    seller_root: Path,
+    cek_id: str,
+    product_id: str | None,
+    dry_run: bool,
+) -> dict:
+    """
+    Build + independently verify both packs in memory, then publish together
+    and write Engine/BUILD.json last (distinct pack_ids, shared cek_id).
+    """
+    data_src = engine / "data"
+    analysis = engine / "analysis"
+
+    data_entries: dict[str, bytes] | None = None
+    analysis_entries: dict[str, bytes] | None = None
+    analysis_rels: list[str] = []
+
+    if data_src.is_dir():
+        data_entries = snapshot_tree(data_src)
+    if analysis.is_dir():
+        analysis_entries, analysis_rels = _snapshot_analysis_entries(analysis)
+        if not analysis_entries:
+            analysis_entries = None
+
+    if data_entries is None and analysis_entries is None:
+        return {"skipped": True, "reason": "no data or analysis text sources"}
+
+    if dry_run:
+        return {
+            "dry_run": True,
+            "data_files": len(data_entries or {}),
+            "analysis_files": len(analysis_entries or {}),
+            "sample_analysis": analysis_rels[:8],
+        }
+
+    data_blob = data_meta = None
+    analysis_blob = analysis_meta = None
+    if data_entries is not None:
+        data_blob, data_meta = build_mmb2_blob(
+            data_entries,
+            seller_root=seller_root,
+            cek_id=cek_id,
+            product_id=product_id,
+            note="stage5-data",
+        )
+    if analysis_entries is not None:
+        analysis_blob, analysis_meta = build_mmb2_blob(
+            analysis_entries,
+            seller_root=seller_root,
+            cek_id=cek_id,
+            product_id=product_id,
+            note="stage5-analysis",
+        )
+
+    published = publish_verified_pack_pair(
+        engine_dir=engine,
+        data_blob=data_blob,
+        data_meta=data_meta,
+        analysis_blob=analysis_blob,
+        analysis_meta=analysis_meta,
+        seller_root=seller_root,
+    )
+
+    removed: dict[str, object] = {}
+    if data_entries is not None and data_src.is_dir():
+        shutil.rmtree(data_src)
+        removed["data"] = str(data_src)
+    if analysis_rels:
+        n = 0
+        for rel in analysis_rels:
+            plain = analysis / rel
+            if plain.is_file():
+                plain.unlink()
+                n += 1
+                parent = plain.parent
+                while parent != analysis and parent.is_dir():
+                    try:
+                        parent.rmdir()
+                    except OSError:
+                        break
+                    parent = parent.parent
+        removed["analysis_files"] = n
+
+    return {
+        "format": "MMB2",
+        "published": published,
+        "removed_plain": removed,
+        "data": data_meta,
+        "analysis_text": analysis_meta,
+    }
+
+
 def build_data_pack(engine: Path, *, dry_run: bool) -> dict:
+    """Legacy MMBA v1 (transition). Prefer MMB2 via pack_portable_assets."""
     from session.asset_pack_format import build_pack
 
     src = engine / "data"
@@ -66,13 +176,14 @@ def build_data_pack(engine: Path, *, dry_run: bool) -> dict:
         files = sum(1 for _ in src.rglob("*") if _.is_file())
         return {"dry_run": True, "files": files, "pack": str(out)}
     info = build_pack(src, out)
-    # Remove plain tree after successful pack.
     shutil.rmtree(src)
     info["removed_plain"] = str(src)
+    info["format"] = "MMBA"
     return info
 
 
 def build_analysis_text_pack(engine: Path, *, dry_run: bool) -> dict:
+    """Legacy MMBA v1 analysis pack."""
     from session.asset_pack_format import build_pack
 
     analysis = engine / "analysis"
@@ -106,14 +217,12 @@ def build_analysis_text_pack(engine: Path, *, dry_run: bool) -> dict:
             }
 
         info = build_pack(staging, out)
-        # Delete packed plain text from portable analysis (keep DLLs etc.).
         removed = 0
         for rel in packed_rels:
             plain = analysis / rel
             if plain.is_file():
                 plain.unlink()
                 removed += 1
-                # prune empty parents up to analysis/
                 parent = plain.parent
                 while parent != analysis and parent.is_dir():
                     try:
@@ -122,10 +231,18 @@ def build_analysis_text_pack(engine: Path, *, dry_run: bool) -> dict:
                         break
                     parent = parent.parent
         info["removed_plain_files"] = removed
+        info["format"] = "MMBA"
         return info
 
 
-def pack_portable_assets(*, dry_run: bool = False) -> dict:
+def pack_portable_assets(
+    *,
+    dry_run: bool = False,
+    legacy_mmba: bool = False,
+    cek_id: str | None = None,
+    product_id: str | None = None,
+    seller_root: Path | None = None,
+) -> dict:
     if not PORTABLE.is_dir():
         raise FileNotFoundError(f"portable tree missing: {PORTABLE}")
     _engine_on_sys_path()
@@ -133,9 +250,39 @@ def pack_portable_assets(*, dry_run: bool = False) -> dict:
     if not engine.is_dir():
         raise FileNotFoundError(f"Engine missing under portable: {engine}")
 
-    data_info = build_data_pack(engine, dry_run=dry_run)
-    analysis_info = build_analysis_text_pack(engine, dry_run=dry_run)
-    return {"data": data_info, "analysis_text": analysis_info, "portable": str(PORTABLE)}
+    if legacy_mmba:
+        data_info = build_data_pack(engine, dry_run=dry_run)
+        analysis_info = build_analysis_text_pack(engine, dry_run=dry_run)
+        return {
+            "format": "MMBA",
+            "data": data_info,
+            "analysis_text": analysis_info,
+            "portable": str(PORTABLE),
+        }
+
+    cek_id = cek_id or os.environ.get("MANMABOT_CEK_ID", "").strip() or None
+    if not cek_id:
+        raise RuntimeError(
+            "MMB2 Stage5 requires --cek-id or MANMABOT_CEK_ID "
+            "(or pass --legacy-mmba for transition builds)"
+        )
+    seller = Path(seller_root) if seller_root else _default_seller_root()
+    pair = _build_mmb2_pair(
+        engine,
+        seller_root=seller,
+        cek_id=cek_id,
+        product_id=product_id,
+        dry_run=dry_run,
+    )
+    return {
+        "format": "MMB2",
+        "cek_id": cek_id,
+        "pair": pair,
+        "data": pair.get("data"),
+        "analysis_text": pair.get("analysis_text"),
+        "portable": str(PORTABLE),
+        "seller_root": str(seller),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -143,9 +290,23 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description="Stage 5 asset pack builder")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--legacy-mmba",
+        action="store_true",
+        help="Build MMBA v1 packs (transition only)",
+    )
+    parser.add_argument("--cek-id", default=None, help="Vault cek_id for MMB2")
+    parser.add_argument("--product-id", default=None)
+    parser.add_argument("--seller-data", type=Path, default=None)
     args = parser.parse_args(argv)
     try:
-        result = pack_portable_assets(dry_run=args.dry_run)
+        result = pack_portable_assets(
+            dry_run=args.dry_run,
+            legacy_mmba=args.legacy_mmba,
+            cek_id=args.cek_id,
+            product_id=args.product_id,
+            seller_root=args.seller_data,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
