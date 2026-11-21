@@ -48,8 +48,66 @@ class WindowGateStage(Stage):
         return StageResult.ok(
             self.id, "attached Purple %dx%d (%s)" % (w, h, kind), width=w)
 
+    def _hwnd_ready(self, bot) -> bool:
+        ready = getattr(bot, "_game_window_ready", None)
+        if callable(ready):
+            try:
+                return bool(ready())
+            except Exception:
+                pass
+        game = getattr(bot, "game", None)
+        return bool(game is not None and getattr(game, "valid", False))
+
+    def _shake_armed(self, ctx: PipelineContext, bot) -> bool:
+        return bool(
+            getattr(bot, "_shake_after_relaunch", False) or ctx.shake_armed)
+
+    def _keep_shake_armed(self, ctx: PipelineContext, bot) -> None:
+        """AUTH relaunch marker must survive Purple handoff into S5."""
+        bot._shake_after_relaunch = True
+        ctx.shake_armed = True
+
     def run(self, ctx: PipelineContext) -> StageResult:
         bot = ctx.bot
+        # v2 engine: run the whole Purple path (launch -> login -> game card
+        # -> Play -> game-ready) here, then hand off to S4. No legacy
+        # fallback — if the engine fails, the pipeline fails loudly.
+        try:
+            from purple.facade import engine_enabled, ensure_launched, run_v2_engine
+        except Exception:
+            engine_enabled = None
+        if engine_enabled is not None and engine_enabled(ctx.cfg or {}):
+            try:
+                shake = self._shake_armed(ctx, bot)
+                # After AUTH close+relaunch the boot-status UI is already
+                # racing. If GLFW is up, skip a full Purple login cycle and
+                # hand off so S5 can hunt/shake immediately.
+                if shake and self._hwnd_ready(bot):
+                    from purple.handoff import apply_handoff
+                    apply_handoff(bot, ctx, engine=None)
+                    self._keep_shake_armed(ctx, bot)
+                    return StageResult.ok(
+                        self.id, "AUTH relaunch: existing game hwnd → S5")
+                if not ensure_launched(bot):
+                    return StageResult.failed(
+                        self.id, "v2: Purple launch/attach failed")
+                from purple.handoff import engine_succeeded
+                # AUTH relaunch only needs Play→hwnd, not a long post-ready wait.
+                eng = run_v2_engine(
+                    bot, ctx, timeout=180.0 if shake else 360.0)
+                if not engine_succeeded(eng):
+                    detail = getattr(eng, "last_error", "") or getattr(eng, "state", "")
+                    return StageResult.failed(
+                        self.id, "v2 engine did not reach game-ready: %s" % detail)
+                if shake:
+                    self._keep_shake_armed(ctx, bot)
+                return StageResult.ok(
+                    self.id, "v2 engine finished state=%s" % getattr(eng, "state", "?"))
+            except Exception as e:
+                return StageResult.failed(
+                    self.id, "v2 engine failed: %r" % e)
+
+        # ---- legacy window gate (unchanged) ----
         n = ctx.bump_retry(self.id)
         if n > self.goal.max_retries:
             return StageResult.failed(

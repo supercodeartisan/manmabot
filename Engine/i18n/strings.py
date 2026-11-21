@@ -854,6 +854,12 @@ _EN = UiStrings(
         "memory_down": "Paused — memory monitor disconnected.",
         "user_pause": "Paused — hotkey.",
         "game_closed": "Stopped — game window was closed.",
+        "session_disconnected": (
+            "Stopped — server connection lost (UIMessage). Relogin will resume."
+        ),
+        "session_policy_block": (
+            "Stopped — operator policy popup. Game closed; not auto-logging in."
+        ),
         "ready_for_resume": (
             "Ready — click the game window "
             "(ZF resumes when the game is focused)."
@@ -1390,6 +1396,12 @@ _KO = UiStrings(
         "memory_down": "일시정지 — 메모리 모니터 연결이 끊겼습니다.",
         "user_pause": "일시정지 — 단축키.",
         "game_closed": "정지 — 게임 창이 닫혔습니다.",
+        "session_disconnected": (
+            "정지 — 서버 연결이 끊겼습니다(통보문). 자동 로그인 후 이어서 진행합니다."
+        ),
+        "session_policy_block": (
+            "정지 — 운영자 정책 통보문. 게임 창을 닫았으며 자동 로그인하지 않습니다."
+        ),
         "ready_for_resume": (
             "준비됨 — 게임 창을 클릭하세요 "
             "(게임이 포커스되면 종횡이 재개됩니다)."
@@ -1921,6 +1933,12 @@ _ZH = UiStrings(
         "memory_down": "已暂停 — 内存监视器已断开。",
         "user_pause": "已暂停 — 快捷键。",
         "game_closed": "已停止 — 游戏窗口已关闭。",
+        "session_disconnected": (
+            "已停止 — 与服务器连接中断（通告）。将自动登录并继续。"
+        ),
+        "session_policy_block": (
+            "已停止 — 运营者政策通告。已关闭游戏且不会自动登录。"
+        ),
         "ready_for_resume": (
             "就绪 — 请点击游戏窗口"
             "（游戏获得焦点后纵锋会继续）。"

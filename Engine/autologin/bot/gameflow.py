@@ -271,8 +271,12 @@ _ANCHOR_FILES = {
     # Post-AUTH-relaunch flash status (tw): shake the instant these appear.
     # 安全設定登録中 / 裝置登錄確認中 — window flips to AUTH in a blink.
     "boot_shake": [
-        "boot_shake_security.png",  # 安全設定登録中 (white+green)
-        "boot_shake_device.png",    # 裝置登錄確認中
+        # zh-TW / JP-style status flash (white+green / white)
+        "boot_shake_security.png",      # 安全設定登録中
+        "boot_shake_device.png",        # 裝置登錄確認中
+        # Korean status flash (same gate, different glyphs)
+        "boot_shake_security_ko.png",   # 보안 설정 등록 중
+        "boot_shake_device_ko.png",     # 기기 등록 확인 중
     ],
 
     "agreement_title": ["game_agreement_title.png"],
@@ -303,11 +307,11 @@ TICK_SLEEP_SHAKE = 0.06
 OCR_MAX_SIDE = 640
 MATCH_THRESH = 0.78
 SCALE_SWEEP = (0.80, 0.90, 1.00, 1.10, 1.25)
-# Tiny status crops (安全設定登録中 / 裝置登錄確認中) — dense scales, OCR-free.
+# zh + ko status crops share one bank (no language split). Short scale
+# sweep + ROI; early-exit on hit. <1s per grab is enough.
 BOOT_SHAKE_THRESH = 0.70
-BOOT_SHAKE_SCALES = (
-    0.75, 0.80, 0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 1.30,
-)
+BOOT_SHAKE_SCALES = (1.00, 0.95, 1.05, 0.90, 1.10)
+BOOT_SHAKE_ROI = (0.05, 0.28, 0.95, 0.78)  # x0,y0,x1,y1 fractions
 BOOT_SHAKE_HUNT_S = 25.0  # template hunt after familiar size is pinned
 # True maximize / Aero-snap — not the normal splash (1296x999).
 SHELL_MAX_W = 1600
@@ -410,6 +414,7 @@ class GameFlow:
         self._boot_screen_sig = None   # frame sig at dialog-size entry
         self._boot_auth_wait_logged = False
         self._boot_hunt_since = 0.0    # armed template-hunt start
+        self._boot_hunt_expired = False
         self._game_size_normalized = False
         self._game_size_normalize_at = 0.0
         self._device_reg_ignore_count = 0
@@ -467,22 +472,48 @@ class GameFlow:
     # ------------------------------------------------------------------
     # resources
     # ------------------------------------------------------------------
+    @staticmethod
+    def _boot_shake_kind(filename: str) -> str:
+        stem = os.path.basename(filename).lower()
+        if "security" in stem:
+            return "security"
+        if "device" in stem:
+            return "device"
+        return "boot"
+
     def _load_anchors(self) -> dict:
         out = {}
         dirs = [ANCHOR_DIR] + [os.path.join(ANCHOR_DIR, lg) for lg in LANGS]
+        seen_boot = set()
         for name, files in _ANCHOR_FILES.items():
             multi = name in _MULTI_FILE_ANCHORS
             for d in dirs:
                 for fn in files:
                     p = os.path.join(d, fn)
-                    if os.path.exists(p):
-                        img = cv2.imread(p)
-                        if img is not None:
-                            if multi:
-                                out.setdefault(name, []).append(img)
-                            else:
-                                out[name] = img
-                                break
+                    if not os.path.exists(p):
+                        continue
+                    img = cv2.imread(p)
+                    if img is None:
+                        continue
+                    if name == "boot_shake":
+                        # One entry per filename; store grayscale for fast match.
+                        key = os.path.basename(fn).lower()
+                        if key in seen_boot:
+                            continue
+                        seen_boot.add(key)
+                        gray = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                                if img.ndim == 3 else img)
+                        out.setdefault(name, []).append({
+                            "kind": self._boot_shake_kind(fn),
+                            "name": key,
+                            "gray": gray,
+                        })
+                        continue
+                    if multi:
+                        out.setdefault(name, []).append(img)
+                    else:
+                        out[name] = img
+                        break
                 if name in out and not multi:
                     break
         return out
@@ -998,44 +1029,94 @@ class GameFlow:
         return None
 
     def _match_boot_shake_status(self, img: np.ndarray) -> Optional[dict]:
-        """OCR-free match of 安全設定登録中 / 裝置登錄確認中 status crops.
+        """OCR-free match of zh/ko boot status crops (one shared bank).
 
-        Templates were cropped at familiar dialog scale. Sweep absolute scales
-        PLUS grab-height-relative scales so a still-large shell can match.
+        Template matching only: try every crop, no language priority.
+        Grayscale ROI + short scale sweep + early-exit; cache per grab.
         """
-        tpl = self.anchors.get("boot_shake")
-        if tpl is None:
+        if img is None or getattr(img, "size", 0) == 0:
             return None
-        templates = tpl if isinstance(tpl, list) else [tpl]
-        kinds = ("security", "device")
-        base_h = float(img.shape[0]) / float(REF_PAGE_H)
-        scales = set(BOOT_SHAKE_SCALES)
-        for m in (0.80, 0.90, 1.00, 1.10, 1.20, 1.35, 1.50):
-            scales.add(round(base_h * m, 4))
-        best = None  # (score, loc, tw, th, scale, kind)
-        for idx, t0 in enumerate(templates):
-            kind = kinds[idx] if idx < len(kinds) else "boot"
-            for s in sorted(scales):
+        try:
+            cache_id = (img.shape[0], img.shape[1], int(img.ctypes.data))
+        except Exception:
+            cache_id = id(img)
+        if getattr(self, "_boot_match_img_id", None) == cache_id:
+            return getattr(self, "_boot_match_cache", None)
+
+        entries = self.anchors.get("boot_shake") or []
+        if not entries:
+            self._boot_match_img_id = cache_id
+            self._boot_match_cache = None
+            return None
+
+        norm = []
+        for item in (entries if isinstance(entries, list) else [entries]):
+            if isinstance(item, dict) and item.get("gray") is not None:
+                norm.append(item)
+            else:
+                arr = item
+                gray = (cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+                        if getattr(arr, "ndim", 0) == 3 else arr)
+                norm.append({"kind": "boot", "name": "?", "gray": gray})
+        if not norm:
+            self._boot_match_img_id = cache_id
+            self._boot_match_cache = None
+            return None
+
+        H, W = img.shape[:2]
+        x0, y0, x1, y1 = BOOT_SHAKE_ROI
+        rx0 = max(0, int(W * x0))
+        ry0 = max(0, int(H * y0))
+        rx1 = min(W, int(W * x1))
+        ry1 = min(H, int(H * y1))
+        if rx1 - rx0 < 40 or ry1 - ry0 < 20:
+            rx0, ry0, rx1, ry1 = 0, 0, W, H
+        roi = img[ry0:ry1, rx0:rx1]
+        gray = (cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                if roi.ndim == 3 else roi)
+        if not gray.flags["C_CONTIGUOUS"]:
+            gray = np.ascontiguousarray(gray)
+        rh, rw = gray.shape[:2]
+
+        best = None  # score, loc, tw, th, scale, kind, name
+        good = BOOT_SHAKE_THRESH + 0.05
+        for entry in norm:
+            t0 = entry["gray"]
+            kind = entry.get("kind") or "boot"
+            name = entry.get("name") or "?"
+            for s in BOOT_SHAKE_SCALES:
                 if s <= 0.05:
                     continue
-                t = cv2.resize(t0, None, fx=s, fy=s,
-                               interpolation=cv2.INTER_AREA)
+                t = (t0 if abs(s - 1.0) < 1e-6
+                     else cv2.resize(t0, None, fx=s, fy=s,
+                                     interpolation=cv2.INTER_AREA))
                 th, tw = t.shape[:2]
-                if th < 6 or tw < 6 or th >= img.shape[0] or tw >= img.shape[1]:
+                if th < 6 or tw < 6 or th >= rh or tw >= rw:
                     continue
-                res = cv2.matchTemplate(img, t, cv2.TM_CCOEFF_NORMED)
+                res = cv2.matchTemplate(gray, t, cv2.TM_CCOEFF_NORMED)
                 _, mv, _, ml = cv2.minMaxLoc(res)
                 if best is None or mv > best[0]:
-                    best = (mv, ml, tw, th, s, kind)
+                    best = (float(mv), ml, tw, th, float(s), kind, name)
+                if mv >= good:
+                    break
+            if best is not None and best[0] >= good:
+                break
+
+        hit = None
         if best and best[0] >= BOOT_SHAKE_THRESH:
-            return {
-                "score": float(best[0]),
-                "x": best[1][0], "y": best[1][1],
-                "w": best[2], "h": best[3],
+            hit = {
+                "score": best[0],
+                "x": int(best[1][0]) + rx0,
+                "y": int(best[1][1]) + ry0,
+                "w": best[2],
+                "h": best[3],
                 "scale": best[4],
                 "kind": best[5],
+                "name": best[6],
             }
-        return None
+        self._boot_match_img_id = cache_id
+        self._boot_match_cache = hit
+        return hit
 
     def _anchor_pt(self, img: np.ndarray, name: str,
                    ref_offset: Tuple[float, float],
@@ -1457,16 +1538,17 @@ class GameFlow:
             return ""  # keep waiting; do not force LOADING/CHARACTER
 
         # --- Gate A: post-AUTH-relaunch boot flash (template-only, OCR-free) ---
-        # 安全設定登録中 / 裝置登錄確認中 flash briefly before AUTH. Hunt with
-        # dense template match only — OCR here would miss the window.
+        # zh + ko status pills flash briefly before AUTH. Hunt with a tight
+        # grayscale ROI match — OCR here would miss the window.
         # Hunt clock is owned by tick() (starts only at familiar 816x639).
-        if armed and not getattr(self, "_boot_shake_done", False):
+        if (armed and not getattr(self, "_boot_shake_done", False)
+                and not getattr(self, "_boot_hunt_expired", False)):
             m_boot = self._match_boot_shake_status(img)
             if m_boot:
                 kind = m_boot.get("kind") or "boot"
                 st = "SECURITY" if kind == "security" else "DEVICE_REG"
-                log.info("boot_shake status tpl=%s score=%.3f → %s",
-                         kind, m_boot["score"], st)
+                log.info("boot_shake status tpl=%s/%s score=%.3f → %s",
+                         kind, m_boot.get("name", "?"), m_boot["score"], st)
                 return st
             m_sec = self._match_anchor(img, "security_splash")
             if (m_sec and m_sec["score"] >= MATCH_THRESH
@@ -1487,10 +1569,10 @@ class GameFlow:
 
         # --- Gate B: 퍼플간편인증 / PURPLE簡易驗證 alone → close+relaunch ---
         # Title (인증 수단 선택) is helpful but no longer required; ko/zh
-        # purple-simple text is enough. After relaunch, never close again
-        # while still inside the boot-shake hunt window above.
-        if not armed and (
-                self._auth_choice_screen(img) or self._purple_auth_screen(img)):
+        # purple-simple text is enough. Boot-shake hunt above takes
+        # precedence; after it expires, AUTH is still detectable (close is
+        # bounded by auth_relaunch_max / _shake_after_relaunch in handler).
+        if self._auth_choice_screen(img) or self._purple_auth_screen(img):
             log.info("PURPLE_AUTH (퍼플간편인증 / PURPLE簡易驗證) → close+relaunch")
             return "PURPLE_AUTH"
 
@@ -2689,6 +2771,7 @@ class GameFlow:
         self._auth_escape_relaunch = False
         self._boot_shake_done = False
         self._boot_hunt_since = 0.0
+        self._boot_hunt_expired = False
         # MUST persist before close — watchdog may kill bot2 during sleep.
         self._persist_auth_relaunch_state()
         log.warning("=" * 60)
@@ -2734,16 +2817,26 @@ class GameFlow:
         """Ready when 安全設定登録中 / 裝置登錄確認中 templates hit."""
         return self._boot_shake_target_ui(img)
 
-    def _maybe_post_relaunch_boot_shake(self, label: str,
-                                         img: Optional[np.ndarray] = None) -> bool:
+    def _maybe_post_relaunch_boot_shake(
+            self, label: str,
+            img: Optional[np.ndarray] = None,
+            match: Optional[dict] = None) -> bool:
         """One wake-nudge when boot status templates appear after AUTH relaunch.
 
         Order: pin 816x639 → match template → wake_nudge → pin again.
-        Never shake while maximized.
+        Never shake while maximized. Pass ``match`` to avoid a second search.
         """
         if not getattr(self.bot, "_shake_after_relaunch", False):
             return False
         if getattr(self, "_boot_shake_done", False):
+            return False
+        if (getattr(self, "_boot_hunt_expired", False)
+                or getattr(self, "_security_passed", False)
+                or getattr(self, "_agreement_seen", False)
+                or self.state not in ("SECURITY", "DEVICE_REG")):
+            return False
+        hunt_t0 = float(getattr(self, "_boot_hunt_since", 0) or 0)
+        if hunt_t0 and _now() - hunt_t0 >= BOOT_SHAKE_HUNT_S:
             return False
         if img is None:
             return False
@@ -2752,9 +2845,17 @@ class GameFlow:
             self._pin_familiar_shell(reason="pre_boot_shake_match")
             # Grab was at old size; caller must re-grab next tick.
             return False
-        m = self._match_boot_shake_status(img)
+        m = match if match is not None else self._match_boot_shake_status(img)
         if not m:
             return False
+        # Tiny status crops can match unrelated later screens. Never shake if
+        # the agreement or server dialog is already visible in this frame.
+        for name in ("agreement_title", "server_title"):
+            later = self._match_anchor(img, name)
+            if later and later["score"] >= MATCH_THRESH:
+                log.warning("%s: boot shake rejected; %s screen detected",
+                            label, name)
+                return False
         try:
             r = self.win.rect if self.win else None
         except Exception:
@@ -2771,9 +2872,10 @@ class GameFlow:
             return False
         before = (r.width, r.height, r.left, r.top)
         try:
-            log.info("%s: boot_shake tpl=%s score=%.3f scale=%.2f @%dx%d → "
+            log.info("%s: boot_shake tpl=%s/%s score=%.3f scale=%.2f @%dx%d → "
                      "wake_nudge %dx%d@(%d,%d) (~%.1fs)",
-                     label, m.get("kind"), m["score"], m.get("scale", 1.0),
+                     label, m.get("kind"), m.get("name", "?"),
+                     m["score"], m.get("scale", 1.0),
                      m["w"], m["h"], r.width, r.height, r.left, r.top,
                      SHAKE_DURATION)
             self._shake_game_window(
@@ -3056,18 +3158,59 @@ class GameFlow:
         self._last_act = _now()
 
     def _select_character(self, img: np.ndarray) -> bool:
-        """Double-click the portrait: fixed → ratio → template/YOLO last."""
+        """Select a character portrait.
+
+        The character-select screen can show up to 3 portraits arranged
+        left-to-right. Selection rules:
+          - If only ONE portrait is detected, click it regardless of the
+            configured character number.
+          - If several are detected, click the Nth (character_number,
+            left-to-right, 1-based).
+          - Detection is YOLO-persons first, then template, then fixed/ratio.
+        """
         n_char = int(getattr(self.bot, "character_number", 1) or 1)
+
+        # 1) Real on-screen portraits (YOLO persons), left-to-right.
+        dets = self._detect_persons(img)
+        if dets:
+            if hasattr(dets[0], "cx"):
+                sd = sorted(dets, key=lambda d: d.cx)
+            else:
+                sd = sorted(dets, key=lambda d: d[0])
+            if len(sd) == 1:
+                d = sd[0]
+                px, py = (d.cx, d.cy) if hasattr(d, "cx") else (d[0], d[1])
+                sx, sy = self._img_pt_to_screen(px, py)
+                if self._click(sx, sy, "char(person-only)", clicks=2):
+                    return True
+            else:
+                idx = max(0, min(n_char - 1, len(sd) - 1))
+                d = sd[idx]
+                px, py = (d.cx, d.cy) if hasattr(d, "cx") else (d[0], d[1])
+                sx, sy = self._img_pt_to_screen(px, py)
+                if self._click(
+                    sx, sy, "char(person #%d)" % n_char, clicks=2,
+                ):
+                    return True
+
+        # 2) Template match (single/known sprite).
+        tm = self._match_char_template(img)
+        if tm is not None:
+            sx, sy = self._img_pt_to_screen(
+                tm["x"] + tm["w"] // 2, tm["y"] + tm["h"] // 2)
+            if self._click(sx, sy, "char(tm)", clicks=2):
+                return True
+
+        # 3) Fixed coordinate.
         if self._try_fixed("char", "char(fixed)", clicks=2):
             return True
+
+        # 4) Fixed ratio slot.
         idx = max(0, min(n_char - 1, len(R_CHAR_SLOTS) - 1))
         sx, sy = self._ratio_pt(*R_CHAR_SLOTS[idx])
-        if self._click(
+        return self._click(
             sx, sy, "character(ratio slot#%d)" % n_char, key="", clicks=2,
-        ):
-            return True
-        # Fixed/ratio refused (e.g. outside window) — vision last.
-        return bool(self._click_char_image(img))
+        )
 
     def _click_char_image(self, img: np.ndarray) -> bool:
         """Vision fallback only: class-sprite template, then YOLO persons."""
@@ -3198,7 +3341,16 @@ class GameFlow:
         self._ensure_on_top()
 
         armed = getattr(self.bot, "_shake_after_relaunch", False)
-        hunting = armed and not getattr(self, "_boot_shake_done", False)
+        if (armed and not getattr(self, "_boot_shake_done", False)
+                and not getattr(self, "_boot_hunt_expired", False)):
+            hunt_t0 = float(getattr(self, "_boot_hunt_since", 0) or 0)
+            if hunt_t0 and _now() - hunt_t0 >= BOOT_SHAKE_HUNT_S:
+                self._boot_hunt_expired = True
+                log.warning("boot shake status not confirmed within %.0fs; "
+                            "skipping shake rather than triggering late",
+                            BOOT_SHAKE_HUNT_S)
+        hunting = (armed and not getattr(self, "_boot_shake_done", False)
+                   and not getattr(self, "_boot_hunt_expired", False))
 
         # After AUTH relaunch: ALWAYS pin familiar size while hunting.
         # Previous bug: only normalized when already dialog-sized, so a
@@ -3264,8 +3416,6 @@ class GameFlow:
             if self._shell_is_familiar() and not getattr(self, "_boot_hunt_since", 0):
                 self._boot_hunt_since = _now()
                 log.info("boot_shake hunt start at familiar shell")
-            if self._shell_is_familiar():
-                self._maybe_post_relaunch_boot_shake("boot-tpl", img=img)
 
         self._ocr_cache = None          # fresh OCR pass for this tick
         if not self._fixed_mode() and not (
@@ -3273,6 +3423,7 @@ class GameFlow:
             self._dismiss_popups(img)
 
         # While hunting status flash, skip OCR-heavy detect — templates only.
+        # Match once per grab; reuse for shake + state (cache inside matcher).
         if hunting and not getattr(self, "_boot_shake_done", False):
             # Do not timeout while shell is still wrong size.
             if not self._shell_is_familiar():
@@ -3283,7 +3434,8 @@ class GameFlow:
             if m_boot:
                 det = ("SECURITY" if m_boot.get("kind") == "security"
                        else "DEVICE_REG")
-                self._maybe_post_relaunch_boot_shake("boot-tpl", img=img)
+                self._maybe_post_relaunch_boot_shake(
+                    "boot-tpl", img=img, match=m_boot)
             else:
                 m_sec = self._match_anchor(img, "security_splash")
                 if (m_sec and m_sec["score"] >= MATCH_THRESH

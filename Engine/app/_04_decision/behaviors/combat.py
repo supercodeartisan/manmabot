@@ -20,7 +20,7 @@ ABANDON_SECONDS = 30.0
 STICKY_MISS_FRAMES = 1
 # After giving up on a target, do not re-select it until this wall-clock window.
 GIVE_UP_COOLDOWN_SECONDS = 4.0
-# When TrackIds remaps a heap pointer, keep the same mob within this radius.
+# When TrackIds remaps a guid-less row (ent fallback), keep the mob nearby.
 STICKY_REBIND_TILES = 2
 # Same world tile after this many attack clicks. Living sticky is not dropped.
 ATTACK_STILL_TRIES = 5
