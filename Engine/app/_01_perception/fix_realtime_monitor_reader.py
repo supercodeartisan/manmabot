@@ -31,7 +31,10 @@ def default_dll_path() -> Path:
 
 
 def default_offsets_path() -> Path:
-    return _ANALYSIS / "registry" / "offsets.json"
+    # Pack-only: TEMP overlay absolute path (compat-audit inject). Dev: Engine/analysis.
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "offsets.json")
 
 
 class RealtimeMonitorReader:

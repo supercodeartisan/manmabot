@@ -13,3 +13,7 @@
 #
 # Leave blank to ignore that icon. Multiple icons may share one role;
 # the first detected slot (box 1→3, F5→F12) wins.
+#
+# Memory may report English item names (e.g. Talking Parchment) even when
+# the UI language is KO/ZH. Add those strings as kr_name aliases so release
+# and client-locale builds still bind talking_scroll.

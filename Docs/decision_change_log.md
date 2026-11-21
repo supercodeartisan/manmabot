@@ -1,5 +1,32 @@
 # Decision change log
 
+## 2026-11-21 — body_pose: pack overlay for find anchors / action VFTs
+
+Intent: Customer pack-only builds had `body pose: action slot unread` / `moving=unread` because `body_pose` read `Engine/analysis/registry/*` on disk while those texts live only in TEMP from `analysis_text.pack`. Main/dev trees with plain analysis files were fine.
+Shared: `body_pose._load_find` / `refresh_offsets`; `registry_apply.source_registry` (overlay first); `run_entry.main` calls `refresh_offsets` after `ensure_packed_assets`. No change to login, combat target, HP, party, or MapSubsystem decision logic.
+Affects: travel / loot / search hop “is moving?” reads on pack-only installs. Stale baked MGR/MyPlayer/VFT defaults no longer win when overlay has current registry.
+Side effects: once offsets bind, loot hop should reclick less on false “still” while walking.
+Consent: user (“yes” after unread root-cause / fix plan).
+Result: code wired + incremental release + Stage5 pack (`build_id` `97957950-…`, same CEK). Docs: `RELEASE_BUGFIX_LOG` RBF-008, `RUNTIME_TEMP`, `SENSITIVE_ASSETS`, `STAGE5_MMB2`, `RELEASE_PLAYBOOK`, `INCREMENTAL_RELEASE`, `Docs/architecture/ANALYSIS_MODULES`. Live pack-only confirm: after deploy, log should no longer show `body pose: action slot unread` / `moving=unread` once overlay binds.
+
+## 2026-11-21 — DeviceKey: TPM retry then Soft on first install
+
+Intent: Stop customer License “Create request” failures on laptops where TPM NCrypt returns transient/denied/unknown; prefer TPM, then Soft+DPAPI after short retries so activation works across PCs.
+Shared: `crypto.device_key._first_install` / `_probe_tpm_with_retries` (used by `session.oob_activation`, `licensed_runtime`, License UI). No change to login, movement, combat, HP, party, or MapSubsystem.
+Affects: first-time device binding only; Soft-bound PCs stay Soft; already `meta=tpm` installs still require TPM or seller reset (no silent Soft switch).
+Consent: user (“Yes” to option B + handbook/docs for later releases).
+Docs: `Engine/crypto/LICENSE_HANDBOOK.md`, `OOB_ACTIVATION.md`, `Seller/README.txt`, `packaging/templates/CUSTOMER_README.txt`, `STAGE5_MMB2.md`.
+Result: implemented + unit tests for transient→Soft. Portable `.pyd` needs incremental release before next customer zip.
+
+<<<<<<< HEAD
+## 2026-11-20 — Runtime TEMP / pack path wiring (data access only)
+
+Intent: Connect MMB2/legacy packs to `asset_store` + analysis TEMP materialize so pack-only builds can feed DLLs via absolute paths. No change to login, movement, combat, HP, or party *decision* code.
+Shared: `session.asset_pack`, `session.analysis_temp`, `session.analysis_overlay`, `session.licensed_runtime`, `session.run_entry` (ensure + stale wipe only). Perception/action readers resolve registry *text* through `analysis_registry_file` (DLL paths still `Engine/analysis/dll`).
+Affects: customer pack materialization path, offsets/registry file location (TEMP vs plain analysis). MapId still MapSubsystem-only.
+Consent: user (Runtime TEMP / run_entry next; “로그인·이동·전투·HP·파티 로직 수정 금지”).
+Result: unit tests `Engine/crypto/tests` include TEMP/MMB2 mount/overlay (50 OK). Full in-game Pack-only / hunting baseline still pending Stage5+license artifacts.
+=======
 <<<<<<< HEAD
 ## 2026-11-21 — Spell cancel: key then left-click; drop heal-double recover
 
@@ -260,6 +287,7 @@ Affects: same-map travel, farm search hops, loot approach guides that use `plan_
 Consent: user (“이 알고리듬을 구현하라” — equal-length under 5, random pick, same-map only).
 Result: `Engine/app/_04_decision/tests/test_shortest_path_alternatives.py` (4 passed). Not run in game.
 >>>>>>> navigation_random
+>>>>>>> origin/main
 
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 

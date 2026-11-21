@@ -14,7 +14,15 @@ Others/
 .pytest_cache/
 packaging/
 
+# --- seller secrets / keygen vault (customer must never receive these) ---
+Seller/
+SellerData/
+Engine/crypto/tests/
+Engine/crypto/seller_cli/
+Engine/crypto/license_server/
+
 # --- root launchers excluded from customer pack ---
+Seller_License_Tool.bat
 Bot_Manmabot_Debug.bat
 Tool_Dungeon_Combat.bat
 Tool_Dungeon_Patrol_Editor.bat

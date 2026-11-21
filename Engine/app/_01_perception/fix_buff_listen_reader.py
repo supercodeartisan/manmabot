@@ -32,7 +32,9 @@ def default_dll_path() -> Path:
 
 
 def default_registry_path() -> Path:
-    return _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "LC930_REGISTRY.txt")
 
 
 class BuffListenReader:

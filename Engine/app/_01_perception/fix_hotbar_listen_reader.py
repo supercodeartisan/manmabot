@@ -28,7 +28,9 @@ def default_dll_path() -> Path:
 
 
 def default_offsets_path() -> Path:
-    return _ANALYSIS / "registry" / "skill_offsets.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "skill_offsets.txt")
 
 
 class HotbarListenReader:

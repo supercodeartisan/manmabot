@@ -47,3 +47,7 @@ interception-python==1.13.6
 
 # Party leader socket (Engine/websocket). The bot starts it when the party role is leader.
 websockets==15.0.1
+
+# Phase-1 license / MMB2 (Engine/crypto)
+cryptography>=42.0.0
+rfc8785==0.1.4

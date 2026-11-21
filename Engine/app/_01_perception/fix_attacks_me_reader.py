@@ -18,7 +18,9 @@ def default_dll_path() -> Path:
 
 
 def default_settings_path() -> Path:
-    return _ANALYSIS / "registry" / "settings_attacks_me.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "settings_attacks_me.json")
 
 
 class AttacksMeReader:

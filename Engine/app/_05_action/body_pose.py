@@ -180,40 +180,72 @@ _FIND = {
 _find_ready = False
 
 
-def _load_find() -> None:
-    """Manager, actor list, and MyPlayer id from the live entity table."""
+def _entity_offsets_path() -> Path:
+    """Prefer analysis TEMP overlay (pack-only), else plain Engine/analysis."""
+    try:
+        from session.analysis_overlay import analysis_registry_file
+
+        return analysis_registry_file("registry", "entity_offsets.txt")
+    except Exception:
+        return (
+            Path(__file__).resolve().parents[2]
+            / "analysis"
+            / "registry"
+            / "entity_offsets.txt"
+        )
+
+
+def _load_find(*, force: bool = False) -> None:
+    """Manager, actor list, and MyPlayer id from the live entity table.
+
+    Missing file leaves ``_find_ready`` false so a later pack materialize /
+    overlay can retry (customer ``analysis_text.pack`` path).
+    """
     global _find_ready
-    if _find_ready:
+    if _find_ready and not force:
         return
-    path = Path(__file__).resolve().parents[2] / "analysis" / "registry" / "entity_offsets.txt"
-    if path.is_file():
-        classes = ""
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            text = line.strip()
-            if not text or text.startswith("#") or "=" not in text:
-                continue
-            key, raw = text.split("=", 1)
-            key = key.strip()
-            raw = raw.strip()
-            if key == "CLASSES":
-                classes = raw
-                continue
-            if key not in ("MGR", "ACTOR_VFT"):
-                continue
-            try:
-                _FIND[key] = int(raw, 0)
-            except ValueError:
-                continue
-        for part in classes.split(","):
-            rva, _, name = part.partition(":")
-            if name.strip() != "MyPlayer":
-                continue
-            try:
-                _FIND["MY_PLAYER"] = int(rva.strip(), 16)
-            except ValueError:
-                pass
-            break
+    path = _entity_offsets_path()
+    if not path.is_file():
+        return
+    classes = ""
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        text = line.strip()
+        if not text or text.startswith("#") or "=" not in text:
+            continue
+        key, raw = text.split("=", 1)
+        key = key.strip()
+        raw = raw.strip()
+        if key == "CLASSES":
+            classes = raw
+            continue
+        if key not in ("MGR", "ACTOR_VFT"):
+            continue
+        try:
+            _FIND[key] = int(raw, 0)
+        except ValueError:
+            continue
+    for part in classes.split(","):
+        rva, _, name = part.partition(":")
+        if name.strip() != "MyPlayer":
+            continue
+        try:
+            _FIND["MY_PLAYER"] = int(rva.strip(), 16)
+        except ValueError:
+            pass
+        break
     _find_ready = True
+
+
+def refresh_offsets() -> None:
+    """Re-bind action VFTs and find anchors after analysis overlay is ready.
+
+    Import-time bind often runs before ``ensure_packed_assets`` materializes
+    ``analysis_text.pack`` into TEMP; call this once the overlay is set.
+    """
+    global _find_ready
+    _find_ready = False
+    _bind_action_vfts()
+    _load_find(force=True)
 
 
 def _is_my_player(ent: int) -> bool:
@@ -486,7 +518,9 @@ def _load_hud() -> None:
     global _hud_ready
     if _hud_ready:
         return
-    table = _ANALYSIS / "registry" / "char_offsets.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    table = analysis_registry_file("registry", "char_offsets.txt")
     if table.is_file():
         for line in table.read_text(encoding="utf-8", errors="replace").splitlines():
             text = line.strip()
@@ -609,7 +643,9 @@ def _load_exp_rva() -> None:
     global _exp_ready, _EXP_RVA
     if _exp_ready:
         return
-    path = _ANALYSIS / "registry" / "offsets.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    path = analysis_registry_file("registry", "offsets.json")
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
