@@ -1,0 +1,1 @@
+{"ok":true,"status":0,"pid":6020,"hwnd":"0x60C54","chars":11,"keys":11,"failed":0,"skipped":0,"enter":true,"elapsed_ms":1859,"message":"keyboard slot 5 now=ko/한 hkl=0412 order=영"}

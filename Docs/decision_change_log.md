@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-20 — party bot chat: drop always-on-top, focus LC, longer IC handoff
+
+Intent: Standalone `enter_chat_cli_admin` typed `/초대` into LC, but the party bot logged `typed` with no game input. The bot UI kept always-on-top / foreground, and Interception handoff settle (0.1s) was too short.
+Shared: `chat.focus.prepare_game_chat_focus` (clear this process's TOPMOST, `bring_game_to_front`, restore after), wired in `GameChat.send` / `press_key`; `handoff.RELEASE_SETTLE_S` 0.1→0.4. Invite command stays `/초대`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: automatic and manual party chat (invite / kick / leave / Y) through `send_chat_line` / `type_accept_key`. Restart the leader bot.
+Consent: user (“그렇게 하라” — topmost off, game front, longer handoff).
+Result: implemented. Not re-run in game this turn.
+
+## 2026-11-20 — party chat: KO command + EN/ZH/KO names actually reach LC
+
+Intent: `/초대` stayed Korean; member names may be Hangul, ASCII, or Chinese. `enter_chat` reported `typed` while LC chat got nothing — WM_CHAR PostMessage false OK for ZH, and open-chat sleep let the bot UI steal focus before Hangul Interception keys.
+Shared: `ec_post_char` (Unicode SendInput to foreground first; no PostMessage-only success while the game is front), open-chat settle + forced re-focus for Hangul/ASCII/CJK, `GameChat` `SENDINPUT_FALLBACK` + longer focus/jamo pace. Invite prefix stays `/초대`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: party `/초대` / kick / leave chat lines and any `send_chat_line` mixed text. Restart the leader bot to load `enter_chat.dll` 1.0.1.
+Consent: user (fix input; invite Korean; names may be EN/ZH/KO).
+Result: DLL rebuilt. Live re-type not confirmed in this turn.
+
 <<<<<<< HEAD
 ## 2026-11-19 — UIMessage via analysis DLL + close/relogin/resume
 

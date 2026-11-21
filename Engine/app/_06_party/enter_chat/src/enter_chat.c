@@ -391,7 +391,9 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     }
     if (request->flags & EC_FLAG_OPEN_CHAT) {
         ec_send_vk(&ctx, VK_RETURN);
-        Sleep(280);
+        /* Bot / monitor UI often steals focus during this settle. Hangul
+         * Interception keys and ZH Unicode both need the game in front. */
+        Sleep(450);
     }
 
     /* Opening chat moves focus to the input line. A pinned top-level HWND
@@ -400,17 +402,18 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     if (!request->hwnd || request->hwnd == ctx.hwnd)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
-    /* Opening chat sleeps long enough for the bot UI to take focus back.
-     * Interception strokes go to whichever window is actually in front, so a
-     * failed focus is a failed line — the driver accepting the stroke is not
-     * enough. */
-    if ((plan.has_hangul || plan.has_scan_keys) &&
-        !ec_is_foreground(ctx.hwnd) &&
+    /* Re-take the foreground after open-chat sleep. Interception and Unicode
+     * SendInput both go to whichever window is actually in front — a driver
+     * accept is not enough. Required for Hangul, ASCII names, and Chinese. */
+    if (!(request->flags & EC_FLAG_NO_FOCUS) &&
+        (plan.has_hangul || plan.has_scan_keys || plan.needs_wmchar) &&
         !ec_force_foreground(ctx.hwnd, focus_timeout)) {
         failed++;
         lost_front = 1;
         ec_result_message(res, L"game is not the foreground window");
     }
+    if (!request->hwnd || request->hwnd == ctx.hwnd)
+        ctx.focus = ec_resolve_focus(ctx.hwnd);
 
     /* Read the live IME and the sentence order before any character key.
      * The first run picks 한 or 영. A Hangul syllable later in the line

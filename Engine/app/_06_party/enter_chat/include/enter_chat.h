@@ -44,8 +44,8 @@ extern "C" {
 
 #define EC_VERSION_MAJOR 1
 #define EC_VERSION_MINOR 0
-#define EC_VERSION_PATCH 0
-#define EC_VERSION_STRING L"1.0.0"
+#define EC_VERSION_PATCH 1
+#define EC_VERSION_STRING L"1.0.1"
 
 /* ------------------------------------------------------------------------- */
 /* Status codes                                                              */
