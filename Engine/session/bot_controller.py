@@ -1264,13 +1264,8 @@ class BotController:
         except Exception:
             pass
         merged = apply_recovery_to_spell_slots(
-            merge_detected_spell_slots(
-                detected.spell_slots,
-                previous_slots,
-                cells=list(getattr(detected, "cells", None) or []),
-            ),
+            merge_detected_spell_slots(detected.spell_slots, previous_slots),
             getattr(profile, "hp_actions", None),
-            layout=profile.hotbar_layout,
         )
         profile.spell_slots = spell_slot_bindings(
             apply_antidote_potion_to_spell_slots(

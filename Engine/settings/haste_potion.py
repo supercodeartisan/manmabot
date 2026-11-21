@@ -72,24 +72,26 @@ def resolve_haste_press_slot(
     item_key: str = "",
     assigned_slot: tuple[int, str] | None = None,
     live_snap: Mapping[str, Any] | None = None,
-    layout: Mapping[str, Any] | None = None,
-    world: Any = None,
 ) -> Optional[tuple[int, str]]:
-    """Find haste on the live hotbar list. Setup box/key alone is ignored."""
-    del assigned_slot  # location comes from the bar, not Setup
-    from hotbar.inspect import resolve_hotbar_press
+    """Assigned hotbar cell first; CSV haste role when nothing is assigned.
 
+    Unread live bar (no slots yet) falls back to ``assigned_slot`` only when
+    the operator did not pick a cell (checkbox-only / still scanning).
+    """
     key = str(item_key or "").strip()
-    if key:
-        try:
-            from app._04_decision.hp_actions import find_hp_restore_hotbar
-
-            return find_hp_restore_hotbar(world, key, layout=layout)
-        except Exception:
-            return None
-    return resolve_hotbar_press(
-        "haste", world=world, snap=live_snap, layout=layout
+    bound = (
+        _usable_slot(assigned_slot[0], assigned_slot[1])
+        if assigned_slot is not None
+        else None
     )
+    if key:
+        return bound
+    raw_slots = live_snap.get("slots") if isinstance(live_snap, Mapping) else None
+    if isinstance(raw_slots, list) and raw_slots:
+        from hotbar.inspect import find_role_on_hotbar
+
+        return find_role_on_hotbar(live_snap, "haste")
+    return bound
 
 
 def apply_haste_potion_to_spell_slots(

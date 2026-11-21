@@ -1,5 +1,32 @@
 # Decision change log
 
+## 2026-11-21 — Spell cancel: key then left-click; drop heal-double recover
+
+Intent: Circle clear uses remembered skill key once, then a view **left**-click (right-click did not clear). Remove heal-key double recovery entirely.
+Shared: `cancel_spell_aim` / `_left_click_view`; `clear_spell_aim` retries cancel only (no `recover_cursor_heal_double`). Knight/elf attack spell fail → `cancel_spell_aim`. Self-heal leftover still calls `clear_spell_aim`. Real self-heal double press for HP is unchanged.
+Affects: travel/mage/party cancel, attack circle clear, leftover clear. Not login / retreat / HP gates / shop.
+Side effects: view left-click may walk or mis-click if the cancel point is busy; no heal/MP burn from recover.
+Consent: user (기억한 키 한번 → 안되면 좌클릭; 더블힐 없애라).
+Result: spell-aim / party_list unit tests.
+
+## 2026-11-21 — Self-heal leftover clear + remember spell aim key
+
+Intent: After 11-18 controller restore, re-add the two post-11-18 heal behaviors that party_list tests require: remember `_spell_aim_key` after a successful heal press, and clear leftover spell cursor on self heal (`self heal leftover`).
+Shared: `ActionExecutor._heal` (remember after press; clear when not list_target); `_press_assigned_skill` sets `_last_skill_press` for remember fallback. Party-list aim miss uses `clear_spell_aim` (same as shop-era). Hotbar press path stays 11-18 (`_live_or_assigned_slot`, no `resolve_hotbar_press`).
+Affects: self heal, party-list heal aim tracking/clear. Not movement/login/HP potion gates.
+Side effects: self heal may cancel a leftover circle that was intentional only if cursor still shows SPELL after double-press (intended).
+Consent: user (이 2개를 추가로 구현하자 — after confirming absent on 11-18 / present on shop branch).
+Result: `test_party_list_press_hold` + shop/sell smoke 49 passed.
+
+## 2026-11-21 — Restore 11-18 memory read spec; keep shop humanize
+
+Intent: `modified_humanize_shop` had re-added dual analysis module trees and consumer “bugfixes” (live-hotbar-only press, guid `TrackIds`) that were not required by the 11-18 memory contract. Restore **11-18** (`4e5913a` / `dll/`+`registry/`) memory structure and press/identity consumers; finish shop humanize on that base.
+Shared: analysis dual folders removed; `hotbar/inspect`, `controller._live_or_assigned_slot`, `memory_entities`/`TrackIds`, HP/haste/antidote resolve, `spell_box.slot_is_enabled`, `mode_actions` heal/potion gates restored from 11-18. Shop humanize (`shop/*`, `shop_trip`, `humanize`/`mouse`, sell settle bag force) kept. Knight cursor-heal recover + `cursor_verify` kept (not memory-structure).
+Affects: hotbar press again allows Setup/assigned fallbacks as in 11-18; entity `track_id` again keys heap `ent`. Shop NPC/UI aim and sell tour unchanged in intent.
+Side effects: symptoms those consumer patches targeted (stale Setup key, ent churn sticky) may reappear; treat on 11-18 semantics if needed later — do not reintroduce dual `Hotbar/`/`entities/` trees.
+Consent: user (restore 11-18 memory structure/spec; only extreme-needed edits; complete shop humanize on 11-18 main baseline; prior “error” fixes may not have been errors).
+Result: worktree restored vs `4e5913a` for memory paths; shop/humanize diff retained.
+
 ## 2026-11-19 — Unify: UI wants role → find on live hotbar only
 
 Intent: Operator UI chooses which skills/items to use; the 24-slot hotbar list is the only source of press location. No Setup box/key alone.
