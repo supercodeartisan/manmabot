@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-20 — rear danger uses the same tile and guid, then the march goes on
+
+Intent: A monster only the rear sees is reported on the nav tile, matched by `memory_guid`, and kept when it is past the first eight bodies. `attacked_me` stays a latch and does not open a new danger report. The leader holds the next hop for that fresh danger, or when the hop would leave an engaged member outside `assist_leash_tiles`. A stale reporter is not refreshed by someone else's ordinary sighting. A dropped connection drops that reporter. The melee approach uses the pathfinder's tiles. A turret return waits on the observed tile and does not send a straight click when the search fails. Radii 6 and 8, and the 2 second windows, were not changed.
+Shared: `sightings_from_monsters`, `resolve_local`, `SightingBook.note` / `decide`, `_send_member_sightings`, `_leader_walk_party`, `combat_step`, `_steps`, `_walk_to`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: party moving march, moving farm approach, and turret return. Solo hunt was not retuned.
+Consent: user (this rear-danger pass).
+Result: `test_rear_danger.py` and `test_party_cycle.py` passed. `app/_06_party/tests` passed 331. The same nine failed on a missing `scipy` import (`test_walk_distance_follow.py` 8, `test_a_pile_behind_a_wall_is_out_of_walk_range` 1). Not run in game. `ENGAGE_RADIUS` 6, `CHASE_RADIUS` 8, `TURRET_LOOK_S` 2.0, and `REPORT_FRESH_S` 2.0 were not changed.
+
 ## 2026-11-20 — cycle test: four members, one frame, the click that comes out
 
 Intent: Drive the leader frame through ingest and each member `decide()`, then the leader walk. A member off the polyline walks to that seat's slot, not `tiles[0]`. A side-slot hop is not held because the walk touches the path. A hop whose goal is on the path and past the arrival cap is still shortened. `party_focus` reads `objects()` when that is a method. The attack-tile click is not replaced by a leader follow hop. A stale sighting does not hold the march; a fresh fight does. Turret radii, loot ownership, retreat, and login clicks were not retuned.

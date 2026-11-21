@@ -162,6 +162,7 @@ def test_screen_report_uses_world_tile_and_drops_the_local_track_id():
         memory_guid = "B"
         track_id = 44
         attacked_me = True
+        attacking_me_now = True
 
     origin = type("P", (), {"x": 8, "y": 12})()
     body = sightings_from_monsters(

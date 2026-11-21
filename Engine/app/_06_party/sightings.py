@@ -278,6 +278,18 @@ def choose_focus(
     )
 
 
+def _mob_guid(obj: Any) -> str:
+    """The id shared on the wire. ``memory_guid`` wins; a test double may use ``guid``."""
+    if obj is None:
+        return ""
+    mem = getattr(obj, "memory_guid", None)
+    if mem:
+        return str(mem).strip()
+    if hasattr(obj, "memory_guid"):
+        return ""
+    return str(getattr(obj, "guid", "") or "").strip()
+
+
 def resolve_local(
     spec: Optional[dict[str, Any]],
     monsters: Sequence[Any],
@@ -286,8 +298,10 @@ def resolve_local(
 ) -> Optional[Any]:
     """The one local monster matching ``spec``, or None.
 
-    None means unseen, or two of the same species too close to separate.
-    Callers must not click a stored tile when this returns None.
+    A guid on both sides that differs excludes that body. An exact guid match
+    is not dropped because another of the same species is nearby. With no id,
+    the species and tile must pick exactly one body. Callers must not click a
+    stored tile when this returns None.
     """
     if not isinstance(spec, dict) or bool(spec.get("clear")):
         return None
@@ -298,44 +312,67 @@ def resolve_local(
         y = int(spec.get("y") if spec.get("species") else spec.get("leader_y"))
     except (TypeError, ValueError):
         return None
-    hits = []
+    exact = []
+    spatial = []
     for obj in monsters:
         if obj is None:
             continue
-        obj_guid = str(getattr(obj, "guid", "") or "").strip()
+        obj_guid = _mob_guid(obj)
+        if guid and obj_guid and obj_guid != guid:
+            continue
+        if guid and obj_guid and obj_guid == guid:
+            exact.append(obj)
+            continue
+        if guid:
+            continue
         obj_species = str(
             getattr(obj, "species_name", None) or getattr(obj, "species", "") or ""
         ).casefold()
-        if guid and obj_guid and obj_guid == guid:
-            hits.append(obj)
-            continue
         if species and obj_species != species:
             continue
         tile = _obj_tile(obj, origin)
         if tile is None:
             continue
         if _cheb(tile[0], tile[1], x, y) <= MATCH_TILES:
-            hits.append(obj)
-    if len(hits) != 1:
+            spatial.append(obj)
+    if exact:
+        return exact[0] if len(exact) == 1 else None
+    if len(spatial) != 1:
         return None
-    return hits[0]
+    return spatial[0]
 
 
 def _obj_tile(obj: Any, origin: Any) -> Optional[tuple[int, int]]:
+    """Absolute nav tile. A screen-normalized position is not a tile.
+
+    A memory world cell uses ``game_to_nav``. A screen position needs ``origin``
+    in that same nav space. Missing either, the observation is skipped.
+    """
+    from app._03_world.space.world_coords import memory_nav_tile
+
+    try:
+        cell = memory_nav_tile(obj)
+    except Exception:
+        cell = None
+    if cell is not None:
+        return int(cell[0]), int(cell[1])
     tile = getattr(obj, "tile", None)
     if isinstance(tile, tuple) and len(tile) >= 2:
         return int(tile[0]), int(tile[1])
-    if getattr(obj, "world_cx", None) is not None and getattr(obj, "world_cy", None) is not None:
-        try:
-            return int(obj.world_cx), int(obj.world_cy)
-        except (TypeError, ValueError):
-            return None
     pos = getattr(obj, "position", None)
-    if pos is not None and hasattr(pos, "x"):
-        return int(pos.x), int(pos.y)
-    if origin is not None and hasattr(obj, "rx"):
-        return int(origin.x) + int(getattr(obj, "rx")), int(origin.y) + int(getattr(obj, "ry"))
-    return None
+    if pos is None or not hasattr(pos, "x") or origin is None:
+        return None
+    try:
+        from app._02_state.geometry import WorldOrigin
+        from app._04_decision.combat_query import object_absolute_tile
+
+        nav = origin if hasattr(origin, "map_id") else WorldOrigin(x=int(origin.x), y=int(origin.y))
+        abs_tile = object_absolute_tile(obj, nav)
+    except Exception:
+        return None
+    if abs_tile is None:
+        return None
+    return int(abs_tile[0]), int(abs_tile[1])
 
 
 def client_action(
@@ -391,11 +428,24 @@ class SightingBook:
         self.rows: dict[str, list[dict[str, Any]]] = {}
         self.order: Optional[Focus] = None
         self._sent: Optional[tuple] = None
+        self._seq: dict[str, int] = {}
+        self._session: dict[str, str] = {}
+        self.connected: Optional[set[str]] = None
 
     def clear(self) -> None:
         self.rows.clear()
         self.order = None
         self._sent = None
+        self._seq.clear()
+        self._session.clear()
+        self.connected = None
+
+    def set_connected(self, names: Optional[Sequence[str]]) -> None:
+        """Names still on the wire. None means the leader has not checked."""
+        if names is None:
+            self.connected = None
+            return
+        self.connected = {str(name).strip().casefold() for name in names if str(name).strip()}
 
     def note(self, body: dict[str, Any]) -> None:
         if str(body.get("type") or "") != SIGHTING:
@@ -405,8 +455,24 @@ class SightingBook:
             return
         import time
 
-        stamped = time.monotonic()
         key = who.casefold()
+        session = str(body.get("session") or "")
+        seq = body.get("seq")
+        prev = self._seq.get(key)
+        prev_session = self._session.get(key, "")
+        same_session = not session or not prev_session or session == prev_session
+        if (
+            same_session
+            and isinstance(seq, int)
+            and isinstance(prev, int)
+            and int(seq) < int(prev)
+        ):
+            return
+        if isinstance(seq, int):
+            self._seq[key] = int(seq)
+        if session:
+            self._session[key] = session
+        stamped = time.monotonic()
         mobs = body.get("mobs")
         if isinstance(mobs, list):
             rows = []
@@ -426,13 +492,31 @@ class SightingBook:
         row["_at"] = stamped
         self.rows[key] = [row]
 
-    def decide(self, *, mode: str, current: Optional[dict[str, Any]] = None) -> Optional[Focus]:
+    def fresh_rows(self, *, now: float, fresh_s: float, map_id: Optional[int] = None) -> list[dict[str, Any]]:
+        """Rows still inside the leader's receive window, one reporter at a time."""
         flat: list[dict[str, Any]] = []
-        for rows in self.rows.values():
-            if isinstance(rows, list):
-                flat.extend(row for row in rows if isinstance(row, dict))
-            elif isinstance(rows, dict):
-                flat.append(rows)
+        for key, rows in self.rows.items():
+            if self.connected is not None and key not in self.connected:
+                continue
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                at = row.get("_at")
+                if not isinstance(at, (int, float)) or float(now) - float(at) > float(fresh_s):
+                    continue
+                if map_id is not None and int(row.get("map_id") or 0) != int(map_id):
+                    continue
+                flat.append(row)
+        return flat
+
+    def decide(self, *, mode: str, current: Optional[dict[str, Any]] = None) -> Optional[Focus]:
+        import time
+
+        from app._06_party.moving_fight import REPORT_FRESH_S
+
+        flat = self.fresh_rows(now=time.monotonic(), fresh_s=REPORT_FRESH_S)
         self.order = choose_focus(flat, mode=mode, current=current)
         return self.order
 
@@ -483,6 +567,21 @@ def sightings_message(who: str, map_id: int, mobs: Sequence[dict[str, Any]]) -> 
     }
 
 
+def _report_rank(obj: Any) -> tuple:
+    """Current attacker, then a fight already confirmed, then a plain sighting."""
+    if bool(getattr(obj, "attacking_me_now", False)):
+        band = 0
+    elif bool(getattr(obj, "finish_kill_until_dead", False)):
+        band = 1
+    else:
+        band = 2
+    guid = _mob_guid(obj)
+    species = str(
+        getattr(obj, "species_name", None) or getattr(obj, "species", "") or ""
+    ).casefold()
+    return (band, guid, species)
+
+
 def sightings_from_monsters(
     monsters: Sequence[Any],
     *,
@@ -493,36 +592,41 @@ def sightings_from_monsters(
     self_hp: Optional[int] = None,
     heading: Optional[tuple[int, int]] = None,
 ) -> dict[str, Any]:
-    """What this client can see. ``attacked_me`` names this character as the victim.
+    """What this client can see. A hit *this observation* names the victim.
 
-    A monster with no tile is omitted. With a march heading, a monster behind
-    the party is marked ``detour`` unless it is already hitting someone.
+    ``attacked_me`` only remembers an earlier hit and does not open a new
+    danger report. ``force_attacks_me`` is a synthetic the attack row owns;
+    the current-tick flag is ``attacking_me_now``. The send cap stays 8, filled
+    after the whole screen is ranked. A monster with no tile is omitted.
     """
+    ranked = sorted(list(monsters or []), key=_report_rank)
     mobs = []
-    for obj in list(monsters or [])[:8]:
+    for obj in ranked:
+        if len(mobs) >= 8:
+            break
         species = str(
             getattr(obj, "species_name", None) or getattr(obj, "species", "") or ""
         ).strip()
         tile = _obj_tile(obj, origin)
         if not species or tile is None:
             continue
-        attacked = bool(getattr(obj, "attacked_me", False) or getattr(obj, "force_attacks_me", False))
+        attacking = bool(getattr(obj, "attacking_me_now", False))
+        confirmed = bool(getattr(obj, "finish_kill_until_dead", False))
         near = False
         if origin is not None and hasattr(origin, "x"):
             near = _cheb(tile[0], tile[1], int(origin.x), int(origin.y)) <= SIGHT_ATTACK_TILES
-        guid = str(getattr(obj, "memory_guid", None) or getattr(obj, "guid", "") or "").strip()
         row: dict[str, Any] = {
             "species": species,
-            "guid": guid,
+            "guid": _mob_guid(obj),
             "x": tile[0],
             "y": tile[1],
-            "victim": who if attacked else "",
-            "can_attack": near or attacked,
-            "engaged": attacked,
+            "victim": who if attacking else "",
+            "can_attack": near or attacking,
+            "engaged": attacking or confirmed,
             "role": role,
-            "detour": _behind(origin, tile, heading) and not attacked,
+            "detour": _behind(origin, tile, heading) and not attacking,
         }
-        if attacked and self_hp is not None:
+        if attacking and self_hp is not None:
             row["victim_hp"] = int(self_hp)
         mobs.append(row)
     return sightings_message(who, map_id, mobs)

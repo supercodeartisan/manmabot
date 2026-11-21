@@ -451,29 +451,81 @@ def _hold_outside(blackboard: "Blackboard", now: Optional[float]) -> bool:
 
 
 def _walk_to(blackboard: "Blackboard", goal: Tile, reason: str) -> Optional[Status]:
+    """Click a verified hop, then wait on the observed tile.
+
+    The same goal does not mean the body has arrived. A click, a walk, an
+    intermediate hop, and a stall are separate. One late pose does not click
+    again. A search that does not return a hop does not send a straight click.
+    """
+    import time
+
     from app._04_decision.nav_config import get_terrain_map
     from app._04_decision.pathfinding import plan_travel_click, waypoint_to_content
+    from app._06_party.follow import FOLLOW_STUCK_S
+
+    goal_t = (int(goal[0]), int(goal[1]))
+    origin = blackboard.world_origin
+    me = None
+    if origin is not None and getattr(origin, "x", None) is not None:
+        me = (int(origin.x), int(origin.y))
+    now = time.monotonic()
+
+    def _idle(why: str) -> Status:
+        blackboard.current_goal = "party_turret"
+        blackboard.emit(ActionType.IDLE, priority=0.2, reason=why)
+        return Status.SUCCESS
+
+    if me == goal_t:
+        for key in (
+            "party_turret_issued",
+            "party_turret_at",
+            "party_turret_hop",
+            "party_turret_stuck_at",
+        ):
+            blackboard.scratch.pop(key, None)
+        return _idle("party turret arrived")
 
     issued = blackboard.scratch.get("party_turret_issued")
-    if issued == (int(goal[0]), int(goal[1])):
-        blackboard.current_goal = "party_turret"
-        blackboard.emit(
-            ActionType.IDLE,
-            priority=0.2,
-            reason="party turret wait on anchor",
-        )
-        return Status.SUCCESS
-    blackboard.scratch["party_turret_issued"] = (int(goal[0]), int(goal[1]))
-    origin = blackboard.world_origin
+    last = blackboard.scratch.get("party_turret_at")
+    if issued == goal_t and me is not None and isinstance(last, tuple):
+        last_t = (int(last[0]), int(last[1]))
+        hop = blackboard.scratch.get("party_turret_hop")
+        hop_t = (int(hop[0]), int(hop[1])) if isinstance(hop, tuple) else None
+        if last_t != me:
+            blackboard.scratch["party_turret_at"] = me
+            blackboard.scratch["party_turret_stuck_at"] = now
+            if hop_t is not None and me != hop_t:
+                return _idle("party turret wait on anchor")
+        else:
+            since = blackboard.scratch.get("party_turret_stuck_at")
+            if not isinstance(since, (int, float)):
+                blackboard.scratch["party_turret_stuck_at"] = now
+                return _idle("party turret wait on anchor")
+            if now - float(since) < FOLLOW_STUCK_S:
+                return _idle("party turret wait on anchor")
+
     dest = None
+    hop_tile = None
     terrain = get_terrain_map()
     if terrain is not None and origin is not None:
         try:
-            dest, _path, _wp = plan_travel_click(terrain, origin, goal)
+            dest, _path, wp = plan_travel_click(terrain, origin, goal)
+            if isinstance(wp, tuple) and len(wp) >= 2:
+                hop_tile = (int(wp[0]), int(wp[1]))
         except Exception:
             dest = None
+    if dest is None and terrain is not None:
+        return _idle("party turret no path")
     if dest is None and origin is not None:
         dest = waypoint_to_content(goal, origin)
+        hop_tile = goal_t
+    if dest is None:
+        return _idle("party turret no path")
+    blackboard.scratch["party_turret_issued"] = goal_t
+    blackboard.scratch["party_turret_hop"] = hop_tile or goal_t
+    blackboard.scratch["party_turret_stuck_at"] = now
+    if me is not None:
+        blackboard.scratch["party_turret_at"] = me
     blackboard.current_goal = "party_turret"
     blackboard.emit(
         ActionType.TRAVELING,

@@ -1173,17 +1173,26 @@ class PartyMemberManager:
             and me_tile is not None
             and leader_tile is not None
         ):
-            from .farm_yard import path_length, tile_from_obj
+            from .farm_yard import tile_from_obj
             from .moving_fight import combat_step
 
             def _steps(start, stand):
                 try:
-                    walked = path_length(start, stand)
+                    from app._04_decision.nav_config import get_terrain_map
+                    from app._04_decision.pathfinding import plan_travel_click
+
+                    terrain = get_terrain_map()
+                    if terrain is None:
+                        return None
+                    origin = type("Tile", (), {"x": int(start[0]), "y": int(start[1])})()
+                    _dest, path, _wp = plan_travel_click(
+                        terrain, origin, (int(stand[0]), int(stand[1]))
+                    )
                 except Exception:
                     return None
-                if walked is None:
+                if not path:
                     return None
-                return [stand] * max(0, int(walked))
+                return [(int(p[0]), int(p[1])) for p in path]
 
             mob_tile = tile_from_obj(assist_obj, origin)
             if mob_tile is None:

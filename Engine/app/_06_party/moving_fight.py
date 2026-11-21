@@ -56,10 +56,19 @@ def combat_step(
                 path = path_for(me, stand)
             except Exception:
                 path = None
-        if path:
-            walk = len(path)
+        if path_for is not None:
+            if not path:
+                continue
+            tiles = [(int(p[0]), int(p[1])) for p in path]
+            if tiles and tiles[0] == (int(me[0]), int(me[1])):
+                steps = tiles[1:]
+            else:
+                steps = tiles
+            if not steps or steps[-1] != (int(stand[0]), int(stand[1])):
+                continue
+            walk = len(steps)
             outside = support_from is not None and any(
-                _cheb((int(p[0]), int(p[1])), support_from) > support for p in path
+                _cheb(p, support_from) > support for p in steps
             )
         else:
             walk = _cheb(me, stand)
@@ -114,6 +123,7 @@ def march_hold_reason(
     hop: Optional[Tile] = None,
     guide: Sequence[Tile] = (),
     engaged_member: Optional[Tile] = None,
+    engaged_members: Sequence[Tile] = (),
     support_tiles: int = 10,
 ) -> str:
     """Why the next march hop waits. ``\"\"`` means the path may continue.
@@ -128,15 +138,16 @@ def march_hold_reason(
         return "fight"
     if hot:
         return "rear"
-    if (
-        not hot
-        and engaged_member is not None
-        and hop is not None
-        and here is not None
-        and _cheb(here, engaged_member) <= int(support_tiles)
-        and _cheb(hop, engaged_member) > int(support_tiles)
-    ):
-        return "support"
+    spots: list[Tile] = []
+    if engaged_member is not None:
+        spots.append((int(engaged_member[0]), int(engaged_member[1])))
+    for spot in engaged_members or ():
+        spots.append((int(spot[0]), int(spot[1])))
+    if hop is not None and here is not None:
+        leash = int(support_tiles)
+        for spot in spots:
+            if _cheb(here, spot) <= leash and _cheb(hop, spot) > leash:
+                return "support"
     return ""
 
 

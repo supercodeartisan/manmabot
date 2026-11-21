@@ -458,3 +458,109 @@ def test_cycle_from_the_leaders_frame_to_each_click(monkeypatch, orders, world):
     assert turret.current_target_id is None or turret.scratch.get("party_turret", {}).get("anchor") == (100, 100)
     book.clear()
     orders.party_focus = None
+
+
+def test_rear_danger_holds_then_the_march_resumes(orders, world) -> None:
+    """The leader never sees the mob. The report, the knight's click, and the hop are real."""
+    from app._02_state.objects import ObjectType, Position, WorldObject
+    from app._06_party.sightings import book, resolve_local, sightings_from_monsters
+    from app._06_party.tests.test_make_way_pace import _Clock, _leader_controller
+
+    def _mob(track, guid, cx, cy, *, hitting=False, latch=False, uv=(0.2, 0.3)):
+        return WorldObject(
+            track_id=track,
+            object_type=ObjectType.MONSTER,
+            species_name="orc",
+            position=Position(x=uv[0], y=uv[1]),
+            world_cx=cx,
+            world_cy=cy,
+            memory_guid=guid,
+            attacking_me_now=hitting,
+            attacked_me=latch,
+        )
+
+    origin = SimpleNamespace(x=8, y=10)
+    crowd = [_mob(i, f"idle-{i}", 20 + i, 10) for i in range(8)]
+    attacker = _mob(9, "A", 12, 10, hitting=True, uv=(0.8, 0.7))
+    same = sightings_from_monsters(
+        crowd + [attacker], who="Mage", map_id=4, origin=origin, role="mage", self_hp=80,
+    )
+    other_screen = sightings_from_monsters(
+        [_mob(9, "A", 12, 10, hitting=True, uv=(0.1, 0.9))],
+        who="Mage", map_id=4, origin=SimpleNamespace(x=4, y=10), role="mage", self_hp=80,
+    )
+    assert same["mobs"][0]["guid"] == "A"
+    assert (same["mobs"][0]["x"], same["mobs"][0]["y"]) == (
+        other_screen["mobs"][0]["x"], other_screen["mobs"][0]["y"],
+    )
+    assert "track_id" not in same["mobs"][0]
+    latch = sightings_from_monsters(
+        [_mob(9, "A", 12, 10, hitting=False, latch=True)],
+        who="Mage", map_id=4, origin=origin, role="mage", self_hp=80,
+    )
+    assert latch["mobs"][0]["victim"] == ""
+
+    book.clear()
+    book.note(same)
+    focus = book.decide(mode="moving")
+    assert focus is not None and focus.guid == "A"
+    body = book.take_message()
+    assert body is not None
+    _deliver(orders, body)
+
+    members, _policy = _members(orders)
+    knight = members["Knight"]
+    knight.set_world_origin(SimpleNamespace(x=10, y=10))
+    only_b = _mob(3, "B", 13, 10, uv=(0.6, 0.6))
+    party = _party({"Lead": (11, 10), "Knight": (10, 10), "Mage": (1, 10)})
+    missed = knight.decide(_state("Knight", CharacterType.KNIGHT, (10, 10), party, [only_b]))
+    assert knight.runtime.assist_track_id is None
+    assert resolve_local({"species": "orc", "guid": "A", "x": 12, "y": 10}, [only_b]) is None
+    seen_a = _mob(9, "A", 12, 10, hitting=False, uv=(0.8, 0.7))
+    book.note(sightings_from_monsters(
+        [only_b, seen_a], who="Knight", map_id=4, origin=SimpleNamespace(x=10, y=10), role="member",
+    ))
+    named = book.decide(mode="moving")
+    assert named is not None and named.support == "Knight" and named.guid == "A"
+    updated = book.take_message()
+    assert updated is not None
+    _deliver(orders, updated)
+    seen = knight.decide(_state(
+        "Knight", CharacterType.KNIGHT, (10, 10), party, [only_b, seen_a],
+    ))
+    assert knight.runtime.assist_track_id == seen_a.track_id
+    assert seen is not None
+
+    clock = _Clock()
+    ctl, walk = _leader_controller(clock)
+    ctl._leader_turret_on = lambda: False
+    ctl._party_profile = SimpleNamespace(assist_leash_tiles=10)
+    leader_world = SimpleNamespace(
+        party_read_ok=False,
+        party_connected=["Mage", "Knight", "Archer"],
+        last_party=_party({"Lead": (10, 10), "Mage": (1, 10), "Knight": (10, 10)}),
+    )
+    board = SimpleNamespace(
+        world_origin=SimpleNamespace(x=10, y=10),
+        nav_path=[(10, 10), (12, 10), (14, 10)],
+        nav_waypoint=(12, 10),
+        player_mode=None,
+        current_target_id=None,
+    )
+    click = SimpleNamespace(action=ActionType.TRAVELING, reason="patrol", priority=0.5, destination=None)
+    held = walk(ctl, leader_world, board, click, 4)
+    assert held.action is ActionType.IDLE
+    assert board.nav_path
+
+    ordinary = sightings_from_monsters(
+        [_mob(4, "C", 30, 10)], who="Archer", map_id=4, origin=origin, role="member",
+    )
+    book.note(ordinary)
+    leader_world.party_connected = ["Knight", "Archer"]
+    board.nav_path = [(10, 10), (11, 10)]
+    board.nav_waypoint = (11, 10)
+    resumed = walk(ctl, leader_world, board, click, 4)
+    assert resumed.action is ActionType.TRAVELING
+    assert missed.action is not None
+    book.clear()
+    orders.party_focus = None

@@ -2253,6 +2253,11 @@ class BotController:
             self.log(f"Party recovery sent to {sent} member(s)")
         self._party_tree_trip = trip
         self._publish_party_policy()
+        names = getattr(world, "party_connected", None)
+        if names is not None:
+            from app._06_party.sightings import book as sighting_book
+
+            sighting_book.set_connected(names)
         self._publish_party_focus()
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
@@ -2332,38 +2337,60 @@ class BotController:
 
             from app._06_party.moving_fight import REPORT_FRESH_S, march_hold_reason
 
-            order = sighting_book.order
-            hot = order is not None and str(getattr(order, "band", "")) in (
-                "dying",
-                "attacking",
+            names = getattr(world, "party_connected", None)
+            if names is not None:
+                sighting_book.set_connected(names)
+            fresh = sighting_book.fresh_rows(
+                now=_time.monotonic(),
+                fresh_s=REPORT_FRESH_S,
+                map_id=int(map_id) if map_id is not None else None,
             )
-            newest = None
-            for rows in sighting_book.rows.values():
-                for row in rows if isinstance(rows, list) else []:
-                    at = row.get("_at") if isinstance(row, dict) else None
-                    if isinstance(at, (int, float)):
-                        newest = at if newest is None else max(newest, float(at))
-            age = None if newest is None else _time.monotonic() - float(newest)
+            hot_rows = [
+                row for row in fresh
+                if str(row.get("victim") or "").strip()
+            ]
+            hot = bool(hot_rows)
+            age = 0.0 if hot else None
             hop = getattr(blackboard, "nav_waypoint", None)
             hop_tile = (
                 (int(hop[0]), int(hop[1]))
                 if isinstance(hop, tuple) and len(hop) >= 2
                 else None
             )
-            other_map = (
-                order is not None
-                and map_id is not None
-                and int(getattr(order, "map_id", map_id) or 0) != int(map_id)
-            )
+            engaged_names = set()
+            for row in fresh:
+                if str(row.get("victim") or "").strip():
+                    engaged_names.add(str(row.get("victim")).strip().casefold())
+                elif bool(row.get("engaged")):
+                    who = str(row.get("who") or row.get("from") or "").strip().casefold()
+                    if who:
+                        engaged_names.add(who)
+            engaged_tiles = []
+            snap = getattr(world, "last_party", None)
+            members = snap.get("members") if isinstance(snap, dict) else None
+            for member in members or []:
+                if not isinstance(member, dict):
+                    continue
+                if str(member.get("name") or "").strip().casefold() not in engaged_names:
+                    continue
+                try:
+                    from app._03_world.merge.memory_sync import game_to_nav
+
+                    engaged_tiles.append(game_to_nav(int(member.get("x")), int(member.get("y"))))
+                except (TypeError, ValueError):
+                    continue
+            profile = getattr(self, "_party_profile", None)
+            leash = int(getattr(profile, "assist_leash_tiles", 10) or 10)
             why = march_hold_reason(
                 leader_fighting=getattr(blackboard, "current_target_id", None) is not None,
                 rear_hot=hot,
-                report_age=0.0 if hot and age is None else age,
+                report_age=age,
                 fresh_s=REPORT_FRESH_S,
-                other_map=other_map,
                 here=here,
                 hop=hop_tile,
                 guide=guide,
+                engaged_members=engaged_tiles,
+                support_tiles=leash,
             )
             if why:
                 pace_idle = True
@@ -3190,13 +3217,13 @@ class BotController:
             pose = None
         if pose is None:
             return
-        monsters = []
         getter = getattr(world, "monsters", None)
-        if callable(getter):
-            try:
-                monsters = list(getter() or [])
-            except Exception:
-                monsters = []
+        if not callable(getter):
+            return
+        try:
+            monsters = list(getter() or [])
+        except Exception:
+            return
         player = getattr(world, "player", None)
         hp = getattr(player, "hp_percent", None) if player is not None else None
         if not isinstance(hp, (int, float)) and player is not None:
@@ -3213,8 +3240,16 @@ class BotController:
             raw_heading = scratch.get("formation_heading") if isinstance(scratch, dict) else None
             if isinstance(raw_heading, tuple) and len(raw_heading) >= 2:
                 heading = (int(raw_heading[0]), int(raw_heading[1]))
-        origin = type("Tile", (), {"x": int(pose.x), "y": int(pose.y)})()
+        from app._03_world.merge.memory_sync import game_to_nav
+
+        try:
+            nav_x, nav_y = game_to_nav(int(pose.x), int(pose.y))
+        except Exception:
+            return
+        origin = type("Tile", (), {"x": int(nav_x), "y": int(nav_y)})()
         map_id = int(pose.map_id)
+        seq = int(getattr(self, "_sighting_seq", 0) or 0) + 1
+        self._sighting_seq = seq
         body = sightings_from_monsters(
             monsters,
             who=name,
@@ -3224,6 +3259,10 @@ class BotController:
             self_hp=int(hp) if isinstance(hp, (int, float)) else None,
             heading=heading,
         )
+        body["seq"] = seq
+        session = str(getattr(self, "_party_session", "") or "")
+        if session:
+            body["session"] = session
         try:
             ok = bool(self._party_comms.send_sighting(body))
         except Exception:
