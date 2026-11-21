@@ -1,5 +1,236 @@
 # Decision change log
 
+<<<<<<< HEAD
+## 2026-11-20 — party bot chat: drop always-on-top, focus LC, longer IC handoff
+
+Intent: Standalone `enter_chat_cli_admin` typed `/초대` into LC, but the party bot logged `typed` with no game input. The bot UI kept always-on-top / foreground, and Interception handoff settle (0.1s) was too short.
+Shared: `chat.focus.prepare_game_chat_focus` (clear this process's TOPMOST, `bring_game_to_front`, restore after), wired in `GameChat.send` / `press_key`; `handoff.RELEASE_SETTLE_S` 0.1→0.4. Invite command stays `/초대`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: automatic and manual party chat (invite / kick / leave / Y) through `send_chat_line` / `type_accept_key`. Restart the leader bot.
+Consent: user (“그렇게 하라” — topmost off, game front, longer handoff).
+Result: implemented. Not re-run in game this turn.
+
+## 2026-11-20 — party chat: KO command + EN/ZH/KO names actually reach LC
+
+Intent: `/초대` stayed Korean; member names may be Hangul, ASCII, or Chinese. `enter_chat` reported `typed` while LC chat got nothing — WM_CHAR PostMessage false OK for ZH, and open-chat sleep let the bot UI steal focus before Hangul Interception keys.
+Shared: `ec_post_char` (Unicode SendInput to foreground first; no PostMessage-only success while the game is front), open-chat settle + forced re-focus for Hangul/ASCII/CJK, `GameChat` `SENDINPUT_FALLBACK` + longer focus/jamo pace. Invite prefix stays `/초대`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: party `/초대` / kick / leave chat lines and any `send_chat_line` mixed text. Restart the leader bot to load `enter_chat.dll` 1.0.1.
+Consent: user (fix input; invite Korean; names may be EN/ZH/KO).
+Result: DLL rebuilt. Live re-type not confirmed in this turn.
+
+<<<<<<< HEAD
+## 2026-11-19 — UIMessage via analysis DLL + close/relogin/resume
+
+Intent: Farm worker must detect connection vs operator-policy popups (KO/ZH body text) through the standard Engine/analysis LCAPI DLL path, not exe spawn. Policy → stop farm, close game, no autologin, warning. Disconnect → stop farm, close game, autologin, resume same map/time.
+Shared: `BotController._check_uimsg_session` / `auto_pause_tick`, `close_game_client`, `OperatorCoordinator.poll` / `main_window._poll`, `prepare_session` recovery arming. Hunt/move/HP helpers unchanged.
+Affects: RUNNING/PAUSED supervision only. Resume file `userdata/hunt_resume.json` restores `routine_cursor` index/elapsed + `farm_area_index` after relogin.
+Consent: user (“dll로 변환… 농장워커… 정책…경고… 연결…자동로그인…지도와 시간이력”).
+Result: `analysis/src/api/uimsg_api.c` → `dll/uimsg.dll`; `session/uimsg_probe.py` (CDLL count=1); `session/hunt_resume.py`; Qt/Tk policy alert. Unit tests for classify + resume apply. Live popup not re-run in this turn.
+
+## 2026-11-19 — UIMessage disconnect / policy stop (30s)
+
+Intent: While the LC window stays open, disconnect (`與伺服器連線中斷`) and operator-policy popups were invisible to `probe_game`; the farm worker kept hunting. Detect via `uimsg_1021` (CommonMessageSubsystem), not vitals.
+Shared: `BotController.auto_pause_tick` (+ `_check_uimsg_session`), `OperatorCoordinator.poll` / `main_window._poll`. Farm decision/move/HP helpers unchanged.
+Affects: RUNNING/PAUSED supervision. `session_disconnected` → same recovery arming as `game_closed` when `resume_after_relogin`. `session_policy_block` → stop, **no** auto-relogin.
+Consent: user (uimsg_1021 every 30s for connection + policy).
+Result: Superseded by DLL + close/relogin/resume entry above.
+
+## 2026-11-19 — AUTH relaunch: hand off before boot-status UI dies
+
+Intent: After AUTH close+relaunch, S1/v2 was blocking ~2 min (nested `_game_ready(120)` + long S4 focus) so boot-shake templates never reached S5. Guarantee shake can run without breaking normal login.
+Shared: `purple.engine` GLFW poll (single-shot, early handoff), S1 shake fast path when hwnd ready, `handoff.apply_handoff` / S4 keep `shake_armed` and shorten foreground when armed.
+Affects: Purple→game handoff timing after AUTH relaunch; normal cold login still waits for GLFW then S5. Farm/move/HP/recovery untouched.
+Consent: user (“좋다. 전체 프로젝트의 안정성을 보장하라”).
+Result: regression tests include S1 fast path + handoff preserve + non-blocking game poll. Live AUTH relaunch not re-run yet.
+
+## 2026-11-19 — Port 11_11 Purple UIA v2 + Interception + char select
+
+Intent: Bring every 11_11autologin advantage into Manmabot without breaking AutoLoginService / OperatorCoordinator / recovery / GameFlow AUTH·KO shake.
+Shared: S1–S3 now call `purple.facade` when `purple_engine=v2`; `handoff.apply_handoff` sets `_purple_logged_in` + GAME_LOGIN for S4/S5. `win/interception.py` injection-only + correct RIGHT/MIDDLE/WHEEL constants. `GameFlow._select_character` YOLO-first. S5 `shake_armed` syncs both ways from `_shake_after_relaunch`.
+Affects: Purple cold login path (UIA AutomationId instead of vision S2), mouse neutralize after login, character slot picking. Does not change farm/move/HP, session `restore_desktop_input`, or mapId.
+Consent: user (“11_11의 우점들을 모두 가져와서 … 흐름도를 분석한다음 구현”).
+Result: package `Engine/autologin/bot/purple/`, scripts `purple_probe`/`purple_contract`/`trace_common`, stages S1–S3 from 11_11, `launcher_config` + `build_transient_config` default `purple_engine=v2`. Also ported boot-shake hunt expiry / late-shake reject / AUTH detect after hunt, and YOLO-first char select. Regression `scripts/test_auth_and_interception_regressions.py` → **14 passed**. Live Purple/game not run yet.
+
+## 2026-11-19 — Korean boot-shake templates (matching only)
+
+Intent: AUTH relaunch shake must recognize Korean status pills as well as zh, via one shared template bank. No language priority in matching; keep match under ~1s.
+Shared: `GameFlow` boot_shake matching only (`_ANCHOR_FILES`, `_load_anchors`, `_match_boot_shake_status`). Hunt/pin/shake orchestration left as before. Purple S2, agree/server/char, HP/move helpers unchanged.
+Affects: which PNG bank boot_shake searches (zh + ko). Match path: grayscale ROI, short scales, early-exit, per-grab cache.
+Consent: user (KO templates; do not split ko/zh for matching; scope is template matching only).
+Result: `boot_shake_security_ko.png` / `boot_shake_device_ko.png` added. Watch-path experiments reverted. Not run in game yet.
+=======
+## 2026-11-19 — Unify: UI wants role → find on live hotbar only
+
+Intent: Operator UI chooses which skills/items to use; the 24-slot hotbar list is the only source of press location. No Setup box/key alone.
+Shared: `resolve_hotbar_press` / `find_role_on_layout`; `_live_or_assigned_slot` + `heal_press_slot` + haste/antidote resolve; `slot_is_enabled` = checkbox only (box may be 0); merge with `cells=` keeps wants without inventing empty-cell keys; `_press_assigned_skill` re-resolves forced slots on the bar.
+Affects: heal, potions, buffs/roles via assigned skill, talking scroll (still boot-scan gated), teleport/mother_tree/etc.
+Side effects: role enabled but missing from bar → no press (correct).
+Consent: user (통일 — 핫바 목록에서 대면부 설정분만 찾아 씀).
+Result: resolve/merge/party/hp unit tests green; catalog buff + depoison + mage named also re-check live bar.
+
+## 2026-11-19 — Hotbar roles from live cells only (no stale Setup potion)
+
+Intent: Stop pressing Setup ``hp_potion@box2/f11`` when that cell is actually a spell (風刃). Live scan / layout name must own skill and item keys.
+Shared: `merge_detected_spell_slots(..., cells=)` blocks filled cells; `apply_recovery_to_spell_slots(..., layout=)` refuses mismatched rebind; `find_hp_restore_hotbar` no Setup fallback; `_can_potion_now` / potion side / `_use_hp_potion` / `_live_or_assigned_slot("hp_potion")` require live potion cell.
+Affects: HP potion side, heal slot prefer-live, hotbar boot merge. Buff/other roles still scan-first then empty-cell previous only.
+Side effects: no HP potion presses until a potion icon is on the bar.
+Consent: user (핫바에서 읽고 쓰지, 설정 허튼 칸 금지).
+Result: merge + live potion unit tests.
+
+## 2026-11-19 — All hotbar presses: no mouse interference
+
+Intent: Same as heal — any skill/item key (shield, potion, buff, heal, …) must not race a mouse move/click mid-press.
+Shared: `_begin_skill_mouse_quiet` / `_end_skill_mouse_quiet` on `_press_box_skill`, full double gap on `_press_assigned_skill` + `_press_catalog_buff`. `recover_cursor_heal_double` still quiets its own double. Party-list row click stays after aim wait (outside quiet).
+Affects: heal, armor/power buff, potions, teleport, mage key press, cursor recover.
+Consent: user (힐뿐 아니라 실드·포션 등 모든 스킬).
+Result: quiet gate on shared press path.
+
+## 2026-11-19 — Heal double: no mouse interference
+
+Intent: Heal-key double (self + cursor recover) must not race a mouse move/click; concurrent hop/attack click mid-press leaves the cast circle up.
+Shared: `MouseController.begin_quiet`/`end_quiet` (blocks move/click/hold; release still allowed), wrap self `_heal` double + `recover_cursor_heal_double` (drop_mouse then quiet). Party-list heal click unchanged (after aim wait).
+Affects: heal, cursor recover, any mouse path during that window.
+Consent: user (힐 두 번 누를 때 마우스 클릭 간섭 금지).
+Result: quiet gate test.
+
+## 2026-11-19 — Wrong-cursor recovery = heal key double
+
+Intent: When the mouse cursor is wrong (spell circle / failed attack verify), recover by pressing heal twice (same as self-cast), not skip-only / exclude.
+Shared: `recover_cursor_heal_double`, `clear_spell_aim` (heal-double first, then one cancel fallback), knight/elf attack fail path. Travel/heal leftover still call `clear_spell_aim`. 1s recover cooldown. Esc unused.
+Affects: combat attack reject, travel/loot spell clear, heal hotkey (may actually heal / spend MP).
+Side effects: heal double while stuck on a corpse; cooldown can delay a second recover.
+Consent: user (“복구처리는 힐건반을 다시 두번 누르라”).
+Result: unit tests for heal-double recover / clear.
+
+## 2026-11-19 — Eradicate leftover spell circle blocking travel
+
+Intent: After party-buff work (`ded020d`) cancel dropped Esc and self heal never remembered its key or checked the cursor, so a leftover cast circle stalled search/loot hops (`spell aim cancel still=spell`). Elf still arrow-attacked; the circle only blocked movement.
+Shared: `clear_spell_aim` (retry key toggle + view RMB), self `_heal` remember+clear, travel pre-clear + `clear_spell_aim` on spell probe, post potion-side clear. Esc still unused (system menu).
+Affects: heal, travel/search/loot hop, potion-side overlap. Not attack targeting / mage cast path.
+Side effects: up to 3 clear rounds of skill-key toggle + view right-click when a circle is stuck.
+Consent: user (“퇴치하라” — eradicate the new circle stall).
+Result: tests for clear + self-heal leftover.
+
+## 2026-11-19 — TrackIds prefer guid over heap ent (mainline)
+
+Intent: Farm loot walked to FREE/MINE piles then stalled (`loot track hold` / sticky release) because int `track_id` was keyed on print_state heap `ent`. Same game `guid` still in the roster got a new track id → false “gone.” Ownership gate was fine (`allowed=1`).
+Shared: `TrackIds` / `entities_to_handoff` / `_track_key` (`guid:…` when usable, else `ent:…`). Sticky APIs still int ids; loot blink hold (guid+kind+cell) kept as backup for guid-less rows. Combat species+cell rebind comments updated.
+Affects: **mainline** print_state→GameState tracks (loot, combat, players with guid). YOLO unchanged.
+**Not** shop / `modified_humanize_shop` (document separately; no shared shop files).
+Consent: user (fix ent-vs-guid track identity; then document as mainline, not shop branch).
+Detail: `Docs/decision/TRACK_ID_GUID.md`.
+Result: same guid keeps track_id across ent change; `test_track_ids_guid.py`.
+
+## 2026-11-19 — Policy: no sell re-open; verify via bag read
+
+Intent: Treat post-sell shop re-open/re-confirm as **forbidden**. Leftover check is bag/WEIGHT after settle, aligned with “no other shop state until bag was given a read window.”
+Shared: docs only (`SELL_TOUR.md` principle). Live path already one open + one confirm; warehouse skips on unread bag. No reopen loop restored.
+Consent: user (re-open must go; re-check via bag read; same as no-move-before-bag-read).
+Gap (not changed this turn): unread bag after settle **skips** warehouse rather than **holding** until `bag_ready`; next-merchant arm uses settle weight but does not hard-gate on `bag_ready`. Holding until ready would need a separate consent.
+Result: principle documented. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop stage wait jitter + pre-confirm fidget scroll
+
+Intent: Soften metronomic shop stage sleeps (±10–15%). After buy/sell row selection (and qty), before confirm, add 2–4 accidental down-right wheel glances at 0.3–0.5s gaps.
+Shared: `humanize.shop_stage_sleep` / `SHOP_STAGE_WAIT_JITTER`, `runtime._stage_sleep`, `_pre_confirm_fidget` on calibrated buy/sell + recover confirm. NPC aim, sell tour gates, buy memory match (still unimplemented), HP/login unchanged.
+Consent: user (stage wait 10–15% jitter; pre-confirm random 2–4 down-right scrolls at 0.3–0.5s).
+Result: `UI_AIM.md` notes. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Buy memory row match deferred (documented only)
+
+Intent: Record that calibrated buy still uses fixed YAML `item_index` (not live `shop_listen` buy rows) as an **unimplemented** follow-up. Also note buy does **not** tour multiple merchants — one resolved NPC per need kind.
+Shared: none (docs only). No `execute_calibrated_buy` / decide / sell changes.
+Consent: user (leave proposal documented as unimplemented; verify buy does not fixed-circuit merchants).
+Result: `Engine/shop/BUY.md`; `LOGIC_OVERVIEW` §10 pointer. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop-wide varied curves on every mouse click
+
+Intent: Every shop mouse move (Buy/Sell tab, rows, confirm, scroll hover, NPC dialog open/probe, recover UI) must use curved approach + fine adjust, with **randomly combined curve styles** so paths do not look like one fixed arc. NPC dialog click uses the same 0.10–0.15s hold (no snap re-aim).
+Shared: `humanize.shop_curve_points` / `SHOP_CURVE_STYLES`, `MouseController.move_with_budget(shop_curves=…)`, `ui_aim.shop_move_to` / `hold_in_place`, `npc_aim` rewritten onto that path, `execute_recover_arrow_buy` via `aim_and_click`. Combat Bezier/`MOVE_BUDGET_S` unchanged. Practice snap unchanged.
+Consent: user (same click logic on buy/sell buttons and NPC dialog; all shop clicks curved; vary curve forms randomly).
+Result: `UI_AIM.md` / tests updated. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — In-window shop UI aim (buy + sell)
+
+Intent: Buy and sell window clicks looked like snap macros. Use the same core as NPC aim (curve approach + fine adjust), without cursor verify; land with 1–2px screen-size error; hold click 0.10–0.15s; think 0.5–2s before scroll; type 0.2–0.3s after row click with ≤5 keys/s gaps; confirm uses the same aim path.
+Shared: `_click_uv`, `_scroll_list`, `_type_qty` via new `shop/ui_aim.py`. NPC `npc_aim`, combat `MOVE_BUDGET_S`, settle/warehouse gates, HP/login unchanged. Practice/`humanize=False` keeps snap.
+Affects: calibrated buy, merchant sell, warehouse store (same helpers). Teleporter option/confirm also go through `_click_uv`.
+Consent: user (curve+fine, 1–2px, hold 0.1–0.15, scroll think 0.5–2, confirm aim, type delay + rate; buy and sell together).
+Note: typing rate set to **5–6 characters/second** (`SHOP_UI_TYPE_KEY_GAP_S` = 1/6…1/5 s) per user follow-up.
+Result: `humanize.SHOP_UI_*`, `UI_AIM.md`, `test_ui_aim.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell decide jitter ~0.2s after weight settle
+
+Intent: After bag/weight settle, pause ~0.2s before adopting early-stop / next merchant / warehouse so the choice does not snap instantly. Timing only.
+Shared: `finish_sell_weight_settle` two-phase (settle → `SELL_DECIDE_JITTER_S` → `advance_sell_trip`). `bot_controller` still force-bags only on `sell_advance_pending` (not during decide). Thresholds, warehouse gates, sell clicks, buy, HP, login unchanged. Store/`give_goods` still advances immediately when that step finishes.
+Affects: delay between merchant sell success and arming the next shop step (~settle + ~0.2s).
+Consent: user (~0.2s; analyze so overall logic is untouched).
+Result: `shops.SELL_DECIDE_JITTER_S` (0.18–0.22); `SELL_TOUR.md`; `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Warehouse only after settle, weight ≥40%, leftovers
+
+Intent: After the sell merchant loop, visit `give_goods` only when bag/weight were read (same settle path as early-stop), weight is still ≥40%, and leftovers sit outside the keep list. Early-stop under 35% then skips warehouse naturally.
+Shared: `advance_sell_trip`, `_bag_needs_give_goods` (unread → skip), new `STORE_AFTER_SELL_MIN_RATIO` / `store_after_sell_weight_ok`. Sell clicks, buy, NPC aim, HP, login, combat unchanged. Merchant settle timing unchanged.
+Affects: solo / shopkeeper personal sell trip tail only. `store_after_sell` OFF still skips warehouse.
+Consent: user (warehouse when weight ≥40% + leftovers; only after bag/weight read like sell settle).
+Result: `shop_trip.py` / `shops.py` / `SELL_TOUR.md` / `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell weight settle before tour advance
+
+Intent: Early-stop / next-stall used WEIGHT before LC memory updated after sell. Wait ~0.75–1.35s (IDLE) with forced bag refresh, then `advance_sell_trip`.
+Shared: `schedule_sell_weight_settle` / `finish_sell_weight_settle`, `manager` sell feedback, `bot_controller` force bag while pending. Store/`give_goods` still advances immediately. NPC aim / buy / HP/login unchanged.
+Consent: user (slack timing between weight read and tour move so gauge is not missed).
+Result: settle constants `SELL_WEIGHT_SETTLE_S`; `SELL_TOUR.md` updated. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Sell tour random order + stop below 35% weight
+
+Intent: Sell circuit felt fixed; humanize by visiting all four merchants in a fresh random order each trip, and stop further merchants when bag weight falls below 35%.
+Shared: `_shuffled_sell_ids` (`random.sample`), `advance_sell_trip`, new `SELL_STOP_BELOW_RATIO` / `sell_tour_weight_done`. Buy path, NPC aim, party pin/block, HP/login unchanged. Optional `give_goods` after the merchant loop still runs.
+Affects: solo sell trips and party shopkeeper personal sell / HP-retreat sell queues. Start threshold remains Fix/Return `SELL_WEIGHT_RATIO` (~70%).
+Consent: user (randomize 4-shop order; stop tour when weight &lt; 35%).
+Result: `shop_trip.py` / `shops.py` / `configure.py`; `Engine/shop/SELL_TOUR.md`; tests `test_sell_tour.py`. Branch `modified_humanize_shop`.
+
+## 2026-11-19 — Shop NPC human aim (approach + fine confirm)
+
+Intent: Live shop NPC open looked mechanical (0.02s move budget + snap + fixed 0.25s ring). Aim like a person: ~1s curved approach, micro-moves near the stall, irregular timing; keep combat move budget unchanged.
+Shared: `open_shop_npc`, new `shop.npc_aim`, `MouseController.move_with_budget` (shop-only long budget). `tick_shop_trip`, sell shuffle, in-window `_click_uv`, party pin/block, `try_unstick_escape` / HP / login unchanged.
+Affects: live shop/warehouse/teleporter NPC open when `executor.humanize`. Practice/`humanize=False` keeps legacy snap ring. `SHOP_RUN` blocks longer on open.
+Consent: user (curve ≥1s, fine repeats near NPC, non-metronomic timing; minimize side effects + document).
+Result: `Engine/shop/npc_aim.py`, `NPC_AIM.md`, humanize `SHOP_APPROACH_*` / `SHOP_FINE_*`, tests `shop/tests/test_npc_aim.py` (4 passed). Branch `modified_humanize_shop`.
+>>>>>>> modified_humanize_shop
+=======
+## 2026-11-20 — same-map guide: via offset then recompute shortest legs
+
+Intent: From a shortest guide, pick 1–2 arbitrary path points, move each onto a walkable tile within Chebyshev 1–2, then recompute shortest `start→via→goal` segments. The joined route need not be globally shortest. Sticky keeps that guide while walking. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral`, `find_path_random_shortest`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides.
+Consent: user (“임의의 점에서 1~2타일… 걸을 수 있는곳만… 매번 최단 경로를 다시 계산”).
+Result: unit tests. Not run in game.
+
+## 2026-11-20 — same-map guide: deform shortest with 1–2 side detours
+
+Intent: Start from a shortest same-map guide, then apply 1–2 side deformations (Chebyshev 1–2). The result need not stay shortest; short local reconnects may add a few steps. Soft forward only (no backtrack). Sticky keeps the deformed guide. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral` (splice via `_connect_tiles`), `find_path_random_shortest`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides.
+Consent: user clarified (“최단경로에 변형… 꼭 최단이 아니고 약간 변화된 경로”).
+Result: unit tests. Not run in game. (Superseded by via recompute above.)
+
+## 2026-11-20 — same-map guide: 1–2 lateral nudges on a shortest path
+
+Intent: After choosing a shortest same-map guide, move only 1–2 interior vertices onto a walkable side tile (Chebyshev 1–2) while keeping forward progress. Do not replan with longer A*. Sticky still reuses the nudged guide. World-nav / combat `find_path` unchanged.
+Shared: `nudge_path_lateral`, `find_path_random_shortest` (post-pick nudge). Equal-length alt pick remains. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login unchanged.
+Affects: same-map travel / search / loot guides via `plan_body_click`.
+Consent: user (“1~2타일변화는 경로에서 1~2번만 추가하자”).
+Result: `test_shortest_path_alternatives.py`. Not run in game. (Superseded by deform splice above.)
+
+## 2026-11-20 — same-map travel picks among equal-length shortest paths
+
+Intent: Same-map movement guides no longer always take the single deterministic A* tie-break. Among equal-length shortest paths, collect up to 4 alternatives and pick one at random. Keep that guide sticky across hops to the same goal. Longer (non-shortest) routes are not used. World-nav / cross-map planning and combat distance `find_path` stay deterministic.
+Shared: `find_path_random_shortest`, `list_shortest_paths`, `plan_travel_click`, hierarchical fine corridor/window/full refine, `plan_body_click` (`sticky_path`), travel `nav_path` sticky, search `scratch.search_guide`. `find_path` (combat/distance), `world_nav` `astar_nav`, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks unchanged.
+Affects: same-map travel, farm search hops, loot approach guides that use `plan_body_click`, and world-nav walk *execution* hops that reuse same-map planning. Abstract portal/coarse routing unchanged.
+Consent: user (“이 알고리듬을 구현하라” — equal-length under 5, random pick, same-map only).
+Result: `Engine/app/_04_decision/tests/test_shortest_path_alternatives.py` (4 passed). Not run in game.
+>>>>>>> navigation_random
+
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
 Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.
@@ -7,6 +238,46 @@ Shared: `Engine/analysis/registry/*` overlays, `offsets.json` / `char_offsets.tx
 Affects: player xy/hp/status, mapId VFT, entity class VFTs, inventory/hotbar anchors, party VFTs, shop listen defaults. Structure-field offsets without v38 proof were left as in the drop.
 Consent: user (“okay, let's update current project's offsets & memory datas to the updated correct version”).
 Result: `python Engine/analysis/_build/check_configs.py` → **PASS**. Backup at `Engine/analysis.bak_v37_20261118`. Not run in game yet — restart the bot against 26.11.17.2002 to smoke-test.
+
+## 2026-11-15 — party kick types /파티추방 and clears 사용 and 대기
+
+Intent: A 파티 추방 click types `/파티추방 이름` only when a confirmed party read lists that name. The line uses the same worker chat path as `/초대`. After the line, party memory is read again. Absence has to hold for the confirm wait, so one empty read does not clear the row. If the name is still listed after that wait, the line is sent two more times. When the absence holds, that roster row's 사용 and 대기 are turned off and this session stops inviting them. The roster row stays. A failed send or a name that never leaves does not clear those values. An unread memory does not type and does not count as a leave.
+Shared: `submit_party_kick`, `_drain_party_chat`, `_tick_party_kicks`, `KickWatch`, `deliver_chat`. `roster_invite_names` and `roster_required_names` still read the stored flags. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the leader party roster while the bot is running. The next Start does not auto-invite or wait for a name whose kick was confirmed.
+Consent: user (`/파티추방 이름`, only current members, same path as invite, confirm leave, repeat twice, then reset 사용 and 대기).
+Result: engine tests cover the send, the two repeats, and the flag clear. Not run in the live game.
+
+## 2026-11-15 — roster kick button replaces 사용 and 대기 columns
+
+Intent: The leader roster no longer shows 사용 and 대기. Each saved name has its own 파티 추방 button, so the button count follows the roster. Name, role, and loot stay editable on that row. 사용 and 대기 remain stored values: a new name and a party invite still turn both on, and the engine still reads them.
+Shared: `_fill_roster_table`, `_kick_named`. `roster_invite_names`, `roster_required_names`, `deliver_chat`, and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the party leader roster screen. A kick still goes out only for a name the live party memory already contains.
+Consent: user (remove the 사용 and 대기 columns and put a per-account 파티 추방 button there).
+Result: UI change only. Not run in game.
+
+## 2026-11-14 — party invite turns 사용 and 대기 on
+
+Intent: Pressing 파티 초대 for a selected roster name stores that name as enabled and required. The operator does not also click 사용 and 대기. Clearing the select box leaves those two values as they are.
+Shared: `_invite_selected`, `_mark_invited_active`. `roster_invite_names`, `roster_required_names`, `deliver_chat`, and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: the leader roster saved for the next automatic `/초대`, forming wait, and start rally. A leader already running keeps the invite list copied at Start.
+Consent: user (party invite click turns 사용 and 대기 on for the selected names).
+Result: UI change only. Not run in game.
+
+## 2026-11-14 — the first chat key follows the sentence order
+
+Intent: Before any character key, read the live IME and the language order of the sentence. A line that starts with `/` or Latin stays in 영 until that first run is typed. 한 is confirmed only when the first run is Hangul, and the start-commit right arrow runs only then. A later Hangul syllable still switches to 한 after that first run.
+Shared: `ec_run`, `ec_format_current_mode`, `ec_hangul_layout`, `ec_require_hangul`, `ec_english_prepare`. `deliver_chat` and `type_accept_key` are unchanged. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite, party leave, and any mixed line whose first character is not Hangul. An unread mode still fails the line before the first key.
+Consent: user ("수정하라" — read the current language and the sentence order before the first key).
+Result: `enter_chat.dll` rebuilt. `test_hangul` passed. Live LC.exe was on Russian English mode (`ru/영 hkl=0419`). `/초대 poorboy` (`order=영-한-영`, 11 chars, 13 keys) and `/초대 매력여기사` (`order=영-한-영-한`, 9 chars, 17 keys) both entered and the user confirmed both lines. A running bot keeps the previous DLL until restart.
+
+## 2026-11-14 — party chat keys wait until the IME mode is read back
+
+Intent: `/초대` types space, slash, and Latin as physical keys only after the game IME reads as English. Hangul runs type jamo only after it reads as Hangul. Invite Y is not pressed, and Enter is not pressed, unless English was read. A mode that cannot be read fails the line.
+Shared: `ec_run`, `ec_english_prepare`, `ec_require_hangul`. `deliver_chat` and `type_accept_key` are unchanged and already treat a non-OK result as failure. Supply quantity typing, `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks are unchanged.
+Affects: party invite, party leave, and the member invite accept key. A Hangul-only line now fails instead of sending jamo when Hangul mode cannot be read.
+Consent: user ("진행하라", and the DLL built from these sources must be rebuilt).
+Result: `enter_chat.dll` rebuilt from the changed sources. Not run in game.
 
 ## 2026-11-12 — the party leader does not pick up ground piles
 

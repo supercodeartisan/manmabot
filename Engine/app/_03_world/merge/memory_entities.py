@@ -356,26 +356,39 @@ def load_species_ids(path: Optional[Path] = None) -> dict[int, dict[str, Any]]:
 
 
 class TrackIds:
-    """Stable int ids for heap addresses. Dropped addresses are forgotten."""
+    """Stable int ids for print_state rows.
+
+    Prefer game ``guid`` when present so a heap ``ent`` remap (or one-tick
+    omit/return) keeps the same ``track_id``. Fall back to heap ``ent`` when
+    guid is missing or ``0x0``. Dropped keys are forgotten on prune.
+    """
 
     def __init__(self) -> None:
         self._ids: dict[str, int] = {}
         self._next = 1
 
-    def resolve(self, ent: str) -> int:
-        key = str(ent)
-        found = self._ids.get(key)
+    def resolve(self, key: str) -> int:
+        token = str(key)
+        found = self._ids.get(token)
         if found is not None:
             return found
         assigned = self._next
         self._next += 1
-        self._ids[key] = assigned
+        self._ids[token] = assigned
         return assigned
 
     def prune(self, live: set[str]) -> None:
         for key in list(self._ids):
             if key not in live:
                 self._ids.pop(key, None)
+
+
+def _track_key(raw: dict[str, Any], ent: str) -> str:
+    """Identity for ``TrackIds``: guid when usable, else heap ent."""
+    guid = str(raw.get("guid") or "").strip()
+    if guid and guid not in {"-", "0x0", "0X0"}:
+        return f"guid:{guid}"
+    return f"ent:{ent}"
 
 
 def _on_screen(x: float, y: float, width: float, height: float) -> bool:
@@ -496,7 +509,8 @@ def entities_to_handoff(
         ent = str(raw.get("ent") or "")
         if not ent:
             continue
-        live.add(ent)
+        track_key = _track_key(raw, ent)
+        live.add(track_key)
         try:
             species_id = int(raw.get("species") or 0)
         except (TypeError, ValueError):
@@ -515,7 +529,9 @@ def entities_to_handoff(
             pos_x = 0.5
             pos_y = 0.5
         row = {
-            "track_id": tracks.resolve(ent) if tracks is not None else len(rows) + 1,
+            "track_id": (
+                tracks.resolve(track_key) if tracks is not None else len(rows) + 1
+            ),
             "label": "object",
             "class_id": 0,
             "yolo_conf": 1.0,

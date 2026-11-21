@@ -42,6 +42,10 @@ LOOT_CURSOR_CLEAR_RADII_PX: tuple[float, ...] = (30.0,)
 SPELL_AIM_VIEW_RETRY_S = 0.5
 # After the skill key or a view click, wait before reading the cursor again.
 SPELL_AIM_SETTLE_S = 0.2
+# clear_spell_aim: heal-double recover, then one cancel round if needed.
+SPELL_AIM_CLEAR_TRIES = 3
+# Do not heal-double recover more often than this (attack reject spam).
+CURSOR_HEAL_RECOVER_COOLDOWN_S = 1.0
 # A party-list key is forgotten when the circle never appears.
 SPELL_AIM_KEY_GRACE_S = 8.0
 # Body UV + tight pixel ring (cardinal-first). No memory-tile jump.
@@ -402,7 +406,8 @@ def cancel_spell_aim(
     The remembered skill key is pressed once, without the box key. While the
     circle remains, a view right-click repeats every ``SPELL_AIM_VIEW_RETRY_S``.
     Returns whether aim looked active. The caller walks only after the cursor
-    is no longer a spell circle.
+    is no longer a spell circle. Prefer ``clear_spell_aim`` when travel/heal
+    must not proceed until the circle is gone.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
@@ -438,6 +443,133 @@ def cancel_spell_aim(
     except Exception:
         pass
     return True
+
+
+def _heal_hotbar_slot(
+    executor: "ActionExecutor",
+) -> tuple[int, str] | None:
+    """Setup/live heal cell (box, F-key), or None when unbound."""
+    from app._05_action import spell_box as sb
+
+    live = getattr(executor, "_live_or_assigned_slot", None)
+    box: int | None = None
+    key = ""
+    if callable(live):
+        try:
+            box, key = live("heal")
+        except Exception:
+            box, key = None, ""
+    if box is None or not key:
+        try:
+            box, key = sb.slot_press("heal")
+        except Exception:
+            return None
+    key_text = str(key or "").strip().lower()
+    if box not in (1, 2, 3) or not key_text:
+        return None
+    return int(box), key_text
+
+
+def recover_cursor_heal_double(
+    executor: "ActionExecutor",
+    *,
+    reason: str = "",
+    force: bool = False,
+) -> bool:
+    """Wrong-cursor recovery: press heal twice (same as self-cast).
+
+    Returns whether the press ran. Caller re-checks the cursor afterward.
+    """
+    slot = _heal_hotbar_slot(executor)
+    if slot is None:
+        return False
+    box, key = slot
+    now = time.monotonic()
+    last = float(getattr(executor, "_cursor_heal_recover_at", 0.0) or 0.0)
+    if (
+        not force
+        and last > 0.0
+        and (now - last) < float(CURSOR_HEAL_RECOVER_COOLDOWN_S)
+    ):
+        return False
+    press_box = getattr(executor, "_press_box_skill", None)
+    keyboard = getattr(executor, "keyboard", None)
+    if not callable(press_box) or keyboard is None:
+        return False
+    try:
+        from app.bot_log import get_logger
+
+        get_logger("action").info(
+            "cursor recover heal double reason=%s box=%s key=%s",
+            str(reason or "cursor").strip() or "cursor",
+            int(box),
+            key,
+        )
+    except Exception:
+        pass
+    # Lift any held button and freeze mouse for both presses + gap. A
+    # concurrent ground/attack click mid-heal leaves the cast circle up.
+    drop = getattr(executor, "drop_mouse", None)
+    if callable(drop):
+        try:
+            drop()
+        except Exception:
+            pass
+    mouse = getattr(executor, "mouse", None)
+    quiet = False
+    if mouse is not None and hasattr(mouse, "begin_quiet"):
+        mouse.begin_quiet()
+        quiet = True
+    try:
+        try:
+            press_box(int(box), key)
+        except Exception:
+            return False
+        from app._05_action import humanize as hz
+
+        if getattr(executor, "humanize", True):
+            hz.sleep_range(hz.HEAL_DOUBLE_GAP, getattr(executor, "_rng", None))
+        elif SPELL_AIM_SETTLE_S > 0:
+            time.sleep(min(0.05, float(SPELL_AIM_SETTLE_S)))
+        try:
+            keyboard.press(key)
+        except Exception:
+            return False
+        executor._cursor_heal_recover_at = now
+        remember_spell_aim_key(executor, key, int(box))
+        _settle_spell_aim()
+        return True
+    finally:
+        if quiet:
+            try:
+                mouse.end_quiet()
+            except Exception:
+                pass
+
+
+def clear_spell_aim(
+    executor: "ActionExecutor",
+    *,
+    reason: str = "",
+) -> bool:
+    """Drop a leftover cast circle. True when the cursor is no longer spell.
+
+    Recovery is a heal-key double press (self-cast clears the aim circle).
+    If the circle remains, one ``cancel_spell_aim`` round (remembered key /
+    view right-click) follows.
+    """
+    label = str(reason or "spell").strip() or "spell"
+    if not cursor_is_spell_aim(executor):
+        return True
+    recover_cursor_heal_double(executor, reason=label)
+    if not cursor_is_spell_aim(executor):
+        _clear_spell_aim_episode(executor)
+        return True
+    executor._spell_view_click_at = 0.0
+    cancel_spell_aim(executor, reason=label)
+    if not cursor_is_spell_aim(executor):
+        return True
+    return False
 
 
 def verify_loot_aim(executor: "ActionExecutor", x: float, y: float) -> bool:
@@ -1416,6 +1548,10 @@ __all__ = [
     "cursor_is_spell_aim",
     "remember_spell_aim_key",
     "cancel_spell_aim",
+    "clear_spell_aim",
+    "recover_cursor_heal_double",
+    "SPELL_AIM_CLEAR_TRIES",
+    "CURSOR_HEAL_RECOVER_COOLDOWN_S",
     "verify_loot_aim",
     "attack_click",
     "attack_pixel_offsets",

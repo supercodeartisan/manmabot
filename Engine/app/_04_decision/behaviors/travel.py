@@ -895,12 +895,19 @@ def emit_travel_hop(
         blackboard.travel_purpose == "world_nav"
         and bool(blackboard.scratch.get(SCRATCH_WORLD_NAV_SHORT_WALK))
     )
+    sticky = list(blackboard.nav_path) if blackboard.nav_path else None
+    if sticky and sticky[-1] != (
+        int(blackboard.nav_goal[0]),
+        int(blackboard.nav_goal[1]),
+    ):
+        sticky = None
     planned = plan_body_click(
         terrain,
         origin,
         (int(blackboard.nav_goal[0]), int(blackboard.nav_goal[1])),
         bodies,
         force_flat=short_walk,
+        sticky_path=sticky,
     )
     from app._04_decision.behaviors.unstick import note_confined_planned_avoid
 

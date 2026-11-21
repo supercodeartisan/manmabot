@@ -264,13 +264,15 @@ HP가 0이면 아무것도 하지 않는다. 사망 처리가 이미 끝냈다. 
 
 우선순위: 과중량 판매 → HP 물약(아데나가 가격 미만이면 요구를 끔) → 해독 → 화살(은화살 또는 일반, 둘 다 켜면 은화살을 끈다).
 
+구매는 판매처럼 상인 여러 곳을 순회하지 않는다. 필요 kind마다 `resolve_shopping_behavior_id`가 **하나의** YAML behavior(고정 NPC)를 고른다. 행 선택은 아직 YAML `item_index` 고정이며, buy 목록 메모리 매칭은 **미구현** — `Engine/shop/BUY.md`.
+
 `tick_shop_trip`은 세 단계다.
 
-1. 판매대 월드 좌표에 있으면 창을 연다. `SHOP_STOP` 다음 `SHOP_RUN`(Intent: `shop_behavior_id` / `shop_kind` / `shop_qty` / `shop_equip` / `shop_use_recover`). 실행은 `shop.runtime.execute_shop_intent` 한 곳.
+1. 판매대 월드 좌표에 있으면 창을 연다. `SHOP_STOP` 다음 `SHOP_RUN`(Intent: `shop_behavior_id` / `shop_kind` / `shop_qty` / `shop_equip` / `shop_use_recover`). 실행은 `shop.runtime.execute_shop_intent` 한 곳. NPC 오픈은 live에서 `shop.npc_aim`(약 1초 곡선 접근 + 세밀 DIALOG 확정). 전투용 `MOVE_BUDGET_S`(0.02s)와 분리. Practice/`humanize=False`는 기존 snap 링. 상세: `Engine/shop/NPC_AIM.md`.
 2. 두루마리를 썼으면 착지를 기다린다. 타임아웃이면 재시도 또는 중단.
 3. 걸을 수 있으면 `begin_travel(..., purpose=PURPOSE_SHOP)`으로 `traveling`에 맡긴다.
 
-판매 실행은 같은 스크롤 페이지를 고른 뒤 confirm 한 번, 창이 닫히면 다시 열어 목록이 빌 때까지이다. 판매 뒤 보관 목록 밖이 남으면 `give_goods`를 한 번 더 한다. 판매 NPC를 UI에서 고르는 기능과 창고는 이 경로에 없다.
+판매 실행은 Sell 탭을 한 번 연 뒤 keep 밖 행을 스크롤하며 고르고 confirm 한 번으로 끝낸다. **판매 후 같은 상점 창을 다시 열어 재확인하지 않는다** — 남은 물건 확인은 settle 뒤 **가방/WEIGHT 메모리**로 한다(가방 읽기 창이 열리기 전 다른 상점 상태로 넘어가지 않는다는 원칙과 맞춤). 창 안 클릭은 live에서 `shop/ui_aim`. 판매 트립은 상인 네 곳 무작위 순열, 무게&lt;35%면 조기종료. 창고는 settle 후 가방 ready·무게≥40%·잔여 keep 밖일 때만. 상세: `Engine/shop/SELL_TOUR.md`, `UI_AIM.md`.
 
 가방 스캔은 느리다. 상점 직후 워커가 가방을 한 번 강제 폴링한다. needs_*는 그 스냅샷 기준으로 늦게 떨어질 수 있다.
 

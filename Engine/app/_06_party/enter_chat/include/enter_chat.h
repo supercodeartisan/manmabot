@@ -11,8 +11,14 @@
  *   - Hangul is sent as physical 2-beolsik jamo keystrokes through Interception
  *     and composed by the installed Korean IME.  This bypasses clients that
  *     drop Hangul from WM_CHAR after an ANSI codepage conversion.
- *   - Other characters are sent with PostMessage(WM_CHAR) (SendInput fallback
- *     optional).
+ *   - Before the first character key, the current IME mode is read and the
+ *     sentence is split into Hangul / ASCII / other runs.  The first run
+ *     picks 한 or 영 and that mode is read back before the key.  A later
+ *     Hangul syllable does not switch the line to 한 first.
+ *   - ASCII that has a US-layout scancode (space, letters, digits, symbols)
+ *     is a physical key after the game IME reads back as English.  A Hangul
+ *     run and an ASCII run each wait for that read-back.  Characters with no
+ *     scancode use PostMessage(WM_CHAR).
  *   - Enter / Esc / Tab are sent as physical keys through Interception.
  *
  * Build
@@ -38,8 +44,8 @@ extern "C" {
 
 #define EC_VERSION_MAJOR 1
 #define EC_VERSION_MINOR 0
-#define EC_VERSION_PATCH 0
-#define EC_VERSION_STRING L"1.0.0"
+#define EC_VERSION_PATCH 1
+#define EC_VERSION_STRING L"1.0.1"
 
 /* ------------------------------------------------------------------------- */
 /* Status codes                                                              */

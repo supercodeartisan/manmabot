@@ -86,11 +86,17 @@ class FocusStage(Stage):
                 bot._set_phase(Phase.GAME_LOGIN)
 
         # Minimize Purple + raise game + verify (retry loop inside helper).
+        # AUTH relaunch + boot-shake: do not burn the status-UI window here.
+        shake = bool(
+            getattr(bot, "_shake_after_relaunch", False) or ctx.shake_armed)
         prepare = getattr(bot, "_prepare_game_foreground", None)
         if callable(prepare):
             try:
-                if prepare(attempts=5):
+                if prepare(attempts=2 if shake else 5):
                     ctx.extras["game_covered"] = False
+                    if shake:
+                        bot._shake_after_relaunch = True
+                        ctx.shake_armed = True
                     return StageResult.ok(
                         self.id, "Purple minimized; game on top (verified)")
             except Exception as e:
@@ -98,9 +104,13 @@ class FocusStage(Stage):
                     self.id, "prepare foreground failed: %r" % e, after=0.4)
             # Not verified — stay on S4 while process/window still exist
             n = ctx.bump_retry(self.id + ":focus")
-            if n > 12:
+            soft_after = 2 if shake else 12
+            if n > soft_after:
                 # Soft pass: hwnd exists; GameFlow will keep re-asserting topmost
                 ctx.extras["game_covered"] = True
+                if shake:
+                    bot._shake_after_relaunch = True
+                    ctx.shake_armed = True
                 return StageResult.ok(
                     self.id,
                     "hwnd ready but on-top unverified — continue to S5",
@@ -108,7 +118,7 @@ class FocusStage(Stage):
             ctx.extras["game_covered"] = True
             return StageResult.blocked(
                 self.id, "game still covered — retry minimize/on-top",
-                after=0.5)
+                after=0.35 if shake else 0.5)
 
         # Fallback path without helper
         mini = getattr(bot, "_minimize_purple_for_game", None)

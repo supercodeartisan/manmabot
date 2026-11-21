@@ -40,10 +40,23 @@ HP_POTION_NPC = "talking"
 # Fix/Return weight gauge (schedule hunt.return_weight_* → configure_decision).
 RETURN_WEIGHT_ENABLED = True
 SELL_WEIGHT_RATIO = 0.70  # decoded WEIGHT percent/100 ≥ this → sell trip
+# After a sell succeeds, stop visiting more merchants when weight falls below this.
+# Start threshold stays ``SELL_WEIGHT_RATIO``; early-stop is tour humanize only.
+SELL_STOP_BELOW_RATIO = 0.35
+# After a merchant sell succeeds, wait this long (seconds) before reading weight
+# / arming the next stall so LC WEIGHT memory can catch up.
+SELL_WEIGHT_SETTLE_S = (0.75, 1.35)
+# After settle has a bag/weight snapshot, pause ~0.2s (IDLE, no force-bag)
+# before adopting early-stop / next merchant / warehouse. Timing only.
+SELL_DECIDE_JITTER_S = (0.18, 0.22)
 # Item/Sell mode: sell_only_garbage | sell_except_keep.
 SELL_MODE = "sell_except_keep"
 # Schedule equipment.store_after_sell. Off skips the warehouse keeper.
 STORE_AFTER_SELL = True
+# After the merchant loop, visit give_goods only when weight is still at least
+# this fill (and leftovers exist). Pairs with SELL_STOP_BELOW_RATIO: early-stop
+# under 35% naturally skips the warehouse.
+STORE_AFTER_SELL_MIN_RATIO = 0.40
 POTION_SUPPRESS_S = 600.0
 # Chebyshev tiles from the shop NPC to click / buy (walk stops here).
 SHOP_ARRIVE_TILES = 7
@@ -389,8 +402,12 @@ __all__ = [
     "RESTOCK_POTIONS",
     "RETURN_WEIGHT_ENABLED",
     "SELL_WEIGHT_RATIO",
+    "SELL_STOP_BELOW_RATIO",
+    "SELL_WEIGHT_SETTLE_S",
+    "SELL_DECIDE_JITTER_S",
     "SELL_MODE",
     "STORE_AFTER_SELL",
+    "STORE_AFTER_SELL_MIN_RATIO",
     "POTION_SUPPRESS_S",
     "SHOP_ARRIVE_TILES",
     "SHOP_CLICK_TILES",

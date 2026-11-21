@@ -137,7 +137,7 @@ def test_manage_page_hides_party_enable_and_renumbers() -> None:
         tab.roster_table.horizontalHeaderItem(index).text()
         for index in range(tab.roster_table.columnCount())
     ]
-    assert labels == ["선택", "번호", "이름", "역할", "루팅", "사용", "대기"]
+    assert labels == ["선택", "번호", "이름", "역할", "루팅", "파티 추방"]
     assert tab.roster_table.columnWidth(0) == 34
     assert tab.roster_table.columnWidth(1) == 45
     tab._store_roster(
@@ -454,6 +454,7 @@ def test_mage_party_support_skills_are_selectable_without_touching_solo() -> Non
         tab.member_support_magic_table.item(row, 2).text()
         for row in range(tab.member_support_magic_table.rowCount())
     ]
+    # Matches settings.party_mage_support (self-only spells stay out).
     assert names == [
         "힐",
         "익스트라 힐",
@@ -463,7 +464,6 @@ def test_mage_party_support_skills_are_selectable_without_touching_solo() -> Non
         "큐어 포이즌",
         "리무브 커스",
         "리절렉션",
-        "실드",
         "홀리 웨폰",
         "인챈트 웨폰",
         "블레스 웨폰",
@@ -471,9 +471,7 @@ def test_mage_party_support_skills_are_selectable_without_touching_solo() -> Non
         "인챈트 덱스터리티",
         "인챈트 마이티",
         "헤이스트",
-        "그레이터 헤이스트",
         "버서커스",
-        "디크리즈 웨이트",
     ]
     heal = _support_row(tab, "힐")
     heal_box = tab.member_support_magic_table.cellWidget(heal, 0).findChild(QCheckBox)
@@ -536,7 +534,7 @@ def test_leader_succession_and_absence_settings() -> None:
         "파티 관리",
         "파티장 자동 인계",
     ]
-    assert tab.roster_table.columnCount() == 7
+    assert tab.roster_table.columnCount() == 6
     tab.note_local_character("알파")
     tab._store_roster(
         [
@@ -665,11 +663,10 @@ def test_roster_name_role_and_loot_edit_in_place() -> None:
     assert table.columnWidth(3) == 100
     name = table.item(0, 2)
     number = table.item(0, 1)
-    enabled = table.item(0, 5)
     assert name.flags() & Qt.ItemFlag.ItemIsEditable
     assert not (number.flags() & Qt.ItemFlag.ItemIsEditable)
-    assert enabled.flags() & Qt.ItemFlag.ItemIsUserCheckable
-    assert not (enabled.flags() & Qt.ItemFlag.ItemIsEditable)
+    assert table.cellWidget(0, 5).findChild(QPushButton).text() == "파티 추방"
+    assert table.cellWidget(1, 5).findChild(QPushButton).text() == "파티 추방"
 
     name.setText("  찰리  ")
     assert tab._roster_rows()[0]["name"] == "찰리"
@@ -715,10 +712,11 @@ def test_roster_name_role_and_loot_edit_in_place() -> None:
     assert tab._roster_rows()[0]["loot"] == "responsible"
     assert table.item(0, 4).text() == "담당"
 
-    enabled.setCheckState(Qt.CheckState.Unchecked)
+    rows = tab._roster_rows()
+    rows[0]["enabled"] = "0"
+    rows[0]["required"] = "0"
+    tab._store_roster(rows)
     assert tab._roster_rows()[0]["enabled"] == "0"
-    table.item(0, 6).setCheckState(Qt.CheckState.Checked)
-    assert tab._roster_rows()[0]["required"] == "1"
 
     tab._fill_roster_table()
     box = table.cellWidget(0, 0).findChild(QCheckBox)
@@ -728,15 +726,21 @@ def test_roster_name_role_and_loot_edit_in_place() -> None:
     tab._party_chat_submit = lambda: (lambda kind, who: sent.append(who) or "queued")  # type: ignore[method-assign]
     assert tab._invite_selected() == ["찰리"]
     assert sent == ["찰리"]
+    assert tab._roster_rows()[0]["enabled"] == "1"
+    assert tab._roster_rows()[0]["required"] == "1"
+    assert tab._roster_rows()[1]["required"] == "0"
+    assert tab.roster_table.cellWidget(0, 5).findChild(QPushButton) is not None
 
     reopened = PartyTab(bag=tab.bag, strings={}, language="ko", profile=None)
     saved = reopened._roster_rows()
     assert saved[0]["name"] == "찰리"
     assert saved[0]["role"] == "shopkeeper"
     assert saved[0]["loot"] == "responsible"
-    assert saved[0]["enabled"] == "0"
+    assert saved[0]["enabled"] == "1"
+    assert saved[0]["required"] == "1"
+    assert saved[1]["required"] == "0"
     assert reopened.roster_table.item(0, 3).text() == "상점"
-    assert reopened.roster_table.columnCount() == 7
+    assert reopened.roster_table.columnCount() == 6
 
 
 _RUNNING = "실행 중에는 역할을 바꿀 수 없습니다."

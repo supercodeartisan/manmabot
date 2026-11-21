@@ -65,7 +65,9 @@ def test_base_helpers():
 
 
 def test_launcher_config():
-    path = os.path.join(SRC, "launcher_config.json")
+    path = os.path.join(ROOT, "launcher_config.json")
+    if not os.path.isfile(path):
+        path = os.path.join(BOT, "launcher_config.json")
     with open(path, encoding="utf-8") as f:
         cfg = json.load(f)
     words = cfg["login"]["words"]
