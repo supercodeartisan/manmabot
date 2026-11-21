@@ -36,6 +36,7 @@ def clear_search_hop(blackboard) -> None:
     blackboard.search_stuck_since_tick = 0
     blackboard.search_stuck_since_time = 0.0
     blackboard.search_unstick_active = False
+    blackboard.scratch.pop("search_guide", None)
     reset_unstick_tries(blackboard)
 
 
@@ -131,15 +132,28 @@ def _emit_body_hop(
 
     origin = blackboard.world_origin
     bodies = click_bodies(state, origin, blackboard)
+    sticky_raw = blackboard.scratch.get("search_guide")
+    sticky = None
+    if isinstance(sticky_raw, list) and sticky_raw:
+        end = sticky_raw[-1]
+        if (
+            isinstance(end, (tuple, list))
+            and len(end) >= 2
+            and (int(end[0]), int(end[1])) == (int(goal[0]), int(goal[1]))
+        ):
+            sticky = [(int(x), int(y)) for x, y in sticky_raw]
     planned = plan_body_click(
         terrain,
         origin,
         (int(goal[0]), int(goal[1])),
         bodies,
+        sticky_path=sticky,
     )
     from app._04_decision.behaviors.unstick import note_confined_planned_avoid
 
     note_confined_planned_avoid(blackboard, planned, bodies)
+    if planned.guide:
+        blackboard.scratch["search_guide"] = list(planned.guide)
     if planned.click is not None:
         wp = (int(planned.click[0]), int(planned.click[1]))
         _emit_search_click(
