@@ -46,6 +46,12 @@ def main() -> int:
 
     from crypto.seller_cli import fulfill_ops, license_ops, signing
     from crypto.seller_cli.store import SellerStore, default_seller_root
+    from ui_qt.theme import (
+        apply_classic_qt_theme,
+        font_roles_for_window,
+        mark_accent,
+        tokens,
+    )
 
     def _wrap_buttons(*buttons: QPushButton) -> QWidget:
         """Horizontal button row that stays usable when the window shrinks."""
@@ -69,9 +75,45 @@ def main() -> int:
             self._last_key = ""
             self._last_response: Path | None = None
 
+            try:
+                from PySide6.QtGui import QIcon
+                from settings.map_previews import brand_icon_path
+
+                logo = brand_icon_path()
+                if logo is not None:
+                    self.setWindowIcon(QIcon(str(logo)))
+            except Exception:
+                pass
+
             outer = QVBoxLayout(self)
-            outer.setContentsMargins(10, 10, 10, 10)
+            outer.setContentsMargins(10, 8, 10, 8)
             outer.setSpacing(8)
+
+            # Header chrome — same tokens as ZF schedule console
+            header = QFrame()
+            header.setObjectName("chrome")
+            header.setFrameShape(QFrame.Shape.StyledPanel)
+            header_lay = QVBoxLayout(header)
+            header_lay.setContentsMargins(12, 10, 12, 10)
+            header_lay.setSpacing(4)
+            title = QLabel("Seller License Tool")
+            title.setStyleSheet(
+                f"font-size: 16px; font-weight: 700; color: {tokens.TEXT};"
+            )
+            header_lay.addWidget(title)
+            info = QLabel(
+                f"<b>SellerData:</b> {self.store.root}<br>"
+                "Customer never receives this folder. "
+                "Create → send key · Fulfill → send response JSON only."
+            )
+            info.setObjectName("muted")
+            info.setWordWrap(True)
+            info.setTextFormat(Qt.TextFormat.RichText)
+            info.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+            )
+            header_lay.addWidget(info)
+            outer.addWidget(header)
 
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
@@ -85,18 +127,6 @@ def main() -> int:
             root = QVBoxLayout(body)
             root.setContentsMargins(4, 4, 4, 4)
             root.setSpacing(12)
-
-            info = QLabel(
-                f"<b>SellerData:</b> {self.store.root}<br>"
-                "Customer never receives this folder. "
-                "Create → send key · Fulfill → send response JSON only."
-            )
-            info.setWordWrap(True)
-            info.setTextFormat(Qt.TextFormat.RichText)
-            info.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-            )
-            root.addWidget(info)
 
             # --- 1) Create ---
             create_box = QGroupBox("1) Create license key for a customer")
@@ -139,6 +169,7 @@ def main() -> int:
 
             self.btn_create = QPushButton("Create license key")
             self.btn_create.setMinimumHeight(36)
+            mark_accent(self.btn_create)
             self.btn_create.clicked.connect(self._on_create)
             cl.addWidget(self.btn_create)
 
@@ -245,16 +276,21 @@ def main() -> int:
                 "Select the activation_request.json the customer sent, "
                 "then send them the response file only."
             )
+            ful_hint.setObjectName("muted")
             ful_hint.setWordWrap(True)
             fl.addWidget(ful_hint)
+            self.btn_fulfill = QPushButton("Select request file…")
+            mark_accent(self.btn_fulfill)
+            self.btn_fulfill.clicked.connect(self._on_fulfill)
             fl.addWidget(
                 _wrap_buttons(
-                    self._mk_btn("Select request file…", self._on_fulfill),
+                    self.btn_fulfill,
                     self._mk_btn("Open response folder", self._open_response_folder),
                     self._mk_btn("Copy response path", self._copy_response_path),
                 )
             )
             self.resp_label = QLabel("Response: (none yet)")
+            self.resp_label.setObjectName("muted")
             self.resp_label.setWordWrap(True)
             self.resp_label.setTextInteractionFlags(
                 Qt.TextInteractionFlag.TextSelectableByMouse
@@ -262,11 +298,17 @@ def main() -> int:
             fl.addWidget(self.resp_label)
             root.addWidget(ful_box)
 
-            # Sticky status under scroll
+            # Status strip (console parity)
+            strip = QFrame()
+            strip.setObjectName("statusStrip")
+            strip_lay = QHBoxLayout(strip)
+            strip_lay.setContentsMargins(8, 4, 8, 4)
             self.status = QLabel("")
+            self.status.setObjectName("statusChip")
             self.status.setWordWrap(True)
             self.status.setMinimumHeight(28)
-            outer.addWidget(self.status)
+            strip_lay.addWidget(self.status, stretch=1)
+            outer.addWidget(strip)
 
             self._reload_ceks()
             self._reload_licenses()
@@ -292,7 +334,13 @@ def main() -> int:
             super().closeEvent(event)
 
         def _set_status(self, text: str, *, error: bool = False) -> None:
-            self.status.setStyleSheet("color: #b91c1c;" if error else "")
+            if error:
+                bg, fg = "#fde8e8", "#b91c1c"
+            else:
+                bg, fg = tokens.STRIP["off"]
+            self.status.setStyleSheet(
+                f"background: {bg}; color: {fg}; padding: 3px 10px; border: none;"
+            )
             self.status.setText(text)
 
         def _show_signing(self) -> None:
@@ -578,13 +626,18 @@ def main() -> int:
             self._set_status("Response path copied.")
 
     app = QApplication.instance() or QApplication(sys.argv)
+    body, section, _title = font_roles_for_window(960, 720)
     try:
-        from ui_qt.theme import apply_classic_qt_theme
-
-        apply_classic_qt_theme(app, "en")
+        apply_classic_qt_theme(app, "en", font_size=body, section_size=section)
     except Exception:
         pass
     win = SellerLicenseWindow()
+    try:
+        apply_classic_qt_theme(
+            app, "en", win, font_size=body, section_size=section, restyle=False
+        )
+    except Exception:
+        pass
     win.show()
     return int(app.exec())
 

@@ -1,7 +1,13 @@
-"""DeviceKeyProvider — TPM + Soft state machine (READY Spec §2)."""
+"""DeviceKeyProvider — TPM + Soft state machine (READY Spec §2).
+
+First install (no meta): prefer TPM; on probe/create failure after a short
+retry loop, fall back to Soft+DPAPI so customer laptops still activate.
+Already-bound TPM meta never silently switches to Soft (seller reset).
+"""
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -26,11 +32,21 @@ from .tpm_key import (
     KeyProbeStatus,
     TpmError,
     TpmFailureClass,
+    TpmProbeResult,
     classify_tpm_failure,
     create_tpm_key,
     decrypt_cek_tpm,
     export_tpm_spki,
     probe_tpm_key,
+)
+
+# First-install only: give TPM a moment, then Soft so activation is not blocked.
+_TPM_RETRY_ATTEMPTS = 3
+_TPM_RETRY_DELAY_S = 0.45
+_PROBE_SOFT_FALLBACK = (
+    KeyProbeStatus.error_transient,
+    KeyProbeStatus.error_denied,
+    KeyProbeStatus.error_unknown,
 )
 
 
@@ -119,58 +135,7 @@ def _recover_soft_meta(store_dir: Path) -> DeviceKeyProvider:
     )
 
 
-def _first_install(store_dir: Path, *, allow_soft_fallback: bool) -> DeviceKeyProvider:
-    """No meta, no existing keys — try TPM then Soft only if permanent failure."""
-    probe = probe_tpm_key()
-    if probe.status is KeyProbeStatus.present:
-        # Should have been recovered earlier; treat as recover.
-        return _recover_tpm_meta(store_dir)
-
-    if probe.status is KeyProbeStatus.error_transient:
-        raise DeviceKeyError("TPM transient error; retry (Soft fallback forbidden)")
-    if probe.status is KeyProbeStatus.error_denied:
-        raise DeviceKeyError("TPM access denied (Soft fallback forbidden)")
-    if probe.status is KeyProbeStatus.error_unknown:
-        raise DeviceKeyError("TPM status unknown (Soft fallback forbidden)")
-
-    # absent / unsupported / provider_permanent → try create TPM
-    if probe.status in (KeyProbeStatus.absent, KeyProbeStatus.unsupported) or (
-        probe.status is KeyProbeStatus.absent
-    ):
-        try:
-            spki = create_tpm_key()
-            did = device_id_from_spki(spki)
-            write_meta(
-                store_dir,
-                provider_type="tpm",
-                device_id=did,
-                created_at=_utc_now_iso(),
-            )
-            return DeviceKeyProvider(
-                store_dir=store_dir,
-                provider_type=ProviderType.tpm,
-                device_id=did,
-                _spki=spki,
-            )
-        except TpmError as e:
-            klass = classify_tpm_failure(e.hr or 0) if e.hr is not None else TpmFailureClass.unknown
-            if klass is TpmFailureClass.transient:
-                raise DeviceKeyError("TPM create transient failure; retry") from e
-            if klass is TpmFailureClass.denied:
-                raise DeviceKeyError("TPM create denied") from e
-            if klass is not TpmFailureClass.permanent and probe.status is not KeyProbeStatus.unsupported:
-                # Unknown create failure — Soft forbidden
-                if not allow_soft_fallback:
-                    raise DeviceKeyError(f"TPM create failed: {e}") from e
-                # For tests we may force soft; production: unknown → no Soft
-                raise DeviceKeyError(f"TPM create failed (no Soft): {e}") from e
-            # permanent or unsupported → Soft if allowed
-            if not allow_soft_fallback:
-                raise DeviceKeyError(f"TPM permanently unavailable: {e}") from e
-
-    # Soft fallback (permanent TPM unavailability / non-Windows tests)
-    if not allow_soft_fallback:
-        raise DeviceKeyError("Soft fallback not permitted")
+def _create_soft_provider(store_dir: Path) -> DeviceKeyProvider:
     _priv, spki = create_soft_key(store_dir)
     did = device_id_from_spki(spki)
     write_meta(
@@ -186,6 +151,95 @@ def _first_install(store_dir: Path, *, allow_soft_fallback: bool) -> DeviceKeyPr
         _spki=spki,
         _soft_private=_priv,
     )
+
+
+def _probe_tpm_with_retries() -> TpmProbeResult:
+    last: TpmProbeResult | None = None
+    for attempt in range(_TPM_RETRY_ATTEMPTS):
+        last = probe_tpm_key()
+        if last.status not in _PROBE_SOFT_FALLBACK:
+            return last
+        if attempt + 1 < _TPM_RETRY_ATTEMPTS:
+            time.sleep(_TPM_RETRY_DELAY_S)
+    assert last is not None
+    return last
+
+
+def _first_install(store_dir: Path, *, allow_soft_fallback: bool) -> DeviceKeyProvider:
+    """No meta, no existing keys — try TPM (with retries), then Soft if allowed."""
+    probe = _probe_tpm_with_retries()
+    if probe.status is KeyProbeStatus.present:
+        # Should have been recovered earlier; treat as recover.
+        return _recover_tpm_meta(store_dir)
+
+    if probe.status in _PROBE_SOFT_FALLBACK:
+        if allow_soft_fallback:
+            return _create_soft_provider(store_dir)
+        if probe.status is KeyProbeStatus.error_transient:
+            raise DeviceKeyError("TPM transient error; retry (Soft fallback forbidden)")
+        if probe.status is KeyProbeStatus.error_denied:
+            raise DeviceKeyError("TPM access denied (Soft fallback forbidden)")
+        raise DeviceKeyError("TPM status unknown (Soft fallback forbidden)")
+
+    # absent / unsupported → try create TPM, then Soft
+    if probe.status in (KeyProbeStatus.absent, KeyProbeStatus.unsupported):
+        last_err: TpmError | None = None
+        for attempt in range(_TPM_RETRY_ATTEMPTS):
+            try:
+                spki = create_tpm_key()
+                did = device_id_from_spki(spki)
+                write_meta(
+                    store_dir,
+                    provider_type="tpm",
+                    device_id=did,
+                    created_at=_utc_now_iso(),
+                )
+                return DeviceKeyProvider(
+                    store_dir=store_dir,
+                    provider_type=ProviderType.tpm,
+                    device_id=did,
+                    _spki=spki,
+                )
+            except TpmError as e:
+                last_err = e
+                klass = (
+                    classify_tpm_failure(e.hr or 0)
+                    if e.hr is not None
+                    else TpmFailureClass.unknown
+                )
+                # Permanent / unsupported create → Soft immediately when allowed
+                if (
+                    klass is TpmFailureClass.permanent
+                    or probe.status is KeyProbeStatus.unsupported
+                ):
+                    break
+                if attempt + 1 < _TPM_RETRY_ATTEMPTS and klass in (
+                    TpmFailureClass.transient,
+                    TpmFailureClass.denied,
+                    TpmFailureClass.unknown,
+                ):
+                    time.sleep(_TPM_RETRY_DELAY_S)
+                    continue
+                break
+
+        if allow_soft_fallback:
+            return _create_soft_provider(store_dir)
+        if last_err is None:
+            raise DeviceKeyError("TPM create failed")
+        klass = (
+            classify_tpm_failure(last_err.hr or 0)
+            if last_err.hr is not None
+            else TpmFailureClass.unknown
+        )
+        if klass is TpmFailureClass.transient:
+            raise DeviceKeyError("TPM create transient failure; retry") from last_err
+        if klass is TpmFailureClass.denied:
+            raise DeviceKeyError("TPM create denied") from last_err
+        raise DeviceKeyError(f"TPM permanently unavailable: {last_err}") from last_err
+
+    if not allow_soft_fallback:
+        raise DeviceKeyError("Soft fallback not permitted")
+    return _create_soft_provider(store_dir)
 
 
 def open_or_create_device_key(
@@ -263,20 +317,6 @@ def open_or_create_device_key(
 
     # First install
     if force_soft:
-        _priv, spki = create_soft_key(store_dir)
-        did = device_id_from_spki(spki)
-        write_meta(
-            store_dir,
-            provider_type="soft",
-            device_id=did,
-            created_at=_utc_now_iso(),
-        )
-        return DeviceKeyProvider(
-            store_dir=store_dir,
-            provider_type=ProviderType.soft,
-            device_id=did,
-            _spki=spki,
-            _soft_private=_priv,
-        )
+        return _create_soft_provider(store_dir)
 
     return _first_install(store_dir, allow_soft_fallback=True)

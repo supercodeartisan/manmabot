@@ -34,6 +34,13 @@ Startup splash logo (`Engine/data/logo.png`) lives inside the pack; GDI+ cannot 
 `Engine/crypto/tests/test_e2e_customer_activation.py` — Seller → packs → activation → offline reload → TEMP.  
 Not a substitute for Pack-only in-game / hunting baseline.
 
+## License / DeviceKey (customer activation)
+
+First install: TPM with retries, then Soft+DPAPI if TPM fails — see
+`Engine/crypto/LICENSE_HANDBOOK.md`. Recompile portable `crypto` / `session`
+modules after DeviceKey policy changes (incremental release).
+
 ## Not done (release gates)
 
-Pack-only in-game, hunting baseline, multi-instance in-game, TPM ACL / NCrypt.
+Pack-only in-game, hunting baseline, multi-instance in-game, TPM ACL / NCrypt
+hardening (Soft fallback already covers activation compatibility).

@@ -15,7 +15,8 @@ python -m crypto.seller_cli artifact generate --license-id <id> --license-key <k
 python -m crypto.seller_cli fulfill --request path\to\activation_request.json
 ```
 
-OOB activation (no HTTP server): see `Engine/crypto/OOB_ACTIVATION.md`.
+OOB activation (no HTTP server): see `Engine/crypto/OOB_ACTIVATION.md`.  
+Full seller/customer handbook: `Engine/crypto/LICENSE_HANDBOOK.md`.
 
 Optional: `MANMABOT_SELLER_DATA` or `--seller-data`.
 

@@ -6,15 +6,26 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from Engine.crypto.device_key import DeviceKeyError, ProviderType, open_or_create_device_key
+from Engine.crypto.device_key import (
+    DeviceKeyError,
+    ProviderType,
+    _first_install,
+    open_or_create_device_key,
+)
 from Engine.crypto.hwid import device_id_from_spki
 from Engine.crypto.soft_key import oaep_encrypt_cek, soft_key_exists, write_meta
-from Engine.crypto.tpm_key import TpmFailureClass, classify_tpm_failure
+from Engine.crypto.tpm_key import (
+    KeyProbeStatus,
+    TpmFailureClass,
+    TpmProbeResult,
+    classify_tpm_failure,
+)
 
 
 class TestClassifyTpm(unittest.TestCase):
@@ -91,6 +102,39 @@ class TestSoftDeviceKey(unittest.TestCase):
             )
             with self.assertRaises(DeviceKeyError):
                 open_or_create_device_key(store, force_soft=True)
+
+
+@unittest.skipUnless(sys.platform == "win32", "DPAPI Soft key requires Windows")
+class TestFirstInstallSoftFallback(unittest.TestCase):
+    def test_transient_retries_then_soft(self) -> None:
+        transient = TpmProbeResult(KeyProbeStatus.error_transient, hr=0x80090030)
+        with tempfile.TemporaryDirectory() as td:
+            store = Path(td)
+            with (
+                patch(
+                    "Engine.crypto.device_key.probe_tpm_key",
+                    return_value=transient,
+                ),
+                patch("Engine.crypto.device_key.time.sleep"),
+            ):
+                prov = _first_install(store, allow_soft_fallback=True)
+            self.assertEqual(prov.provider_type, ProviderType.soft)
+            self.assertTrue(soft_key_exists(store))
+
+    def test_transient_forbidden_without_soft(self) -> None:
+        transient = TpmProbeResult(KeyProbeStatus.error_transient, hr=0x80090030)
+        with tempfile.TemporaryDirectory() as td:
+            store = Path(td)
+            with (
+                patch(
+                    "Engine.crypto.device_key.probe_tpm_key",
+                    return_value=transient,
+                ),
+                patch("Engine.crypto.device_key.time.sleep"),
+            ):
+                with self.assertRaises(DeviceKeyError) as ctx:
+                    _first_install(store, allow_soft_fallback=False)
+            self.assertIn("Soft fallback forbidden", str(ctx.exception))
 
 
 if __name__ == "__main__":

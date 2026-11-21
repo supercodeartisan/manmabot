@@ -1,6 +1,7 @@
 """Customer license activation UI (OOB request / response — no cmd).
 
 UI languages: Korean and Simplified Chinese only (no English).
+Visual style matches the main ZF schedule console (classic Qt theme).
 """
 
 from __future__ import annotations
@@ -9,12 +10,13 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,7 +34,7 @@ from session.oob_activation import (
     create_activation_request,
 )
 from session.paths import USERDATA
-from ui_qt.theme import tokens
+from ui_qt.theme import apply_classic_qt_theme, font_roles_for_window, mark_accent, tokens
 
 # License window copy — ko / zh only.
 _COPY: dict[str, dict[str, str]] = {
@@ -57,6 +59,8 @@ _COPY: dict[str, dict[str, str]] = {
         "paste_ph": "또는 MMB-RSP1.… 문자열을 붙여넣은 뒤 「붙여넣은 응답 적용」을 누르세요",
         "btn_paste": "붙여넣은 응답 적용",
         "btn_quit": "종료",
+        "step_key": "1. 키 · 요청",
+        "step_response": "2. 응답 적용",
         "err_key": "올바른 라이선스 키(MMB-…)를 입력하세요.",
         "err_request": "요청 실패: {exc}",
         "ok_request": "요청 파일이 준비되었습니다. 판매자에게 보낸 뒤 응답을 선택하세요.",
@@ -94,6 +98,8 @@ _COPY: dict[str, dict[str, str]] = {
         "paste_ph": "或粘贴 MMB-RSP1.… 字符串后点击「应用粘贴的响应」",
         "btn_paste": "应用粘贴的响应",
         "btn_quit": "退出",
+        "step_key": "1. 密钥 · 请求",
+        "step_response": "2. 应用响应",
         "err_key": "请输入有效的许可证密钥（MMB-…）。",
         "err_request": "创建请求失败：{exc}",
         "ok_request": "请求文件已就绪。请发给卖家，然后选择响应文件。",
@@ -122,6 +128,13 @@ def _resolve_language() -> str:
         return detect_system_language()
 
 
+def _chrome_card() -> QFrame:
+    frame = QFrame()
+    frame.setObjectName("chrome")
+    frame.setFrameShape(QFrame.Shape.StyledPanel)
+    return frame
+
+
 class LicenseActivationDialog(QDialog):
     """Modal: enter key → create request → apply seller response (ko/zh)."""
 
@@ -133,44 +146,77 @@ class LicenseActivationDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setModal(True)
-        self.setMinimumWidth(520)
+        self.setMinimumSize(560, 520)
+        self.resize(600, 560)
         self._activated = False
         self._last_request: Path | None = None
         self._lang = ui_language(language or _resolve_language())
         self._t = _COPY[self._lang]
 
-        root = QVBoxLayout(self)
+        try:
+            from settings.map_previews import brand_icon_path
 
-        lang_row = QHBoxLayout()
+            logo = brand_icon_path()
+            if logo is not None:
+                self.setWindowIcon(QIcon(str(logo)))
+        except Exception:
+            pass
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(10, 10, 10, 8)
+        root.setSpacing(10)
+
+        # --- Header (schedule-console style) ---
+        header = _chrome_card()
+        header_lay = QVBoxLayout(header)
+        header_lay.setContentsMargins(12, 10, 12, 10)
+        header_lay.setSpacing(6)
+
+        top = QHBoxLayout()
+        self.title_label = QLabel()
+        self.title_label.setStyleSheet(
+            f"font-size: 16px; font-weight: 700; color: {tokens.TEXT};"
+        )
+        top.addWidget(self.title_label, stretch=1)
         self.lang_caption = QLabel()
+        self.lang_caption.setObjectName("muted")
         self.lang_combo = QComboBox()
+        self.lang_combo.setMinimumWidth(110)
         self.lang_combo.addItem("한국어", "ko")
         self.lang_combo.addItem("简体中文", "zh")
         self.lang_combo.setCurrentIndex(0 if self._lang == "ko" else 1)
         self.lang_combo.currentIndexChanged.connect(self._on_language_changed)
-        lang_row.addWidget(self.lang_caption)
-        lang_row.addWidget(self.lang_combo)
-        lang_row.addStretch(1)
-        root.addLayout(lang_row)
-
-        self.title_label = QLabel()
-        self.title_label.setStyleSheet("font-size: 18px; font-weight: 600;")
-        root.addWidget(self.title_label)
+        top.addWidget(self.lang_caption)
+        top.addWidget(self.lang_combo)
+        header_lay.addLayout(top)
 
         self.hint_label = QLabel()
+        self.hint_label.setObjectName("muted")
         self.hint_label.setWordWrap(True)
-        self.hint_label.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
-        root.addWidget(self.hint_label)
+        header_lay.addWidget(self.hint_label)
+        root.addWidget(header)
 
+        # --- Step 1: key + request ---
+        key_card = _chrome_card()
+        key_lay = QVBoxLayout(key_card)
+        key_lay.setContentsMargins(12, 10, 12, 10)
+        key_lay.setSpacing(8)
+        self.step_key_label = QLabel()
+        self.step_key_label.setStyleSheet(
+            f"font-weight: 700; color: {tokens.ACCENT_TEXT};"
+        )
+        key_lay.addWidget(self.step_key_label)
         self.key_caption = QLabel()
-        root.addWidget(self.key_caption)
+        key_lay.addWidget(self.key_caption)
         self.key_edit = QLineEdit()
         self.key_edit.setPlaceholderText("MMB-…")
         self.key_edit.setClearButtonEnabled(True)
-        root.addWidget(self.key_edit)
+        key_lay.addWidget(self.key_edit)
 
         row1 = QHBoxLayout()
+        row1.setSpacing(8)
         self.btn_request = QPushButton()
+        mark_accent(self.btn_request)
         self.btn_request.clicked.connect(self._on_create_request)
         self.btn_open = QPushButton()
         self.btn_open.clicked.connect(self._on_open_folder)
@@ -179,42 +225,64 @@ class LicenseActivationDialog(QDialog):
         row1.addWidget(self.btn_request)
         row1.addWidget(self.btn_open)
         row1.addWidget(self.btn_copy)
-        root.addLayout(row1)
+        row1.addStretch(1)
+        key_lay.addLayout(row1)
 
         self.path_label = QLabel()
+        self.path_label.setObjectName("muted")
         self.path_label.setWordWrap(True)
         self.path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        root.addWidget(self.path_label)
+        key_lay.addWidget(self.path_label)
+        root.addWidget(key_card)
 
+        # --- Step 2: seller response ---
+        resp_card = _chrome_card()
+        resp_lay = QVBoxLayout(resp_card)
+        resp_lay.setContentsMargins(12, 10, 12, 10)
+        resp_lay.setSpacing(8)
+        self.step_response_label = QLabel()
+        self.step_response_label.setStyleSheet(
+            f"font-weight: 700; color: {tokens.ACCENT_TEXT};"
+        )
+        resp_lay.addWidget(self.step_response_label)
         self.response_caption = QLabel()
-        root.addWidget(self.response_caption)
+        resp_lay.addWidget(self.response_caption)
+
         row2 = QHBoxLayout()
         self.btn_browse = QPushButton()
+        mark_accent(self.btn_browse)
         self.btn_browse.clicked.connect(self._on_browse_response)
         row2.addWidget(self.btn_browse)
         row2.addStretch(1)
-        root.addLayout(row2)
+        resp_lay.addLayout(row2)
 
         self.paste = QTextEdit()
         self.paste.setFixedHeight(72)
-        root.addWidget(self.paste)
+        resp_lay.addWidget(self.paste)
         self.btn_paste = QPushButton()
+        mark_accent(self.btn_paste)
         self.btn_paste.clicked.connect(self._on_apply_paste)
-        root.addWidget(self.btn_paste)
+        resp_lay.addWidget(self.btn_paste)
+        root.addWidget(resp_card)
 
+        root.addStretch(1)
+
+        # --- Status strip + quit (console parity) ---
+        strip = QFrame()
+        strip.setObjectName("statusStrip")
+        strip_lay = QHBoxLayout(strip)
+        strip_lay.setContentsMargins(8, 4, 8, 4)
+        strip_lay.setSpacing(8)
         self.status = QLabel("")
+        self.status.setObjectName("statusChip")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet(f"color: {tokens.TEXT_MUTED};")
-        root.addWidget(self.status)
-
-        bottom = QHBoxLayout()
-        bottom.addStretch(1)
+        strip_lay.addWidget(self.status, stretch=1)
         self.btn_quit = QPushButton()
         self.btn_quit.clicked.connect(self.reject)
-        bottom.addWidget(self.btn_quit)
-        root.addLayout(bottom)
+        strip_lay.addWidget(self.btn_quit)
+        root.addWidget(strip)
 
         if REQUEST_PATH.is_file():
             self._last_request = REQUEST_PATH
@@ -233,6 +301,8 @@ class LicenseActivationDialog(QDialog):
         self.lang_caption.setText(self._tr("language"))
         self.title_label.setText(self._tr("heading"))
         self.hint_label.setText(self._tr("hint"))
+        self.step_key_label.setText(self._tr("step_key"))
+        self.step_response_label.setText(self._tr("step_response"))
         self.key_caption.setText(self._tr("key_label"))
         self.btn_request.setText(self._tr("btn_request"))
         self.btn_open.setText(self._tr("btn_open"))
@@ -251,14 +321,30 @@ class LicenseActivationDialog(QDialog):
         data = self.lang_combo.currentData()
         self._lang = ui_language(str(data) if data else "ko")
         self._apply_strings()
+        app = QApplication.instance()
+        if app is not None:
+            body, section, _title = font_roles_for_window(600, 560)
+            apply_classic_qt_theme(
+                app,
+                self._lang,
+                self,
+                font_size=body,
+                section_size=section,
+                restyle=True,
+            )
 
     @property
     def activated(self) -> bool:
         return self._activated
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
-        color = "#b91c1c" if error else tokens.TEXT_MUTED
-        self.status.setStyleSheet(f"color: {color};")
+        if error:
+            bg, fg = "#fde8e8", "#b91c1c"
+        else:
+            bg, fg = tokens.STRIP["off"]
+        self.status.setStyleSheet(
+            f"background: {bg}; color: {fg}; padding: 3px 10px; border: none;"
+        )
         self.status.setText(text)
 
     def _on_create_request(self) -> None:
@@ -348,14 +434,20 @@ def run_license_activation_dialog() -> bool:
     if app is None:
         app = QApplication(sys.argv)
         created = True
-        try:
-            from ui_qt.theme import apply_classic_qt_theme
 
-            apply_classic_qt_theme(app, language)
-        except Exception:
-            pass
+    body, section, _title = font_roles_for_window(600, 560)
+    try:
+        apply_classic_qt_theme(app, language, font_size=body, section_size=section)
+    except Exception:
+        pass
 
     dlg = LicenseActivationDialog(language=language)
+    try:
+        apply_classic_qt_theme(
+            app, language, dlg, font_size=body, section_size=section, restyle=False
+        )
+    except Exception:
+        pass
     result = dlg.exec()
     ok = dlg.activated and TICKET_PATH.is_file() and ENVELOPE_PATH.is_file()
     _ = created, result

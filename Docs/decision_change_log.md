@@ -1,5 +1,14 @@
 # Decision change log
 
+## 2026-11-21 — DeviceKey: TPM retry then Soft on first install
+
+Intent: Stop customer License “Create request” failures on laptops where TPM NCrypt returns transient/denied/unknown; prefer TPM, then Soft+DPAPI after short retries so activation works across PCs.
+Shared: `crypto.device_key._first_install` / `_probe_tpm_with_retries` (used by `session.oob_activation`, `licensed_runtime`, License UI). No change to login, movement, combat, HP, party, or MapSubsystem.
+Affects: first-time device binding only; Soft-bound PCs stay Soft; already `meta=tpm` installs still require TPM or seller reset (no silent Soft switch).
+Consent: user (“Yes” to option B + handbook/docs for later releases).
+Docs: `Engine/crypto/LICENSE_HANDBOOK.md`, `OOB_ACTIVATION.md`, `Seller/README.txt`, `packaging/templates/CUSTOMER_README.txt`, `STAGE5_MMB2.md`.
+Result: implemented + unit tests for transient→Soft. Portable `.pyd` needs incremental release before next customer zip.
+
 <<<<<<< HEAD
 ## 2026-11-20 — Runtime TEMP / pack path wiring (data access only)
 

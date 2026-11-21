@@ -22,4 +22,9 @@ Daily use
 3. Fulfill: select customer activation_request.json → send response JSON only
 4. Reset: for PC change; Export CSV for ledger
 
+Customer DeviceKey
+------------------
+Activation binds one PC. Client tries TPM, then Soft+DPAPI after retries.
+Handbook: Engine\crypto\LICENSE_HANDBOOK.md (and OOB_ACTIVATION.md).
+
 Customer must NEVER receive this folder.

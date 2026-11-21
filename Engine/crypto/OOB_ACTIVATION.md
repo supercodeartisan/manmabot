@@ -70,3 +70,11 @@ This writes `UserData\license\ticket.json` + `envelope.json`. Later runs are off
 - One license → one device until `license reset`.
 - Response must never contain raw CEK / signing private keys.
 - Pack/BUILD/`trusted_kids` verification is unchanged.
+
+## DeviceKey (TPM → Soft)
+
+First install prefers TPM. After a short retry, **Soft+DPAPI** is used when TPM
+probe/create fails (transient / denied / unknown / absent), so customer laptops
+are not blocked by `TPM transient error; Soft fallback forbidden`.
+
+Full seller/customer handbook: **`LICENSE_HANDBOOK.md`** (same folder).
