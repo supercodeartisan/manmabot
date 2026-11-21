@@ -262,6 +262,51 @@ Nuitka가 `os.path.isdir = hook` 이후에도 저장해 둔 원본 대신 바뀐
 
 ---
 
+## RBF-008 — body pose unread on pack-only portable (2026-11-21)
+
+### 증상
+
+고객 portable 사냥 로그:
+
+- `[pose] body pose: action slot unread`
+- travel/loot hop `moving=unread` / `moving=-1`
+- 좌표·몹·아이템은 읽히는데 걷기/서기 판정이 비어 루팅 hop이 과재클릭됨
+
+개발 트리(평문 `Engine/analysis/registry`)에서는 같은 클라이언트로 정상인 경우가 많음.
+
+### 원인
+
+`analysis_text.pack`은 기동 시 `%TEMP%/manmabot_an_*` 오버레이로만 풀림.  
+`body_pose._load_find` / `registry_apply.source_registry` 가 **디스크** `Engine/analysis/registry/*` 만 봐서 팩 전용 빌드에서는 옛 MGR/MyPlayer/VFT 폴백으로 MyPlayer 체인이 실패함.  
+import 시점 `_bind_action_vfts` 도 오버레이 설정 **전**에 돌아가 바인딩이 비는 경우가 있음.
+
+### 수정 (소스에 포함됨 — 재빌드만 하면 됨)
+
+| 파일 | 내용 |
+|------|------|
+| `Engine/app/_05_action/body_pose.py` | `analysis_registry_file`로 `entity_offsets.txt`; 없으면 `_find_ready` 고정 안 함; `refresh_offsets()` |
+| `Engine/app/_01_perception/registry_apply.py` | `source_registry()` 오버레이 `LC930_REGISTRY.txt` 우선 |
+| `Engine/session/run_entry.py` | `ensure_packed_assets()` 직후 `refresh_offsets()` |
+| `Engine/app/_05_action/tests/test_body_pose_overlay.py` | 오버레이 경로 단위 테스트 |
+
+### 이후 릴리스에서 할 일
+
+**수동 패치 없음.** `incremental_release.py` 후 Stage 5(같은 CEK)로 portable을 갱신한다. 교체되는 `.pyd`:
+
+`Engine/app/_05_action/body_pose.cp314-win_amd64.pyd`  
+`Engine/app/_01_perception/registry_apply.cp314-win_amd64.pyd`  
+`Engine/session/run_entry.cp314-win_amd64.pyd`
+
+실기 확인: 로그에 `action slot unread` / `moving=unread`가 사라지고 hop reclick이 줄어드는지.
+
+### 재발 방지 규칙
+
+오프셋·레지스트리 **텍스트**를 여는 Python 경로는 `session.analysis_overlay.analysis_registry_file` (또는 `source_registry`)를 쓴다.  
+`Path(__file__)/…/Engine/analysis/…` 하드코딩을 새로 넣지 않는다. Pack-only 기동은 `ensure` → `refresh_offsets` 순서를 유지한다.  
+자세한 런타임 흐름: `RUNTIME_TEMP.md`, `SENSITIVE_ASSETS.md` §6.
+
+---
+
 ## (다음 항목)
 
 형식:

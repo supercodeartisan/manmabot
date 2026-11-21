@@ -42,6 +42,8 @@ python\python.exe packaging\incremental_release.py
 
 고객 폴더의 `UserData`에 이 PC의 계정, 로그, 스케줄이 있으면 체크섬 전에 지운다. 개발 트리의 `UserData`는 그대로다. `defaults`만 남긴다.
 
+Pack-only(MMB2) 고객 배포면 증분 뒤에 `pack_assets.py --cek-id …` + `verify_stage5.py`를 다시 돌린다(평문 `Engine\data`를 남기지 않음). `body_pose` / `registry_apply` / `run_entry` 오프셋 경로 수정(RBF-008)도 이 순서로 portable `.pyd`에 넣는다.
+
 ## 전체를 다시 만드는 경우
 
 - 고객 폴더가 없다.

@@ -27,6 +27,8 @@ Transition: `--legacy-mmba` still builds MMBA v1.
 
 Runtime (`ensure_packed_assets`) refuses MMB2 packs when BUILD.json is missing, signature fails (trusted kid), or sha256/pack_id mismatched (mixed-build + tamper protection).
 
+After a successful ensure, `run_entry` calls `body_pose.refresh_offsets()` so stand/walk VFTs and MyPlayer find anchors load from the analysis TEMP overlay (`entity_offsets.txt` / `LC930_REGISTRY.txt` inside `analysis_text.pack`). Without that refresh, pack-only builds log `body pose: action slot unread` (RBF-008).
+
 Startup splash logo (`Engine/data/logo.png`) lives inside the pack; GDI+ cannot read the RAM mount directly. Runtime materializes a temp file in `startup_splash._load_logo` — **no extra Stage 5 unpack step for logo.**
 
 ## E2E (unit / integration)

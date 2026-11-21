@@ -7,7 +7,7 @@ Shared: `body_pose._load_find` / `refresh_offsets`; `registry_apply.source_regis
 Affects: travel / loot / search hop “is moving?” reads on pack-only installs. Stale baked MGR/MyPlayer/VFT defaults no longer win when overlay has current registry.
 Side effects: once offsets bind, loot hop should reclick less on false “still” while walking.
 Consent: user (“yes” after unread root-cause / fix plan).
-Result: code wired + incremental release + Stage5 pack (`build_id` `97957950-…`, same CEK). Live pack-only confirm: after deploy, log should no longer show `body pose: action slot unread` / `moving=unread` once overlay binds.
+Result: code wired + incremental release + Stage5 pack (`build_id` `97957950-…`, same CEK). Docs: `RELEASE_BUGFIX_LOG` RBF-008, `RUNTIME_TEMP`, `SENSITIVE_ASSETS`, `STAGE5_MMB2`, `RELEASE_PLAYBOOK`, `INCREMENTAL_RELEASE`, `Docs/architecture/ANALYSIS_MODULES`. Live pack-only confirm: after deploy, log should no longer show `body pose: action slot unread` / `moving=unread` once overlay binds.
 
 ## 2026-11-21 — DeviceKey: TPM retry then Soft on first install
 
