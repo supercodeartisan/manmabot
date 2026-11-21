@@ -49,10 +49,19 @@ from release_snapshot import (  # noqa: E402
 
 _PYD_RE = re.compile(r"^(?P<stem>.+)\.cp\d+.*\.pyd$", re.I)
 _ANALYSIS_PREFIX = "Engine/analysis/"
-_VCVARS = Path(
-    r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-    r"\VC\Auxiliary\Build\vcvars64.bat"
+_VCVARS_CANDIDATES = (
+    Path(r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"),
 )
+
+
+def _find_vcvars() -> Path | None:
+    for path in _VCVARS_CANDIDATES:
+        if path.is_file():
+            return path
+    return None
 
 
 def _stat(path: Path):
@@ -314,11 +323,12 @@ def _ensure_msvc(compile_needed: bool) -> None:
         return
     if shutil.which("cl"):
         return
-    if not _VCVARS.is_file():
+    vcvars = _find_vcvars()
+    if vcvars is None:
         raise SystemExit("ERROR: cl.exe is not on PATH. Open the x64 Native Tools prompt.")
     script = Path(__file__).resolve()
     quoted = " ".join(f'"{arg}"' if " " in arg else arg for arg in sys.argv[1:])
-    command = f'call "{_VCVARS}" && set MANMABOT_VCVARS=1 && "{sys.executable}" "{script}" {quoted}'
+    command = f'call "{vcvars}" && set MANMABOT_VCVARS=1 && "{sys.executable}" "{script}" {quoted}'
     raise SystemExit(subprocess.call(command, shell=True))
 
 

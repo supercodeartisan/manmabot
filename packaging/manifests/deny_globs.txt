@@ -36,6 +36,8 @@ Tool_Shopping_Practice_Admin.bat
 **/*~
 
 # --- analysis build sources & debris (keep DLLs / offset data) ---
+# Local registry backups (memory update scratch) — never ship
+Engine/analysis.bak_v37_20261118/
 *.c
 *.h
 *.obj
