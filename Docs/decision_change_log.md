@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-21 — leader stands in the rally area while the member socket is down
+
+Intent: After the last teleport, a pose that has not landed must not start the hunt walk. With no member socket the leader stays on that rally tile until the forming deadline. A member who is connected but not at the tile still has the 3 minute stand.
+Shared: `LeaderStartRally.should_hold`, `LeaderStartRally.update`. Login clicks, retreat, and solo unstick were not changed.
+Affects: party start rally only. The march and turret radii were not retuned.
+Consent: user (wait in the rally area, as before).
+Result: `test_leader_rally.py` passed (8). Not run in game. The 3 minute stand for a connected member was not changed.
+
 <<<<<<< HEAD
 ## 2026-11-20 — rear danger uses the same tile and guid, then the march goes on
 

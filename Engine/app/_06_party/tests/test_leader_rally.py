@@ -91,7 +91,8 @@ def test_teleport_plan_stands_on_the_landing_after_the_teleport():
     assert start.state == "await_mark"
     assert start.should_hold(0, _Pose(4, 10, 10)) is False
     assert start.should_hold(1, _Pose(4, 20, 20)) is False
-    assert start.should_hold(2, _Pose(4, 20, 20)) is False
+    assert start.should_hold(2, _Pose(4, 20, 20)) is True
+    assert start.state == "await_mark"
     assert start.should_hold(2, _Pose(4, 83, 78)) is True
     assert start.stood is True
     assert start.state == "waiting"
@@ -126,7 +127,8 @@ def test_scroll_then_walk_stands_before_the_walk():
     assert start.hold_step == 1
     assert start.meet == (4, 80, 80)
     assert start.should_hold(0, _Pose(0, 1, 2)) is False
-    assert start.should_hold(1, _Pose(0, 1, 2)) is False
+    assert start.should_hold(1, _Pose(0, 1, 2)) is True
+    assert start.state == "await_mark"
     assert start.should_hold(1, _Pose(4, 84, 80)) is True
     assert start.state == "waiting"
 
@@ -172,6 +174,24 @@ def test_a_missing_member_holds_the_stand_for_three_minutes():
     start.update(1, here)
     assert start.state == "done"
     assert start.left_behind == ["b"]
+
+
+def test_no_socket_keeps_the_leader_on_the_rally_tile():
+    from websocket.party_orders import Rally
+
+    clock = {"t": 100.0}
+    rally = Rally()
+    start = LeaderStartRally(rally, log=lambda _m: None, clock=lambda: clock["t"])
+    start.begin({"콘러드"}, travel=True, pose=None, deadline=100.0 + 600.0)
+    start.note_arrived((4, 80, 80))
+    here = {"members": []}
+    clock["t"] = 100.0 + 180.0
+    start.update(0, here)
+    assert start.state == "waiting"
+    clock["t"] = 100.0 + 600.0
+    start.update(0, here)
+    assert start.state == "done"
+    assert start.left_behind == ["콘러드"]
 
 
 def test_rally_wait_stands_before_the_hunt_walk():

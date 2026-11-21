@@ -224,10 +224,11 @@ class LeaderStartRally:
         except (TypeError, ValueError):
             return False
         # A scroll lands within a few tiles of the planned cell. A walk-only
-        # route still requires the exact tile.
+        # route still requires the exact tile. After a teleport, a pose that
+        # has not landed yet must not release the next hunt walk.
         slack = LANDING_SLACK if self.had_teleport else 1
         if not _near_meet(pose, self.meet, slack):
-            return False
+            return bool(self.had_teleport)
         self.note_arrived(self.meet)
         return self.state == "waiting"
 
@@ -256,6 +257,24 @@ class LeaderStartRally:
             self._log("Party start rally complete — all members here, continue to the hunt")
             return
         now = self._clock()
+        # Nobody on the socket: stay on the rally tile through the forming
+        # window. A connected member who has not walked up still has 3 minutes.
+        if int(connected) <= 0 and self.deadline is not None:
+            if now >= self.deadline:
+                self.left_behind = self._rally.missing(self.expected)
+                missing = ", ".join(self.left_behind) or "—"
+                self.skip(
+                    f"start wait over, not connected: {missing} — continue to the hunt "
+                    "(late members follow the leader)"
+                )
+            elif now - self._log_at >= WAIT_LOG_EVERY_S:
+                self._log_at = now
+                missing = ", ".join(self._rally.missing(self.expected)) or "—"
+                self._log(
+                    f"Party start rally wait {self._rally.stage} missing={missing} "
+                    f"ws_clients={int(connected)}"
+                )
+            return
         started = self._wait_started
         if started is not None and now - started >= MEMBER_WAIT_S:
             self.left_behind = self._rally.missing(self.expected)
