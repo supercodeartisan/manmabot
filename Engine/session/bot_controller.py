@@ -2095,6 +2095,14 @@ class BotController:
         if mode not in ("turret", "moving"):
             mode = "moving"
         anchor = getattr(self, "_formation_anchor", None)
+        hunt = getattr(brain, "turret_anchor", None)
+        hunt_map = getattr(brain, "turret_anchor_map", None)
+        if not (isinstance(hunt, tuple) and len(hunt) >= 2):
+            hunt = None
+        try:
+            hunt_map = int(hunt_map) if hunt_map is not None else None
+        except (TypeError, ValueError):
+            hunt_map = None
 
         def _anchor_coord(index: int):
             if not isinstance(anchor, tuple) or len(anchor) <= index:
@@ -2109,6 +2117,9 @@ class BotController:
             "formation_anchor_y": _anchor_coord(1),
             "formation_anchor_dx": _anchor_coord(2),
             "formation_anchor_dy": _anchor_coord(3),
+            "hunt_anchor_x": None if hunt is None or hunt_map is None else int(hunt[0]),
+            "hunt_anchor_y": None if hunt is None or hunt_map is None else int(hunt[1]),
+            "hunt_anchor_map": None if hunt is None or hunt_map is None else int(hunt_map),
             "random_loot": bool(getattr(profile, "party_random_loot", False)),
             "loot_role": str(getattr(profile, "party_loot_role", "none") or "none"),
             "yard_scale_with_roster": True,
@@ -2202,6 +2213,24 @@ class BotController:
             )
         return sent
 
+    def _publish_party_focus(self) -> None:
+        """One shared hunt order from member sightings. Unseen mobs are not clicks."""
+        from app._06_party.sightings import book
+
+        mode = "moving"
+        info = getattr(self, "_party_policy_info", None)
+        if isinstance(info, dict) and str(info.get("leader_mode") or "") == "turret":
+            mode = "turret"
+        book.decide(mode=mode)
+        body = book.take_message()
+        if body is None:
+            return
+        sent = self._party_comms_publish_body(body)
+        self.log(
+            f"Party focus band={body.get('band') or 'clear'} "
+            f"support={body.get('support') or '—'} → {sent}"
+        )
+
     def _leader_party_tick(self, world, blackboard, map_id) -> None:
         """Collect hellos / reports always; policy and recovery only with a roster."""
         if not self._party_server_on():
@@ -2224,23 +2253,25 @@ class BotController:
             self.log(f"Party recovery sent to {sent} member(s)")
         self._party_tree_trip = trip
         self._publish_party_policy()
+        self._publish_party_focus()
         self._publish_shop_reports(world, map_id)
         self._publish_supply_notice()
         self._publish_supply_hold()
         self._publish_supply_stand(world, map_id, blackboard)
 
     def _leader_walk_party(self, world, blackboard, action, map_id):
-        """Leader travel with members: ask for room when blocked, pace when they lag.
+        """Leader travel with members: share the path, ask for room, pace the line.
 
         A guide with no click for 3 seconds sends ``make_way`` (once per 5 s).
-        A travel click waits up to 1 second while the farthest same-map member
-        within 12 tiles is past ``PACE_GAP_TILES``, then clicks freely for 2.
-        Unstick clicks, retreat, and the walk before the start rally ends are
-        not paced. Other actions pass through.
+        While ``nav_path`` is set, the next click waits when a same-map member
+        is more than ``MARCH_GAP_TILES`` path steps behind. That wait keeps
+        the shared path. With no guide, the old 1-second hold and 2-second
+        free window still apply. Unstick, retreat, and the walk before the
+        start rally ends clear the path and are not paced.
         """
         from app._02_state.enums import ActionType
         from app._04_decision.player_mode import PlayerMode
-        from app._06_party.leader_pace import PACE_GAP_TILES, LeaderPace, pace_gap
+        from app._06_party.leader_pace import LeaderPace, pace_gap
         from app._06_party.make_way import (
             BLOCKED_NOTES,
             LeaderBlockWatch,
@@ -2267,42 +2298,170 @@ class BotController:
                 make_way_message(map_id=map_id, x=here[0], y=here[1], guide=guide)
             )
             self.log(f"Party: leader blocked at {here}, make way sent to {sent}")
-        if (
-            kind is not ActionType.TRAVELING
-            or "unstick" in reason
-            or origin is None
-            or getattr(blackboard, "player_mode", None) is PlayerMode.RETREATING
-        ):
-            pace.reset()
-            return action
-        rally = getattr(self, "_start_rally", None)
-        if rally is None or str(getattr(rally, "state", "") or "") != "done":
-            pace.reset()
-            return action
-        if getattr(world, "party_read_ok", None) is not True:
-            return action
         from app._06_party.formation import followers_from_party
-
-        snap = getattr(world, "last_party", None)
-        followers = followers_from_party(
-            snap, map_id, self_name=_player_chat_name(world, snap)
+        from app._06_party.formation_march import (
+            MARCH_GAP_TILES,
+            MarchShare,
+            clip_leader_hop,
         )
-        gap = pace_gap((int(origin.x), int(origin.y)), followers)
-        limit = int(PACE_GAP_TILES)
-        was = pace.holding
-        if not pace.check(behind=gap is not None and gap > limit):
-            if was and not pace.holding:
-                self.log(f"Party: pace released, farthest member {gap} tiles")
-            return action
-        if not was:
-            self.log(f"Party: pace wait, farthest member {gap} tiles (limit {limit})")
-        from app._06_party.types import ActionIntent
 
-        return ActionIntent(
-            action=ActionType.IDLE,
-            priority=float(getattr(action, "priority", 0.0) or 0.0),
-            reason=f"party pace wait gap={gap} limit={limit}",
+        march = getattr(self, "_party_march", None)
+        if not isinstance(march, MarchShare):
+            march = self._party_march = MarchShare()
+        retreat = (
+            origin is None
+            or "unstick" in reason
+            or getattr(blackboard, "player_mode", None) is PlayerMode.RETREATING
         )
+        rally = getattr(self, "_start_rally", None)
+        rally_open = rally is not None and str(getattr(rally, "state", "") or "") == "done"
+        if kind is not ActionType.TRAVELING or retreat or not rally_open:
+            pace.reset()
+        here = None if origin is None else (int(origin.x), int(origin.y))
+        guide = list(getattr(blackboard, "nav_path", None) or [])
+        # A pace idle keeps the path. Only a real cancel clears it.
+        pace_idle = False
+        gap = None
+        followers = []
+        moving = kind is ActionType.TRAVELING and not retreat and rally_open
+        from app._06_party.sightings import book as sighting_book
+
+        turret_on = getattr(self, "_leader_turret_on", None)
+        if moving and here is not None and not (callable(turret_on) and turret_on()):
+            import time as _time
+
+            from app._06_party.moving_fight import REPORT_FRESH_S, march_hold_reason
+
+            order = sighting_book.order
+            hot = order is not None and str(getattr(order, "band", "")) in (
+                "dying",
+                "attacking",
+            )
+            newest = None
+            for rows in sighting_book.rows.values():
+                for row in rows if isinstance(rows, list) else []:
+                    at = row.get("_at") if isinstance(row, dict) else None
+                    if isinstance(at, (int, float)):
+                        newest = at if newest is None else max(newest, float(at))
+            age = None if newest is None else _time.monotonic() - float(newest)
+            hop = getattr(blackboard, "nav_waypoint", None)
+            hop_tile = (
+                (int(hop[0]), int(hop[1]))
+                if isinstance(hop, tuple) and len(hop) >= 2
+                else None
+            )
+            other_map = (
+                order is not None
+                and map_id is not None
+                and int(getattr(order, "map_id", map_id) or 0) != int(map_id)
+            )
+            why = march_hold_reason(
+                leader_fighting=getattr(blackboard, "current_target_id", None) is not None,
+                rear_hot=hot,
+                report_age=0.0 if hot and age is None else age,
+                fresh_s=REPORT_FRESH_S,
+                other_map=other_map,
+                here=here,
+                hop=hop_tile,
+                guide=guide,
+            )
+            if why:
+                pace_idle = True
+                gap = why
+        if (
+            moving
+            and here is not None
+            and getattr(world, "party_read_ok", None) is True
+        ):
+            snap = getattr(world, "last_party", None)
+            followers = followers_from_party(
+                snap, map_id, self_name=_player_chat_name(world, snap)
+            )
+            if not guide:
+                gap = pace_gap(here, followers)
+                limit = int(MARCH_GAP_TILES)
+                was = pace.holding
+                if not pace.check(behind=gap is not None and gap > limit):
+                    if was and not pace.holding:
+                        self.log(f"Party: pace released, farthest member {gap} tiles")
+                else:
+                    pace_idle = True
+                    if not was:
+                        self.log(
+                            f"Party: pace wait, farthest member {gap} tiles (limit {limit})"
+                        )
+        clients = 0
+        comms = getattr(self, "_party_comms", None)
+        server = getattr(comms, "server", None) if comms is not None else None
+        if server is not None:
+            count = getattr(server, "client_count", 0)
+            try:
+                clients = int(count() if callable(count) else count)
+            except (TypeError, ValueError):
+                clients = 0
+        seat_tiles = []
+        for follower in followers:
+            if isinstance(follower, tuple) and len(follower) == 2:
+                seat_tiles.append((int(follower[0]), int(follower[1])))
+            else:
+                seat_tiles.append(None)
+        terrain = None
+        try:
+            from app._04_decision.nav_config import get_terrain_map
+
+            terrain = get_terrain_map()
+        except Exception:
+            terrain = None
+        body = march.update(
+            map_id=map_id,
+            here=here,
+            guide=guide if moving or pace_idle else [],
+            traveling=moving,
+            pace_idle=pace_idle,
+            cancel=bool(retreat or not rally_open),
+            clients=clients,
+            terrain=terrain,
+            seats=seat_tiles,
+        )
+        if body is not None:
+            sent = self._party_comms_publish_body(body)
+            if body.get("clear"):
+                self.log(f"Party: march cleared, sent to {sent}")
+            else:
+                self.log(
+                    f"Party: march rev={body.get('rev')} seq={body.get('seq')} "
+                    f"tiles={len(body.get('tiles') or [])} sent to {sent}"
+                )
+        if moving and guide and here is not None and not pace_idle:
+            hop = getattr(blackboard, "nav_waypoint", None)
+            if isinstance(hop, tuple) and len(hop) >= 2:
+                hop_tile = (int(hop[0]), int(hop[1]))
+                progresses = [
+                    None if tile is None else march.index_of(tile) for tile in seat_tiles
+                ]
+                clipped = clip_leader_hop(march, hop_tile, progresses)
+                if clipped is None and any(item is not None for item in progresses):
+                    pace_idle = True
+                    gap = "arrival"
+                elif clipped is not None and clipped != hop_tile and origin is not None:
+                    from dataclasses import replace
+
+                    from app._04_decision.pathfinding import waypoint_to_content
+
+                    action = replace(
+                        action,
+                        destination=waypoint_to_content(clipped, origin),
+                        reason=f"{reason} march clip {clipped[0]},{clipped[1]}",
+                    )
+        if pace_idle and kind is ActionType.TRAVELING:
+            from app._06_party.types import ActionIntent
+
+            return ActionIntent(
+                action=ActionType.IDLE,
+                priority=float(getattr(action, "priority", 0.0) or 0.0),
+                reason=f"party pace wait gap={gap} limit={int(MARCH_GAP_TILES)}",
+            )
+        return action
 
     @staticmethod
     def _party_comms_publish_body(body) -> int:
@@ -2645,6 +2804,12 @@ class BotController:
         reporter.nudge()
         self._supply_live_key = key
 
+    def _note_march_hello(self, _name: str) -> None:
+        """A new or replaced member socket asks for the current path."""
+        march = getattr(self, "_party_march", None)
+        if march is not None and hasattr(march, "note_hello"):
+            march.note_hello()
+
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
         from app._06_party.invite import roster_invite_names
@@ -2664,6 +2829,7 @@ class BotController:
                 rows, _player_chat_name(world, snap)
             ),
             log=_note,
+            on_hello=self._note_march_hello,
         )
 
     def _leader_policy_acked(self, name: str) -> bool:
@@ -3004,6 +3170,66 @@ class BotController:
             live=self._member_live_view(world),
             client_id=self._member_client_id(),
         )
+        self._send_member_sightings(world, name or "")
+
+    def _send_member_sightings(self, world, name: str) -> None:
+        """Report this screen. The leader orders; this client does not click for it."""
+        import time
+
+        from app._04_decision.world_nav.session import live_pose_from_state
+        from app._06_party.sightings import SIGHTING_EVERY_S, sightings_from_monsters
+
+        if not name or not self._party_comms.member_connected:
+            return
+        now = time.monotonic()
+        if now - float(getattr(self, "_sighting_at", 0.0) or 0.0) < SIGHTING_EVERY_S:
+            return
+        try:
+            pose = live_pose_from_state(world)
+        except Exception:
+            pose = None
+        if pose is None:
+            return
+        monsters = []
+        getter = getattr(world, "monsters", None)
+        if callable(getter):
+            try:
+                monsters = list(getter() or [])
+            except Exception:
+                monsters = []
+        player = getattr(world, "player", None)
+        hp = getattr(player, "hp_percent", None) if player is not None else None
+        if not isinstance(hp, (int, float)) and player is not None:
+            cur = getattr(player, "hp", None)
+            cap = getattr(player, "max_hp", None)
+            if isinstance(cur, (int, float)) and isinstance(cap, (int, float)) and cap > 0:
+                hp = int(100 * cur / cap)
+        info = self._member_policy_info if isinstance(self._member_policy_info, dict) else {}
+        role = str(info.get("seat_role") or "member")
+        heading = None
+        if str(info.get("leader_mode") or "") != "turret":
+            brain = getattr(self, "_party_brain_ref", None)
+            scratch = getattr(getattr(brain, "runtime", None), "scratch", None)
+            raw_heading = scratch.get("formation_heading") if isinstance(scratch, dict) else None
+            if isinstance(raw_heading, tuple) and len(raw_heading) >= 2:
+                heading = (int(raw_heading[0]), int(raw_heading[1]))
+        origin = type("Tile", (), {"x": int(pose.x), "y": int(pose.y)})()
+        map_id = int(pose.map_id)
+        body = sightings_from_monsters(
+            monsters,
+            who=name,
+            map_id=map_id,
+            origin=origin,
+            role=role,
+            self_hp=int(hp) if isinstance(hp, (int, float)) else None,
+            heading=heading,
+        )
+        try:
+            ok = bool(self._party_comms.send_sighting(body))
+        except Exception:
+            ok = False
+        if ok:
+            self._sighting_at = now
 
     def _member_live_view(self, world) -> dict:
         """Monitor extras for ``member_state``: bot state, map, xy, hp/mp, brain, rally."""
@@ -3988,6 +4214,21 @@ class BotController:
                     map_id=last_logged_map_id,
                     anchor=turret_anchor,
                 )
+                if isinstance(help_scratch, dict):
+                    regroup = False
+                    try:
+                        from app._06_party.sightings import book as sighting_book
+
+                        regroup = bool(
+                            sighting_book.order is not None
+                            and sighting_book.order.regroup
+                        )
+                    except Exception:
+                        regroup = False
+                    if regroup:
+                        help_scratch["party_turret_regroup"] = True
+                    else:
+                        help_scratch.pop("party_turret_regroup", None)
                 if self._party_leader_on():
                     self._party_turret_info = turret_status(decision.blackboard)
 

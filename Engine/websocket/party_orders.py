@@ -183,6 +183,9 @@ def policy_message(
     formation_anchor_y: int | None = None,
     formation_anchor_dx: int | None = None,
     formation_anchor_dy: int | None = None,
+    hunt_anchor_x: int | None = None,
+    hunt_anchor_y: int | None = None,
+    hunt_anchor_map: int | None = None,
 ) -> dict[str, Any]:
     """Global party farm knobs from the leader. Members merge into their config.
 
@@ -207,6 +210,9 @@ def policy_message(
         "formation_anchor_y": formation_anchor_y,
         "formation_anchor_dx": formation_anchor_dx,
         "formation_anchor_dy": formation_anchor_dy,
+        "hunt_anchor_x": hunt_anchor_x,
+        "hunt_anchor_y": hunt_anchor_y,
+        "hunt_anchor_map": hunt_anchor_map,
         "random_loot": bool(random_loot),
         "loot_role": str(loot_role or "none"),
         "yard_half_w": yard_half_w,
@@ -590,6 +596,10 @@ class MemberOrders:
         self.supply_open: bool = False
         # Blocked leader's step-off request, stamped ``_at`` (monotonic) on arrival.
         self.make_way: Optional[dict[str, Any]] = None
+        # Active shared walk. A lower ``seq`` on the same session is ignored.
+        self.formation_path: Optional[dict[str, Any]] = None
+        # Shared hunt order. Local track ids are not in this frame.
+        self.party_focus: Optional[dict[str, Any]] = None
 
     @property
     def order_kind(self) -> str:
@@ -610,6 +620,8 @@ class MemberOrders:
         self.supply_stand = None
         self.supply_open = False
         self.make_way = None
+        self.formation_path = None
+        self.party_focus = None
 
     def take_make_way(self) -> Optional[dict[str, Any]]:
         """The latest step-off request once, then None until the next one."""
@@ -690,6 +702,15 @@ class MemberOrders:
             if kind == "make_way":
                 self.make_way = {**body, "_at": time.monotonic()}
                 continue
+            if kind == "formation_path":
+                self._note_formation_path(body)
+                continue
+            if kind == "party_focus":
+                if bool(body.get("clear")):
+                    self.party_focus = None
+                else:
+                    self.party_focus = dict(body)
+                continue
             if kind == "party_reports":
                 rows = body.get("reports")
                 self.party_reports = [
@@ -710,6 +731,23 @@ class MemberOrders:
                     self.arrived = False
                     self._reported = False
                     self._report_pending = False
+
+    def _note_formation_path(self, body: dict[str, Any]) -> None:
+        """Keep the newest path. A late frame with a smaller seq is dropped."""
+        try:
+            seq = int(body.get("seq"))
+        except (TypeError, ValueError):
+            return
+        current = self.formation_path
+        if isinstance(current, dict):
+            try:
+                prev = int(current.get("seq"))
+            except (TypeError, ValueError):
+                prev = -1
+            same = str(body.get("session") or "") == str(current.get("session") or "")
+            if same and seq < prev:
+                return
+        self.formation_path = dict(body)
 
     def near(self, map_id: Optional[int], x: Any, y: Any) -> bool:
         order = self.gather

@@ -85,6 +85,18 @@ def send_member_state(client: Any, body: dict) -> bool:
     return True
 
 
+def send_sighting(client: Any, body: dict) -> bool:
+    """Member → leader: the monsters on this screen. Replaces the previous set."""
+    from websocket.protocol import PartyMessage
+
+    if client is None or not getattr(client, "connected", False):
+        return False
+    if not isinstance(body, dict):
+        return False
+    client.send(PartyMessage(sender=str(body.get("from") or "member"), message=body))
+    return True
+
+
 def send_beep(client: Any, *, name: str, why: str = "already_in_party") -> bool:
     """Member → leader: socket test when already in the in-game party."""
     from websocket.protocol import PartyMessage

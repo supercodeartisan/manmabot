@@ -73,6 +73,11 @@ class PolicyInput:
     leader_moving: bool = False
     # Already returning to the slot. Stays on until the member is within one tile.
     catch_up: bool = False
+    # Shared march: this member's own slot is ahead. Not a catch-up distance.
+    # stop_tiles may still say hold, but the slot has to start moving.
+    march_advance: bool = False
+    # Moving farm: a short walk to an empty attack tile. Not a follow hold.
+    combat_approach: bool = False
 
 
 # Off the slot by this many tiles: defer a new hunt until back within one tile.
@@ -136,6 +141,18 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
         else dist
     )
 
+    # A short step to an attack tile is not a hold inside stop_tiles.
+    # Turret keeps its own yard. Out of that step, follow as before.
+    if (
+        inp.assist_ready
+        and inp.need_combat_step
+        and inp.combat_approach
+        and not cfg.turret_farm
+    ):
+        return PolicyResult(
+            MemberKind.FOLLOW, True, f"combat_approach dist={dist}"
+        )
+
     # Assist beats loot and follow. A leader step or a seat catch-up does not
     # defer it. Out of attack range still follows instead of closing in.
     if inp.assist_ready and not inp.need_combat_step:
@@ -178,11 +195,17 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
             )
         # Inside the stop band, stand. A side slot does not pull the member
         # around the leader. Outside it, follow the leader tile.
-        if walk <= int(cfg.stop_tiles):
+        if walk <= int(cfg.stop_tiles) and not inp.march_advance:
             return PolicyResult(
                 MemberKind.HOLD,
                 False,
                 f"hold dist={dist} walk={walk}",
+            )
+        if inp.march_advance and walk <= int(cfg.stop_tiles):
+            return PolicyResult(
+                MemberKind.FOLLOW,
+                True,
+                f"march_advance walk={walk} dist={dist}",
             )
         return PolicyResult(
             MemberKind.FOLLOW,
@@ -193,13 +216,16 @@ def decide_policy(inp: PolicyInput) -> PolicyResult:
     # --- Travel / idle ---
     # Walk steps to the leader. Two tiles across a wall is not beside him.
     # A formation slot is not a walk goal.
-    if walk <= int(cfg.stop_tiles):
+    if walk <= int(cfg.stop_tiles) and not inp.march_advance:
         return PolicyResult(
             MemberKind.HOLD,
             False,
             f"hold dist={dist} walk={walk}",
         )
-    why = "follow_settle" if inp.leader_stopped else "follow_travel"
+    if inp.march_advance and walk <= int(cfg.stop_tiles):
+        why = "march_advance"
+    else:
+        why = "follow_settle" if inp.leader_stopped else "follow_travel"
     return PolicyResult(
         MemberKind.FOLLOW,
         True,

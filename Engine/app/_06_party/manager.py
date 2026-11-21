@@ -137,6 +137,8 @@ class PartyMemberManager:
         self._walk_cost_memo: Optional[tuple[tuple[int, int, int, int], float, Optional[int]]] = None
         self._make_way_until = 0.0
         self._make_way_leader: Optional[tuple[int, int]] = None
+        self._march_move: Any = None
+        self._march_active = False
         self._formation = MemberFormation()
         # Solo DecisionManager blackboard — required for WORLD_NAV join (scroll/gate).
         self._nav_blackboard: Any = None
@@ -651,6 +653,44 @@ class PartyMemberManager:
                 if helped is not None:
                     assist_obj = helped
                     assist_src = "member_help"
+        try:
+            from .comms.orders import member_orders
+            from .loot import _self_row_name
+            from .sightings import resolve_local
+
+            focus = member_orders.party_focus
+            seat = ""
+            if origin_ok and origin is not None and game_state is not None:
+                seat = _self_row_name(
+                    getattr(game_state, "last_party", None),
+                    (int(origin.x), int(origin.y)),
+                    self.runtime.local_map_id,
+                )
+            if (
+                isinstance(focus, dict)
+                and not focus.get("clear")
+                and str(cfg.seat_role or "") != "mage"
+                and seat
+                and str(focus.get("support") or "") == seat
+            ):
+                raw_objects = getattr(game_state, "objects", None)
+                if callable(raw_objects):
+                    from app._02_state.objects import ObjectType
+
+                    monsters = list(raw_objects(ObjectType.MONSTER))
+                elif isinstance(raw_objects, (list, tuple)):
+                    monsters = list(raw_objects)
+                else:
+                    monsters = []
+                matched = resolve_local(focus, monsters, origin=origin)
+                if matched is not None:
+                    assist_obj = matched
+                    assist_src = "party_focus"
+                else:
+                    assist_obj = None
+                    assist_src = "party_focus_unseen"
+        except Exception as exc:
+            _log.debug("party focus match failed: %s", exc)
         self.runtime.assist_track_id = (
             int(getattr(assist_obj, "track_id", 0) or 0) if assist_obj else None
         )
@@ -687,8 +727,12 @@ class PartyMemberManager:
 
         from .farm_yard import (
             in_yard,
+            member_zone_center,
+            path_length,
+            target_band,
             tile_from_obj,
             yard_half_extents,
+            zone_radii,
         )
 
         half_w, half_h = yard_half_extents(
@@ -702,9 +746,25 @@ class PartyMemberManager:
         )
         in_farm_yard = True
         target_in_yard = True
-        if cfg.turret_farm and leader_tile is not None:
+        yard_center = member_zone_center(
+            cfg.hunt_anchor_x,
+            cfg.hunt_anchor_y,
+            cfg.hunt_anchor_map,
+            self.runtime.local_map_id,
+        )
+        zone_key = None if yard_center is None else (
+            int(cfg.hunt_anchor_map),
+            int(yard_center[0]),
+            int(yard_center[1]),
+        )
+        if zone_key != getattr(self.runtime, "hunt_zone_key", None):
+            if getattr(self.runtime, "hunt_zone_key", None) is not None and zone_key is not None:
+                self.runtime.own_hunt_id = None
+            self.runtime.hunt_zone_key = zone_key
+        start_r, chase_r = zone_radii(half_w, half_h)
+        if cfg.turret_farm and yard_center is not None:
             in_farm_yard = in_yard(
-                me_tile, leader_tile, half_w=half_w, half_h=half_h
+                me_tile, yard_center, half_w=chase_r, half_h=chase_r
             )
             tgt_tile = tile_from_obj(assist_obj, origin)
             if tgt_tile is None:
@@ -712,7 +772,7 @@ class PartyMemberManager:
             target_in_yard = (
                 True
                 if tgt_tile is None
-                else in_yard(tgt_tile, leader_tile, half_w=half_w, half_h=half_h)
+                else in_yard(tgt_tile, yard_center, half_w=start_r, half_h=start_r)
             )
 
         # Turret, leader idle: hunt inside the yard. A mob already started is
@@ -723,7 +783,7 @@ class PartyMemberManager:
         if (
             cfg.turret_farm
             and not cfg.solo_farm
-            and leader_tile is not None
+            and yard_center is not None
             and game_state is not None
             and origin_ok
         ):
@@ -737,19 +797,42 @@ class PartyMemberManager:
 
                 own_ok = bool(
                     _assist_target_live(game_state, own_obj)
-                    and own_tile is not None
-                    and in_yard(own_tile, leader_tile, half_w=half_w, half_h=half_h)
+                    and target_band(
+                        own_tile,
+                        me_tile,
+                        yard_center,
+                        engaged=True,
+                        can_hit=assist_in_attack_range(game_state, own_obj),
+                        path_tiles=path_length(me_tile, own_tile),
+                    )
+                    in ("now", "step")
                 )
             yard_id = None
             yard_obj = None
             if not view.farming:
                 def _in_this_yard(obj: Any) -> bool:
                     tile = tile_from_obj(obj, origin)
-                    return tile is not None and in_yard(
-                        tile, leader_tile, half_w=half_w, half_h=half_h
-                    )
+                    return target_band(
+                        tile,
+                        me_tile,
+                        yard_center,
+                        engaged=False,
+                        can_hit=assist_in_attack_range(game_state, obj),
+                        path_tiles=path_length(me_tile, tile),
+                    ) in ("now", "step")
 
                 try:
+                    def _keep_current(obj: Any) -> bool:
+                        tile = tile_from_obj(obj, origin)
+                        return target_band(
+                            tile,
+                            me_tile,
+                            yard_center,
+                            engaged=True,
+                            can_hit=assist_in_attack_range(game_state, obj),
+                            path_tiles=path_length(me_tile, tile),
+                        ) in ("now", "step")
+
                     yard_obj = pick_solo_farm_target(
                         game_state,
                         origin=origin,
@@ -758,6 +841,7 @@ class PartyMemberManager:
                         previous_id=own_id,
                         blackboard=self._nav_blackboard,
                         contains=_in_this_yard,
+                        keep_previous=_keep_current,
                     )
                 except Exception as exc:
                     _log.debug("turret own hunt failed: %s", exc)
@@ -789,7 +873,7 @@ class PartyMemberManager:
                 self.runtime.assist_src = assist_src
                 tgt_tile = tile_from_obj(assist_obj, origin)
                 target_in_yard = tgt_tile is not None and in_yard(
-                    tgt_tile, leader_tile, half_w=half_w, half_h=half_h
+                    tgt_tile, yard_center, half_w=start_r, half_h=start_r
                 )
                 need_combat_step = not assist_in_attack_range(
                     game_state, assist_obj
@@ -853,7 +937,7 @@ class PartyMemberManager:
                     need_combat_step = not assist_in_attack_range(
                         game_state, assist_obj
                     )
-                    if cfg.turret_farm and leader_tile is not None:
+                    if cfg.turret_farm and yard_center is not None:
                         tgt_tile = tile_from_obj(assist_obj, origin)
                         if tgt_tile is None:
                             tgt_tile = assist_monster_tile(assist_obj, origin)
@@ -862,9 +946,9 @@ class PartyMemberManager:
                             if tgt_tile is None
                             else in_yard(
                                 tgt_tile,
-                                leader_tile,
-                                half_w=half_w,
-                                half_h=half_h,
+                                yard_center,
+                                half_w=chase_r,
+                                half_h=chase_r,
                             )
                         )
                 else:
@@ -1079,6 +1163,44 @@ class PartyMemberManager:
         if slot_tile is not None and me_tile is not None:
             slot_dist = tile_chebyshev(me_tile, slot_tile)
         stand = None
+        self._march_move = self._build_march(origin if origin_ok else None, game_state, cfg)
+        combat_approach = False
+        self.runtime.scratch.pop("combat_stand", None)
+        if (
+            need_combat_step
+            and assist_obj is not None
+            and not cfg.turret_farm
+            and me_tile is not None
+            and leader_tile is not None
+        ):
+            from .farm_yard import path_length, tile_from_obj
+            from .moving_fight import combat_step
+
+            def _steps(start, stand):
+                try:
+                    walked = path_length(start, stand)
+                except Exception:
+                    return None
+                if walked is None:
+                    return None
+                return [stand] * max(0, int(walked))
+
+            mob_tile = tile_from_obj(assist_obj, origin)
+            if mob_tile is None:
+                mob_tile = assist_monster_tile(assist_obj, origin)
+            step_kind, step_tile = combat_step(
+                me_tile,
+                mob_tile,
+                can_hit=False,
+                approach_tiles=int(cfg.approach_tiles),
+                support_from=leader_tile,
+                support_tiles=int(cfg.assist_leash_tiles),
+                blocked=(leader_tile,),
+                path_for=_steps,
+            )
+            if step_kind == "approach" and step_tile is not None:
+                combat_approach = True
+                self.runtime.scratch["combat_stand"] = step_tile
 
         result = decide_policy(
             PolicyInput(
@@ -1102,6 +1224,7 @@ class PartyMemberManager:
                 at_travel_spot=None,
                 leader_walk_dist=leader_walk_dist if leader_present else None,
                 need_combat_step=need_combat_step,
+                combat_approach=combat_approach,
                 solo_farm=cfg.solo_farm,
                 in_farm_yard=in_farm_yard,
                 target_in_yard=target_in_yard,
@@ -1112,6 +1235,7 @@ class PartyMemberManager:
                 slot_arrive=1 if formed.kind == "stand" else 0,
                 leader_moving=leader_moving,
                 catch_up=bool(self.runtime.scratch.get("catch_up")),
+                march_advance=bool(getattr(self._march_move, "advance", False)),
             )
         )
         returning = formation_returning(
@@ -1159,9 +1283,14 @@ class PartyMemberManager:
             party_should_drop_loot,
         )
 
+        approaching = str(result.reason).startswith("combat_approach")
+        if approaching and self._nav_blackboard is not None:
+            from .loot import clear_party_loot_sticky
+
+            clear_party_loot_sticky(self._nav_blackboard)
         can_loot_now = party_may_start_loot(
             result.kind.value, allowed=loot_own is not None
-        )
+        ) and not approaching
         loot_max_tiles = party_loot_radius(cfg) if can_loot_now else 0
         if (
             can_loot_now
@@ -1190,6 +1319,7 @@ class PartyMemberManager:
 
         if (
             can_loot_now
+            and not returning
             and loot_own is not None
             and game_state is not None
             and self._nav_blackboard is not None
@@ -1277,6 +1407,7 @@ class PartyMemberManager:
             and dest_map is not None
             and party_xy is not None
             and leader_dist is not None
+            and not self._march_active
         ):
             walk_cost = self._follow_walk_cost(
                 origin, leader_tile, int(leader_dist), walk_field
@@ -1324,16 +1455,46 @@ class PartyMemberManager:
             self.runtime.last_kind = result.kind.value
             field_plan = None
             make_way = None
-            if result.kind in (MemberKind.HOLD, MemberKind.FOLLOW) and origin_ok:
+            marched = False
+            if (
+                str(result.reason).startswith("combat_approach")
+                and origin_ok
+                and isinstance(self.runtime.scratch.get("combat_stand"), tuple)
+            ):
                 try:
-                    make_way = self._make_way(origin, game_state)
+                    from .intents import plan_slot_hop
+
+                    field_plan = plan_slot_hop(
+                        origin,
+                        self.runtime.scratch["combat_stand"],
+                        previous_goal=self.runtime.approach_goal,
+                        previous_hop=self.runtime.follow_hop,
+                        kind="combat_approach",
+                        state=game_state,
+                    )
+                    self.runtime.last_kind = "combat_approach"
                 except Exception as exc:
-                    _log.debug("party make way failed: %s", exc)
-                    make_way = None
-            if make_way is not None:
-                field_plan = make_way
-                self.runtime.last_kind = "make_way"
-            elif (
+                    _log.debug("party combat approach failed: %s", exc)
+                    field_plan = None
+            else:
+                if result.kind in (MemberKind.HOLD, MemberKind.FOLLOW) and origin_ok:
+                    try:
+                        make_way = self._make_way(origin, game_state)
+                    except Exception as exc:
+                        _log.debug("party make way failed: %s", exc)
+                        make_way = None
+                if make_way is not None:
+                    field_plan = make_way
+                    self.runtime.last_kind = "make_way"
+            if field_plan is None and (
+                result.kind is MemberKind.FOLLOW
+                and self._march_move is not None
+                and self._march_move.plan is not None
+            ):
+                field_plan = self._march_move.plan
+                marched = True
+                self.runtime.last_kind = "march"
+            elif field_plan is None and (
                 result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
                 and origin_ok
@@ -1353,7 +1514,7 @@ class PartyMemberManager:
                 except Exception as exc:
                     _log.debug("party leader hop failed: %s", exc)
                     field_plan = None
-            elif (
+            elif field_plan is None and (
                 result.kind is MemberKind.FOLLOW
                 and stand is None
                 and follow_field is not None
@@ -1372,7 +1533,11 @@ class PartyMemberManager:
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)
                     field_plan = None
-            if (
+            march_reason = str(getattr(self._march_move, "reason", "") or "")
+            normal_hold = march_reason in ("pace_wait", "door_wait", "in_transit")
+            if normal_hold:
+                self.runtime.scratch.pop("follow_stuck", None)
+            elif (
                 make_way is None
                 and result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
@@ -1387,7 +1552,9 @@ class PartyMemberManager:
                     escape = None
                 if escape is not None:
                     field_plan = escape
-            else:
+                    if marched:
+                        self.runtime.last_kind = "follow"
+            elif not marched:
                 self.runtime.scratch.pop("follow_stuck", None)
             if field_plan is not None:
                 intent, goal, detail, hop = field_plan
@@ -1949,6 +2116,166 @@ class PartyMemberManager:
         self._make_way_leader = leader
         _log.info("make way from=%s hop=%s leader=%s", me, tile, leader)
         return _emit_follow_hop(origin, tile, leader, "make_way")
+
+    def _build_march(self, origin: Any, game_state: Any, cfg: PartyMemberConfig) -> Any:
+        """Shared-path click, or None when ordinary follow should run.
+
+        A new rev drops the previous hop. A sliding window of the same rev
+        does not. Heal, defend, and assist return before this plan is used.
+        """
+        from .comms.orders import member_orders
+        from .formation_march import (
+            MarchMove,
+            accept_march,
+            aim_index,
+            full_progress,
+            head_limit,
+            member_goal,
+            note_heading,
+            observe_line,
+            path_forward,
+            path_tile,
+            seat_back,
+            slot_ahead,
+        )
+        from .intents import _emit_follow_hop, idle, plan_slot_hop
+        from .loot import stable_self_identity
+
+        self._march_active = False
+        path = accept_march(
+            member_orders.formation_path,
+            local_map_id=self.runtime.local_map_id,
+            session=str(member_orders.session or ""),
+        )
+        previous = self.runtime.scratch.get("march_rev")
+        if path is None:
+            if previous is not None:
+                self.runtime.follow_hop = None
+                self.runtime.follow_hop_at = 0.0
+                self.runtime.scratch.pop("march_rev", None)
+                self.runtime.scratch.pop("march_progress", None)
+                self.runtime.scratch.pop("march_seen", None)
+            return None
+        self._march_active = True
+        if previous != path.rev:
+            self.runtime.follow_hop = None
+            self.runtime.follow_hop_at = 0.0
+            self.runtime.scratch["march_rev"] = path.rev
+            self.runtime.scratch.pop("march_progress", None)
+            self.runtime.scratch.pop("march_heading", None)
+            self.runtime.scratch.pop("march_heading_pending", None)
+            self.runtime.scratch.pop("march_heading_run", None)
+        if origin is None or not hasattr(origin, "x"):
+            return MarchMove(False, None, None, path.rev)
+        me = (int(origin.x), int(origin.y))
+        own_name = ""
+        try:
+            own_name, _guid = stable_self_identity(
+                getattr(game_state, "last_party", None),
+                me,
+                self.runtime.local_map_id,
+                player=getattr(game_state, "player", None),
+                print_state=getattr(game_state, "last_print_state", None),
+            )
+        except Exception:
+            own_name = ""
+        step = path_forward(path.tiles, path.cursor)
+        heading = note_heading(self.runtime.scratch, step)
+        seen = self.runtime.scratch.get("march_seen")
+        if not isinstance(seen, dict):
+            seen = {}
+        others = observe_line(
+            getattr(game_state, "last_party", None),
+            path.tiles,
+            local_map_id=self.runtime.local_map_id,
+            self_name=str(own_name or ""),
+            seen=seen,
+            base=path.base,
+        )
+        self.runtime.scratch["march_seen"] = seen
+        progress = full_progress(path, me, self.runtime.scratch.get("march_progress"))
+        if progress is not None:
+            self.runtime.scratch["march_progress"] = int(progress)
+        seat = 0 if cfg.seat_index is None else int(cfg.seat_index)
+        kind, goal = member_goal(
+            path,
+            seat=seat,
+            followers=max(1, int(cfg.party_size)),
+            me=me,
+            terrain=_terrain_or_none(),
+            heading=heading,
+            others=others,
+            previous_progress=self.runtime.scratch.get("march_progress"),
+        )
+        if kind == "fallback":
+            return MarchMove(False, None, None, path.rev, "fallback")
+        if kind in ("pace_wait", "door_wait") or goal is None:
+            why = kind if kind in ("pace_wait", "door_wait") else "pace_wait"
+            self.runtime.follow_hop = None
+            self.runtime.follow_hop_at = 0.0
+            waited = (idle(why), None, why, None)
+            return MarchMove(False, waited, None, path.rev, why)
+        rejected = bool(self.runtime.scratch.pop("follow_click_failed", None))
+        if rejected:
+            self.runtime.follow_hop = None
+            self.runtime.follow_hop_at = 0.0
+        ahead = slot_ahead(me, goal, heading)
+        plan = plan_slot_hop(
+            origin,
+            goal,
+            previous_goal=self.runtime.approach_goal,
+            previous_hop=self.runtime.follow_hop,
+            kind="march",
+            leader_moved=False,
+            state=game_state,
+        )
+        _intent, _goal, detail, hop = plan
+        detail = str(detail or "")
+        if detail == "follow_in_transit":
+            why = "in_transit"
+        elif detail in ("no_path", "no_terrain"):
+            why = "no_path"
+        elif rejected:
+            why = "click_rejected"
+        else:
+            why = "go"
+        if why == "go" and isinstance(hop, tuple):
+            rows = [
+                (int(idx), seat_back(other))
+                for other, idx in others
+                if idx is not None
+            ]
+            limit = head_limit(rows)
+            hop_full = full_progress(path, hop, progress)
+            goal_full = full_progress(path, goal, progress) if isinstance(goal, tuple) else None
+            # A side slot is not a path index. Touching the line on the way
+            # there is not a reason to wait. Cap only a hop whose goal is on the line.
+            if (
+                goal_full is not None
+                and hop_full is not None
+                and limit is not None
+            ):
+                # A hop that lands inside the arrival cap is a real step, even
+                # when the body was only snapped onto that path index.
+                # Shorten or hold only the click whose end passes the cap.
+                if int(hop_full) <= int(limit) - seat_back(seat):
+                    allowed = hop_full
+                else:
+                    allowed = aim_index(hop_full, progress, seat_back(seat), limit)
+                if allowed is None:
+                    self.runtime.follow_hop = None
+                    self.runtime.follow_hop_at = 0.0
+                    waited = (idle("pace_wait"), None, "pace_wait", None)
+                    return MarchMove(False, waited, goal, path.rev, "pace_wait")
+                if int(allowed) < int(hop_full):
+                    clipped = path_tile(path, int(allowed))
+                    if clipped is None or clipped == me:
+                        self.runtime.follow_hop = None
+                        self.runtime.follow_hop_at = 0.0
+                        waited = (idle("pace_wait"), None, "pace_wait", None)
+                        return MarchMove(False, waited, goal, path.rev, "pace_wait")
+                    plan = _emit_follow_hop(origin, clipped, goal, "march")
+        return MarchMove(ahead, plan, goal, path.rev, why)
 
     def _follow_stuck_escape(
         self,

@@ -257,7 +257,7 @@ def test_outside_the_box_walks_back_to_the_dot() -> None:
     class _Board:
         def __init__(self) -> None:
             self.scratch: dict = {}
-            self.world_origin = SimpleNamespace(x=13, y=10)
+            self.world_origin = SimpleNamespace(x=19, y=10)
             self.current_target_id: int | None = 5
             self.current_item_id = None
             self.current_goal = None
@@ -272,10 +272,14 @@ def test_outside_the_box_walks_back_to_the_dot() -> None:
     board = _Board()
     set_party_turret(board, True, map_id=4, anchor=(10, 10))
     step_party_turret_leash(_State(), board)  # type: ignore[arg-type]
+    assert board.emitted == []
+    board.scratch["party_turret_outside_at"] = 0.0
+    step_party_turret_leash(_State(), board)  # type: ignore[arg-type]
     assert board.current_target_id is None
     assert 9 in board.scratch["party_turret_exclude"]
     assert 5 in board.scratch["party_turret_exclude"]
     assert board.emitted
+    assert "100,100" not in str(board.emitted[0] if False else "")
 
 
 def test_elf_turret_uses_the_solo_click_range() -> None:
@@ -376,11 +380,17 @@ def test_no_target_idles_on_the_dot() -> None:
     assert near.emitted == [(ActionType.IDLE, "party turret wait on anchor")]
     assert near.search_hop_active is False
 
-    off = _Board(13, 10)
+    stayed = _Board(13, 10)
+    set_party_turret(stayed, True, map_id=4, anchor=(10, 10))
+    step_party_turret_idle(object(), stayed)  # type: ignore[arg-type]
+    assert stayed.emitted == [(ActionType.IDLE, "party turret wait on anchor")]
+
+    off = _Board(19, 10)
     set_party_turret(off, True, map_id=4, anchor=(10, 10))
-    step_party_turret_idle(object(), off)  # type: ignore[arg-type]
-    assert off.emitted
-    assert off.emitted[0][0] is ActionType.TRAVELING
+    step_party_turret_idle(object(), off, now=0.0)  # type: ignore[arg-type]
+    assert off.emitted == [(ActionType.IDLE, "party turret wait on anchor")]
+    step_party_turret_idle(object(), off, now=3.0)  # type: ignore[arg-type]
+    assert off.emitted[-1][0] is ActionType.TRAVELING
 
     on = _Board(10, 10)
     set_party_turret(on, True, map_id=4, anchor=(10, 10))

@@ -217,6 +217,7 @@ class PartyComms:
         party_snapshot: Any = None,
         roster_names: Optional[Any] = None,
         log: Optional[LogFn] = None,
+        on_hello: Optional[Any] = None,
     ) -> int:
         return ingest.drain_leader_reports(
             server=self.server,
@@ -224,6 +225,7 @@ class PartyComms:
             party_snapshot=party_snapshot,
             roster_names=roster_names,
             log=log,
+            on_hello=on_hello,
         )
 
     # --- member ticks ---
@@ -246,6 +248,9 @@ class PartyComms:
 
     def send_invite_accept(self, body: dict) -> bool:
         return status.send_invite_accept(self.client, body)
+
+    def send_sighting(self, body: dict) -> bool:
+        return status.send_sighting(self.client, body)
 
     def send_beep(self, *, name: str, why: str = "already_in_party") -> bool:
         return status.send_beep(self.client, name=name, why=why)

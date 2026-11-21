@@ -18,6 +18,7 @@ _MEMBER_TYPES = frozenset({
     "invite_accept",
     "report",
     "beep",
+    "sighting",
 })
 _LEADER_TYPES = frozenset({
     "party_policy",
@@ -30,6 +31,8 @@ _LEADER_TYPES = frozenset({
     "supply_hold",
     "supply_stand",
     "make_way",
+    "formation_path",
+    "party_focus",
 })
 
 
@@ -83,6 +86,25 @@ def reject_member_frame(body: Any) -> str:
     session = body.get("session")
     if session not in (None, "") and _text(session, _ID_MAX) is None:
         return "bad session"
+    if kind == "sighting":
+        if not character_name(who):
+            return "sighting without a name"
+        try:
+            int(body.get("map_id"))
+        except (TypeError, ValueError):
+            return "sighting without a tile"
+        mobs = body.get("mobs")
+        rows = mobs if isinstance(mobs, list) else [body]
+        if not isinstance(mobs, list) and not str(body.get("species") or "").strip():
+            return "sighting without species"
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("species") or "").strip():
+                return "sighting without species"
+            try:
+                int(row.get("x"))
+                int(row.get("y"))
+            except (TypeError, ValueError):
+                return "sighting without a tile"
     return ""
 
 
@@ -117,6 +139,32 @@ def reject_leader_frame(body: Any) -> str:
                 int(body.get(key))
             except (TypeError, ValueError):
                 return f"rally missing {key}"
+    if kind == "formation_path":
+        try:
+            int(body.get("map_id"))
+            int(body.get("rev"))
+            int(body.get("seq"))
+        except (TypeError, ValueError):
+            return "bad formation_path"
+        if not bool(body.get("clear")):
+            tiles = body.get("tiles")
+            if not isinstance(tiles, list) or not tiles or len(tiles) > 32:
+                return "bad formation_path"
+            for tile in tiles:
+                try:
+                    int(tile[0])
+                    int(tile[1])
+                except (TypeError, ValueError, IndexError):
+                    return "bad formation_path"
+    if kind == "party_focus" and not bool(body.get("clear")):
+        if not str(body.get("species") or "").strip():
+            return "focus without species"
+        try:
+            int(body.get("map_id"))
+            int(body.get("x"))
+            int(body.get("y"))
+        except (TypeError, ValueError):
+            return "focus without a tile"
     return ""
 
 

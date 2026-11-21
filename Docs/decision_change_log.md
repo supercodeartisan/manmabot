@@ -1,5 +1,61 @@
 # Decision change log
 
+## 2026-11-20 — cycle test: four members, one frame, the click that comes out
+
+Intent: Drive the leader frame through ingest and each member `decide()`, then the leader walk. A member off the polyline walks to that seat's slot, not `tiles[0]`. A side-slot hop is not held because the walk touches the path. A hop whose goal is on the path and past the arrival cap is still shortened. `party_focus` reads `objects()` when that is a method. The attack-tile click is not replaced by a leader follow hop. A stale sighting does not hold the march; a fresh fight does. Turret radii, loot ownership, retreat, and login clicks were not retuned.
+Shared: `member_goal`, the arrival clip in `_build_march`, the member follow branch, `_leader_walk_party`.
+Affects: moving march and moving farm. The one-tile door still lets the last member out.
+Consent: user (this integrated verification).
+Result: `test_party_cycle.py` passed (1). `app/_06_party/tests` passed 324. Nine failed on `scipy` import (`test_walk_distance_follow.py` 8, `test_a_pile_behind_a_wall_is_out_of_walk_range` 1). Not run in game.
+
+## 2026-11-20 — moving farm steps to an attack tile and holds the march for a real fight
+
+Intent: On a moving hunt, a member who can already shoot stays and attacks. A melee member inside `stop_tiles` walks one short path to an empty attack tile instead of holding. A wall detour longer than `approach_tiles`, or a stand outside `assist_leash_tiles`, is dropped and the member rejoins. That approach does not start or keep a loot walk. Heal, potion, defend, and retreat still win. A fresh sighting behind the march that is not hitting anyone does not become the fight and does not stop the party. The leader withholds the next hop while the leader is actually fighting, or while a fresh rear report is dying or attacking. One missed report stays inside `REPORT_FRESH_S`. A stale report, a dropped connection, or another map does not hold. The shared path is kept and resumed from the current tile. Turret radii, loot ownership, and the no-guide pace are unchanged.
+Shared: `combat_step`, `march_hold_reason`, `decide_policy` (`combat_approach`), the member follow branch in `PartyMemberManager.decide`, `_leader_walk_party`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: party moving farm. Turret and loot ownership stay as they were.
+Consent: user (this moving-farm pass).
+Result: `test_moving_fight.py`, `test_close_follow.py`, `test_formation_march.py`, `test_turret_zone.py`, `test_party_sightings.py`, `test_make_way_pace.py`, `test_turret_own_hunt.py`, and `test_leader_routine.py` passed (101). `test_party_loot.py` passed 10; `test_a_pile_behind_a_wall_is_out_of_walk_range` did not import (`scipy` missing). Not run in game. Measure `REPORT_FRESH_S` 2.0. Reuse `approach_tiles` (2) and `assist_leash_tiles` (10).
+
+## 2026-11-20 — turret radii reach the live step, and the dot is shared
+
+Intent: One stored engage radius (6) and chase radius (8) are what the leash step reads. They are not cut to 4. The attack decision uses the tile the character would stand on. A new fight uses 6. Only the target already in `current_target_id` may use 8. A path that leaves the radius drops the target and does not click. After a kill the leader waits on the current tile. One outside sample does not start the walk back. The walk back, when it comes, stops on the engage ring. The same published dot and map keep the current fight. A different dot or map clears it. A member applies the dot only when the map matches. Until then the member follows as before.
+Shared: `set_party_turret`, `zone_pair`, `pick_attack_stand`, `step_party_turret_leash`, `step_party_turret_idle`, `member_zone_center`, the member yard block in `PartyMemberManager.decide`. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed. Moving hunt, loot ownership, and the march were not retuned.
+Affects: party turret. Moving follow is unchanged.
+Consent: user (this turret-farm pass, including the seven scenes and the regression run).
+Result: `pytest app/_06_party/tests/test_turret_zone.py app/_06_party/tests/test_leader_routine.py app/_06_party/tests/test_turret_own_hunt.py app/_06_party/tests/test_close_follow.py app/_06_party/tests/test_party_sightings.py` passed (73, together with those files). `test_walk_distance_follow.py` did not import here (`scipy` missing). Not run in game. Measure `ENGAGE_RADIUS` 6, `CHASE_RADIUS` 8, `TURRET_LOOK_S` 2.0, and `DETOUR_EXTRA` 4.
+
+## 2026-11-20 — turret yard stays on the fixed dot
+
+Intent: The routine dot stays put. New fights start within 6 tiles of it. A fight already started may use an attack tile within 8. After a kill, a leader still inside that zone waits there and takes the next monster from that tile. The walk back to the dot runs when the body has left the zone, the party is regrouping, or the empty look cycle reaches the dot. Member yard checks use the published dot. The leader's live tile stays the support and rejoin reference. A character who can already hit does not step. A short step stays in the zone. A long detour is dropped. A valid current target is not replaced because a nearer monster appeared.
+Shared: `step_party_turret_idle`, `step_party_turret_leash`, `target_band`, `hunt_center`, the member yard check in `PartyMemberManager.decide`, `pick_solo_farm_target` (`keep_previous` only). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: party turret hunt. Moving hunt and solo farm are unchanged.
+Consent: user (the turret-zone rules, the three files, and the east-kill then neighbor scene).
+Result: `pytest app/_06_party/tests/test_turret_zone.py app/_06_party/tests/test_leader_routine.py` → 35 passed. Not run in game. `ENGAGE_RADIUS` 6, `CHASE_RADIUS` 8, `SHORT_STEP` 2, `DETOUR_EXTRA` 4, and `TURRET_LOOK_S` 2.0 are unmeasured.
+
+## 2026-11-20 — a monster only a member can see is still a party target
+
+Intent: Anyone reports a monster. The party shares one priority. The click happens only on a client whose own screen still has that monster. A local track id is never sent. If two of the same species cannot be told apart, that client does not click. A mage who is being hit still heals before the shared order. While that danger continues on a moving hunt, the leader holds the next advance. On a stake hunt the order asks the hit member to regroup instead of pulling the party out of the yard. The leader keeps the fight it can see.
+Shared: `choose_focus`, `resolve_local`, `drain_leader_reports` (sighting), `MemberOrders.party_focus`, the member assist pick when this seat is the named support, `_leader_walk_party` (hold only). `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: party hunt target choice. Solo assist and the march path are unchanged when no sighting is in.
+Consent: user ("analyze current codebase and implement this"), including the leader-A / archer-A+B / mage-B scene.
+Result: `pytest app/_06_party/tests/test_party_sightings.py` → 4 passed. Not run in game. `DANGER_HP` is 40, `MATCH_TILES` is 3, `SIGHT_ATTACK_TILES` is 10, and the report interval is 0.4 s. All four are unmeasured. A live report does not yet mark `detour`.
+
+## 2026-11-20 — march frames keep the trail, and the next click is clipped
+
+Intent: The shared path carries the tiles the leader has already walked, not only the next 12. `base` is the full-path index of the first tile and `cursor` is the leader inside that message. Members store `march_progress` in that full index. The next click is limited by where it will land (`progress + seat_back + MARCH_ALLOWED_LAG`), for the leader and anyone ahead. A one-tile passage is admitted by the leader (`door`, `exit`, `admit`). `pace_wait` and `door_wait` clear the unstick clock; a hop that never changes tile still uses unstick. A `member_hello` resends the current frame even when the client count stays the same. A member already behind their slot does not start a new loot walk.
+Shared: `MarchShare.update`, `plan_slot_hop` (its hop is clipped before the screen point is kept), `decide_policy` unchanged aside from the existing `march_advance`, `_leader_walk_party`, `drain_leader_reports` (`on_hello`), `_follow_stuck_escape` still the same function and now runs unless the reason is a normal hold. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: same-map party follow while a `formation_path` is active. Open ground still starts together. No path keeps the old hold, follow, join, and heal order.
+Consent: user ("I have to fix this" / the five-part march correction, including send-and-receive tests).
+Result: `pytest app/_06_party/tests/test_formation_march.py app/_06_party/tests/test_make_way_pace.py app/_06_party/tests/test_close_follow.py` → 47 passed. Not run in game. `MARCH_ALLOWED_LAG` is 2 and `MARCH_TRAIL` is 12; both are unmeasured. Click-to-first-position delay is still not a timer.
+
+## 2026-11-20 — same-map party walks a shared formation path
+
+Intent: When the leader commits a walk, same-map members start toward their own slot on that path without waiting for the leader's first coordinate change. Open ground stays side by side. A one-tile passage goes single file, then each member restores a side slot after leaving it. If a member is actually behind (a heal), the leader and anyone ahead shorten or hold the next hop. Each client still decides on its own tick and clicks through the existing executor.
+Shared: `plan_slot_hop`, `decide_policy` (`march_advance` only), `_leader_walk_party`, `MemberOrders` (`formation_path`), `reject_leader_frame`. `_follow_stuck_escape` is gated for an active march plan and was not rewritten. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, and login clicks were not changed.
+Affects: same-map party follow while a `formation_path` is active. No shared path keeps stop-band hold, ordinary follow, other-map join, and heal / buff / defend / assist / make-way ahead of the march click. A pace idle keeps the path. Retreat, unstick, and a rally that is not done clear it.
+Consent: user ("구현해줘" / "update like this the party movement"), including the five-part scope and the decide() regression tests.
+Result: `python -m pytest app/_06_party/tests/test_formation_march.py app/_06_party/tests/test_close_follow.py app/_06_party/tests/test_make_way_pace.py` → 44 passed. Not run in game. `MARCH_GAP_TILES` (4) and the two-tile look-ahead are unmeasured assumptions. Click-to-first-position delay is not a timer; progress is recorded only from an observed tile.
+
 ## 2026-11-18 — memory offsets updated to analysis_11_18 (v38)
 
 Intent: Point live memory readers at the corrected registry/overlays for LC.exe **26.11.17.2002** (registry **v38**), replacing the project’s v37 (26.11.10.2003) constants.

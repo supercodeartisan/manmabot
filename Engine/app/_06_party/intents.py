@@ -331,8 +331,11 @@ def _occupied_tiles(game_state: Any, origin: Any) -> list[tuple[int, int]]:
     from app._04_decision.combat_query import object_absolute_tile
 
     occupied: list[tuple[int, int]] = []
+    getter = getattr(game_state, "objects", None)
+    if not callable(getter):
+        return occupied
     for kind in (ObjectType.PLAYER, ObjectType.MONSTER, ObjectType.NPC):
-        for obj in game_state.objects(kind):
+        for obj in getter(kind):
             try:
                 occupied.append(object_absolute_tile(obj, origin))
             except Exception:

@@ -36,6 +36,7 @@ class PartyLeaderManager:
         self.hunt_mode = "moving"
         self.on_area = False
         self.turret_anchor: Optional[tuple[int, int]] = None
+        self.turret_anchor_map: Optional[int] = None
         self._plan_motion: Optional[str] = None
 
     def decide(self, world: Any) -> Any:
@@ -240,6 +241,15 @@ class PartyLeaderManager:
         self.hunt_mode = "turret" if mode == "turret" else "moving"
         self.on_area = bool(on_area) and self.hunt_mode != "turret"
         self.turret_anchor = anchor if self.hunt_mode == "turret" else None
+        self.turret_anchor_map = None
+        if self.hunt_mode == "turret" and anchor is not None:
+            row = self.schedule.current() if self.schedule is not None else None
+            if row is not None:
+                from app._04_decision.world_nav import pack_ids
+
+                mid = pack_ids.pack_id_to_map_id(str(row.get("map_id") or ""))
+                if mid is not None:
+                    self.turret_anchor_map = int(mid)
 
     def _on_point_arrival(self, blackboard: Any, reason: str) -> bool:
         """Arm turret when a party-point walk ends inside that dot's 5×5.

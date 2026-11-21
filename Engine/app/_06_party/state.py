@@ -33,6 +33,8 @@ class MemberRuntime:
     # Mob this member started while the turret leader was idle. Kept until it
     # dies even if the leader begins an attack.
     own_hunt_id: Optional[int] = None
+    # Last confirmed turret dot (map, x, y). A new dot clears the current fight.
+    hunt_zone_key: Optional[tuple[int, int, int]] = None
     assist_src: str = ""
     assist_name: str = ""
     tick: int = 0

@@ -794,6 +794,7 @@ def pick_solo_farm_target(
     previous_id: Optional[int] = None,
     blackboard: Any = None,
     contains: Optional[Any] = None,
+    keep_previous: Optional[Any] = None,
 ) -> Optional[Any]:
     """Own target for solo-farm members: nearest attackable near the leader.
 
@@ -838,11 +839,17 @@ def pick_solo_farm_target(
 
     if previous_id is not None and int(previous_id) not in skip:
         obj = game_state.get_object(int(previous_id))
+        held = False
+        if keep_previous is not None and obj is not None:
+            try:
+                held = bool(keep_previous(obj))
+            except Exception:
+                held = False
         if (
             obj is not None
             and getattr(obj, "object_type", None) is ObjectType.MONSTER
             and _assist_target_live(game_state, obj)
-            and near_leader(obj)
+            and (held or near_leader(obj))
         ):
             try:
                 from app._04_decision.species_rules import is_avoided_for_state

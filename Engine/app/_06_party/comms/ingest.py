@@ -49,6 +49,7 @@ def drain_leader_reports(
     party_snapshot: Any = None,
     roster_names: Optional[Any] = None,
     log: Optional[LogFn] = None,
+    on_hello: Optional[Any] = None,
 ) -> int:
     """Apply member ``report`` frames to the rally, ``member_state`` frames to
     ``sync.member_states`` (and their ``policy_id`` to ``policy_acks``),
@@ -130,6 +131,13 @@ def drain_leader_reports(
                 f"Party hello {hello_name or '—'} "
                 f"[{row.status.value}] id={cid or '—'}"
             )
+            if on_hello is not None and hello_name:
+                on_hello(hello_name)
+            continue
+        if kind == "sighting":
+            from ..sightings import book
+
+            book.note(body)
             continue
         if kind == BEEP:
             why = str(body.get("why") or "already_in_party")

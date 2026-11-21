@@ -67,6 +67,10 @@ class PartyMemberConfig:
     formation_anchor_y: Optional[int] = None
     formation_anchor_dx: Optional[int] = None
     formation_anchor_dy: Optional[int] = None
+    # Fixed turret dot from the leader routine. The yard does not follow the leader.
+    hunt_anchor_x: Optional[int] = None
+    hunt_anchor_y: Optional[int] = None
+    hunt_anchor_map: Optional[int] = None
     # Turret yard half-extents (None = derive from party_size).
     yard_half_w: Optional[int] = None
     yard_half_h: Optional[int] = None
@@ -181,6 +185,9 @@ class PartyMemberConfig:
             formation_anchor_y=self.formation_anchor_y,
             formation_anchor_dx=self.formation_anchor_dx,
             formation_anchor_dy=self.formation_anchor_dy,
+            hunt_anchor_x=self.hunt_anchor_x,
+            hunt_anchor_y=self.hunt_anchor_y,
+            hunt_anchor_map=self.hunt_anchor_map,
             yard_half_w=hw,
             yard_half_h=hh,
             yard_scale_with_roster=bool(self.yard_scale_with_roster),
@@ -285,6 +292,9 @@ class PartyMemberConfig:
             "formation_anchor_y": _coord(policy.get("formation_anchor_y", self.formation_anchor_y)),
             "formation_anchor_dx": _coord(policy.get("formation_anchor_dx", self.formation_anchor_dx)),
             "formation_anchor_dy": _coord(policy.get("formation_anchor_dy", self.formation_anchor_dy)),
+            "hunt_anchor_x": _coord(policy.get("hunt_anchor_x", self.hunt_anchor_x)),
+            "hunt_anchor_y": _coord(policy.get("hunt_anchor_y", self.hunt_anchor_y)),
+            "hunt_anchor_map": _coord(policy.get("hunt_anchor_map", self.hunt_anchor_map)),
             "yard_half_w": policy.get("yard_half_w", self.yard_half_w),
             "yard_half_h": policy.get("yard_half_h", self.yard_half_h),
             "yard_scale_with_roster": policy.get(
@@ -431,6 +441,9 @@ class PartyMemberConfig:
             formation_anchor_y=_coord(raw.get("formation_anchor_y")),
             formation_anchor_dx=_coord(raw.get("formation_anchor_dx")),
             formation_anchor_dy=_coord(raw.get("formation_anchor_dy")),
+            hunt_anchor_x=_coord(raw.get("hunt_anchor_x")),
+            hunt_anchor_y=_coord(raw.get("hunt_anchor_y")),
+            hunt_anchor_map=_coord(raw.get("hunt_anchor_map")),
             yard_half_w=hw_i,
             yard_half_h=hh_i,
             yard_scale_with_roster=bool(raw.get("yard_scale_with_roster", True)),
