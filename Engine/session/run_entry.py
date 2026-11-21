@@ -56,6 +56,13 @@ def main() -> int:
                 raise RuntimeError(
                     f"asset pack {section} failed: {block.get('reason')}"
                 )
+        # body_pose import-time bind often ran before the overlay existed.
+        try:
+            from app._05_action.body_pose import refresh_offsets
+
+            refresh_offsets()
+        except Exception:
+            pass
         from session.elevate import prepare_runtime
 
         prepare_runtime()

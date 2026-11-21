@@ -1,5 +1,14 @@
 # Decision change log
 
+## 2026-11-21 — body_pose: pack overlay for find anchors / action VFTs
+
+Intent: Customer pack-only builds had `body pose: action slot unread` / `moving=unread` because `body_pose` read `Engine/analysis/registry/*` on disk while those texts live only in TEMP from `analysis_text.pack`. Main/dev trees with plain analysis files were fine.
+Shared: `body_pose._load_find` / `refresh_offsets`; `registry_apply.source_registry` (overlay first); `run_entry.main` calls `refresh_offsets` after `ensure_packed_assets`. No change to login, combat target, HP, party, or MapSubsystem decision logic.
+Affects: travel / loot / search hop “is moving?” reads on pack-only installs. Stale baked MGR/MyPlayer/VFT defaults no longer win when overlay has current registry.
+Side effects: once offsets bind, loot hop should reclick less on false “still” while walking.
+Consent: user (“yes” after unread root-cause / fix plan).
+Result: code wired + incremental release + Stage5 pack (`build_id` `97957950-…`, same CEK). Live pack-only confirm: after deploy, log should no longer show `body pose: action slot unread` / `moving=unread` once overlay binds.
+
 ## 2026-11-21 — DeviceKey: TPM retry then Soft on first install
 
 Intent: Stop customer License “Create request” failures on laptops where TPM NCrypt returns transient/denied/unknown; prefer TPM, then Soft+DPAPI after short retries so activation works across PCs.
