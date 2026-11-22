@@ -77,8 +77,34 @@ def parse_frame(raw: str | bytes) -> PartyMessage:
     return PartyMessage.from_json(raw)
 
 
+def coerce_message(
+    message: PartyMessage | dict[str, Any] | str,
+    *,
+    sender: str = "",
+) -> PartyMessage:
+    """Wrap a payload for the wire.
+
+    A dict that already has ``message`` or ``msg`` is an envelope. A command
+    dict (``type``, ``run``, ``rally``, …) is the payload itself. Treating that
+    command as an envelope drops the body and sends ``""``.
+    """
+    if isinstance(message, PartyMessage):
+        if sender and not message.sender:
+            message.sender = sender
+        return message
+    if isinstance(message, dict):
+        if "message" in message or "msg" in message:
+            msg = PartyMessage.from_dict(message)
+            if sender and not msg.sender:
+                msg.sender = sender
+            return msg
+        return PartyMessage(sender=sender, message=message)
+    return PartyMessage(sender=sender, message=str(message))
+
+
 __all__ = [
     "MessageBody",
     "PartyMessage",
+    "coerce_message",
     "parse_frame",
 ]

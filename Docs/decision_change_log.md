@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — member snapshot is a real party frame
+
+Intent: A snapshot sent to one member keeps its `party_sync` body. A command dict is the payload, not an envelope. A dropped socket releases that character's connection id, so the same character can hello again on a new id.
+Shared: `coerce_message`, `PartyServer._coerce`, hello `send_to`, `_party_sync_broadcast`, `_party_sync_ack`, `MemberDiscovery.release_peer`. Login clicks, retreat, and solo unstick were not changed.
+Affects: network party hello, snapshot retransmit, member resume pull, reconnect after a dropped socket.
+Consent: user (fix the empty `send_to` snapshot and the reconnect `[CONFLICT]`).
+Result: `test_party_sync.py` passed (28), including the real `PartyServer._coerce` snapshot and the dropped-socket reconnect. Not run in the Windows game.
+
 ## 2026-11-22 — network members wait before any party move
 
 Intent: A network member does not walk an old march, follow, map join, or shared attack while the socket is down, while resume sync is open, or while the leader snapshot says paused. After the matching policy and snapshot are applied and a new pose sample is seen, an ended rally rejoins the current leader. The same cached pose sample does not end the wait.

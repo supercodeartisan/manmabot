@@ -3158,10 +3158,15 @@ class BotController:
         if server is None or not isinstance(body, dict):
             return
         from app._06_party.sync import member_states
+        from websocket.protocol import PartyMessage
 
         for peer in member_states.peer_ids():
             try:
-                server.send_to(peer, body, sender="leader")
+                server.send_to(
+                    peer,
+                    PartyMessage(sender="leader", message=body),
+                    sender="leader",
+                )
             except Exception:
                 continue
 
@@ -3201,7 +3206,13 @@ class BotController:
             body = dict(body)
             body["pull"] = pull
         try:
-            server.send_to(peer, body, sender="leader")
+            from websocket.protocol import PartyMessage
+
+            server.send_to(
+                peer,
+                PartyMessage(sender="leader", message=body),
+                sender="leader",
+            )
         except Exception:
             return
 

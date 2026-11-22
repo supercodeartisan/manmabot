@@ -209,16 +209,9 @@ class PartyServer:
         *,
         sender: str = "",
     ) -> PartyMessage:
-        if isinstance(message, PartyMessage):
-            if sender and not message.sender:
-                message.sender = sender
-            return message
-        if isinstance(message, dict):
-            msg = PartyMessage.from_dict(message)
-            if sender and not msg.sender:
-                msg.sender = sender
-            return msg
-        return PartyMessage(sender=sender, message=str(message))
+        from .protocol import coerce_message
+
+        return coerce_message(message, sender=sender)
 
     def _run_coro(self, coro: Any) -> Any:
         loop = self._loop

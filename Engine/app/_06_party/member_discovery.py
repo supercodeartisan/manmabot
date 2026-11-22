@@ -73,6 +73,38 @@ class MemberDiscovery:
     def clear(self) -> None:
         self.by_connection.clear()
 
+    def release_peer(self, peer: str) -> None:
+        """Drop the row owned by a socket that has disconnected.
+
+        A later hello with a new ``client_id`` for the same character is then
+        a normal roster match. One remaining live row is no longer a conflict.
+        """
+        pid = str(peer or "").strip()
+        if not pid:
+            return
+        names: list[str] = []
+        for cid, row in list(self.by_connection.items()):
+            if str((row.extra or {}).get("peer") or "") != pid:
+                continue
+            names.append(row.name)
+            self.by_connection.pop(cid, None)
+        for name in names:
+            self._restore_lone(name)
+
+    def _restore_lone(self, name: str) -> None:
+        key = _key(name)
+        if not key:
+            return
+        same = [row for row in self.by_connection.values() if _key(row.name) == key]
+        if len(same) != 1 or same[0].status != MembershipStatus.CONFLICT:
+            return
+        one = same[0]
+        one.status = (
+            MembershipStatus.MATCHED
+            if one.extra.get("on_roster")
+            else MembershipStatus.PENDING
+        )
+
     def observe(
         self,
         *,
@@ -81,6 +113,7 @@ class MemberDiscovery:
         character_class: str = "",
         level: Any = None,
         roster: Any = None,
+        peer: str = "",
     ) -> DiscoveredMember:
         cid = str(connection_id or "").strip() or "_anon"
         incoming = str(name or "").strip()
@@ -98,10 +131,12 @@ class MemberDiscovery:
 
         ident = CharacterIdentity(name=incoming)
         roster_by_key = {n.casefold(): n for n in _roster_names(roster)}
+        on_roster = False
         if not ident.is_valid():
             status = MembershipStatus.UNIDENTIFIED
             incoming = ""
         else:
+            on_roster = incoming.casefold() in roster_by_key
             claimants = [
                 row
                 for row in self.by_connection.values()
@@ -118,7 +153,7 @@ class MemberDiscovery:
                 status = MembershipStatus.CONFLICT
                 for other in claimants:
                     other.status = MembershipStatus.CONFLICT
-            elif incoming.casefold() in roster_by_key:
+            elif on_roster:
                 status = MembershipStatus.MATCHED
                 incoming = roster_by_key[incoming.casefold()]
             else:
@@ -129,6 +164,11 @@ class MemberDiscovery:
         except (TypeError, ValueError):
             lvl = None
 
+        extra = dict(prev.extra) if prev is not None else {}
+        bound = str(peer or "").strip() or str(extra.get("peer") or "")
+        if bound:
+            extra["peer"] = bound
+        extra["on_roster"] = on_roster
         row = DiscoveredMember(
             connection_id=cid,
             name=incoming,
@@ -139,6 +179,7 @@ class MemberDiscovery:
             status=status,
             at=time.time(),
             frames=(prev.frames if prev is not None else 0) + 1,
+            extra=extra,
         )
         self.by_connection[cid] = row
         return row

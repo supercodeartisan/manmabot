@@ -88,6 +88,7 @@ def drain_leader_reports(
     for peer in dropped_peers:
         held = member_states.name_for_peer(peer)
         member_states.forget_peer(peer)
+        discovery.release_peer(str(peer))
         if not held:
             continue
         from ..sightings import book
@@ -132,6 +133,7 @@ def drain_leader_reports(
                 character_class=str(character.get("class") or ""),
                 level=character.get("level"),
                 roster=roster,
+                peer=peer,
             )
             note(
                 f"Party hello {hello_name or '—'} "
@@ -161,6 +163,7 @@ def drain_leader_reports(
                 connection_id=cid,
                 name=state_name,
                 roster=roster,
+                peer=peer,
             )
             if found.status != MembershipStatus.MATCHED:
                 if found.status == MembershipStatus.UNIDENTIFIED:
@@ -252,7 +255,13 @@ def drain_leader_reports(
         for hello_name, peer in hellos:
             for body in deliver(hello_name, peer) or []:
                 try:
-                    server.send_to(peer, body, sender="leader")
+                    from websocket.protocol import PartyMessage
+
+                    server.send_to(
+                        peer,
+                        PartyMessage(sender="leader", message=body),
+                        sender="leader",
+                    )
                 except Exception:
                     note(f"Party sync send failed for {hello_name or peer}")
     return connected

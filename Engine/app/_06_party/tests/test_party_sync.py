@@ -32,10 +32,15 @@ class _Server:
         return self.count
 
     def take_dropped(self):
-        return []
+        out = list(self.dropped)
+        self.dropped.clear()
+        return out
 
     def send_to(self, peer, body, sender=""):
-        self.sent.append((peer, dict(body), sender))
+        from websocket.server import PartyServer
+
+        frame = PartyServer._coerce(body, sender=sender or "leader")
+        self.sent.append((peer, frame.message, sender or frame.sender))
 
 
 class _Pose:
@@ -480,7 +485,10 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
             return []
 
         def send_to(self, peer, body, sender=""):
-            sent.append((peer, dict(body)))
+            from websocket.server import PartyServer
+
+            frame = PartyServer._coerce(body, sender=sender or "leader")
+            sent.append((peer, frame.message))
 
     start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
     start.state = "waiting"
@@ -519,6 +527,104 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
     assert (manager._join_nav.kwargs["dest_x"], manager._join_nav.kwargs["dest_y"]) == (80, 90)
     member_orders.clear()
     member_states.clear()
+
+
+def test_send_to_keeps_the_rally_snapshot_and_decide_moves(monkeypatch):
+    """A member-only snapshot stays a party_sync object through real packing."""
+    from app._06_party.comms.ingest import drain_leader_reports
+    from app._06_party.comms.orders import member_orders
+    from app._06_party.frame_check import reject_leader_frame
+    from app._06_party.member_discovery import discovery
+    from websocket.server import PartyServer
+
+    member_orders.clear()
+    discovery.clear()
+    start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
+    start.state = "waiting"
+    start.meet = (4, 32726, 32921)
+    start.expected = {"멤버"}
+    box = LeaderSync()
+    policy = {
+        "type": "party_policy",
+        "from": "leader",
+        "session": "bd3b6486",
+        "policy_id": "p1",
+        "leader_mode": "moving",
+        "roster": [{"name": "멤버"}],
+    }
+
+    def deliver(_name, _peer):
+        return [policy, box.observe("bd3b6486", "p1", start)]
+
+    raw = [row for row in deliver("멤버", "peer-1") if row["type"] == "party_sync"][0]
+    packed = PartyServer._coerce(raw, sender="leader")
+    assert packed.message["run"] == "running"
+    assert packed.message["rally"] == "active"
+    assert reject_leader_frame(packed.message) == ""
+
+    server = _Server()
+    server.frames = [
+        _Frame(
+            {
+                "type": "member_hello",
+                "from": "멤버",
+                "client_id": "bf3c23b8",
+                "character": {"name": "멤버", "class": "ELF", "level": 1},
+            },
+            "peer-1",
+        )
+    ]
+    drain_leader_reports(server=server, start_rally=start, deliver=deliver)
+    sync = [row[1] for row in server.sent if row[1].get("type") == "party_sync"][-1]
+    assert reject_leader_frame(sync) == ""
+    assert (sync["map_id"], sync["x"], sync["y"]) == (4, 32726, 32921)
+
+    mgr, state = _decide_member(monkeypatch, "멤버", (10, 10), (12, 10))
+    mgr._join_nav = _Nav()
+    before = mgr.decide(state)
+    assert before.action is not ActionType.USE_TALKING_SCROLL
+    member_orders.ingest([_Frame(policy), _Frame(sync)])
+    assert consider_sync(
+        member_orders, name="멤버", on_roster=roster_has(member_orders.policy, "멤버")
+    ) == "applied"
+    intent = mgr.decide(state)
+    assert intent.action is ActionType.USE_TALKING_SCROLL
+    assert (mgr._join_nav.kwargs["dest_x"], mgr._join_nav.kwargs["dest_y"]) == (32726, 32921)
+    member_orders.clear()
+    discovery.clear()
+
+
+def test_a_dropped_socket_does_not_keep_the_name_in_conflict():
+    from app._06_party.comms.ingest import drain_leader_reports
+    from app._06_party.member_discovery import MembershipStatus, discovery
+
+    discovery.clear()
+    start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
+    start.expected = {"콘러드"}
+
+    def hello(client_id):
+        return {
+            "type": "member_hello",
+            "from": "콘러드",
+            "client_id": client_id,
+            "character": {"name": "콘러드", "class": "ELF", "level": 1},
+        }
+
+    server = _Server(count=2)
+    server.frames = [_Frame(hello("dd8dc854"), "peer-old")]
+    drain_leader_reports(server=server, start_rally=start)
+    server.frames = [_Frame(hello("bf3c23b8"), "peer-new")]
+    drain_leader_reports(server=server, start_rally=start)
+    assert discovery.by_connection["bf3c23b8"].status == MembershipStatus.CONFLICT
+    server.dropped = ["peer-old"]
+    drain_leader_reports(server=server, start_rally=start)
+    assert "dd8dc854" not in discovery.by_connection
+    assert discovery.by_connection["bf3c23b8"].status == MembershipStatus.MATCHED
+    server.dropped = ["peer-new"]
+    server.frames = [_Frame(hello("bb625ad7"), "peer-again")]
+    drain_leader_reports(server=server, start_rally=start)
+    assert discovery.by_connection["bb625ad7"].status == MembershipStatus.MATCHED
+    discovery.clear()
 
 
 def test_paused_snapshot_blocks_rally_march_and_focus(monkeypatch):
@@ -611,7 +717,10 @@ def test_same_rev_pull_and_a_missing_rev_are_retransmitted():
 
     class _Server:
         def send_to(self, peer, body, sender=""):
-            sent.append((peer, dict(body)))
+            from websocket.server import PartyServer
+
+            frame = PartyServer._coerce(body, sender=sender or "leader")
+            sent.append((peer, frame.message))
 
     start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
     start.state = "waiting"
