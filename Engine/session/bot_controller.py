@@ -1389,6 +1389,7 @@ class BotController:
         self._pause_gate.set()
         self._pause_kind = None
         self._resume_pending = False
+        self._party_pause_clock(resume=True)
         self._set_state(RunState.RUNNING, "")
         self._log_ui("running", via=self._via_label(via))
         return True
@@ -1396,6 +1397,7 @@ class BotController:
     def _enter_auto_pause_locked(self, code: str) -> None:
         self._pause_gate.clear()
         self._pause_kind = "auto"
+        self._party_pause_clock(resume=False)
         ui = self._ui()
         hint = f"{ui.reason[code]} {ui.reason['resume_hint']}"
         self._set_state(RunState.PAUSED, hint)
@@ -1516,11 +1518,12 @@ class BotController:
         with self._lock:
             if self.state != RunState.RUNNING:
                 return
-            self._pause_gate.clear()
-            self._pause_kind = "user"
-            self._resume_pending = False
-            self._set_state(RunState.PAUSED, self._reason("user_pause"))
-            self._log_ui("paused_hotkey")
+        self._pause_gate.clear()
+        self._pause_kind = "user"
+        self._resume_pending = False
+        self._set_state(RunState.PAUSED, self._reason("user_pause"))
+        self._party_pause_clock(resume=False)
+        self._log_ui("paused_hotkey")
 
     def toggle_pause_hotkey(self) -> None:
         if self.state == RunState.RUNNING:
@@ -1785,6 +1788,13 @@ class BotController:
             return True
         host = str(getattr(profile, "party_leader_host", "") or "").strip()
         port = getattr(profile, "party_ws_port", 8765)
+        if host:
+            from app._06_party.comms.orders import member_orders
+
+            member_orders.gather = None
+            member_orders.formation_path = None
+            member_orders.party_focus = None
+            member_orders.sync_frame = None
         self._party_comms.start_member(host=host, port=port, log=self.log)
         self._sync_party_handles()
         if self._party_comms.client is None:
@@ -1807,6 +1817,30 @@ class BotController:
         self._party_socket_wait_note_at = 0.0
         self._party_comms.stop_member(log=self.log)
         self._sync_party_handles()
+
+    def _note_member_link(self, brain, world) -> None:
+        """Network members with a leader address wait. Memory-only follow does not."""
+        runtime = getattr(brain, "runtime", None) if brain is not None else None
+        if runtime is None:
+            return
+        role = str(getattr(self._profile, "party_role", "member") or "member").strip().lower()
+        host = str(getattr(self._profile, "party_leader_host", "") or "").strip()
+        party_on = bool(getattr(self._profile, "party_enabled", False)) and bool(
+            getattr(self._profile, "party_member_enabled", False)
+        )
+        network = role == "member" and party_on and bool(host)
+        runtime.network_party = network
+        runtime.orders_open = not (network and not self._party_comms.member_connected)
+        if not runtime.sync_hold:
+            return
+        try:
+            from app._04_decision.world_nav.session import live_pose_from_state
+
+            pose = live_pose_from_state(world)
+        except Exception:
+            pose = None
+        if pose is not None:
+            runtime.sync_hold = False
 
     def _member_socket_pending(self) -> bool:
         """True until the first leader-socket connect.
@@ -2346,6 +2380,7 @@ class BotController:
         from app._06_party.comms.orders import leader_session, policy_message
 
         kwargs = self._leader_party_policy_kwargs()
+        self._party_policy_kwargs = dict(kwargs)
         key = json.dumps(kwargs, sort_keys=True, default=str)
         self._party_policy_id = str(policy_message(**kwargs).get("policy_id") or "")
         now = _time.time()
@@ -3006,6 +3041,89 @@ class BotController:
         if march is not None and hasattr(march, "note_hello"):
             march.note_hello()
 
+    def _leader_sync_box(self):
+        from app._06_party.party_sync import LeaderSync
+
+        box = getattr(self, "_leader_sync", None)
+        if not isinstance(box, LeaderSync):
+            box = self._leader_sync = LeaderSync()
+        return box
+
+    def _party_policy_id(self) -> str:
+        info = getattr(self, "_party_policy_info", None)
+        if isinstance(info, dict):
+            return str(info.get("policy_id") or "")
+        return ""
+
+    def _party_sync_observe(self):
+        from websocket.party_orders import leader_session
+
+        if not self._party_server_on():
+            return None
+        return self._leader_sync_box().observe(
+            leader_session(),
+            self._party_policy_id(),
+            getattr(self, "_start_rally", None),
+        )
+
+    def _party_sync_frames(self, _name: str, _peer: str) -> list:
+        """Current policy and rally snapshot for this peer. Same rev on a repeat."""
+        from websocket.party_orders import policy_message
+
+        frames = []
+        info = getattr(self, "_party_policy_kwargs", None)
+        if isinstance(info, dict) and info:
+            try:
+                frames.append(policy_message(**info))
+            except Exception:
+                pass
+        body = self._party_sync_observe()
+        if isinstance(body, dict):
+            frames.append(body)
+        return frames
+
+    def _party_sync_ack(self, name: str, session: str, rev, peer: str) -> None:
+        box = self._leader_sync_box()
+        box.note_ack(name, session, rev)
+        if not peer or not box.needs_send(name, session):
+            return
+        server = self._party_comms.server
+        body = self._party_sync_observe()
+        if server is None or not isinstance(body, dict):
+            return
+        try:
+            server.send_to(peer, body, sender="leader")
+        except Exception:
+            return
+
+    def _party_pause_clock(self, *, resume: bool) -> None:
+        """Leader pause keeps the remainders. A member pause does not."""
+        import time
+
+        role = str(getattr(self._profile, "party_role", "") or "").strip().lower()
+        now = time.monotonic()
+        if role == "leader" and self._party_server_on():
+            box = self._leader_sync_box()
+            start = getattr(self, "_start_rally", None)
+            if resume:
+                box.resume(start, now)
+            else:
+                box.pause(start, now)
+            self._party_sync_observe()
+            return
+        if role != "member" or resume is False:
+            return
+        host = str(getattr(self._profile, "party_leader_host", "") or "").strip()
+        if not host:
+            return
+        brain = getattr(self, "_party_brain_ref", None)
+        runtime = getattr(brain, "runtime", None) if brain is not None else None
+        if runtime is not None:
+            runtime.sync_hold = True
+        reporter = getattr(self, "_member_state_reporter", None)
+        if reporter is not None and hasattr(reporter, "nudge"):
+            reporter.nudge()
+
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
         from app._06_party.invite import roster_invite_names
@@ -3018,7 +3136,7 @@ class BotController:
             self.log(msg)
             self._party_event("socket", msg)
 
-        return self._party_comms.drain_reports(
+        sent = self._party_comms.drain_reports(
             start_rally=getattr(self, "_start_rally", None),
             party_snapshot=snap,
             roster_names=roster_invite_names(
@@ -3026,7 +3144,11 @@ class BotController:
             ),
             log=_note,
             on_hello=self._note_march_hello,
+            deliver=self._party_sync_frames,
+            note_ack=self._party_sync_ack,
         )
+        self._party_sync_observe()
+        return sent
 
     def _leader_policy_acked(self, name: str) -> bool:
         """Invite gate: ``name`` confirmed the policy currently being sent.
@@ -3356,6 +3478,8 @@ class BotController:
         snap = action_party_snapshot(world)
         name = str(info.get("as_name") or "") or _player_chat_name(world, snap)
         self._nudge_supply_live()
+        applied = getattr(member_orders, "applied_sync", None)
+        sync_rev = applied[1] if isinstance(applied, tuple) else None
         self._member_state_reporter.tick(
             self._party_comms.send_member_state,
             name=name or "member",
@@ -3365,6 +3489,7 @@ class BotController:
             invite=invite,
             live=self._member_live_view(world),
             client_id=self._member_client_id(),
+            sync_rev=sync_rev,
         )
         self._send_member_sightings(world, name or "")
 
@@ -3501,6 +3626,9 @@ class BotController:
         gather = member_orders.gather or {}
         out["rally"] = str(gather.get("stage") or "")
         out["arrived"] = bool(member_orders.arrived)
+        if gather.get("rev") is not None:
+            out["rally_rev"] = int(gather["rev"])
+            out["rally_session"] = str(gather.get("session") or "")
         return out
 
     def _member_party_tick(
@@ -3547,9 +3675,20 @@ class BotController:
             rostered = bool(
                 policy is not None and self._member_on_leader_roster(world, policy)
             )
-            if not rostered:
+            if policy is not None and not rostered:
                 member_orders.gather = None
                 member_orders.recovery = None
+                member_orders.sync_frame = None
+            if party_brain is not None:
+                from app._06_party.party_sync import consider_sync, roster_has
+
+                status = consider_sync(
+                    member_orders,
+                    name=_player_chat_name(world, getattr(world, "last_party", None)),
+                    on_roster=roster_has(policy, _player_chat_name(world, getattr(world, "last_party", None))),
+                )
+                if status == "applied" and member_orders.gather is None:
+                    party_brain.release_rally_nav()
             if party_brain is not None and policy is not None and rostered:
                 self._apply_member_party_policy(
                     world, map_id, party_brain, policy
@@ -4224,6 +4363,11 @@ class BotController:
                         mouse_dropped = True
                     self._consume_paused_settings(config, decision, world, executor)
                     _freeze_stay_clocks(decision.blackboard)
+                    if self._party_server_on():
+                        try:
+                            self._drain_party_reports(world)
+                        except Exception:
+                            pass
                     self._set_preview_hold("Paused")
                     publish("paused")
                     time.sleep(0.05)
@@ -4494,6 +4638,7 @@ class BotController:
                 if party_brain is not None:
                     # Socket is policy/rally only. Leader pose comes from party memory.
                     self._member_socket_pending()
+                    self._note_member_link(party_brain, world)
                     self._member_party_tick(
                         world,
                         last_logged_map_id,

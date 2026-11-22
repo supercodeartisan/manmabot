@@ -218,6 +218,8 @@ class PartyComms:
         roster_names: Optional[Any] = None,
         log: Optional[LogFn] = None,
         on_hello: Optional[Any] = None,
+        deliver: Optional[Any] = None,
+        note_ack: Optional[Any] = None,
     ) -> int:
         return ingest.drain_leader_reports(
             server=self.server,
@@ -226,6 +228,8 @@ class PartyComms:
             roster_names=roster_names,
             log=log,
             on_hello=on_hello,
+            deliver=deliver,
+            note_ack=note_ack,
         )
 
     # --- member ticks ---

@@ -341,6 +341,7 @@ def member_state_message(
     changed: bool,
     live: Optional[dict[str, Any]] = None,
     client_id: str = "",
+    sync_rev: Optional[int] = None,
 ) -> dict[str, Any]:
     """Member → leader: full member view (see module doc). ``changed`` = differs
     from the previous frame (the rest are keep-alive repeats). ``live`` = monitor
@@ -356,6 +357,8 @@ def member_state_message(
         "seq": int(seq),
         "changed": bool(changed),
     }
+    if sync_rev is not None:
+        body["sync_rev"] = int(sync_rev)
     cid = str(client_id or "").strip()
     if cid:
         body["client_id"] = cid
@@ -573,6 +576,12 @@ def _at_point(order: dict[str, Any], map_id: Any, x: Any, y: Any) -> bool:
 
 def _report_at_rally(order: dict[str, Any], report: dict[str, Any]) -> bool:
     # ``arrived`` refers to the member's current order; ignore it for another one.
+    if report.get("rally_rev") is not None and order.get("rev") is not None:
+        try:
+            if int(report.get("rally_rev")) != int(order.get("rev")):
+                return False
+        except (TypeError, ValueError):
+            return False
     if bool(report.get("arrived")) and str(report.get("order") or "") == order_tag(order):
         return True
     return _at_point(order, report.get("map_id"), report.get("x"), report.get("y"))
@@ -612,6 +621,11 @@ class MemberOrders:
         self.formation_path: Optional[dict[str, Any]] = None
         # Shared hunt order. Local track ids are not in this frame.
         self.party_focus: Optional[dict[str, Any]] = None
+        # Latest party_sync held until the roster is known. Not a second rally machine.
+        self.sync_frame: Optional[dict[str, Any]] = None
+        self.applied_sync: Optional[tuple[str, int]] = None
+        self.applied_phase: str = ""
+        self._old_sessions: set[str] = set()
 
     @property
     def order_kind(self) -> str:
@@ -634,6 +648,9 @@ class MemberOrders:
         self.make_way = None
         self.formation_path = None
         self.party_focus = None
+        self.sync_frame = None
+        self.applied_sync = None
+        self.applied_phase = ""
 
     def take_make_way(self) -> Optional[dict[str, Any]]:
         """The latest step-off request once, then None until the next one."""
@@ -647,6 +664,7 @@ class MemberOrders:
         self.session_resets = 0
         self._session_changed = False
         self._beep = None
+        self._old_sessions = set()
 
     def take_beep(self) -> Optional[dict[str, Any]]:
         """Leader beep once, then None until the next one."""
@@ -678,6 +696,10 @@ class MemberOrders:
                 continue
             session = str(body.get("session") or "")
             if session and session != self.session:
+                if session in self._old_sessions:
+                    continue
+                if self.session:
+                    self._old_sessions.add(self.session)
                 self._drop_orders()
                 self.session = session
                 self.session_resets += 1
@@ -736,7 +758,24 @@ class MemberOrders:
                     dict(row) for row in rows if isinstance(row, dict)
                 ] if isinstance(rows, list) else []
                 continue
+            if kind == "party_sync":
+                prev = self.sync_frame
+                if isinstance(prev, dict) and str(prev.get("session") or "") == session:
+                    try:
+                        if int(body.get("rev")) < int(prev.get("rev")):
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+                self.sync_frame = dict(body)
+                continue
             if kind == RALLY:
+                applied = getattr(self, "applied_sync", None)
+                if (
+                    isinstance(applied, tuple)
+                    and applied[0] == session
+                    and str(getattr(self, "applied_phase", "") or "") == "done"
+                ):
+                    continue
                 if _order_key(body) != _order_key(self.gather):
                     self.gather = dict(body)
                     self.arrived = False

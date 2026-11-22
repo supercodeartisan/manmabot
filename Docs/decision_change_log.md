@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-21 — network party sync on hello and resume
+
+Intent: A member with a leader address waits for the leader, then joins the current rally without a manual restart. The leader sends one snapshot (session, rev, running/paused, policy, rally phase). Pause on the leader keeps the remaining forming and stand time. Pause on a member does not. A new leader run ignores the previous session.
+Shared: `LeaderStartRally.freeze` / `thaw`, `LeaderSync`, `consider_sync`, `drain_leader_reports` hello `send_to`, `PartyMemberManager._maybe_hunt_gather` / `release_rally_nav`, pause and resume in `BotController`. Login clicks, retreat, and solo unstick were not changed. Solo mode and party follow with no leader address do not wait on a socket.
+Affects: network party start, rally move, leader pause, member pause, leader restart.
+Consent: user (the party-sync spec on `feat/party-formation-march-sightings`, last reviewed commit `4e93013`).
+Result: `test_party_sync.py` passed (14), including the continuous case member-first → rally click → member hold while the leader is done → resume follow to the current leader. `test_leader_rally.py` passed (9). `app/_06_party/tests` plus `session/tests/test_hunt_resume.py` and `websocket/tests/test_traffic_log.py` passed 362. Nine failures are `ModuleNotFoundError: scipy` in `test_walk_distance_follow.py` and `test_party_loot.py` (scipy was not installed). Not run in the Windows game.
+
 ## 2026-11-21 — members world-nav to the rally meet tile
 
 Intent: A member receives the leader's meet tile and plans a talking scroll or an NPC teleporter to it, as before the rally pin was dropped. A same-map fight still yields to follow and assist. After the stand ends, a newly connected member is not sent the old point.

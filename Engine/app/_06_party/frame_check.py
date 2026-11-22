@@ -33,6 +33,7 @@ _LEADER_TYPES = frozenset({
     "make_way",
     "formation_path",
     "party_focus",
+    "party_sync",
 })
 
 
@@ -133,6 +134,22 @@ def reject_leader_frame(body: Any) -> str:
                     return "bad roster name"
             elif not character_name(row):
                 return "bad roster name"
+    if kind == "party_sync":
+        if str(body.get("run") or "") not in ("running", "paused"):
+            return "bad sync run"
+        phase = str(body.get("rally") or "")
+        if phase not in ("pending", "active", "done"):
+            return "bad sync rally"
+        try:
+            int(body.get("rev"))
+        except (TypeError, ValueError):
+            return "bad sync rev"
+        if phase == "active":
+            for key in ("map_id", "x", "y"):
+                try:
+                    int(body.get(key))
+                except (TypeError, ValueError):
+                    return f"sync missing {key}"
     if kind == "rally":
         for key in ("map_id", "x", "y"):
             try:

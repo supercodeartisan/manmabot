@@ -65,6 +65,12 @@ class MemberRuntime:
     duty_phase: str = "follow"
     # Invite popup is open, or Y was sent and party memory still names someone else.
     hold_join_map: bool = False
+    # Network party with a leader address. Memory-only follow leaves this false.
+    network_party: bool = False
+    # False while that socket is down: no new rally, march, or shared attack.
+    orders_open: bool = True
+    # Member resume: do not reissue a rally click until a live pose is read.
+    sync_hold: bool = False
     # Last ground drop this shopkeeper made. The leader broadcasts it.
     supply_notice: Optional[dict[str, Any]] = None
     # Counts added onto a report that has not caught up with a drop yet.

@@ -126,7 +126,31 @@ class LeaderStartRally:
         # Expected names not at the rally point when the start wait ended.
         self.left_behind: list[str] = []
         self._log_at = float("-inf")
+        self._frozen_left: Optional[dict[str, Optional[float]]] = None
         self._rally.clear()
+
+    def freeze(self, now: float) -> None:
+        """Keep the forming and stand remainders. A second call does not stack."""
+        if self._frozen_left is not None:
+            return
+        deadline = None
+        if self.deadline is not None:
+            deadline = max(0.0, float(self.deadline) - float(now))
+        wait = None
+        if self._wait_started is not None:
+            wait = max(0.0, float(self._wait_started) + MEMBER_WAIT_S - float(now))
+        self._frozen_left = {"deadline": deadline, "wait": wait}
+
+    def thaw(self, now: float) -> None:
+        """Restore the remainders once. The clock starts from ``now``."""
+        left = self._frozen_left
+        if left is None:
+            return
+        if left.get("deadline") is not None:
+            self.deadline = float(now) + float(left["deadline"])
+        if left.get("wait") is not None:
+            self._wait_started = float(now) - (MEMBER_WAIT_S - float(left["wait"]))
+        self._frozen_left = None
 
     def _enter_waiting(self) -> None:
         if self._wait_started is None:
@@ -147,6 +171,12 @@ class LeaderStartRally:
         self._log(f"Party start rally skipped — {why}")
 
     def remaining_s(self) -> Optional[float]:
+        frozen = getattr(self, "_frozen_left", None)
+        if isinstance(frozen, dict):
+            if self.state == "waiting" and frozen.get("wait") is not None:
+                return max(0.0, float(frozen["wait"]))
+            if frozen.get("deadline") is not None:
+                return max(0.0, float(frozen["deadline"]))
         if self.state == "waiting" and self._wait_started is not None:
             return max(0.0, self._wait_started + MEMBER_WAIT_S - self._clock())
         if self.deadline is not None:
@@ -235,6 +265,8 @@ class LeaderStartRally:
 
     def update(self, connected: int, snapshot: Any) -> None:
         """Each tick: resend if needed, count arrivals, finish when all are in."""
+        if getattr(self, "_frozen_left", None) is not None:
+            return
         if (
             self.deadline is not None
             and self.state not in ("off", "done", "waiting")

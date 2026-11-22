@@ -173,6 +173,8 @@ class PartyMemberManager:
         self.clear_leader_policy()
         self._formation.reset()
         self.runtime.own_hunt_id = None
+        self.runtime.scratch.pop("rally_click", None)
+        self.release_rally_nav()
 
     def pause(self) -> None:
         self.runtime.paused = True
@@ -590,14 +592,13 @@ class PartyMemberManager:
             need_buff = False
             need_potion = self._need_potion(player, cfg)
 
-        if not need_heal and not need_buff:
-            gather = self._maybe_hunt_gather(game_state, dead=dead)
-            if gather is not None:
-                return gather
-
         threat = None
         if cfg.defend_self and game_state is not None:
             threat = resolve_self_defender(game_state, origin=origin)
+        if threat is None and not need_heal and not need_buff:
+            gather = self._maybe_hunt_gather(game_state, dead=dead)
+            if gather is not None:
+                return gather
 
         leader_in_ui = leader is not None
         assist_obj = None
@@ -658,7 +659,7 @@ class PartyMemberManager:
             from .loot import _self_row_name
             from .sightings import resolve_local
 
-            focus = member_orders.party_focus
+            focus = None if not bool(getattr(self.runtime, "orders_open", True)) else member_orders.party_focus
             seat = ""
             if origin_ok and origin is not None and game_state is not None:
                 seat = _self_row_name(
@@ -1720,7 +1721,11 @@ class PartyMemberManager:
         The join plan may use a talking scroll or an NPC teleporter. Recovery
         is not handled here.
         """
-        if dead or self.runtime.paused:
+        if dead or self.runtime.paused or self.runtime.sync_hold:
+            return None
+        if not bool(getattr(self.runtime, "orders_open", True)):
+            return None
+        if bool(getattr(self.runtime, "hold_join_map", False)):
             return None
         try:
             from app._06_party.comms.orders import member_orders
@@ -1769,11 +1774,38 @@ class PartyMemberManager:
             dest_y=dest_y,
             reason=rally_reason,
         )
+        from .intents import idle
+        from .party_sync import _CLICKS, click_name, same_rally_click
+
+        click = (
+            str(order.get("session") or ""),
+            int(order.get("rev") or 0),
+            map_id,
+            dest_x,
+            dest_y,
+        )
+        if click_name(intent) in _CLICKS and same_rally_click(order, self.runtime.scratch.get("rally_click")):
+            held = idle(f"{rally_reason}_wait_land")
+            self.runtime.last_kind = "join_map"
+            self.runtime.last_reason = str(getattr(held, "reason", "") or "")
+            self._record_decision(held)
+            return held
+        if click_name(intent) in _CLICKS:
+            self.runtime.scratch["rally_click"] = click
         self.runtime.last_kind = "join_map"
         self.runtime.last_reason = str(getattr(intent, "reason", "") or rally_reason)
         self.runtime.chasing = False
         self._record_decision(intent)
         return intent
+
+    def release_rally_nav(self) -> bool:
+        """Stop a join that this rally started. Leave a normal map join running."""
+        session = getattr(self._join_nav, "session", None)
+        reason = str(getattr(session, "reason", "") or "")
+        if not reason.startswith("party_rally"):
+            return False
+        self._join_nav.clear()
+        return True
 
     @staticmethod
     def _is_dead(player: Any) -> bool:
@@ -2197,6 +2229,8 @@ class PartyMemberManager:
     def _build_march(self, origin: Any, game_state: Any, cfg: PartyMemberConfig) -> Any:
         """Shared-path click, or None when ordinary follow should run.
 
+        A closed leader socket does not walk a path from the previous run.
+
         A new rev drops the previous hop. A sliding window of the same rev
         does not. Heal, defend, and assist return before this plan is used.
         """
@@ -2218,6 +2252,9 @@ class PartyMemberManager:
         from .intents import _emit_follow_hop, idle, plan_slot_hop
         from .loot import stable_self_identity
 
+        if not bool(getattr(self.runtime, "orders_open", True)):
+            self._march_active = False
+            return None
         self._march_active = False
         path = accept_march(
             member_orders.formation_path,

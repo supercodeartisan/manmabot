@@ -457,9 +457,14 @@ class SightingBook:
             self._retired.discard(token_peer)
         if token_client:
             self._retired.discard(token_client)
+        same = (
+            self._live_peer.get(key, "") == token_peer
+            and self._live_client.get(key, "") == token_client
+        )
         self._live_peer[key] = token_peer
         self._live_client[key] = token_client
-        self._seq.pop(key, None)
+        if not same:
+            self._seq.pop(key, None)
 
     def drop_peer(self, who: str, peer: str) -> None:
         """The live socket closed. An older socket closing does not clear the new report."""

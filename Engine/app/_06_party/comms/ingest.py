@@ -50,6 +50,8 @@ def drain_leader_reports(
     roster_names: Optional[Any] = None,
     log: Optional[LogFn] = None,
     on_hello: Optional[Any] = None,
+    deliver: Optional[Any] = None,
+    note_ack: Optional[Any] = None,
 ) -> int:
     """Apply member ``report`` frames to the rally, ``member_state`` frames to
     ``sync.member_states`` (and their ``policy_id`` to ``policy_acks``),
@@ -75,6 +77,7 @@ def drain_leader_reports(
     )
 
     note = log or (lambda _m: None)
+    hellos: list[tuple[str, str]] = []
     if server is None:
         return 0
     try:
@@ -140,6 +143,8 @@ def drain_leader_reports(
                 book.note_hello(hello_name, peer, cid)
             if on_hello is not None and hello_name:
                 on_hello(hello_name)
+            if peer:
+                hellos.append((hello_name, peer))
             continue
         if kind == "sighting":
             from ..sightings import book
@@ -167,6 +172,8 @@ def drain_leader_reports(
             if peer:
                 member_states.bind_peer(peer, booked)
             row = member_states.row(booked)
+            if note_ack is not None and body.get("sync_rev") is not None:
+                note_ack(booked, body.get("session") or "", body.get("sync_rev"), peer)
             pid = str(row.get("policy_id") or "")
             if pid:
                 first = not policy_acks.acked(booked, pid)
@@ -235,6 +242,13 @@ def drain_leader_reports(
         note("Party rally repeated for a new member")
     if start_rally is not None:
         start_rally.update(connected, party_snapshot)
+    if deliver is not None:
+        for hello_name, peer in hellos:
+            for body in deliver(hello_name, peer) or []:
+                try:
+                    server.send_to(peer, body, sender="leader")
+                except Exception:
+                    note(f"Party sync send failed for {hello_name or peer}")
     return connected
 
 

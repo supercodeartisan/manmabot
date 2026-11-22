@@ -122,6 +122,7 @@ class MemberStateReporter:
         invite: dict[str, Any],
         live: Optional[dict[str, Any]] = None,
         client_id: str = "",
+        sync_rev: Optional[int] = None,
     ) -> bool:
         """Send when the view changed or the keep-alive is due. True = sent.
 
@@ -132,7 +133,7 @@ class MemberStateReporter:
 
         view = {
             "name": name, "session": session, "policy_id": policy_id,
-            "party": party, "invite": invite,
+            "party": party, "invite": invite, "sync_rev": sync_rev,
         }
         key = json.dumps(view, sort_keys=True, default=str, ensure_ascii=False)
         now = self._clock()
@@ -142,7 +143,7 @@ class MemberStateReporter:
         body = member_state_message(
             name=name, session=session, policy_id=policy_id,
             party=party, invite=invite, seq=self.seq + 1, changed=changed,
-            live=live, client_id=client_id,
+            live=live, client_id=client_id, sync_rev=sync_rev,
         )
         try:
             ok = bool(send(body))
