@@ -807,17 +807,25 @@ def plan_slot_hop(
     leader_moved: bool = False,
     state: Any = None,
 ) -> tuple[Any, Optional[tuple[int, int]], str, Optional[tuple[int, int]]]:
-    """Short hop toward an absolute formation tile. Does not aim at the leader."""
+    """Short hop toward an absolute formation tile. Does not aim at the leader.
+
+    March hops may run past ``FOLLOW_CLICK_TILES``. Ordinary follow and stand
+    seats stay on the short click so they cannot step onto the leader.
+    """
     from app._04_decision.nav_config import get_terrain_map
     from app._04_decision.pathfinding import plan_travel_click
 
     from .follow import STAND_ARRIVE_TILES
+    from .formation_march import MARCH_CLICK_TILES, MARCH_REPLACE_AHEAD
 
     ox, oy = int(origin.x), int(origin.y)
     goal = (int(slot[0]), int(slot[1]))
     arrive = STAND_ARRIVE_TILES if kind == "stand" else ARRIVAL_TOLERANCE
-    if max(abs(goal[0] - ox), abs(goal[1] - oy)) <= arrive:
+    gap = max(abs(goal[0] - ox), abs(goal[1] - oy))
+    if gap <= arrive:
         return idle("at_slot"), goal, "at_slot", None
+    march = str(kind or "") == "march"
+    hop_limit = int(MARCH_CLICK_TILES) if march else int(FOLLOW_CLICK_TILES)
     # Same leader tile: keep a click that still aims at the slot.
     # A leader step, a turn, or a hop that would pass the slot clicks now.
     if hold_follow_click(
@@ -836,7 +844,15 @@ def plan_slot_hop(
             if extended is None:
                 return idle("player_beside"), goal, "player_beside", None
             return _emit_follow_hop(origin, extended, goal, kind)
-        return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
+        # March: slot pulled ahead of the pending hop — replan, do not idle.
+        assert previous_hop is not None
+        hop_left = max(
+            abs(int(previous_hop[0]) - ox), abs(int(previous_hop[1]) - oy)
+        )
+        if march and gap > hop_left + int(MARCH_REPLACE_AHEAD):
+            pass
+        else:
+            return idle("follow_in_transit"), goal, "follow_in_transit", previous_hop
     terrain = get_terrain_map()
     if terrain is None:
         return idle("no_terrain"), goal, "no_terrain", None
@@ -846,14 +862,16 @@ def plan_slot_hop(
         terrain,
         origin,
         goal,
-        max_hop=FOLLOW_CLICK_TILES,
-        diverse=kind != "march",
+        max_hop=hop_limit,
+        diverse=not march,
     )
     if dest is None:
         return idle("no_path"), None, "no_path", None
     hop = waypoint if waypoint is not None else goal
     if _hop_on_player(state, origin, hop):
-        hop = _closing_hop_off_player(origin, goal, hop, state, terrain)
+        hop = _closing_hop_off_player(
+            origin, goal, hop, state, terrain, limit=hop_limit
+        )
     if hop is None:
         return idle("player_beside"), goal, "player_beside", None
     return _emit_follow_hop(origin, hop, goal, kind)

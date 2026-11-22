@@ -97,7 +97,7 @@ def orders():
 
 @pytest.fixture
 def march_world(monkeypatch):
-    """Open ground and a one-tile hop toward whatever slot the march picked."""
+    """Open ground. Hops close toward the slot up to ``max_hop``."""
 
     def _terrain():
         return _Open()
@@ -105,9 +105,13 @@ def march_world(monkeypatch):
     def _click(terrain, origin, goal, max_hop=2, **_kwargs):
         ox, oy = int(origin.x), int(origin.y)
         gx, gy = int(goal[0]), int(goal[1])
-        sx = 0 if gx == ox else (1 if gx > ox else -1)
-        sy = 0 if gy == oy else (1 if gy > oy else -1)
-        hop = (ox + sx, oy + sy)
+        limit = max(1, int(max_hop))
+        dx = max(-limit, min(limit, gx - ox))
+        dy = max(-limit, min(limit, gy - oy))
+        # Prefer a real step; never land on the origin.
+        if dx == 0 and dy == 0:
+            return None, None, None
+        hop = (ox + dx, oy + dy)
         return hop, [hop], hop
 
     monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", _terrain)
@@ -681,12 +685,15 @@ def test_a_still_leader_publishes_the_path_and_the_member_steps(
 
 
 def test_march_hop_asks_for_one_shortest_path(monkeypatch):
+    from app._06_party.formation_march import MARCH_CLICK_TILES
+    from app._06_party.follow import FOLLOW_CLICK_TILES
     from app._06_party.intents import plan_slot_hop
 
     seen = {}
 
     def _click(terrain, origin, goal, max_hop=2, **kwargs):
         seen["diverse"] = kwargs.get("diverse", True)
+        seen["max_hop"] = max_hop
         ox, oy = int(origin.x), int(origin.y)
         hop = (ox + 1, oy)
         return hop, [hop], hop
@@ -696,8 +703,10 @@ def test_march_hop_asks_for_one_shortest_path(monkeypatch):
     origin = SimpleNamespace(x=0, y=0)
     plan_slot_hop(origin, (4, 0), previous_goal=None, previous_hop=None, kind="march")
     assert seen["diverse"] is False
+    assert int(seen["max_hop"]) == int(MARCH_CLICK_TILES)
     plan_slot_hop(origin, (4, 0), previous_goal=None, previous_hop=None, kind="stand")
     assert seen["diverse"] is True
+    assert int(seen["max_hop"]) == int(FOLLOW_CLICK_TILES)
 
 
 def test_loot_window_keeps_only_the_designated_seat_after_a_refight():
@@ -917,3 +926,114 @@ def test_cleared_path_releases_to_ordinary_follow(monkeypatch, orders, march_wor
     assert mgr.runtime.last_kind == "follow"
     assert "leader" in str(released.reason)
     assert mgr.runtime.scratch.get("march_goal") is None
+
+
+def test_cursor_advance_moves_slot_off_the_departure_stand():
+    """Error 1: after assembly the slot tracks cursor+lookahead, not the start."""
+    tiles = [(10 + i, 10) for i in range(12)]
+    path0 = _march(tiles, cursor=0)
+    kind0, goal0 = member_goal(
+        path0,
+        seat=0,
+        followers=4,
+        me=(10, 9),
+        terrain=_Open(),
+        heading=(1, 0),
+        others=[],
+        previous_progress=None,
+        previous_goal=None,
+    )
+    assert kind0 == "go" and goal0 is not None
+    path4 = _march(tiles, cursor=4)
+    kind4, goal4 = member_goal(
+        path4,
+        seat=0,
+        followers=4,
+        me=(10, 9),
+        terrain=_Open(),
+        heading=(1, 0),
+        others=[],
+        previous_progress=None,
+        previous_goal=goal0,
+    )
+    assert kind4 == "go" and goal4 is not None
+    # Cursor moved four tiles; sticky must not keep the departure-side slot.
+    assert goal4[0] > goal0[0]
+    assert goal4[0] >= 14
+
+
+def test_no_path_tick_keeps_march_ownership_without_backward_leader_click(
+    monkeypatch, orders, march_world
+):
+    """Error 2: temporary hop miss stays on the march slot, never the leader."""
+    from app._02_state.enums import ActionType
+
+    tiles = [(10 + i, 10) for i in range(10)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=3)
+    mgr = _member(monkeypatch, orders, tile=(10, 10))
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    slot = mgr.runtime.scratch.get("march_goal")
+    assert isinstance(slot, tuple) and slot[0] > 10
+    hop = mgr.runtime.follow_hop
+    assert hop is not None and hop[0] > 10
+
+    def _miss(*_a, **_k):
+        return None, None, None
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _miss)
+    missed = mgr.decide(state)
+    assert mgr.runtime.last_kind == "march"
+    assert "leader" not in str(missed.reason)
+    assert mgr.runtime.scratch.get("march_goal") == slot
+    # No replacement click onto the leader tile behind the body.
+    if missed.action is ActionType.TRAVELING:
+        assert missed.destination is None or (
+            int(getattr(missed.destination, "x", missed.destination[0])) >= 10
+        )
+
+
+def test_march_extends_hop_when_slot_is_ahead_while_moving(
+    monkeypatch, orders, march_world
+):
+    """Error 3: moving with a short pending hop replans when the slot pulls away."""
+    from app._02_state.enums import ActionType
+    from app._06_party.formation_march import MARCH_CLICK_TILES
+
+    tiles = [(10 + i, 10) for i in range(14)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=8)
+    mgr = _member(monkeypatch, orders, tile=(10, 10))
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.action is ActionType.TRAVELING
+    slot = mgr.runtime.scratch.get("march_goal")
+    assert isinstance(slot, tuple) and slot[0] >= 16
+    # Short hop still in flight while the slot is far ahead.
+    mgr.runtime.follow_hop = (12, 9)
+    mgr.runtime.approach_goal = slot
+    mgr.runtime.follow_hop_at = 0.0
+
+    seen = {}
+
+    def _click(terrain, origin, goal, max_hop=2, **_kwargs):
+        seen["max_hop"] = max_hop
+        ox, oy = int(origin.x), int(origin.y)
+        gx, gy = int(goal[0]), int(goal[1])
+        limit = max(1, int(max_hop))
+        dx = max(-limit, min(limit, gx - ox))
+        dy = max(-limit, min(limit, gy - oy))
+        hop = (ox + dx, oy + dy)
+        return hop, [hop], hop
+
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _click)
+    monkeypatch.setattr("app._06_party.intents._body_moving", lambda: True)
+    extended = mgr.decide(state)
+    assert mgr.runtime.last_kind == "march"
+    assert extended.action is ActionType.TRAVELING
+    assert int(seen.get("max_hop", 0)) == int(MARCH_CLICK_TILES)
+    hop = mgr.runtime.follow_hop
+    assert hop is not None
+    # Continuation past the short two-tile pending hop.
+    assert max(abs(hop[0] - 10), abs(hop[1] - 9)) > 2

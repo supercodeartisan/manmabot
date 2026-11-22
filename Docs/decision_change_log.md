@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — coordinated formation-march slot, ownership, and hop continuation
+
+Intent: Treat the three post-assembly march failures as one movement flow. Each tick recomputes the member slot from the latest formation cursor plus look-ahead (sticky only for one-tile lateral drift, never glued to the departure stand). While the shared path is valid, `MarchMove.owns` keeps march ownership through a failed hop, in_transit, door_wait, or temporary path miss; ordinary leader follow is only for cleared/wrong-map/session paths or intentional assist catch-up. March hops use `MARCH_CLICK_TILES` and replan when the slot pulls ahead of the pending hop; ordinary follow stays on `FOLLOW_CLICK_TILES=2`. Safety checks (collision, occupied tiles, corridor caps, click replacement only when progress needs it) stay in place. Diagnostics log rev/cursor/seat/progress/goal/hop/why/source/hop_age.
+Shared: `member_goal` / `_side_slot`, `plan_slot_hop`, `follow_extend_hop`, `PartyMemberManager._build_march` / `_log_march` / `decide`. Login, retreat, solo unstick, ENGAGE/CHASE/TURRET radii, approach_tiles, and assist_leash_tiles were not changed.
+Affects: member formation march after rally and during a moving farm. Assist catch-up and cleared-path follow still release ownership intentionally.
+Consent: user (coordinated three-error formation-march fix; prior owns work already consented).
+Result: `test_formation_march.py` passed (24), including cursor-driven slot advance, hop-miss ownership without leader click, and march hop continuation past a short pending hop. `test_moving_fight.py` and `test_party_cycle.py` passed. `app/_06_party/tests` with a `cv2` stub passed 394. Nine failures are the existing missing `scipy` import. Not run in the Windows game.
+
 ## 2026-11-22 — march keeps its slot across a one-tick hop miss
 
 Intent: While a shared formation path is valid for this session and map, the member keeps that path's current slot as the walk goal. A tick with no safe hop, no terrain, or an in-flight hop does not switch the click to the leader tile. `stop_tiles` does not hold when that slot is still open. Door and pace waits stay on the march and do not unstick or make-way to the leader. A cleared, wrong-map, or wrong-session path releases to ordinary follow. Combat approach, heal, and supply still take the tick; the next free tick reads the latest slot.

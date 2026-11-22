@@ -2428,8 +2428,8 @@ class PartyMemberManager:
 
         A closed leader socket does not walk a path from the previous run.
 
-        A new rev drops the previous hop. A sliding window of the same rev
-        does not. Heal, defend, and assist return before this plan is used.
+        A new rev keeps body progress and keeps a hop that still closes on
+        the latest slot. Heal, defend, and assist return before this plan.
         """
         from .comms.orders import member_orders
         from .formation_march import (
@@ -2473,16 +2473,19 @@ class PartyMemberManager:
             return None
         self._march_active = True
         if previous != path.rev:
-            self.runtime.follow_hop = None
-            self.runtime.follow_hop_at = 0.0
             self.runtime.scratch["march_rev"] = path.rev
-            self.runtime.scratch.pop("march_progress", None)
+            # Keep body progress across a rev bump so the member does not snap
+            # back onto the departure window. Drop only a hop that no longer
+            # closes on the slot computed below.
             self.runtime.scratch.pop("march_heading", None)
             self.runtime.scratch.pop("march_heading_pending", None)
             self.runtime.scratch.pop("march_heading_run", None)
-            self.runtime.scratch.pop("march_goal", None)
         if origin is None or not hasattr(origin, "x"):
             # Path is valid; the body pose is missing this tick. Keep ownership.
+            # Without a pose a new rev cannot prove the old hop still closes.
+            if previous != path.rev:
+                self.runtime.follow_hop = None
+                self.runtime.follow_hop_at = 0.0
             return MarchMove(False, None, None, path.rev, "retry", owns=True)
         me = (int(origin.x), int(origin.y))
         own_name = ""
@@ -2514,6 +2517,12 @@ class PartyMemberManager:
         if progress is not None:
             self.runtime.scratch["march_progress"] = int(progress)
         seat = 0 if cfg.seat_index is None else int(cfg.seat_index)
+        kept_goal = self.runtime.scratch.get("march_goal")
+        prev_goal = (
+            (int(kept_goal[0]), int(kept_goal[1]))
+            if isinstance(kept_goal, tuple) and len(kept_goal) == 2
+            else None
+        )
         kind, goal = member_goal(
             path,
             seat=seat,
@@ -2523,14 +2532,23 @@ class PartyMemberManager:
             heading=heading,
             others=others,
             previous_progress=self.runtime.scratch.get("march_progress"),
+            previous_goal=prev_goal,
         )
         if kind == "fallback":
             # Path still owns this tick. Ordinary follow waits for a real release.
-            kept = self.runtime.scratch.get("march_goal")
-            if isinstance(kept, tuple) and len(kept) == 2:
-                goal = (int(kept[0]), int(kept[1]))
+            if prev_goal is not None:
+                goal = prev_goal
             waited = (idle("retry"), goal, "retry", None)
             open_slot = goal is not None and goal != me
+            self._log_march(
+                path,
+                seat=seat,
+                progress=progress,
+                goal=goal,
+                hop=self.runtime.follow_hop,
+                why="retry",
+                source="fallback",
+            )
             return MarchMove(open_slot, waited, goal, path.rev, "retry", owns=True)
         if kind in ("pace_wait", "door_wait") or goal is None:
             why = kind if kind in ("pace_wait", "door_wait") else "pace_wait"
@@ -2538,8 +2556,24 @@ class PartyMemberManager:
             self.runtime.follow_hop_at = 0.0
             self.runtime.scratch.pop("march_goal", None)
             waited = (idle(why), None, why, None)
+            self._log_march(
+                path,
+                seat=seat,
+                progress=progress,
+                goal=None,
+                hop=None,
+                why=why,
+                source="wait",
+            )
             return MarchMove(False, waited, None, path.rev, why, owns=True)
         self.runtime.scratch["march_goal"] = (int(goal[0]), int(goal[1]))
+        from .follow import follow_hop_still_closes
+
+        pending = self.runtime.follow_hop
+        if previous != path.rev and pending is not None:
+            if not follow_hop_still_closes(me, goal, pending):
+                self.runtime.follow_hop = None
+                self.runtime.follow_hop_at = 0.0
         rejected = bool(self.runtime.scratch.pop("follow_click_failed", None))
         if rejected:
             self.runtime.follow_hop = None
@@ -2562,6 +2596,15 @@ class PartyMemberManager:
             self.runtime.follow_hop = None
             self.runtime.follow_hop_at = 0.0
             waited = (idle(detail), goal, detail, None)
+            self._log_march(
+                path,
+                seat=seat,
+                progress=progress,
+                goal=goal,
+                hop=None,
+                why=detail,
+                source="arrive",
+            )
             return MarchMove(False, waited, goal, path.rev, detail, owns=True)
         if detail == "follow_in_transit":
             why = "in_transit"
@@ -2601,6 +2644,15 @@ class PartyMemberManager:
                     self.runtime.follow_hop = None
                     self.runtime.follow_hop_at = 0.0
                     waited = (idle("pace_wait"), None, "pace_wait", None)
+                    self._log_march(
+                        path,
+                        seat=seat,
+                        progress=progress,
+                        goal=goal,
+                        hop=None,
+                        why="pace_wait",
+                        source="cap",
+                    )
                     return MarchMove(False, waited, goal, path.rev, "pace_wait", owns=True)
                 if int(allowed) < int(hop_full):
                     clipped = path_tile(path, int(allowed))
@@ -2608,9 +2660,62 @@ class PartyMemberManager:
                         self.runtime.follow_hop = None
                         self.runtime.follow_hop_at = 0.0
                         waited = (idle("pace_wait"), None, "pace_wait", None)
+                        self._log_march(
+                            path,
+                            seat=seat,
+                            progress=progress,
+                            goal=goal,
+                            hop=None,
+                            why="pace_wait",
+                            source="cap",
+                        )
                         return MarchMove(False, waited, goal, path.rev, "pace_wait", owns=True)
                     plan = _emit_follow_hop(origin, clipped, goal, "march")
+                    hop = clipped
+        age = self._follow_hop_age()
+        self._log_march(
+            path,
+            seat=seat,
+            progress=progress,
+            goal=goal,
+            hop=hop if isinstance(hop, tuple) else self.runtime.follow_hop,
+            why=why,
+            source="cursor",
+            hop_age_s=age,
+        )
         return MarchMove(open_slot, plan, goal, path.rev, why, owns=True)
+
+    def _log_march(
+        self,
+        path: Any,
+        *,
+        seat: int,
+        progress: Optional[int],
+        goal: Optional[tuple[int, int]],
+        hop: Optional[tuple[int, int]],
+        why: str,
+        source: str,
+        hop_age_s: Optional[float] = None,
+    ) -> None:
+        """One line for rev/cursor/slot/ownership/click decisions."""
+        age = ""
+        if hop_age_s is not None:
+            age = f" hop_age={hop_age_s:.2f}"
+        _log.info(
+            "march rev=%s seq=%s base=%s cursor=%s seat=%s progress=%s "
+            "goal=%s hop=%s why=%s source=%s owns=1%s",
+            getattr(path, "rev", None),
+            getattr(path, "seq", None),
+            getattr(path, "base", None),
+            getattr(path, "cursor", None),
+            seat,
+            progress,
+            goal,
+            hop,
+            why,
+            source,
+            age,
+        )
 
     def _follow_stuck_escape(
         self,

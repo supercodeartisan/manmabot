@@ -25,6 +25,10 @@ PATH_TYPE = "formation_path"
 MARCH_GAP_TILES = int(PACE_GAP_TILES)
 # How far ahead of a still leader the side slot is placed, in path steps.
 MARCH_LOOKAHEAD = 2
+# March click length. Ordinary follow stays at FOLLOW_CLICK_TILES (2).
+MARCH_CLICK_TILES = 5
+# While moving, replan when the slot is this many tiles past the pending hop.
+MARCH_REPLACE_AHEAD = 2
 # Tiles of the committed path sent on one frame.
 MARCH_WINDOW = 12
 # Past this much gap the front stops. A smaller excess only shortens the slot.
@@ -781,6 +785,53 @@ def choose_admission(
     return door, exit_full, admit
 
 
+def _side_slot(
+    path: MarchPath,
+    *,
+    anchor: Tile,
+    forward: tuple[int, int],
+    seat: int,
+    followers: int,
+    terrain: Any,
+    previous_goal: Optional[Tile],
+) -> tuple[str, Optional[Tile]]:
+    """Side formation tile at ``anchor``.
+
+    ``previous_goal`` only absorbs a one-tile lateral drift. When the new
+    ideal is ahead along the march heading, the slot always advances with
+    the cursor so the member cannot stay glued to the departure stand.
+    """
+    from .follow import sticky_goal_tile
+
+    formed = choose_formation_goal(
+        anchor,
+        forward=forward,
+        seat=seat,
+        followers=max(1, int(followers)),
+        stopped=False,
+        trail_tile=None,
+        terrain=terrain,
+        occupied=set(),
+        previous=None,
+        lateral=None,
+    )
+    if formed.tile is None:
+        return "fallback", None
+    if terrain is not None and not walkable(terrain, formed.tile[0], formed.tile[1]):
+        return "fallback", None
+    tile = formed.tile
+    if previous_goal is not None:
+        px, py = int(previous_goal[0]), int(previous_goal[1])
+        ix, iy = int(formed.tile[0]), int(formed.tile[1])
+        fx, fy = int(forward[0]), int(forward[1])
+        ahead = (ix - px) * fx + (iy - py) * fy
+        if ahead <= 0:
+            tile = sticky_goal_tile(formed.tile, previous_goal, slack=1)
+    if terrain is not None and not walkable(terrain, tile[0], tile[1]):
+        tile = formed.tile
+    return "go", tile
+
+
 def member_goal(
     path: MarchPath,
     *,
@@ -791,43 +842,42 @@ def member_goal(
     heading: tuple[int, int],
     others: Sequence[tuple[int, Optional[int]]],
     previous_progress: Optional[int],
+    previous_goal: Optional[Tile] = None,
 ) -> tuple[str, Optional[Tile]]:
     """``go`` with a tile, ``pace_wait`` / ``door_wait``, or ``fallback``.
 
-    ``fallback`` is the ordinary follow click. A short rear history does not
-    send the member to ``tiles[0]``. Passage order comes from ``path.admit``.
-    A member still before ``exit`` stays in file after the leader is outside.
+    The slot is always read from the latest ``cursor`` plus look-ahead.
+    ``previous_goal`` only absorbs a one-tile lateral drift; it does not keep
+    a slot at the leader's departure when the cursor has moved on.
+    Passage order comes from ``path.admit``. A member still before ``exit``
+    stays in file after the leader is outside.
     """
     tiles = path.tiles
     if not tiles:
         return "fallback", None
     cursor_full = int(path.base) + int(path.cursor)
+    end_full = int(path.base) + len(tiles) - 1
+    # Always aim ahead of the live cursor. Beside the leader's current tile
+    # left the member stuck at the departure stand after assembly.
+    desired = min(end_full, cursor_full + MARCH_LOOKAHEAD)
     progress = full_progress(path, me, previous_progress)
+    forward = heading if heading != (0, 0) else path_forward(tiles, path.cursor)
     if progress is None:
-        # Not on this window. Walk to this seat's slot by the leader,
-        # never to tiles[0] just because the body is off the line.
-        anchor = path_tile(path, cursor_full)
-        forward = heading if heading != (0, 0) else path_forward(tiles, path.cursor)
+        anchor = path_tile(path, desired)
         if anchor is None:
             return "fallback", None
-        formed = choose_formation_goal(
-            anchor,
+        kind, tile = _side_slot(
+            path,
+            anchor=anchor,
             forward=forward,
             seat=seat,
-            followers=max(1, int(followers)),
-            stopped=False,
-            trail_tile=None,
+            followers=followers,
             terrain=terrain,
-            occupied=set(),
-            previous=None,
-            lateral=None,
+            previous_goal=previous_goal,
         )
-        if formed.tile is None or formed.tile == me:
+        if kind != "go" or tile is None or tile == me:
             return "fallback", None
-        if terrain is not None and not walkable(terrain, formed.tile[0], formed.tile[1]):
-            return "fallback", None
-        return "go", formed.tile
-    forward = heading if heading != (0, 0) else path_forward(tiles, path.cursor)
+        return "go", tile
     rows = [
         (int(idx), seat_back(other))
         for other, idx in others
@@ -868,32 +918,28 @@ def member_goal(
         if terrain is not None and not walkable(terrain, step[0], step[1]):
             return "fallback", None
         return "go", step
-    desired = min(int(path.base) + len(tiles) - 1, cursor_full + MARCH_LOOKAHEAD)
+    # Keep asking for ground ahead of both the body and the cursor.
+    desired = max(desired, min(end_full, int(progress) + 1))
     landed = aim_index(desired, progress, back, limit)
     if landed is None:
         return "pace_wait", None
     anchor = path_tile(path, int(landed))
     if anchor is None:
         return "fallback", None
-    formed = choose_formation_goal(
-        anchor,
+    kind, tile = _side_slot(
+        path,
+        anchor=anchor,
         forward=forward,
         seat=seat,
-        followers=max(1, int(followers)),
-        stopped=False,
-        trail_tile=None,
+        followers=followers,
         terrain=terrain,
-        occupied=set(),
-        previous=None,
-        lateral=None,
+        previous_goal=previous_goal,
     )
-    if formed.tile is None:
+    if kind != "go" or tile is None:
         return "fallback", None
-    if terrain is not None and not walkable(terrain, formed.tile[0], formed.tile[1]):
-        return "fallback", None
-    if formed.tile == me:
+    if tile == me:
         return "pace_wait", None
-    return "go", formed.tile
+    return "go", tile
 
 
 def _occupied_ahead(
@@ -1023,8 +1069,10 @@ def _first_narrow(tiles: Sequence[Tile], index: int, terrain: Any) -> int:
 
 __all__ = [
     "MARCH_ALLOWED_LAG",
+    "MARCH_CLICK_TILES",
     "MARCH_GAP_TILES",
     "MARCH_LOOKAHEAD",
+    "MARCH_REPLACE_AHEAD",
     "MARCH_WINDOW",
     "PATH_TYPE",
     "MarchMove",

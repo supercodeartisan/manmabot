@@ -299,8 +299,8 @@ def follow_extend_hop(
 ) -> Optional[tuple[int, int]]:
     """One tile past ``hop`` when the member, the hop, and the slot are one line.
 
-    A trail seat stays on the short hop. The new tile stays within
-    ``FOLLOW_EXTEND_TILES`` of the member and closer to the slot than ``hop``.
+    A trail seat stays on the short hop. Ordinary follow stays within
+    ``FOLLOW_EXTEND_TILES``. March may stretch out to ``MARCH_CLICK_TILES``.
     """
     if str(kind or "") == "trail":
         return None
@@ -313,7 +313,13 @@ def follow_extend_hop(
     if unit8((sx - hx, sy - hy)) != direction:
         return None
     nxt = (hx + direction[0], hy + direction[1])
-    if max(abs(nxt[0] - mx), abs(nxt[1] - my)) > FOLLOW_EXTEND_TILES:
+    if str(kind or "") == "march":
+        from .formation_march import MARCH_CLICK_TILES
+
+        stretch = int(MARCH_CLICK_TILES)
+    else:
+        stretch = int(FOLLOW_EXTEND_TILES)
+    if max(abs(nxt[0] - mx), abs(nxt[1] - my)) > stretch:
         return None
     if tile_chebyshev(nxt, (sx, sy)) >= tile_chebyshev((hx, hy), (sx, sy)):
         return None
