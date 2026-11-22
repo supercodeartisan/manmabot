@@ -48,7 +48,9 @@ from .leader import (
     party_member_block,
     resolve_leader,
 )
+from .moving_fight import COMBAT_APPROACH_RETRY
 from .policy import MemberKind, PolicyInput, decide_policy, formation_returning
+from .sightings import ASSIST_FOCUS_ID, FOCUS, FOCUS_DEAD, FOCUS_KEPT, FOCUS_LIVE, FOCUS_UNSEEN
 from .state import MemberRuntime
 from .party_log import get_logger as _party_logger
 from .support import apply_party_support
@@ -672,9 +674,20 @@ class PartyMemberManager:
                     (int(origin.x), int(origin.y)),
                     self.runtime.local_map_id,
                 )
+            focus_map = focus.get("map_id") if isinstance(focus, dict) else None
+            focus_map_ok = True
+            if (
+                focus_map is not None
+                and self.runtime.local_map_id is not None
+            ):
+                try:
+                    focus_map_ok = int(focus_map) == int(self.runtime.local_map_id)
+                except (TypeError, ValueError):
+                    focus_map_ok = False
             if (
                 isinstance(focus, dict)
                 and not focus.get("clear")
+                and focus_map_ok
                 and str(cfg.seat_role or "") != "mage"
                 and seat
                 and str(focus.get("support") or "") == seat
@@ -689,12 +702,38 @@ class PartyMemberManager:
                 else:
                     monsters = []
                 matched = resolve_local(focus, monsters, origin=origin)
+                gone = False
                 if matched is not None:
+                    from app._02_state.objects import ObjectStatus
+
+                    gone = (
+                        getattr(matched, "status", None) is ObjectStatus.DEAD
+                        or bool(getattr(matched, "bait", False))
+                    )
+                if matched is not None and not gone:
                     assist_obj = matched
-                    assist_src = "party_focus"
+                    assist_src = FOCUS
+                elif gone:
+                    # Confirmed dead. A missing observation stays unseen below.
+                    assist_obj = None
+                    assist_src = FOCUS_DEAD
                 else:
                     assist_obj = None
-                    assist_src = "party_focus_unseen"
+                    assist_src = FOCUS_UNSEEN
+            focus_ident = None
+            if assist_src in FOCUS_LIVE:
+                focus_ident = (
+                    str(focus.get("guid") or focus.get("leader_guid") or ""),
+                    str(focus.get("species") or focus.get("leader_species") or ""),
+                    int(focus.get("map_id") or 0) if isinstance(focus, dict) else 0,
+                )
+            if (
+                ASSIST_FOCUS_ID in self.runtime.scratch
+                and self.runtime.scratch.get(ASSIST_FOCUS_ID) != focus_ident
+            ):
+                self.runtime.approach_goal = None
+                self.runtime.follow_hop = None
+            self.runtime.scratch[ASSIST_FOCUS_ID] = focus_ident
         except Exception as exc:
             _log.debug("party focus match failed: %s", exc)
         self.runtime.assist_track_id = (
@@ -919,7 +958,14 @@ class PartyMemberManager:
                 pending_src=assist_src,
             )
             switched = helped is not assist_obj or help_src != assist_src
-            if switched:
+            # A missed or dead shared target stays designated when nobody else
+            # is being hit. One empty observation is not a new target.
+            keep_designation = (
+                assist_obj is None
+                and assist_src in FOCUS_KEPT
+                and helped is None
+            )
+            if switched and not keep_designation:
                 assist_obj = helped
                 assist_src = help_src
                 if help_src in ("mage_help", "member_under_attack"):
@@ -1420,6 +1466,18 @@ class PartyMemberManager:
             )
         if result.reason in ("invite_before_join", "party_leader_unconfirmed"):
             reason = result.reason
+        shared_focus = self.runtime.assist_src in FOCUS_LIVE
+        outside_support = (
+            leader_dist is None
+            or int(leader_dist) > int(cfg.assist_leash_tiles)
+        )
+        # Catch-up owns this tick when the shared target is still designated
+        # but this member cannot step to an attack tile yet.
+        support_follow = shared_focus and (
+            self.runtime.assist_src == FOCUS_UNSEEN
+            or outside_support
+            or (bool(need_combat_step) and not combat_approach)
+        )
         # Continue an in-flight WORLD_NAV follow/join until it finishes.
         # An open invite, or a party row that is not the policy leader, does not scroll.
         paused_rally = False
@@ -1442,7 +1500,7 @@ class PartyMemberManager:
             and dest_map is not None
             and party_xy is not None
             and leader_dist is not None
-            and not self._march_active
+            and not (self._march_active and not support_follow)
         ):
             walk_cost = self._follow_walk_cost(
                 origin, leader_tile, int(leader_dist), walk_field
@@ -1491,17 +1549,19 @@ class PartyMemberManager:
             field_plan = None
             make_way = None
             marched = False
-            if (
+            approach_tick = (
                 str(result.reason).startswith("combat_approach")
                 and origin_ok
                 and isinstance(self.runtime.scratch.get("combat_stand"), tuple)
-            ):
+            )
+            if approach_tick:
+                stand_tile = self.runtime.scratch["combat_stand"]
                 try:
                     from .intents import plan_slot_hop
 
                     field_plan = plan_slot_hop(
                         origin,
-                        self.runtime.scratch["combat_stand"],
+                        stand_tile,
                         previous_goal=self.runtime.approach_goal,
                         previous_hop=self.runtime.follow_hop,
                         kind="combat_approach",
@@ -1511,6 +1571,21 @@ class PartyMemberManager:
                 except Exception as exc:
                     _log.debug("party combat approach failed: %s", exc)
                     field_plan = None
+                hop = field_plan[3] if field_plan is not None else None
+                detail_now = field_plan[2] if field_plan is not None else ""
+                if field_plan is None or (
+                    hop is None and detail_now in ("no_path", "no_terrain")
+                ):
+                    from .intents import idle
+
+                    # No click this tick. Keep the stand and try the next pose.
+                    field_plan = (
+                        idle(COMBAT_APPROACH_RETRY),
+                        stand_tile,
+                        COMBAT_APPROACH_RETRY,
+                        None,
+                    )
+                    self.runtime.last_kind = "combat_approach"
             else:
                 if result.kind in (MemberKind.HOLD, MemberKind.FOLLOW) and origin_ok:
                     try:
@@ -1521,10 +1596,12 @@ class PartyMemberManager:
                 if make_way is not None:
                     field_plan = make_way
                     self.runtime.last_kind = "make_way"
+            fight_owns_tick = approach_tick or support_follow
             if field_plan is None and (
                 result.kind is MemberKind.FOLLOW
                 and self._march_move is not None
                 and self._march_move.plan is not None
+                and not fight_owns_tick
             ):
                 field_plan = self._march_move.plan
                 marched = True
@@ -1574,6 +1651,7 @@ class PartyMemberManager:
                 self.runtime.scratch.pop("follow_stuck", None)
             elif (
                 make_way is None
+                and not approach_tick
                 and result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
                 and origin_ok

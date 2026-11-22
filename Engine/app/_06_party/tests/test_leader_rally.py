@@ -157,6 +157,35 @@ def test_everyone_at_the_mark_leaves_immediately():
     assert clock["t"] == 10.0
 
 
+def test_a_self_report_does_not_arrive_a_member_the_party_list_shows_far():
+    from websocket.party_orders import Rally
+
+    rally = Rally()
+    start = LeaderStartRally(rally, log=lambda _m: None, clock=lambda: 10.0)
+    start.begin({"콘러드"}, travel=False, pose=None, deadline=100.0)
+    start.note_arrived((4, 33113, 33381))
+    rally.note_report(
+        "콘러드",
+        {
+            "type": "report",
+            "from": "콘러드",
+            "arrived": True,
+            "order": "rally:start",
+            "map_id": 4,
+            "x": 33113,
+            "y": 33381,
+        },
+        {"콘러드"},
+    )
+    assert "콘러드" in rally.arrived
+    start.update(
+        1,
+        {"members": [{"name": "콘러드", "map_id": 4, "x": 33000, "y": 33000}]},
+    )
+    assert start.state == "waiting"
+    assert rally.arrived == set()
+
+
 def test_a_missing_member_holds_the_stand_for_three_minutes():
     from app._06_party.leader_rally import MEMBER_WAIT_S
     from websocket.party_orders import Rally

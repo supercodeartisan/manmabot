@@ -11,6 +11,8 @@ from typing import Any, Optional, Sequence
 # How long a rear report still counts. One missed send stays inside this.
 # Not measured.
 REPORT_FRESH_S = 2.0
+# Approach owns the tick, but this observation has no click yet.
+COMBAT_APPROACH_RETRY = "combat_approach_retry"
 
 Tile = tuple[int, int]
 
@@ -152,6 +154,7 @@ def march_hold_reason(
 
 
 __all__ = [
+    "COMBAT_APPROACH_RETRY",
     "REPORT_FRESH_S",
     "combat_step",
     "crosses_corner",

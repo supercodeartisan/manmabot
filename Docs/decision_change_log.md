@@ -1,5 +1,21 @@
 # Decision change log
 
+## 2026-11-22 — moving-farm assist keeps the shared target
+
+Intent: While a shared target is still the member's job, a tick that is approaching that target or catching up to the leader does not take a formation hop. A hop that cannot be clicked this tick waits for the next position. A missed or ambiguous sighting does not attack. A cleared, expired, changed, or confirmed-dead focus releases the approach, and the formation march can run again.
+Shared: `PartyMemberManager.decide` (the march fallback and `_march_active` on the catch-up route), `choose_help_target`'s empty result no longer clears a designated unseen or dead focus. Login clicks, retreat starters, and solo unstick were not changed. Attack range, `approach_tiles`, and `assist_leash_tiles` were not changed.
+Affects: member assist, follow, and formation march during a moving farm. Turret farm, pause, sync hold, and other-map rejoin stay ahead of this.
+Consent: user (fix moving-farm combat assist in `PartyMemberManager`, compared with `8adc9f7`).
+Result: On `feat/party-formation-march-sightings` at `205a668`, before the edit a member 20 tiles behind with a live formation path clicked `march`. A shared target one step out of click range, with a stand inside the approach limit, already clicked `combat_approach`. After the edit, `test_moving_fight.py` (11) and `test_party_cycle.py` (2) passed. The party suite, with `cv2` stubbed so collection could finish, was 380 passed. Nine failures are the existing missing `scipy` import. One corridor cycle failed only inside that combined process and passed when that file was run on its own. Not run in the Windows game.
+
+## 2026-11-22 — rally arrival follows the party list
+
+Intent: The stand ends only while the party list places every expected member within 7 tiles of the meet tile. A member report that says arrived, or a name kept from an earlier tick, does not finish the stand when the current list shows that body farther away or omits it.
+Shared: `Rally.note_positions`, `_report_at_rally`. Login clicks, retreat, and solo unstick were not changed.
+Affects: leader start-rally completion. Member follow and assist were not changed.
+Consent: user (the arrival check passed while party memory did not show the member within 7 tiles).
+Result: `test_leader_rally.py` passed (12), including a self-report at the meet tile that stays waiting when the party list shows that member far away. Not run in the Windows game.
+
 ## 2026-11-22 — gate teleport on the rally stand, and fight during the wait
 
 Intent: A member planning to the leader on the same map may use the dungeon-gate teleporter when the leader is standing at that gate. A same-map goal far from the gate still walks or uses a scroll. While the leader is standing for the rally, a monster hitting the leader or a party member on this screen is attacked before the idle stand.

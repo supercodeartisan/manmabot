@@ -540,15 +540,21 @@ class Rally:
         self.arrived.add(name)
 
     def note_positions(self, snapshot: Any) -> None:
-        """Count party-list members already standing within reach of the point."""
+        """Set arrivals from the party list. A name farther than the point is dropped.
+
+        The list is the whole answer for this tick. A member report cannot leave
+        a name here after the list shows that body somewhere else, or omits it.
+        """
         if not self.armed or self.body is None or not isinstance(snapshot, dict):
             return
+        here: set[str] = set()
         for raw in snapshot.get("members") or []:
             if not isinstance(raw, dict) or raw.get("is_leader"):
                 continue
             name = str(raw.get("name") or "").strip()
             if name and _at_point(self.body, raw.get("map_id"), raw.get("x"), raw.get("y")):
-                self.arrived.add(name)
+                here.add(name)
+        self.arrived = here
 
     def missing(self, names: set[str]) -> list[str]:
         expected = {str(n).strip() for n in names if str(n).strip()}
@@ -578,15 +584,14 @@ def _at_point(order: dict[str, Any], map_id: Any, x: Any, y: Any) -> bool:
 
 
 def _report_at_rally(order: dict[str, Any], report: dict[str, Any]) -> bool:
-    # ``arrived`` refers to the member's current order; ignore it for another one.
+    # A self-report counts only when its own tile is on this point. The party
+    # list replaces that name on the next ``note_positions``.
     if report.get("rally_rev") is not None and order.get("rev") is not None:
         try:
             if int(report.get("rally_rev")) != int(order.get("rev")):
                 return False
         except (TypeError, ValueError):
             return False
-    if bool(report.get("arrived")) and str(report.get("order") or "") == order_tag(order):
-        return True
     return _at_point(order, report.get("map_id"), report.get("x"), report.get("y"))
 
 

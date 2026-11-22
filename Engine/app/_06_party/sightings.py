@@ -11,6 +11,16 @@ from typing import Any, Optional, Sequence
 
 SIGHTING = "sighting"
 FOCUS = "party_focus"
+# Shared order is still this member's, but this tick has no single local body.
+FOCUS_UNSEEN = "party_focus_unseen"
+# The matched body is already dead. That releases the approach.
+FOCUS_DEAD = "party_focus_dead"
+# Live designation: attack, approach, or catch up. A confirmed death is not in this set.
+FOCUS_LIVE = frozenset({FOCUS, FOCUS_UNSEEN})
+# Empty help must not wipe these. The shared order is still the designation.
+FOCUS_KEPT = frozenset({FOCUS_UNSEEN, FOCUS_DEAD})
+# Scratch key for the shared target kept across ticks.
+ASSIST_FOCUS_ID = "assist_focus_id"
 UNKNOWN = "unknown"
 # Same species with no guid, this close, is one monster. Closer than this
 # to a second one of that species is ambiguous.
@@ -716,8 +726,13 @@ book = SightingBook()
 
 
 __all__ = [
+    "ASSIST_FOCUS_ID",
     "DANGER_HP",
     "FOCUS",
+    "FOCUS_DEAD",
+    "FOCUS_KEPT",
+    "FOCUS_LIVE",
+    "FOCUS_UNSEEN",
     "MATCH_TILES",
     "SIGHTING",
     "UNKNOWN",
