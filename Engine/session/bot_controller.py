@@ -1840,7 +1840,22 @@ class BotController:
         except Exception:
             pose = None
         if pose is not None:
-            runtime.sync_hold = False
+            runtime.sync_pose_ready = True
+        self._release_sync_hold(runtime)
+
+    def _release_sync_hold(self, runtime) -> None:
+        """Resume waits for this request's reply and a pose taken after resume."""
+        if runtime is None or not bool(getattr(runtime, "sync_hold", False)):
+            return
+        from app._06_party.comms.orders import member_orders
+
+        if not bool(getattr(runtime, "sync_pose_ready", False)):
+            return
+        if not bool(getattr(member_orders, "sync_answered", False)):
+            return
+        runtime.sync_hold = False
+        member_orders.sync_pull = None
+        member_orders.sync_answered = False
 
     def _member_socket_pending(self) -> bool:
         """True until the first leader-socket connect.
@@ -3049,22 +3064,34 @@ class BotController:
             box = self._leader_sync = LeaderSync()
         return box
 
-    def _party_policy_id(self) -> str:
-        info = getattr(self, "_party_policy_info", None)
-        if isinstance(info, dict):
-            return str(info.get("policy_id") or "")
-        return ""
-
     def _party_sync_observe(self):
         from websocket.party_orders import leader_session
 
         if not self._party_server_on():
             return None
-        return self._leader_sync_box().observe(
+        box = self._leader_sync_box()
+        previous = int(box.rev)
+        body = box.observe(
             leader_session(),
-            self._party_policy_id(),
+            str(getattr(self, "_party_policy_id", "") or ""),
             getattr(self, "_start_rally", None),
         )
+        if isinstance(body, dict) and int(box.rev) != previous:
+            self._party_sync_broadcast(body)
+        return body
+
+    def _party_sync_broadcast(self, body: dict) -> None:
+        """One copy to each connected member when the snapshot changes."""
+        server = self._party_comms.server
+        if server is None or not isinstance(body, dict):
+            return
+        from app._06_party.sync import member_states
+
+        for peer in member_states.peer_ids():
+            try:
+                server.send_to(peer, body, sender="leader")
+            except Exception:
+                continue
 
     def _party_sync_frames(self, _name: str, _peer: str) -> list:
         """Current policy and rally snapshot for this peer. Same rev on a repeat."""
@@ -3082,15 +3109,25 @@ class BotController:
             frames.append(body)
         return frames
 
-    def _party_sync_ack(self, name: str, session: str, rev, peer: str) -> None:
+    def _party_sync_ack(self, name: str, session: str, rev, peer: str, pull=None) -> None:
+        """Retransmit when this member has not applied the current rev.
+
+        A resume pull asks for the current snapshot even when the rev matches.
+        A report with no ``sync_rev`` has never applied one, so it is due too.
+        """
         box = self._leader_sync_box()
-        box.note_ack(name, session, rev)
-        if not peer or not box.needs_send(name, session):
+        if rev is not None:
+            box.note_ack(name, session, rev)
+        force = pull is not None or rev is None
+        if not peer or (not force and not box.needs_send(name, session)):
             return
         server = self._party_comms.server
         body = self._party_sync_observe()
         if server is None or not isinstance(body, dict):
             return
+        if pull is not None:
+            body = dict(body)
+            body["pull"] = pull
         try:
             server.send_to(peer, body, sender="leader")
         except Exception:
@@ -3120,6 +3157,12 @@ class BotController:
         runtime = getattr(brain, "runtime", None) if brain is not None else None
         if runtime is not None:
             runtime.sync_hold = True
+            runtime.sync_pose_ready = False
+        from app._06_party.comms.orders import member_orders
+
+        self._sync_pull_n = int(getattr(self, "_sync_pull_n", 0) or 0) + 1
+        member_orders.sync_pull = self._sync_pull_n
+        member_orders.sync_answered = False
         reporter = getattr(self, "_member_state_reporter", None)
         if reporter is not None and hasattr(reporter, "nudge"):
             reporter.nudge()
@@ -3480,6 +3523,7 @@ class BotController:
         self._nudge_supply_live()
         applied = getattr(member_orders, "applied_sync", None)
         sync_rev = applied[1] if isinstance(applied, tuple) else None
+        sync_pull = getattr(member_orders, "sync_pull", None)
         self._member_state_reporter.tick(
             self._party_comms.send_member_state,
             name=name or "member",
@@ -3490,6 +3534,7 @@ class BotController:
             live=self._member_live_view(world),
             client_id=self._member_client_id(),
             sync_rev=sync_rev,
+            sync_pull=sync_pull,
         )
         self._send_member_sightings(world, name or "")
 
@@ -3689,6 +3734,7 @@ class BotController:
                 )
                 if status == "applied" and member_orders.gather is None:
                     party_brain.release_rally_nav()
+                self._release_sync_hold(getattr(party_brain, "runtime", None))
             if party_brain is not None and policy is not None and rostered:
                 self._apply_member_party_policy(
                     world, map_id, party_brain, policy

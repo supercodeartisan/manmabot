@@ -342,6 +342,7 @@ def member_state_message(
     live: Optional[dict[str, Any]] = None,
     client_id: str = "",
     sync_rev: Optional[int] = None,
+    sync_pull: Optional[int] = None,
 ) -> dict[str, Any]:
     """Member → leader: full member view (see module doc). ``changed`` = differs
     from the previous frame (the rest are keep-alive repeats). ``live`` = monitor
@@ -359,6 +360,8 @@ def member_state_message(
     }
     if sync_rev is not None:
         body["sync_rev"] = int(sync_rev)
+    if sync_pull is not None:
+        body["sync_pull"] = int(sync_pull)
     cid = str(client_id or "").strip()
     if cid:
         body["client_id"] = cid
@@ -625,6 +628,9 @@ class MemberOrders:
         self.sync_frame: Optional[dict[str, Any]] = None
         self.applied_sync: Optional[tuple[str, int]] = None
         self.applied_phase: str = ""
+        self.leader_run: str = ""
+        self.sync_pull: Optional[int] = None
+        self.sync_answered: bool = False
         self._old_sessions: set[str] = set()
 
     @property
@@ -651,6 +657,7 @@ class MemberOrders:
         self.sync_frame = None
         self.applied_sync = None
         self.applied_phase = ""
+        self.leader_run = ""
 
     def take_make_way(self) -> Optional[dict[str, Any]]:
         """The latest step-off request once, then None until the next one."""
@@ -665,6 +672,8 @@ class MemberOrders:
         self._session_changed = False
         self._beep = None
         self._old_sessions = set()
+        self.sync_pull = None
+        self.sync_answered = False
 
     def take_beep(self) -> Optional[dict[str, Any]]:
         """Leader beep once, then None until the next one."""
@@ -767,6 +776,12 @@ class MemberOrders:
                     except (TypeError, ValueError):
                         continue
                 self.sync_frame = dict(body)
+                token = getattr(self, "sync_pull", None)
+                try:
+                    if token is not None and int(body.get("pull")) == int(token):
+                        self.sync_answered = True
+                except (TypeError, ValueError):
+                    pass
                 continue
             if kind == RALLY:
                 applied = getattr(self, "applied_sync", None)

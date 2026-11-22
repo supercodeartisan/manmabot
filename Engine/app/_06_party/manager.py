@@ -173,7 +173,7 @@ class PartyMemberManager:
         self.clear_leader_policy()
         self._formation.reset()
         self.runtime.own_hunt_id = None
-        self.runtime.scratch.pop("rally_click", None)
+        self.runtime.scratch.pop("rally_special", None)
         self.release_rally_nav()
 
     def pause(self) -> None:
@@ -659,7 +659,9 @@ class PartyMemberManager:
             from .loot import _self_row_name
             from .sightings import resolve_local
 
-            focus = None if not bool(getattr(self.runtime, "orders_open", True)) else member_orders.party_focus
+            focus = None
+            if bool(getattr(self.runtime, "orders_open", True)) and not self._leader_orders_paused():
+                focus = member_orders.party_focus
             seat = ""
             if origin_ok and origin is not None and game_state is not None:
                 seat = _self_row_name(
@@ -1401,7 +1403,11 @@ class PartyMemberManager:
             reason = result.reason
         # Continue an in-flight WORLD_NAV follow/join until it finishes.
         # An open invite, or a party row that is not the policy leader, does not scroll.
-        if hold_join or not confirmed:
+        paused_rally = False
+        if self._leader_orders_paused():
+            rally_reason = str(getattr(getattr(self._join_nav, "session", None), "reason", "") or "")
+            paused_rally = rally_reason.startswith("party_rally")
+        if paused_rally or hold_join or not confirmed:
             pass
         elif self._join_nav.active and result.kind in (
             MemberKind.FOLLOW,
@@ -1725,6 +1731,8 @@ class PartyMemberManager:
             return None
         if not bool(getattr(self.runtime, "orders_open", True)):
             return None
+        if self._leader_orders_paused():
+            return None
         if bool(getattr(self.runtime, "hold_join_map", False)):
             return None
         try:
@@ -1766,6 +1774,8 @@ class PartyMemberManager:
             dest_y = int(order.get("y"))
         except (TypeError, ValueError):
             return None
+        before = getattr(self._join_nav, "session", None)
+        step_before = int(getattr(before, "step_i", 0) or 0)
         intent = self._join_nav.tick(
             game_state,
             self._nav_blackboard,
@@ -1775,28 +1785,34 @@ class PartyMemberManager:
             reason=rally_reason,
         )
         from .intents import idle
-        from .party_sync import _CLICKS, click_name, same_rally_click
+        from .party_sync import _CLICKS, click_name, hold_special_move
 
-        click = (
-            str(order.get("session") or ""),
-            int(order.get("rev") or 0),
-            map_id,
-            dest_x,
-            dest_y,
-        )
-        if click_name(intent) in _CLICKS and same_rally_click(order, self.runtime.scratch.get("rally_click")):
+        if click_name(intent) in _CLICKS and hold_special_move(
+            order, self.runtime.scratch.get("rally_special"), before
+        ):
             held = idle(f"{rally_reason}_wait_land")
             self.runtime.last_kind = "join_map"
             self.runtime.last_reason = str(getattr(held, "reason", "") or "")
             self._record_decision(held)
             return held
         if click_name(intent) in _CLICKS:
-            self.runtime.scratch["rally_click"] = click
+            self.runtime.scratch["rally_special"] = {
+                "dest": (map_id, dest_x, dest_y),
+                "step": step_before,
+            }
         self.runtime.last_kind = "join_map"
         self.runtime.last_reason = str(getattr(intent, "reason", "") or rally_reason)
         self.runtime.chasing = False
         self._record_decision(intent)
         return intent
+
+    def _leader_orders_paused(self) -> bool:
+        """The applied leader snapshot says the leader bot is paused."""
+        try:
+            from .comms.orders import member_orders
+        except Exception:
+            return False
+        return str(getattr(member_orders, "leader_run", "") or "") == "paused"
 
     def release_rally_nav(self) -> bool:
         """Stop a join that this rally started. Leave a normal map join running."""
@@ -2252,7 +2268,7 @@ class PartyMemberManager:
         from .intents import _emit_follow_hop, idle, plan_slot_hop
         from .loot import stable_self_identity
 
-        if not bool(getattr(self.runtime, "orders_open", True)):
+        if not bool(getattr(self.runtime, "orders_open", True)) or self._leader_orders_paused():
             self._march_active = False
             return None
         self._march_active = False

@@ -140,6 +140,7 @@ def consider_sync(
         return "held"
     if on_roster is False:
         orders.sync_frame = None
+        orders.leader_run = ""
         return "dropped"
     session = str(body.get("session") or "")
     try:
@@ -153,6 +154,10 @@ def consider_sync(
         and int(applied[1]) > rev
     ):
         return "stale"
+    run = str(body.get("run") or "running")
+    if run not in ("running", "paused"):
+        run = "running"
+    orders.leader_run = run
     phase = str(body.get("rally") or "")
     if phase == "active":
         try:
@@ -194,6 +199,30 @@ def consider_sync(
     return "applied"
 
 
+def hold_special_move(order: Optional[dict], issued: Any, session: Any) -> bool:
+    """Hold a second scroll or teleport on the same destination and step.
+
+    The leader rev is not part of this. Pause and resume must not look like a
+    new command. A later step, a new meet tile, or a failed session may click.
+    """
+    if not isinstance(order, dict) or not isinstance(issued, dict):
+        return False
+    try:
+        dest = (int(order.get("map_id")), int(order.get("x")), int(order.get("y")))
+        old = issued.get("dest")
+        if not isinstance(old, tuple) or tuple(int(v) for v in old) != dest:
+            return False
+        step = int(getattr(session, "step_i", 0) or 0)
+        if step != int(issued.get("step") or 0):
+            return False
+    except (TypeError, ValueError):
+        return False
+    phase = str(getattr(session, "phase", "") or "")
+    if phase == "fail":
+        return False
+    return True
+
+
 def same_rally_click(order: Optional[dict], issued: Any) -> bool:
     if not isinstance(order, dict) or not isinstance(issued, tuple) or len(issued) < 5:
         return False
@@ -219,6 +248,7 @@ __all__ = [
     "SYNC",
     "click_name",
     "consider_sync",
+    "hold_special_move",
     "rally_phase",
     "rally_point",
     "roster_has",

@@ -54,7 +54,12 @@ class _Nav:
     def tick(self, _state, _board, **kwargs):
         self.calls += 1
         self.kwargs = kwargs
-        self.session = SimpleNamespace(reason=kwargs["reason"])
+        current = self.session
+        self.session = SimpleNamespace(
+            reason=kwargs["reason"],
+            step_i=int(getattr(current, "step_i", 0) or 0),
+            phase=str(getattr(current, "phase", "") or ""),
+        )
         return SimpleNamespace(
             action=ActionType.USE_TALKING_SCROLL, reason=kwargs["reason"]
         )
@@ -110,6 +115,7 @@ def _move(manager, orders):
 
     box.member_orders.gather = orders.gather
     box.member_orders.arrived = orders.arrived
+    box.member_orders.leader_run = str(getattr(orders, "leader_run", "") or "")
     return manager._maybe_hunt_gather(object(), dead=False)
 
 
@@ -436,3 +442,206 @@ def test_duplicate_hello_on_the_same_peer_keeps_the_report_seq():
     replay["seq"] = 1
     book.note(replay, peer="peer-a", client_id="a")
     assert book._seq.get("법사") == 5
+
+
+def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch):
+    """The real controller builds the hello reply. The member's first intent uses it."""
+    from types import SimpleNamespace
+
+    from app._06_party.leader_rally import LeaderStartRally
+    from app._06_party.sync import member_states
+    from session.bot_controller import BotController
+    from websocket.party_orders import Rally, member_orders
+
+    member_states.clear()
+    member_orders.clear()
+    sent = []
+
+    class _Server:
+        def drain(self):
+            return [
+                _Frame(
+                    {
+                        "type": "member_hello",
+                        "from": "멤버",
+                        "client_id": "m1",
+                        "character": {"name": "멤버", "class": "KNIGHT", "level": 1},
+                    },
+                    "peer-1",
+                )
+            ]
+
+        def client_count(self):
+            return 1
+
+        def take_dropped(self):
+            return []
+
+        def send_to(self, peer, body, sender=""):
+            sent.append((peer, dict(body)))
+
+    start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
+    start.state = "waiting"
+    start.meet = (4, 80, 90)
+    start.expected = {"멤버"}
+    ctrl = BotController()
+    ctrl._profile.party_enabled = True
+    ctrl._profile.party_role = "leader"
+    ctrl._party_policy_id = "policy-live"
+    ctrl._party_policy_kwargs = {
+        "leader_name": "리더",
+        "roster": [{"name": "멤버"}],
+    }
+    ctrl._start_rally = start
+    ctrl._party_comms._leader = SimpleNamespace(
+        watchdog=SimpleNamespace(server=_Server()), owned=True
+    )
+    ctrl._drain_party_reports(SimpleNamespace(last_party=None))
+    kinds = [row[1].get("type") for row in sent if row[0] == "peer-1"]
+    assert "party_policy" in kinds
+    sync = [row[1] for row in sent if row[1].get("type") == "party_sync"][-1]
+    assert sync["policy_id"] == "policy-live"
+    assert sync["rally"] == "active"
+    assert (sync["map_id"], sync["x"], sync["y"]) == (4, 80, 90)
+    assert not callable(ctrl._party_policy_id)
+
+    orders = MemberOrders()
+    orders.ingest([_Frame(row[1]) for row in sent if row[0] == "peer-1"])
+    assert consider_sync(orders, name="멤버", on_roster=roster_has(orders.policy, "멤버")) == "applied"
+    manager = _manager(monkeypatch, _Pose(4, 10, 10))
+    intent = _move(manager, orders)
+    assert intent.action is ActionType.USE_TALKING_SCROLL
+    assert (manager._join_nav.kwargs["dest_x"], manager._join_nav.kwargs["dest_y"]) == (80, 90)
+    member_orders.clear()
+    member_states.clear()
+
+
+def test_paused_snapshot_blocks_rally_march_and_focus(monkeypatch):
+    orders = MemberOrders()
+    manager = _manager(monkeypatch, _Pose(4, 10, 10))
+    policy = _policy("s", ["멤버"])
+    paused = _sync("s", 2, "active", (4, 80, 90), run="paused")
+    orders.ingest([_Frame(policy), _Frame(paused)])
+    assert consider_sync(orders, name="멤버", on_roster=True) == "applied"
+    assert orders.leader_run == "paused"
+    assert orders.gather["x"] == 80
+    assert _move(manager, orders) is None
+    seen = []
+    monkeypatch.setattr(
+        "app._06_party.formation_march.accept_march",
+        lambda *args, **kwargs: seen.append(1),
+    )
+    assert manager._build_march(None, None, manager.config) is None
+    assert seen == []
+    orders.party_focus = {"support": "멤버"}
+    assert manager._leader_orders_paused() is True
+    from app._06_party.comms.orders import member_orders as live_orders
+
+    live_orders.leader_run = "running"
+    assert manager._build_march(None, None, manager.config) is None
+    assert seen == [1]
+
+
+def test_resume_keeps_the_hold_until_the_pull_reply_and_a_pose():
+    from session.bot_controller import BotController
+    from websocket.party_orders import member_orders
+
+    member_orders.clear()
+    ctrl = BotController()
+    ctrl._profile.party_role = "member"
+    ctrl._profile.party_leader_host = "10.0.0.8"
+    ctrl._profile.party_enabled = True
+    ctrl._profile.party_member_enabled = True
+    from app._06_party.manager import PartyMemberManager
+
+    brain = PartyMemberManager()
+    ctrl._party_brain_ref = brain
+    ctrl._party_pause_clock(resume=True)
+    assert brain.runtime.sync_hold is True
+    token = member_orders.sync_pull
+    assert isinstance(token, int)
+    ctrl._note_member_link(brain, SimpleNamespace())
+    assert brain.runtime.sync_hold is True
+
+    class _PoseBox:
+        map_id = 4
+        x = 3
+        y = 4
+
+    import app._04_decision.world_nav.session as nav_session
+
+    previous_pose = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = lambda _world: _PoseBox()
+    try:
+        ctrl._note_member_link(brain, SimpleNamespace())
+        assert brain.runtime.sync_pose_ready is True
+        assert brain.runtime.sync_hold is True
+        member_orders.ingest([_Frame(_sync("s", 4, "done"))])
+        assert brain.runtime.sync_hold is True
+        done = _sync("s", 4, "done")
+        done["pull"] = token
+        member_orders.session = "s"
+        member_orders.ingest([_Frame(done)])
+        assert member_orders.sync_answered is True
+        ctrl._release_sync_hold(brain.runtime)
+        assert brain.runtime.sync_hold is False
+    finally:
+        nav_session.live_pose_from_state = previous_pose
+        member_orders.clear()
+
+
+def test_same_rev_pull_and_a_missing_rev_are_retransmitted():
+    from types import SimpleNamespace
+
+    from app._06_party.leader_rally import LeaderStartRally
+    from session.bot_controller import BotController
+    from websocket.party_orders import Rally
+
+    sent = []
+
+    class _Server:
+        def send_to(self, peer, body, sender=""):
+            sent.append((peer, dict(body)))
+
+    start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
+    start.state = "waiting"
+    start.meet = (0, 4, 5)
+    start.expected = {"멤버"}
+    ctrl = BotController()
+    ctrl._profile.party_enabled = True
+    ctrl._profile.party_role = "leader"
+    ctrl._party_policy_id = "policy-live"
+    ctrl._start_rally = start
+    ctrl._party_comms._leader = SimpleNamespace(
+        watchdog=SimpleNamespace(server=_Server()), owned=True
+    )
+    body = ctrl._party_sync_observe()
+    sent.clear()
+    ctrl._party_sync_ack("멤버", body["session"], body["rev"], "peer-1")
+    assert sent == []
+    ctrl._party_sync_ack("멤버", body["session"], None, "peer-1")
+    assert sent and sent[-1][1]["rev"] == body["rev"]
+    sent.clear()
+    ctrl._party_sync_ack("멤버", body["session"], body["rev"], "peer-1", pull=7)
+    assert sent[-1][1]["pull"] == 7
+    assert sent[-1][1]["rev"] == body["rev"]
+
+
+def test_a_failed_step_may_retry_and_a_rev_change_does_not(monkeypatch):
+    orders = MemberOrders()
+    manager = _manager(monkeypatch, _Pose(4, 1, 1))
+    policy = _policy("s", ["멤버"])
+    active = _sync("s", 3, "active", (4, 40, 41))
+    orders.ingest([_Frame(policy), _Frame(active)])
+    consider_sync(orders, name="멤버", on_roster=True)
+    assert _move(manager, orders).action is ActionType.USE_TALKING_SCROLL
+    later = _sync("s", 9, "active", (4, 40, 41))
+    orders.ingest([_Frame(later)])
+    consider_sync(orders, name="멤버", on_roster=True)
+    assert _move(manager, orders).action is ActionType.IDLE
+    manager._join_nav.session.phase = "fail"
+    assert _move(manager, orders).action is ActionType.USE_TALKING_SCROLL
+    manager._join_nav.session.phase = ""
+    manager._join_nav.session.step_i = 1
+    assert _move(manager, orders).action is ActionType.USE_TALKING_SCROLL
+    assert _move(manager, orders).action is ActionType.IDLE

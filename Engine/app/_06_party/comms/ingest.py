@@ -172,8 +172,14 @@ def drain_leader_reports(
             if peer:
                 member_states.bind_peer(peer, booked)
             row = member_states.row(booked)
-            if note_ack is not None and body.get("sync_rev") is not None:
-                note_ack(booked, body.get("session") or "", body.get("sync_rev"), peer)
+            if note_ack is not None and peer:
+                note_ack(
+                    booked,
+                    body.get("session") or "",
+                    body.get("sync_rev"),
+                    peer,
+                    body.get("sync_pull"),
+                )
             pid = str(row.get("policy_id") or "")
             if pid:
                 first = not policy_acks.acked(booked, pid)

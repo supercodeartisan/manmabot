@@ -69,8 +69,9 @@ class MemberRuntime:
     network_party: bool = False
     # False while that socket is down: no new rally, march, or shared attack.
     orders_open: bool = True
-    # Member resume: do not reissue a rally click until a live pose is read.
+    # Member resume: wait for this request's reply and a pose read after resume.
     sync_hold: bool = False
+    sync_pose_ready: bool = False
     # Last ground drop this shopkeeper made. The leader broadcasts it.
     supply_notice: Optional[dict[str, Any]] = None
     # Counts added onto a report that has not caught up with a drop yet.

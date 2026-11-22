@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-21 — leader snapshot no longer calls the policy id string
+
+Intent: The leader reads the stored policy id string when it builds a snapshot. A paused leader holds member rally, march, and shared attack. Member resume waits for this request's reply and a pose. A missed first snapshot is retransmitted. A second scroll or teleport waits on the same step, and a failed step or a later step may click.
+Shared: `BotController._party_sync_observe`, `_party_sync_ack`, `_release_sync_hold`, `consider_sync`, `hold_special_move`, `PartyMemberManager._leader_orders_paused`. Login clicks, retreat, and solo unstick were not changed.
+Affects: network party hello, leader pause, member resume, rally special moves.
+Consent: user (fix the `9ced6e7` review: P0 policy-id TypeError, then paused apply, resume reply, and first-snapshot retransmit).
+Result: `test_party_sync.py` and `test_leader_rally.py` passed (28). The controller hello test feeds `send_to` frames into the member and checks the first rally intent. `app/_06_party/tests` plus `session/tests/test_hunt_resume.py` passed 365. Nine failures are `ModuleNotFoundError: scipy` in the walk-distance file and one loot-wall test. Not run in the Windows game.
+
 <<<<<<< HEAD
 ## 2026-11-21 — network party sync on hello and resume
 
