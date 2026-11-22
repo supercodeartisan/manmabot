@@ -1584,6 +1584,11 @@ class PartyMemberManager:
             field_plan = None
             make_way = None
             marched = False
+            march_owns = bool(
+                self._march_move is not None
+                and getattr(self._march_move, "owns", False)
+            )
+            march_reason = str(getattr(self._march_move, "reason", "") or "")
             approach_tick = (
                 str(result.reason).startswith("combat_approach")
                 and origin_ok
@@ -1622,7 +1627,13 @@ class PartyMemberManager:
                     )
                     self.runtime.last_kind = "combat_approach"
             else:
-                if result.kind in (MemberKind.HOLD, MemberKind.FOLLOW) and origin_ok:
+                # A shared path owns this tick. Make-way must not replace the
+                # slot, a door wait, or a one-tick hop miss.
+                if (
+                    not march_owns
+                    and result.kind in (MemberKind.HOLD, MemberKind.FOLLOW)
+                    and origin_ok
+                ):
                     try:
                         make_way = self._make_way(origin, game_state)
                     except Exception as exc:
@@ -1633,18 +1644,31 @@ class PartyMemberManager:
                     self.runtime.last_kind = "make_way"
             fight_owns_tick = approach_tick or support_follow
             if field_plan is None and (
-                result.kind is MemberKind.FOLLOW
+                march_owns
                 and self._march_move is not None
-                and self._march_move.plan is not None
                 and not fight_owns_tick
+                and result.kind in (MemberKind.FOLLOW, MemberKind.HOLD)
             ):
+                from .intents import idle as _idle_march
+
                 field_plan = self._march_move.plan
+                if field_plan is None:
+                    # Path owns this tick but no pose or hop yet. Do not follow.
+                    field_plan = (
+                        _idle_march("retry"),
+                        getattr(self._march_move, "goal", None),
+                        "retry",
+                        None,
+                    )
                 marched = True
                 self.runtime.last_kind = "march"
             elif field_plan is None and (
                 result.kind is MemberKind.FOLLOW
                 and leader_tile is not None
                 and origin_ok
+                # Assist catch-up may walk to the leader while a path is open.
+                # A plain march miss must not.
+                and (fight_owns_tick or not march_owns)
             ):
                 try:
                     field_plan = plan_leader_hop(
@@ -1663,6 +1687,7 @@ class PartyMemberManager:
                     field_plan = None
             elif field_plan is None and (
                 result.kind is MemberKind.FOLLOW
+                and not march_owns
                 and stand is None
                 and follow_field is not None
                 and origin_ok
@@ -1680,8 +1705,16 @@ class PartyMemberManager:
                 except Exception as exc:
                     _log.debug("party field follow failed: %s", exc)
                     field_plan = None
-            march_reason = str(getattr(self._march_move, "reason", "") or "")
-            normal_hold = march_reason in ("pace_wait", "door_wait", "in_transit")
+            # Passage waits and an in-flight march hop do not unstick to the
+            # leader. Open-field stuck recovery still may after a go or miss.
+            normal_hold = march_reason in (
+                "pace_wait",
+                "door_wait",
+                "in_transit",
+                "retry",
+                "at_slot",
+                "at_approach",
+            )
             if normal_hold:
                 self.runtime.scratch.pop("follow_stuck", None)
             elif (
@@ -2411,7 +2444,6 @@ class PartyMemberManager:
             path_forward,
             path_tile,
             seat_back,
-            slot_ahead,
         )
         from .intents import _emit_follow_hop, idle, plan_slot_hop
         from .loot import stable_self_identity
@@ -2437,6 +2469,7 @@ class PartyMemberManager:
                 self.runtime.scratch.pop("march_rev", None)
                 self.runtime.scratch.pop("march_progress", None)
                 self.runtime.scratch.pop("march_seen", None)
+                self.runtime.scratch.pop("march_goal", None)
             return None
         self._march_active = True
         if previous != path.rev:
@@ -2447,8 +2480,10 @@ class PartyMemberManager:
             self.runtime.scratch.pop("march_heading", None)
             self.runtime.scratch.pop("march_heading_pending", None)
             self.runtime.scratch.pop("march_heading_run", None)
+            self.runtime.scratch.pop("march_goal", None)
         if origin is None or not hasattr(origin, "x"):
-            return MarchMove(False, None, None, path.rev)
+            # Path is valid; the body pose is missing this tick. Keep ownership.
+            return MarchMove(False, None, None, path.rev, "retry", owns=True)
         me = (int(origin.x), int(origin.y))
         own_name = ""
         try:
@@ -2490,18 +2525,28 @@ class PartyMemberManager:
             previous_progress=self.runtime.scratch.get("march_progress"),
         )
         if kind == "fallback":
-            return MarchMove(False, None, None, path.rev, "fallback")
+            # Path still owns this tick. Ordinary follow waits for a real release.
+            kept = self.runtime.scratch.get("march_goal")
+            if isinstance(kept, tuple) and len(kept) == 2:
+                goal = (int(kept[0]), int(kept[1]))
+            waited = (idle("retry"), goal, "retry", None)
+            open_slot = goal is not None and goal != me
+            return MarchMove(open_slot, waited, goal, path.rev, "retry", owns=True)
         if kind in ("pace_wait", "door_wait") or goal is None:
             why = kind if kind in ("pace_wait", "door_wait") else "pace_wait"
             self.runtime.follow_hop = None
             self.runtime.follow_hop_at = 0.0
+            self.runtime.scratch.pop("march_goal", None)
             waited = (idle(why), None, why, None)
-            return MarchMove(False, waited, None, path.rev, why)
+            return MarchMove(False, waited, None, path.rev, why, owns=True)
+        self.runtime.scratch["march_goal"] = (int(goal[0]), int(goal[1]))
         rejected = bool(self.runtime.scratch.pop("follow_click_failed", None))
         if rejected:
             self.runtime.follow_hop = None
             self.runtime.follow_hop_at = 0.0
-        ahead = slot_ahead(me, goal, heading)
+        # Slot still open for policy: body is not on it yet. Direction alone
+        # must not clear stop_tiles when the shared slot is several tiles away.
+        open_slot = goal != me
         plan = plan_slot_hop(
             origin,
             goal,
@@ -2513,10 +2558,18 @@ class PartyMemberManager:
         )
         _intent, _goal, detail, hop = plan
         detail = str(detail or "")
+        if detail in ("at_slot", "at_approach"):
+            self.runtime.follow_hop = None
+            self.runtime.follow_hop_at = 0.0
+            waited = (idle(detail), goal, detail, None)
+            return MarchMove(False, waited, goal, path.rev, detail, owns=True)
         if detail == "follow_in_transit":
             why = "in_transit"
         elif detail in ("no_path", "no_terrain"):
-            why = "no_path"
+            why = "retry" if detail == "no_terrain" else "no_path"
+            # Keep the last safe hop only when it still closes on this slot.
+            if why == "retry":
+                plan = (idle("retry"), goal, "retry", self.runtime.follow_hop)
         elif rejected:
             why = "click_rejected"
         else:
@@ -2548,16 +2601,16 @@ class PartyMemberManager:
                     self.runtime.follow_hop = None
                     self.runtime.follow_hop_at = 0.0
                     waited = (idle("pace_wait"), None, "pace_wait", None)
-                    return MarchMove(False, waited, goal, path.rev, "pace_wait")
+                    return MarchMove(False, waited, goal, path.rev, "pace_wait", owns=True)
                 if int(allowed) < int(hop_full):
                     clipped = path_tile(path, int(allowed))
                     if clipped is None or clipped == me:
                         self.runtime.follow_hop = None
                         self.runtime.follow_hop_at = 0.0
                         waited = (idle("pace_wait"), None, "pace_wait", None)
-                        return MarchMove(False, waited, goal, path.rev, "pace_wait")
+                        return MarchMove(False, waited, goal, path.rev, "pace_wait", owns=True)
                     plan = _emit_follow_hop(origin, clipped, goal, "march")
-        return MarchMove(ahead, plan, goal, path.rev, why)
+        return MarchMove(open_slot, plan, goal, path.rev, why, owns=True)
 
     def _follow_stuck_escape(
         self,

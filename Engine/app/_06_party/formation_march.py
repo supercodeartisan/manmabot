@@ -66,15 +66,19 @@ class MarchPath:
 class MarchMove:
     """What this member should do with the current path.
 
-    ``plan`` is a ``plan_slot_hop`` / idle tuple when the march owns the
-    click. ``None`` means the existing follow should run. ``advance`` is
-    only the policy bit: the slot is ahead, so ``stop_tiles`` may not hold.
-    It is not ``slot_dist``.
+    ``owns`` is true while this session and map still accept the shared path.
+    A missing click this tick does not clear that. ``plan`` is the click or
+    idle for this tick; it may be an idle retry while ``owns`` stays true.
+    Ordinary leader follow runs only when ``owns`` is false.
+
+    ``advance`` is the policy bit: the current slot is still open, so
+    ``stop_tiles`` may not hold. It is not ``slot_dist``.
 
     ``reason`` tells the walk branch why this tick stopped:
     ``pace_wait`` and ``door_wait`` are normal holds, ``in_transit`` is a
-    click already out, ``click_rejected`` drops that hop, ``no_path`` may
-    unstick. ``go`` is a hop that already fits the arrival limit.
+    click already out, ``retry`` / ``no_path`` keep the goal without a new
+    click, ``click_rejected`` drops that hop. ``go`` is a hop that already
+    fits the arrival limit.
     """
 
     advance: bool
@@ -82,6 +86,7 @@ class MarchMove:
     goal: Optional[Tile]
     rev: int
     reason: str = ""
+    owns: bool = False
 
 
 def march_message(

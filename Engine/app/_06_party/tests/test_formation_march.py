@@ -789,3 +789,131 @@ def test_shop_duty_returns_to_the_latest_slot(monkeypatch, orders, march_world):
     assert second.action is ActionType.TRAVELING
     assert mgr.runtime.last_kind == "march"
     assert mgr.runtime.follow_hop is not None and mgr.runtime.follow_hop[1] > 9
+
+
+def test_one_tick_hop_miss_keeps_the_march_goal_not_a_leader_hop(
+    monkeypatch, orders, march_world
+):
+    """A missing hop this tick does not click the leader tile behind the slot."""
+    from app._02_state.enums import ActionType
+
+    tiles = [(10 + i, 10) for i in range(8)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=0)
+    mgr = _member(monkeypatch, orders, tile=(10, 10))
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert "march" in str(first.reason)
+    slot = mgr.runtime.scratch.get("march_goal")
+    assert isinstance(slot, tuple) and slot[0] > 10
+
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: None)
+    missed = mgr.decide(state)
+    assert "leader" not in str(missed.reason)
+    assert mgr.runtime.last_kind == "march"
+    assert mgr.runtime.scratch.get("march_goal") == slot
+
+    # Terrain returns: same shared path, same slot direction.
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: _Open())
+    recovered = mgr.decide(state)
+    assert recovered.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert "march" in str(recovered.reason)
+    hop = mgr.runtime.follow_hop
+    assert hop is not None and hop[0] > 10
+
+
+def test_leader_within_stop_tiles_still_marches_to_a_slot_ahead(
+    monkeypatch, orders, march_world
+):
+    """walk=1 to the leader does not hold when the shared slot is six tiles out."""
+    from app._02_state.enums import ActionType
+
+    tiles = [(10 + i, 10) for i in range(10)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=0)
+    mgr = _member(monkeypatch, orders, tile=(10, 10))
+    mgr.set_world_origin(SimpleNamespace(x=10, y=9))
+    intent = mgr.decide(SimpleNamespace(player=None, last_party=None, objects=[]))
+    assert intent.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert "hold dist=" not in str(mgr.runtime.last_reason)
+    hop = mgr.runtime.follow_hop
+    assert hop is not None and hop[0] > 10
+
+
+def test_in_transit_keeps_the_march_hop_without_a_new_click(
+    monkeypatch, orders, march_world
+):
+    from app._02_state.enums import ActionType
+
+    tiles = [(10 + i, 10) for i in range(8)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=0)
+    mgr = _member(monkeypatch, orders)
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.action is ActionType.TRAVELING
+    slot = mgr.runtime.scratch.get("march_goal")
+    assert isinstance(slot, tuple)
+    from app._06_party.follow import unit8
+
+    step = unit8((int(slot[0]) - 10, int(slot[1]) - 9))
+    assert step != (0, 0)
+    # Pending hop more than one tile out on the slot bearing.
+    pending = (10 + 2 * step[0], 9 + 2 * step[1])
+    mgr.runtime.follow_hop = pending
+    mgr.runtime.approach_goal = slot
+
+    monkeypatch.setattr(
+        "app._06_party.intents._body_moving", lambda: True
+    )
+    held = mgr.decide(state)
+    assert held.action is not ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert mgr.runtime.last_reason == "follow_in_transit"
+    assert mgr.runtime.follow_hop == pending
+    assert "leader" not in str(held.reason)
+
+
+def test_door_wait_does_not_fall_through_to_leader_follow(
+    monkeypatch, orders, march_world
+):
+    from app._02_state.enums import ActionType
+    from app._06_party.config import PartyMemberConfig
+
+    orders.formation_path = _path_body([(i, 0) for i in range(12)], cursor=6)
+    orders.formation_path["door"] = 5
+    orders.formation_path["exit"] = 9
+    orders.formation_path["admit"] = 0
+    mgr = _member(monkeypatch, orders, tile=(6, 0))
+    mgr.config = PartyMemberConfig(
+        leader_name="lead", stop_tiles=2, seat_index=1, party_size=4
+    )
+    mgr.set_world_origin(SimpleNamespace(x=2, y=0))
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    waiting = mgr.decide(state)
+    assert waiting.action is not ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert "leader" not in str(waiting.reason)
+    assert "door_wait" in str(mgr.runtime.last_reason) or "door_wait" in str(
+        waiting.reason
+    )
+
+
+def test_cleared_path_releases_to_ordinary_follow(monkeypatch, orders, march_world):
+    from app._02_state.enums import ActionType
+
+    tiles = [(10 + i, 10) for i in range(8)]
+    orders.formation_path = _path_body(tiles, rev=1, seq=1, cursor=0)
+    mgr = _member(monkeypatch, orders, tile=(10, 14))
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+
+    orders.formation_path = _path_body(tiles, rev=2, seq=2, cursor=0, clear=True)
+    released = mgr.decide(state)
+    assert released.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "follow"
+    assert "leader" in str(released.reason)
+    assert mgr.runtime.scratch.get("march_goal") is None

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — march keeps its slot across a one-tick hop miss
+
+Intent: While a shared formation path is valid for this session and map, the member keeps that path's current slot as the walk goal. A tick with no safe hop, no terrain, or an in-flight hop does not switch the click to the leader tile. `stop_tiles` does not hold when that slot is still open. Door and pace waits stay on the march and do not unstick or make-way to the leader. A cleared, wrong-map, or wrong-session path releases to ordinary follow. Combat approach, heal, and supply still take the tick; the next free tick reads the latest slot.
+Shared: `MarchMove.owns`, `PartyMemberManager._build_march` / `decide`. Login clicks, retreat, and solo unstick were not changed. Ordinary follow click limits were not changed.
+Affects: member march vs ordinary follow during a moving farm. Assist priority and other-map join stay ahead of this.
+Consent: user (`update` after the march goal-flip guide and the owned-path design).
+Result: `test_formation_march.py` passed (21), including one-tick hop miss, stop_tiles with a slot ahead, in-transit hop keep, door_wait without leader follow, and clear→follow. `test_moving_fight.py` and `test_party_cycle.py` passed. `app/_06_party/tests` with a `cv2` stub passed 391. Nine failures are the existing missing `scipy` import. Not run in the Windows game.
+
 ## 2026-11-22 — a new leader path starts the member on the first tick
 
 Intent: When the leader confirms a walk, a member who can move steps toward that path's current slot on the first `decide()` after the frame, while the leader is still on the old tile. Ordinary follow remains the way a member who is behind rejoins. A live attack step is not kept on an older march or follow nav. Ordinary loot stops when that step is due. After a fight, drops stay open for at most 5 seconds; only the responsible seat keeps looting if the fight resumes. A shopkeeper who left the line does not hold the party's spacing. A paused leader does not walk. A fresh same-map leader tile during sync hold does.
