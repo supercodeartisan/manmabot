@@ -478,8 +478,8 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
     if not sid or not _ID_SAFE.match(sid):
         raise ValueError(f"behaviors[{index}] needs a safe id")
     action = str(item.get("action") or ACTION_BUY).strip().lower()
-    # Legacy: warehouse give_goods was stored as sell.
-    if sid == "give_goods" and action == ACTION_SELL:
+    # Legacy: warehouse give_goods / give_goods_ch was stored as sell.
+    if sid.startswith("give_goods") and action == ACTION_SELL:
         action = ACTION_STORE
     if action not in ACTIONS:
         raise ValueError(
@@ -734,7 +734,7 @@ def save_behaviors(
         action = str(b.action).strip().lower()
         if action not in ACTIONS:
             raise ValueError(f"{sid}: action must be buy, sell, store, or teleporter")
-        if sid == "give_goods" and action == ACTION_SELL:
+        if sid.startswith("give_goods") and action == ACTION_SELL:
             action = ACTION_STORE
         if not str(b.map_id).strip():
             raise ValueError(f"{sid}: map required")

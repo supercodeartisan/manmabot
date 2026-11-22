@@ -1,5 +1,14 @@
 # Decision change log
 
+## 2026-11-22 — warehouse id follows shop locale (give_goods_ch)
+
+Intent: Korean still visits ``give_goods``. Chinese visits ``give_goods_ch`` after the sell tour when ``store_after_sell`` runs. Before this, both locales armed the Korean warehouse id.
+Shared: ``resolve_store_behavior_id``, ``is_store_behavior`` (``give_goods*``), ``advance_sell_trip``. storewin deposit/read path unchanged. Buy/sell locale resolve unchanged. ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: post-sell warehouse arm only. If ``give_goods_ch`` is missing from YAML, Chinese falls back to ``give_goods`` (same as teleporter ``_ch`` fallback).
+Side effects: Chinese needs a calibrated ``give_goods_ch`` row (already present in YAML); missing row falls back to ``give_goods``.
+Consent: user (give_goods_ch for Chinese; give_goods for Korean).
+Result: unit tests for resolve + zh advance.
+
 ## 2026-11-22 — warehouse deposit line clicks the glyph
 
 Intent: The warehouse dialog opened and the cursor reached "물건을 맡긴다", but the shop-button orbit and 1–2px land error missed that short line, so the deposit list never opened. The visit then ended and the character left for the world tree with the junk still in the bag. Click that line on the calibrated pixel, rest so the glyph can highlight, and if the deposit list is still closed step 4, 8, then 12px down the same line. Once the list is the deposit list, store the same keep-list misses as before.
