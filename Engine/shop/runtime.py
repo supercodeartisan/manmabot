@@ -866,8 +866,7 @@ def execute_calibrated_sell(
                 item_id = int(row.get("id") or 0)
             except (TypeError, ValueError):
                 item_id = 0
-            if is_store and str(row.get("name") or "").strip() in ("아데나", "Adena"):
-                continue
+            # Adena / keep / garbage: same filter for merchants and warehouse.
             if not item_passes_sell_filter(
                 str(row.get("name") or ""),
                 sell_mode=sell_mode,

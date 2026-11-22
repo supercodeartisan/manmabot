@@ -1,5 +1,23 @@
 # Decision change log
 
+## 2026-11-22 — keep talking scroll across Chinese store/sell
+
+Intent: ``말하는 두루마리`` is on keep_list but not in game_catalog, so Chinese storewin names (說話的卷軸 / 说话卷轴) still passed the filter and ``give_goods_ch`` deposited the scrolls (next F5 → opened=False).
+Shared: ``_KEEP_NAME_ALIASES`` / ``_KEEP_ITEM_IDS`` wired into ``_catalog_keys_for_names`` / ``_catalog_ids_for_names`` (same ``item_passes_sell_filter`` for sell + warehouse). ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: sell tour and warehouse deposit only for scroll / scroll box (and class-bound scroll ids).
+Side effects: none for catalog-backed keep rows; aliases are explicit for this hotbar-only item.
+Consent: user (yes — after log diagnosis).
+Result: unit tests for ZH scroll names + ids 16673/16222/16977.
+
+## 2026-11-22 — sell/store keep filter matches Chinese names + ids
+
+Intent: Chinese clients were depositing/selling keep-list items because ``keep_list`` is Korean-only and live storewin/shop rows are Chinese (or id-only). Expand keep matching with catalog ko/zh aliases and catalog item ids; never sell/store Adena (ids 5/7 and 金幣/金币).
+Shared: ``item_passes_sell_filter``, ``_catalog_keys_for_names``, ``_catalog_ids_for_names``; ``parse_store_entries`` now forwards ``id``. Merchant sell and warehouse deposit share the same filter. ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: sell tour and ``give_goods`` / ``give_goods_ch`` deposit row selection.
+Side effects: keep entries missing from the item catalog still match only by exact string; add catalog rows or Chinese keep names for those.
+Consent: user (yes — fix Chinese keep matching after all-items dump).
+Result: unit tests for ZH keep / Adena / empty-name id keep.
+
 ## 2026-11-22 — warehouse id follows shop locale (give_goods_ch)
 
 Intent: Korean still visits ``give_goods``. Chinese visits ``give_goods_ch`` after the sell tour when ``store_after_sell`` runs. Before this, both locales armed the Korean warehouse id.
