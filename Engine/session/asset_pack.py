@@ -3,8 +3,8 @@
 Dev tree: plain ``Engine/data`` present → no-op.
 Customer release:
   ``Engine/data.pack`` (MMBA or MMB2) → RAM via ``asset_store`` (no plain folder).
-  ``Engine/analysis_text.pack`` → ``%TEMP%/manmabot_an_<id>/`` for C DLL readers;
-  absolute paths via ``analysis_overlay``; wiped on exit.
+  ``Engine/analysis_text.pack`` → ``%TEMP%/manmabot_an_<id>/`` for registry text
+  **and** ``dll/*.dll``; absolute paths via ``analysis_overlay``; wiped on exit.
 """
 from __future__ import annotations
 
@@ -107,11 +107,11 @@ def ensure_data_pack(*, force: bool = False) -> dict:
 
 
 def ensure_analysis_text_pack(*, force: bool = False) -> dict:
-    """Materialize analysis text under per-instance TEMP; wire overlay paths."""
+    """Materialize analysis text + dlls under per-instance TEMP; wire overlay paths."""
     engine = manmabot_root()
     pack_path = engine / ANALYSIS_PACK_NAME
     if not pack_path.is_file():
-        # Dev / unpack tree: plain analysis text under Engine/analysis.
+        # Dev / unpack tree: plain analysis under Engine/analysis (text + dll).
         set_analysis_overlay(None)
         return {"action": "skipped", "reason": "no_pack"}
 

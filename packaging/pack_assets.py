@@ -4,11 +4,13 @@ Default (Phase 1): **MMB2** via SellerData vault + pack_id reservation.
 Legacy MMBA v1: ``--legacy-mmba`` (transition only).
 
 Packs:
-  Engine/data.pack           ← entire Engine/data (maps, cursors, catalog, world…)
-  Engine/analysis_text.pack  ← sensitive analysis text/json (offsets, tables)
+  Engine/data.pack           ← portable Engine/data (maps, cursors, catalog, world…)
+  Engine/analysis_text.pack  ← repo Engine/analysis texts/csv/dll (offsets, tables)
 
-After packing, plain sources are removed from the portable tree.
-Dev tree is never modified. Customer packs never contain CEK / signing private keys.
+Analysis membership is snapshotted from the **dev** ``Engine/analysis`` tree so a
+stripped portable cannot shrink the pack. After packing, matching plains are
+removed from the portable tree only. Dev tree is never modified. Customer packs
+never contain CEK / signing private keys.
 """
 from __future__ import annotations
 
@@ -29,7 +31,7 @@ PACKAGING_DIR = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGING_DIR.parent
 PORTABLE = REPO_ROOT / "release" / "portable" / "ManmabotV1"
 
-ANALYSIS_INCLUDE_SUFFIXES = {".json", ".txt", ".yaml", ".yml", ".md", ".bak"}
+ANALYSIS_INCLUDE_SUFFIXES = {".json", ".txt", ".yaml", ".yml", ".md", ".bak", ".csv"}
 
 
 def _engine_on_sys_path() -> Path:
@@ -57,10 +59,20 @@ def _default_seller_root() -> Path:
 def _should_pack_analysis_file(path: Path, analysis_root: Path) -> bool:
     if not path.is_file():
         return False
-    if path.suffix.lower() not in ANALYSIS_INCLUDE_SUFFIXES:
+    rel = path.relative_to(analysis_root)
+    parts_tuple = rel.parts
+    parts = {p.lower() for p in parts_tuple}
+    suffix = path.suffix.lower()
+    # Analysis DLLs ship inside the same MMB2 as offset text (Wave 2).
+    # Skip build debris (* .new.dll / *.old.dll) even under dll/.
+    if suffix == ".dll":
+        stem_l = path.name.lower()
+        if stem_l.endswith(".new.dll") or stem_l.endswith(".old.dll"):
+            return False
+        return len(parts_tuple) >= 2 and parts_tuple[0].lower() == "dll"
+    if suffix not in ANALYSIS_INCLUDE_SUFFIXES:
         return False
-    parts = {p.lower() for p in path.relative_to(analysis_root).parts}
-    if "image" in parts and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
+    if "image" in parts and suffix in {".png", ".jpg", ".jpeg", ".webp"}:
         return False
     return True
 
@@ -77,6 +89,20 @@ def _snapshot_analysis_entries(analysis: Path) -> tuple[dict[str, bytes], list[s
     return entries, packed_rels
 
 
+def _analysis_snapshot_root(portable_engine: Path) -> Path:
+    """Dev ``Engine/analysis`` is the truth for pack membership.
+
+    Portable analysis is often already stripped after a prior Stage 5. Snapshotting
+    only leftovers (e.g. dll/csv) would replace a full ``analysis_text.pack`` with a
+    shrunk one and drop registry/offsets. Always prefer the repo analysis tree when
+    present; fall back to portable only if the dev tree is missing.
+    """
+    src = REPO_ROOT / "Engine" / "analysis"
+    if src.is_dir():
+        return src
+    return portable_engine / "analysis"
+
+
 def _build_mmb2_pair(
     engine: Path,
     *,
@@ -90,7 +116,8 @@ def _build_mmb2_pair(
     and write Engine/BUILD.json last (distinct pack_ids, shared cek_id).
     """
     data_src = engine / "data"
-    analysis = engine / "analysis"
+    portable_analysis = engine / "analysis"
+    analysis_src = _analysis_snapshot_root(engine)
 
     data_entries: dict[str, bytes] | None = None
     analysis_entries: dict[str, bytes] | None = None
@@ -98,8 +125,8 @@ def _build_mmb2_pair(
 
     if data_src.is_dir():
         data_entries = snapshot_tree(data_src)
-    if analysis.is_dir():
-        analysis_entries, analysis_rels = _snapshot_analysis_entries(analysis)
+    if analysis_src.is_dir():
+        analysis_entries, analysis_rels = _snapshot_analysis_entries(analysis_src)
         if not analysis_entries:
             analysis_entries = None
 
@@ -112,6 +139,7 @@ def _build_mmb2_pair(
             "data_files": len(data_entries or {}),
             "analysis_files": len(analysis_entries or {}),
             "sample_analysis": analysis_rels[:8],
+            "analysis_snapshot": str(analysis_src),
         }
 
     data_blob = data_meta = None
@@ -146,15 +174,16 @@ def _build_mmb2_pair(
     if data_entries is not None and data_src.is_dir():
         shutil.rmtree(data_src)
         removed["data"] = str(data_src)
-    if analysis_rels:
+    # Strip packed plains from the *portable* tree only — never touch repo analysis.
+    if analysis_rels and portable_analysis.is_dir():
         n = 0
         for rel in analysis_rels:
-            plain = analysis / rel
+            plain = portable_analysis / rel
             if plain.is_file():
                 plain.unlink()
                 n += 1
                 parent = plain.parent
-                while parent != analysis and parent.is_dir():
+                while parent != portable_analysis and parent.is_dir():
                     try:
                         parent.rmdir()
                     except OSError:
@@ -168,6 +197,7 @@ def _build_mmb2_pair(
         "removed_plain": removed,
         "data": data_meta,
         "analysis_text": analysis_meta,
+        "analysis_snapshot": str(analysis_src),
     }
 
 
@@ -281,6 +311,11 @@ def pack_portable_assets(
         product_id=product_id,
         dry_run=dry_run,
     )
+    collapsed = 0
+    if not dry_run:
+        from build_release import collapse_empty_dirs_in_portable
+
+        collapsed = collapse_empty_dirs_in_portable(dry_run=False)
     return {
         "format": "MMB2",
         "cek_id": cek_id,
@@ -289,6 +324,7 @@ def pack_portable_assets(
         "analysis_text": pair.get("analysis_text"),
         "portable": str(PORTABLE),
         "seller_root": str(seller),
+        "collapsed_empty": collapsed,
     }
 
 

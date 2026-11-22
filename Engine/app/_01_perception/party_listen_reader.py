@@ -12,7 +12,6 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _DLL_LOCK = threading.Lock()
 
 
@@ -23,7 +22,9 @@ def _registry_file(*parts: str) -> Path:
 
 
 def default_dll_path() -> Path:
-    return _ANALYSIS / "dll" / "party.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    return analysis_dll_path("party.dll")
 
 
 _VFT_KEYS = ("PARTY_VFT_SUBS", "PARTY_VFT_RC", "PARTY_VFT_RC_PLAYER")

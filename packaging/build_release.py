@@ -55,10 +55,23 @@ def rel_posix(path: Path, root: Path) -> str:
     return path.resolve().relative_to(root.resolve()).as_posix()
 
 
+# Customer ``Engine/analysis/bin``: only companion processes used at runtime.
+# All other research ``*_930.exe`` CLIs are denied (see deny_globs comments).
+ANALYSIS_BIN_KEEP = frozenset(
+    {
+        "realtime_monitor_full.exe",
+        "inventory_listen.exe",
+    }
+)
+
+
 def is_denied(rel: str, deny_globs: list[str]) -> bool:
     """Return True if relative path (posix) should not be shipped."""
     name = Path(rel).name
     parts = rel.split("/")
+    # Whitelist companion EXEs; strip every other file under analysis/bin.
+    if rel.startswith("Engine/analysis/bin/") and name:
+        return name.lower() not in {n.lower() for n in ANALYSIS_BIN_KEEP}
     for pattern in deny_globs:
         p = pattern.replace("\\", "/")
         if p.endswith("/"):
@@ -67,6 +80,16 @@ def is_denied(rel: str, deny_globs: list[str]) -> bool:
                 token = prefix[3:]
                 if token in parts:
                     return True
+                continue
+            # Mid-path globs: Engine/app/**/tests → any …/tests under Engine/app
+            if "/**/" in prefix:
+                head, tail = prefix.split("/**/", 1)
+                if rel == f"{head}/{tail}" or rel.startswith(f"{head}/{tail}/"):
+                    return True
+                if rel.startswith(head + "/"):
+                    rest_parts = rel[len(head) + 1 :].split("/")
+                    if tail in rest_parts:
+                        return True
                 continue
             if rel == prefix or rel.startswith(prefix + "/"):
                 return True
@@ -85,6 +108,113 @@ def is_denied(rel: str, deny_globs: list[str]) -> bool:
         if rel == p or rel.startswith(p.rstrip("/") + "/"):
             return True
     return False
+
+
+# Empty dirs under these prefixes are kept even with no files (runtime seeds).
+_KEEP_EMPTY_DIR_PREFIXES = (
+    "UserData/",
+    "UserData",
+)
+
+
+def _keep_empty_dir(rel: str) -> bool:
+    if rel.startswith("python/") or rel == "python":
+        return True
+    for prefix in _KEEP_EMPTY_DIR_PREFIXES:
+        if rel == prefix.rstrip("/") or rel.startswith(prefix):
+            return True
+    return False
+
+
+def collapse_empty_dirs_in_portable(*, dry_run: bool = False) -> int:
+    """Remove directories that contain no files (deepest first).
+
+    Skips bundled ``python/`` and seeded ``UserData/``. Used after Stage 5 strip
+    / deny prune so ``Engine/analysis`` research shells do not ship empty.
+    """
+    if not PORTABLE_DIR.is_dir():
+        return 0
+    removed = 0
+    dirs = [p for p in PORTABLE_DIR.rglob("*") if p.is_dir()]
+    for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
+        try:
+            rel = rel_posix(path, PORTABLE_DIR)
+        except ValueError:
+            continue
+        if _keep_empty_dir(rel):
+            continue
+        try:
+            if any(path.iterdir()):
+                continue
+        except OSError:
+            continue
+        if dry_run:
+            print(f"[dry-run] rmdir_empty {rel}/")
+            removed += 1
+            continue
+        try:
+            path.rmdir()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
+def prune_denied_from_portable(*, dry_run: bool = False) -> dict:
+    """Remove deny_globs hits already present under the portable tree.
+
+    Stage 1 skips denied paths on copy, but incremental compile can leave
+    ``**/tests`` ``.pyd`` trees behind. Call before Stage 4 checksums.
+    Also collapses leftover empty directories (except ``UserData/`` / ``python/``).
+    """
+    if not PORTABLE_DIR.is_dir():
+        return {
+            "removed_files": 0,
+            "removed_dirs": 0,
+            "collapsed_empty": 0,
+            "skipped": True,
+        }
+    _, _, deny_globs = load_manifests()
+    removed_files = 0
+    removed_dirs = 0
+    # Files first (deepest first), then empty denied dirs.
+    files = [p for p in PORTABLE_DIR.rglob("*") if p.is_file()]
+    for path in sorted(files, key=lambda p: len(p.parts), reverse=True):
+        try:
+            rel = rel_posix(path, PORTABLE_DIR)
+        except ValueError:
+            continue
+        if not is_denied(rel, deny_globs):
+            continue
+        if dry_run:
+            print(f"[dry-run] prune {rel}")
+        else:
+            path.unlink(missing_ok=True)
+        removed_files += 1
+    dirs = [p for p in PORTABLE_DIR.rglob("*") if p.is_dir()]
+    for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
+        try:
+            rel = rel_posix(path, PORTABLE_DIR)
+        except ValueError:
+            continue
+        if not (is_denied(rel, deny_globs) or is_denied(rel + "/", deny_globs)):
+            continue
+        if dry_run:
+            print(f"[dry-run] prune_dir {rel}/")
+            removed_dirs += 1
+            continue
+        try:
+            path.rmdir()
+            removed_dirs += 1
+        except OSError:
+            # Non-empty (e.g. still has allowlisted sibling) — leave.
+            pass
+    collapsed = collapse_empty_dirs_in_portable(dry_run=dry_run)
+    return {
+        "removed_files": removed_files,
+        "removed_dirs": removed_dirs,
+        "collapsed_empty": collapsed,
+    }
 
 
 def validate_manifests(
@@ -348,6 +478,12 @@ def stage4(*, dry_run: bool, skip_sign: bool) -> int:
         return 1
 
     print(f"Stage 4 — checksums + optional signing -> {PORTABLE_DIR}")
+    prune_stats = prune_denied_from_portable(dry_run=dry_run)
+    print(
+        f"  prune_denied: files={prune_stats.get('removed_files', 0)} "
+        f"dirs={prune_stats.get('removed_dirs', 0)} "
+        f"empty={prune_stats.get('collapsed_empty', 0)}"
+    )
     sign_result: dict = {"enabled": False, "skipped": True}
     if not skip_sign:
         try:
@@ -370,6 +506,7 @@ def stage4(*, dry_run: bool, skip_sign: bool) -> int:
         extra={
             "signing": sign_result,
             "checksums": str(checksum_path) if checksum_path else None,
+            "prune_denied": prune_stats,
         },
     )
     print("Stage 4 OK")

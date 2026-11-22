@@ -4,11 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-
-
 def default_dll_path() -> Path:
-    return _ANALYSIS / "dll" / "partyhud.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    return analysis_dll_path("partyhud.dll")
 
 
 class PartyHudReader:

@@ -46,6 +46,9 @@ Tool_Shopping_Practice_Admin.bat
 # --- analysis build sources & debris (keep DLLs / offset data) ---
 # Local registry backups (memory update scratch) — never ship
 Engine/analysis.bak_v37_20261118/
+Engine/analysis/_build/
+# analysis/bin: research CLIs denied in build_release.ANALYSIS_BIN_KEEP
+# (ships only realtime_monitor_full.exe + inventory_listen.exe)
 *.c
 *.h
 *.obj
@@ -58,6 +61,21 @@ Engine/analysis.bak_v37_20261118/
 **/build_*.bat
 build_*.bat
 install_930_dlls.bat
+
+# --- unused / training-only scripts (keep label_tables.json) ---
+Engine/scripts/classify_model/model_architectures.py
+Engine/scripts/classify_model/preprocess_v2.py
+Engine/_route_click_check.py
+
+# --- tests must not ship to customers ---
+# Prefer **/tests/ — mid-path Engine/app/**/tests/ does not match is_denied prefix rules.
+**/tests/
+Engine/websocket/tests/
+Engine/crypto/tests/
+Engine/session/tests/
+Engine/shop/tests/
+Engine/settings/tests/
+Engine/hotbar/tests/
 
 # --- runtime logs must not ship from the build machine ---
 Engine/logs/

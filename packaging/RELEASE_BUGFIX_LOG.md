@@ -307,6 +307,48 @@ import 시점 `_bind_action_vfts` 도 오버레이 설정 **전**에 돌아가 �
 
 ---
 
+## RBF-009 — BUILD pins both packs; analysis csv/dll; websocket compile (2026-11-21)
+
+### 증상
+
+증분 후 `pack_assets`가 data만 다시 만들면 `BUILD.json`에 `data.pack`만 남아 `analysis_text.pack`이 해시 검증 밖으로 떨어짐. `item_name_kr.csv`와 `analysis/dll/*.dll`이 고객 zip에 평문으로 남음. `Engine/websocket`이 평문 `.py`로 배포됨.
+
+### 원인
+
+`publish_verified_pack_pair`가 재빌드된 쪽만 BUILD에 넣음. analysis 팩 suffix에 `.csv`/`.dll` 없음. `compile_packages.txt`에 websocket 없음.
+
+### 수정 (소스에 포함됨)
+
+| 파일 | 내용 |
+|------|------|
+| `packaging/mmb2_stage5.py` | 미재빌드 쪽 MMB2 **carry-forward** → BUILD에 양쪽 sha256 |
+| `Engine/crypto/pack_format.py` | `peek_mmb2_public_header` |
+| `packaging/pack_assets.py` | `.csv` + `dll/*.dll` 팩 포함 |
+| `packaging/manifests/compile_packages.txt` | `Engine websocket` |
+| `packaging/manifests/deny_globs.txt` | tests 제외 |
+| `session/analysis_overlay.py` | `analysis_dll_path` (TEMP overlay → plain) |
+| perception readers / `uimsg_probe` / `lc_session` | DLL 경로 overlay 경유 |
+| `incremental_release.py` | CEK 있으면 analysis를 MMB2로 재팩 |
+
+### 이후 릴리스에서 할 일
+
+`MANMABOT_CEK_ID` + SellerData로 `incremental_release` 후 `verify_stage5`. BUILD에 `data.pack`과 `analysis_text.pack` 둘 다 있는지 확인. 고객 zip에 `Engine/analysis/dll` 평문·`item_name_kr.csv`가 없어야 함.
+
+### 재발 방지 규칙
+
+Stage 5 publish는 항상 두 팩을 BUILD에 올린다(신규 또는 carry-forward). analysis DLL/텍스트는 overlay helper만 사용. websocket은 compile_packages에 유지.
+`pack_assets` analysis 스냅샷은 **repo** `Engine/analysis` 기준(포터블이 이미 strip된 뒤 dll/csv만 남아 팩이 축소되는 사고 방지).
+
+## RBF-010 — prune deny leftovers from portable (2026-11-21)
+
+### Symptom
+증분 후 `**/tests` 가 `.pyd`로 고객 트리에 남고, `Engine/app/**/tests/` deny는 mid-path `**`를 못 매칭. `*.new.dll`이 analysis 팩에 들어감. `classify_model` 학습용 `.py` / `analysis/_build` 잔존.
+
+### Fix
+`deny_globs`에 `**/tests/` 등 보강; `is_denied` mid-path `/**/` 지원; Stage4 직전 `prune_denied_from_portable`; compile 대상에서 deny 제외; analysis 팩에서 `*.new.dll`/`*.old.dll` 제외. Stage5/Stage4에서 **빈 폴더 붕괴**(`UserData/`·`python/` 제외). `analysis/bin`은 `realtime_monitor_full.exe`·`inventory_listen.exe`만 유지. `win32_prototypes.py`·`label_tables.json`은 런타임용으로 유지.
+
+---
+
 ## (다음 항목)
 
 형식:

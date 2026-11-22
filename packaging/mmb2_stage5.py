@@ -207,6 +207,62 @@ def write_customer_build_manifest(
     return path
 
 
+def carry_forward_existing_pack(
+    engine_dir: Path,
+    pack_name: str,
+    *,
+    cek_id: str,
+    product_id: str,
+) -> dict:
+    """Pin an on-disk MMB2 pack into BUILD when that side was not rebuilt.
+
+    Reads public header fields (no CEK) and refuses cek_id / product_id mismatch.
+    """
+    _engine_on_path()
+    from crypto.pack_format import peek_mmb2_public_header
+
+    path = Path(engine_dir) / pack_name
+    if not path.is_file():
+        raise RuntimeError(
+            f"cannot carry-forward missing {pack_name} — rebuild that pack or restore it"
+        )
+    blob = path.read_bytes()
+    if not blob.startswith(b"MMB2"):
+        raise RuntimeError(f"{pack_name} is not MMB2; refuse carry-forward")
+    header = peek_mmb2_public_header(blob)
+    if header["cek_id"] != cek_id:
+        raise RuntimeError(
+            f"{pack_name} cek_id {header['cek_id']} != publish cek_id {cek_id}"
+        )
+    if header["product_id"] != product_id:
+        raise RuntimeError(
+            f"{pack_name} product_id mismatch (header {header['product_id']})"
+        )
+    # Prefer prior BUILD file count when present; else header entry_count.
+    files = int(header["entry_count"])
+    prior = Path(engine_dir) / CUSTOMER_BUILD_NAME
+    if prior.is_file():
+        try:
+            old = json.loads(prior.read_text(encoding="utf-8"))
+            old_info = (old.get("packs") or {}).get(pack_name) or {}
+            if isinstance(old_info.get("files"), int):
+                files = int(old_info["files"])
+            old_pid = old_info.get("pack_id_hex")
+            if isinstance(old_pid, str) and old_pid.lower() != header["pack_id_hex"]:
+                # Disk pack replaced outside BUILD — still pin header pack_id.
+                pass
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            pass
+    return {
+        "pack_path": str(path.resolve()),
+        "pack_bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "pack_id_hex": header["pack_id_hex"],
+        "files": files,
+        "carried_forward": True,
+    }
+
+
 def publish_verified_pack_pair(
     *,
     engine_dir: Path,
@@ -219,6 +275,9 @@ def publish_verified_pack_pair(
     """
     Publish data.pack + analysis_text.pack only after both blobs are verified,
     then write signed BUILD.json last. Prevents mixed-build consumption on crash.
+
+    When only one side is rebuilt (typical after incremental data restore), the
+    other on-disk MMB2 pack is carry-forwarded into BUILD so both stay sha256-pinned.
     """
     _engine_on_path()
     from crypto.seller_cli.signing import load_private
@@ -257,6 +316,11 @@ def publish_verified_pack_pair(
             "pack_id_hex": data_meta["pack_id_hex"],
             "files": data_meta["files"],
         }
+    else:
+        published["data.pack"] = carry_forward_existing_pack(
+            engine_dir, "data.pack", cek_id=cek_id, product_id=product_id
+        )
+
     if analysis_blob is not None and analysis_meta is not None:
         pub = atomic_publish(analysis_blob, engine_dir / "analysis_text.pack")
         published["analysis_text.pack"] = {
@@ -264,6 +328,16 @@ def publish_verified_pack_pair(
             "pack_id_hex": analysis_meta["pack_id_hex"],
             "files": analysis_meta["files"],
         }
+    else:
+        published["analysis_text.pack"] = carry_forward_existing_pack(
+            engine_dir,
+            "analysis_text.pack",
+            cek_id=cek_id,
+            product_id=product_id,
+        )
+
+    if published["data.pack"]["pack_id_hex"] == published["analysis_text.pack"]["pack_id_hex"]:
+        raise RuntimeError("duplicate pack_id across customer packs (forbidden)")
 
     manifest_path = write_customer_build_manifest(
         engine_dir,

@@ -8,6 +8,7 @@ Companion: `OOB_ACTIVATION.md` (file exchange details), `seller_cli/README.md`.
 - Zip of `release\portable\ManmabotV1` only (never `Seller\` / `SellerData`)
 - One license key string (`MMB-…`)
 - No HWID collection before purchase
+- Pack-only assets: `Engine\data.pack` + `Engine\analysis_text.pack` (MMB2, same CEK epoch) and `Engine\BUILD.json` pinning both sha256 values. Analysis pack holds offset text, `item_name_kr.csv`, and `dll/*.dll`; those materialize under `%TEMP%` at runtime (not left plain in the zip). Empty research folders under `Engine\analysis` are collapsed at Stage 4.
 
 ## What stays on the seller PC
 
@@ -74,3 +75,5 @@ Seller does **not** need `tpm.msc` steps for Soft-fallback builds; those were fo
 ## Release note for packagers
 
 After changing `Engine/crypto/device_key.py` (or license UI), run an **incremental release** so portable `.pyd` picks up the Soft-fallback policy before the next customer zip.
+
+Pack-only customer builds also need `MANMABOT_CEK_ID` + `MANMABOT_SELLER_DATA` so Stage 5 / incremental keep **both** packs in `BUILD.json` (carry-forward when only one side rebuilds). Confirm with `packaging\verify_stage5.py`. Details: `packaging\RELEASE_PLAYBOOK.md`, `SENSITIVE_ASSETS.md`, `RUNTIME_TEMP.md`, RBF-008…010 in `RELEASE_BUGFIX_LOG.md`.
