@@ -122,26 +122,55 @@ def roster_has(policy: Optional[dict], name: str) -> Optional[bool]:
     return False
 
 
+def _policy_matches(policy: Any, body: dict) -> bool:
+    """True when this policy and snapshot are the same session and policy id."""
+    if not isinstance(policy, dict) or not isinstance(body, dict):
+        return False
+    if str(policy.get("policy_id") or "") != str(body.get("policy_id") or ""):
+        return False
+    if not str(policy.get("policy_id") or ""):
+        return False
+    left = str(policy.get("session") or "")
+    right = str(body.get("session") or "")
+    return not left or not right or left == right
+
+
 def consider_sync(
     orders: Any,
     *,
     name: str,
     on_roster: Optional[bool],
 ) -> str:
-    """Apply a stored ``party_sync`` once the roster is known.
+    """Apply a stored ``party_sync`` once its policy pair and roster are known.
 
     Returns ``applied``, ``held``, ``dropped``, ``stale``, or ``none``.
-    A lower rev in the same session does not replace a newer one.
+    A lower rev in the same session does not replace a newer one. The applied
+    ACK is withheld until the matching policy and snapshot are both in hand.
     """
     body = getattr(orders, "sync_frame", None)
     if not isinstance(body, dict):
         return "none"
+    policy = getattr(orders, "policy", None)
+    if not _policy_matches(policy, body):
+        # A newer policy must not keep the previous snapshot's permission.
+        applied_pid = str(getattr(orders, "applied_policy_id", "") or "")
+        current_pid = str(policy.get("policy_id") or "") if isinstance(policy, dict) else ""
+        if current_pid and current_pid != applied_pid:
+            orders.leader_run = ""
+        return "held"
     if on_roster is None:
         return "held"
     if on_roster is False:
         orders.sync_frame = None
+        orders.gather = None
+        orders.formation_path = None
+        orders.party_focus = None
         orders.leader_run = ""
+        orders.applied_sync = None
+        orders.applied_policy_id = ""
+        orders.sync_excluded = True
         return "dropped"
+    orders.sync_excluded = False
     session = str(body.get("session") or "")
     try:
         rev = int(body.get("rev"))
@@ -189,13 +218,14 @@ def consider_sync(
             orders.arrived = False
             orders._reported = False
             orders._report_pending = False
-    elif phase == "done":
+    elif phase == "done" or phase == "pending":
         orders.gather = None
         orders.arrived = False
         orders._reported = False
         orders._report_pending = False
     orders.applied_sync = (session, rev)
     orders.applied_phase = phase
+    orders.applied_policy_id = str(policy.get("policy_id") or "")
     return "applied"
 
 

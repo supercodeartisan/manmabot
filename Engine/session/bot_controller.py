@@ -1831,7 +1831,67 @@ class BotController:
         network = role == "member" and party_on and bool(host)
         runtime.network_party = network
         runtime.orders_open = not (network and not self._party_comms.member_connected)
-        if not runtime.sync_hold:
+        if network and runtime.orders_open and not bool(getattr(runtime, "link_open", False)):
+            self._begin_sync_wait(runtime, world, pull=False)
+        runtime.link_open = bool(runtime.orders_open) if network else False
+        if runtime.sync_hold:
+            self._note_sync_pose(runtime, world)
+            self._ensure_sync_pull(runtime)
+            self._release_sync_hold(runtime)
+
+    @staticmethod
+    def _pose_sample(world) -> Optional[tuple]:
+        """Identity of one pose observation. The same cached dict does not count twice."""
+        snap = getattr(world, "last_memory_snapshot", None)
+        if not isinstance(snap, dict):
+            return None
+        for key in ("sample", "frame_id", "seq"):
+            if snap.get(key) is not None:
+                return (key, snap.get(key))
+        return ("id", id(snap))
+
+    def _begin_sync_wait(self, runtime, world, *, pull: bool) -> None:
+        """Start a wait. The pose already in hand is not the one that ends it."""
+        from app._06_party.comms.orders import member_orders
+
+        runtime.sync_hold = True
+        runtime.sync_need_pull = bool(pull)
+        runtime.sync_pose_ready = False
+        runtime.sync_pose_seen = self._pose_sample(world)
+        member_orders.need_gen = int(getattr(member_orders, "need_gen", 0) or 0) + 1
+        member_orders.sync_excluded = False
+        if pull:
+            self._arm_sync_pull()
+        else:
+            member_orders.sync_pull = None
+            member_orders.sync_answered = False
+
+    def _arm_sync_pull(self) -> None:
+        from app._06_party.comms.orders import member_orders
+
+        self._sync_pull_n = int(getattr(self, "_sync_pull_n", 0) or 0) + 1
+        member_orders.sync_pull = self._sync_pull_n
+        member_orders.sync_answered = False
+        reporter = getattr(self, "_member_state_reporter", None)
+        if reporter is not None and hasattr(reporter, "nudge"):
+            reporter.nudge()
+
+    def _ensure_sync_pull(self, runtime) -> None:
+        """A session change can clear the token while the wait is still on."""
+        if runtime is None or not bool(getattr(runtime, "sync_hold", False)):
+            return
+        if not bool(getattr(runtime, "sync_need_pull", False)):
+            return
+        from app._06_party.comms.orders import member_orders
+
+        if getattr(member_orders, "sync_pull", None) is None:
+            self._arm_sync_pull()
+
+    def _note_sync_pose(self, runtime, world) -> None:
+        if runtime is None or not bool(getattr(runtime, "sync_hold", False)):
+            return
+        sample = self._pose_sample(world)
+        if sample is None or sample == getattr(runtime, "sync_pose_seen", None):
             return
         try:
             from app._04_decision.world_nav.session import live_pose_from_state
@@ -1841,19 +1901,31 @@ class BotController:
             pose = None
         if pose is not None:
             runtime.sync_pose_ready = True
-        self._release_sync_hold(runtime)
 
     def _release_sync_hold(self, runtime) -> None:
-        """Resume waits for this request's reply and a pose taken after resume."""
+        """Release after the matching orders and a pose from after this wait.
+
+        Resume also needs the reply to this ``sync_pull``. A first connection
+        accepts the snapshot that arrived on the current socket.
+        """
         if runtime is None or not bool(getattr(runtime, "sync_hold", False)):
             return
         from app._06_party.comms.orders import member_orders
 
+        if bool(getattr(member_orders, "sync_excluded", False)):
+            runtime.sync_hold = False
+            runtime.sync_need_pull = False
+            return
+        if bool(getattr(runtime, "sync_need_pull", False)) and not bool(
+            getattr(member_orders, "sync_answered", False)
+        ):
+            return
         if not bool(getattr(runtime, "sync_pose_ready", False)):
             return
-        if not bool(getattr(member_orders, "sync_answered", False)):
+        if str(getattr(member_orders, "leader_run", "") or "") not in ("running", "paused"):
             return
         runtime.sync_hold = False
+        runtime.sync_need_pull = False
         member_orders.sync_pull = None
         member_orders.sync_answered = False
 
@@ -3156,16 +3228,9 @@ class BotController:
         brain = getattr(self, "_party_brain_ref", None)
         runtime = getattr(brain, "runtime", None) if brain is not None else None
         if runtime is not None:
-            runtime.sync_hold = True
-            runtime.sync_pose_ready = False
-        from app._06_party.comms.orders import member_orders
-
-        self._sync_pull_n = int(getattr(self, "_sync_pull_n", 0) or 0) + 1
-        member_orders.sync_pull = self._sync_pull_n
-        member_orders.sync_answered = False
-        reporter = getattr(self, "_member_state_reporter", None)
-        if reporter is not None and hasattr(reporter, "nudge"):
-            reporter.nudge()
+            self._begin_sync_wait(runtime, getattr(self, "_party_world", None), pull=True)
+        else:
+            self._arm_sync_pull()
 
     def _drain_party_reports(self, world) -> int:
         """Feed member reports to the rally, policy acks to the invite gate."""
@@ -3734,6 +3799,13 @@ class BotController:
                 )
                 if status == "applied" and member_orders.gather is None:
                     party_brain.release_rally_nav()
+                if status == "dropped":
+                    party_brain.release_rally_nav()
+                    runtime = getattr(party_brain, "runtime", None)
+                    if runtime is not None:
+                        runtime.sync_hold = False
+                        runtime.sync_need_pull = False
+                self._ensure_sync_pull(getattr(party_brain, "runtime", None))
                 self._release_sync_hold(getattr(party_brain, "runtime", None))
             if party_brain is not None and policy is not None and rostered:
                 self._apply_member_party_policy(

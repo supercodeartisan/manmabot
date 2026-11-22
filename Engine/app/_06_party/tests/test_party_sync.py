@@ -298,6 +298,8 @@ def test_member_pause_does_not_move_the_leader_deadline(monkeypatch):
     assert start.state == "done"
     orders = MemberOrders()
     manager = _manager(monkeypatch, _Pose(4, 40, 40))
+    manager.runtime.network_party = True
+    manager.runtime.orders_open = True
     manager.runtime.sync_hold = True
     orders.gather = {"type": "rally", "stage": "start", "session": "s", "rev": 2, "map_id": 4, "x": 1, "y": 1}
     assert _move(manager, orders) is None
@@ -487,11 +489,13 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
     ctrl = BotController()
     ctrl._profile.party_enabled = True
     ctrl._profile.party_role = "leader"
-    ctrl._party_policy_id = "policy-live"
     ctrl._party_policy_kwargs = {
         "leader_name": "리더",
         "roster": [{"name": "멤버"}],
     }
+    from websocket.party_orders import policy_message
+
+    ctrl._party_policy_id = str(policy_message(**ctrl._party_policy_kwargs).get("policy_id") or "")
     ctrl._start_rally = start
     ctrl._party_comms._leader = SimpleNamespace(
         watchdog=SimpleNamespace(server=_Server()), owned=True
@@ -500,7 +504,8 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
     kinds = [row[1].get("type") for row in sent if row[0] == "peer-1"]
     assert "party_policy" in kinds
     sync = [row[1] for row in sent if row[1].get("type") == "party_sync"][-1]
-    assert sync["policy_id"] == "policy-live"
+    assert sync["policy_id"] == ctrl._party_policy_id
+    assert ctrl._party_policy_id
     assert sync["rally"] == "active"
     assert (sync["map_id"], sync["x"], sync["y"]) == (4, 80, 90)
     assert not callable(ctrl._party_policy_id)
@@ -519,6 +524,8 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
 def test_paused_snapshot_blocks_rally_march_and_focus(monkeypatch):
     orders = MemberOrders()
     manager = _manager(monkeypatch, _Pose(4, 10, 10))
+    manager.runtime.network_party = True
+    manager.runtime.orders_open = True
     policy = _policy("s", ["멤버"])
     paused = _sync("s", 2, "active", (4, 80, 90), run="paused")
     orders.ingest([_Frame(policy), _Frame(paused)])
@@ -556,6 +563,9 @@ def test_resume_keeps_the_hold_until_the_pull_reply_and_a_pose():
 
     brain = PartyMemberManager()
     ctrl._party_brain_ref = brain
+    cached = SimpleNamespace(last_memory_snapshot={"sample": 1})
+    fresh = SimpleNamespace(last_memory_snapshot={"sample": 2})
+    ctrl._party_world = cached
     ctrl._party_pause_clock(resume=True)
     assert brain.runtime.sync_hold is True
     token = member_orders.sync_pull
@@ -573,16 +583,16 @@ def test_resume_keeps_the_hold_until_the_pull_reply_and_a_pose():
     previous_pose = nav_session.live_pose_from_state
     nav_session.live_pose_from_state = lambda _world: _PoseBox()
     try:
-        ctrl._note_member_link(brain, SimpleNamespace())
+        ctrl._note_member_link(brain, cached)
+        assert brain.runtime.sync_pose_ready is False
+        ctrl._note_member_link(brain, fresh)
         assert brain.runtime.sync_pose_ready is True
-        assert brain.runtime.sync_hold is True
-        member_orders.ingest([_Frame(_sync("s", 4, "done"))])
         assert brain.runtime.sync_hold is True
         done = _sync("s", 4, "done")
         done["pull"] = token
-        member_orders.session = "s"
-        member_orders.ingest([_Frame(done)])
+        member_orders.ingest([_Frame(_policy("s", ["멤버"])), _Frame(done)])
         assert member_orders.sync_answered is True
+        assert consider_sync(member_orders, name="멤버", on_roster=True) == "applied"
         ctrl._release_sync_hold(brain.runtime)
         assert brain.runtime.sync_hold is False
     finally:
@@ -645,3 +655,306 @@ def test_a_failed_step_may_retry_and_a_rev_change_does_not(monkeypatch):
     manager._join_nav.session.step_i = 1
     assert _move(manager, orders).action is ActionType.USE_TALKING_SCROLL
     assert _move(manager, orders).action is ActionType.IDLE
+
+
+def test_resume_then_release_does_not_revive_the_old_march(monkeypatch):
+    from app._02_state.enums import ActionType as HealType
+    from app._06_party.comms.orders import member_orders
+
+    member_orders.clear()
+    member_orders.session = "sess"
+    member_orders.leader_run = "running"
+    member_orders.need_gen = 2
+    member_orders.path_gen = 1
+    member_orders.formation_path = {
+        "type": "formation_path", "from": "leader", "session": "sess",
+        "map_id": 4, "rev": 1, "seq": 1, "cursor": 0,
+        "tiles": [[10, 10], [12, 11]], "clear": False,
+    }
+    member_orders.party_focus = {"support": "멤버", "seq": 1}
+    member_orders.focus_gen = 1
+    mgr, state = _decide_member(monkeypatch, "멤버", (10, 10), (14, 10))
+    mgr.runtime.sync_hold = True
+    heal = SimpleNamespace(action=HealType.HEAL, reason="urgent self heal")
+    monkeypatch.setattr("app._06_party.manager.apply_party_support", lambda *_a, **_k: heal)
+    mgr._nav_blackboard = SimpleNamespace(scratch={}, side_intents=[])
+    during = mgr.decide(state)
+    assert during.action is not ActionType.TRAVELING, getattr(during, "reason", "")
+    assert getattr(during, "action", None) is HealType.HEAL
+    mgr.runtime.sync_hold = False
+    after = mgr.decide(state)
+    assert _goal_of(after) != (12, 11)
+    assert "march" not in str(getattr(after, "reason", ""))
+    member_orders.clear()
+
+
+def test_reply_and_pose_order_and_stale_inputs_do_not_release():
+    from session.bot_controller import BotController
+    from websocket.party_orders import member_orders
+    from app._06_party.manager import PartyMemberManager
+
+    member_orders.clear()
+    ctrl = BotController()
+    ctrl._profile.party_role = "member"
+    ctrl._profile.party_leader_host = "10.0.0.8"
+    ctrl._profile.party_enabled = True
+    ctrl._profile.party_member_enabled = True
+    brain = PartyMemberManager()
+    brain.runtime.network_party = True
+    ctrl._party_brain_ref = brain
+    cached = SimpleNamespace(last_memory_snapshot={"sample": 1})
+    ctrl._party_world = cached
+    ctrl._party_pause_clock(resume=True)
+    token = member_orders.sync_pull
+    policy = _policy("s", ["멤버"])
+    done = _sync("s", 3, "done")
+    done["pull"] = token
+
+    def _apply(world):
+        ctrl._note_member_link(brain, world)
+
+    import app._04_decision.world_nav.session as nav_session
+    previous = nav_session.live_pose_from_state
+    nav_session.live_pose_from_state = lambda _w: SimpleNamespace(map_id=4, x=1, y=1)
+    try:
+        member_orders.ingest([_Frame(policy), _Frame(done)])
+        consider_sync(member_orders, name="멤버", on_roster=True)
+        _apply(cached)
+        assert brain.runtime.sync_hold is True
+        _apply(SimpleNamespace(last_memory_snapshot={"sample": 2}))
+        assert brain.runtime.sync_hold is False
+    finally:
+        nav_session.live_pose_from_state = previous
+        member_orders.clear()
+
+    member_orders.clear()
+    brain = PartyMemberManager()
+    ctrl._party_brain_ref = brain
+    ctrl._party_world = cached
+    ctrl._party_pause_clock(resume=True)
+    nav_session.live_pose_from_state = lambda _w: SimpleNamespace(map_id=4, x=1, y=1)
+    try:
+        _apply = lambda world: ctrl._note_member_link(brain, world)
+        _apply(SimpleNamespace(last_memory_snapshot={"sample": 3}))
+        assert brain.runtime.sync_hold is True
+        stale = _sync("s", 3, "done")
+        stale["pull"] = 1
+        member_orders.ingest([_Frame(_policy("s", ["멤버"])), _Frame(stale)])
+        consider_sync(member_orders, name="멤버", on_roster=True)
+        ctrl._release_sync_hold(brain.runtime)
+        assert brain.runtime.sync_hold is True
+        fresh = _sync("s", 3, "done")
+        fresh["pull"] = member_orders.sync_pull
+        member_orders.ingest([_Frame(fresh)])
+        ctrl._release_sync_hold(brain.runtime)
+        assert brain.runtime.sync_hold is False
+    finally:
+        nav_session.live_pose_from_state = previous
+        member_orders.clear()
+
+
+def test_policy_and_snapshot_order_and_roster_removal():
+    first = MemberOrders()
+    policy = _policy("s", ["멤버"])
+    active = _sync("s", 2, "active", (4, 30, 31))
+    first.ingest([_Frame(policy)])
+    assert consider_sync(first, name="멤버", on_roster=True) == "none"
+    first.ingest([_Frame(active)])
+    assert consider_sync(first, name="멤버", on_roster=True) == "applied"
+    assert first.gather["x"] == 30
+
+    second = MemberOrders()
+    second.ingest([_Frame(active)])
+    assert consider_sync(second, name="멤버", on_roster=None) == "held"
+    assert getattr(second, "applied_sync", None) is None
+    second.ingest([_Frame(policy)])
+    assert consider_sync(second, name="멤버", on_roster=True) == "applied"
+    assert second.gather["x"] == 30
+
+    removed = MemberOrders()
+    removed.ingest([_Frame(_policy("s", ["다른"])), _Frame(active)])
+    assert consider_sync(removed, name="멤버", on_roster=False) == "dropped"
+    assert removed.gather is None
+    assert removed.leader_run == ""
+    assert removed.sync_excluded is True
+
+
+def test_member_resume_after_rally_done_rejoins_the_leader(monkeypatch):
+    from app._06_party.comms.orders import member_orders
+
+    member_orders.clear()
+    member_orders.session = "s"
+    member_orders.leader_run = "running"
+    member_orders.gather = {
+        "type": "rally", "stage": "start", "session": "s", "rev": 2,
+        "map_id": 4, "x": 80, "y": 90,
+    }
+    mgr, state = _decide_member(monkeypatch, "멤버", (10, 10), (18, 10))
+    mgr.runtime.sync_hold = True
+    waiting = mgr.decide(state)
+    assert waiting.action is not ActionType.TRAVELING, getattr(waiting, "reason", "")
+    assert _goal_of(waiting) != (80, 90)
+    member_orders.ingest([
+        _Frame(_policy("s", ["멤버"])),
+        _Frame(_sync("s", 4, "done")),
+    ])
+    assert consider_sync(member_orders, name="멤버", on_roster=True) == "applied"
+    assert member_orders.gather is None
+    mgr.runtime.sync_hold = False
+    member_orders.leader_run = "running"
+    member_orders.need_gen = 1
+    joined = mgr.decide(state)
+    assert _goal_of(joined) != (80, 90)
+    assert joined.action is ActionType.TRAVELING
+    assert "leader" in str(getattr(joined, "reason", ""))
+    member_orders.clear()
+
+
+def test_session_change_clears_the_pull_and_can_request_again():
+    from session.bot_controller import BotController
+    from websocket.party_orders import member_orders
+    from app._06_party.manager import PartyMemberManager
+
+    member_orders.clear()
+    ctrl = BotController()
+    brain = PartyMemberManager()
+    brain.runtime.sync_hold = True
+    brain.runtime.sync_need_pull = True
+    ctrl._party_brain_ref = brain
+    member_orders.sync_pull = 4
+    member_orders.session = "old"
+    member_orders.ingest([_Frame(_sync("new", 1, "pending"))])
+    assert member_orders.sync_pull is None
+    assert brain.runtime.sync_hold is True
+    ctrl._ensure_sync_pull(brain.runtime)
+    assert isinstance(member_orders.sync_pull, int)
+    assert member_orders.sync_pull != 4
+    member_orders.clear()
+
+
+def _open_world(monkeypatch):
+    import sys
+    import types
+
+    sys.modules.setdefault("cv2", types.ModuleType("cv2"))
+
+    class _Grid:
+        width = 40
+        height = 16
+
+        def is_walkable(self, x, y):
+            return 0 <= int(x) < 40 and 0 <= int(y) < 16
+
+        def can_step(self, cx, cy, nx, ny):
+            return self.is_walkable(nx, ny)
+
+        def tile_cost(self, x, y):
+            return 1
+
+        def dist_to_wall(self, x, y):
+            return 2
+
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: _Grid())
+    monkeypatch.setattr(
+        "app._03_world.merge.memory_sync.game_to_nav",
+        lambda x, y: (int(x), int(y)),
+    )
+
+
+def _decide_member(monkeypatch, name, here, leader, *, party_on=True):
+    from app._02_state.enums import CharacterType
+    from app._06_party.config import PartyMemberConfig
+    from app._06_party.leader import LeaderView
+    from app._06_party.manager import PartyMemberManager
+
+    _open_world(monkeypatch)
+    monkeypatch.setattr(
+        "app._06_party.manager.resolve_leader",
+        lambda *_a, **_k: LeaderView(
+            name="Lead",
+            tile=leader,
+            map_id=4,
+            same_map=True,
+            fresh=True,
+            source="sync",
+            farming=False,
+        ),
+    )
+    mgr = PartyMemberManager(PartyMemberConfig(leader_name="Lead", stop_tiles=1))
+    mgr.apply_leader_policy(
+        {"leader_name": "Lead", "leader_mode": "moving", "roster": [{"name": name}]},
+        self_name=name,
+    )
+    mgr.set_local_map_id(4)
+    mgr.set_world_origin(SimpleNamespace(x=here[0], y=here[1]))
+    mgr.runtime.network_party = party_on
+    mgr.runtime.orders_open = True
+    party = {
+        "in_party": True,
+        "members": [
+            {"name": "Lead", "is_leader": True, "map_id": 4, "x": leader[0], "y": leader[1]},
+            {"name": name, "map_id": 4, "x": here[0], "y": here[1]},
+        ],
+    }
+    state = SimpleNamespace(
+        player=SimpleNamespace(
+            identity=SimpleNamespace(name=name),
+            species_name=name,
+            character_type=CharacterType.KNIGHT,
+            hp=100,
+            max_hp=100,
+            memory_guid="",
+        ),
+        last_party=party,
+        last_print_state=None,
+        objects=lambda *_a, **_k: [],
+        monsters=lambda: [],
+        party_read_ok=True,
+    )
+    return mgr, state
+
+
+def _goal_of(intent):
+    import re
+
+    found = re.findall(r"(-?\d+),(-?\d+)", str(getattr(intent, "reason", "") or ""))
+    if not found:
+        return None
+    return int(found[-1][0]), int(found[-1][1])
+
+
+def test_resume_hold_does_not_walk_the_old_march(monkeypatch):
+    from app._06_party.comms.orders import member_orders
+
+    member_orders.clear()
+    member_orders.session = "sess"
+    member_orders.formation_path = {
+        "type": "formation_path",
+        "from": "leader",
+        "session": "sess",
+        "map_id": 4,
+        "rev": 1,
+        "seq": 1,
+        "cursor": 0,
+        "tiles": [[10, 10], [11, 10], [12, 11]],
+        "clear": False,
+    }
+    mgr, state = _decide_member(monkeypatch, "멤버", (10, 10), (10, 10))
+    mgr.runtime.sync_hold = True
+    intent = mgr.decide(state)
+    assert intent.action is not ActionType.TRAVELING, getattr(intent, "reason", "")
+    assert _goal_of(intent) != (12, 11)
+    member_orders.clear()
+
+
+def test_paused_leader_does_not_follow_from_five_tiles(monkeypatch):
+    from app._06_party.comms.orders import member_orders
+
+    member_orders.clear()
+    member_orders.session = "sess"
+    member_orders.leader_run = "paused"
+    mgr, state = _decide_member(monkeypatch, "멤버", (5, 10), (10, 10))
+    intent = mgr.decide(state)
+    assert intent.action is not ActionType.TRAVELING, getattr(intent, "reason", "")
+    assert _goal_of(intent) != (10, 10)
+    member_orders.clear()

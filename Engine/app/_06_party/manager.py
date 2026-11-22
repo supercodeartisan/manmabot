@@ -660,8 +660,11 @@ class PartyMemberManager:
             from .sightings import resolve_local
 
             focus = None
-            if bool(getattr(self.runtime, "orders_open", True)) and not self._leader_orders_paused():
-                focus = member_orders.party_focus
+            if not self._party_move_held():
+                need = int(getattr(member_orders, "need_gen", 0) or 0)
+                fresh = int(getattr(member_orders, "focus_gen", 0) or 0)
+                if not need or fresh == need:
+                    focus = member_orders.party_focus
             seat = ""
             if origin_ok and origin is not None and game_state is not None:
                 seat = _self_row_name(
@@ -1166,7 +1169,10 @@ class PartyMemberManager:
         if slot_tile is not None and me_tile is not None:
             slot_dist = tile_chebyshev(me_tile, slot_tile)
         stand = None
-        self._march_move = self._build_march(origin if origin_ok else None, game_state, cfg)
+        if self._party_move_held():
+            self._march_move = None
+        else:
+            self._march_move = self._build_march(origin if origin_ok else None, game_state, cfg)
         combat_approach = False
         self.runtime.scratch.pop("combat_stand", None)
         if (
@@ -1278,6 +1284,19 @@ class PartyMemberManager:
                         else MemberKind.HEAL
                     )
                     return self._return_support(listed, kind)
+        if self._party_move_held() and result.kind in (
+            MemberKind.FOLLOW,
+            MemberKind.JOIN_MAP,
+            MemberKind.WAIT,
+            MemberKind.ASSIST,
+        ):
+            from .intents import idle
+
+            held = idle("party_orders_held")
+            self.runtime.last_kind = "hold"
+            self.runtime.last_reason = "party_orders_held"
+            self._record_decision(held)
+            return held
         reason = result.reason
         if returning and result.kind is MemberKind.FOLLOW:
             reason = f"catch_up {reason}"
@@ -1727,11 +1746,7 @@ class PartyMemberManager:
         The join plan may use a talking scroll or an NPC teleporter. Recovery
         is not handled here.
         """
-        if dead or self.runtime.paused or self.runtime.sync_hold:
-            return None
-        if not bool(getattr(self.runtime, "orders_open", True)):
-            return None
-        if self._leader_orders_paused():
+        if dead or self.runtime.paused or self._party_move_held():
             return None
         if bool(getattr(self.runtime, "hold_join_map", False)):
             return None
@@ -1813,6 +1828,24 @@ class PartyMemberManager:
         except Exception:
             return False
         return str(getattr(member_orders, "leader_run", "") or "") == "paused"
+
+    def _party_move_held(self) -> bool:
+        """Network members do not walk until the current orders are live.
+
+        Memory-only follow and solo play leave ``network_party`` false.
+        A local pause is handled by ``runtime.paused`` and is not this gate.
+        """
+        if not bool(getattr(self.runtime, "network_party", False)):
+            return False
+        if not bool(getattr(self.runtime, "orders_open", True)):
+            return True
+        if bool(getattr(self.runtime, "sync_hold", False)):
+            return True
+        try:
+            from .comms.orders import member_orders
+        except Exception:
+            return True
+        return str(getattr(member_orders, "leader_run", "") or "") != "running"
 
     def release_rally_nav(self) -> bool:
         """Stop a join that this rally started. Leave a normal map join running."""
@@ -2268,7 +2301,11 @@ class PartyMemberManager:
         from .intents import _emit_follow_hop, idle, plan_slot_hop
         from .loot import stable_self_identity
 
-        if not bool(getattr(self.runtime, "orders_open", True)) or self._leader_orders_paused():
+        if self._party_move_held():
+            self._march_active = False
+            return None
+        need = int(getattr(member_orders, "need_gen", 0) or 0)
+        if need and int(getattr(member_orders, "path_gen", 0) or 0) != need:
             self._march_active = False
             return None
         self._march_active = False

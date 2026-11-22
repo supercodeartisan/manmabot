@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — network members wait before any party move
+
+Intent: A network member does not walk an old march, follow, map join, or shared attack while the socket is down, while resume sync is open, or while the leader snapshot says paused. After the matching policy and snapshot are applied and a new pose sample is seen, an ended rally rejoins the current leader. The same cached pose sample does not end the wait.
+Shared: `PartyMemberManager._party_move_held` / `decide`, `consider_sync`, `MemberOrders._drop_orders`, `BotController._begin_sync_wait` / `_release_sync_hold`. Login clicks, retreat, and solo unstick were not changed. Memory-only follow does not take this wait.
+Affects: network party startup, reconnect, leader pause, member resume.
+Consent: user (fix startup, reconnect, and resume on `8679a34`).
+Result: At `8679a34`, `decide()` returned `TRAVELING` `party_member:march 12,12` during resume hold and `party_member:leader 10,10` while the leader was paused. After the change those two tests pass. `test_party_sync.py` and `test_party_cycle.py` passed (28). `app/_06_party/tests` passed 370. Nine failures are `ModuleNotFoundError: scipy` in the walk-distance file and one loot-wall test. Not run in the Windows game.
+
 ## 2026-11-21 — leader snapshot no longer calls the policy id string
 
 Intent: The leader reads the stored policy id string when it builds a snapshot. A paused leader holds member rally, march, and shared attack. Member resume waits for this request's reply and a pose. A missed first snapshot is retransmitted. A second scroll or teleport waits on the same step, and a failed step or a later step may click.

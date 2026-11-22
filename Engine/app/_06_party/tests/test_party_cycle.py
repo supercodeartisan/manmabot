@@ -120,7 +120,16 @@ def orders():
         member_orders.party_focus,
         member_orders.supply_hold,
         member_orders.supply_drop,
+        int(getattr(member_orders, "need_gen", 0) or 0),
+        str(getattr(member_orders, "leader_run", "") or ""),
+        member_orders.gather,
     )
+    member_orders.need_gen = 0
+    member_orders.path_gen = 0
+    member_orders.focus_gen = 0
+    member_orders.leader_run = ""
+    member_orders.gather = None
+    member_orders.sync_frame = None
     yield member_orders
     (
         member_orders.session,
@@ -128,6 +137,9 @@ def orders():
         member_orders.party_focus,
         member_orders.supply_hold,
         member_orders.supply_drop,
+        member_orders.need_gen,
+        member_orders.leader_run,
+        member_orders.gather,
     ) = saved
 
 

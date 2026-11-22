@@ -629,15 +629,20 @@ class MemberOrders:
         self.applied_sync: Optional[tuple[str, int]] = None
         self.applied_phase: str = ""
         self.leader_run: str = ""
+        self.applied_policy_id: str = ""
         self.sync_pull: Optional[int] = None
         self.sync_answered: bool = False
+        self.sync_excluded: bool = False
+        self.need_gen: int = 0
+        self.path_gen: int = 0
+        self.focus_gen: int = 0
         self._old_sessions: set[str] = set()
 
     @property
     def order_kind(self) -> str:
         return order_tag(self.gather)
 
-    def _drop_orders(self) -> None:
+    def _drop_orders(self, *, new_session: bool = False) -> None:
         self.gather = None
         self.recovery = None
         self.policy = None
@@ -658,6 +663,13 @@ class MemberOrders:
         self.applied_sync = None
         self.applied_phase = ""
         self.leader_run = ""
+        self.applied_policy_id = ""
+        self.sync_excluded = False
+        self.path_gen = 0
+        self.focus_gen = 0
+        if new_session:
+            self.sync_pull = None
+            self.sync_answered = False
 
     def take_make_way(self) -> Optional[dict[str, Any]]:
         """The latest step-off request once, then None until the next one."""
@@ -674,6 +686,9 @@ class MemberOrders:
         self._old_sessions = set()
         self.sync_pull = None
         self.sync_answered = False
+        self.need_gen = 0
+        self.path_gen = 0
+        self.focus_gen = 0
 
     def take_beep(self) -> Optional[dict[str, Any]]:
         """Leader beep once, then None until the next one."""
@@ -707,9 +722,10 @@ class MemberOrders:
             if session and session != self.session:
                 if session in self._old_sessions:
                     continue
-                if self.session:
+                retiring = bool(self.session)
+                if retiring:
                     self._old_sessions.add(self.session)
-                self._drop_orders()
+                self._drop_orders(new_session=retiring)
                 self.session = session
                 self.session_resets += 1
                 self._session_changed = True
@@ -751,8 +767,10 @@ class MemberOrders:
             if kind == "party_focus":
                 if bool(body.get("clear")):
                     self.party_focus = None
+                    self.focus_gen = 0
                 else:
                     self.party_focus = dict(body)
+                    self.focus_gen = int(getattr(self, "need_gen", 0) or 0)
                 continue
             if kind == "party_reports":
                 rows = body.get("reports")
@@ -813,6 +831,7 @@ class MemberOrders:
             if same and seq < prev:
                 return
         self.formation_path = dict(body)
+        self.path_gen = int(getattr(self, "need_gen", 0) or 0)
 
     def near(self, map_id: Optional[int], x: Any, y: Any) -> bool:
         order = self.gather
