@@ -79,6 +79,46 @@ def _lp_utf8_be(s: str) -> bytes:
     return _u16be(len(b)) + b
 
 
+def peek_mmb2_public_header(blob: bytes) -> dict:
+    """Read product_id / cek_id / pack_id / entry_count without CEK (header only).
+
+    Used by seller Stage 5 to carry-forward an on-disk pack into BUILD.json when
+    that side was not rebuilt in the current publish.
+    """
+    if len(blob) < MMB2_FIXED_PREAMBLE:
+        raise PackFormatError("file too small")
+    if bytes(blob[0:4]) != MAGIC:
+        raise PackFormatError("bad magic")
+    (format_version,) = struct.unpack_from("<H", blob, 4)
+    header_size, flags, entry_count = struct.unpack_from("<III", blob, 6)
+    _require_exact(format_version == FORMAT_VERSION, "unsupported format_version")
+    _require_exact(flags == PHASE1_FLAGS, "unknown header flags")
+    if header_size < MMB2_FIXED_PREAMBLE or header_size > MAX_HEADER_SIZE:
+        raise PackFormatError("header_size out of range")
+    if header_size > len(blob):
+        raise PackFormatError("header beyond EOF")
+    mv = memoryview(blob)
+    off = MMB2_FIXED_PREAMBLE
+    product_id, off = _read_lp_utf8(mv, off, max_len=MAX_PATH_BYTES)
+    cek_id, off = _read_lp_utf8(mv, off, max_len=MAX_PATH_BYTES)
+    if off + 2 > header_size:
+        raise PackFormatError("truncated pack_id in header")
+    (pid_len,) = struct.unpack_from(">H", blob, off)
+    off += 2
+    _require_exact(pid_len == PACK_ID_LEN, "header pack_id length")
+    if off + PACK_ID_LEN != header_size:
+        raise PackFormatError("header_size does not match trailing pack_id")
+    pack_id = bytes(blob[off : off + PACK_ID_LEN])
+    return {
+        "product_id": product_id,
+        "cek_id": cek_id,
+        "pack_id": pack_id,
+        "pack_id_hex": pack_id.hex(),
+        "entry_count": int(entry_count),
+        "header_size": int(header_size),
+    }
+
+
 def _read_lp_utf8(buf: memoryview, off: int, *, max_len: int = MAX_PATH_BYTES) -> tuple[str, int]:
     if off + 2 > len(buf):
         raise PackFormatError("truncated length prefix")

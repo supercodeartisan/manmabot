@@ -83,15 +83,21 @@ class UiMsgSample:
 
 
 def _analysis_root() -> Path:
-    return manmabot_root() / "analysis"
+    from session.analysis_overlay import analysis_text_root
+
+    return analysis_text_root()
 
 
 def uimsg_dll_path() -> Path:
-    return _analysis_root() / "dll" / "uimsg.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    return analysis_dll_path("uimsg.dll")
 
 
 def registry_path() -> Path:
-    return _analysis_root() / "registry" / "LC930_REGISTRY.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "LC930_REGISTRY.txt")
 
 
 def classify_uimsg_text(text: str) -> UiMsgKind:

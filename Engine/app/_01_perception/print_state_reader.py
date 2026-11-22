@@ -17,21 +17,15 @@ from typing import Any, Optional
 # print_state_snapshot / shutdown at the same time.
 _DLL_LOCK = threading.Lock()
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-_DLL = _ANALYSIS / "dll"
-
-
 def default_dll_path() -> Path:
     """Newest print_state image. A locked live DLL keeps the previous build beside it."""
-    candidates = [
-        _DLL / "print_state.new.dll",
-        _DLL / "print_state.iso.dll",
-        _DLL / "print_state.dll",
-    ]
-    found = [path for path in candidates if path.is_file()]
-    if not found:
-        return candidates[-1]
-    return max(found, key=lambda path: path.stat().st_mtime)
+    from session.analysis_overlay import analysis_dll_prefer_newer
+
+    return analysis_dll_prefer_newer(
+        "print_state.new.dll",
+        "print_state.iso.dll",
+        "print_state.dll",
+    )
 
 
 def default_settings_path() -> Path:

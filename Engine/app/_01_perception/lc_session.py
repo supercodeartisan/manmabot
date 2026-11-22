@@ -13,7 +13,6 @@ import time
 from pathlib import Path
 
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-_DLL_DIR = _ANALYSIS / "dll"
 
 
 def _registry_path() -> Path:
@@ -72,13 +71,15 @@ class LcSession:
         spec = _MODULES.get(name)
         if spec is None:
             raise KeyError(name)
-        dll = _DLL_DIR / f"{name}.dll"
+        from session.analysis_overlay import analysis_dll_path
+
+        dll = analysis_dll_path(f"{name}.dll")
         if not dll.is_file():
             raise FileNotFoundError(f"memory module DLL is missing: {dll}")
         registry = _registry_path()
         if not registry.is_file():
             raise FileNotFoundError(f"registry is missing: {registry}")
-        # Text root may be TEMP overlay; DLLs stay under Engine/analysis/dll.
+        # Text + DLL roots may be TEMP overlay (pack-only) or plain Engine/analysis.
         os.environ["LCAPI_ROOT"] = str(_text_root())
         with self._guard:
             thread = self._threads.get(name)

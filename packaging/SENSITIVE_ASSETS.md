@@ -10,8 +10,9 @@
 | 자산 | 고객 빌드에서의 형태 | 런타임 |
 |------|----------------------|--------|
 | `Engine/data/**` (맵 PNG, cursors, catalog, world JSON 등) | **평문 `Engine/data/`.** Stage 5가 `data.pack`을 만든 뒤 `unpack_customer_data.py`가 풀고 팩을 지운다 | 디스크의 `Engine/data`를 직접 읽는다. `data.pack`이 없으면 RAM 마운트는 하지 않는다 |
-| `Engine/analysis/**` 민감 텍스트 (offsets.json, `*_offsets.txt`, zone_table, list JSON/MD 등) | `Engine/analysis_text.pack` | 실행 중 `%TEMP%/manmabot_an_*`에 materialize + overlay. Python은 `analysis_registry_file` / `source_registry`. C DLL은 절대 TEMP 경로. 정상 종료 시 TEMP 삭제 |
-| 분석 DLL / `.pyd` / 드라이버 | 평문 유지 | 그대로 로드 |
+| `Engine/analysis/**` 민감 텍스트 (+ `.csv`) 및 `analysis/dll/*.dll` | `Engine/analysis_text.pack` (MMB2) | 실행 중 `%TEMP%/manmabot_an_*`에 text+`dll/` materialize + overlay. `analysis_registry_file` / `analysis_dll_path`. 정상 종료 시 TEMP 삭제. 고객 zip에는 팩에 빠진 뒤 **빈 analysis 하위 폴더를 붕괴** (RBF-010) |
+| `Engine/analysis/bin/*.exe` | 평문 (화이트리스트만) | 고객 zip: `realtime_monitor_full.exe` + `inventory_listen.exe`만. 나머지 연구용 `*_930.exe`는 deny (RBF-010) |
+| Nuitka `.pyd` / WinNotify 드라이버 | 평문 유지 | `LoadLibrary` / 드라이버 설치 모델 (Wave 3 상용 임베드 후보) |
 
 의도적으로 **보호하지 않는 것**:
 
