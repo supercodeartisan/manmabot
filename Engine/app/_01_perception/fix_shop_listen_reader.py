@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-_DLL = Path(__file__).resolve().parents[2] / "analysis" / "dll"
 _LOCK = threading.Lock()
 _SHARED: Optional["ShopListenReader"] = None
 _LAST_SHOP_SNAPSHOT: Optional[dict[str, Any]] = None
@@ -20,14 +19,12 @@ _LAST_SHOP_SNAPSHOT_AT: float = 0.0
 
 def default_dll_path() -> Path:
     """Newest shop image. A locked live DLL keeps the previous build beside it."""
-    candidates = [
-        _DLL / "shop_listen.new.dll",
-        _DLL / "shop_listen.dll",
-    ]
-    found = [path for path in candidates if path.is_file()]
-    if not found:
-        return candidates[-1]
-    return max(found, key=lambda path: path.stat().st_mtime)
+    from session.analysis_overlay import analysis_dll_prefer_newer
+
+    return analysis_dll_prefer_newer(
+        "shop_listen.new.dll",
+        "shop_listen.dll",
+    )
 
 
 class ShopListenReader:

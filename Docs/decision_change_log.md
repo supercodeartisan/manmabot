@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-21 — network party sync on hello and resume
 
 Intent: A member with a leader address waits for the leader, then joins the current rally without a manual restart. The leader sends one snapshot (session, rev, running/paused, policy, rally phase). Pause on the leader keeps the remaining forming and stand time. Pause on a member does not. A new leader run ignores the previous session.
@@ -98,6 +99,24 @@ Affects: same-map party follow while a `formation_path` is active. No shared pat
 Consent: user ("구현해줘" / "update like this the party movement"), including the five-part scope and the decide() regression tests.
 Result: `python -m pytest app/_06_party/tests/test_formation_march.py app/_06_party/tests/test_close_follow.py app/_06_party/tests/test_make_way_pace.py` → 44 passed. Not run in game. `MARCH_GAP_TILES` (4) and the two-tile look-ahead are unmeasured assumptions. Click-to-first-position delay is not a timer; progress is recorded only from an observed tile.
 =======
+=======
+## 2026-11-21 — Portable deny prune + empty-dir collapse
+
+Intent: Customer zip must not keep compiled test trees, training debris, or empty `Engine/analysis` shells left after Stage5 strip.
+Shared: `build_release.is_denied` / `prune_denied_from_portable` / `collapse_empty_dirs_in_portable` (Stage4 + Stage5); `deny_globs.txt`; `compile_inplace` skip denied; `pack_assets` skip `*.new.dll`. Docs: playbook, incremental, STAGE5, SENSITIVE, LICENSE_HANDBOOK. No login/move/combat/HP edits.
+Affects: portable contents + analysis pack membership only.
+Consent: user (“yes” after audit cleanup; “yes” for empty-folder collapse + handbook/docs; “yes” for analysis/bin whitelist).
+Result: prune + empty collapse; analysis/bin keep monitor+inventory only; handbook/playbook updated (RBF-010).
+
+## 2026-11-21 — Defense Wave1–2: BUILD carry-forward, analysis dll/csv pack, websocket compile
+
+Intent: Keep hunt/license logic unchanged while closing pack/BUILD holes and hiding analysis DLLs+csv from the customer zip (TEMP materialize like registry text). Compile websocket to `.pyd`.
+Shared: `mmb2_stage5.publish_verified_pack_pair` / `carry_forward_existing_pack`; `pack_assets` suffixes; `analysis_overlay.analysis_dll_path`; perception DLL path helpers; `incremental_release` MMB2 analysis when CEK set; manifests compile/deny. No login/move/combat/HP/MapSubsystem decision edits.
+Affects: pack-only portable contents, BUILD.json both packs, reader DLL resolution. Wave 3 commercial embed deferred (`packaging/COMMERCIAL_NATIVE_POC.md`).
+Consent: user approved attached defense plan.
+Result: code + unit tests (5); incremental + pack_assets + verify_stage5 + Stage4. BUILD `56f4f3ab-…` pins both packs (same CEK). analysis pack 35 files (registry+csv+dll); TEMP materialize+CDLL smoke OK. Live hunt smoke skipped (no `LC.exe` this session). Wave3 gates in `packaging/COMMERCIAL_NATIVE_POC.md` only.
+
+>>>>>>> origin
 ## 2026-11-21 — body_pose: pack overlay for find anchors / action VFTs
 
 Intent: Customer pack-only builds had `body pose: action slot unread` / `moving=unread` because `body_pose` read `Engine/analysis/registry/*` on disk while those texts live only in TEMP from `analysis_text.pack`. Main/dev trees with plain analysis files were fine.

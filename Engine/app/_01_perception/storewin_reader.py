@@ -14,16 +14,17 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["StorewinReader"] = None
 
 
 def default_dll_path() -> Path:
+    from session.analysis_overlay import analysis_dll_path
+
     env = os.environ.get("STOREWIN_DLL", "").strip()
     if env:
         return Path(env)
-    return _ANALYSIS / "dll" / "storewin_build.dll"
+    return analysis_dll_path("storewin_build.dll")
 
 
 def default_registry_path() -> Path:

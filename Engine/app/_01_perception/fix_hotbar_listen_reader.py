@@ -12,14 +12,15 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["HotbarListenReader"] = None
 
 
 def default_dll_path() -> Path:
-    built = _ANALYSIS / "dll" / "hotbar_listen_build.dll"
-    live = _ANALYSIS / "dll" / "hotbar_listen.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    built = analysis_dll_path("hotbar_listen_build.dll")
+    live = analysis_dll_path("hotbar_listen.dll")
     if built.is_file() and (
         not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
     ):

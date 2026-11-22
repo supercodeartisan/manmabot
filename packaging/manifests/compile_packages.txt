@@ -14,5 +14,6 @@ Engine login
 Engine autologin
 Engine tool
 Engine crypto
+Engine websocket
 UI ui_qt
 UI ui

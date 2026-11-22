@@ -91,6 +91,9 @@ def list_compile_targets(
     only_packages: set[str] | None = None,
 ) -> list[Path]:
     keep = load_keep_scripts()
+    from build_release import is_denied, load_manifests
+
+    _, _, deny_globs = load_manifests()
     targets: list[Path] = []
     for parent, package in load_compile_packages():
         if only_packages and package not in only_packages:
@@ -110,6 +113,8 @@ def list_compile_targets(
                 continue
             rel = path.relative_to(PORTABLE_DIR).as_posix()
             if rel in keep:
+                continue
+            if is_denied(rel, deny_globs):
                 continue
             targets.append(path)
     return targets
