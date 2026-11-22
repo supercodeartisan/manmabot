@@ -223,6 +223,64 @@ def test_rally_wait_stands_before_the_hunt_walk():
     assert standing.emitted == [(ActionType.IDLE, 0.45, "party rally wait")]
 
 
+def test_same_map_goal_at_the_gate_keeps_the_dungeon_teleport():
+    from app._04_decision.world_nav.npc_teleporters import (
+        NpcTeleporterLink,
+        filter_teleporter_links_for_goal,
+    )
+
+    gate = NpcTeleporterLink(
+        behavior_id="teleport_gludin",
+        name="글루딘",
+        map_id=4,
+        npc_x=32727,
+        npc_y=32931,
+        adena_cost=220,
+        teleport_kind="dungeon_gate",
+        destination_dungeon=7,
+        land_map_id=4,
+        land_x=32727,
+        land_y=32931,
+    )
+    near = filter_teleporter_links_for_goal(
+        [gate], [], goal_map=4, same_map=True, goal_x=32726, goal_y=32921
+    )
+    assert [link.behavior_id for link in near] == ["teleport_gludin"]
+    far = filter_teleporter_links_for_goal(
+        [gate], [], goal_map=4, same_map=True, goal_x=33000, goal_y=33000
+    )
+    assert far == []
+
+
+def test_rally_wait_fights_a_mob_on_the_leader(monkeypatch):
+    from app._04_decision.behavior_tree import Status
+    from app._04_decision.behaviors import mode_actions
+    from app._04_decision.behaviors.mode_ticks import _step_party_rally_wait
+
+    def hit(state, blackboard):
+        del state, blackboard
+        return Status.SUCCESS
+
+    monkeypatch.setattr(mode_actions, "approach_counterattack", hit)
+
+    class _State:
+        def monsters(self):
+            return []
+
+    class _Board:
+        def __init__(self):
+            self.scratch = {"party_rally_wait": True}
+            self.current_goal = ""
+            self.emitted = []
+
+        def emit(self, kind, priority, reason):
+            self.emitted.append((kind, reason))
+
+    board = _Board()
+    assert _step_party_rally_wait(_State(), board) is Status.SUCCESS
+    assert board.emitted == []
+
+
 def test_rally_point_is_sent_to_members(monkeypatch):
     from websocket import party_orders
     from websocket.party_orders import MemberOrders, Rally, rally_message

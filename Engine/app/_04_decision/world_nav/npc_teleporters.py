@@ -39,6 +39,9 @@ GROUND_ENTER_LINK_RADIUS = 400
 TELEPORTER_META_COST_TILES = 15
 # If start is within this Chebyshev of a goal ground_enter.from, prefer walk — no NPC TP.
 NEAR_ENTRANCE_NO_TELEPORTER_TILES = 50
+# If the goal is this close to a dungeon gate on the same map, keep that
+# teleporter. A goal elsewhere on the map still drops it.
+GATE_GOAL_KEEP_TILES = 48
 
 
 _behaviors_cache: tuple[int, list[Any]] | None = None
@@ -179,10 +182,13 @@ def filter_teleporter_links_for_goal(
     *,
     goal_map: int,
     same_map: bool,
+    goal_x: int | None = None,
+    goal_y: int | None = None,
 ) -> list[NpcTeleporterLink]:
     """Drop dungeon_gate links that do not serve the goal; keep field_land.
 
-    On the goal map, only field_land remains (dungeon_gate would leave it).
+    On the goal map, a dungeon_gate stays only when the goal is standing at
+    that gate. A far same-map goal does not take the dungeon door.
     """
     out: list[NpcTeleporterLink] = []
     gm = int(goal_map)
@@ -191,6 +197,8 @@ def filter_teleporter_links_for_goal(
             out.append(link)
             continue
         if same_map:
+            if _gate_serves_same_map_goal(link, gm, goal_x, goal_y):
+                out.append(link)
             continue
         if dungeon_gate_serves_goal(
             transitions,
@@ -199,6 +207,19 @@ def filter_teleporter_links_for_goal(
         ):
             out.append(link)
     return out
+
+
+def _gate_serves_same_map_goal(
+    link: NpcTeleporterLink,
+    goal_map: int,
+    goal_x: int | None,
+    goal_y: int | None,
+) -> bool:
+    if goal_x is None or goal_y is None:
+        return False
+    if int(link.land_map_id) != int(goal_map):
+        return False
+    return _cheb(link.land_x, link.land_y, int(goal_x), int(goal_y)) <= GATE_GOAL_KEEP_TILES
 
 
 @dataclass(frozen=True)

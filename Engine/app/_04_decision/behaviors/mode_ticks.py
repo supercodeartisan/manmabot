@@ -813,17 +813,12 @@ def _step_spell_support(
 def _step_party_rally_wait(
     state: "GameState", blackboard: "Blackboard"
 ) -> Status | None:
-    """Stand on the rally mark. The hunt walk starts when this flag drops."""
-    del state
+    """Stand on the rally mark. A mob on the leader or a member is fought first."""
     if not blackboard.scratch.get("party_rally_wait"):
         return None
-    blackboard.current_goal = "rally"
-    blackboard.emit(
-        ActionType.IDLE,
-        priority=0.45,
-        reason="party rally wait",
-    )
-    return Status.SUCCESS
+    from app._04_decision.behaviors.mode_actions import rally_stand_or_fight
+
+    return rally_stand_or_fight(state, blackboard)
 
 
 def _step_farm_engage(

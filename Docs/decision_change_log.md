@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — gate teleport on the rally stand, and fight during the wait
+
+Intent: A member planning to the leader on the same map may use the dungeon-gate teleporter when the leader is standing at that gate. A same-map goal far from the gate still walks or uses a scroll. While the leader is standing for the rally, a monster hitting the leader or a party member on this screen is attacked before the idle stand.
+Shared: `filter_teleporter_links_for_goal`, `Planner.plan`, `rally_stand_or_fight`, `_step_party_rally_wait`, `WorldNavSession._pause_for_rally`. Login clicks, retreat, and solo unstick were not changed.
+Affects: member world-nav to a same-map rally or leader, and the leader's rally stand in world-nav and farm columns.
+Consent: user (fix the member gate route and the idle rally stand).
+Result: `test_leader_rally.py` passed (11), including the gate kept beside the Gludin landing and dropped for a far same-map goal, and a rally stand that fights before idling. Not run in the Windows game.
+
 ## 2026-11-22 — member snapshot is a real party frame
 
 Intent: A snapshot sent to one member keeps its `party_sync` body. A command dict is the payload, not an envelope. A dropped socket releases that character's connection id, so the same character can hello again on a new id.

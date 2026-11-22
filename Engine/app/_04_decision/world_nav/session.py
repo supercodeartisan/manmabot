@@ -417,7 +417,7 @@ class WorldNavSession:
             return self._emit_gate(blackboard)
 
         if self.step_i >= len(self.plan.steps):
-            if self._pause_for_rally(pose, blackboard):
+            if self._pause_for_rally(pose, blackboard, state):
                 return Status.SUCCESS
             self.complete()
             return None
@@ -425,7 +425,7 @@ class WorldNavSession:
         step = self.plan.steps[self.step_i]
         tokens = api.state_tokens()
         if self.phase == "ready":
-            if self._pause_for_rally(pose, blackboard):
+            if self._pause_for_rally(pose, blackboard, state):
                 return Status.SUCCESS
             api.emit_state(
                 tokens.STEP_BEGIN,
@@ -453,7 +453,7 @@ class WorldNavSession:
 
         return Status.SUCCESS
 
-    def _pause_for_rally(self, pose: Any, blackboard: Any) -> bool:
+    def _pause_for_rally(self, pose: Any, blackboard: Any, state: Any = None) -> bool:
         """Party start stand. Solo leaves the hook empty and never pauses here."""
         hold = WorldNavHooks.should_hold
         if hold is None:
@@ -464,12 +464,9 @@ class WorldNavSession:
             return False
         if not paused:
             return False
-        blackboard.current_goal = "rally"
-        blackboard.emit(
-            ActionType.IDLE,
-            priority=0.45,
-            reason="party rally wait",
-        )
+        from app._04_decision.behaviors.mode_actions import rally_stand_or_fight
+
+        rally_stand_or_fight(state, blackboard)
         return True
 
     def _snap_live_origin(self, blackboard: Any) -> bool:

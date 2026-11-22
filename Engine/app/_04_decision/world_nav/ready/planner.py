@@ -212,6 +212,8 @@ class WorldNavPlanner:
                 g.transitions,
                 goal_map=int(goal.map_id),
                 same_map=same_map,
+                goal_x=int(goal.x) if goal.kind == "point" and goal.x is not None else None,
+                goal_y=int(goal.y) if goal.kind == "point" and goal.y is not None else None,
             )
             if not tp_links:
                 allow_npc_tp = False

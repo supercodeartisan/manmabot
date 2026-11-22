@@ -2628,6 +2628,51 @@ def approach_counterattack(
     return _loot_counter_drops(state, blackboard)
 
 
+def rally_stand_or_fight(state: Any, blackboard: "Blackboard") -> Status:
+    """Rally stand. Fight a mob on the leader or a party member before idling."""
+    fought = _rally_fight(state, blackboard)
+    if fought is not None:
+        return fought
+    blackboard.current_goal = "rally"
+    blackboard.emit(
+        ActionType.IDLE,
+        priority=0.45,
+        reason="party rally wait",
+    )
+    return Status.SUCCESS
+
+
+def _rally_fight(state: Any, blackboard: "Blackboard") -> Status | None:
+    if not callable(getattr(state, "monsters", None)):
+        return None
+    fought = approach_counterattack(state, blackboard)
+    if fought is not None:
+        return fought
+    party = getattr(state, "last_party", None)
+    if not isinstance(party, dict):
+        return None
+    from app._06_party.assist import resolve_member_under_attack
+
+    player = getattr(state, "player", None)
+    ident = getattr(player, "identity", None) if player is not None else None
+    me = str(getattr(ident, "name", "") or "")
+    target = resolve_member_under_attack(
+        state,
+        party,
+        self_name=me,
+        origin=getattr(blackboard, "world_origin", None),
+    )
+    if target is None:
+        return None
+    return continue_or_start_combat(
+        state,
+        blackboard,
+        allow_new=True,
+        chosen=target,
+        reason="rally member",
+    )
+
+
 def farm_loot_or_combat(
     state: "GameState",
     blackboard: "Blackboard",
