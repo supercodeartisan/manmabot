@@ -595,6 +595,10 @@ def finish_retreat(blackboard: "Blackboard") -> None:
     for_reason = blackboard.scratch.pop("retreat_for", None)
     blackboard.scratch.pop("mother_tree_trip", None)
     blackboard.scratch.pop("mother_tree_cast_at", None)
+    blackboard.scratch.pop("mother_tree_map_changed", None)
+    blackboard.scratch.pop("mother_tree_map_at", None)
+    blackboard.scratch.pop("mother_tree_zone", None)
+    blackboard.scratch.pop("mother_tree_regen_watch", None)
     blackboard.scratch.pop("hp_retreat_kind", None)
     blackboard.scratch.pop("hp_post_land_tree_tried", None)
     from app._04_decision.talking_scroll import (

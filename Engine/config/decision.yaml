@@ -61,7 +61,8 @@ decision:
 
   # --- Elf Return to Mother Tree ---------------------------------------------
   # Learned the spell: on critical HP, warp to the tree. Body to Mind when
-  # HP ≥ 85% and MP < 80%. Leave retreat at HP ≥ 95%. false = normal escape TP.
+  # HP ≥ 85% and MP < 80%. Leave when HP and MP are both ≥ almost_full (95%).
+  # false = normal escape TP.
   elf:
     mother_tree: true
 

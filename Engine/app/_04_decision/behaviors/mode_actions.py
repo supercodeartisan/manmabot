@@ -1358,20 +1358,42 @@ def apply_hp_actions(
     convert = maybe_hp_to_mp(state, blackboard)
     if convert is not None:
         return convert
-    _log_hp_idle(blackboard, ratio, can, actions)
+    _log_hp_idle(blackboard, state, ratio, can, actions)
     return None
 
 
 _SCRATCH_HP_IDLE_LOG_AT = "hp_idle_log_at"
 
 
+def _mp_idle_text(state: "GameState") -> str:
+    """Current/max and ratio for the idle line. ``?`` when MP is unread."""
+    try:
+        from app._04_decision.mode_control import mp_ratio
+
+        player = getattr(state, "player", None)
+        if player is None:
+            return "?"
+        mp = getattr(player, "mp", None)
+        max_mp = getattr(player, "max_mp", None)
+        ratio = mp_ratio(state)
+        if mp is None or max_mp is None or ratio is None:
+            return "?"
+        return "%d/%d (%.2f)" % (int(mp), int(max_mp), float(ratio))
+    except (TypeError, ValueError, OverflowError):
+        return "?"
+
+
 def _log_hp_idle(
     blackboard: "Blackboard",
+    state: "GameState",
     ratio: float,
     can: dict[str, bool],
     actions: list,
 ) -> None:
-    """Throttle-log when HP is under an enabled gate but nothing could fire."""
+    """Throttle-log when HP is under an enabled gate but nothing could fire.
+
+    MP is text on that same line. It does not change the gate or the 2s clock.
+    """
     from app._04_decision.hp_actions import action_threshold
     from app.bot_log import get_logger
 
@@ -1395,7 +1417,10 @@ def _log_hp_idle(
     blackboard.scratch[_SCRATCH_HP_IDLE_LOG_AT] = now
     ready = ",".join(k for k, ok in can.items() if ok) or "-"
     get_logger("hp").info(
-        "hp idle ratio=%.2f can=%s", float(ratio), ready
+        "hp idle ratio=%.2f mp=%s can=%s",
+        float(ratio),
+        _mp_idle_text(state),
+        ready,
     )
 
 

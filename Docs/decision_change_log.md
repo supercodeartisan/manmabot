@@ -1,5 +1,41 @@
 # Decision change log
 
+## 2026-11-22 — warehouse deposit line clicks the glyph
+
+Intent: The warehouse dialog opened and the cursor reached "물건을 맡긴다", but the shop-button orbit and 1–2px land error missed that short line, so the deposit list never opened. The visit then ended and the character left for the world tree with the junk still in the bag. Click that line on the calibrated pixel, rest so the glyph can highlight, and if the deposit list is still closed step 4, 8, then 12px down the same line. Once the list is the deposit list, store the same keep-list misses as before.
+Shared: `aim_and_click_exact` and `open_store_deposit_tab`, called from `execute_calibrated_sell` only when the behavior is store. Merchant `_click_uv` / `aim_and_click`, buy, scroll, confirm, the keep list, the Adena skip, and the one-visit warehouse stop stay as they are.
+Affects: overweight and pre-retreat warehouse deposit (`give_goods`). After the deposit list opens, junk outside the keep list is still stored, then the world-tree step runs.
+Side effects: up to four option clicks and about 1.5s between them while the list stays closed. A retrieve list is closed with two Esc presses and those rows are not stored. Merchant sell timing is unchanged.
+Consent: user (make deposit work; keep storing the junk; do not drop the warehouse step).
+Result: code + unit tests. Live warehouse visit not run this session.
+
+## 2026-11-22 — mother tree return waits for both bars
+
+Intent: The hunt return after Teleport to Mother starts only when HP and MP are both at least the almost-full ratio (95%). A bar that is not in memory does not count as full. Once HP is already on that line and the landing is confirmed (map changed, 세계수의 가호, or the faster-regen mark), another Teleport to Mother is not pressed, so the cast cannot spend the MP this stand is still filling. Heal and Body to Mind keep their existing bands.
+Shared: `_tick_mother_tree_retreat` and `_mother_tree_landing_confirmed`. `_hold_until_world_tree_blessing` is unchanged and still runs while HP is under 95%, and while HP is full but the landing is not confirmed. `begin_retreat`, `apply_hp_actions`, field Body to Mind, and non-tree retreat exit (`retreat_exit_ready`, HP 95% only) are unchanged.
+Affects: every mother-tree recharge stand (HP retreat, post-respawn, post-land, teleport fallback). The return is `finish_retreat` → world nav, and it runs on that joint condition.
+Side effects: after a confirmed landing, MP under 95% keeps the character at the tree. Body to Mind still stops once MP is over 80%, so the last stretch is the aura. If MP never reaches 95%, the stand does not end. A same-map press on map 4 with no aura still recasts, because that landing is not confirmed. Both bars already at 95% on a recharge tick starts the return without another map wait; an HP retreat begins below that line.
+Consent: user (apply the agreed exit: both nearly full, then start the hunt return; review side effects while editing).
+Result: code + unit tests. Live stand not run this session.
+
+## 2026-11-21 — world-tree stand: map change, then blessing or regen
+
+Intent: At the world tree, heal and Body to Mind were stuck behind an unreadable buff list (`waiting for world tree blessing`) until HP hit 95%. After Teleport to Mother, a MapSubsystem mapId change is the first arrival check. A readable 세계수의 가호 recovers in place. A readable list without it presses the skill again, and Body to Mind raises MP to 15 first only when the map actually changed. An unreadable list recovers in place only when HP and MP rise faster than the hunt/move baseline.
+Shared: `_hold_until_world_tree_blessing`, `_tick_mother_tree_retreat`, `maybe_hp_to_mp` / `maybe_hp_to_mp_at_tree` (blessing skipped only when `mother_tree_zone` is `regen`), `finish_retreat` drops the new scratch keys. `begin_retreat`, `apply_hp_actions`, field Body to Mind, and the 95% exit are unchanged.
+Affects: standing after Teleport to Mother. Field heal, potions, and Body to Mind still require the blessing.
+Side effects: a failed cast that never changes map retries after 2s without Body to Mind. On map 4, an unreadable list waits up to 8s of slow vitals before that retry. HP under 20% does not convert to buy the 15 MP.
+Consent: user (map change, then buff; recast, Body to Mind until MP 15, recast again; unread buffs use faster-than-field HP/MP). Follow-up: review the retreat column and shared HP paths so the new stand does not leak into hunt, party, or a stale buff read.
+Result: code + unit tests. A blessing read still on the hunt map does not start tree recovery, and a one-step potion jump is not treated as the aura. The recovery checkbox still gates Body to Mind, including the press that buys 15 MP. Field heal, potions, and party Body to Mind are unchanged. The tree return is the both-bars rule in the entry above. Live stand not run this session.
+
+## 2026-11-21 — HP idle log also records MP
+
+Intent: The 2s `hp idle` line already records HP ratio. Append current/max MP and MP ratio on that same line. Unknown MP is `?`.
+Shared: `_log_hp_idle` / `_mp_idle_text` in `mode_actions.py`. Called from `apply_hp_actions` after heal, retreat, and HP-to-MP already returned. Gate, 2s clock, and those returns are unchanged.
+Affects: session `[hp]` text only, and only when that idle line was already due. Hunt, retreat, loot, login, potion, and heal decisions stay as they are.
+Side effects: the existing line is longer (`mp=18/45 (0.40)`). A bad MP read cannot raise out of the HP picker; it prints `mp=?`.
+Consent: user (“그래 그 과정에 부작용이 나타나지 않도록 갱신 잘해줘”).
+Result: idle line carries MP. No new timer and no new log when HP is above every enabled gate.
+
 ## 2026-11-21 — Portable deny prune + empty-dir collapse
 
 Intent: Customer zip must not keep compiled test trees, training debris, or empty `Engine/analysis` shells left after Stage5 strip.

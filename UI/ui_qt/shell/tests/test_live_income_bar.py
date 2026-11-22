@@ -19,7 +19,12 @@ from PySide6.QtWidgets import QApplication
 
 from ui_qt.editors.task_editor import TaskEditor
 from ui_qt.shell import live_income_bar as income
-from ui_qt.shell.live_income_bar import LiveIncomeBar, _Meter
+from ui_qt.shell.live_income_bar import (
+    LiveIncomeBar,
+    _Meter,
+    place_adena_columns,
+    split_income_cards,
+)
 from ui_qt.shell.schedule_shell import ScheduleShell
 
 
@@ -302,6 +307,77 @@ def test_reset_buttons_sit_in_the_card_corners_and_reset_one_card() -> None:
         app.processEvents()
         assert exp.toolTip() == "重置经验值统计"
         assert adena.toolTip() == "重置金币统计"
+        bar.shutdown()
+    finally:
+        income._read_sample = lambda: (None, None, None)  # type: ignore[assignment]
+
+
+def test_level_card_width_stays_on_the_existing_split() -> None:
+    """A longer adena measurement must not take width from the level card."""
+    level, adena = split_income_cards(1000, 400)
+    assert level == 600
+    assert adena == 400
+    narrow_level, narrow_adena = split_income_cards(700, 500)
+    assert narrow_level == 700 * 0.62
+    assert narrow_adena == 700 - narrow_level
+    longer_level, _longer_adena = split_income_cards(700, 900)
+    assert longer_level == narrow_level
+
+
+def test_wide_adena_card_keeps_the_holdings_column() -> None:
+    natural_hold = 220.0
+    text_w = 90.0
+    # Same content width _adena_width builds: icon, hold, gutter, rate, pad.
+    content = 110.0 + natural_hold + text_w
+    card_left = 500.0
+    card_right = card_left + content
+    hold_x = card_left + 72.0
+    hold_w, rate_x, placed = place_adena_columns(
+        card_left, card_right, hold_x, natural_hold, text_w
+    )
+    assert hold_w == natural_hold
+    assert placed == text_w
+    assert rate_x + placed <= card_right - 29.0
+    assert rate_x >= hold_x + natural_hold + 6.0
+
+
+def test_long_runtime_keeps_the_rate_inside_a_narrow_card() -> None:
+    card_left, card_right = 400.0, 680.0
+    hold_x = card_left + 72.0
+    hold_w, rate_x, placed = place_adena_columns(
+        card_left, card_right, hold_x, 420.0, 96.0
+    )
+    assert placed == 96.0
+    assert rate_x + placed <= card_right - 29.0
+    assert rate_x >= card_left
+    assert hold_w < 420.0
+    assert hold_x + hold_w + 6.0 <= rate_x
+
+
+def test_narrow_bar_still_paints_with_a_long_runtime() -> None:
+    _app()
+    income._read_sample = lambda: (9286, 9, 54.3)  # type: ignore[assignment]
+    bar = LiveIncomeBar(language="ko", running=lambda: True, buying=lambda: False)
+    try:
+        bar.resize(640, 88)
+        bar._view = {
+            "level": 40,
+            "exp": 12.5,
+            "exp_rate": 3.0,
+            "adena": 12_345_678,
+            "adena_rate": 1_500_000,
+            "adena_gained": 8_765_432,
+            "elapsed": 6 * 3600,
+        }
+        bar.show()
+        app = QApplication.instance()
+        assert app is not None
+        bar.repaint()
+        app.processEvents()
+        for name in ("income_exp_reset", "income_adena_reset"):
+            button = bar.findChild(type(bar._exp_reset), name)
+            assert button is not None
+            assert bar.rect().contains(button.geometry())
         bar.shutdown()
     finally:
         income._read_sample = lambda: (None, None, None)  # type: ignore[assignment]
