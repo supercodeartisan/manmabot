@@ -542,6 +542,31 @@ def list_shortest_paths(
     return [one] if one else []
 
 
+def guide_path(
+    terrain: TerrainMap,
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    *,
+    sticky_path: Sequence[tuple[int, int]] | None = None,
+    diverse: bool = True,
+) -> list[tuple[int, int]]:
+    """Movement guide. ``diverse`` picks among equal shortest paths.
+
+    Party march passes ``diverse=False`` so the same start and goal keep one
+    shortest path. A still-valid previous hop is kept by the caller.
+    """
+    start_xy = (int(start[0]), int(start[1]))
+    goal_xy = (int(goal[0]), int(goal[1]))
+    if not diverse:
+        reused = sticky_shortest_suffix(sticky_path, terrain, start_xy, goal_xy)
+        if reused:
+            return list(reused)
+        return find_path(terrain, start_xy, goal_xy)
+    return find_path_random_shortest(
+        terrain, start, goal, sticky_path=sticky_path
+    )
+
+
 def find_path_random_shortest(
     terrain: TerrainMap,
     start: tuple[int, int],
@@ -778,6 +803,7 @@ def plan_travel_click(
     force_flat: bool = False,
     max_hop: int | None = None,
     sticky_path: Sequence[tuple[int, int]] | None = None,
+    diverse: bool = True,
 ) -> tuple[Optional[Position], list[tuple[int, int]], Optional[tuple[int, int]]]:
     """Pathfind from origin to goal and pick a content click destination.
 
@@ -839,12 +865,13 @@ def plan_travel_click(
             slack=slack,
             max_hop=max_hop,
             sticky_path=sticky_path,
+            diverse=diverse,
         )
         return dest, path, wp
 
     start = (origin.x, origin.y)
-    path = find_path_random_shortest(
-        terrain, start, goal, sticky_path=sticky_path
+    path = guide_path(
+        terrain, start, goal, sticky_path=sticky_path, diverse=diverse
     )
     if not path:
         return None, [], None

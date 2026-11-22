@@ -1354,20 +1354,49 @@ class PartyMemberManager:
         # Assist already won above. Hold and follow yield to a pile.
         # A moving leader and a seat catch-up do not cancel that pile.
         from .loot import (
+            note_party_loot_window,
+            party_designated_keeps_loot,
             party_loot_radius,
             party_loot_walks,
+            party_loot_window_open,
             party_may_start_loot,
             party_should_drop_loot,
+            release_party_loot_window,
         )
 
         approaching = str(result.reason).startswith("combat_approach")
-        if approaching and self._nav_blackboard is not None:
-            from .loot import clear_party_loot_sticky
+        march_go = (
+            self._march_move is not None
+            and bool(getattr(self._march_move, "advance", False))
+            and str(getattr(self._march_move, "reason", "") or "") == "go"
+        )
+        fighting_now = approaching or result.kind is MemberKind.ASSIST
+        loot_scratch = (
+            getattr(self._nav_blackboard, "scratch", None)
+            if self._nav_blackboard is not None
+            else None
+        )
+        note_party_loot_window(loot_scratch, fighting=fighting_now, now=time.monotonic())
+        designated_loot = party_designated_keeps_loot(
+            cfg, loot_scratch, fighting=fighting_now, now=time.monotonic()
+        )
+        if march_go or (fighting_now and not designated_loot):
+            if self._nav_blackboard is not None:
+                from .loot import clear_party_loot_sticky
 
-            clear_party_loot_sticky(self._nav_blackboard)
-        can_loot_now = party_may_start_loot(
-            result.kind.value, allowed=loot_own is not None
-        ) and not approaching
+                clear_party_loot_sticky(self._nav_blackboard)
+            if march_go:
+                release_party_loot_window(loot_scratch)
+        can_loot_now = False
+        if not march_go and loot_own is not None:
+            if designated_loot and party_loot_window_open(loot_scratch, time.monotonic()):
+                can_loot_now = True
+            else:
+                can_loot_now = (
+                    party_may_start_loot(result.kind.value, allowed=True)
+                    and not approaching
+                    and not fighting_now
+                )
         loot_max_tiles = party_loot_radius(cfg) if can_loot_now else 0
         if (
             can_loot_now
@@ -1466,6 +1495,10 @@ class PartyMemberManager:
             )
         if result.reason in ("invite_before_join", "party_leader_unconfirmed"):
             reason = result.reason
+        # A live attack step is this tick. An open follow nav or an older
+        # march does not keep the member on the previous route.
+        if str(result.reason).startswith("combat_approach"):
+            self._join_nav.clear()
         shared_focus = self.runtime.assist_src in FOCUS_LIVE
         outside_support = (
             leader_dist is None
@@ -1484,9 +1517,11 @@ class PartyMemberManager:
         if self._leader_orders_paused():
             rally_reason = str(getattr(getattr(self._join_nav, "session", None), "reason", "") or "")
             paused_rally = rally_reason.startswith("party_rally")
-        if paused_rally or hold_join or not confirmed:
+        if str(result.reason).startswith("combat_approach"):
             pass
-        elif self._join_nav.active and result.kind in (
+        elif paused_rally or hold_join or not confirmed:
+            pass
+        elif getattr(self._join_nav, "active", False) and result.kind in (
             MemberKind.FOLLOW,
             MemberKind.JOIN_MAP,
             MemberKind.WAIT,
@@ -2185,10 +2220,12 @@ class PartyMemberManager:
     def _need_potion(player: Any, cfg: PartyMemberConfig) -> bool:
         """Same drink line as solo: the recovery HP-potion row, not the party 50%."""
         del cfg
+        if player is None:
+            return False
         from app._04_decision import player_mode as pm
         from app._04_decision.hp_actions import action_threshold, normalize_hp_actions
 
-        if not pm.USE_HP_POTION or player is None:
+        if not pm.USE_HP_POTION:
             return False
         try:
             ratio = float(getattr(player, "hp_ratio", 1.0) or 1.0)

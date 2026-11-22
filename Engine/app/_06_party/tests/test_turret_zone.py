@@ -59,7 +59,7 @@ def test_edge_fight_continues_and_a_wall_detour_is_dropped() -> None:
 def test_empty_zone_looks_inside_before_the_dot(monkeypatch) -> None:
     monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
 
-    def _plan(_terrain, _origin, goal):
+    def _plan(_terrain, _origin, goal, **_kwargs):
         hop = (int(goal[0]), int(goal[1]))
         return ("click", [hop], hop)
 

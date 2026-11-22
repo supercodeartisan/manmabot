@@ -840,8 +840,14 @@ def plan_slot_hop(
     terrain = get_terrain_map()
     if terrain is None:
         return idle("no_terrain"), goal, "no_terrain", None
+    # March keeps one shortest path for the same start and goal. Other hops
+    # still pick among equal-length guides.
     dest, _path, waypoint = plan_travel_click(
-        terrain, origin, goal, max_hop=FOLLOW_CLICK_TILES
+        terrain,
+        origin,
+        goal,
+        max_hop=FOLLOW_CLICK_TILES,
+        diverse=kind != "march",
     )
     if dest is None:
         return idle("no_path"), None, "no_path", None

@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — a new leader path starts the member on the first tick
+
+Intent: When the leader confirms a walk, a member who can move steps toward that path's current slot on the first `decide()` after the frame, while the leader is still on the old tile. Ordinary follow remains the way a member who is behind rejoins. A live attack step is not kept on an older march or follow nav. Ordinary loot stops when that step is due. After a fight, drops stay open for at most 5 seconds; only the responsible seat keeps looting if the fight resumes. A shopkeeper who left the line does not hold the party's spacing. A paused leader does not walk. A fresh same-map leader tile during sync hold does.
+Shared: `BotController._leader_walk_party`, `plan_slot_hop` for `kind=="march"`, `PartyMemberManager.decide`, `note_party_loot_window`. Login clicks, retreat, and solo unstick were not changed. Attack range, `approach_tiles`, and `assist_leash_tiles` were not changed.
+Affects: party march start, march clicks, loot after a fight, shopkeeper pace, sync hold, and leader pause. A held sync does not walk. After the current orders are open, a same-map member walks to the live leader tile.
+Consent: user (leader's new move starts the party together, compared with `a3e3315`).
+Result: `test_formation_march.py` passed (16), including a still leader whose first shared frame makes the member's first `decide()` travel toward the slot. `app/_06_party/tests` passed 386. Nine failures are the existing missing `scipy` import. Not run in the Windows game.
+
 ## 2026-11-22 — moving-farm assist keeps the shared target
 
 Intent: While a shared target is still the member's job, a tick that is approaching that target or catching up to the leader does not take a formation hop. A hop that cannot be clicked this tick waits for the next position. A missed or ambiguous sighting does not attack. A cleared, expired, changed, or confirmed-dead focus releases the approach, and the formation march can run again.

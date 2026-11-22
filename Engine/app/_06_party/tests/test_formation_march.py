@@ -102,7 +102,7 @@ def march_world(monkeypatch):
     def _terrain():
         return _Open()
 
-    def _click(terrain, origin, goal, max_hop=2):
+    def _click(terrain, origin, goal, max_hop=2, **_kwargs):
         ox, oy = int(origin.x), int(origin.y)
         gx, gy = int(goal[0]), int(goal[1])
         sx = 0 if gx == ox else (1 if gx > ox else -1)
@@ -649,3 +649,143 @@ def test_same_count_reconnect_repeats_the_current_path():
     )
     assert resent is not None and resent["rev"] == first["rev"]
     assert resent["tiles"] == first["tiles"]
+
+
+def test_a_still_leader_publishes_the_path_and_the_member_steps(
+    monkeypatch, orders, march_world
+):
+    """Leader tile stays put. The first received path is a slot step, not a hold."""
+    from app._02_state.enums import ActionType
+
+    tiles = [(10, 10), (11, 10), (12, 10), (13, 10)]
+    share = MarchShare()
+    body = share.update(
+        map_id=4,
+        here=(10, 10),
+        guide=tiles,
+        traveling=True,
+        pace_idle=False,
+        cancel=False,
+        terrain=_Open(),
+        seats=[(10, 9)],
+    )
+    assert body is not None and body.get("clear") is not True
+    assert [11, 10] in body["tiles"]
+    _deliver(orders, body)
+    mgr = _member(monkeypatch, orders)
+    intent = mgr.decide(SimpleNamespace(player=None, last_party=None, objects=[]))
+    hop = mgr.runtime.follow_hop
+    assert intent.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert hop is not None and (hop[0] > 10 or hop[1] != 9)
+
+
+def test_march_hop_asks_for_one_shortest_path(monkeypatch):
+    from app._06_party.intents import plan_slot_hop
+
+    seen = {}
+
+    def _click(terrain, origin, goal, max_hop=2, **kwargs):
+        seen["diverse"] = kwargs.get("diverse", True)
+        ox, oy = int(origin.x), int(origin.y)
+        hop = (ox + 1, oy)
+        return hop, [hop], hop
+
+    monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: _Open())
+    monkeypatch.setattr("app._04_decision.pathfinding.plan_travel_click", _click)
+    origin = SimpleNamespace(x=0, y=0)
+    plan_slot_hop(origin, (4, 0), previous_goal=None, previous_hop=None, kind="march")
+    assert seen["diverse"] is False
+    plan_slot_hop(origin, (4, 0), previous_goal=None, previous_hop=None, kind="stand")
+    assert seen["diverse"] is True
+
+
+def test_loot_window_keeps_only_the_designated_seat_after_a_refight():
+    from app._06_party.config import PartyMemberConfig
+    from app._06_party.loot import (
+        PARTY_LOOT_WINDOW_S,
+        note_party_loot_window,
+        party_designated_keeps_loot,
+        party_loot_window_open,
+        release_party_loot_window,
+    )
+
+    scratch = {}
+    plain = PartyMemberConfig(loot_role="none")
+    named = PartyMemberConfig(loot_role="responsible")
+    note_party_loot_window(scratch, fighting=True, now=0.0)
+    note_party_loot_window(scratch, fighting=False, now=1.0)
+    assert party_loot_window_open(scratch, 1.0)
+    assert not party_designated_keeps_loot(plain, scratch, fighting=True, now=3.0)
+    assert party_designated_keeps_loot(named, scratch, fighting=True, now=3.0)
+    assert not party_loot_window_open(scratch, 1.0 + PARTY_LOOT_WINDOW_S)
+    note_party_loot_window(scratch, fighting=True, now=10.0)
+    note_party_loot_window(scratch, fighting=False, now=11.0)
+    release_party_loot_window(scratch)
+    assert not party_designated_keeps_loot(named, scratch, fighting=True, now=12.0)
+
+
+def test_sync_hold_and_a_paused_leader_do_not_walk_an_old_order(
+    monkeypatch, orders, march_world
+):
+    """A held sync does not step. After it opens, the live leader tile does."""
+    from app._02_state.enums import ActionType
+
+    orders.leader_run = ""
+    orders.formation_path = _path_body([(10 + i, 10) for i in range(6)])
+    mgr = _member(monkeypatch, orders, tile=(10, 20))
+    mgr.set_world_origin(SimpleNamespace(x=10, y=9))
+    mgr.runtime.network_party = True
+    mgr.runtime.orders_open = True
+    mgr.runtime.sync_hold = True
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    waiting = mgr.decide(state)
+    assert waiting.action is not ActionType.TRAVELING
+    assert mgr.runtime.last_reason == "party_orders_held"
+
+    orders.leader_run = "paused"
+    mgr.runtime.sync_hold = False
+    paused = mgr.decide(state)
+    assert paused.action is not ActionType.TRAVELING
+    assert mgr.runtime.last_reason == "party_orders_held"
+
+    orders.leader_run = "running"
+    orders.formation_path = None
+    joined = mgr.decide(state)
+    assert joined.action is ActionType.TRAVELING
+    assert "leader" in str(joined.reason)
+    orders.leader_run = ""
+
+
+def test_shop_duty_returns_to_the_latest_slot(monkeypatch, orders, march_world):
+    from app._02_state.enums import ActionType
+
+    calls = {"n": 0}
+
+    def _duty(*_a, **_k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            from app._06_party.types import ActionIntent
+
+            return ActionIntent(action=ActionType.IDLE, reason="shop")
+        return None
+
+    monkeypatch.setattr("app._06_party.arrow_duty.tick_shopkeeper_duty", _duty)
+    monkeypatch.setattr(
+        "app._06_party.manager.PartyMemberManager._opening_shopkeeper_heal",
+        lambda *a, **k: None,
+    )
+    east = [(10 + i, 10) for i in range(6)]
+    orders.formation_path = _path_body(east, rev=1, seq=1)
+    mgr = _member(monkeypatch, orders)
+    mgr._nav_blackboard = SimpleNamespace(scratch={}, current_item_id=None)
+    mgr.config.seat_role = "shopkeeper"
+    state = SimpleNamespace(player=None, last_party=None, objects=[])
+    first = mgr.decide(state)
+    assert first.reason == "shop"
+    south = [(10, 10 + i) for i in range(6)]
+    orders.formation_path = _path_body(south, rev=2, seq=2)
+    second = mgr.decide(state)
+    assert second.action is ActionType.TRAVELING
+    assert mgr.runtime.last_kind == "march"
+    assert mgr.runtime.follow_hop is not None and mgr.runtime.follow_hop[1] > 9

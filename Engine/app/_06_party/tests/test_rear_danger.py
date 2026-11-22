@@ -215,7 +215,7 @@ def test_turret_return_waits_on_the_body(monkeypatch):
         def emit(self, action, **kwargs):
             self.emitted.append((action, kwargs.get("reason"), kwargs.get("destination")))
 
-    def _plan(_terrain, origin, _goal):
+    def _plan(_terrain, origin, _goal, **_kwargs):
         hop = (int(origin.x) + 1, int(origin.y))
         return ("click", [hop], hop)
 

@@ -2692,8 +2692,22 @@ class BotController:
             and getattr(world, "party_read_ok", None) is True
         ):
             snap = getattr(world, "last_party", None)
+            # A shopkeeper who left the line for a shop run is not a tail
+            # the rest of the party waits on. Supply holds stay on their own clock.
+            away = []
+            for row in (snap.get("members") if isinstance(snap, dict) else None) or []:
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("role") or "").strip().lower() != "shopkeeper":
+                    continue
+                name = str(row.get("name") or "").strip()
+                if name:
+                    away.append(name)
             followers = followers_from_party(
-                snap, map_id, self_name=_player_chat_name(world, snap)
+                snap,
+                map_id,
+                self_name=_player_chat_name(world, snap),
+                omit_names=away,
             )
             if not guide:
                 gap = pace_gap(here, followers)

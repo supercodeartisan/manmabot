@@ -197,7 +197,7 @@ def test_turret_return_clicks_only_after_the_terrain_loads(monkeypatch):
         lambda: object() if loaded["on"] else None,
     )
 
-    def _plan(_terrain, origin, _goal):
+    def _plan(_terrain, origin, _goal, **_kwargs):
         hop = (int(origin.x) + 1, int(origin.y))
         return ("click", [hop], hop)
 

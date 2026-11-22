@@ -347,7 +347,7 @@ def test_elf_turret_uses_the_solo_click_range() -> None:
 def test_no_target_idles_on_the_dot(monkeypatch) -> None:
     monkeypatch.setattr("app._04_decision.nav_config.get_terrain_map", lambda: object())
 
-    def _plan(_terrain, _origin, goal):
+    def _plan(_terrain, _origin, goal, **_kwargs):
         hop = (int(goal[0]), int(goal[1]))
         return ("click", [hop], hop)
 

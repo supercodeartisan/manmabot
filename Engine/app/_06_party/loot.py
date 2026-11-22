@@ -158,6 +158,46 @@ def party_should_drop_loot(kind: str, *, allowed: bool) -> bool:
     return str(kind or "") in _LOOT_DROP_KINDS
 
 
+# One window for ordinary drops after a fight. Not a pose-delay measurement.
+PARTY_LOOT_WINDOW_S = 5.0
+
+
+def note_party_loot_window(scratch: Any, *, fighting: bool, now: float) -> None:
+    """Open the drop window once when a fight ends. A resumed fight does not reset it."""
+    if not isinstance(scratch, dict):
+        return
+    was = bool(scratch.get("_party_fight_loot"))
+    scratch["_party_fight_loot"] = bool(fighting)
+    if was and not fighting:
+        scratch["party_loot_until"] = float(now) + PARTY_LOOT_WINDOW_S
+
+
+def party_loot_window_open(scratch: Any, now: float) -> bool:
+    if not isinstance(scratch, dict):
+        return False
+    until = scratch.get("party_loot_until")
+    if until is None:
+        return False
+    if float(now) >= float(until):
+        scratch.pop("party_loot_until", None)
+        return False
+    return True
+
+
+def party_designated_keeps_loot(cfg: Any, scratch: Any, *, fighting: bool, now: float) -> bool:
+    """The responsible seat keeps the pile for the rest of the window."""
+    if str(getattr(cfg, "loot_role", "") or "") != "responsible":
+        return False
+    if not fighting:
+        return False
+    return party_loot_window_open(scratch, now)
+
+
+def release_party_loot_window(scratch: Any) -> None:
+    if isinstance(scratch, dict):
+        scratch.pop("party_loot_until", None)
+
+
 def party_closest_looter_filter(
     state: "GameState",
     origin: Any,
@@ -704,7 +744,12 @@ __all__ = [
     "party_loot_walk_meter",
     "party_loot_walks",
     "party_may_loot",
+    "PARTY_LOOT_WINDOW_S",
+    "note_party_loot_window",
+    "party_designated_keeps_loot",
+    "party_loot_window_open",
     "party_may_start_loot",
+    "release_party_loot_window",
     "party_should_drop_loot",
     "try_party_hold_loot",
 ]
