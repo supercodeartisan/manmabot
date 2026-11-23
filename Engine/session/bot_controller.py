@@ -3150,12 +3150,24 @@ class BotController:
             box = self._leader_sync = LeaderSync()
         return box
 
+    def _reset_leader_sync(self) -> None:
+        """Drop a leftover pause from a previous Stop/Start of this controller."""
+        from app._06_party.party_sync import LeaderSync
+
+        self._leader_sync = LeaderSync()
+
     def _party_sync_observe(self):
         from websocket.party_orders import leader_session
 
         if not self._party_server_on():
             return None
         box = self._leader_sync_box()
+        # Members key off ``run``. A stale paused box after the leader is
+        # Running again left them standing next to a live formation_path.
+        if self.state == RunState.RUNNING and box.run != "running":
+            import time
+
+            box.resume(getattr(self, "_start_rally", None), time.monotonic())
         previous = int(box.rev)
         body = box.observe(
             leader_session(),
@@ -4134,6 +4146,8 @@ class BotController:
         invite_accepts.clear()
         if self._party_leader_on():
             session = new_leader_session()
+            # New wire session must not reuse a paused snapshot from last Start.
+            self._reset_leader_sync()
             self.log(f"Party leader session {session} (members reset on this id)")
             self._party_event("session", f"leader session {session}")
         if party_mode:

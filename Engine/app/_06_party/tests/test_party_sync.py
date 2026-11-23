@@ -746,6 +746,40 @@ def test_same_rev_pull_and_a_missing_rev_are_retransmitted():
     assert sent[-1][1]["rev"] == body["rev"]
 
 
+def test_running_leader_clears_a_stale_paused_sync():
+    """Stop/Start leftover pause must not keep members locked after Running."""
+    from types import SimpleNamespace
+
+    from app._06_party.leader_rally import LeaderStartRally
+    from app._06_party.party_sync import LeaderSync
+    from session.bot_controller import BotController, RunState
+    from websocket.party_orders import Rally
+
+    start = LeaderStartRally(Rally(), log=lambda _m: None, clock=lambda: 0.0)
+    start.state = "done"
+    ctrl = BotController()
+    ctrl._profile.party_enabled = True
+    ctrl._profile.party_role = "leader"
+    ctrl._party_policy_id = "policy-live"
+    ctrl._start_rally = start
+    ctrl._party_comms._leader = SimpleNamespace(
+        watchdog=SimpleNamespace(server=object()), owned=True
+    )
+    stale = LeaderSync()
+    stale.pause(start, 0.0)
+    assert stale.run == "paused"
+    ctrl._leader_sync = stale
+    ctrl._set_state(RunState.RUNNING, "")
+    body = ctrl._party_sync_observe()
+    assert body is not None
+    assert body["run"] == "running"
+    assert ctrl._leader_sync_box().run == "running"
+
+    ctrl._reset_leader_sync()
+    assert ctrl._leader_sync_box().run == "running"
+    assert int(ctrl._leader_sync_box().rev) == 0
+
+
 def test_a_failed_step_may_retry_and_a_rev_change_does_not(monkeypatch):
     orders = MemberOrders()
     manager = _manager(monkeypatch, _Pose(4, 1, 1))

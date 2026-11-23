@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — new leader session clears a stale party_sync pause
+
+Intent: After Stop/Start (or a leftover auto-pause), the leader controller could keep a `LeaderSync` with `run=paused` while the bot was Running again. Members then held (`leader_run != running`) even with a live `formation_path`. A new leader wire session now resets `LeaderSync`, and `_party_sync_observe` resumes the snapshot whenever `RunState.RUNNING` still sees `run=paused`. Intentional user/auto pause still sets paused; resume still thaws rally timers.
+Shared: `BotController._reset_leader_sync` / `_party_sync_observe` / worker `new_leader_session`. Login, retreat, solo unstick, ENGAGE/CHASE/TURRET radii, approach_tiles, and assist_leash_tiles were not changed. Talking-scroll unstick was not changed.
+Affects: network party members after leader restart/reconnect. Memory-only follow is unchanged.
+Consent: user (`수정해보라` after the party_sync pause root-cause report).
+Result: `test_party_sync.py` passed (29), including `test_running_leader_clears_a_stale_paused_sync`. Not run in the Windows game.
+
 ## 2026-11-22 — coordinated formation-march slot, ownership, and hop continuation
 
 Intent: Treat the three post-assembly march failures as one movement flow. Each tick recomputes the member slot from the latest formation cursor plus look-ahead (sticky only for one-tile lateral drift, never glued to the departure stand). While the shared path is valid, `MarchMove.owns` keeps march ownership through a failed hop, in_transit, door_wait, or temporary path miss; ordinary leader follow is only for cleared/wrong-map/session paths or intentional assist catch-up. March hops use `MARCH_CLICK_TILES` and replan when the slot pulls ahead of the pending hop; ordinary follow stays on `FOLLOW_CLICK_TILES=2`. Safety checks (collision, occupied tiles, corridor caps, click replacement only when progress needs it) stay in place. Diagnostics log rev/cursor/seat/progress/goal/hop/why/source/hop_age.
