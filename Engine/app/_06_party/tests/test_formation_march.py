@@ -408,6 +408,17 @@ def test_disconnect_does_not_freeze_and_a_new_client_receives_the_path():
     )
     assert share.active
     assert held is None or held["clear"] is False
+    idle_keep = share.update(
+        map_id=4,
+        here=(3, 0),
+        guide=[],
+        traveling=False,
+        pace_idle=True,
+        cancel=False,
+        clients=2,
+    )
+    assert idle_keep is None
+    assert share.active is True
     cleared = share.update(
         map_id=4,
         here=(3, 0),

@@ -11,12 +11,17 @@ from app._04_decision.behaviors.mode_actions import party_leader_pile_ok
 from app._06_party.config import PartyMemberConfig
 from app._06_party.loot import (
     PARTY_LOOT_WALK_TILES,
+    PARTY_LOOT_WINDOW_S,
+    note_party_loot_window,
+    party_can_loot_now,
     party_loot_ownership_filter,
     party_loot_radius,
     party_loot_walk_meter,
     party_loot_walks,
+    party_loot_window_open,
     party_may_start_loot,
     party_should_drop_loot,
+    release_party_loot_window,
 )
 
 
@@ -123,6 +128,39 @@ def test_loot_beats_follow_and_assist_drops_it() -> None:
     assert not party_should_drop_loot("follow", allowed=True)
     assert party_should_drop_loot("assist", allowed=True)
     assert party_should_drop_loot("follow", allowed=False)
+
+
+def test_leader_target_drop_opens_window_and_loot_beats_march_go() -> None:
+    """Member need not have assisted: leader target clear arms the window."""
+    scratch = {}
+    note_party_loot_window(scratch, fighting=True, now=0.0)  # leader on a target
+    note_party_loot_window(scratch, fighting=False, now=1.0)  # target dead
+    assert party_loot_window_open(scratch, 1.0)
+    assert party_can_loot_now(
+        loot_own=True,
+        designated_loot=False,
+        window_open=True,
+        kind="follow",
+        approaching=False,
+        fighting_now=False,
+        march_go=True,
+    )
+    assert not party_can_loot_now(
+        loot_own=True,
+        designated_loot=False,
+        window_open=False,
+        kind="follow",
+        approaching=False,
+        fighting_now=False,
+        march_go=True,
+    )
+    # March go must not erase the settle window.
+    release_party_loot_window(scratch)
+    note_party_loot_window(scratch, fighting=True, now=10.0)
+    note_party_loot_window(scratch, fighting=False, now=11.0)
+    assert party_loot_window_open(scratch, 11.0)
+    assert party_loot_window_open(scratch, 11.0 + PARTY_LOOT_WINDOW_S - 0.1)
+    assert not party_loot_window_open(scratch, 11.0 + PARTY_LOOT_WINDOW_S)
 
 
 def test_leader_policy_does_not_carry_a_loot_priority() -> None:

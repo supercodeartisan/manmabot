@@ -2586,12 +2586,19 @@ class BotController:
         origin = getattr(blackboard, "world_origin", None)
         kind = getattr(action, "action", None)
         reason = str(getattr(action, "reason", "") or "")
-        blocked = kind is ActionType.IDLE and reason in BLOCKED_NOTES
+        guide = list(getattr(blackboard, "nav_path", None) or [])
+        # Corridor make_way only: a farm/loot idle with no guide is not a
+        # member decision and must not ask them to step off.
+        blocked = (
+            kind is ActionType.IDLE
+            and reason in BLOCKED_NOTES
+            and bool(guide)
+        )
         if watch.note(blocked) and origin is not None:
             here = (int(origin.x), int(origin.y))
-            guide = guide_ahead(getattr(blackboard, "nav_path", None) or [], here)
+            ahead = guide_ahead(guide, here)
             sent = self._party_comms_publish_body(
-                make_way_message(map_id=map_id, x=here[0], y=here[1], guide=guide)
+                make_way_message(map_id=map_id, x=here[0], y=here[1], guide=ahead)
             )
             self.log(f"Party: leader blocked at {here}, make way sent to {sent}")
         from app._06_party.formation import followers_from_party
@@ -2614,12 +2621,15 @@ class BotController:
         if kind is not ActionType.TRAVELING or retreat or not rally_open:
             pace.reset()
         here = None if origin is None else (int(origin.x), int(origin.y))
-        guide = list(getattr(blackboard, "nav_path", None) or [])
-        # A pace idle keeps the path. Only a real cancel clears it.
+        # A pace idle keeps the path. An ordinary idle (loot / block / fight
+        # stand) also keeps an active path. Only retreat / closed rally clear.
         pace_idle = False
         gap = None
         followers = []
         moving = kind is ActionType.TRAVELING and not retreat and rally_open
+        holding_path = bool(
+            not moving and not retreat and rally_open and bool(getattr(march, "active", False))
+        )
         from app._06_party.sightings import book as sighting_book
 
         turret_on = getattr(self, "_leader_turret_on", None)
@@ -2749,7 +2759,7 @@ class BotController:
             here=here,
             guide=guide if moving or pace_idle else [],
             traveling=moving,
-            pace_idle=pace_idle,
+            pace_idle=bool(pace_idle or holding_path),
             cancel=bool(retreat or not rally_open),
             clients=clients,
             terrain=terrain,

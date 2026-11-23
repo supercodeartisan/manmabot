@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-22 — farm idle does not clear march; loot beats march in the settle window
+
+Intent: A leader idle note such as `window has no safe click` is not a member decision. Without a travel guide it must not send `make_way`, and an active `formation_path` must not clear on ordinary idle (loot / fight stand / blocked click). Only retreat or a closed rally cancels the shared path. After party combat pressure drops (local assist/approach **or** the leader losing its target), the post-fight loot window opens even if that seat never assisted. While the window is open, `march go` yields to loot and does not release the window; outside the window, ordinary loot still stops when the hop is due.
+Shared: `BotController._leader_walk_party`, `MarchShare.update`, `note_party_loot_window` / `party_can_loot_now`, `PartyMemberManager.decide` loot gate. Login, retreat, solo unstick, ENGAGE/CHASE/TURRET radii, approach_tiles, and assist_leash_tiles were not changed.
+Affects: network party march persistence during farm idle; member loot vs formation hop after a kill. Corridor `make_way` with a live nav guide is unchanged.
+Consent: user (`fix and update` after the idle-side-effect and member-loot root-cause report).
+Result: `test_make_way_pace.py`, `test_formation_march.py`, `test_party_cycle.py`, and the non-scipy `test_party_loot.py` cases passed, including farm-idle no make_way/no clear, idle path keep, and loot-beats-march_go in the settle window. One existing failure is `ModuleNotFoundError: scipy` in the walk-distance loot test. Not run in the Windows game.
+
 ## 2026-11-22 — new leader session clears a stale party_sync pause
 
 Intent: After Stop/Start (or a leftover auto-pause), the leader controller could keep a `LeaderSync` with `run=paused` while the bot was Running again. Members then held (`leader_run != running`) even with a live `formation_path`. A new leader wire session now resets `LeaderSync`, and `_party_sync_observe` resumes the snapshot whenever `RunState.RUNNING` still sees `run=paused`. Intentional user/auto pause still sets paused; resume still thaws rally timers.

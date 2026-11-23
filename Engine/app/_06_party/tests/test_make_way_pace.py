@@ -220,6 +220,44 @@ def test_leader_blocked_three_seconds_sends_make_way(monkeypatch) -> None:
     assert sent[0]["guide"] == [[86, 88], [87, 88]]
 
 
+def test_farm_idle_blocked_note_does_not_make_way_or_clear_march(monkeypatch) -> None:
+    """Loot/fight idle with no guide is not a member decision."""
+    from types import SimpleNamespace
+
+    from app._02_state.enums import ActionType
+    from app._06_party.formation_march import MarchShare
+    from app._06_party.types import ActionIntent
+
+    clock = _Clock()
+    ctl, walk = _leader_controller(clock)
+    march = MarchShare()
+    opened = march.update(
+        map_id=1,
+        here=(85, 88),
+        guide=[(85, 88), (86, 88), (87, 88), (88, 88)],
+        traveling=True,
+        pace_idle=False,
+        cancel=False,
+    )
+    assert opened is not None and opened.get("clear") is not True
+    assert march.active
+    ctl._party_march = march
+    world = SimpleNamespace(party_read_ok=False, last_party={})
+    board = SimpleNamespace(
+        world_origin=SimpleNamespace(x=85, y=88),
+        nav_path=[],
+        player_mode=None,
+    )
+    stuck = ActionIntent(action=ActionType.IDLE, reason="window has no safe click")
+    walk(ctl, world, board, stuck, 1)
+    clock.t += MAKE_WAY_BLOCKED_S + 0.1
+    walk(ctl, world, board, stuck, 1)
+    bodies = [row for row in ctl.logs if isinstance(row, dict)]
+    assert not any(row.get("type") == "make_way" for row in bodies)
+    assert not any(row.get("type") == "formation_path" and row.get("clear") for row in bodies)
+    assert march.active is True
+
+
 def test_a_turned_leader_clicks_a_fresh_hop_instead_of_walking_out(monkeypatch) -> None:
     from app._06_party import intents
 

@@ -163,7 +163,11 @@ PARTY_LOOT_WINDOW_S = 5.0
 
 
 def note_party_loot_window(scratch: Any, *, fighting: bool, now: float) -> None:
-    """Open the drop window once when a fight ends. A resumed fight does not reset it."""
+    """Open the drop window once when party combat pressure ends.
+
+    ``fighting`` is local assist/approach **or** the leader still having a
+    target. A resumed fight does not reset an open window.
+    """
     if not isinstance(scratch, dict):
         return
     was = bool(scratch.get("_party_fight_loot"))
@@ -180,6 +184,34 @@ def party_loot_window_open(scratch: Any, now: float) -> bool:
         return False
     if float(now) >= float(until):
         scratch.pop("party_loot_until", None)
+        return False
+    return True
+
+
+def party_can_loot_now(
+    *,
+    loot_own: Any,
+    designated_loot: bool,
+    window_open: bool,
+    kind: str,
+    approaching: bool,
+    fighting_now: bool,
+    march_go: bool,
+) -> bool:
+    """True when this tick may take a pile.
+
+    A formation ``march go`` yields to loot while the post-fight window is
+    open. Outside that window, ordinary loot still stops when the hop is due.
+    """
+    if loot_own is None:
+        return False
+    if designated_loot and window_open:
+        return True
+    if not party_may_start_loot(kind, allowed=True):
+        return False
+    if approaching or fighting_now:
+        return False
+    if march_go and not window_open:
         return False
     return True
 
@@ -749,6 +781,7 @@ __all__ = [
     "party_designated_keeps_loot",
     "party_loot_window_open",
     "party_may_start_loot",
+    "party_can_loot_now",
     "release_party_loot_window",
     "party_should_drop_loot",
     "try_party_hold_loot",

@@ -455,18 +455,22 @@ class MarchShare:
     ) -> Optional[dict[str, Any]]:
         """A frame to broadcast, or None when nothing changed.
 
-        A pace idle keeps the path. Extending the same polyline keeps ``rev``.
-        A future that leaves the polyline bumps ``rev``. ``clients`` is unused
-        for resend: a replacement connection can keep the same count, so only
-        ``note_hello`` repeats the frame.
+        A pace idle or ordinary idle keeps an active path. Only ``cancel``
+        (retreat / closed rally) clears it. Extending the same polyline keeps
+        ``rev``. A future that leaves the polyline bumps ``rev``. ``clients``
+        is unused for resend: a replacement connection can keep the same
+        count, so only ``note_hello`` repeats the frame.
         """
         del clients
         if cancel or map_id is None or here is None:
             return self._clear(map_id)
         forward = _tiles(guide)
         keep = bool(traveling or (pace_idle and self.active))
-        if not keep or not forward:
+        if not keep:
             return self._clear(map_id)
+        if not forward:
+            # Idle hold with no new guide: keep the last frame, do not clear.
+            return None
         stood = (int(here[0]), int(here[1]))
         diverged = self._absorb(stood, forward)
         if diverged:
