@@ -75,6 +75,8 @@ class PartyServer:
         self._started_at = 0.0
         self._listen_epoch = 0
         self._last_status: dict[str, Any] = {}
+        # Optional LAN / hello identity stamped into status announces.
+        self.announce_info: dict[str, Any] = {}
 
     @property
     def running(self) -> bool:
@@ -397,6 +399,7 @@ class PartyServer:
             return
         from .netinfo import local_ipv4
 
+        info = dict(self.announce_info or {})
         payload = PartyMessage(
             sender="server",
             message={
@@ -412,6 +415,11 @@ class PartyServer:
                 "uptime_s": (
                     round(time.time() - self._started_at, 1) if self._started_at else 0.0
                 ),
+                "leader_id": str(info.get("leader_id") or ""),
+                "session_id": str(info.get("session_id") or ""),
+                "display_name": str(info.get("display_name") or ""),
+                "ready": bool(info.get("ready")),
+                "protocol": int(info.get("protocol") or 1),
             },
         )
         raw = payload.to_json()

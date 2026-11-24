@@ -27,6 +27,8 @@ _LEADER_TYPES = frozenset({
     "rally",
     "recovery",
     "beep",
+    "hello_reject",
+    "hello_ok",
     "supply_drop",
     "supply_hold",
     "supply_stand",

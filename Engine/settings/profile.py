@@ -348,6 +348,12 @@ class Profile:
     party_ws_port: int = 8765
     # Member client: address of the leader PC's party socket.
     party_leader_host: str = ""
+    # Stable leader install id (LAN browse / auto-reconnect). Same across restarts.
+    party_leader_id: str = ""
+    # Member: last chosen leader_id. Auto-reconnect only targets this id.
+    party_selected_leader_id: str = ""
+    # Member: stop auto join until the user picks again (e.g. not_on_roster).
+    party_join_hold: str = ""
     # Leader roster: name, seat role, optional loot (none|responsible).
     party_roster: list = field(default_factory=list)
 
@@ -702,6 +708,14 @@ class Profile:
             kwargs["party_role"] = role if role in ("member", "leader") else "member"
         if "party_leader_host" in kwargs:
             kwargs["party_leader_host"] = str(kwargs.get("party_leader_host") or "").strip()
+        if "party_leader_id" in kwargs:
+            kwargs["party_leader_id"] = str(kwargs.get("party_leader_id") or "").strip()
+        if "party_selected_leader_id" in kwargs:
+            kwargs["party_selected_leader_id"] = str(
+                kwargs.get("party_selected_leader_id") or ""
+            ).strip()
+        if "party_join_hold" in kwargs:
+            kwargs["party_join_hold"] = str(kwargs.get("party_join_hold") or "").strip()
         if "party_roster" in kwargs:
             kwargs["party_roster"] = normalize_party_roster(kwargs.get("party_roster"))
         if "party_ws_port" in kwargs:

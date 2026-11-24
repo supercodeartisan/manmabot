@@ -139,6 +139,51 @@ def drain_leader_reports(
                 f"Party hello {hello_name or '—'} "
                 f"[{row.status.value}] id={cid or '—'}"
             )
+            # Roster gate before invites / party commands. Game inputs stay off
+            # for PENDING; MATCHED proceeds to snapshot deliver.
+            if row.status is MembershipStatus.PENDING and peer:
+                try:
+                    from websocket.party_orders import hello_reject_message
+                    from websocket.protocol import PartyMessage
+
+                    server.send_to(
+                        peer,
+                        PartyMessage(
+                            sender="leader",
+                            message=hello_reject_message(
+                                reason="not_on_roster",
+                                name=hello_name,
+                                session=leader_session(),
+                            ),
+                        ),
+                        sender="leader",
+                    )
+                except Exception:
+                    note(f"Party hello reject send failed for {hello_name or peer}")
+                note(f"Party hello rejected — not on roster: {hello_name or '—'}")
+                continue
+            if row.status is MembershipStatus.CONFLICT and peer:
+                try:
+                    from websocket.party_orders import hello_reject_message
+                    from websocket.protocol import PartyMessage
+
+                    server.send_to(
+                        peer,
+                        PartyMessage(
+                            sender="leader",
+                            message=hello_reject_message(
+                                reason="conflict",
+                                name=hello_name,
+                                session=leader_session(),
+                            ),
+                        ),
+                        sender="leader",
+                    )
+                except Exception:
+                    note(f"Party hello conflict reject failed for {hello_name or peer}")
+                continue
+            if row.status is not MembershipStatus.MATCHED:
+                continue
             if hello_name:
                 from ..sightings import book
 

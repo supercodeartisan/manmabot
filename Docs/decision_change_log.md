@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-24 — LAN party browse, roster hello gate, auto-reconnect by leader_id
+
+Intent: Member picks a leader once from **주변 파티** (UDP browse). After that, reconnect uses the saved `leader_id` (last host first, then LAN resolve). Search alone never invites. `member_hello` is roster-gated before invites/party commands: not on roster → `hello_reject` + member join hold; MATCHED → `hello_ok` + current snapshot; CONFLICT keeps the existing dual-socket policy; game memory unknown does not invite. Leader announces `leader_id` / `session_id` / ready on LAN and on WS status. Socket drop still releases only that peer’s registration.
+Shared: `websocket.lan_discover`, `PartyComms.start_leader` / `update_lan_announce`, `drain_leader_reports` hello gate, `BotController` member resolve / hello reject hold, `party_tab` nearby list, profile `party_leader_id` / `party_selected_leader_id` / `party_join_hold`. Login clicks, retreat, solo unstick, ENGAGE/CHASE/TURRET radii, approach_tiles, and assist_leash_tiles were not changed.
+Affects: network party first connect and restart recovery. Memory-only follow without a host is unchanged.
+Consent: user (Cursor work order — LAN search, roster approval, auto-reconnect).
+Result: `test_lan_discover_join.py` and `test_party_sync.py` passed (35). Two-PC LAN restart matrix not run in this session.
+
 ## 2026-11-22 — farm idle does not clear march; loot beats march in the settle window
 
 Intent: A leader idle note such as `window has no safe click` is not a member decision. Without a travel guide it must not send `make_way`, and an active `formation_path` must not clear on ordinary idle (loot / fight stand / blocked click). Only retreat or a closed rally cancels the shared path. After party combat pressure drops (local assist/approach **or** the leader losing its target), the post-fight loot window opens even if that seat never assisted. While the window is open, `march go` yields to loot and does not release the window; outside the window, ordinary loot still stops when the hop is due.

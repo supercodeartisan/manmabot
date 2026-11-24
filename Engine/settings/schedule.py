@@ -190,6 +190,11 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "role": str(getattr(profile, "party_role", "member") or "member"),
             "ws_port": int(getattr(profile, "party_ws_port", 8765) or 8765),
             "leader_host": str(getattr(profile, "party_leader_host", "") or ""),
+            "leader_id": str(getattr(profile, "party_leader_id", "") or ""),
+            "selected_leader_id": str(
+                getattr(profile, "party_selected_leader_id", "") or ""
+            ),
+            "join_hold": str(getattr(profile, "party_join_hold", "") or ""),
             # Party-boss "마을 및 보급". Bag keys match task_runtime.
             "member_hp_min": int(getattr(profile, "party_member_hp_min", 10)),
             "shopkeeper_hp_min": int(getattr(profile, "party_shopkeeper_hp_min", 20)),

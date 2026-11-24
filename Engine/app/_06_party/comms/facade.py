@@ -22,6 +22,7 @@ class PartyComms:
     def __init__(self) -> None:
         self._leader: Optional[link.LeaderLink] = None
         self._member: Optional[link.MemberLink] = None
+        self._lan_announce: Any = None
         self._hb_err = ""
         self._reset_member_watch()
 
@@ -57,7 +58,17 @@ class PartyComms:
 
     # --- lifecycle ---
 
-    def start_leader(self, *, port: Any = 8765, log: Optional[LogFn] = None) -> bool:
+    def start_leader(
+        self,
+        *,
+        port: Any = 8765,
+        log: Optional[LogFn] = None,
+        leader_id: str = "",
+        session_id: str = "",
+        display_name: str = "",
+        ready: bool = False,
+    ) -> bool:
+        from websocket.lan_discover import LanAnnouncer, PROTOCOL_V, new_leader_id
         from websocket.member_status import member_reports
 
         self.stop_leader(log=log)
@@ -66,9 +77,67 @@ class PartyComms:
         invite_accepts.clear()
         discovery.clear()
         self._leader = link.start_leader_link(port=port, log=log)
-        return self._leader is not None
+        if self._leader is None:
+            return False
+        lid = str(leader_id or "").strip() or new_leader_id()
+        sid = str(session_id or "").strip()
+        name = str(display_name or "").strip() or "leader"
+        server = self.server
+        if server is not None:
+            server.announce_info = {
+                "leader_id": lid,
+                "session_id": sid,
+                "display_name": name,
+                "ready": bool(ready),
+                "protocol": PROTOCOL_V,
+            }
+        announcer = LanAnnouncer(
+            leader_id=lid,
+            ws_port=int(self._leader.port),
+            name=name,
+            session_id=sid,
+            ready=bool(ready),
+        )
+        announcer.start()
+        self._lan_announce = announcer
+        note = log or (lambda _m: None)
+        note(f"Party LAN discover answering on udp (leader_id={lid[:8]}…)")
+        return True
+
+    def update_lan_announce(
+        self,
+        *,
+        session_id: Optional[str] = None,
+        display_name: Optional[str] = None,
+        ready: Optional[bool] = None,
+    ) -> None:
+        announcer = self._lan_announce
+        if announcer is not None:
+            announcer.update(
+                session_id=session_id,
+                name=display_name,
+                ready=ready,
+            )
+        server = self.server
+        if server is None:
+            return
+        info = dict(getattr(server, "announce_info", None) or {})
+        if session_id is not None:
+            info["session_id"] = str(session_id or "")
+        if display_name is not None:
+            info["display_name"] = str(display_name or "").strip() or "leader"
+        if ready is not None:
+            info["ready"] = bool(ready)
+        server.announce_info = info
 
     def stop_leader(self, *, log: Optional[LogFn] = None) -> None:
+        announcer = self._lan_announce
+        self._lan_announce = None
+        if announcer is not None:
+            try:
+                announcer.stop(timeout=1.5)
+            except Exception:
+                pass
         link.stop_leader_link(self._leader, log=log)
         self._leader = None
 

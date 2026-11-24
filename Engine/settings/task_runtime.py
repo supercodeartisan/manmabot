@@ -188,6 +188,28 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
             party.get("leader_host", getattr(profile, "party_leader_host", "")) or ""
         ).strip(),
     )
+    set_value(
+        "party_leader_id",
+        str(
+            party.get("leader_id", getattr(profile, "party_leader_id", "")) or ""
+        ).strip(),
+    )
+    set_value(
+        "party_selected_leader_id",
+        str(
+            party.get(
+                "selected_leader_id",
+                getattr(profile, "party_selected_leader_id", ""),
+            )
+            or ""
+        ).strip(),
+    )
+    set_value(
+        "party_join_hold",
+        str(
+            party.get("join_hold", getattr(profile, "party_join_hold", "")) or ""
+        ).strip(),
+    )
     # Master Party-tab switch (UI checkbox). Legacy profiles only had member_enabled.
     party_master = party.get("enabled")
     if party_master is None:

@@ -1704,9 +1704,18 @@ class BotController:
                 "socket" if msg.startswith("Party socket") else "setup", msg
             )
 
+        from websocket.lan_discover import ensure_leader_id
+        from websocket.party_orders import leader_session
+
+        leader_id = ensure_leader_id(profile)
         self._party_comms.start_leader(
             port=getattr(profile, "party_ws_port", 8765),
             log=_log,
+            leader_id=leader_id,
+            session_id=str(leader_session() or ""),
+            display_name=str(getattr(profile, "party_leader_name", "") or "")
+            or "leader",
+            ready=False,
         )
         self._sync_party_handles()
         from settings.profile import normalize_party_roster
@@ -1728,6 +1737,7 @@ class BotController:
             _log(
                 "Party roster empty — server listening, waiting for member hello"
             )
+        _log(f"Party leader_id={leader_id}")
 
     def _stop_party_socket(self) -> None:
         self._party_comms.stop_leader(log=self.log)
@@ -1786,8 +1796,13 @@ class BotController:
         self._party_start_error = ""
         if role != "member" or not party_on or not member_on:
             return True
-        host = str(getattr(profile, "party_leader_host", "") or "").strip()
-        port = getattr(profile, "party_ws_port", 8765)
+        hold = str(getattr(profile, "party_join_hold", "") or "").strip()
+        if hold:
+            self.log(
+                f"Party member: join held ({hold}) — pick the leader again on the Party tab"
+            )
+            return True
+        host, port = self._resolve_member_leader_endpoint()
         if host:
             from app._06_party.comms.orders import member_orders
 
@@ -1798,19 +1813,106 @@ class BotController:
         self._party_comms.start_member(host=host, port=port, log=self.log)
         self._sync_party_handles()
         if self._party_comms.client is None:
-            self.log(
-                "Party member: no leader socket — follow and combat use party memory only"
-            )
+            selected = str(getattr(profile, "party_selected_leader_id", "") or "").strip()
+            if selected:
+                self.log(
+                    f"Party member: looking for leader_id={selected[:8]}… "
+                    "(LAN browse / last address)"
+                )
+            else:
+                self.log(
+                    "Party member: no leader socket — follow and combat use party memory only"
+                )
             return True
         # The socket carries policy and rally. Follow and combat read party memory
         # whether or not this connect ever succeeds.
         self._party_start_wait = {"since": time.time(), "uri": f"{host}:{port}"}
         self._party_socket_wait_note_at = 0.0
+        self._party_expected_leader_id = str(
+            getattr(profile, "party_selected_leader_id", "") or ""
+        ).strip()
         self.log(
             f"Party member: leader socket {host}:{port} connecting in the background. "
             "Follow and combat use party memory."
         )
         return True
+
+    def _resolve_member_leader_endpoint(self) -> tuple[str, int]:
+        """Last saved host first; else LAN browse for the selected ``leader_id``."""
+        profile = self._profile
+        host = str(getattr(profile, "party_leader_host", "") or "").strip()
+        try:
+            port = int(getattr(profile, "party_ws_port", 8765) or 8765)
+        except (TypeError, ValueError):
+            port = 8765
+        port = max(1, min(65535, port))
+        selected = str(getattr(profile, "party_selected_leader_id", "") or "").strip()
+        if host:
+            return host, port
+        if not selected:
+            return "", port
+        try:
+            from websocket.lan_discover import resolve_leader_endpoint
+
+            hit = resolve_leader_endpoint(
+                leader_id=selected,
+                last_host="",
+                last_port=port,
+                probe_s=1.2,
+            )
+        except Exception as exc:
+            self.log(f"Party member: LAN resolve failed: {exc}")
+            return "", port
+        if hit is None:
+            return "", port
+        host_i, port_i = hit
+        profile.party_leader_host = str(host_i)
+        profile.party_ws_port = int(port_i)
+        self.log(
+            f"Party member: found leader_id={selected[:8]}… at {host_i}:{port_i}"
+        )
+        return str(host_i), int(port_i)
+
+    def _note_member_hello_reject(self, body: dict) -> None:
+        """Roster rejection: stop auto join until the user picks again."""
+        reason = str((body or {}).get("reason") or "not_on_roster").strip()
+        label = {
+            "not_on_roster": "명단에 없음",
+            "conflict": "캐릭터 충돌",
+        }.get(reason, reason)
+        self._profile.party_join_hold = reason
+        msg = f"Party join rejected — {label}"
+        self.log(msg)
+        self._party_event("socket", msg)
+        self._party_join_status = label
+        try:
+            self._stop_party_client()
+        except Exception:
+            pass
+
+    def _note_member_hello_ok(self, body: dict) -> None:
+        expected = str(
+            getattr(self, "_party_expected_leader_id", "")
+            or getattr(self._profile, "party_selected_leader_id", "")
+            or ""
+        ).strip()
+        got = str((body or {}).get("leader_id") or "").strip()
+        if expected and got and expected != got:
+            msg = "Party hello ok from a different leader_id — disconnecting"
+            self.log(msg)
+            self._party_event("socket", msg)
+            try:
+                self._stop_party_client()
+            except Exception:
+                pass
+            return
+        self._profile.party_join_hold = ""
+        in_party = bool((body or {}).get("in_party"))
+        self._party_join_status = "가입 완료" if in_party else "명단 확인"
+        self.log(
+            "Party hello ok"
+            + (" — already in game party" if in_party else " — waiting for invite/memory")
+        )
 
     def _stop_party_client(self) -> None:
         self._party_start_wait = {}
@@ -2079,6 +2181,13 @@ class BotController:
         )
         self._party_invites = invites
         invites.start(names, snapshot=snap, self_name=self_name)
+        try:
+            self._party_comms.update_lan_announce(
+                display_name=self_name or "leader",
+                ready=True,
+            )
+        except Exception:
+            pass
 
     def _send_leader_beep(self, why: str = "already_in_party") -> int:
         """Broadcast a socket test beep. 0 = no member connected yet."""
@@ -3206,11 +3315,34 @@ class BotController:
             except Exception:
                 continue
 
-    def _party_sync_frames(self, _name: str, _peer: str) -> list:
-        """Current policy and rally snapshot for this peer. Same rev on a repeat."""
-        from websocket.party_orders import policy_message
+    def _party_sync_frames(self, name: str, _peer: str) -> list:
+        """Hello ok + current policy and rally snapshot. Same rev on a repeat."""
+        from app._06_party.invite import action_party_snapshot
+        from websocket.lan_discover import ensure_leader_id
+        from websocket.party_orders import hello_ok_message, party_member_names, policy_message
 
         frames = []
+        snap = None
+        try:
+            snap = action_party_snapshot(getattr(self, "_party_world", None))
+        except Exception:
+            snap = None
+        in_party = False
+        who = str(name or "").strip()
+        if who and snap is not None:
+            in_party = who.casefold() in {
+                str(n).casefold() for n in party_member_names(snap)
+            }
+        try:
+            frames.append(
+                hello_ok_message(
+                    name=who,
+                    leader_id=ensure_leader_id(self._profile),
+                    in_party=in_party,
+                )
+            )
+        except Exception:
+            pass
         info = getattr(self, "_party_policy_kwargs", None)
         if isinstance(info, dict) and info:
             try:
@@ -3306,14 +3438,23 @@ class BotController:
         return sent
 
     def _leader_policy_acked(self, name: str) -> bool:
-        """Invite gate: ``name`` confirmed the policy currently being sent.
+        """Invite gate: roster MATCHED + ``name`` confirmed the current policy.
 
         A dropped socket must send a new ``member_state`` before another
         ``/초대``. A name already in party memory is not in the due list.
         """
         from app._06_party.comms.orders import policy_acks
+        from app._06_party.member_discovery import MembershipStatus, discovery
         from app._06_party.sync import member_states
 
+        key = str(name or "").strip().casefold()
+        matched = False
+        for row in discovery.by_connection.values():
+            if row.status is MembershipStatus.MATCHED and str(row.name or "").casefold() == key:
+                matched = True
+                break
+        if not matched:
+            return False
         if member_states.awaiting_fresh(name):
             return False
         return policy_acks.acked(name, getattr(self, "_party_policy_id", "") or None)
@@ -3574,6 +3715,8 @@ class BotController:
             class_token,
         )
 
+        if str(getattr(self._profile, "party_join_hold", "") or "").strip():
+            return
         if not self._party_comms.member_connected:
             return
         snap = getattr(world, "last_party", None)
@@ -3827,6 +3970,12 @@ class BotController:
                 msg = f"Party beep from leader — socket ok ({why})"
                 self.log(msg)
                 self._party_event("socket", msg)
+            rejected = member_orders.take_hello_reject()
+            if rejected is not None:
+                self._note_member_hello_reject(rejected)
+            ok_hello = member_orders.take_hello_ok()
+            if ok_hello is not None:
+                self._note_member_hello_ok(ok_hello)
             fresh = member_orders.take_policy()
             policy = member_orders.policy
             rostered = bool(
@@ -4160,6 +4309,13 @@ class BotController:
             self._reset_leader_sync()
             self.log(f"Party leader session {session} (members reset on this id)")
             self._party_event("session", f"leader session {session}")
+            try:
+                self._party_comms.update_lan_announce(
+                    session_id=session,
+                    ready=self._leader_roster_ready(),
+                )
+            except Exception:
+                pass
         if party_mode:
             party_brain = PartyMemberManager(party_cfg)
             self._party_brain_ref = party_brain

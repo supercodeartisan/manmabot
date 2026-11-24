@@ -215,13 +215,31 @@ def test_replacement_hello_is_addressed_and_the_old_socket_cannot_clear_it():
         "character": {"name": "법사", "class": "MAGE", "level": 1},
     }
     server.frames = [_Frame(hello, "peer-a")]
-    drain_leader_reports(server=server, start_rally=start, deliver=deliver)
+    drain_leader_reports(
+        server=server, start_rally=start, deliver=deliver, roster_names=["법사"]
+    )
+    assert server.sent and server.sent[-1][1].get("rally") == "active"
+    # A second live socket for the same name is CONFLICT: reject, no snapshot.
     server.frames = [_Frame(dict(hello, client_id="b"), "peer-b")]
     server.count = 2
-    drain_leader_reports(server=server, start_rally=start, deliver=deliver)
-    peers = [row[0] for row in server.sent]
-    assert peers == ["peer-a", "peer-b"]
-    assert server.sent[-1][1]["rally"] == "active"
+    before = len(server.sent)
+    drain_leader_reports(
+        server=server, start_rally=start, deliver=deliver, roster_names=["법사"]
+    )
+    assert any(
+        row[0] == "peer-b" and row[1].get("type") == "hello_reject"
+        for row in server.sent[before:]
+    )
+    # After the old socket drops, the survivor is MATCHED again.
+    server.dropped = ["peer-a"]
+    server.frames = [_Frame(dict(hello, client_id="b"), "peer-b")]
+    drain_leader_reports(
+        server=server, start_rally=start, deliver=deliver, roster_names=["법사"]
+    )
+    assert any(
+        row[0] == "peer-b" and row[1].get("type") == "party_sync"
+        for row in server.sent
+    )
     book.note_hello("법사", "peer-b", "b")
     book.note(
         {"type": "sighting", "from": "법사", "client_id": "b", "map_id": 4, "seq": 1, "mobs": []},
@@ -497,6 +515,7 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
     ctrl = BotController()
     ctrl._profile.party_enabled = True
     ctrl._profile.party_role = "leader"
+    ctrl._profile.party_roster = [{"name": "멤버"}]
     ctrl._party_policy_kwargs = {
         "leader_name": "리더",
         "roster": [{"name": "멤버"}],
@@ -510,7 +529,9 @@ def test_controller_hello_returns_policy_and_the_member_clicks_once(monkeypatch)
     )
     ctrl._drain_party_reports(SimpleNamespace(last_party=None))
     kinds = [row[1].get("type") for row in sent if row[0] == "peer-1"]
+    assert "hello_ok" in kinds
     assert "party_policy" in kinds
+    assert "hello_reject" not in kinds
     sync = [row[1] for row in sent if row[1].get("type") == "party_sync"][-1]
     assert sync["policy_id"] == ctrl._party_policy_id
     assert ctrl._party_policy_id

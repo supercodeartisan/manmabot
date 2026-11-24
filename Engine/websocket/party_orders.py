@@ -40,6 +40,8 @@ POLICY_ACK = "policy_ack"
 INVITE_ACCEPT = "invite_accept"
 MEMBER_STATE = "member_state"
 MEMBER_HELLO = "member_hello"
+HELLO_REJECT = "hello_reject"
+HELLO_OK = "hello_ok"
 BEEP = "beep"
 
 STAGE_START = "start"
@@ -273,6 +275,44 @@ def beep_message(*, who: str = "leader", why: str = "already_in_party") -> dict[
         "type": BEEP,
         "from": sender,
         "why": str(why or "already_in_party"),
+        "at": time.time(),
+    }
+
+
+def hello_reject_message(
+    *,
+    reason: str,
+    name: str = "",
+    leader_id: str = "",
+    session: str = "",
+) -> dict[str, Any]:
+    """Leader → member: hello refused before invites or party commands."""
+    return {
+        "type": HELLO_REJECT,
+        "from": "leader",
+        "reason": str(reason or "not_on_roster"),
+        "name": str(name or "").strip(),
+        "leader_id": str(leader_id or "").strip(),
+        "session": str(session or leader_session() or ""),
+        "at": time.time(),
+    }
+
+
+def hello_ok_message(
+    *,
+    name: str = "",
+    leader_id: str = "",
+    session: str = "",
+    in_party: bool = False,
+) -> dict[str, Any]:
+    """Leader → member: roster ok; ``in_party`` when game memory already lists them."""
+    return {
+        "type": HELLO_OK,
+        "from": "leader",
+        "name": str(name or "").strip(),
+        "leader_id": str(leader_id or "").strip(),
+        "session": str(session or leader_session() or ""),
+        "in_party": bool(in_party),
         "at": time.time(),
     }
 
@@ -611,6 +651,8 @@ class MemberOrders:
         self.session_resets = 0
         self._session_changed = False
         self._beep: Optional[dict[str, Any]] = None
+        self._hello_reject: Optional[dict[str, Any]] = None
+        self._hello_ok: Optional[dict[str, Any]] = None
         # Latest ``party_reports`` bundle from the leader (shopkeeper mailbox).
         self.party_reports: list[dict[str, Any]] = []
         # Buff and ailment rows for a party mage. Not a supply mailbox.
@@ -684,10 +726,12 @@ class MemberOrders:
 
     def clear(self) -> None:
         self._drop_orders()
+        self._beep = None
+        self._hello_reject = None
+        self._hello_ok = None
         self.session = ""
         self.session_resets = 0
         self._session_changed = False
-        self._beep = None
         self._old_sessions = set()
         self.sync_pull = None
         self.sync_answered = False
@@ -699,6 +743,16 @@ class MemberOrders:
         """Leader beep once, then None until the next one."""
         body = self._beep
         self._beep = None
+        return body
+
+    def take_hello_reject(self) -> Optional[dict[str, Any]]:
+        body = self._hello_reject
+        self._hello_reject = None
+        return body
+
+    def take_hello_ok(self) -> Optional[dict[str, Any]]:
+        body = self._hello_ok
+        self._hello_ok = None
         return body
 
     def take_session_change(self) -> Optional[str]:
@@ -737,6 +791,12 @@ class MemberOrders:
             kind = str(body.get("type") or "")
             if kind == BEEP:
                 self._beep = dict(body)
+                continue
+            if kind == HELLO_REJECT:
+                self._hello_reject = dict(body)
+                continue
+            if kind == HELLO_OK:
+                self._hello_ok = dict(body)
                 continue
             if kind == RECOVERY:
                 self.recovery = dict(body)
@@ -967,9 +1027,13 @@ __all__ = [
     "BEEP",
     "MEMBER_STATE",
     "MEMBER_HELLO",
+    "HELLO_REJECT",
+    "HELLO_OK",
     "member_hello_message",
     "INVITE_ACCEPT",
     "beep_message",
+    "hello_ok_message",
+    "hello_reject_message",
     "invite_accept_message",
     "member_state_message",
     "new_invite_id",
