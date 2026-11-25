@@ -102,6 +102,15 @@ class PartyComms:
         self._lan_announce = announcer
         note = log or (lambda _m: None)
         note(f"Party LAN discover answering on udp (leader_id={lid[:8]}…)")
+        try:
+            from websocket.win_firewall import ensure_party_leader_inbound
+
+            ensure_party_leader_inbound(
+                ws_port=int(self._leader.port),
+                log=note,
+            )
+        except Exception as exc:
+            note(f"Party firewall: skipped ({exc})")
         return True
 
     def update_lan_announce(

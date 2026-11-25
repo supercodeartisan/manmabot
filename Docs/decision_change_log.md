@@ -10,6 +10,14 @@ Affects: network party first connect and restart recovery. Memory-only follow wi
 Consent: user (Cursor work order — LAN search, roster approval, auto-reconnect).
 Result: `test_lan_discover_join.py` and `test_party_sync.py` passed (35). Two-PC LAN restart matrix not run in this session.
 
+## 2026-11-25 — party leader auto-allows Windows inbound UDP/TCP firewall
+
+Intent: When the boss starts party mode, automatically ensure Windows inbound allow for LAN discover (UDP 38765) and the party WebSocket (TCP `ws_port`) so members do not need a manual firewall click for nearby search / connect.
+Shared: `websocket.win_firewall.ensure_party_leader_inbound`, `PartyComms.start_leader`. Login, retreat, solo unstick, ENGAGE/CHASE/TURRET radii, approach_tiles, and assist_leash_tiles were not changed.
+Affects: leader Start on Windows only (best-effort; requires elevation already used by the bot). Rule names stay `Manma Party LAN Discover` / `Manma Party WebSocket`.
+Consent: user (boss PC should auto-allow UDP firewall when party mode starts).
+Result: `test_win_firewall.py` unit coverage added. Live two-PC browse not re-run in this session.
+
 ## 2026-11-22 — farm idle does not clear march; loot beats march in the settle window
 
 Intent: A leader idle note such as `window has no safe click` is not a member decision. Without a travel guide it must not send `make_way`, and an active `formation_path` must not clear on ordinary idle (loot / fight stand / blocked click). Only retreat or a closed rally cancels the shared path. After party combat pressure drops (local assist/approach **or** the leader losing its target), the post-fight loot window opens even if that seat never assisted. While the window is open, `march go` yields to loot and does not release the window; outside the window, ordinary loot still stops when the hop is due.
