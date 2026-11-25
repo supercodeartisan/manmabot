@@ -339,6 +339,17 @@ import 시점 `_bind_action_vfts` 도 오버레이 설정 **전**에 돌아가 �
 Stage 5 publish는 항상 두 팩을 BUILD에 올린다(신규 또는 carry-forward). analysis DLL/텍스트는 overlay helper만 사용. websocket은 compile_packages에 유지.
 `pack_assets` analysis 스냅샷은 **repo** `Engine/analysis` 기준(포터블이 이미 strip된 뒤 dll/csv만 남아 팩이 축소되는 사고 방지).
 
+## RBF-011 — portable missing cryptography / rfc8785 (2026-11-22)
+
+### Symptom
+Customer License UI:「요청 실패: No module named 'cryptography'」 when creating the activation request.
+
+### Root cause
+Embeddable `python\` (and thus Stage 3 / incremental python recopy) never had `cryptography` / `rfc8785` installed, though `Engine/requirements.txt` lists them for MMB2 / Soft DeviceKey.
+
+### Fix
+Install `cryptography` + `rfc8785` into repo `python\` and portable `python\`. `verify_runtime_imports` now requires both so Stage 3 / incremental cannot ship without them.
+
 ## RBF-010 — prune deny leftovers from portable (2026-11-21)
 
 ### Symptom

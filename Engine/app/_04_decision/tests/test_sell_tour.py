@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from app._04_decision import shops as shops_mod  # noqa: E402
 from app._04_decision.shop_trip import (  # noqa: E402
+    GIVE_GOODS_CH_ID,
     GIVE_GOODS_ID,
     SCRATCH_SELL_QUEUE,
     SCRATCH_SHOP_BEHAVIOR,
@@ -20,6 +21,10 @@ from app._04_decision.shop_trip import (  # noqa: E402
     advance_sell_trip,
     sell_tour_weight_done,
     store_after_sell_weight_ok,
+)
+from app._04_decision.shops import (  # noqa: E402
+    is_store_behavior,
+    resolve_store_behavior_id,
 )
 
 
@@ -133,10 +138,25 @@ def test_store_after_sell_weight_ok_at_40():
     assert store_after_sell_weight_ok(_state(0.40, bag_ready=False)) is False
 
 
+def test_resolve_store_behavior_id_by_locale():
+    prev = shops_mod.SHOP_LOCALE
+    try:
+        shops_mod.SHOP_LOCALE = "ko"
+        assert resolve_store_behavior_id() == GIVE_GOODS_ID
+        shops_mod.SHOP_LOCALE = "zh"
+        assert resolve_store_behavior_id() == GIVE_GOODS_CH_ID
+    finally:
+        shops_mod.SHOP_LOCALE = prev
+    assert is_store_behavior(GIVE_GOODS_ID)
+    assert is_store_behavior(GIVE_GOODS_CH_ID)
+    assert not is_store_behavior("sell_except_keep_ch")
+
+
 def test_advance_give_goods_when_heavy_with_leftovers():
     shops_mod.STORE_AFTER_SELL = True
     shops_mod.STORE_AFTER_SELL_MIN_RATIO = 0.40
     shops_mod.SELL_STOP_BELOW_RATIO = 0.35
+    shops_mod.SHOP_LOCALE = "ko"
     board = _board(
         **{
             SCRATCH_SHOP_TRIP: True,
@@ -150,6 +170,30 @@ def test_advance_give_goods_when_heavy_with_leftovers():
         nxt = advance_sell_trip(board, _state(0.50, items=[_leftover_item()]))
     assert nxt == GIVE_GOODS_ID
     assert board.scratch[SCRATCH_SHOP_BEHAVIOR] == GIVE_GOODS_ID
+
+
+def test_advance_give_goods_ch_when_locale_zh():
+    shops_mod.STORE_AFTER_SELL = True
+    shops_mod.STORE_AFTER_SELL_MIN_RATIO = 0.40
+    shops_mod.SELL_STOP_BELOW_RATIO = 0.35
+    prev = shops_mod.SHOP_LOCALE
+    shops_mod.SHOP_LOCALE = "zh"
+    board = _board(
+        **{
+            SCRATCH_SHOP_TRIP: True,
+            SCRATCH_SHOP_BEHAVIOR: "sell_except_keep_ch",
+            SCRATCH_SELL_QUEUE: [],
+        }
+    )
+    try:
+        with mock.patch(
+            "app._04_decision.shop_trip._bag_needs_give_goods", return_value=True
+        ):
+            nxt = advance_sell_trip(board, _state(0.50, items=[_leftover_item()]))
+    finally:
+        shops_mod.SHOP_LOCALE = prev
+    assert nxt == GIVE_GOODS_CH_ID
+    assert board.scratch[SCRATCH_SHOP_BEHAVIOR] == GIVE_GOODS_CH_ID
 
 
 def test_advance_skips_give_goods_when_weight_under_40():

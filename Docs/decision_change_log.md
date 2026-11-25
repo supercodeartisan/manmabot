@@ -1,5 +1,6 @@
 # Decision change log
 
+<<<<<<< HEAD
 ## 2026-11-24 — LAN party browse, roster hello gate, auto-reconnect by leader_id
 
 Intent: Member picks a leader once from **주변 파티** (UDP browse). After that, reconnect uses the saved `leader_id` (last host first, then LAN resolve). Search alone never invites. `member_hello` is roster-gated before invites/party commands: not on roster → `hello_reject` + member join hold; MATCHED → `hello_ok` + current snapshot; CONFLICT keeps the existing dual-socket policy; game memory unknown does not invite. Leader announces `leader_id` / `session_id` / ready on LAN and on WS status. Socket drop still releases only that peer’s registration.
@@ -196,6 +197,86 @@ Consent: user ("구현해줘" / "update like this the party movement"), includin
 Result: `python -m pytest app/_06_party/tests/test_formation_march.py app/_06_party/tests/test_close_follow.py app/_06_party/tests/test_make_way_pace.py` → 44 passed. Not run in game. `MARCH_GAP_TILES` (4) and the two-tile look-ahead are unmeasured assumptions. Click-to-first-position delay is not a timer; progress is recorded only from an observed tile.
 =======
 =======
+=======
+## 2026-11-22 — Portable: ship cryptography + rfc8785 (license request)
+
+Intent: Fix customer License「요청 실패: No module named 'cryptography'」— Soft DeviceKey / MMB2 request needs cryptography+rfc8785 in embeddable python.
+Shared: pip into repo `python\` + portable `python\`; `prune_python.verify_runtime_imports` gate. No login/move/combat/HP edits.
+Consent: user (bug report with screenshot).
+Result: portable import OK; Stage4 checksum refresh (RBF-011).
+
+## 2026-11-22 — Customer rerelease (shop/decision/UI, same CEK)
+
+Intent: Ship recent shop sell-locale / decision / storewin / live_income_bar updates to pack-only portable without rotating CEK.
+Shared: incremental_release + pack_assets MMB2 + verify_stage5 + Stage4. No login/move/combat/HP edits in this release step.
+Affects: customer zip (`data.pack` rebuilt, analysis republished, changed `.pyd`s).
+Consent: user approved release plan (“yes”).
+Result: `build_id` `43900795-…`, CEK `4d6dcda5-…`, Stage5/4 OK. First incremental failed on portable-python locking `libcrypto` during python recopy; completed with build CPython.
+
+## 2026-11-22 — keep talking scroll across Chinese store/sell
+
+Intent: ``말하는 두루마리`` is on keep_list but not in game_catalog, so Chinese storewin names (說話的卷軸 / 说话卷轴) still passed the filter and ``give_goods_ch`` deposited the scrolls (next F5 → opened=False).
+Shared: ``_KEEP_NAME_ALIASES`` / ``_KEEP_ITEM_IDS`` wired into ``_catalog_keys_for_names`` / ``_catalog_ids_for_names`` (same ``item_passes_sell_filter`` for sell + warehouse). ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: sell tour and warehouse deposit only for scroll / scroll box (and class-bound scroll ids).
+Side effects: none for catalog-backed keep rows; aliases are explicit for this hotbar-only item.
+Consent: user (yes — after log diagnosis).
+Result: unit tests for ZH scroll names + ids 16673/16222/16977.
+
+## 2026-11-22 — sell/store keep filter matches Chinese names + ids
+
+Intent: Chinese clients were depositing/selling keep-list items because ``keep_list`` is Korean-only and live storewin/shop rows are Chinese (or id-only). Expand keep matching with catalog ko/zh aliases and catalog item ids; never sell/store Adena (ids 5/7 and 金幣/金币).
+Shared: ``item_passes_sell_filter``, ``_catalog_keys_for_names``, ``_catalog_ids_for_names``; ``parse_store_entries`` now forwards ``id``. Merchant sell and warehouse deposit share the same filter. ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: sell tour and ``give_goods`` / ``give_goods_ch`` deposit row selection.
+Side effects: keep entries missing from the item catalog still match only by exact string; add catalog rows or Chinese keep names for those.
+Consent: user (yes — fix Chinese keep matching after all-items dump).
+Result: unit tests for ZH keep / Adena / empty-name id keep.
+
+## 2026-11-22 — warehouse id follows shop locale (give_goods_ch)
+
+Intent: Korean still visits ``give_goods``. Chinese visits ``give_goods_ch`` after the sell tour when ``store_after_sell`` runs. Before this, both locales armed the Korean warehouse id.
+Shared: ``resolve_store_behavior_id``, ``is_store_behavior`` (``give_goods*``), ``advance_sell_trip``. storewin deposit/read path unchanged. Buy/sell locale resolve unchanged. ``try_unstick_escape``, ``begin_retreat``, ``apply_hp_actions``, login unchanged.
+Affects: post-sell warehouse arm only. If ``give_goods_ch`` is missing from YAML, Chinese falls back to ``give_goods`` (same as teleporter ``_ch`` fallback).
+Side effects: Chinese needs a calibrated ``give_goods_ch`` row (already present in YAML); missing row falls back to ``give_goods``.
+Consent: user (give_goods_ch for Chinese; give_goods for Korean).
+Result: unit tests for resolve + zh advance.
+
+## 2026-11-22 — warehouse deposit line clicks the glyph
+
+Intent: The warehouse dialog opened and the cursor reached "물건을 맡긴다", but the shop-button orbit and 1–2px land error missed that short line, so the deposit list never opened. The visit then ended and the character left for the world tree with the junk still in the bag. Click that line on the calibrated pixel, rest so the glyph can highlight, and if the deposit list is still closed step 4, 8, then 12px down the same line. Once the list is the deposit list, store the same keep-list misses as before.
+Shared: `aim_and_click_exact` and `open_store_deposit_tab`, called from `execute_calibrated_sell` only when the behavior is store. Merchant `_click_uv` / `aim_and_click`, buy, scroll, confirm, the keep list, the Adena skip, and the one-visit warehouse stop stay as they are.
+Affects: overweight and pre-retreat warehouse deposit (`give_goods`). After the deposit list opens, junk outside the keep list is still stored, then the world-tree step runs.
+Side effects: up to four option clicks and about 1.5s between them while the list stays closed. A retrieve list is closed with two Esc presses and those rows are not stored. Merchant sell timing is unchanged.
+Consent: user (make deposit work; keep storing the junk; do not drop the warehouse step).
+Result: code + unit tests. Live warehouse visit not run this session.
+
+## 2026-11-22 — mother tree return waits for both bars
+
+Intent: The hunt return after Teleport to Mother starts only when HP and MP are both at least the almost-full ratio (95%). A bar that is not in memory does not count as full. Once HP is already on that line and the landing is confirmed (map changed, 세계수의 가호, or the faster-regen mark), another Teleport to Mother is not pressed, so the cast cannot spend the MP this stand is still filling. Heal and Body to Mind keep their existing bands.
+Shared: `_tick_mother_tree_retreat` and `_mother_tree_landing_confirmed`. `_hold_until_world_tree_blessing` is unchanged and still runs while HP is under 95%, and while HP is full but the landing is not confirmed. `begin_retreat`, `apply_hp_actions`, field Body to Mind, and non-tree retreat exit (`retreat_exit_ready`, HP 95% only) are unchanged.
+Affects: every mother-tree recharge stand (HP retreat, post-respawn, post-land, teleport fallback). The return is `finish_retreat` → world nav, and it runs on that joint condition.
+Side effects: after a confirmed landing, MP under 95% keeps the character at the tree. Body to Mind still stops once MP is over 80%, so the last stretch is the aura. If MP never reaches 95%, the stand does not end. A same-map press on map 4 with no aura still recasts, because that landing is not confirmed. Both bars already at 95% on a recharge tick starts the return without another map wait; an HP retreat begins below that line.
+Consent: user (apply the agreed exit: both nearly full, then start the hunt return; review side effects while editing).
+Result: code + unit tests. Live stand not run this session.
+
+## 2026-11-21 — world-tree stand: map change, then blessing or regen
+
+Intent: At the world tree, heal and Body to Mind were stuck behind an unreadable buff list (`waiting for world tree blessing`) until HP hit 95%. After Teleport to Mother, a MapSubsystem mapId change is the first arrival check. A readable 세계수의 가호 recovers in place. A readable list without it presses the skill again, and Body to Mind raises MP to 15 first only when the map actually changed. An unreadable list recovers in place only when HP and MP rise faster than the hunt/move baseline.
+Shared: `_hold_until_world_tree_blessing`, `_tick_mother_tree_retreat`, `maybe_hp_to_mp` / `maybe_hp_to_mp_at_tree` (blessing skipped only when `mother_tree_zone` is `regen`), `finish_retreat` drops the new scratch keys. `begin_retreat`, `apply_hp_actions`, field Body to Mind, and the 95% exit are unchanged.
+Affects: standing after Teleport to Mother. Field heal, potions, and Body to Mind still require the blessing.
+Side effects: a failed cast that never changes map retries after 2s without Body to Mind. On map 4, an unreadable list waits up to 8s of slow vitals before that retry. HP under 20% does not convert to buy the 15 MP.
+Consent: user (map change, then buff; recast, Body to Mind until MP 15, recast again; unread buffs use faster-than-field HP/MP). Follow-up: review the retreat column and shared HP paths so the new stand does not leak into hunt, party, or a stale buff read.
+Result: code + unit tests. A blessing read still on the hunt map does not start tree recovery, and a one-step potion jump is not treated as the aura. The recovery checkbox still gates Body to Mind, including the press that buys 15 MP. Field heal, potions, and party Body to Mind are unchanged. The tree return is the both-bars rule in the entry above. Live stand not run this session.
+
+## 2026-11-21 — HP idle log also records MP
+
+Intent: The 2s `hp idle` line already records HP ratio. Append current/max MP and MP ratio on that same line. Unknown MP is `?`.
+Shared: `_log_hp_idle` / `_mp_idle_text` in `mode_actions.py`. Called from `apply_hp_actions` after heal, retreat, and HP-to-MP already returned. Gate, 2s clock, and those returns are unchanged.
+Affects: session `[hp]` text only, and only when that idle line was already due. Hunt, retreat, loot, login, potion, and heal decisions stay as they are.
+Side effects: the existing line is longer (`mp=18/45 (0.40)`). A bad MP read cannot raise out of the HP picker; it prints `mp=?`.
+Consent: user (“그래 그 과정에 부작용이 나타나지 않도록 갱신 잘해줘”).
+Result: idle line carries MP. No new timer and no new log when HP is above every enabled gate.
+
+>>>>>>> origin
 ## 2026-11-21 — Portable deny prune + empty-dir collapse
 
 Intent: Customer zip must not keep compiled test trees, training debris, or empty `Engine/analysis` shells left after Stage5 strip.

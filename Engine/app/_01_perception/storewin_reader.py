@@ -112,7 +112,7 @@ def capture_store() -> Optional[dict[str, Any]]:
 
 
 def parse_store_entries(snapshot: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Normalize rows to idx, name, count. Empty when the window is not open."""
+    """Normalize rows to idx, id, name, count. Empty when the window is not open."""
     if not isinstance(snapshot, dict):
         return []
     raw = snapshot.get("rows")
@@ -127,12 +127,17 @@ def parse_store_entries(snapshot: Optional[dict[str, Any]]) -> list[dict[str, An
         except (TypeError, ValueError):
             idx = i
         try:
+            item_id = int(row.get("id") or 0)
+        except (TypeError, ValueError):
+            item_id = 0
+        try:
             qty = max(0, int(row.get("qty") or row.get("count") or 0))
         except (TypeError, ValueError):
             qty = 0
         out.append(
             {
                 "idx": idx,
+                "id": item_id,
                 "name": str(row.get("name") or "").strip(),
                 "count": qty,
             }

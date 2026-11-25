@@ -83,6 +83,33 @@ def test_aim_and_click_uses_budget_and_hold(monkeypatch):
     assert hold[3] == 0.12
 
 
+def test_aim_and_click_exact_holds_the_pixel(monkeypatch):
+    calls = []
+
+    class FakeMouse:
+        screen_width = 1920
+
+        def move_with_budget(
+            self, x, y, *, budget_s, steps=None, curve_fraction=None, shop_curves=False
+        ):
+            calls.append(("approach", x, y))
+
+        def hold_in_place(self, x, y, duration, button="left"):
+            calls.append(("hold", x, y, duration, button))
+
+    monkeypatch.setattr(hz, "SHOP_UI_APPROACH_BUDGET_S", (0.4, 0.4))
+    monkeypatch.setattr(hz, "SHOP_UI_APPROACH_STEPS", (4, 4))
+    monkeypatch.setattr(hz, "SHOP_UI_CLICK_HOLD_S", (0.12, 0.12))
+    monkeypatch.setattr(hz.time, "sleep", lambda s: calls.append(("sleep", s)))
+
+    ex = SimpleNamespace(humanize=True, mouse=FakeMouse(), _rng=random.Random(3))
+    ui_aim.aim_and_click_exact(ex, 100.0, 200.0, hover_s=0.25)
+    assert ("sleep", 0.25) in calls
+    hold = [c for c in calls if c[0] == "hold"][0]
+    assert hold[1] == 100.0 and hold[2] == 200.0
+    assert not any(c[0] == "approach" and (c[1], c[2]) != (100.0, 200.0) for c in calls)
+
+
 def test_click_uv_human_vs_snap(monkeypatch):
     from shop import runtime
     import app._05_action.coordinates as coords

@@ -123,6 +123,19 @@ def aim_and_click(executor: Any, sx: float, sy: float) -> None:
     click_hold(executor, fx, fy)
 
 
+def aim_and_click_exact(executor: Any, sx: float, sy: float, *, hover_s: float = 0.25) -> None:
+    """Curve onto one pixel, rest, then hold-click that same pixel.
+
+    Dialog lines such as the warehouse "deposit" option are a short glyph.
+    The shop-button orbit and the 1–2px land error miss that glyph. This
+    path does not orbit and does not add a land error.
+    """
+    approach_ui(executor, float(sx), float(sy))
+    if hover_s > 0.0:
+        time.sleep(float(hover_s))
+    click_hold(executor, float(sx), float(sy))
+
+
 def type_qty_human(executor: Any, qty: int, *, backspace: int = 3) -> None:
     """After the row click: 0.2–0.3s, then keys at 5–6 characters/second."""
     rng = _rng(executor)

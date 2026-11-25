@@ -332,8 +332,12 @@ def maybe_hp_to_mp(
     blackboard: "Blackboard",
     *,
     reason: str = "hp to mp",
+    assume_blessing: bool = False,
 ) -> Optional[Status]:
     """Convert HP to MP when the World Tree blessing is up.
+
+    ``assume_blessing`` is only for a mother-tree stand whose buff list never
+    arrived and whose HP/MP are already rising faster than field regen.
 
     HP must be at least ``HP_TO_MP_MIN_RATIO`` and MP at or under
     ``HP_TO_MP_MAX_MP_RATIO``. Both come from the mother-tree recovery
@@ -368,7 +372,7 @@ def maybe_hp_to_mp(
         state, blackboard
     ):
         return None
-    if not world_tree_blessing_active(state):
+    if not assume_blessing and not world_tree_blessing_active(state):
         return None
     ratio = hp_ratio(state)
     if ratio is None or ratio < min_hp:
@@ -398,8 +402,18 @@ def maybe_hp_to_mp_at_tree(
     state: "GameState",
     blackboard: "Blackboard",
 ) -> Optional[Status]:
-    """At Mother Tree: Body to Mind when the blessing is up, HP ≥ 85%, MP < 80%."""
-    result = maybe_hp_to_mp(state, blackboard, reason="hp to mp at mother tree")
+    """At Mother Tree: Body to Mind on the recovery band (HP ≥ 85%, MP ≤ 80%).
+
+    The blessing check stays on unless this stand already marked the aura
+    from HP/MP rising faster than field regen.
+    """
+    assume = blackboard.scratch.get("mother_tree_zone") == "regen"
+    result = maybe_hp_to_mp(
+        state,
+        blackboard,
+        reason="hp to mp at mother tree",
+        assume_blessing=assume,
+    )
     if result is Status.SUCCESS:
         blackboard.current_goal = "mother_tree"
     return result

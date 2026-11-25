@@ -96,6 +96,102 @@ def _click_uv(executor, bounds, uv, *, wait_s: float) -> None:
         _stage_sleep(executor, wait_s)
 
 
+# Warehouse dialog line only. First click is the calibrated pixel. The next
+# three sit 4, 8, and 12px lower on that same line when the deposit list
+# is still closed. Merchant buy/sell buttons do not use this.
+_STORE_OPTION_NUDGE_PX = (0, 4, 8, 12)
+_STORE_OPTION_HOVER_S = 0.25
+_STORE_OPTION_POLL_S = 1.5
+_STORE_RETRIEVE_MODES = frozenset({"retrieve", "withdraw"})
+
+
+def store_deposit_ready(snap) -> bool:
+    """True when the open warehouse list is the deposit list."""
+    if not isinstance(snap, dict) or not snap.get("open"):
+        return False
+    mode = str(snap.get("mode") or "").strip().lower()
+    return mode in ("", "deposit")
+
+
+def store_list_is_retrieve(snap) -> bool:
+    if not isinstance(snap, dict):
+        return False
+    mode = str(snap.get("mode") or "").strip().lower()
+    return mode in _STORE_RETRIEVE_MODES
+
+
+def _log_store_option(snap, *, tries: int) -> None:
+    from app.bot_log import get_logger
+
+    if not isinstance(snap, dict):
+        get_logger("shop").info(
+            "store option open=0 mode=closed tries=%s",
+            int(tries),
+        )
+        return
+    get_logger("shop").info(
+        "store option open=%s mode=%s tries=%s",
+        snap.get("open"),
+        snap.get("mode") or "-",
+        int(tries),
+    )
+
+
+def _click_store_option_exact(executor, bounds, uv, *, dy_px: float) -> None:
+    """Click the deposit line on its pixel. No shop-button orbit."""
+    from app._05_action.coordinates import game_to_screen
+
+    u, v = _uv_xy(uv)
+    sx, sy = game_to_screen(u, v, bounds)
+    sy = float(sy) + float(dy_px)
+    if _shop_humanize_on(executor):
+        from shop.ui_aim import aim_and_click_exact
+
+        aim_and_click_exact(executor, float(sx), sy, hover_s=_STORE_OPTION_HOVER_S)
+        return
+    executor.mouse.move(sx, sy, snap=True)
+    time.sleep(_STORE_OPTION_HOVER_S)
+    executor.mouse.move_and_click(sx, sy, snap=True)
+
+
+def _poll_store_window(timeout_s: float):
+    """Latest storewin snapshot. Stops early on deposit or retrieve."""
+    from app._01_perception.storewin_reader import capture_store
+
+    deadline = time.time() + max(0.0, float(timeout_s))
+    last = None
+    while True:
+        try:
+            snap = capture_store()
+        except Exception:
+            snap = None
+        last = snap if isinstance(snap, dict) else None
+        if store_deposit_ready(last) or store_list_is_retrieve(last):
+            return last
+        if time.time() >= deadline:
+            return last
+        time.sleep(0.05)
+
+
+def open_store_deposit_tab(executor, bounds, sell_uv) -> str:
+    """Click "deposit" until the deposit list is open.
+
+    One NPC dialog is already open. This does not click the keeper again.
+    Returns ``deposit``, ``retrieve``, or ``closed``. A retrieve list is not
+    stored; the caller closes that window.
+    """
+    last = None
+    for tries, dy in enumerate(_STORE_OPTION_NUDGE_PX, start=1):
+        _click_store_option_exact(executor, bounds, sell_uv, dy_px=float(dy))
+        last = _poll_store_window(_STORE_OPTION_POLL_S)
+        _log_store_option(last, tries=tries)
+        if store_deposit_ready(last):
+            return "deposit"
+        if store_list_is_retrieve(last):
+            return "retrieve"
+    return "closed"
+
+
 def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) -> None:
     from app._05_action.coordinates import game_to_screen
     from app._05_action.input_backend import list_wheel_count, scroll_wheel
@@ -770,8 +866,7 @@ def execute_calibrated_sell(
                 item_id = int(row.get("id") or 0)
             except (TypeError, ValueError):
                 item_id = 0
-            if is_store and str(row.get("name") or "").strip() in ("아데나", "Adena"):
-                continue
+            # Adena / keep / garbage: same filter for merchants and warehouse.
             if not item_passes_sell_filter(
                 str(row.get("name") or ""),
                 sell_mode=sell_mode,
@@ -783,20 +878,31 @@ def execute_calibrated_sell(
             sellable.append(row)
         return sellable, max(length, len(rows))
 
-    def open_sell() -> bool:
-        if not open_shop_npc(
-            executor, bounds, behavior, player_origin_from_executor(executor)
-        ):
-            return False
-        _click_uv(executor, bounds, ui.sell_button, wait_s=hz.SHOP_AFTER_TAB_WAIT_S)
-        _stage_sleep(executor, 0.35)
-        return True
-
     def close_shop() -> None:
         try:
             executor.keyboard.press("escape")
         except Exception:
             pass
+
+    def open_sell() -> bool:
+        if not open_shop_npc(
+            executor, bounds, behavior, player_origin_from_executor(executor)
+        ):
+            return False
+        if is_store:
+            # Exact glyph click. The shop-button orbit misses this short line.
+            # Rows are stored only after the deposit list is actually open.
+            opened = open_store_deposit_tab(executor, bounds, ui.sell_button)
+            if opened != "deposit":
+                close_shop()
+                if opened == "retrieve":
+                    close_shop()
+                return False
+            _stage_sleep(executor, 0.35)
+            return True
+        _click_uv(executor, bounds, ui.sell_button, wait_s=hz.SHOP_AFTER_TAB_WAIT_S)
+        _stage_sleep(executor, 0.35)
+        return True
 
     def _idx(row: dict) -> int:
         try:

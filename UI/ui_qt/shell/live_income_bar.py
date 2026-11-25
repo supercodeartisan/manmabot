@@ -144,6 +144,56 @@ def _copy(language: str) -> dict[str, str]:
 
 _RUNTIME_GAP = 12.0
 _RUNTIME_VALUE_SIZE = 12
+_RESET_MARGIN = 9.0
+_RESET_BUTTON = 16.0
+_RATE_BUTTON_GAP = 4.0
+_ADENA_GUTTER = 18.0
+_ADENA_MIN_GUTTER = 6.0
+_LEVEL_FLOOR = 360.0
+
+
+def split_income_cards(usable: float, adena_content: float) -> tuple[float, float]:
+    """Split the bar into the level card and the adena card.
+
+    The level card keeps at least ``_LEVEL_FLOOR`` when the adena card can
+    have its measured content width. A narrower bar keeps the 62 / 38 split.
+    The adena rate is placed inside its own card, so this split does not
+    change to make room for that column.
+    """
+    if usable >= adena_content + _LEVEL_FLOOR:
+        return usable - adena_content, adena_content
+    level_w = usable * 0.62
+    return level_w, usable - level_w
+
+
+def place_adena_columns(
+    card_left: float,
+    card_right: float,
+    hold_x: float,
+    natural_hold: float,
+    text_w: float,
+) -> tuple[float, float, float]:
+    """Place the holdings column and the hourly-rate text inside one card.
+
+    The rate text ends before the reset button. When the card is wide enough
+    the holdings column keeps its measured width and only the gutter narrows.
+    When it is not, the rate stays on the card and the holdings column clips.
+    Returns ``(hold_w, rate_x, text_w)``.
+    """
+    text_limit = card_right - _RESET_MARGIN - _RESET_BUTTON - _RATE_BUTTON_GAP
+    if text_w < 0.0:
+        text_w = 0.0
+    full_rate_x = hold_x + max(0.0, natural_hold) + _ADENA_GUTTER
+    if full_rate_x + text_w <= text_limit:
+        return max(0.0, natural_hold), full_rate_x, text_w
+    rate_x = text_limit - text_w
+    if rate_x >= hold_x + max(0.0, natural_hold) + _ADENA_MIN_GUTTER:
+        return max(0.0, natural_hold), rate_x, text_w
+    rate_x = max(card_left + 8.0, rate_x)
+    if rate_x + text_w > text_limit:
+        text_w = max(0.0, text_limit - rate_x)
+    hold_w = max(0.0, rate_x - _ADENA_MIN_GUTTER - hold_x)
+    return hold_w, rate_x, text_w
 
 
 def runtime_phrase(elapsed: float | None, language: str = "ko") -> str:
@@ -546,13 +596,10 @@ class LiveIncomeBar(QWidget):
         left = 3.0
         usable = max(0.0, self.width() - left - gap - 1.0)
         adena_w = self._adena_width(painter)
-        # The level card keeps most of a narrow bar. Adena takes its content
-        # width only when the level card still has room for its columns.
-        if usable >= adena_w + 360.0:
-            level_w = usable - adena_w
-        else:
-            level_w = usable * 0.62
-            adena_w = usable - level_w
+        # Level-card width stays on split_income_cards. A long adena runtime
+        # must not take pixels from the exp columns; the rate pins inside
+        # the gold card instead.
+        level_w, adena_w = split_income_cards(usable, adena_w)
         height = self.height() - 2.0
         self._paint_progress(painter, QRectF(left, 0, level_w, height))
         self._paint_adena(painter, QRectF(left + level_w + gap, 0, adena_w, height))
@@ -644,17 +691,29 @@ class LiveIncomeBar(QWidget):
         adena = self._view.get("adena")
         rate = self._view.get("adena_rate")
         amount = "—" if adena is None else f"{int(adena):,}"
-        gutter = 18.0
-        hold_w = self._hold_column_width(painter, text)
-        rate_w = self._block_width(
-            painter,
-            ((text["adena_rate_label"], 11, False), (f"{text['about']} 999,999", 15, True)),
+        natural_hold = self._hold_column_width(painter, text)
+        rate_text = self._adena_rate_value(rate)
+        text_w = max(
+            self._advance(painter, text["adena_rate_label"], 11, False),
+            self._advance(painter, rate_text, 15, True),
+            self._advance(painter, f"{text['about']} 999,999", 15, True),
         )
         hold_x = icon.right() + 12.0
-        rate_x = hold_x + hold_w + gutter
-        self._rule(painter, rate_x - gutter / 2.0, rect, QColor("#f0d7a2"))
+        hold_w, rate_x, text_w = place_adena_columns(
+            rect.left(), rect.right(), hold_x, natural_hold, text_w
+        )
+        gap_left = hold_x + hold_w
+        if rate_x - gap_left >= _ADENA_MIN_GUTTER:
+            self._rule(
+                painter,
+                (gap_left + rate_x) / 2.0,
+                rect,
+                QColor("#f0d7a2"),
+            )
         hold_rect = QRectF(hold_x, rect.top() + 8, hold_w, rect.height() - 12)
-        rate_rect = QRectF(rate_x, rect.top() + 10, max(rate_w, rect.right() - 12.0 - rate_x), rect.height() - 20)
+        text_limit = rect.right() - _RESET_MARGIN - _RESET_BUTTON - _RATE_BUTTON_GAP
+        draw_w = min(text_w + 2.0, max(0.0, text_limit + 2.0 - rate_x))
+        rate_rect = QRectF(rate_x, rect.top() + 10, draw_w, rect.height() - 20)
         self._text(painter, hold_rect, 2, text["adena_label"], 11, "#8a6a32", bold=False)
         self._text(painter, hold_rect.adjusted(0, 18, 0, 0), 0, amount, 18, "#1f2937", bold=True)
         gained_dy = 52.0
@@ -693,7 +752,6 @@ class LiveIncomeBar(QWidget):
             "#1f2937",
             bold=True,
         )
-        rate_text = self._adena_rate_value(rate)
         self._text(painter, rate_rect, 4, text["adena_rate_label"], 11, "#8a6a32", bold=False)
         self._text(
             painter,
@@ -778,7 +836,7 @@ class LiveIncomeBar(QWidget):
         return 14.0 + 46.0 + 12.0 + hold_w + 18.0 + rate_w + 16.0
 
     def _hold_column_width(self, painter: QPainter, text: dict[str, str]) -> float:
-        """Holdings column. Runtime sits on the gained line and must not push the rate off."""
+        """Measured holdings column. Paint pins the rate if this does not fit."""
         base = max(
             self._advance(painter, text["adena_label"], 11, False),
             self._advance(painter, "999,999,999", 18, True),

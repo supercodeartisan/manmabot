@@ -51,7 +51,9 @@ SCRATCH_SELL_DECIDE_AFTER = "sell_decide_after_mono"
 SCRATCH_HP_SELL_BEFORE_RETREAT = "hp_sell_before_retreat"
 # Weight at the retreat decision. 50% sells first; below that retreats now.
 HP_RETREAT_SELL_WEIGHT = 0.50
+# Korean warehouse id. Chinese uses ``resolve_store_behavior_id()`` → give_goods_ch.
 GIVE_GOODS_ID = "give_goods"
+GIVE_GOODS_CH_ID = "give_goods_ch"
 
 # After talking-scroll emit, wait this long for landing before retry/cancel.
 SHOP_LANDING_WAIT_S = 25.0
@@ -413,11 +415,16 @@ def advance_sell_trip(
     Visit order is a random permutation of the four merchants. If bag weight
     falls below ``SELL_STOP_BELOW_RATIO`` (default 35%), remaining merchants
     are skipped. When the merchant loop ends, ``store_after_sell`` may run
-    ``give_goods`` once only if bag/weight were read, weight is still at
-    least ``STORE_AFTER_SELL_MIN_RATIO`` (default 40%), and leftovers sit
-    outside the keep list. The following tick then picks potions/arrows.
+    warehouse once (``give_goods`` / ``give_goods_ch`` by locale) only if
+    bag/weight were read, weight is still at least
+    ``STORE_AFTER_SELL_MIN_RATIO`` (default 40%), and leftovers sit outside
+    the keep list. The following tick then picks potions/arrows.
     """
     from app.bot_log import get_logger
+    from app._04_decision.shops import (
+        is_store_behavior,
+        resolve_store_behavior_id,
+    )
 
     remaining = blackboard.scratch.get(SCRATCH_SELL_QUEUE)
     if isinstance(remaining, list) and remaining:
@@ -434,24 +441,30 @@ def advance_sell_trip(
             if next_id:
                 return _arm_next_shop(blackboard, next_id, rest)
     current = str(blackboard.scratch.get(SCRATCH_SHOP_BEHAVIOR) or "")
-    if shops_mod.STORE_AFTER_SELL and current != GIVE_GOODS_ID:
+    if shops_mod.STORE_AFTER_SELL and not is_store_behavior(current):
+        store_id = resolve_store_behavior_id()
         if not _bag_inventory_ready(state):
             get_logger("shop").info(
-                "sell done, bag/weight unread after settle → skip give_goods"
+                "sell done, bag/weight unread after settle → skip %s",
+                store_id,
             )
         elif not store_after_sell_weight_ok(state):
             get_logger("shop").info(
-                "sell done, weight<%.0f%% → skip give_goods",
+                "sell done, weight<%.0f%% → skip %s",
                 float(shops_mod.STORE_AFTER_SELL_MIN_RATIO) * 100.0,
+                store_id,
             )
         elif _bag_needs_give_goods(state):
             get_logger("shop").info(
-                "sell done, weight>=%.0f%% + leftovers → give_goods",
+                "sell done, weight>=%.0f%% + leftovers → %s",
                 float(shops_mod.STORE_AFTER_SELL_MIN_RATIO) * 100.0,
+                store_id,
             )
-            return _arm_next_shop(blackboard, GIVE_GOODS_ID, [])
+            return _arm_next_shop(blackboard, store_id, [])
         else:
-            get_logger("shop").info("sell done, keep-only bag → skip give_goods")
+            get_logger("shop").info(
+                "sell done, keep-only bag → skip %s", store_id
+            )
     clear_shop_trip(blackboard)
     return None
 
@@ -936,6 +949,8 @@ __all__ = [
     "sell_hold_pending",
     "SCRATCH_HP_SELL_BEFORE_RETREAT",
     "HP_RETREAT_SELL_WEIGHT",
+    "GIVE_GOODS_ID",
+    "GIVE_GOODS_CH_ID",
     "arm_sell_before_hp_retreat",
     "drop_hp_sell_before_retreat",
     "clear_shop_trip",

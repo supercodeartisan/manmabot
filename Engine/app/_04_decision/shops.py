@@ -139,6 +139,25 @@ def resolve_shopping_behavior_id(kind: str) -> str:
     )
 
 
+def resolve_store_behavior_id() -> str:
+    """Warehouse YAML id for the live shop locale.
+
+    Korean → ``give_goods``. Chinese → ``give_goods_ch`` when that row exists
+    in ``npc_behaviors.yaml``, else the Korean base (same fallback as
+    teleporters) until a Chinese UV is calibrated.
+    """
+    if SHOP_LOCALE != "zh":
+        return "give_goods"
+    try:
+        from shop.behaviors import behavior_by_id, load_behaviors
+
+        if behavior_by_id("give_goods_ch", load_behaviors()) is not None:
+            return "give_goods_ch"
+    except Exception:
+        pass
+    return "give_goods"
+
+
 def resolve_sell_behavior_ids() -> tuple[str, ...]:
     """The four sell YAML ids. No UI NPC picker — locale + SELL_MODE only.
 
@@ -261,9 +280,9 @@ def is_sell_behavior(behavior_id: str) -> bool:
 
 
 def is_store_behavior(behavior_id: str) -> bool:
-    """Warehouse / store NPC (e.g. give_goods), not merchant sell_*."""
+    """Warehouse / store NPC (e.g. give_goods / give_goods_ch), not sell_*."""
     bid = str(behavior_id or "")
-    if bid == "give_goods" or bid.startswith("store_"):
+    if bid.startswith("give_goods") or bid.startswith("store_"):
         return True
     try:
         from shop.behaviors import ACTION_STORE, behavior_by_id, load_behaviors
@@ -422,6 +441,7 @@ __all__ = [
     "normalize_sell_mode",
     "resolve_shopping_behavior_id",
     "resolve_sell_behavior_ids",
+    "resolve_store_behavior_id",
     "is_arrow_behavior",
     "is_hp_potion_behavior",
     "is_depoison_behavior",
