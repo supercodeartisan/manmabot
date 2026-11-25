@@ -70,6 +70,17 @@ class PartyRoutineViewModel(RoutineViewModel):
         super().__init__(language)
         self.strings = strings or {}
 
+    def map_choices(self, *, kind: str) -> list[tuple[str, str, bool]]:
+        # Solo blessing-land packs stay out of the party map picker.
+        from ui.reachable_battle_maps import BLESSING_LAND_HIDDEN_MAP_IDS
+
+        hidden = BLESSING_LAND_HIDDEN_MAP_IDS
+        return [
+            item
+            for item in super().map_choices(kind=kind)
+            if str(item[0]) not in hidden
+        ]
+
     def payload(self) -> list[dict[str, Any]]:
         return normalize_party_routine(copy.deepcopy(self.rows))
 

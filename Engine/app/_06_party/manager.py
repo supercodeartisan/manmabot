@@ -168,9 +168,22 @@ class PartyMemberManager:
         The new policy is applied on top right after (same tick when it arrived
         with the session change).
         """
+        from .party_shop import get_party_shop
+
+        get_party_shop().abort_all(
+            self.runtime,
+            self._nav_blackboard,
+            self,
+            reason="leader session reset",
+            clear_notice=True,
+        )
         self.clear_leader_policy()
         self._formation.reset()
         self.runtime.own_hunt_id = None
+        try:
+            self.runtime.supply_expected = {}
+        except Exception:
+            pass
 
     def pause(self) -> None:
         self.runtime.paused = True
@@ -325,6 +338,20 @@ class PartyMemberManager:
         dead = self._is_dead(player)
         origin = self.world_origin
         origin_ok = origin is not None and hasattr(origin, "x")
+        from .party_shop import ShopContext, get_party_shop
+        from .party_shop.communication import is_canonical_shopkeeper
+
+        shop = get_party_shop()
+
+        if dead or bool(self.runtime.paused):
+            if shop.has_local_state(self.runtime, self._nav_blackboard):
+                shop.abort_all(
+                    self.runtime,
+                    self._nav_blackboard,
+                    self,
+                    reason="dead" if dead else "paused",
+                    clear_notice=True,
+                )
 
         # Sticky party-memory identity first so ent/guid track survives farming.
         party_block = party_member_block(
@@ -427,9 +454,9 @@ class PartyMemberManager:
                 self._nav_blackboard.scratch["party_loot_weight"] = (
                     int(cfg.loot_weight_pct) / 100.0
                 )
-                from .arrow_policy import pile_reserved
                 from .comms.orders import member_orders
                 from .loot import stable_self_identity
+                from .party_shop.supply import pile_reserved
 
                 me = ""
                 if origin_ok:
@@ -471,7 +498,14 @@ class PartyMemberManager:
                 self._record_decision(escape)
                 return escape
 
-            from .arrow_duty import expire_supply_hold, note_care_pose, release_care_pose
+            from .party_shop.delivery import (
+                expire_supply_hold,
+                note_care_pose,
+                release_care_pose,
+                remember_supply_stand,
+            )
+            from .party_shop.duty import _hold_confirmed, leader_hold_displaced
+            from .party_shop.pickup import claim_names_me
             from .support import urgent_self_survival
 
             release_care_pose(self._nav_blackboard, game_state)
@@ -497,13 +531,6 @@ class PartyMemberManager:
                 self._record_decision(care)
                 return care
 
-            from .arrow_duty import (
-                claim_names_me,
-                recipient_hold_intent,
-                remember_supply_stand,
-                tick_shopkeeper_duty,
-                tick_supply_pickup,
-            )
             from .comms.orders import member_orders
             from .loot import stable_self_identity
 
@@ -520,8 +547,6 @@ class PartyMemberManager:
             leaving = self.joining_map() or str(self.runtime.last_kind or "") == "retreat"
             hold = None if leaving else member_orders.supply_hold
             if claim_names_me(hold, seat_name, seat_guid):
-                from .arrow_duty import _hold_confirmed, leader_hold_displaced
-
                 left = leader_hold_displaced(
                     self._nav_blackboard, game_state, hold
                 )
@@ -535,6 +560,9 @@ class PartyMemberManager:
                     hold = None
             else:
                 self.runtime.supply_stand = None
+            from .party_shop.delivery import recipient_hold_intent
+            from .party_shop.pickup import tick_supply_pickup
+
             picked = None if leaving else tick_supply_pickup(
                 self, game_state, self_name=seat_name, self_guid=seat_guid
             )
@@ -552,7 +580,31 @@ class PartyMemberManager:
                 self.runtime.last_reason = "supply hold"
                 self._record_decision(waited)
                 return waited
-            if str(cfg.seat_role or "") == "shopkeeper":
+            policy = getattr(self, "leader_policy", None)
+            roster = policy.get("roster") if isinstance(policy, dict) else None
+            keeper_seat = str(cfg.seat_role or "") == "shopkeeper"
+            keeper_here = keeper_seat and (
+                not roster or is_canonical_shopkeeper(roster, seat_name)
+            )
+            if keeper_seat and not keeper_here:
+                if shop.has_local_state(self.runtime, self._nav_blackboard):
+                    shop.abort_all(
+                        self.runtime,
+                        self._nav_blackboard,
+                        self,
+                        reason="shopkeeper demoted",
+                        clear_notice=True,
+                    )
+            elif not keeper_seat:
+                if shop.has_local_state(self.runtime, self._nav_blackboard):
+                    shop.abort_all(
+                        self.runtime,
+                        self._nav_blackboard,
+                        self,
+                        reason="not shopkeeper",
+                        clear_notice=True,
+                    )
+            if keeper_here:
                 party_heal = self._opening_shopkeeper_heal(
                     game_state, origin if origin_ok else None
                 )
@@ -568,10 +620,22 @@ class PartyMemberManager:
                     )
                     self._record_decision(party_heal)
                     return party_heal
-                duty = tick_shopkeeper_duty(self, game_state, self_name=seat_name)
-                if duty is not None:
-                    self._record_decision(duty)
-                    return duty
+                duty_res = shop.tick(
+                    ShopContext(
+                        state=game_state,
+                        blackboard=self._nav_blackboard,
+                        runtime=self.runtime,
+                        manager=self,
+                        config=cfg,
+                        self_name=seat_name,
+                        self_guid=seat_guid,
+                        roster=roster,
+                        role="keeper",
+                    )
+                )
+                if duty_res.intent is not None:
+                    self._record_decision(duty_res.intent)
+                    return duty_res.intent
 
             support = apply_party_support(
                 game_state,

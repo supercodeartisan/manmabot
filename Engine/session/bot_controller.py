@@ -1235,6 +1235,38 @@ class BotController:
         self.reason = reason
         self._on_state(state, reason)
 
+    def _record_startup_hotbar(
+        self,
+        profile,
+        world,
+        detected,
+        error: Exception | None,
+        epoch: int,
+    ) -> None:
+        """Bind a startup hotbar read. A failed read only turns field recovery off."""
+        from app._04_decision.field_recovery import (
+            refresh_field_recovery_capability,
+            refresh_field_recovery_from_layout,
+        )
+
+        if error is not None or detected is None:
+            self.log(self._ui().logs["hotbar_failed"].format(error=error or "no slots"))
+            if profile is not None:
+                from app._05_action.spell_box import configure_spell_box
+
+                configure_spell_box(getattr(profile, "spell_slots", None))
+            refresh_field_recovery_capability(None, epoch=epoch)
+            self.log("Field recovery hotbar: off")
+            return
+        self._commit_hotbar_scan(
+            profile, world, detected, persist=True, log_result=True
+        )
+        recovery_on = refresh_field_recovery_from_layout(detected, epoch=epoch)
+        self.log(
+            "Field recovery hotbar: "
+            + ("Heal and Body to Mind" if recovery_on else "off")
+        )
+
     def _commit_hotbar_scan(
         self,
         profile: Profile,
@@ -1414,6 +1446,9 @@ class BotController:
             self._unattended = bool(unattended)
             self._stop_event.clear()
             self._resume_pending = False
+            from app._04_decision.field_recovery import begin_field_recovery_session
+
+            begin_field_recovery_session()
             hwnd = 0
             game = probe_game()
             if game.hwnd:
@@ -1534,6 +1569,9 @@ class BotController:
                 return t is None or not t.is_alive()
             self._stop_event.set()
             self._pause_gate.set()  # unblock waiters
+            from app._04_decision.field_recovery import begin_field_recovery_session
+
+            begin_field_recovery_session()
             self._pause_kind = None
             self._resume_pending = False
             self._unattended = False
@@ -2338,7 +2376,7 @@ class BotController:
     def _party_hunt_open(self, world) -> bool:
         """True after the start rally has reached the hunt mark."""
         from app._04_decision.world_nav.session import live_pose_from_state
-        from app._06_party.arrow_policy import hunt_map_after_pose
+        from app._06_party.party_shop.supply import hunt_map_after_pose
 
         rally = getattr(self, "_start_rally", None)
         if rally is None or str(getattr(rally, "state", "") or "") != "done":
@@ -2449,24 +2487,14 @@ class BotController:
             scratch.pop("party_arrow_shop_covered", None)
 
     def _leader_supply_claim(self) -> dict | None:
-        from app._06_party.comms.publish import _shopkeeper_names
-        from app._06_party.sync import member_states
+        from app._06_party.party_shop import get_party_shop
         from settings.profile import normalize_party_roster
 
-        names = _shopkeeper_names(
+        view = get_party_shop().live_supply(
             normalize_party_roster(getattr(self._profile, "party_roster", None))
         )
-        if not names:
-            return None
-        row = member_states.rows.get(names[0])
-        if not isinstance(row, dict):
-            for key, value in member_states.rows.items():
-                if str(key).casefold() == names[0].casefold():
-                    row = value
-                    break
-        live = row.get("live") if isinstance(row, dict) else None
-        supply = live.get("supply") if isinstance(live, dict) else None
-        return dict(supply) if isinstance(supply, dict) else None
+        notice = view.get("notice")
+        return dict(notice) if isinstance(notice, dict) else None
 
     def _leader_arrow_pickup(self, world, blackboard):
         claim = self._leader_supply_claim()
@@ -2476,7 +2504,7 @@ class BotController:
         who = str(claim.get("for") or "").strip()
         if not me or not who or me.casefold() != who.casefold():
             return None
-        from app._06_party.arrow_duty import leader_supply_pickup
+        from app._06_party.party_shop.pickup import leader_supply_pickup
 
         return leader_supply_pickup(world, blackboard, claim)
 
@@ -2509,28 +2537,36 @@ class BotController:
         )
         self._party_supply_id = str(claim.get("id"))
 
-    def _shopkeeper_live(self) -> dict | None:
-        from app._06_party.comms.publish import _shopkeeper_names
-        from app._06_party.sync import member_states
+    def _shopkeeper_live_supply_view(self) -> dict:
+        from app._06_party.party_shop import get_party_shop
         from settings.profile import normalize_party_roster
 
-        names = _shopkeeper_names(
+        return get_party_shop().live_supply(
             normalize_party_roster(getattr(self._profile, "party_roster", None))
         )
-        if not names:
+
+    def _shopkeeper_live(self) -> dict | None:
+        """Compatibility: raw live only when the shopkeeper socket is fresh."""
+        view = self._shopkeeper_live_supply_view()
+        if not view.get("valid"):
             return None
-        row = member_states.rows.get(names[0])
+        from app._06_party.sync import member_states
+
+        name = str(view.get("name") or "")
+        if not name:
+            return None
+        row = member_states.rows.get(name.casefold())
         if not isinstance(row, dict):
             for key, value in member_states.rows.items():
-                if str(key).casefold() == names[0].casefold():
+                if str(key).casefold() == name.casefold():
                     row = value
                     break
         live = row.get("live") if isinstance(row, dict) else None
         return live if isinstance(live, dict) else None
 
     def _leader_supply_hold(self) -> dict | None:
-        live = self._shopkeeper_live()
-        hold = live.get("supply_hold") if isinstance(live, dict) else None
+        view = self._shopkeeper_live_supply_view()
+        hold = view.get("hold")
         return dict(hold) if isinstance(hold, dict) else None
 
     def _publish_supply_hold(self) -> None:
@@ -2581,7 +2617,7 @@ class BotController:
         leader_self = bool(me and who and me.casefold() == who.casefold())
         stand = None
         if leader_self:
-            from app._06_party.arrow_duty import leader_supply_stand
+            from app._06_party.party_shop.delivery import leader_supply_stand
 
             stand = leader_supply_stand(
                 blackboard, getattr(world, "last_party", None), hold
@@ -3406,6 +3442,10 @@ class BotController:
         self._party_beep_sent = False
         self._party_client_id = ""
         self._party_leader_ref = None
+        self._party_supply_id = ""
+        self._party_hold_id = ""
+        self._party_hold_drop = False
+        self._party_stand_key = None
         from app._06_party.comms.orders import (
             member_orders,
             new_leader_session,
@@ -3662,16 +3702,19 @@ class BotController:
         from app._05_action.spell_box import begin_talking_scroll_boot
 
         begin_talking_scroll_boot()
+        from app._04_decision.field_recovery import field_recovery_capability_epoch
+
+        recovery_epoch = field_recovery_capability_epoch()
+        detected = None
+        hotbar_error: Exception | None = None
         try:
             detected = inspect_hotbars()
         except HotbarInspectError as exc:
-            _abort_hotbar(self._ui().logs["hotbar_failed"].format(error=exc))
-            return
+            hotbar_error = exc
         except Exception as exc:
-            _abort_hotbar(self._ui().logs["hotbar_failed"].format(error=exc))
-            return
-        self._commit_hotbar_scan(
-            profile, world, detected, persist=True, log_result=True
+            hotbar_error = exc
+        self._record_startup_hotbar(
+            profile, world, detected, hotbar_error, recovery_epoch
         )
 
         from i18n.localized_names import (
@@ -3764,9 +3807,17 @@ class BotController:
         self._start_vision_preview(capture)
         try:
             while not self._stop_event.is_set():
+                was_paused = False
                 while not self._stop_event.is_set() and not self._pause_gate.is_set():
                     # Lift once on pause so a leftover click does not stick, then
                     # leave the mouse alone so the operator can drag.
+                    if not was_paused:
+                        from app._04_decision.field_recovery import (
+                            invalidate_field_recovery_capability,
+                        )
+
+                        invalidate_field_recovery_capability()
+                    was_paused = True
                     if not mouse_dropped:
                         executor.drop_mouse()
                         mouse_dropped = True
@@ -3776,10 +3827,49 @@ class BotController:
                     publish("paused")
                     time.sleep(0.05)
 
+                if was_paused and party_brain is not None:
+                    try:
+                        from app._06_party.party_shop import get_party_shop
+
+                        get_party_shop().abort_all(
+                            party_brain.runtime,
+                            party_brain._nav_blackboard,
+                            party_brain,
+                            reason="bot resume",
+                            clear_notice=True,
+                        )
+                    except Exception as resume_exc:
+                        self.log(f"Party supply resume clear failed: {resume_exc}")
+
                 self._consume_paused_settings(config, decision, world, executor)
                 mouse_dropped = False
                 if self._stop_event.is_set():
                     break
+                if was_paused:
+                    from app._04_decision.field_recovery import (
+                        refresh_field_recovery_capability,
+                        refresh_field_recovery_from_layout,
+                    )
+
+                    try:
+                        resumed = inspect_hotbars()
+                        self._commit_hotbar_scan(
+                            profile,
+                            world,
+                            resumed,
+                            persist=False,
+                            log_result=False,
+                        )
+                        recovery_on = refresh_field_recovery_from_layout(
+                            resumed, epoch=recovery_epoch
+                        )
+                        self.log(
+                            "Field recovery hotbar recheck: "
+                            + ("Heal and Body to Mind" if recovery_on else "off")
+                        )
+                    except Exception as exc:
+                        refresh_field_recovery_capability(None, epoch=recovery_epoch)
+                        self.log(f"Field recovery hotbar recheck failed: {exc}")
 
                 cap_status, content_rect, content_bounds = self._sample_capture(capture)
                 if cap_status == "minimized":
@@ -3907,6 +3997,8 @@ class BotController:
                         )
                     except Exception:
                         pass
+                    # This reread updates spell keys only. Field recovery keeps
+                    # the result from start or the last resume.
 
                 if not self._pause_gate.is_set() or self._stop_event.is_set():
                     _freeze_stay_clocks(decision.blackboard)
@@ -4051,7 +4143,7 @@ class BotController:
                     )
                     hold = self._leader_supply_hold() if supply_here else None
                     claim = self._leader_supply_claim() if supply_here else None
-                    from app._06_party.arrow_duty import leader_supply_action
+                    from app._06_party.party_shop.delivery import leader_supply_action
 
                     action = leader_supply_action(
                         world, decision.blackboard, hold, claim

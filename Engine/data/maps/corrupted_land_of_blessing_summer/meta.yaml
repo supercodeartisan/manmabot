@@ -1,0 +1,10 @@
+id: corrupted_land_of_blessing_summer
+name: "Corrupted Land of Blessing - Summer"
+# Field hunt pack. Origin from map_transitions rect / obstacle_tiles_raw map_245.
+raw_map: "245"
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+farms: farms.yaml
+default_region: blessing_land

@@ -516,27 +516,33 @@ def _buff_cast_guarded(blackboard: "Blackboard", name: str, now: float) -> bool:
 
 
 def set_auto_buffs(rows) -> None:
-    """Install the checked buff list for this run."""
+    """Install the checked buff list for this run. Light is never installed."""
     global AUTO_BUFFS
-    from settings.auto_buffs import AutoBuff
+    from settings.auto_buffs import AutoBuff, is_light_auto_buff
 
     parsed: list[AutoBuff] = []
     for row in rows or []:
         if isinstance(row, AutoBuff):
+            if is_light_auto_buff(row.skill_id, row.names):
+                continue
             parsed.append(row)
             continue
         if not isinstance(row, dict):
             continue
         try:
+            skill_id = int(row["skill_id"])
+            names = tuple(
+                str(name)
+                for name in (row.get("names") or [])
+                if str(name or "").strip()
+            )
+            if is_light_auto_buff(skill_id, names):
+                continue
             parsed.append(
                 AutoBuff(
-                    skill_id=int(row["skill_id"]),
+                    skill_id=skill_id,
                     priority=int(row.get("priority") or 1),
-                    names=tuple(
-                        str(name)
-                        for name in (row.get("names") or [])
-                        if str(name or "").strip()
-                    ),
+                    names=names,
                     duration_s=float(row.get("duration_s") or 0),
                 )
             )
@@ -627,7 +633,11 @@ def _due_catalog_buff(
     if snap is None:
         return None
     last = blackboard.buff_last_cast
+    from settings.auto_buffs import is_light_auto_buff
+
     for buff in AUTO_BUFFS:
+        if is_light_auto_buff(buff.skill_id, buff.names):
+            continue
         if float(buff.duration_s or 0) <= 0:
             continue
         token = f"buff:{int(buff.skill_id)}"
@@ -750,9 +760,13 @@ def maybe_cast_buff(
     name = due_buff(blackboard, state)
     if name is None:
         return None
+    from settings.auto_buffs import is_light_auto_buff
+
+    if is_light_auto_buff(token=str(name)):
+        return None
     if str(name).startswith("buff:"):
         buff = _auto_buff(name)
-        if buff is None:
+        if buff is None or is_light_auto_buff(buff.skill_id, buff.names):
             return None
         from settings.auto_buffs import press_for_buff
 

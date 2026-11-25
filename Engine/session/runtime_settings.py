@@ -160,6 +160,24 @@ def install_profile_runtime(profile: Any, config: dict, *, navigation: bool) -> 
     tree_cfg["heal_hp_ratio"] = float(getattr(profile, "mother_tree_heal_hp_ratio", 0.40))
     tree_cfg["heal_mp_ratio"] = float(getattr(profile, "mother_tree_heal_mp_ratio", 0.80))
     decision_cfg["mother_tree"] = tree_cfg
+    field_cfg = dict(decision_cfg.get("field_recovery") or {})
+    field_cfg["enabled"] = bool(getattr(profile, "field_recovery_enabled", False))
+    field_cfg["hp_start_ratio"] = float(
+        getattr(profile, "field_recovery_hp_start_ratio", 0.80)
+    )
+    field_cfg["mp_start_ratio"] = float(
+        getattr(profile, "field_recovery_mp_start_ratio", 0.50)
+    )
+    field_cfg["stop_ratio"] = float(
+        getattr(profile, "field_recovery_stop_ratio", 0.85)
+    )
+    field_cfg["min_hp_ratio"] = float(
+        getattr(profile, "field_recovery_min_hp_ratio", 0.60)
+    )
+    field_cfg["min_mp_ratio"] = float(
+        getattr(profile, "field_recovery_min_mp_ratio", 0.20)
+    )
+    decision_cfg["field_recovery"] = field_cfg
     teleport_cfg = dict(decision_cfg.get("teleport") or {})
     teleport_cfg["enabled"] = bool(getattr(profile, "random_teleport_enabled", False))
     teleport_cfg["on_player"] = bool(getattr(profile, "teleport_on_player", False))

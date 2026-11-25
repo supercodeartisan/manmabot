@@ -546,12 +546,17 @@ def practice_calibrated_behavior(behavior_id: str) -> PracticeResult:
                     "(row_0..row_6) and Save layout first"
                 ),
             )
-    elif behavior.action == "teleporter":
-        if not ui.calibrated(action="teleporter"):
+    elif behavior.action in ("teleporter", "other"):
+        need = (
+            "option + confirm UV"
+            if behavior.action == "teleporter"
+            else "at least 2 click_sequence markers"
+        )
+        if not ui.calibrated(action=behavior.action):
             return PracticeResult(
                 ok=False,
                 message=(
-                    f"{behavior_id} needs option + confirm UV "
+                    f"{behavior_id} needs {need} "
                     "(Behaviors tab → Recapture → place markers → Save)"
                 ),
             )
@@ -673,15 +678,21 @@ def practice_calibrated_behavior(behavior_id: str) -> PracticeResult:
                     ),
                 )
 
-            if behavior.action == "teleporter":
+            if behavior.action in ("teleporter", "other"):
                 if not execute_calibrated_teleporter(executor, bounds, behavior):
                     return PracticeResult(
                         ok=False,
-                        message=f"{behavior_id} teleporter UI failed after {prefix}",
+                        message=(
+                            f"{behavior_id} {behavior.action} UI failed after {prefix}"
+                        ),
                     )
+                n_clicks = len(behavior.ui.ordered_dialog_clicks(behavior.action))
                 return PracticeResult(
                     ok=True,
-                    message=f"{behavior_id} ok · {prefix} · teleporter · option+confirm",
+                    message=(
+                        f"{behavior_id} ok · {prefix} · {behavior.action} · "
+                        f"{n_clicks} dialog clicks"
+                    ),
                 )
 
             qty = max(1, min(999, int(behavior.default_qty)))

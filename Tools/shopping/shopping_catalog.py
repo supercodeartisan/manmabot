@@ -65,7 +65,7 @@ def shopping_catalog() -> list[PracticeEntry]:
         elif b.action == "store":
             filter_bits = f"mode={b.sell_mode}"
             run_note = "dialog store (sell-tab path)"
-        elif b.action == "teleporter":
+        elif b.action in ("teleporter", "other"):
             kind = str(getattr(b, "teleport_kind", "") or "dungeon_gate")
             if kind == "field_land":
                 dest_bit = (
@@ -75,10 +75,16 @@ def shopping_catalog() -> list[PracticeEntry]:
                 )
             else:
                 dest_bit = f"dest_dungeon={b.destination_dungeon}"
+            if b.action == "other":
+                n_clicks = len(getattr(b.ui, "click_sequence", ()) or ())
+                click_bit = f"clicks={n_clicks}"
+                run_note = "dialog other click_sequence in order"
+            else:
+                click_bit = "option+confirm"
+                run_note = "dialog teleporter option → confirm"
             filter_bits = (
-                f"kind={kind} · adena={b.adena_cost} · {dest_bit} · option+confirm"
+                f"kind={kind} · adena={b.adena_cost} · {dest_bit} · {click_bit}"
             )
-            run_note = "dialog teleporter option → confirm"
         else:
             filter_bits = f"item_index={b.item_index} · qty={b.default_qty}"
             run_note = "dialog buys/sells"
@@ -97,6 +103,11 @@ def shopping_catalog() -> list[PracticeEntry]:
             elif b.action == "teleporter":
                 desc += (
                     " — calibrate option + confirm UVs on the Behaviors tab "
+                    "before Run Practice"
+                )
+            elif b.action == "other":
+                desc += (
+                    " — add/place click_sequence markers on the Behaviors tab "
                     "before Run Practice"
                 )
             else:

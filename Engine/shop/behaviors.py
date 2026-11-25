@@ -1,8 +1,8 @@
 """NPC behaviors: identity, travel, and calibrated dialog click UVs.
 
 Canonical file: ``Engine/data/npc_behaviors.yaml``
-(buy, sell, warehouse, teleporter). Kept outside ``data/maps`` so a map-pack
-replace cannot wipe it.
+(buy, sell, warehouse, teleporter, other). Kept outside ``data/maps`` so a
+map-pack replace cannot wipe it.
 """
 from __future__ import annotations
 
@@ -30,12 +30,24 @@ ACTION_BUY = "buy"
 ACTION_SELL = "sell"
 ACTION_STORE = "store"
 ACTION_TELEPORTER = "teleporter"
+ACTION_OTHER = "other"
 ACTIONS: tuple[str, ...] = (
     ACTION_BUY,
     ACTION_SELL,
     ACTION_STORE,
     ACTION_TELEPORTER,
+    ACTION_OTHER,
 )
+# NPC dialog travel shortcuts (fixed 2-click teleporter, or N-click other).
+DIALOG_TELEPORT_ACTIONS: frozenset[str] = frozenset(
+    {ACTION_TELEPORTER, ACTION_OTHER}
+)
+OTHER_MIN_CLICKS = 2
+OTHER_MAX_CLICKS = 16
+
+
+def is_dialog_teleport_action(action: str | None) -> bool:
+    return str(action or "").strip().lower() in DIALOG_TELEPORT_ACTIONS
 
 # Teleporter arrival model (world-nav).
 TELEPORT_KIND_DUNGEON_GATE = "dungeon_gate"
@@ -59,20 +71,21 @@ _LEGACY_WORLD_NAV_BASE_IDS: frozenset[str] = frozenset(
     )
 )
 
-_HEADER = """# NPC behaviors — buy/sell/store/teleporter (travel + dialog UVs).
+_HEADER = """# NPC behaviors — buy/sell/store/teleporter/other (travel + dialog UVs).
 # npc_world: absolute game coordinates (memory monitor space).
 # scroll_spot: talking-scroll spot id (hubs usage rules; wheels live on the spot).
 # click_offset_uv: optional [du, dv] added to computed NPC content UV when opening.
 #   When set → single click at (A + offset). When unset → cursor-search open.
-# adena_cost: teleporter fare in adena (affordability gate vs walk path); 0 = free/unset.
+# adena_cost: teleporter/other fare in adena (affordability gate vs walk path); 0 = free/unset.
 # teleport_kind: dungeon_gate (default) | field_land.
 #   dungeon_gate: destination_dungeon = LC mapId (ground_enter.to). Same NPC can have
 #     one behavior per dungeon (e.g. Giran → 30 vs 53). After SHOP_RUN, world-nav
 #     rewrites the next gate to the nearest matching entrance.
 #   field_land: land_map_id + land_world = same-map (or other) field xy after the
 #     dialog (e.g. Giran TP → Dragon Valley field). No dungeon gate rewrite.
-# world_nav: true → world-nav planner may use this teleporter (Shopping Practice checkbox).
+# world_nav: true → world-nav planner may use this teleporter/other (Shopping Practice checkbox).
 # ui.*: content-normalized UVs [u, v] on the perception capture (0..1).
+# ui.click_sequence: ordered UV list for action=other (N dialog clicks in order).
 # item_index: 0-based index in the full merchant list (7 rows visible) — buy only.
 # sell_mode: sell_only_garbage | sell_except_keep (sell/store).
 # Prefer sell_except_keep: keep_list = names to retain; all other sell-tab rows sell.
@@ -80,6 +93,7 @@ _HEADER = """# NPC behaviors — buy/sell/store/teleporter (travel + dialog UVs)
 # Live sell/store: shop_listen memory list + list scroll (item_index rule: scroll = max(0,n-6)).
 # store: warehouse keeper (e.g. give_goods); same dialog UVs as sell for now.
 # teleporter: option + confirm only (no slot/qty); dungeon or field shortcut via NPC.
+# other: same travel model as teleporter; clicks come from ui.click_sequence (2..16).
 # Engine data: Engine/data/npc_behaviors.yaml (not inside maps/, not UserData).
 # Edited by Shopping Practice / bot_data_editors tools.
 #
@@ -111,6 +125,8 @@ class ShoppingUiClicks:
     item_rows: tuple[Optional[tuple[float, float]], ...] = field(
         default_factory=lambda: tuple(None for _ in range(ITEM_ROW_COUNT))
     )
+    # Ordered dialog clicks for action=other (Shopping Practice Add marker).
+    click_sequence: tuple[Optional[tuple[float, float]], ...] = ()
 
     def to_mapping(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
@@ -139,7 +155,36 @@ class ShoppingUiClicks:
                 rows.append([float(pt[0]), float(pt[1])])
         if any(r is not None for r in rows):
             data["item_rows"] = rows
+        seq = []
+        for pt in self.click_sequence:
+            if pt is None:
+                seq.append(None)
+            else:
+                seq.append([float(pt[0]), float(pt[1])])
+        if any(p is not None for p in seq):
+            data["click_sequence"] = seq
         return data
+
+    def ordered_dialog_clicks(self, action: str | None = None) -> list[tuple[float, float]]:
+        """Resolved click UVs in execution order (teleporter or other)."""
+        act = str(action or "").strip().lower()
+        if act == ACTION_OTHER:
+            out: list[tuple[float, float]] = []
+            for pt in self.click_sequence:
+                if pt is None:
+                    continue
+                out.append((float(pt[0]), float(pt[1])))
+            return out
+        if act == ACTION_TELEPORTER:
+            out = []
+            if self.buy_button is not None:
+                out.append((float(self.buy_button[0]), float(self.buy_button[1])))
+            if self.confirm_button is not None:
+                out.append(
+                    (float(self.confirm_button[0]), float(self.confirm_button[1]))
+                )
+            return out
+        return []
 
     def calibrated(self, *, action: str | None = None) -> bool:
         """True when enough UVs exist for the given action (or either if unset)."""
@@ -150,6 +195,11 @@ class ShoppingUiClicks:
             return bool(
                 self.buy_button is not None and self.confirm_button is not None
             )
+        if act == ACTION_OTHER:
+            seq = list(self.click_sequence or ())
+            if len(seq) < OTHER_MIN_CLICKS or len(seq) > OTHER_MAX_CLICKS:
+                return False
+            return all(pt is not None for pt in seq)
         if act in (ACTION_SELL, ACTION_STORE):
             # Memory sell/store: sell/confirm + 7 item rows + list scroll.
             return bool(
@@ -178,24 +228,24 @@ class ShoppingUiClicks:
 class ShoppingBehavior:
     id: str
     name: str
-    action: str  # buy | sell | store | teleporter
+    action: str  # buy | sell | store | teleporter | other
     map_id: str
     scroll_spot: str
     npc_world_x: int
     npc_world_y: int
     default_qty: int = 200
     item_index: int = 0
-    # Teleporter fare (adena). Ignored for buy/sell/store (forced 0 on save).
+    # Teleporter/other fare (adena). Ignored for buy/sell/store (forced 0 on save).
     adena_cost: int = 0
-    # Teleporter: dungeon_gate (ground_enter dest) or field_land (absolute land xy).
+    # Teleporter/other: dungeon_gate (ground_enter dest) or field_land (absolute land xy).
     teleport_kind: str = TELEPORT_KIND_DUNGEON_GATE
-    # Teleporter dungeon_gate: LC mapId of the dungeon this option enters.
+    # dungeon_gate: LC mapId of the dungeon this option enters.
     destination_dungeon: int = 0
-    # Teleporter field_land: LC mapId + absolute game xy after the dialog.
+    # field_land: LC mapId + absolute game xy after the dialog.
     land_map_id: int = 0
     land_world_x: int = 0
     land_world_y: int = 0
-    # Teleporter: include in world-nav NPC teleporter graph (Shopping Practice toggle).
+    # Include in world-nav NPC teleporter graph (Shopping Practice toggle).
     world_nav: bool = False
     # Per sell/store behavior; name lists live in ShoppingSellFilters (file-level).
     sell_mode: str = SELL_MODE_EXCEPT_KEEP
@@ -209,7 +259,7 @@ class ShoppingBehavior:
 
     def is_field_land(self) -> bool:
         return (
-            self.action == ACTION_TELEPORTER
+            is_dialog_teleport_action(self.action)
             and str(self.teleport_kind or "") == TELEPORT_KIND_FIELD_LAND
         )
 
@@ -234,7 +284,7 @@ class ShoppingBehavior:
             data["default_qty"] = int(self.default_qty)
             data["item_index"] = int(self.item_index)
             data["sell_mode"] = str(self.sell_mode or SELL_MODE_ONLY_GARBAGE)
-        elif self.action == ACTION_TELEPORTER:
+        elif is_dialog_teleport_action(self.action):
             kind = _normalize_teleport_kind(
                 self.teleport_kind,
                 destination_dungeon=self.destination_dungeon,
@@ -260,6 +310,11 @@ class ShoppingBehavior:
                 slim["buy_button"] = ui["buy_button"]
             if "confirm_button" in ui:
                 slim["confirm_button"] = ui["confirm_button"]
+            ui = slim
+        elif self.action == ACTION_OTHER:
+            slim = {}
+            if "click_sequence" in ui:
+                slim["click_sequence"] = ui["click_sequence"]
             ui = slim
         if ui:
             data["ui"] = ui
@@ -317,12 +372,20 @@ def _parse_ui(raw: Any) -> ShoppingUiClicks:
     if isinstance(rows_raw, list):
         for i in range(min(ITEM_ROW_COUNT, len(rows_raw))):
             rows[i] = _clamp_uv(rows_raw[i])
+    seq_raw = raw.get("click_sequence")
+    seq: list[Optional[tuple[float, float]]] = []
+    if isinstance(seq_raw, list):
+        for i, pt in enumerate(seq_raw):
+            if i >= OTHER_MAX_CLICKS:
+                break
+            seq.append(_clamp_uv(pt))
     return ShoppingUiClicks(
         buy_button=_clamp_uv(raw.get("buy_button")),
         sell_button=_clamp_uv(raw.get("sell_button")),
         list_scroll_point=_clamp_uv(raw.get("list_scroll_point")),
         confirm_button=_clamp_uv(raw.get("confirm_button")),
         item_rows=tuple(rows),
+        click_sequence=tuple(seq),
     )
 
 
@@ -483,7 +546,7 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
         action = ACTION_STORE
     if action not in ACTIONS:
         raise ValueError(
-            f"behavior {sid!r}: action must be buy, sell, store, or teleporter"
+            f"behavior {sid!r}: action must be buy, sell, store, teleporter, or other"
         )
     world = item.get("npc_world") or item.get("world")
     if not (isinstance(world, (list, tuple)) and len(world) >= 2):
@@ -494,7 +557,7 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
         raise ValueError(f"behavior {sid!r} needs map")
     if not scroll:
         raise ValueError(f"behavior {sid!r} needs scroll_spot")
-    default_qty_raw = 1 if action == ACTION_TELEPORTER else 200
+    default_qty_raw = 1 if is_dialog_teleport_action(action) else 200
     try:
         qty = max(1, min(999, int(item.get("default_qty", default_qty_raw))))
     except (TypeError, ValueError) as exc:
@@ -527,7 +590,7 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
         except (TypeError, ValueError) as exc:
             raise ValueError(f"behavior {sid!r}: bad land_world") from exc
     teleport_kind = TELEPORT_KIND_DUNGEON_GATE
-    if action == ACTION_TELEPORTER:
+    if is_dialog_teleport_action(action):
         qty = 1
         item_index = 0
         world_nav = _parse_world_nav_flag(item.get("world_nav"), behavior_id=sid)
@@ -557,6 +620,14 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
             buy_button=ui.buy_button,
             confirm_button=ui.confirm_button,
         )
+    elif action == ACTION_OTHER:
+        seq = list(ui.click_sequence or ())
+        if len(seq) < OTHER_MIN_CLICKS:
+            # Seed empty slots so the editor can place markers.
+            while len(seq) < OTHER_MIN_CLICKS:
+                seq.append(None)
+        seq = seq[:OTHER_MAX_CLICKS]
+        ui = ShoppingUiClicks(click_sequence=tuple(seq))
     click_offset_uv = _parse_offset_uv(item.get("click_offset_uv"))
     return ShoppingBehavior(
         id=sid,
@@ -733,7 +804,9 @@ def save_behaviors(
         seen.add(sid)
         action = str(b.action).strip().lower()
         if action not in ACTIONS:
-            raise ValueError(f"{sid}: action must be buy, sell, store, or teleporter")
+            raise ValueError(
+                f"{sid}: action must be buy, sell, store, teleporter, or other"
+            )
         if sid == "give_goods" and action == ACTION_SELL:
             action = ACTION_STORE
         if not str(b.map_id).strip():
@@ -749,7 +822,7 @@ def save_behaviors(
         land_world_x = int(getattr(b, "land_world_x", 0) or 0)
         land_world_y = int(getattr(b, "land_world_y", 0) or 0)
         teleport_kind = TELEPORT_KIND_DUNGEON_GATE
-        if action == ACTION_TELEPORTER:
+        if is_dialog_teleport_action(action):
             qty = 1
             item_index = 0
             world_nav = bool(getattr(b, "world_nav", False))
@@ -768,10 +841,21 @@ def save_behaviors(
                 land_world_y = 0
                 if destination_dungeon <= 0:
                     raise ValueError(f"{sid}: dungeon_gate needs destination_dungeon")
-            ui = ShoppingUiClicks(
-                buy_button=b.ui.buy_button,
-                confirm_button=b.ui.confirm_button,
-            )
+            if action == ACTION_TELEPORTER:
+                ui = ShoppingUiClicks(
+                    buy_button=b.ui.buy_button,
+                    confirm_button=b.ui.confirm_button,
+                )
+            else:
+                seq = list(getattr(b.ui, "click_sequence", ()) or ())
+                if len(seq) < OTHER_MIN_CLICKS or len(seq) > OTHER_MAX_CLICKS:
+                    raise ValueError(
+                        f"{sid}: other needs {OTHER_MIN_CLICKS}..{OTHER_MAX_CLICKS} "
+                        "click_sequence markers"
+                    )
+                if any(pt is None for pt in seq):
+                    raise ValueError(f"{sid}: other click_sequence has empty markers")
+                ui = ShoppingUiClicks(click_sequence=tuple(seq))
         else:
             adena_cost = 0
             destination_dungeon = 0

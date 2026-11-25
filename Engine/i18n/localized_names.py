@@ -66,10 +66,138 @@ MAP_NAMES: dict[str, tuple[str, str, str]] = {
     "mutant_ant_dungeon": ("Mutant Ant Dungeon", "개미굴", "蚂蚁洞穴"),
     "gerard_test_dungeon": ("Gerard Test Dungeon", "게라드 테스트 던전", "杰拉德测试地下城"),
     "jim_dungeon": ("Jim Dungeon", "짐 던전", "吉姆地下城"),
-    "polluted_land_of_blessing_dungeon": (
+    # Base season packs (live mapId owners; not in solo battle picker).
+    "polluted_land_of_blessing": (
         "Polluted Land of Blessing",
-        "더럽혀진 축복의 땅",
-        "被污染的祝福之地",
+        "오염된 축복의 땅",
+        "污染的祝福之地",
+    ),
+    "corrupted_land_of_blessing_spring": (
+        "Corrupted Land of Blessing - Spring",
+        "타락한 축복의 땅의 봄",
+        "堕落的祝福之地的春天",
+    ),
+    "corrupted_land_of_blessing_summer": (
+        "Corrupted Land of Blessing - Summer",
+        "타락한 축복의 땅의 여름",
+        "堕落的祝福之地的夏天",
+    ),
+    "corrupted_land_of_blessing_autumn": (
+        "Corrupted Land of Blessing - Autumn",
+        "타락한 축복의 땅의 가을",
+        "堕落的祝福之地的秋天",
+    ),
+    "corrupted_land_of_blessing_winter": (
+        "Corrupted Land of Blessing - Winter",
+        "타락한 축복의 땅의 겨울",
+        "堕落的祝福之地的冬天",
+    ),
+    # Season × race picker entries.
+    "polluted_land_of_blessing_fairy": (
+        "Polluted Land of Blessing / Fairy Land",
+        "오염된 축복의 땅 / 요정의 땅",
+        "污染的祝福之地 / 妖精之地",
+    ),
+    "polluted_land_of_blessing_human": (
+        "Polluted Land of Blessing / Human Land",
+        "오염된 축복의 땅 / 인간의 땅",
+        "污染的祝福之地 / 人类之地",
+    ),
+    "polluted_land_of_blessing_orch": (
+        "Polluted Land of Blessing / Orch Land",
+        "오염된 축복의 땅 / 오크의 땅",
+        "污染的祝福之地 / 兽人之地",
+    ),
+    "polluted_land_of_blessing_spirit": (
+        "Polluted Land of Blessing / Spirit Land",
+        "오염된 축복의 땅 / 정령의 땅",
+        "污染的祝福之地 / 精灵之地",
+    ),
+    "corrupted_land_of_blessing_spring_fairy": (
+        "Corrupted Land of Blessing - Spring / Fairy Land",
+        "타락한 축복의 땅의 봄 / 요정의 땅",
+        "堕落的祝福之地的春天 / 妖精之地",
+    ),
+    "corrupted_land_of_blessing_spring_human": (
+        "Corrupted Land of Blessing - Spring / Human Land",
+        "타락한 축복의 땅의 봄 / 인간의 땅",
+        "堕落的祝福之地的春天 / 人类之地",
+    ),
+    "corrupted_land_of_blessing_spring_orch": (
+        "Corrupted Land of Blessing - Spring / Orch Land",
+        "타락한 축복의 땅의 봄 / 오크의 땅",
+        "堕落的祝福之地的春天 / 兽人之地",
+    ),
+    "corrupted_land_of_blessing_spring_spirit": (
+        "Corrupted Land of Blessing - Spring / Spirit Land",
+        "타락한 축복의 땅의 봄 / 정령의 땅",
+        "堕落的祝福之地的春天 / 精灵之地",
+    ),
+    "corrupted_land_of_blessing_summer_fairy": (
+        "Corrupted Land of Blessing - Summer / Fairy Land",
+        "타락한 축복의 땅의 여름 / 요정의 땅",
+        "堕落的祝福之地的夏天 / 妖精之地",
+    ),
+    "corrupted_land_of_blessing_summer_human": (
+        "Corrupted Land of Blessing - Summer / Human Land",
+        "타락한 축복의 땅의 여름 / 인간의 땅",
+        "堕落的祝福之地的夏天 / 人类之地",
+    ),
+    "corrupted_land_of_blessing_summer_orch": (
+        "Corrupted Land of Blessing - Summer / Orch Land",
+        "타락한 축복의 땅의 여름 / 오크의 땅",
+        "堕落的祝福之地的夏天 / 兽人之地",
+    ),
+    "corrupted_land_of_blessing_summer_spirit": (
+        "Corrupted Land of Blessing - Summer / Spirit Land",
+        "타락한 축복의 땅의 여름 / 정령의 땅",
+        "堕落的祝福之地的夏天 / 精灵之地",
+    ),
+    "corrupted_land_of_blessing_autumn_fairy": (
+        "Corrupted Land of Blessing - Autumn / Fairy Land",
+        "타락한 축복의 땅의 가을 / 요정의 땅",
+        "堕落的祝福之地的秋天 / 妖精之地",
+    ),
+    "corrupted_land_of_blessing_autumn_human": (
+        "Corrupted Land of Blessing - Autumn / Human Land",
+        "타락한 축복의 땅의 가을 / 인간의 땅",
+        "堕落的祝福之地的秋天 / 人类之地",
+    ),
+    "corrupted_land_of_blessing_autumn_orch": (
+        "Corrupted Land of Blessing - Autumn / Orch Land",
+        "타락한 축복의 땅의 가을 / 오크의 땅",
+        "堕落的祝福之地的秋天 / 兽人之地",
+    ),
+    "corrupted_land_of_blessing_autumn_spirit": (
+        "Corrupted Land of Blessing - Autumn / Spirit Land",
+        "타락한 축복의 땅의 가을 / 정령의 땅",
+        "堕落的祝福之地的秋天 / 精灵之地",
+    ),
+    "corrupted_land_of_blessing_winter_fairy": (
+        "Corrupted Land of Blessing - Winter / Fairy Land",
+        "타락한 축복의 땅의 겨울 / 요정의 땅",
+        "堕落的祝福之地的冬天 / 妖精之地",
+    ),
+    "corrupted_land_of_blessing_winter_human": (
+        "Corrupted Land of Blessing - Winter / Human Land",
+        "타락한 축복의 땅의 겨울 / 인간의 땅",
+        "堕落的祝福之地的冬天 / 人类之地",
+    ),
+    "corrupted_land_of_blessing_winter_orch": (
+        "Corrupted Land of Blessing - Winter / Orch Land",
+        "타락한 축복의 땅의 겨울 / 오크의 땅",
+        "堕落的祝福之地的冬天 / 兽人之地",
+    ),
+    "corrupted_land_of_blessing_winter_spirit": (
+        "Corrupted Land of Blessing - Winter / Spirit Land",
+        "타락한 축복의 땅의 겨울 / 정령의 땅",
+        "堕落的祝福之地的冬天 / 精灵之地",
+    ),
+    # Legacy pack id (raw_map removed); keep a display name for old profiles.
+    "polluted_land_of_blessing_dungeon": (
+        "Polluted Land of Blessing (legacy)",
+        "오염된 축복의 땅 (구)",
+        "污染的祝福之地 (旧)",
     ),
     "aden_inner_castle_dungeon": ("Aden Inner Castle", "아덴 내성", "亚丁内城"),
     "tower_of_insolence_underground_path_dungeon": (

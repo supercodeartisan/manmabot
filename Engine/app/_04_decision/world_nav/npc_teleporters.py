@@ -73,13 +73,13 @@ def list_world_nav_teleporter_base_ids(
     catalog: Iterable[Any] | None = None,
 ) -> tuple[str, ...]:
     """Korean (non-``_ch``) teleporter ids with ``world_nav`` enabled."""
-    from shop.behaviors import ACTION_TELEPORTER
+    from shop.behaviors import is_dialog_teleport_action
 
     rows = catalog if catalog is not None else _cached_behaviors()
     out: list[str] = []
     seen: set[str] = set()
     for b in rows:
-        if str(getattr(b, "action", "") or "") != ACTION_TELEPORTER:
+        if not is_dialog_teleport_action(getattr(b, "action", None)):
             continue
         if not bool(getattr(b, "world_nav", False)):
             continue
@@ -259,7 +259,7 @@ def load_npc_teleporter_links(
     ``adena``: when set, skip links whose fare exceeds current adena.
     Incomplete rows (dest/land unset) are skipped.
     """
-    from shop.behaviors import ACTION_TELEPORTER, behavior_by_id
+    from shop.behaviors import behavior_by_id, is_dialog_teleport_action
 
     from . import pack_ids
 
@@ -274,7 +274,7 @@ def load_npc_teleporter_links(
 
     for bid in sorted(want):
         b = behavior_by_id(bid, catalog)
-        if b is None or str(b.action) != ACTION_TELEPORTER:
+        if b is None or not is_dialog_teleport_action(getattr(b, "action", None)):
             continue
         mid = pack_ids.pack_id_to_map_id(str(b.map_id or ""))
         if mid is None:

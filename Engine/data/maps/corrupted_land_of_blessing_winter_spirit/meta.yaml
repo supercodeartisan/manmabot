@@ -1,0 +1,12 @@
+id: corrupted_land_of_blessing_winter_spirit
+name: "Corrupted Land of Blessing - Winter / Spirit Land"
+# Race field variant. Live mapId 2454 owned by corrupted_land_of_blessing_winter.
+# raw_map omitted so map_id_to_pack_id stays unique on the base pack.
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: ../corrupted_land_of_blessing_winter/nav.png
+farms: farms.yaml
+default_region: blessing_land
+race: spirit
+nav_source_pack: corrupted_land_of_blessing_winter

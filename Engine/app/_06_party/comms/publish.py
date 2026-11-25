@@ -100,9 +100,9 @@ def publish_shop_reports(
         for row in member_reports.snapshot()
         if str(row.get("from") or "").strip().casefold() != leader.casefold()
     ]
-    reports.append(
-        build_report(world, map_id, name=leader, x=x, y=y, arrived=False, order="")
-    )
+    own = build_report(world, map_id, name=leader, x=x, y=y, arrived=False, order="")
+    own["noted_at"] = time.time()
+    reports.append(own)
     blocked = {
         str(name).strip().casefold()
         for name in (away or [])
@@ -111,7 +111,13 @@ def publish_shop_reports(
     open_hunt = bool(hunt_open)
     for row in reports:
         who = str(row.get("from") or "").strip().casefold()
-        row["supply_ok"] = bool(open_hunt and who not in blocked)
+        dropped = False
+        if who and who != leader.casefold():
+            try:
+                dropped = bool(member_states.awaiting_fresh(who))
+            except Exception:
+                dropped = False
+        row["supply_ok"] = bool(open_hunt and who not in blocked and not dropped)
         row["hunt_open"] = open_hunt
     body: dict[str, Any] = {
         "type": "party_reports",
@@ -210,17 +216,11 @@ def _buff_row(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def _shopkeeper_names(roster: Any) -> list[str]:
-    names: list[str] = []
-    rows = roster if isinstance(roster, (list, tuple)) else []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        if str(row.get("role") or "").strip().lower() != "shopkeeper":
-            continue
-        name = str(row.get("name") or "").strip()
-        if name and name not in names:
-            names.append(name)
-    return names
+    """Sole supply shopkeeper name, or empty. Extra roster shopkeepers are ignored."""
+    from ..party_shop.communication import canonical_shopkeeper_name
+
+    name = canonical_shopkeeper_name(roster)
+    return [name] if name else []
 
 
 __all__ = [

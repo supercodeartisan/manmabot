@@ -83,6 +83,49 @@ def mp_cost_for_role_fallback(role: str) -> Optional[int]:
     return None
 
 
+@lru_cache(maxsize=1)
+def _hp_by_name() -> dict[str, int]:
+    """Folded name → HP cost from Korean + Chinese spell catalogs."""
+    out: dict[str, int] = {}
+    for lang in ("korean", "chinese"):
+        for row in _read_contents(_LIST_ROOT / lang / "spell.json"):
+            name = str(row.get("name") or "").strip()
+            if not name:
+                continue
+            cons = row.get("consumables")
+            if not isinstance(cons, dict):
+                continue
+            try:
+                hp = int(cons.get("hp") or 0)
+            except (TypeError, ValueError):
+                continue
+            if hp < 0:
+                continue
+            out.setdefault(_fold_key(name), hp)
+    return out
+
+
+def hp_cost_by_spell_name(name: str) -> Optional[int]:
+    """Catalog HP consumed by a bare spell name, or None if unknown."""
+    key = _fold_key(name)
+    if not key:
+        return None
+    table = _hp_by_name()
+    if key in table:
+        return int(table[key])
+    return None
+
+
+def hp_cost_for_role_fallback(role: str) -> Optional[int]:
+    """Catalog HP via known names for a bot role (no live hotbar)."""
+    for name in _ROLE_FALLBACK_NAMES.get(str(role or "").strip(), ()):
+        cost = hp_cost_by_spell_name(name)
+        if cost is not None:
+            return cost
+    return None
+
+
 def clear_spell_mana_cache() -> None:
     """Tests: drop the cached catalog table."""
     _mp_by_name.cache_clear()
+    _hp_by_name.cache_clear()

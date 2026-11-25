@@ -1,11 +1,14 @@
 """Pure party arrow-supply decisions. No clicks and no shop trip."""
 from __future__ import annotations
 
+import time
 from typing import Any, Callable, Optional
 
 DUTY_FOLLOW = "follow"
 DUTY_SHOP = "shop"
 DUTY_SUPPLY = "supply"
+# Inventory reports older than this are ignored for new buy/drop choice.
+REPORT_FRESH_S = 45.0
 
 
 def hunt_map_after_pose(stored: Any, pose_map: Any, *, leaving: bool) -> Any:
@@ -20,6 +23,33 @@ def hunt_map_after_pose(stored: Any, pose_map: Any, *, leaving: bool) -> Any:
         return int(pose_map)
     except (TypeError, ValueError):
         return stored
+
+
+def supply_report_is_fresh(row: Any, *, now: Optional[float] = None) -> bool:
+    """True when ``noted_at`` is present and within ``REPORT_FRESH_S``.
+
+    Missing ``noted_at`` is not treated as live inventory for a new duty.
+    """
+    if not isinstance(row, dict):
+        return False
+    try:
+        noted = float(row.get("noted_at") or 0.0)
+    except (TypeError, ValueError):
+        return False
+    if noted <= 0.0:
+        return False
+    age = float(time.time() if now is None else now) - noted
+    return 0.0 <= age <= float(REPORT_FRESH_S)
+
+
+def fresh_supply_rows(rows: Any, *, now: Optional[float] = None) -> list:
+    """Reports eligible for a new buy/drop. Stale ``noted_at`` rows are dropped."""
+    kept: list = []
+    stamp = time.time() if now is None else float(now)
+    for row in rows or []:
+        if isinstance(row, dict) and supply_report_is_fresh(row, now=stamp):
+            kept.append(row)
+    return kept
 
 
 def report_arrow_count(row: Any) -> Optional[int]:

@@ -1,7 +1,9 @@
 id: polluted_land_of_blessing_dungeon
-name: "Polluted Land of Blessing"
-# From obstacle_tiles_raw map_244.png (1 px = 1 tile).
-raw_map: "244"
+name: "Polluted Land of Blessing (legacy)"
+# Live mapId 244 is owned by polluted_land_of_blessing (field pack).
+# This folder stays loadable by pack_id for old UserData/tooling paths.
+# raw_map intentionally omitted so map_id_to_pack_id(244) is unique.
+legacy_superseded_by: polluted_land_of_blessing
 origin_x: 32640
 origin_y: 32768
 pixel_scale: 1

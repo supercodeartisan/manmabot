@@ -287,6 +287,24 @@ def profile_snapshot(profile: Profile) -> dict[str, dict[str, Any]]:
             "mother_tree_heal_mp": round(
                 float(getattr(profile, "mother_tree_heal_mp_ratio", 0.80)) * 100
             ),
+            "field_recovery_enabled": bool(
+                getattr(profile, "field_recovery_enabled", False)
+            ),
+            "field_recovery_hp_start": round(
+                float(getattr(profile, "field_recovery_hp_start_ratio", 0.80)) * 100
+            ),
+            "field_recovery_mp_start": round(
+                float(getattr(profile, "field_recovery_mp_start_ratio", 0.50)) * 100
+            ),
+            "field_recovery_stop": round(
+                float(getattr(profile, "field_recovery_stop_ratio", 0.85)) * 100
+            ),
+            "field_recovery_min_hp": round(
+                float(getattr(profile, "field_recovery_min_hp_ratio", 0.60)) * 100
+            ),
+            "field_recovery_min_mp": round(
+                float(getattr(profile, "field_recovery_min_mp_ratio", 0.20)) * 100
+            ),
             "random_teleport_enabled": bool(
                 getattr(profile, "random_teleport_enabled", False)
             ),

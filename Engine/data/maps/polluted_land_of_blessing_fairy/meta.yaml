@@ -1,0 +1,12 @@
+id: polluted_land_of_blessing_fairy
+name: "Polluted Land of Blessing / Fairy Land"
+# Race field variant. Live mapId 244 owned by polluted_land_of_blessing.
+# raw_map omitted so map_id_to_pack_id stays unique on the base pack.
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: ../polluted_land_of_blessing/nav.png
+farms: farms.yaml
+default_region: blessing_land
+race: fairy
+nav_source_pack: polluted_land_of_blessing

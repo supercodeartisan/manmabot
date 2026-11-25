@@ -16,6 +16,35 @@ _LIST = Path(__file__).resolve().parents[1] / "data" / "catalog" / "list" / "kor
 _DIGITS = re.compile(r"\d+")
 _INSTANT = frozenset({"순간", "瞬間", "instant"})
 _SKIP_KO = frozenset({"힐", "텔레포트"})
+# Spell catalog id 1 is 라이트 on every class. Auto-cast stays off even if checked.
+LIGHT_SKILL_ID = 1
+_LIGHT_NAMES = frozenset({"라이트", "日光術", "日光术", "light"})
+
+
+def is_light_auto_buff(
+    skill_id: object = None,
+    names: object = None,
+    token: str = "",
+) -> bool:
+    """True for Light, including a saved check or a ``buff:1`` press token."""
+    text = str(token or "").strip().lower()
+    if text == "light" or text == f"buff:{LIGHT_SKILL_ID}":
+        return True
+    if text.startswith("buff:"):
+        try:
+            if int(text.split(":", 1)[1]) == LIGHT_SKILL_ID:
+                return True
+        except (TypeError, ValueError):
+            pass
+    try:
+        if int(skill_id) == LIGHT_SKILL_ID:
+            return True
+    except (TypeError, ValueError):
+        pass
+    for name in names or ():
+        if str(name or "").strip().lower() in _LIGHT_NAMES:
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -125,7 +154,9 @@ def auto_buffs_for_magic(magic: dict[str, Any] | None, ui_class: str) -> tuple[A
             continue
         if skill.category == "attack_magic":
             continue
-        if skill.ko in _SKIP_KO:
+        if skill.ko in _SKIP_KO or is_light_auto_buff(
+            skill.skill_id, (skill.ko, skill.zh_tw, skill.zh_cn)
+        ):
             continue
         seconds = durations.get(int(skill.skill_id))
         if seconds is None:

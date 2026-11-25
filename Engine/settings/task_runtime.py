@@ -536,6 +536,30 @@ def apply_runtime_settings(task: ScheduleTask, profile: Profile) -> list[str]:
         _ratio(recovery.get("mother_tree_heal_mp"), 0.80),
     )
     set_value(
+        "field_recovery_enabled",
+        bool(recovery.get("field_recovery_enabled", False)),
+    )
+    set_value(
+        "field_recovery_hp_start_ratio",
+        _ratio(recovery.get("field_recovery_hp_start"), 0.80),
+    )
+    set_value(
+        "field_recovery_mp_start_ratio",
+        _ratio(recovery.get("field_recovery_mp_start"), 0.50),
+    )
+    stop = _ratio(recovery.get("field_recovery_stop"), 0.85)
+    set_value("field_recovery_stop_ratio", stop)
+    set_value("field_recovery_hp_stop_ratio", stop)
+    set_value("field_recovery_mp_stop_ratio", stop)
+    set_value(
+        "field_recovery_min_hp_ratio",
+        _ratio(recovery.get("field_recovery_min_hp"), 0.60),
+    )
+    set_value(
+        "field_recovery_min_mp_ratio",
+        _ratio(recovery.get("field_recovery_min_mp"), 0.20),
+    )
+    set_value(
         "mp_recover_enabled",
         bool(recovery.get("mp_recover_enabled", getattr(profile, "mp_recover_enabled", False))),
     )

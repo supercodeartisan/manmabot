@@ -218,6 +218,44 @@ class RecoveryTab(QWidget):
             80,
             self.t.get("mp_ge", "MP ≥"),
         )
+
+        field = card(page, self.t.get("field_recovery", "Field auto recovery"))
+        left.addWidget(field)
+        flay = field.layout()
+        assert isinstance(flay, QVBoxLayout)
+        field_on = add_check(
+            flay, self.bag, "recovery", "field_recovery_enabled",
+            self.t.get("field_recovery_enabled", "Enable field auto recovery"),
+            False, self._refresh_summary,
+        )
+        field_spins = [
+            add_spin_row(
+                flay, self.bag, "recovery", "field_recovery_hp_start",
+                self.t.get("field_recovery_hp_start", "HP start"),
+                80, 1, 100, "%", self._refresh_summary,
+            ),
+            add_spin_row(
+                flay, self.bag, "recovery", "field_recovery_mp_start",
+                self.t.get("field_recovery_mp_start", "MP start"),
+                50, 1, 100, "%", self._refresh_summary,
+            ),
+            add_spin_row(
+                flay, self.bag, "recovery", "field_recovery_stop",
+                self.t.get("field_recovery_stop", "Shared stop"),
+                85, 1, 100, "%", self._refresh_summary,
+            ),
+            add_spin_row(
+                flay, self.bag, "recovery", "field_recovery_min_hp",
+                self.t.get("field_recovery_min_hp", "Min HP for Body to Mind"),
+                60, 1, 100, "%", self._refresh_summary,
+            ),
+            add_spin_row(
+                flay, self.bag, "recovery", "field_recovery_min_mp",
+                self.t.get("field_recovery_min_mp", "Min MP for Heal"),
+                20, 1, 100, "%", self._refresh_summary,
+            ),
+        ]
+        bind_gate(field_on, *field_spins)
         left.addStretch(1)
 
         teleport = card(page, self.t.get("form_teleport", "Teleport"))
@@ -517,6 +555,13 @@ class RecoveryTab(QWidget):
                 f"{self.bag.get_int('recovery', 'mother_tree_heal_hp', 40)}% "
                 f"{self.t.get('mp_ge', 'MP ≥')} "
                 f"{self.bag.get_int('recovery', 'mother_tree_heal_mp', 80)}%"
+            ),
+            (
+                f"{self.t.get('field_recovery', 'Field auto recovery')}: "
+                f"{on('recovery', 'field_recovery_enabled')} "
+                f"HP {self.bag.get_int('recovery', 'field_recovery_hp_start', 80)}% "
+                f"MP {self.bag.get_int('recovery', 'field_recovery_mp_start', 50)}% "
+                f"stop {self.bag.get_int('recovery', 'field_recovery_stop', 85)}%"
             ),
             f"{self.t.get('return_supplies', 'Supplies')}: {on('hunt', 'return_no_supplies')}",
         ]

@@ -29,7 +29,7 @@ _MAX_SCROLL = 8
 
 
 def grid_path() -> Path:
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     return root / "data" / "supply" / "inventory_grid.json"
 
 
@@ -377,7 +377,7 @@ def _ground_seen(
     try:
         from app._03_world.space.world_coords import tile_chebyshev
         from app._04_decision.combat_query import list_lootable, object_absolute_tile
-        from app._06_party.arrow_policy import supply_pile_matches
+        from .supply import supply_pile_matches
 
         piles = list_lootable(
             state,

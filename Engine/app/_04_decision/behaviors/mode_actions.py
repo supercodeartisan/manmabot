@@ -1358,6 +1358,11 @@ def apply_hp_actions(
     convert = maybe_hp_to_mp(state, blackboard)
     if convert is not None:
         return convert
+    from app._04_decision.field_recovery import try_field_auto_recovery
+
+    field = try_field_auto_recovery(state, blackboard)
+    if field is not None:
+        return field
     _log_hp_idle(blackboard, ratio, can, actions)
     return None
 

@@ -211,6 +211,15 @@ class Profile:
     mother_tree_heal_enabled: bool = True
     mother_tree_heal_hp_ratio: float = 0.40
     mother_tree_heal_mp_ratio: float = 0.80
+    # Solo hunt-field Heal / Body to Mind. Off leaves hunting unchanged.
+    field_recovery_enabled: bool = False
+    field_recovery_hp_start_ratio: float = 0.80
+    field_recovery_mp_start_ratio: float = 0.50
+    field_recovery_stop_ratio: float = 0.85
+    field_recovery_hp_stop_ratio: float = 0.85
+    field_recovery_mp_stop_ratio: float = 0.85
+    field_recovery_min_hp_ratio: float = 0.60
+    field_recovery_min_mp_ratio: float = 0.20
     random_teleport_enabled: bool = False
     teleport_on_player: bool = False
     teleport_when_surrounded: bool = False
@@ -450,7 +459,11 @@ class Profile:
                 char = "mage"
             kwargs["character"] = char
         if "active_map" in kwargs:
-            kwargs["active_map"] = str(kwargs["active_map"] or DEFAULT_MAP_ID).strip()
+            active = str(kwargs["active_map"] or DEFAULT_MAP_ID).strip()
+            # Legacy dungeon pack id → field pack that owns live mapId 244.
+            if active == "polluted_land_of_blessing_dungeon":
+                active = "polluted_land_of_blessing"
+            kwargs["active_map"] = active or DEFAULT_MAP_ID
         if "spell_slots" in kwargs or "buff_cooldown_min" in data or "heal_double_press" in data:
             # Runtime merge for validation, then keep bindings only on the Profile.
             kwargs["spell_slots"] = spell_slot_bindings(
@@ -473,6 +486,13 @@ class Profile:
             ("mother_tree_hp_to_mp_mp_ratio", 0.0, 1.0),
             ("mother_tree_heal_hp_ratio", 0.0, 1.0),
             ("mother_tree_heal_mp_ratio", 0.0, 1.0),
+            ("field_recovery_hp_start_ratio", 0.0, 1.0),
+            ("field_recovery_mp_start_ratio", 0.0, 1.0),
+            ("field_recovery_stop_ratio", 0.0, 1.0),
+            ("field_recovery_hp_stop_ratio", 0.0, 1.0),
+            ("field_recovery_mp_stop_ratio", 0.0, 1.0),
+            ("field_recovery_min_hp_ratio", 0.0, 1.0),
+            ("field_recovery_min_mp_ratio", 0.0, 1.0),
         ):
             if name in kwargs:
                 try:
@@ -757,9 +777,14 @@ def _party_weight_pct(value: Any) -> int:
 
 
 def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
-    """Leader seat list: name, seat (default mage), optional loot seat."""
+    """Leader seat list: name, seat (default mage), optional loot seat.
+
+    At most one enabled ``shopkeeper`` is kept (first in roster order). Extra or
+    disabled shopkeeper rows become ``member`` so only one seat runs supply.
+    """
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
+    shopkeeper_taken = False
     items = raw if isinstance(raw, (list, tuple)) else []
     for item in items:
         if not isinstance(item, dict):
@@ -774,6 +799,12 @@ def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
         role = str(item.get("role") or "mage").strip().lower()
         if role not in _ROSTER_ROLES:
             role = "mage"
+        enabled = _roster_on(item, "enabled", True)
+        if role == "shopkeeper":
+            if not enabled or shopkeeper_taken:
+                role = "member"
+            else:
+                shopkeeper_taken = True
         loot = str(item.get("loot") or item.get("loot_role") or "none").strip().lower()
         if loot not in _ROSTER_LOOT:
             loot = "none"
@@ -781,7 +812,7 @@ def normalize_party_roster(raw: Any) -> list[dict[str, str]]:
             "name": name,
             "role": role,
             "loot": loot,
-            "enabled": "1" if _roster_on(item, "enabled", True) else "0",
+            "enabled": "1" if enabled else "0",
             "required": "1" if _roster_on(item, "required", True) else "0",
         })
     return rows

@@ -591,7 +591,7 @@ class ActionExecutor:
                 return
         # Solo and every other party action still pass an empty allow list.
         # Inventory is spared only while a party supply drop gesture is active.
-        from app._06_party.supply_drop import dismiss_allowed_labels
+        from app._06_party.party_shop.drop_gesture import dismiss_allowed_labels
 
         allowed = dismiss_allowed_labels(getattr(self, "_blackboard", None))
         if not unexpected_open_labels(snap, allowed=allowed):
@@ -812,6 +812,9 @@ class ActionExecutor:
         """Click a ground hop; require NORMAL cursor, else a small tile ring."""
         if action.destination is None:
             return
+        import time
+
+        from app._02_state.geometry import WorldOrigin
         from app._05_action.cursor_catalog import CursorCategory
         from app._05_action.cursor_verify import (
             click_closed_door,
@@ -824,15 +827,17 @@ class ActionExecutor:
             content_destinations_ring,
             relative_tile_of_content,
         )
-        from app._04_decision.doors import (
-            closed_door_before_click,
-            cursor_on_door_action,
-            door_state_at,
-            door_state_near,
-            refresh_live_doors,
+        from app._04_decision.door_navigation import (
+            DoorNavRequest,
+            DoorNavStatus,
+            handle_door_navigation,
+            session_from_blackboard,
         )
+        from app._04_decision.doors import door_state_at, door_state_near, refresh_live_doors
+        from app._04_decision.pathfinding import waypoint_to_content
 
-        refresh_live_doors(getattr(self._world, "last_print_state", None))
+        snap = getattr(self._world, "last_print_state", None)
+        refresh_live_doors(snap)
 
         aimed = self._aim_ground_click(action)
         if aimed is False:
@@ -847,56 +852,133 @@ class ActionExecutor:
             }
             return
         destination = action.destination if aimed is None else aimed
-        dests = list(content_destinations_ring(destination))
         pinned = self.last_travel_click_origin
-        if aimed is not None and pinned is not None:
-            from app._02_state.geometry import WorldOrigin
+        intent_reason = str(getattr(action, "reason", "") or "")
+        guide = (
+            list(getattr(self._blackboard, "nav_path", None) or [])
+            if self._blackboard is not None
+            else []
+        )
+        session = (
+            session_from_blackboard(self._blackboard)
+            if self._blackboard is not None
+            else None
+        )
 
+        if session is not None and pinned is not None and guide:
+            rel_guess = relative_tile_of_content(destination)
+            click_tile = (
+                int(pinned[0]) + int(rel_guess[0]),
+                int(pinned[1]) + int(rel_guess[1]),
+            )
+            door_res = handle_door_navigation(
+                DoorNavRequest(
+                    snapshot=snap,
+                    guide=guide,
+                    start=(int(pinned[0]), int(pinned[1])),
+                    planned_click=click_tile,
+                    session=session,
+                    now=time.time(),
+                    event="act",
+                )
+            )
+            door_stats = dict(door_res.stats or {})
+            door_stats["intent_reason"] = intent_reason
+            if door_res.status is DoorNavStatus.OPEN_NOW and door_res.door_tile is not None:
+                content = waypoint_to_content(
+                    door_res.door_tile,
+                    WorldOrigin(x=int(pinned[0]), y=int(pinned[1])),
+                )
+                sx, sy = self._screen_point(content.x, content.y, bounds)
+                client_h = float(getattr(bounds, "height", 600) or 600)
+                opened = sweep_click_closed_door(self, sx, sy, client_h)
+                handle_door_navigation(
+                    DoorNavRequest(
+                        snapshot=snap,
+                        guide=guide,
+                        start=(int(pinned[0]), int(pinned[1])),
+                        planned_click=door_res.door_tile,
+                        session=session,
+                        now=time.time(),
+                        event="note_open",
+                        opened=bool(opened),
+                    )
+                )
+                if opened:
+                    self.last_travel_click_relative = (
+                        int(door_res.door_tile[0]) - int(pinned[0]),
+                        int(door_res.door_tile[1]) - int(pinned[1]),
+                    )
+                    self.last_travel_cursor_stats = {
+                        "ok": True,
+                        "probes": 1,
+                        "dialog_seen": 0,
+                        "labels_seen": ["door"],
+                        "click_label": "door",
+                        "door": "close",
+                        **door_stats,
+                    }
+                    return
+                self.last_travel_click_failed = True
+                self.last_travel_cursor_stats = {
+                    "ok": False,
+                    "probes": 1,
+                    "dialog_seen": 0,
+                    "labels_seen": ["door"],
+                    "last_reject": "door_open_miss",
+                    **door_stats,
+                }
+                return
+            if door_res.status in (
+                DoorNavStatus.WAIT_OPEN,
+                DoorNavStatus.WAIT_CROSS,
+                DoorNavStatus.UNKNOWN,
+            ):
+                # Hold the hop; do not ground-click through a closed / unknown door.
+                self.last_travel_cursor_stats = {
+                    "ok": True,
+                    "probes": 0,
+                    "dialog_seen": 0,
+                    "labels_seen": ["door"],
+                    "click_label": "hold",
+                    "door": door_res.door_state.value,
+                    **door_stats,
+                }
+                return
+            if door_res.status in (
+                DoorNavStatus.FAILED,
+                DoorNavStatus.SEALED,
+                DoorNavStatus.NOT_FOUND,
+            ):
+                self.last_travel_click_failed = True
+                self.last_travel_cursor_stats = {
+                    "ok": False,
+                    "probes": 0,
+                    "dialog_seen": 0,
+                    "labels_seen": ["door"],
+                    "last_reject": door_res.status.value,
+                    "door": door_res.door_state.value,
+                    **door_stats,
+                }
+                return
+            if door_res.status is DoorNavStatus.PASS_NOW and door_res.pass_tile is not None:
+                destination = waypoint_to_content(
+                    door_res.pass_tile,
+                    WorldOrigin(x=int(pinned[0]), y=int(pinned[1])),
+                )
+            if door_res.status is DoorNavStatus.CROSSED:
+                pass  # resume ordinary hop with the aimed destination
+
+        dests = list(content_destinations_ring(destination))
+        if aimed is not None and pinned is not None:
             dests = self._clear_ring_points(
                 dests, WorldOrigin(x=int(pinned[0]), y=int(pinned[1]))
             )
-            if dests:
-                from app._04_decision.pathfinding import waypoint_to_content
-
-                rel0 = relative_tile_of_content(dests[0])
-                click_tile = (
-                    int(pinned[0]) + int(rel0[0]),
-                    int(pinned[1]) + int(rel0[1]),
-                )
-                guide = (
-                    list(getattr(self._blackboard, "nav_path", None) or [])
-                    if self._blackboard is not None
-                    else []
-                )
-                door_tile = closed_door_before_click(guide, pinned, click_tile)
-                if door_tile is not None:
-                    content = waypoint_to_content(
-                        door_tile,
-                        WorldOrigin(x=int(pinned[0]), y=int(pinned[1])),
-                    )
-                    sx, sy = self._screen_point(content.x, content.y, bounds)
-                    client_h = float(getattr(bounds, "height", 600) or 600)
-                    if sweep_click_closed_door(self, sx, sy, client_h):
-                        self.last_travel_click_relative = (
-                            int(door_tile[0]) - int(pinned[0]),
-                            int(door_tile[1]) - int(pinned[1]),
-                        )
-                        self.last_travel_cursor_stats = {
-                            "ok": True,
-                            "probes": 1,
-                            "dialog_seen": 0,
-                            "labels_seen": ["door"],
-                            "click_label": "door",
-                            "door": "close",
-                            "intent_reason": str(getattr(action, "reason", "") or ""),
-                        }
-                        return
         probes = 0
         dialog_seen = 0
         seen_labels: list[str] = []
         door_note = ""
         spell_cancels = 0
-        intent_reason = str(getattr(action, "reason", "") or "")
         index = 0
         while index < len(dests):
             content = dests[index]
@@ -921,6 +1003,23 @@ class ActionExecutor:
                 continue
             if travel_click(self, x, y):
                 self.last_travel_click_relative = rel
+                if (
+                    session is not None
+                    and session.phase.value == "crossing"
+                    and pinned is not None
+                ):
+                    handle_door_navigation(
+                        DoorNavRequest(
+                            snapshot=snap,
+                            guide=guide,
+                            start=(int(pinned[0]), int(pinned[1])),
+                            planned_click=nav_tile,
+                            session=session,
+                            now=time.time(),
+                            event="note_pass",
+                            passed_pose=nav_tile,
+                        )
+                    )
                 match = getattr(self, "last_cursor_match", None)
                 label = str(getattr(match, "label", "") or "")
                 self.last_travel_cursor_stats = {
@@ -941,7 +1040,6 @@ class ActionExecutor:
                     seen_labels.append(label)
                 if label == "dialog" or category is CursorCategory.DIALOG:
                     dialog_seen += 1
-            # Leftover cast circle: Esc, then a right-click if it remains.
             if label.startswith("spell") or category is CursorCategory.SPELL:
                 if spell_cancels >= 3:
                     break
@@ -975,9 +1073,23 @@ class ActionExecutor:
                         dialog_seen += 1
             door_cursor = label == "door" or category is CursorCategory.DOOR
             if door_cursor:
+                # Never open from a ring probe unless the module already asked.
+                # An open door must not be clicked (would close it).
                 door_note = door_state or "unknown"
-                action_on_door = cursor_on_door_action(door_state)
-                if action_on_door == "open" and click_closed_door(self, x, y):
+                if door_state == "close" and click_closed_door(self, x, y):
+                    if session is not None and pinned is not None:
+                        handle_door_navigation(
+                            DoorNavRequest(
+                                snapshot=snap,
+                                guide=guide,
+                                start=(int(pinned[0]), int(pinned[1])),
+                                planned_click=nav_tile,
+                                session=session,
+                                now=time.time(),
+                                event="note_open",
+                                opened=True,
+                            )
+                        )
                     self.last_travel_click_relative = rel
                     self.last_travel_cursor_stats = {
                         "ok": True,
@@ -1343,6 +1455,10 @@ class ActionExecutor:
         target cursor.
         """
         name = str(which or "")
+        from settings.auto_buffs import is_light_auto_buff
+
+        if is_light_auto_buff(token=name):
+            return
         if intent is not None and self._party_list_buff(intent, bounds):
             return
         if name.startswith("buff:") and intent is not None:
@@ -1351,16 +1467,21 @@ class ActionExecutor:
             if box in (1, 2, 3) and key:
                 self._press_catalog_buff(name, box, key)
             return
-        if name not in ("power_up", "armor_up", "haste", "light"):
+        if name not in ("power_up", "armor_up", "haste"):
             return
         self._press_assigned_skill(name)
 
     def _press_catalog_buff(self, token: str, box: int, key: str) -> None:
         """Press one checked buff. Decision already chose the hotbar cell."""
         from app._04_decision.spells import _auto_buff, can_cast_spell
+        from settings.auto_buffs import is_light_auto_buff
 
+        if is_light_auto_buff(token=token):
+            return
         buff = _auto_buff(token)
-        spell_name = buff.names[0] if buff is not None and buff.names else ""
+        if buff is None or is_light_auto_buff(buff.skill_id, buff.names):
+            return
+        spell_name = buff.names[0] if buff.names else ""
         world = getattr(self, "_world", None)
         if world is not None and not can_cast_spell(world, role=spell_name or None):
             return

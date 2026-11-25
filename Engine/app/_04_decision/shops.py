@@ -262,15 +262,15 @@ def is_store_behavior(behavior_id: str) -> bool:
 
 
 def is_teleporter_behavior(behavior_id: str) -> bool:
-    """Dungeon-entry teleporter NPC (npc_behaviors action=teleporter)."""
+    """NPC dialog travel shortcut (action=teleporter or other)."""
     bid = str(behavior_id or "")
     if bid.startswith("teleport_"):
         return True
     try:
-        from shop.behaviors import ACTION_TELEPORTER, behavior_by_id, load_behaviors
+        from shop.behaviors import behavior_by_id, is_dialog_teleport_action, load_behaviors
 
         b = behavior_by_id(bid, load_behaviors())
-        return b is not None and str(b.action) == ACTION_TELEPORTER
+        return b is not None and is_dialog_teleport_action(getattr(b, "action", None))
     except Exception:
         return False
 

@@ -1,0 +1,12 @@
+id: corrupted_land_of_blessing_autumn_fairy
+name: "Corrupted Land of Blessing - Autumn / Fairy Land"
+# Race field variant. Live mapId 2452 owned by corrupted_land_of_blessing_autumn.
+# raw_map omitted so map_id_to_pack_id stays unique on the base pack.
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: ../corrupted_land_of_blessing_autumn/nav.png
+farms: farms.yaml
+default_region: blessing_land
+race: fairy
+nav_source_pack: corrupted_land_of_blessing_autumn

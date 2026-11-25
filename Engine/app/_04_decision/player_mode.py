@@ -24,6 +24,16 @@ HP_FULL_RATIO = 0.99
 HP_TO_MP_ENABLED = True
 HP_TO_MP_MIN_RATIO = 0.85
 HP_TO_MP_MAX_MP_RATIO = 0.80
+# Solo field recovery. Off until the recovery page enables it.
+# Starts use the HP and MP lines. One shared stop ends the session.
+FIELD_RECOVERY_ENABLED = False
+FIELD_RECOVERY_HP_START = 0.80
+FIELD_RECOVERY_MP_START = 0.50
+FIELD_RECOVERY_STOP = 0.85
+FIELD_RECOVERY_HP_STOP = 0.85
+FIELD_RECOVERY_MP_STOP = 0.85
+FIELD_RECOVERY_MIN_HP = 0.60
+FIELD_RECOVERY_MIN_MP = 0.20
 # Mother-tree recharge only: heal while HP is at or under this and MP is at least this.
 MP_TO_HP_ENABLED = True
 MP_TO_HP_MAX_HP_RATIO = 0.40

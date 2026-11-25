@@ -182,6 +182,31 @@ def configure_decision(config: Optional[dict[str, Any]] = None) -> None:
             tree["heal_mp_ratio"], pm.MP_TO_HP_MIN_MP_RATIO
         )
 
+    field = root.get("field_recovery") or {}
+    if "enabled" in field:
+        pm.FIELD_RECOVERY_ENABLED = bool(field["enabled"])
+    if "hp_start_ratio" in field:
+        pm.FIELD_RECOVERY_HP_START = _unit_ratio(
+            field["hp_start_ratio"], pm.FIELD_RECOVERY_HP_START
+        )
+    if "mp_start_ratio" in field:
+        pm.FIELD_RECOVERY_MP_START = _unit_ratio(
+            field["mp_start_ratio"], pm.FIELD_RECOVERY_MP_START
+        )
+    if "stop_ratio" in field:
+        pm.FIELD_RECOVERY_STOP = _unit_ratio(
+            field["stop_ratio"], pm.FIELD_RECOVERY_STOP
+        )
+    pm.FIELD_RECOVERY_HP_STOP = pm.FIELD_RECOVERY_STOP
+    pm.FIELD_RECOVERY_MP_STOP = pm.FIELD_RECOVERY_STOP
+    if "min_hp_ratio" in field:
+        pm.FIELD_RECOVERY_MIN_HP = _unit_ratio(
+            field["min_hp_ratio"], pm.FIELD_RECOVERY_MIN_HP
+        )
+    if "min_mp_ratio" in field:
+        pm.FIELD_RECOVERY_MIN_MP = _unit_ratio(
+            field["min_mp_ratio"], pm.FIELD_RECOVERY_MIN_MP
+        )
     from app._04_decision.hp_actions import normalize_hp_actions
 
     explicit_actions = hp.get("actions")

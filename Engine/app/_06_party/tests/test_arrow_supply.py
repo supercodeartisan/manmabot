@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from app._04_decision.player_mode import LOOT_MODE_ADENA
 from app._04_decision.shop_trip import needs_arrow_buy
-from app._06_party.arrow_duty import _supply_specs, note_supply_shop_finished
-from app._06_party.arrow_policy import (
+from app._06_party.party_shop.duty import _supply_specs, note_supply_shop_finished
+from app._06_party.party_shop.supply import (
     affordable_supply_qty,
     choose_supply_duty,
     next_supply_buy,
@@ -249,9 +249,9 @@ class _Pile:
 
 def test_party_supply_reads_silver_arrows_only() -> None:
     from app._03_world.merge.memory_inventory import ARROW_IDS, SILVER_ARROW_IDS
-    from app._06_party.arrow_duty import supply_shop_id
-    from app._06_party.arrow_policy import bag_supply_counts
-    from app._06_party.supply_drop import _kind_tables
+    from app._06_party.party_shop.duty import supply_shop_id
+    from app._06_party.party_shop.supply import bag_supply_counts
+    from app._06_party.party_shop.drop_gesture import _kind_tables
 
     row = {"from": "Elf", "items": {"arrows": 500, "silver_arrows": 40}}
     assert report_supply_count(row, "arrow") == 40
@@ -486,7 +486,7 @@ def test_policy_merge_keeps_arrow_and_pickup_knobs() -> None:
 def test_same_map_drop_converts_game_xy_before_travel() -> None:
     """Report xy is raw game. Same-map travel must get nav tiles."""
     from app._03_world.merge.memory_sync import configure_map_origin, get_map_origin
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     saved = get_map_origin()
     configure_map_origin(

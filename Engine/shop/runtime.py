@@ -402,7 +402,7 @@ def _party_supply_amount(executor, behavior: ShoppingBehavior, amount: int) -> i
     scratch = getattr(board, "scratch", None)
     if not isinstance(scratch, dict) or not scratch.get("party_shopkeeper_arrow"):
         return int(amount)
-    from app._06_party.arrow_policy import affordable_supply_qty
+    from app._06_party.party_shop.supply import affordable_supply_qty
 
     world = getattr(executor, "_world", None)
     player = getattr(world, "player", None)
@@ -489,18 +489,33 @@ def execute_calibrated_teleporter(
     bounds,
     behavior: ShoppingBehavior,
 ) -> bool:
-    """Teleporter dialog: option click + confirm (no list slot / qty)."""
-    from app._05_action import humanize as hz
-    from shop.behaviors import ACTION_TELEPORTER
+    """Teleporter/other dialog: ordered UV clicks (no list slot / qty).
 
+    ``teleporter`` uses option + confirm. ``other`` uses ``ui.click_sequence``.
+    Clicks are timed sleeps only (dialog open was gated in ``open_shop_npc``).
+    """
+    from app._05_action import humanize as hz
+    from shop.behaviors import (
+        ACTION_OTHER,
+        ACTION_TELEPORTER,
+        is_dialog_teleport_action,
+    )
+
+    action = str(getattr(behavior, "action", "") or ACTION_TELEPORTER).strip().lower()
+    if not is_dialog_teleport_action(action):
+        action = ACTION_TELEPORTER
     ui = behavior.ui
-    if not ui.calibrated(action=ACTION_TELEPORTER):
+    if not ui.calibrated(action=action):
         return False
-    assert ui.buy_button is not None
-    assert ui.confirm_button is not None
+    clicks = ui.ordered_dialog_clicks(action)
+    if len(clicks) < 2:
+        return False
     wait = hz.SHOP_BUTTON_WAIT_S
-    _click_uv(executor, bounds, ui.buy_button, wait_s=hz.SHOP_AFTER_TAB_WAIT_S)
-    _click_uv(executor, bounds, ui.confirm_button, wait_s=wait)
+    first_wait = hz.SHOP_AFTER_TAB_WAIT_S
+    for i, pt in enumerate(clicks):
+        # First gap matches legacy teleporter option→confirm pacing.
+        gap = first_wait if i == 0 else wait
+        _click_uv(executor, bounds, pt, wait_s=gap)
     return True
 
 
@@ -938,7 +953,7 @@ def execute_shop_intent(executor, bounds, action) -> tuple[bool, str]:
     if behavior is None:
         return False, behavior_id
     kind = str(getattr(action, "shop_kind", None) or "").strip().lower()
-    if kind not in ("buy", "sell", "store", "teleporter"):
+    if kind not in ("buy", "sell", "store", "teleporter", "other"):
         kind = str(getattr(behavior, "action", "") or "buy").strip().lower()
     if not behavior.ui.calibrated(action=kind):
         return False, behavior_id
@@ -967,7 +982,7 @@ def execute_shop_intent(executor, bounds, action) -> tuple[bool, str]:
     ):
         return False, behavior_id
 
-    if kind == "teleporter":
+    if kind in ("teleporter", "other"):
         ok = execute_calibrated_teleporter(executor, bounds, behavior)
         return bool(ok), behavior_id
 

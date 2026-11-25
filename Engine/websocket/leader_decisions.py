@@ -39,7 +39,10 @@ def publish_leader_decision(
     # Mother-tree and the start rally have their own frames (recovery / rally).
     if name == "return_to_mother_tree":
         return ""
-    if name == "shop_run" and str(getattr(action, "shop_kind", "") or "") == "teleporter":
+    if name == "shop_run" and str(getattr(action, "shop_kind", "") or "") in (
+        "teleporter",
+        "other",
+    ):
         return ""
     key = _key(action, name)
     if key == _last_key:

@@ -258,6 +258,65 @@ def current() -> "HuntInput":
     return _active
 
 
+_VK_BY_NAME = {
+    "f1": 0x70,
+    "f2": 0x71,
+    "f3": 0x72,
+    "f4": 0x73,
+    "f5": 0x74,
+    "f6": 0x75,
+    "f7": 0x76,
+    "f8": 0x77,
+    "f9": 0x78,
+    "f10": 0x79,
+    "f11": 0x7A,
+    "f12": 0x7B,
+    "esc": 0x1B,
+    "i": 0x49,
+}
+
+
+def expected_key_scan(key: str) -> str:
+    """Virtual key and scan code the Interception package would derive.
+
+    ``interception.key_down`` uses ``MapVirtualKeyA(vk, MAPVK_VK_TO_VSC_EX)``
+    and discards the driver's send result. This string is the code we expect,
+    not proof the stroke was accepted.
+    """
+    name = str(key or "").strip().lower()
+    vk = _VK_BY_NAME.get(name)
+    if vk is None:
+        return "vk=- scan=- ext=-"
+    try:
+        scan = int(ctypes.windll.user32.MapVirtualKeyA(int(vk), 4) or 0)
+    except Exception:
+        return f"vk={vk:#x} scan=- ext=-"
+    return f"vk={vk:#x} scan={scan & 0xFF:#x} ext={int(bool((scan >> 8) & 0xFF))}"
+
+
+def foreground_label() -> str:
+    """Foreground window at the moment of a key call. Empty title if unread."""
+    try:
+        user32 = ctypes.windll.user32
+        hwnd = int(user32.GetForegroundWindow() or 0)
+        buf = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(hwnd, buf, 256)
+        pid = ctypes.wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        title = str(buf.value or "").replace(" ", "_")[:80]
+        return f"hwnd={hwnd} pid={int(pid.value)} title={title or '-'}"
+    except Exception as exc:
+        return f"fg_error={exc}"
+
+
+def input_diag() -> str:
+    """Selected device and foreground window. Never raises."""
+    try:
+        return current().diag()
+    except Exception as exc:
+        return f"diag_error={exc}"
+
+
 def ensure_open() -> None:
     current().ensure_open()
 
@@ -404,6 +463,9 @@ class HuntInput:
     def button_gap_s(self) -> float:
         return 0.0
 
+    def diag(self) -> str:
+        return f"kind={self.kind} {foreground_label()}"
+
 
 class InterceptionHuntInput(HuntInput):
     """PyPI ``interception`` package. Same device handling the farm path used."""
@@ -497,6 +559,7 @@ class InterceptionHuntInput(HuntInput):
         self._ensure_live_context()
         self._library().auto_capture_devices(keyboard=True, mouse=True)
         self._captured = True
+        self._log_devices("capture")
 
     def prepare(self) -> None:
         """Re-bind devices. A live context is kept; a dead one is replaced."""
@@ -504,6 +567,10 @@ class InterceptionHuntInput(HuntInput):
         self.ensure_open()
 
     def close(self) -> None:
+        try:
+            released = self.diag()
+        except Exception:
+            released = "kind=interception"
         try:
             if self._captured:
                 try:
@@ -517,6 +584,62 @@ class InterceptionHuntInput(HuntInput):
         except Exception:
             pass
         self._captured = False
+        try:
+            from app.bot_log import event
+
+            event("input", "devices event=closed %s", released)
+        except Exception:
+            pass
+
+    def diag(self) -> str:
+        ctx = self._current_context()
+        kb = getattr(ctx, "keyboard", None) if ctx is not None else None
+        mouse = getattr(ctx, "mouse", None) if ctx is not None else None
+        handle = "-"
+        hwid = "-"
+        devices = list(getattr(ctx, "devices", None) or [])
+        if isinstance(kb, int) and 0 <= kb < len(devices):
+            dev = devices[kb]
+            handle = str(getattr(dev, "handle", "-"))
+            try:
+                raw = dev.get_HWID()
+                hwid = str(raw or "-").replace(" ", "_")[:72]
+            except Exception:
+                hwid = "-"
+        return (
+            f"kind=interception kb={kb} mouse={mouse} handle={handle} "
+            f"hwid={hwid} captured={int(bool(self._captured))} "
+            f"send_result=hidden {foreground_label()}"
+        )
+
+    def _log_devices(self, event_name: str) -> None:
+        """Record which device index was selected. Does not change the selection."""
+        try:
+            from app.bot_log import event
+
+            ctx = self._current_context()
+            devices = list(getattr(ctx, "devices", None) or [])
+            rows: list[str] = []
+            for index, dev in enumerate(devices):
+                handle = getattr(dev, "handle", -1)
+                if handle in (-1, 0, None):
+                    continue
+                try:
+                    raw = dev.get_HWID() or ""
+                except Exception:
+                    raw = ""
+                kind = "kb" if index <= 9 else "mouse"
+                rows.append(f"{index}:{kind}:h={handle}:{str(raw).replace(' ', '_')[:40]}")
+            event(
+                "input",
+                "devices event=%s kb=%s mouse=%s roster=%s",
+                event_name,
+                getattr(ctx, "keyboard", None) if ctx is not None else None,
+                getattr(ctx, "mouse", None) if ctx is not None else None,
+                " | ".join(rows) or "-",
+            )
+        except Exception:
+            return
 
     def move_abs(self, x: int, y: int) -> None:
         self.ensure_open()
@@ -740,6 +863,12 @@ class PicoHuntInput(HuntInput):
 
     def key_up(self, key: str) -> None:
         self._require().key_up(self._code(key))
+
+    def diag(self) -> str:
+        return (
+            f"kind=pico port={self.port} open={int(self._client is not None)} "
+            f"send_result=hidden {foreground_label()}"
+        )
 
     def button_gap_s(self) -> float:
         return _PICO_BUTTON_GAP_S

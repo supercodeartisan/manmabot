@@ -125,7 +125,11 @@ def maybe_solo_mage_buffs(
     snap = _live_hotbar_snap(state, blackboard)
     rows = _try_rows(blackboard)
 
+    from settings.auto_buffs import is_light_auto_buff
+
     for buff in buffs:
+        if is_light_auto_buff(buff.skill_id, buff.names):
+            continue
         skill_id = int(buff.skill_id)
         key = str(skill_id)
         row = rows.get(key) if isinstance(rows.get(key), dict) else {}

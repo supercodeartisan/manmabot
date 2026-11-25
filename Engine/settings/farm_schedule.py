@@ -63,6 +63,12 @@ def stay_seconds_for(
     return clamp_farm_stay_s(default_s)
 
 
+# Old dungeon-named pack id → field pack that owns live mapId 244.
+_LEGACY_ROUTINE_MAP_IDS = {
+    "polluted_land_of_blessing_dungeon": "polluted_land_of_blessing",
+}
+
+
 def normalize_routine(raw: Any) -> list[dict[str, Any]]:
     """Ordered battle/break maps saved with a schedule."""
     if not isinstance(raw, list):
@@ -73,6 +79,7 @@ def normalize_routine(raw: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         map_id = str(item.get("map_id") or "").strip()
+        map_id = _LEGACY_ROUTINE_MAP_IDS.get(map_id, map_id)
         if not map_id:
             continue
         kind = str(item.get("kind") or "battle").strip().lower()

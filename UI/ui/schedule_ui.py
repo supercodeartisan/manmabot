@@ -2211,12 +2211,12 @@ class UnifiedTaskEditor(ttk.Frame):
             return
 
     def _add_routine_map(self, kind: str) -> None:
-        from ui.reachable_battle_maps import battle_picker_choices
+        from ui.reachable_battle_maps import battle_picker_choices, break_picker_choices
 
         self._load_map_catalog()
         choices = list(self._map_choices)
         if kind == "break":
-            choices = [item for item in choices if not item[2]]
+            choices = break_picker_choices(choices)
         else:
             choices = battle_picker_choices(choices)
         if not choices:
@@ -2266,9 +2266,11 @@ class UnifiedTaskEditor(ttk.Frame):
         ttk.Label(body, text=self.t["routine_pick_map"]).pack(anchor="w")
         labels = []
         ids: dict[str, str] = {}
+        from ui.reachable_battle_maps import break_picker_choices
+
         pool = choices if choices is not None else list(self._map_choices)
-        if kind == "break":
-            pool = [item for item in pool if not item[2]]
+        if kind == "break" and choices is None:
+            pool = break_picker_choices(pool)
         if not pool:
             return ""
         for map_id, label, dungeon in pool:

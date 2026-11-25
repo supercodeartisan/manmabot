@@ -23,6 +23,27 @@ CATALOG = _ENGINE_ROOT / "data" / "world_nav" / "providers" / "00_maps.json"
 _PACK_MAP_ID = {
     "talking_island": 0,
     "mainland": 4,
+    # Blessing-land race variants share the season base pack's live mapId.
+    "polluted_land_of_blessing_fairy": 244,
+    "polluted_land_of_blessing_human": 244,
+    "polluted_land_of_blessing_orch": 244,
+    "polluted_land_of_blessing_spirit": 244,
+    "corrupted_land_of_blessing_spring_fairy": 2450,
+    "corrupted_land_of_blessing_spring_human": 2450,
+    "corrupted_land_of_blessing_spring_orch": 2450,
+    "corrupted_land_of_blessing_spring_spirit": 2450,
+    "corrupted_land_of_blessing_summer_fairy": 245,
+    "corrupted_land_of_blessing_summer_human": 245,
+    "corrupted_land_of_blessing_summer_orch": 245,
+    "corrupted_land_of_blessing_summer_spirit": 245,
+    "corrupted_land_of_blessing_autumn_fairy": 2452,
+    "corrupted_land_of_blessing_autumn_human": 2452,
+    "corrupted_land_of_blessing_autumn_orch": 2452,
+    "corrupted_land_of_blessing_autumn_spirit": 2452,
+    "corrupted_land_of_blessing_winter_fairy": 2454,
+    "corrupted_land_of_blessing_winter_human": 2454,
+    "corrupted_land_of_blessing_winter_orch": 2454,
+    "corrupted_land_of_blessing_winter_spirit": 2454,
 }
 
 

@@ -5,6 +5,16 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Optional
 
+# When race variants share a live mapId, prefer the season base pack for
+# mapId → pack install (nav / prebuild owner).
+_LIVE_MAP_PACK_OWNERS: dict[int, str] = {
+    244: "polluted_land_of_blessing",
+    2450: "corrupted_land_of_blessing_spring",
+    245: "corrupted_land_of_blessing_summer",
+    2452: "corrupted_land_of_blessing_autumn",
+    2454: "corrupted_land_of_blessing_winter",
+}
+
 
 @lru_cache(maxsize=1)
 def _packs() -> list:
@@ -28,6 +38,11 @@ def pack_id_to_map_id(pack_id: str) -> Optional[int]:
 
 def map_id_to_pack_id(map_id: int) -> Optional[str]:
     mid = int(map_id)
+    owner = _LIVE_MAP_PACK_OWNERS.get(mid)
+    if owner is not None:
+        for pack in _packs():
+            if pack.pack_id == owner:
+                return owner
     for pack in _packs():
         if int(pack.map_id) == mid:
             return str(pack.pack_id)
@@ -35,8 +50,13 @@ def map_id_to_pack_id(map_id: int) -> Optional[str]:
 
 
 def pack_for_map_id(map_id: int):
-    """First discovered pack whose numeric mapId is ``map_id``. None if unmapped."""
+    """Pack for live mapId. Prefers season base over race variants."""
     mid = int(map_id)
+    owner = _LIVE_MAP_PACK_OWNERS.get(mid)
+    if owner is not None:
+        for pack in _packs():
+            if pack.pack_id == owner:
+                return pack
     for pack in _packs():
         if int(pack.map_id) == mid:
             return pack

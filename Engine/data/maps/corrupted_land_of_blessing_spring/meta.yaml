@@ -1,0 +1,10 @@
+id: corrupted_land_of_blessing_spring
+name: "Corrupted Land of Blessing - Spring"
+# Field hunt pack. Origin from map_transitions rect / obstacle_tiles_raw map_2450.
+raw_map: "2450"
+origin_x: 32640
+origin_y: 32768
+pixel_scale: 1
+terrain: nav.png
+farms: farms.yaml
+default_region: blessing_land

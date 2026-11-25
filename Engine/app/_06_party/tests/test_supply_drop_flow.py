@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from app._05_action.uidialog_gate import unexpected_open_labels
-from app._06_party.arrow_duty import _tick_drop
-from app._06_party.arrow_policy import DUTY_FOLLOW, DUTY_SUPPLY
-from app._06_party import supply_drop
-from app._06_party.supply_drop import confirm_live_slot, dismiss_allowed_labels
+from app._06_party.party_shop.duty import _tick_drop
+from app._06_party.party_shop.supply import DUTY_FOLLOW, DUTY_SUPPLY
+from app._06_party.party_shop import drop_gesture as supply_drop
+from app._06_party.party_shop.drop_gesture import confirm_live_slot, dismiss_allowed_labels
 
 
 class _Board:
@@ -192,7 +192,7 @@ def _duty() -> dict:
 
 
 def test_failed_drop_does_not_notify_or_follow() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop
@@ -218,7 +218,7 @@ def test_verified_drop_notifies_and_resumes_follow() -> None:
     def _ok(state, board, qty, kind="arrow"):
         return {"ok": True, "map_id": 4, "x": 99, "y": 199, "qty": qty}
 
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop

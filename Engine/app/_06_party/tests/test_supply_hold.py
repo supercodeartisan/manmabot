@@ -1,7 +1,7 @@
 """Recipient stands still, the drop lands on an empty neighbor, pickup interrupts."""
 from __future__ import annotations
 
-from app._06_party.arrow_duty import (
+from app._06_party.party_shop.duty import (
     choose_drop_stand,
     plan_supply_drop,
     supply_hold_for,
@@ -370,7 +370,7 @@ def test_approach_follows_a_tile_that_moves(caplog) -> None:
 
 
 def test_stand_uses_party_memory_and_the_hunt_map_follows() -> None:
-    from app._06_party.arrow_policy import hunt_map_after_pose
+    from app._06_party.party_shop.supply import hunt_map_after_pose
     from app._06_party.leader import stand_from_party_memory
 
     snap = {
@@ -403,7 +403,7 @@ def test_supply_stays_closed_until_the_hunt_starts() -> None:
 
 
 def test_an_away_member_is_not_a_drop_target() -> None:
-    from app._06_party.arrow_duty import supply_rows
+    from app._06_party.party_shop.duty import supply_rows
 
     rows = supply_rows(
         [
@@ -416,7 +416,7 @@ def test_an_away_member_is_not_a_drop_target() -> None:
 
 
 def test_close_claim_without_a_pile_does_not_hand_the_tick_back() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     class _Origin:
         x = 10
@@ -458,7 +458,7 @@ def test_close_claim_without_a_pile_does_not_hand_the_tick_back() -> None:
 
 
 def test_a_claim_on_another_map_does_not_hand_the_tick_back() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     class _Origin:
         x = 10
@@ -495,7 +495,7 @@ def test_a_claim_on_another_map_does_not_hand_the_tick_back() -> None:
 
 
 def test_a_seen_pile_that_is_gone_releases_and_drops_the_pickup_goal(monkeypatch) -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     class _Origin:
         x = 10
@@ -543,10 +543,10 @@ def test_a_seen_pile_that_is_gone_releases_and_drops_the_pickup_goal(monkeypatch
 
 
 def test_an_unseen_drop_keeps_the_leader_off_the_schedule(monkeypatch) -> None:
-    from app._06_party.arrow_duty import _mark_supply_seen, leader_supply_action
+    from app._06_party.party_shop.duty import _mark_supply_seen, leader_supply_action
 
     monkeypatch.setattr(
-        "app._06_party.arrow_duty.leader_supply_pickup",
+        "app._06_party.party_shop.duty.leader_supply_pickup",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
@@ -618,7 +618,7 @@ def test_survival_interrupts_supply_and_the_shop_resumes(monkeypatch, caplog) ->
     monkeypatch.setattr(
         "app._06_party.support.urgent_self_survival", lambda *_a, **_k: potion
     )
-    monkeypatch.setattr("app._06_party.arrow_duty.tick_shopkeeper_duty", _shop)
+    monkeypatch.setattr("app._06_party.party_shop.duty.tick_shopkeeper_duty", _shop)
     manager = PartyMemberManager(PartyMemberConfig(seat_role="shopkeeper"))
     board = _Board()
     board.scratch[SCRATCH_SHOP_TRIP] = True
@@ -650,7 +650,7 @@ def test_survival_interrupts_supply_and_the_shop_resumes(monkeypatch, caplog) ->
 
 def test_a_move_during_care_rechecks_the_shop_and_the_drop(caplog) -> None:
     from app._04_decision.shop_trip import SCRATCH_SHOP_HALTED, SCRATCH_SHOP_TRIP
-    from app._06_party.arrow_duty import release_care_pose
+    from app._06_party.party_shop.duty import release_care_pose
 
     import logging
 
@@ -684,7 +684,7 @@ def test_a_move_during_care_rechecks_the_shop_and_the_drop(caplog) -> None:
 
 def test_an_in_place_care_keeps_the_shop_approach(caplog) -> None:
     from app._04_decision.shop_trip import SCRATCH_SHOP_HALTED, SCRATCH_SHOP_TRIP
-    from app._06_party.arrow_duty import release_care_pose
+    from app._06_party.party_shop.duty import release_care_pose
 
     import logging
 
@@ -814,7 +814,7 @@ def test_stand_timeout_cancels_and_the_old_tile_does_not_apply(caplog) -> None:
 def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
     import logging
 
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     caplog.set_level(logging.INFO, logger="manmabot.party")
     saved_reports = list(member_orders.party_reports)
@@ -889,7 +889,7 @@ def test_a_missing_neighbor_steps_aside_then_ends_the_delivery(caplog) -> None:
 
 
 def test_a_body_on_the_stand_takes_the_next_pair_and_keeps_it() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     board = _Board()
     real_open = arrow_duty._tile_open
@@ -931,7 +931,7 @@ def test_a_body_on_the_stand_takes_the_next_pair_and_keeps_it() -> None:
 
 
 def test_bodies_on_every_ring_end_the_drop_without_a_ring_step() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     board = _Board()
     blocked: set[tuple[int, int]] = set()
@@ -951,7 +951,7 @@ def test_bodies_on_every_ring_end_the_drop_without_a_ring_step() -> None:
 
 
 def test_drop_blocks_are_the_body_centers() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     def _centers(_state, _origin):
         return {(5, 5), (6, 6)}
@@ -968,7 +968,7 @@ def test_drop_blocks_are_the_body_centers() -> None:
 
 
 def test_a_blocked_stand_walks_to_the_next_tile_without_stepping_aside() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
 
     saved_reports = list(member_orders.party_reports)
     saved_stand = member_orders.supply_stand
@@ -1027,7 +1027,7 @@ def test_a_blocked_stand_walks_to_the_next_tile_without_stepping_aside() -> None
 
 
 def test_bodies_on_every_ring_cancel_without_stepping_aside() -> None:
-    from app._06_party import arrow_duty
+    from app._06_party.party_shop import duty as arrow_duty
     import app._04_decision.world_nav.session as session
 
     saved_reports = list(member_orders.party_reports)
@@ -1191,7 +1191,7 @@ def test_survival_still_runs_when_the_hold_expires(monkeypatch) -> None:
 
 
 def test_a_blocked_drop_retries_then_releases_the_hold() -> None:
-    from app._06_party.arrow_duty import DROP_SHIFT_MAX, _tick_drop
+    from app._06_party.party_shop.duty import DROP_SHIFT_MAX, _tick_drop
 
     manager = _Manager()
     manager.runtime.supply_hold = {"id": "hold:arrow:Elf", "for": "Elf", "item": "arrow"}
@@ -1209,8 +1209,8 @@ def test_a_blocked_drop_retries_then_releases_the_hold() -> None:
     def _blocked(state, board, qty, kind="arrow"):
         return {"blocked": True, "reason": "arrow drop blocked"}
 
-    import app._06_party.arrow_duty as arrow_duty
-    import app._06_party.supply_drop as supply_drop
+    import app._06_party.party_shop.duty as arrow_duty
+    import app._06_party.party_shop.drop_gesture as supply_drop
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop
@@ -1238,7 +1238,7 @@ def test_a_blocked_drop_retries_then_releases_the_hold() -> None:
 
 
 def test_a_finished_drop_returns_to_follow() -> None:
-    from app._06_party.arrow_duty import _tick_drop
+    from app._06_party.party_shop.duty import _tick_drop
 
     manager = _Manager()
     manager.runtime.supply_hold = {"id": "hold:arrow:Elf", "for": "Elf", "item": "arrow"}
@@ -1255,8 +1255,8 @@ def test_a_finished_drop_returns_to_follow() -> None:
     def _ok(state, board, qty, kind="arrow"):
         return {"ok": True, "map_id": 4, "x": 11, "y": 13, "qty": qty}
 
-    import app._06_party.arrow_duty as arrow_duty
-    import app._06_party.supply_drop as supply_drop
+    import app._06_party.party_shop.duty as arrow_duty
+    import app._06_party.party_shop.drop_gesture as supply_drop
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop
@@ -1288,7 +1288,7 @@ def test_the_shop_trip_is_still_the_next_tick(monkeypatch) -> None:
         assert manager._nav_blackboard.scratch[SCRATCH_SHOP_TRIP] is True
         return type("I", (), {"reason": "shop"})()
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_buy", _buy)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_buy", _buy)
     manager = _Manager()
     manager._nav_blackboard.scratch[SCRATCH_SHOP_TRIP] = True
     manager._nav_blackboard.scratch["party_shopkeeper_arrow"] = True
@@ -1315,9 +1315,9 @@ def test_a_finished_shop_does_not_block_the_join(monkeypatch) -> None:
     def _buy(*_args, **_kwargs):
         raise AssertionError("a finished shop must not buy again")
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_join", _join)
-    monkeypatch.setattr("app._06_party.arrow_duty.next_supply_buy", lambda *_a, **_k: None)
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_buy", _buy)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_join", _join)
+    monkeypatch.setattr("app._06_party.party_shop.duty.next_supply_buy", lambda *_a, **_k: None)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_buy", _buy)
     manager = _Manager()
     board = manager._nav_blackboard
     board.player_mode = None
@@ -1338,7 +1338,7 @@ def test_a_finished_shop_does_not_block_the_join(monkeypatch) -> None:
 
 
 def test_finished_shopping_joins_a_leader_on_any_map(monkeypatch) -> None:
-    from app._06_party.arrow_duty import _tick_join
+    from app._06_party.party_shop.duty import _tick_join
 
     seen = {}
 
@@ -1346,7 +1346,7 @@ def test_finished_shopping_joins_a_leader_on_any_map(monkeypatch) -> None:
         seen["goal"] = (map_id, x, y, reason)
         return type("I", (), {"reason": reason})()
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_nav", _nav)
     manager = _Manager()
     manager.config = PartyMemberConfig(
         seat_role="shopkeeper", leader_name="매력여기사"
@@ -1365,7 +1365,7 @@ def test_finished_shopping_joins_a_leader_on_any_map(monkeypatch) -> None:
 
 
 def test_a_short_leader_step_keeps_the_join_route(monkeypatch) -> None:
-    from app._06_party.arrow_duty import _tick_join
+    from app._06_party.party_shop.duty import _tick_join
 
     seen = {}
 
@@ -1373,7 +1373,7 @@ def test_a_short_leader_step_keeps_the_join_route(monkeypatch) -> None:
         seen["goal"] = (map_id, x, y)
         return type("I", (), {"reason": reason})()
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_nav", _nav)
     manager = _Manager()
     manager.config = PartyMemberConfig(
         seat_role="shopkeeper", leader_name="매력여기사"
@@ -1396,7 +1396,7 @@ def test_a_short_leader_step_keeps_the_join_route(monkeypatch) -> None:
 
 
 def test_a_missed_party_read_keeps_the_join_walk(monkeypatch) -> None:
-    from app._06_party.arrow_duty import _tick_join
+    from app._06_party.party_shop.duty import _tick_join
 
     seen = {}
 
@@ -1404,7 +1404,7 @@ def test_a_missed_party_read_keeps_the_join_walk(monkeypatch) -> None:
         seen["goal"] = (map_id, x, y, reason)
         return type("I", (), {"reason": reason})()
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_nav", _nav)
     manager = _Manager()
     manager.runtime.leader_same_map = False
     manager._nav_blackboard.scratch["party_nav_goal"] = (
@@ -1424,7 +1424,7 @@ def test_a_missed_party_read_keeps_the_join_walk(monkeypatch) -> None:
 
 
 def test_join_waits_without_a_leader_pose() -> None:
-    from app._06_party.arrow_duty import _tick_join
+    from app._06_party.party_shop.duty import _tick_join
 
     manager = _Manager()
     manager.runtime.leader_same_map = False
@@ -1436,12 +1436,12 @@ def test_join_waits_without_a_leader_pose() -> None:
 
 
 def test_join_ends_when_already_beside_the_leader(monkeypatch) -> None:
-    from app._06_party.arrow_duty import _tick_join
+    from app._06_party.party_shop.duty import _tick_join
 
     def _nav(*_args, **_kwargs):
         raise AssertionError("already beside the leader")
 
-    monkeypatch.setattr("app._06_party.arrow_duty._tick_nav", _nav)
+    monkeypatch.setattr("app._06_party.party_shop.duty._tick_nav", _nav)
     manager = _Manager()
     manager.runtime.leader_same_map = True
     manager.runtime.leader_dist = 2
@@ -1512,7 +1512,7 @@ def test_a_moved_stand_pauses_before_the_next_try() -> None:
 
 
 def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> None:
-    from app._06_party.arrow_duty import leader_supply_action, leader_supply_stand
+    from app._06_party.party_shop.duty import leader_supply_action, leader_supply_stand
 
     potion = type("I", (), {"reason": "hp potion"})()
     pose = {"x": 10, "y": 10}
@@ -1526,7 +1526,7 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
         "y": 10,
         "is_leader": True,
     }
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
@@ -1615,7 +1615,7 @@ def test_the_leader_drinks_before_a_hold_and_a_move_releases_it(monkeypatch) -> 
 
 
 def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
-    from app._06_party.arrow_duty import claim_names_me
+    from app._06_party.party_shop.duty import claim_names_me
     from app._06_party.loot import stable_self_identity
 
     snap = {
@@ -1643,7 +1643,7 @@ def test_supply_identity_prefers_guid_and_skips_an_ambiguous_tile() -> None:
 
 
 def test_a_far_party_row_keeps_the_confirmed_stand() -> None:
-    from app._06_party.arrow_duty import _apply_leader_drop_recheck, _leader_drop_recheck
+    from app._06_party.party_shop.duty import _apply_leader_drop_recheck, _leader_drop_recheck
 
     duty = {
         "kind": "drop",
@@ -1694,7 +1694,7 @@ def test_a_far_party_row_keeps_the_confirmed_stand() -> None:
 
 
 def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -> None:
-    from app._06_party.arrow_duty import _leader_drop_recheck, _tick_drop
+    from app._06_party.party_shop.duty import _leader_drop_recheck, _tick_drop
 
     duty = {
         "kind": "drop",
@@ -1744,8 +1744,8 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
         dropped["n"] += 1
         return {"ok": True}
 
-    import app._06_party.arrow_duty as arrow_duty
-    import app._06_party.supply_drop as supply_drop
+    import app._06_party.party_shop.duty as arrow_duty
+    import app._06_party.party_shop.drop_gesture as supply_drop
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop
@@ -1762,7 +1762,7 @@ def test_a_one_tile_leader_move_retargets_the_drop_without_clearing_the_hold() -
 
 
 def test_a_one_tile_party_row_retargets_the_drop_again() -> None:
-    from app._06_party.arrow_duty import _ATTEMPT, _apply_leader_drop_recheck
+    from app._06_party.party_shop.duty import _ATTEMPT, _apply_leader_drop_recheck
 
     stand = {
         "id": "hold:hp:poorboy",
@@ -1917,7 +1917,7 @@ def test_a_latched_hold_stays_when_the_recipient_steps_outside_12() -> None:
 
 
 def test_the_recipient_hunts_in_place_until_the_drop_is_announced() -> None:
-    from app._06_party.arrow_duty import recipient_hold_intent
+    from app._06_party.party_shop.duty import recipient_hold_intent
 
     board = _Board()
     board.current_target_id = 7
@@ -1963,7 +1963,7 @@ def test_a_dropping_hold_is_published_again(monkeypatch) -> None:
 
 def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
     from app._02_state.enums import ActionType
-    from app._06_party.arrow_duty import leader_supply_action, leader_supply_stand
+    from app._06_party.party_shop.duty import leader_supply_action, leader_supply_stand
 
     pose = {"x": 10, "y": 10}
     body = {"moving": True, "standing": False}
@@ -1976,7 +1976,7 @@ def test_a_walk_halts_and_the_stand_waits_for_a_real_stop(monkeypatch) -> None:
         "y": 1,
         "is_leader": True,
     }
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
@@ -2040,7 +2040,7 @@ def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
     import logging
 
     from app._02_state.enums import ActionType
-    from app._06_party.arrow_duty import HOLD_HALT_MAX, leader_supply_action
+    from app._06_party.party_shop.duty import HOLD_HALT_MAX, leader_supply_action
 
     caplog.set_level(logging.INFO, logger="manmabot.party")
     pose = {"map": 4, "x": 10, "y": 10}
@@ -2055,7 +2055,7 @@ def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
         "y": 1,
         "is_leader": True,
     }
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.support.party_critical_escape", lambda *_a, **_k: None
     )
@@ -2127,7 +2127,7 @@ def test_esc_retries_only_while_the_body_is_moving(monkeypatch, caplog) -> None:
 
 
 def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) -> None:
-    from app._06_party.arrow_duty import (
+    from app._06_party.party_shop.duty import (
         STAND_WAIT_S,
         _leader_drop_recheck,
         _stand_ready,
@@ -2141,7 +2141,7 @@ def test_talking_island_map_zero_stands_and_a_missing_map_does_not(monkeypatch) 
     body = {"moving": True, "standing": False}
     clock = {"t": 4000.0}
     sent: list[dict] = []
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._06_party.comms.publish.publish_body",
         lambda body: sent.append(dict(body)) or 1,
@@ -2447,7 +2447,7 @@ def test_a_member_stand_keeps_confirmed_so_the_leader_can_publish_it(monkeypatch
 def test_an_unconfirmed_stand_updates_and_an_old_attempt_does_not_drop() -> None:
     import time
 
-    from app._06_party.arrow_duty import _stand_ready
+    from app._06_party.party_shop.duty import _stand_ready
 
     saved_reports = list(member_orders.party_reports)
     saved_stand = member_orders.supply_stand
@@ -2530,7 +2530,7 @@ def _leader_party(map_id: int, x: int, y: int) -> dict:
 
 def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
     """Game (32624,33148) on map 0 is nav (368,444). A bad map waits."""
-    from app._06_party.arrow_duty import (
+    from app._06_party.party_shop.duty import (
         _apply_leader_drop_recheck,
         _leader_drop_recheck,
         _tick_drop,
@@ -2604,8 +2604,8 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
         drops["n"] += 1
         return {"ok": True, "map_id": 0, "x": 369, "y": 445}
 
-    import app._06_party.arrow_duty as arrow_duty
-    import app._06_party.supply_drop as supply_drop
+    import app._06_party.party_shop.duty as arrow_duty
+    import app._06_party.party_shop.drop_gesture as supply_drop
 
     real_beside = arrow_duty._beside_member
     real_step = supply_drop.step_ground_drop
@@ -2632,7 +2632,7 @@ def test_talking_island_game_stand_drops_on_the_nav_tile() -> None:
 
 def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -> None:
     """An empty or unreadable leader row keeps the stand. Another map that still projects waits."""
-    from app._06_party.arrow_duty import (
+    from app._06_party.party_shop.duty import (
         STAND_WAIT_S,
         _apply_leader_drop_recheck,
         _beside_member,
@@ -2673,7 +2673,7 @@ def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -
     assert _leader_drop_recheck(unreadable, planned) is None
 
     empty_drop = _Manager()
-    import app._06_party.arrow_duty as arrow_duty
+    import app._06_party.party_shop.duty as arrow_duty
 
     real_beside = arrow_duty._beside_member
     arrow_duty._beside_member = lambda *_args, **_kwargs: True
@@ -2697,7 +2697,7 @@ def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -
     assert _leader_drop_recheck(type("S", (), {"last_party": other})(), member) is None
 
     clock = {"t": 5000.0}
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     wrong_map = type("S", (), {"last_party": _leader_party(4, 32624, 33148)})()
     waiting = _Manager()
     waiting._nav_blackboard.scratch["party_supply_attempt"] = {
@@ -2765,7 +2765,7 @@ def test_a_leader_row_without_a_tile_drops_on_the_confirmed_stand(monkeypatch) -
 
 def test_a_drop_with_no_click_expires_without_using_the_walk_clock(monkeypatch) -> None:
     """Eight seconds without a hop releases the hold. A hop resets that wait."""
-    from app._06_party.arrow_duty import STAND_WAIT_S, _beside_member
+    from app._06_party.party_shop.duty import STAND_WAIT_S, _beside_member
 
     duty = {
         "kind": "drop",
@@ -2781,7 +2781,7 @@ def test_a_drop_with_no_click_expires_without_using_the_walk_clock(monkeypatch) 
     state = type("S", (), {})()
     clock = {"t": 8000.0}
     hops = {"emit": False}
-    monkeypatch.setattr("app._06_party.arrow_duty.time.time", lambda: clock["t"])
+    monkeypatch.setattr("app._06_party.party_shop.duty.time.time", lambda: clock["t"])
     monkeypatch.setattr(
         "app._04_decision.world_nav.session.live_pose_from_state",
         lambda _state, fresh=False: type("P", (), {"map_id": 4, "x": 1, "y": 1})(),

@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
 from i18n.localized_names import dungeon_tag, map_display_name, route_point_display_name
 from i18n.strings import normalize_game_language, ui_strings
 from session.probes import is_dungeon_map_id, list_farms_for_map, list_map_choices
-from ui.hangul_sort import hangul_sort_key
 from settings.profile import CHARACTER_IDS, Profile, save_profile
 from ui.loot_modes import LOOT_MODES
 from ui_qt.dialogs.driver_setup_dialog import show_driver_setup
@@ -213,8 +212,12 @@ class SetupWizard(QDialog):
         body = QLabel(self.s.wizard_map_body)
         body.setWordWrap(True)
         self.body.addWidget(body)
-        choices = list(list_map_choices(self.profile.language))
-        choices.sort(key=lambda item: hangul_sort_key(item[1]))
+        from ui.hangul_sort import map_choice_sort_key
+        from ui.reachable_battle_maps import battle_picker_choices
+
+        # Same reachable set as solo battle picker (avoids listing every pack).
+        choices = battle_picker_choices(list(list_map_choices(self.profile.language)))
+        choices.sort(key=map_choice_sort_key)
         if not choices:
             missing = QLabel(self.s.start_fail["map_missing"])
             missing.setStyleSheet("color: #dc2626;")

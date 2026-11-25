@@ -1,5 +1,62 @@
 # Decision change log
 
+## 2026-11-21 — field recovery compares both percents and stops on one shared line
+
+Intent: While a field recovery session is active, always compare the latest HP% and MP%. Heal the lower one. On a tie, pick at random. Do not drop a resource from the comparison because it was already at the stop. End only when both are at or above one shared stop, default 85%.
+Shared: `select_field_recovery_skill` and `_both_at_stop` in `field_recovery.py`. `FIELD_RECOVERY_STOP` in `player_mode.py`. The recovery page writes `field_recovery_stop`. `configure_decision` applies `stop_ratio` to both resources. An old file without that key loads 85%, not the previous 95/80 split.
+Affects: solo field Heal / Body to Mind selection and the session end. Existing combat heal, potions, mother-tree recharge, retreat, movement, and loot are unchanged. One-tick yield and the cast safety checks stay.
+Consent: user (shared 85% stop; never exclude HP or MP from the comparison).
+Result: `test_field_recovery.py`. Not run in game.
+
+## 2026-11-16 — hotbar failure stays on field recovery; Light is not auto-cast
+
+Intent: A failed startup hotbar read must not stop the worker. It only leaves field recovery off. Light (catalog skill id 1, 라이트) must not be auto-cast from a saved check, the buff plan, due selection, the solo-mage buff loop, or the final key press. Other checked buffs stay on their existing repeat rules.
+Shared: `BotController._record_startup_hotbar`. `is_light_auto_buff` in `settings.auto_buffs`. `set_auto_buffs`, `_due_catalog_buff`, `maybe_cast_buff`, `maybe_solo_mage_buffs`, and `ActionExecutor._buff` / `_press_catalog_buff` refuse Light. `emit_heal`, potion sides, `maybe_hp_to_mp`, combat, and movement are unchanged.
+Affects: startup when the 24-slot read throws, and any automatic Light press. A checked Shield still casts. An unmatched non-Light buff still becomes due again after 3 seconds.
+Consent: user (separate hotbar failure from the run; ban Light on every auto path).
+Result: `test_field_recovery.py`, `test_catalog_buff_light.py`, `test_catalog_buff_repeat.py`. Not run in game.
+
+## 2026-11-16 — field recovery hotbar is a session gate
+
+Intent: Field Heal / Body to Mind runs only when both skills are on the live hotbar. The read happens at start and again after pause, not on every decision tick. A failed or partial read leaves the feature off. The result stays in process memory for that run.
+Shared: `invalidate_field_recovery_capability`, `begin_field_recovery_session`, `refresh_field_recovery_capability` in `field_recovery.py`. `BotController.start` / `stop` begin a new session. The worker records the first inspect, clears it when the pause wait starts, and inspects again before the next decide. The 5–7s hotbar reread does not change this flag. `maybe_hp_to_mp`, `emit_heal`, potion sides, and party recovery are unchanged.
+Affects: solo field recovery only. Existing heal, HP potion, mother-tree Body to Mind, and party recovery still run when the session flag is off.
+Consent: user (field recovery hotbar pre-check and Light repeat investigation).
+Result: `test_field_recovery.py`, `test_catalog_buff_light.py`. Not run in game.
+
+## 2026-11-15 — Party Shop Module package
+
+Intent: Move party shop/supply orchestration into `app._06_party.party_shop` behind `PartyShopModule` (start/tick/pause/resume/cancel/status). Host decide priority stays outside the module. Low-level `Engine/shop` and `shop_trip` stay as engines.
+Shared: new package (`facade`, `session`, `supply`, `shopping`, `delivery`, `pickup`, `communication`, `drop_gesture`, `duty`). `PartyMemberManager.decide`, `bot_controller` leader supply publish/pickup/abort, and DecisionManager shop-success call the facade or `party_shop` submodules. Legacy `arrow_duty` / `arrow_policy` / `supply_lifecycle` / `supply_drop` removed after retarget. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, combat, follow, and map UI are unchanged.
+Affects: party shopkeeper buy → join → hold → stand → drop → pickup only. Solo shopping unchanged.
+Consent: user (approved Party Shop Module architecture plan; implement all phases).
+Result: 117 passed (`test_supply_hold`, `test_supply_lifecycle`, `test_arrow_supply`, `test_supply_drop_flow`, `test_party_shop_facade`). Not run in game — no live buy→drop→pickup claim.
+
+## 2026-11-15 — party supply lifecycle cleanup (F1–F6)
+
+Intent: Stop stale shopkeeper live from keeping hold/drop alive, abort buy/join/delivery when `supply_open` closes, reset shop scratch on a new leader session, keep undelivered `supply_notice` across a new buy, use 45s report freshness, and allow only one roster shopkeeper.
+Shared: `shopkeeper_live_supply`, `abort_supply_session`, `abort_party_shop`, `abort_party_supply` in `app._06_party.supply_lifecycle`. `tick_shopkeeper_duty`, `PartyMemberManager.decide` / `reset_for_new_leader_session`, leader publish in `bot_controller`, `normalize_party_roster`, and `publish_shop_reports` call them. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, combat, follow, and inventory drag-drop are unchanged. Solo shop outside party pins is unchanged.
+Affects: party shopkeeper buy, join-after-shop, hold/stand/drop/pickup, and leader republish of supply frames. Hunt close aborts in-progress supply (no resume). Bot pause resume clears local supply/shop state; leader freshness clears wire holds while the socket is silent.
+Consent: user (Phase 2 — 파티 상점 / 물자 공급 시스템 결함 수정 및 안정화, policies 1–8 locked).
+Result: `app/_06_party/tests/test_supply_lifecycle.py` plus `test_supply_hold.py`, `test_arrow_supply.py`, `test_supply_drop_flow.py` (111 passed together with membership). Not run in game.
+
+## 2026-11-15 — independent door_navigation module
+
+Intent: Room doors on a travel/search/loot hop are detected, opened once, crossed via the tile past the doorway, and recovered without mixing door rules through A*. Solo and party use the same `handle_door_navigation` entry. Ordinary hops with no door stay unchanged. Map-gate / floor-ladder clicks stay outside this module.
+Shared: `handle_door_navigation` in `app._04_decision.door_navigation`. `ActionController._search` asks the module before a ground ring click. `doors.refresh_live_doors` / `retarget_open_door` / `tile_sealed` stay as thin wrappers for plan and TerrainMap. `try_unstick_escape`, `begin_retreat`, `apply_hp_actions`, login clicks, combat, and dungeon unstick policy are unchanged. Teleport / talking scroll are not used for door failure.
+Affects: travel, search, and loot approach hops whose guide crosses a live InteractiveNPC door. Party members share the module; an already-open door only yields `PASS_NOW` (no re-open click).
+Memory: `print_state.c` reads ActionComponent `+0xE0` for open(`0x1C`)/close(`0x1D`). Graphics `0x8009` is not a lock; `DOOR_GFX_LOCKED=0xFFFFFFFF` matches registry. Built `analysis/dll/print_state.new.dll` (locked live `print_state.dll` left in place; reader prefers the newer file).
+Consent: user (Task: implement complete independent door navigation system).
+Result: `app/_04_decision/tests/test_door_navigation.py` 17 passed. Related party click / assist tests passed. Not run in game — restart the bot so `print_state.new.dll` loads.
+
+## 2026-11-15 — solo field Heal and Body to Mind
+
+Intent: While a solo character is searching inside the hunt rectangle, cast one Heal or Body to Mind when HP or MP is under its start line, then leave the next decision tick to the existing walk. Body to Mind in the field does not require 세계수의 가호. The mother-tree function `maybe_hp_to_mp` is unchanged.
+Shared: `apply_hp_actions` calls `try_field_auto_recovery` only after the existing retreat, heal, and `maybe_hp_to_mp` have declined the tick. `emit_heal`, potion sides, `begin_retreat`, and party recovery are unchanged. The feature stays off until the recovery page enables it. Party ticks and mother-tree trips do not call it.
+Affects: solo farming inside the hunt zone, and only when the switch is on. Combat, a retreat-line HP, and a due potion skip the cast. `nav_goal` is not cleared.
+Consent: user (field recovery as a separate module, one cast then movement, existing combat checks, mother tree and party unchanged).
+Result: `Engine/app/_04_decision/tests/test_field_recovery.py`. Not run in game.
+
 ## 2026-11-12 — the party leader does not pick up ground piles
 
 Intent: A party leader drops a pile it already chose and does not start another. The farm "loot until pickup" hold and the world-nav "loot before route" hold stop once that pile is cleared. Members still loot. A supply drop claimed for the leader still uses `leader_supply_pickup`.

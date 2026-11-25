@@ -9,12 +9,13 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from .arrow_policy import (
+from .supply import (
     DUTY_FOLLOW,
     DUTY_SHOP,
     DUTY_SUPPLY,
     bag_supply_counts,
     choose_supply_duty,
+    fresh_supply_rows,
     mage_seat_names,
     mp_recipient_names,
     next_supply_buy,
@@ -25,7 +26,14 @@ from .arrow_policy import (
     supply_pile_matches,
     supply_pile_qty_ok,
 )
-from .party_log import get_logger as _party_logger
+from .session import (
+    abort_party_shop,
+    abort_party_supply,
+    abort_supply_session,
+    has_shopkeeper_local_state,
+    is_canonical_shopkeeper,
+)
+from ..party_log import get_logger as _party_logger
 
 _log = _party_logger("member")
 
@@ -186,7 +194,7 @@ def recipient_hold_intent(
             except Exception:
                 pass
         _drop_combat_lock(blackboard)
-        from .intents import idle
+        from ..intents import idle
 
         return idle("supply receive")
     if isinstance(hold, dict) and not _hold_confirmed(blackboard, hold):
@@ -195,10 +203,10 @@ def recipient_hold_intent(
         moving = not _leader_body_stopped()
         if moving:
             if _halt_walk_again(prev):
-                from .intents import supply_halt
+                from ..intents import supply_halt
 
                 return supply_halt()
-            from .intents import idle
+            from ..intents import idle
 
             return idle("supply hold")
         if (
@@ -211,18 +219,31 @@ def recipient_hold_intent(
                 "supply hold halt stopped n=%s",
                 int(prev.get("halt_n") or 0),
             )
-        from .intents import idle
+        from ..intents import idle
 
         return idle("supply hold")
     return supply_wait_intent(state, blackboard)
 
 
 def supply_rows(rows: Any) -> list:
-    """Reports the shopkeeper may supply. An explicit ``supply_ok`` false is away."""
+    """Reports the shopkeeper may supply. An explicit ``supply_ok`` false is away.
+
+    A missing ``noted_at`` is stamped once on the stored row so later freshness
+    checks use a stable time. Leader-forwarded rows already carry ``noted_at``.
+    """
     kept: list = []
+    now = time.time()
     for row in rows or []:
-        if isinstance(row, dict) and row.get("supply_ok") is False:
+        if not isinstance(row, dict):
             continue
+        if row.get("supply_ok") is False:
+            continue
+        try:
+            noted = float(row.get("noted_at") or 0.0)
+        except (TypeError, ValueError):
+            noted = 0.0
+        if noted <= 0.0:
+            row["noted_at"] = now
         kept.append(row)
     return kept
 
@@ -235,8 +256,8 @@ def claim_names_me(claim: Any, self_name: str, self_guid: str = "") -> bool:
     """
     if not isinstance(claim, dict) or bool(claim.get("clear")):
         return False
-    from .follow import guid_key
-    from .leader import _guids_match
+    from ..follow import guid_key
+    from ..leader import _guids_match
 
     claim_guid = str(claim.get("guid") or "").strip()
     mine = str(self_guid or "").strip()
@@ -263,7 +284,7 @@ def _ring_offsets(ring: int) -> tuple:
 
 def _drop_pairs(member_x: int, member_y: int, ring: int) -> list:
     """``(ox, oy, stand, drop, member)`` for one Chebyshev ring."""
-    from .supply_drop import _DROP_TILES
+    from .drop_gesture import _DROP_TILES
 
     dx, dy = int(_DROP_TILES[0][0]), int(_DROP_TILES[0][1])
     member = (int(member_x), int(member_y))
@@ -531,7 +552,7 @@ def _drop_combat_lock(blackboard: Any) -> None:
 
 def supply_wait_intent(state: Any, blackboard: Any) -> Any:
     """Stand still. Attack only a monster already inside reach."""
-    from .intents import attack, idle
+    from ..intents import attack, idle
 
     if blackboard is not None:
         try:
@@ -712,7 +733,7 @@ def _wait_for_stand(manager: Any, duty: dict) -> Any:
     runtime.duty_phase = DUTY_SUPPLY
     runtime.last_kind = "supply"
     runtime.last_reason = "wait for stand"
-    from .intents import idle
+    from ..intents import idle
 
     return idle("supply hold")
 
@@ -1197,27 +1218,32 @@ def tick_shopkeeper_duty(
     if board is None:
         runtime.duty_phase = DUTY_FOLLOW
         return None
-    from .comms.orders import member_orders
+    from ..comms.orders import member_orders
     from app._04_decision.shop_trip import SCRATCH_SHOP_TRIP
 
     supply_open = bool(getattr(member_orders, "supply_open", False))
+    if not supply_open:
+        abort_party_supply(
+            runtime,
+            board,
+            manager,
+            reason="supply closed",
+            clear_notice=True,
+        )
+        return None
+
     in_progress = bool(
         board.scratch.get(SCRATCH_SHOP_TRIP)
         and board.scratch.get(_FLAG)
         and board.scratch.get("party_supply_item")
     )
-    if in_progress and supply_open:
+    if in_progress:
         return _tick_buy(manager, state, _current_buy_duty(board))
 
     if board.scratch.get(_JOIN):
         release_finished_party_shop(board)
         runtime.duty_phase = DUTY_SHOP
         return _tick_join(manager, state)
-
-    if not supply_open:
-        runtime.supply_hold = None
-        runtime.duty_phase = DUTY_FOLLOW
-        return None
 
     release_finished_party_shop(board)
 
@@ -1269,7 +1295,7 @@ def tick_shopkeeper_duty(
     )
     if duty is None:
         runtime.supply_hold = None
-        _clear_shop_flags(board)
+        abort_party_shop(board, manager, reason="no supply duty")
         runtime.duty_phase = DUTY_FOLLOW
         return None
     if duty["kind"] == "buy":
@@ -1340,7 +1366,7 @@ def tick_supply_pickup(
     self_guid: str = "",
 ) -> Any:
     """The named member walks to the dropped arrows and picks them up."""
-    from .comms.orders import member_orders
+    from ..comms.orders import member_orders
 
     claim = member_orders.supply_drop
     if not claim_names_me(claim, self_name, self_guid):
@@ -1415,7 +1441,7 @@ def _mp_names(board: Any, roster: Any, state: Any) -> set[str]:
 
 
 def _remember_drop(runtime: Any, duty: dict) -> None:
-    from .comms.orders import member_orders
+    from ..comms.orders import member_orders
 
     item = str(duty.get("item") or "arrow")
     name = str(duty.get("name") or "")
@@ -1447,7 +1473,9 @@ def _remember_drop(runtime: Any, duty: dict) -> None:
 def _supply_report_rows(board: Any, runtime: Any, reports: Any) -> list:
     return _rows_without_pause(
         board,
-        rows_with_expected(supply_rows(reports), _expected_book(runtime)),
+        fresh_supply_rows(
+            rows_with_expected(supply_rows(reports), _expected_book(runtime))
+        ),
     )
 
 
@@ -1528,7 +1556,7 @@ def _tick_buy(manager: Any, state: Any, duty: Optional[dict] = None) -> Any:
         keep = 0
     own = (duty or {}).get("own")
     runtime.duty_phase = DUTY_SHOP
-    runtime.supply_notice = None
+    # Keep an undelivered supply_notice until pickup or _expire_notice.
     if str(board.scratch.get("party_supply_item") or "") not in ("", item):
         board.scratch.pop(SCRATCH_SHOP_BEHAVIOR, None)
         board.scratch.pop(_PIN, None)
@@ -1567,7 +1595,7 @@ def _tick_buy(manager: Any, state: Any, duty: Optional[dict] = None) -> Any:
         runtime.last_kind = "shop"
         runtime.last_reason = reason
         return intent
-    from .intents import idle
+    from ..intents import idle
 
     runtime.last_kind = "shop"
     runtime.last_reason = reason
@@ -1606,7 +1634,7 @@ def _is_party_leader_row(snapshot: Any, row: Any) -> bool:
         return False
     if row is leader:
         return True
-    from .leader import _guids_match
+    from ..leader import _guids_match
 
     if _guids_match(row.get("guid"), leader.get("guid")):
         return True
@@ -1626,7 +1654,7 @@ def _leader_drop_recheck(state: Any, duty: dict, board: Any = None) -> Any:
     rebuilt on a one-tile step.
     """
     del board
-    from .leader import supply_member_row
+    from ..leader import supply_member_row
 
     snapshot = getattr(state, "last_party", None)
     row = supply_member_row(
@@ -1727,7 +1755,7 @@ def _hold_ambiguous_leader_drop(manager: Any, duty: dict) -> Any:
     runtime.duty_phase = DUTY_SUPPLY
     runtime.last_kind = "supply"
     runtime.last_reason = "supply drop held"
-    from .intents import idle
+    from ..intents import idle
 
     return idle("supply drop held")
 
@@ -1777,7 +1805,7 @@ def _idle_drop_walk(manager: Any, duty: dict, reason: str) -> Any:
         st["walk_idle_since"] = now
     board.scratch[_ATTEMPT] = st
     _release_held_drop_label(manager, reason)
-    from .intents import idle
+    from ..intents import idle
 
     return idle(reason)
 
@@ -1848,17 +1876,17 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         runtime.supply_hold = _hold_with_phase(board, duty)
         runtime.last_kind = "supply"
         runtime.last_reason = "supply drop"
-        from .intents import idle
+        from ..intents import idle
 
         return idle("supply drop")
-    from .supply_drop import step_ground_drop
+    from .drop_gesture import step_ground_drop
 
     item = str(duty.get("item") or "arrow")
     result = step_ground_drop(state, board, int(duty["qty"]), kind=item)
     if result is None:
         runtime.last_kind = "supply"
         runtime.last_reason = "arrow drop"
-        from .intents import idle
+        from ..intents import idle
 
         return idle("arrow drop")
     if result.get("blocked") or not result.get("ok"):
@@ -1883,7 +1911,7 @@ def _tick_drop(manager: Any, state: Any, duty: dict) -> Any:
         runtime.duty_phase = DUTY_SUPPLY
         runtime.last_kind = "supply"
         runtime.last_reason = reason
-        from .intents import idle
+        from ..intents import idle
 
         return idle(reason)
     runtime.supply_notice = {
@@ -1929,7 +1957,7 @@ def _memory_game_xy(
     who = str(name or "").strip()
     if (not who and not str(guid or "").strip()) or state is None:
         return None
-    from .leader import supply_member_row
+    from ..leader import supply_member_row
 
     row = supply_member_row(getattr(state, "last_party", None), who, str(guid or ""))
     if not isinstance(row, dict):
@@ -2092,7 +2120,7 @@ def _party_leader_game_pose(manager: Any, state: Any) -> Optional[tuple[int, int
     """
     if getattr(state, "party_read_ok", None) is not True:
         return None
-    from .leader import _party_game_xy, _party_map_id, party_member_block
+    from ..leader import _party_game_xy, _party_map_id, party_member_block
 
     cfg = getattr(manager, "config", None)
     name = str(getattr(cfg, "leader_name", "") or "")
@@ -2127,7 +2155,7 @@ def _tick_join(manager: Any, state: Any) -> Any:
     is on. A same-map sticky tile is not that coordinate, and it is cleared
     while the maps differ.
     """
-    from .intents import idle
+    from ..intents import idle
 
     board = manager._nav_blackboard
     runtime = manager.runtime
@@ -2187,7 +2215,7 @@ def _tick_nav(
     board = manager._nav_blackboard
     pose = live_pose_from_state(state)
     if pose is None:
-        from .intents import idle
+        from ..intents import idle
 
         return idle("world nav no pose")
     session = board.scratch.get(SCRATCH_WORLD_NAV)
@@ -2201,7 +2229,7 @@ def _tick_nav(
         if int(pose.map_id) == int(map_id) or session.phase == "done":
             return None
         if time.time() < float(board.scratch.get("party_nav_retry") or 0.0):
-            from .intents import idle
+            from ..intents import idle
 
             return idle("world nav retry")
         same_goal = False
@@ -2231,13 +2259,13 @@ def _tick_nav(
             board.scratch["party_nav_retry"] = time.time() + 5.0
             if int(pose.map_id) == int(map_id):
                 return None
-            from .intents import idle
+            from ..intents import idle
 
             return idle("world nav no plan")
     try:
         session.tick(state, board)
     except Exception:
-        from .intents import idle
+        from ..intents import idle
 
         return idle("world nav tick")
     if session.phase in ("done", "fail") and int(pose.map_id) == int(map_id):
@@ -2247,15 +2275,15 @@ def _tick_nav(
         manager.runtime.last_kind = "shop" if reason == "party_join_leader" else "supply"
         manager.runtime.last_reason = reason
         return intent
-    from .intents import idle
+    from ..intents import idle
 
     return idle(reason)
 
 
 def _finish_join(manager: Any) -> None:
     board = manager._nav_blackboard
+    abort_party_shop(board, manager, reason="join finished")
     if board is not None:
-        _clear_shop_flags(board)
         from app._04_decision.world_nav.hooks import SCRATCH_WORLD_NAV
 
         session = board.scratch.get(SCRATCH_WORLD_NAV)
@@ -2271,8 +2299,8 @@ def bind_supply_identity(rows: Any, snapshot: Any) -> list:
     With no party snapshot the reports are unchanged. Coordinates never choose
     which row a name belongs to.
     """
-    from .leader import supply_member_row
-    from .loot import _identity_rows
+    from ..leader import supply_member_row
+    from ..loot import _identity_rows
 
     if not isinstance(snapshot, dict) or not snapshot.get("in_party"):
         return [row for row in (rows or []) if isinstance(row, dict)]
@@ -2542,8 +2570,8 @@ def leader_supply_action(
     """
     if world is None or blackboard is None:
         return None
-    from .loot import stable_self_identity
-    from .support import party_critical_escape, urgent_self_survival
+    from ..loot import stable_self_identity
+    from ..support import party_critical_escape, urgent_self_survival
 
     escape = party_critical_escape(world, blackboard)
     if escape is not None:
@@ -2577,7 +2605,7 @@ def leader_supply_action(
         # A drop that still names the leader keeps this tick. The hunt runs
         # after the pile has been seen and has left the ground.
         if isinstance(claim, dict) and not _supply_seen(blackboard, claim):
-            from .intents import idle
+            from ..intents import idle
 
             return idle("supply pickup")
     if claim_names_me(hold, name, guid):
@@ -2588,12 +2616,7 @@ def leader_supply_action(
 
 
 def _clear_shop_flags(board: Any) -> None:
-    board.scratch.pop(_FLAG, None)
-    board.scratch.pop(_PIN, None)
-    board.scratch.pop(_JOIN, None)
-    board.scratch.pop("party_arrow_buy_qty", None)
-    board.scratch.pop("party_supply_item", None)
-    board.scratch.pop("party_supply_chain", None)
+    abort_party_shop(board)
 
 
 def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any:
@@ -2611,7 +2634,7 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
     origin = getattr(blackboard, "world_origin", None)
     if pose is None or origin is None or int(pose.map_id) != mid:
         # The claim still names this body. A missing pose is not the hunt.
-        from .intents import idle
+        from ..intents import idle
 
         if runtime is not None:
             runtime.last_kind = "supply"
@@ -2646,7 +2669,7 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
                 break
     if pile is not None and dist <= 2:
         from app._02_state.enums import ActionType
-        from .types import ActionIntent
+        from ..types import ActionIntent
 
         _drop_combat_lock(blackboard)
         _mark_supply_seen(blackboard, claim)
@@ -2665,7 +2688,7 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
             _drop_pickup_travel(blackboard)
             return None
         _drop_combat_lock(blackboard)
-        from .intents import idle
+        from ..intents import idle
 
         if runtime is not None:
             runtime.last_kind = "supply"
@@ -2686,7 +2709,7 @@ def _pickup_claim(state: Any, blackboard: Any, claim: dict, runtime: Any) -> Any
                 runtime.last_kind = "supply"
                 runtime.last_reason = "walk to arrows"
             return intent
-    from .intents import idle
+    from ..intents import idle
 
     if runtime is not None:
         runtime.last_kind = "supply"

@@ -921,7 +921,12 @@ class WorldNavSession:
 
     def _start_npc_teleporter(self, step: Any, pose: Any, blackboard: Any) -> Status:
         """Emit SHOP_RUN teleporter; land checked after settle (gate or field xy)."""
-        from shop.behaviors import ACTION_TELEPORTER, behavior_by_id
+        from shop.behaviors import (
+            ACTION_OTHER,
+            ACTION_TELEPORTER,
+            behavior_by_id,
+            is_dialog_teleport_action,
+        )
         from shop.runtime import npc_content_uv
 
         det = step.detail
@@ -946,7 +951,9 @@ class WorldNavSession:
             )
             return Status.FAILURE
         behavior = behavior_by_id(bid)
-        if behavior is None or str(behavior.action) != ACTION_TELEPORTER:
+        if behavior is None or not is_dialog_teleport_action(
+            getattr(behavior, "action", None)
+        ):
             self.fail(f"unknown teleporter behavior {bid}")
             return Status.FAILURE
         pack_id = pack_ids.map_id_to_pack_id(npc_map)
@@ -955,6 +962,11 @@ class WorldNavSession:
             return Status.FAILURE
         if not self._ensure_map_pack(blackboard, pack_id):
             return self._idle(blackboard, "world nav wait pack")
+        shop_kind = (
+            ACTION_OTHER
+            if str(behavior.action) == ACTION_OTHER
+            else ACTION_TELEPORTER
+        )
         api.emit_state(
             tokens.NPC_TP_START,
             behavior=bid,
@@ -974,7 +986,7 @@ class WorldNavSession:
             reason=f"world nav teleporter:{bid}",
             shop_behavior_id=bid,
             shop_qty=1,
-            shop_kind="teleporter",
+            shop_kind=shop_kind,
         )
         self.tp_behavior_id = bid
         self.tp_expect_map_id = expect_land

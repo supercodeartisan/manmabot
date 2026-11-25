@@ -1,4 +1,4 @@
-"""NPC behavior editor — buy, sell, warehouse, teleporter. Form + capture UV calibrate."""
+"""NPC behavior editor — buy, sell, warehouse, teleporter, other."""
 from __future__ import annotations
 
 import re
@@ -9,11 +9,14 @@ from typing import Callable, Optional
 
 from shop.behaviors import (
     ACTION_BUY,
+    ACTION_OTHER,
     ACTION_SELL,
     ACTION_STORE,
     ACTION_TELEPORTER,
     ACTIONS,
     ITEM_ROW_COUNT,
+    OTHER_MAX_CLICKS,
+    OTHER_MIN_CLICKS,
     SELL_MODE_ONLY_GARBAGE,
     SELL_MODES,
     TELEPORT_KIND_DUNGEON_GATE,
@@ -24,6 +27,7 @@ from shop.behaviors import (
     ShoppingUiClicks,
     behaviors_path,
     default_behavior,
+    is_dialog_teleport_action,
     load_behaviors,
     save_behaviors,
 )
@@ -54,6 +58,35 @@ _MARKER_LABELS = {
 }
 
 
+def _seq_key(index: int) -> str:
+    return f"seq_{int(index)}"
+
+
+def _seq_index(key: str) -> int | None:
+    if not key.startswith("seq_"):
+        return None
+    try:
+        return int(key.split("_", 1)[1])
+    except (TypeError, ValueError):
+        return None
+
+
+def _marker_label(action: str, key: str) -> str:
+    act = str(action or "").strip().lower()
+    if act == ACTION_TELEPORTER and key == "buy_button":
+        return "Teleport option"
+    idx = _seq_index(key)
+    if idx is not None:
+        return f"Click {idx + 1}"
+    return _MARKER_LABELS.get(key, key)
+
+
+def _other_marker_keys(ui: ShoppingUiClicks | None) -> tuple[str, ...]:
+    n = len(getattr(ui, "click_sequence", ()) or ())
+    n = max(OTHER_MIN_CLICKS, min(OTHER_MAX_CLICKS, n if n > 0 else OTHER_MIN_CLICKS))
+    return tuple(_seq_key(i) for i in range(n))
+
+
 def _uv_get(ui: ShoppingUiClicks, key: str) -> Optional[tuple[float, float]]:
     if key == "buy_button":
         return ui.buy_button
@@ -68,6 +101,11 @@ def _uv_get(ui: ShoppingUiClicks, key: str) -> Optional[tuple[float, float]]:
         rows = ui.item_rows
         if 0 <= idx < len(rows):
             return rows[idx]
+    seq_i = _seq_index(key)
+    if seq_i is not None:
+        seq = ui.click_sequence or ()
+        if 0 <= seq_i < len(seq):
+            return seq[seq_i]
     return None
 
 
@@ -82,6 +120,7 @@ def _uv_set(ui: ShoppingUiClicks, key: str, pt: Optional[tuple[float, float]]) -
         ui.confirm_button,
         ui.list_scroll_point,
     )
+    seq = list(ui.click_sequence or ())
     if key == "buy_button":
         buy = pt
     elif key == "sell_button":
@@ -94,12 +133,19 @@ def _uv_set(ui: ShoppingUiClicks, key: str, pt: Optional[tuple[float, float]]) -
         idx = int(key.split("_", 1)[1])
         if 0 <= idx < ITEM_ROW_COUNT:
             rows[idx] = pt
+    else:
+        seq_i = _seq_index(key)
+        if seq_i is not None:
+            while len(seq) <= seq_i:
+                seq.append(None)
+            seq[seq_i] = pt
     return ShoppingUiClicks(
         buy_button=buy,
         sell_button=sell,
         confirm_button=conf,
         list_scroll_point=scroll,
         item_rows=tuple(rows),
+        click_sequence=tuple(seq),
     )
 
 
@@ -109,6 +155,14 @@ def _default_ui_layout(*, action: str = ACTION_BUY) -> ShoppingUiClicks:
         return ShoppingUiClicks(
             buy_button=(0.18, 0.40),
             confirm_button=(0.28, 0.72),
+        )
+    if action == ACTION_OTHER:
+        # Two starter clicks; Add marker appends more.
+        return ShoppingUiClicks(
+            click_sequence=(
+                (0.18, 0.40),
+                (0.28, 0.55),
+            )
         )
     rows = []
     for i in range(ITEM_ROW_COUNT):
@@ -221,7 +275,7 @@ class ShoppingBehaviorEditor(ttk.Frame):
         top.pack(fill="x", pady=(0, 4))
         ttk.Label(
             top,
-            text="NPC behaviors (buy, sell, warehouse, teleporter) — dialog UVs",
+            text="NPC behaviors (buy, sell, warehouse, teleporter, other) — dialog UVs",
             style="Chrome.TLabel",
             foreground=TEXT_MUTED,
         ).pack(side="left")
@@ -385,6 +439,7 @@ class ShoppingBehaviorEditor(ttk.Frame):
             "Scroll spot = talking-scroll hubs. Adena = fare. "
             "dungeon_gate → Dest dungeon (LC mapId). "
             "field_land → Land map/xy after Run Practice. "
+            "other → same travel as teleporter, Add marker for N ordered clicks. "
             "World-nav checkbox writes world_nav (Korean id; zh uses _ch).",
             style="Chrome.TLabel",
             foreground=TEXT_MUTED,
@@ -456,6 +511,16 @@ class ShoppingBehaviorEditor(ttk.Frame):
         ttk.Label(marker_box, text="Markers", style="Chrome.TLabel").pack(anchor="w")
         self.marker_list = tk.Listbox(marker_box, height=14, exportselection=False)
         self.marker_list.pack(fill="both", expand=True)
+        marker_btns = ttk.Frame(marker_box, style="Chrome.TFrame")
+        marker_btns.pack(fill="x", pady=(4, 0))
+        self._add_marker_btn = ttk.Button(
+            marker_btns, text="Add marker", command=self.add_other_marker
+        )
+        self._add_marker_btn.pack(side="left", padx=(0, 4))
+        self._remove_marker_btn = ttk.Button(
+            marker_btns, text="Remove marker", command=self.remove_other_marker
+        )
+        self._remove_marker_btn.pack(side="left")
         self._rebuild_marker_list()
         self.marker_list.bind("<<ListboxSelect>>", self._on_marker_select)
 
@@ -616,21 +681,20 @@ class ShoppingBehaviorEditor(ttk.Frame):
 
     def _rebuild_marker_list(self) -> None:
         action = self._combo_text(self._action_combo, self.action_var).lower()
-        keys = (
-            _TELEPORTER_MARKER_KEYS
-            if action == ACTION_TELEPORTER
-            else _SHOP_MARKER_KEYS
-        )
+        if action == ACTION_TELEPORTER:
+            keys = _TELEPORTER_MARKER_KEYS
+        elif action == ACTION_OTHER:
+            cur = self._current()
+            keys = _other_marker_keys(cur.ui if cur is not None else None)
+        else:
+            keys = _SHOP_MARKER_KEYS
         self._active_marker_keys = keys
         if not hasattr(self, "marker_list"):
             return
         prev = self._marker_key
         self.marker_list.delete(0, "end")
         for key in keys:
-            label = _MARKER_LABELS[key]
-            if action == ACTION_TELEPORTER and key == "buy_button":
-                label = "Teleport option"
-            self.marker_list.insert("end", label)
+            self.marker_list.insert("end", _marker_label(action, key))
         if prev in keys:
             idx = keys.index(prev)
         else:
@@ -640,28 +704,36 @@ class ShoppingBehaviorEditor(ttk.Frame):
             self.marker_list.selection_clear(0, "end")
             self.marker_list.selection_set(idx)
             self.marker_list.activate(idx)
-            label = _MARKER_LABELS[self._marker_key]
-            if action == ACTION_TELEPORTER and self._marker_key == "buy_button":
-                label = "Teleport option"
-            self.marker_var.set(label)
+            self.marker_var.set(_marker_label(action, self._marker_key))
+        other_state = "normal" if action == ACTION_OTHER else "disabled"
+        for btn in (
+            getattr(self, "_add_marker_btn", None),
+            getattr(self, "_remove_marker_btn", None),
+        ):
+            if btn is not None:
+                try:
+                    btn.configure(state=other_state)
+                except tk.TclError:
+                    pass
 
     def _sync_action_panel(self) -> None:
-        """Show sell mode for sell/store; adena/dest for teleporter; refresh markers."""
+        """Show sell mode for sell/store; adena/dest for teleporter/other; refresh markers."""
         action = self._combo_text(self._action_combo, self.action_var).lower()
         kind = self._combo_text(self._kind_combo, self.teleport_kind_var).lower()
         if kind not in TELEPORT_KINDS:
             kind = TELEPORT_KIND_DUNGEON_GATE
+        is_tp = is_dialog_teleport_action(action)
         slot_state = (
             "disabled"
-            if action in (ACTION_SELL, ACTION_STORE, ACTION_TELEPORTER)
+            if action in (ACTION_SELL, ACTION_STORE) or is_tp
             else "normal"
         )
-        qty_state = "disabled" if action == ACTION_TELEPORTER else "normal"
-        adena_state = "normal" if action == ACTION_TELEPORTER else "disabled"
-        kind_state = "readonly" if action == ACTION_TELEPORTER else "disabled"
-        world_nav_state = "normal" if action == ACTION_TELEPORTER else "disabled"
-        is_dungeon = action == ACTION_TELEPORTER and kind == TELEPORT_KIND_DUNGEON_GATE
-        is_field = action == ACTION_TELEPORTER and kind == TELEPORT_KIND_FIELD_LAND
+        qty_state = "disabled" if is_tp else "normal"
+        adena_state = "normal" if is_tp else "disabled"
+        kind_state = "readonly" if is_tp else "disabled"
+        world_nav_state = "normal" if is_tp else "disabled"
+        is_dungeon = is_tp and kind == TELEPORT_KIND_DUNGEON_GATE
+        is_field = is_tp and kind == TELEPORT_KIND_FIELD_LAND
         dest_state = "normal" if is_dungeon else "disabled"
         land_state = "normal" if is_field else "disabled"
         entry = self._item_index_entry
@@ -720,7 +792,7 @@ class ShoppingBehaviorEditor(ttk.Frame):
             self.land_y_var.set("0")
             self.teleport_kind_var.set(TELEPORT_KIND_DUNGEON_GATE)
             self.world_nav_var.set(False)
-        elif action == ACTION_TELEPORTER:
+        elif is_tp:
             self.item_index_var.set("0")
             self.qty_var.set("1")
             if is_dungeon:
@@ -729,6 +801,16 @@ class ShoppingBehaviorEditor(ttk.Frame):
                 self.land_y_var.set("0")
             else:
                 self.dest_dungeon_var.set("")
+            # Switching into other seeds click_sequence if empty.
+            if action == ACTION_OTHER and self._selected_index is not None:
+                cur = self._behaviors[self._selected_index]
+                seq = list(getattr(cur.ui, "click_sequence", ()) or ())
+                if len(seq) < OTHER_MIN_CLICKS:
+                    seeded = _default_ui_layout(action=ACTION_OTHER)
+                    self._behaviors[self._selected_index] = replace(
+                        cur, action=ACTION_OTHER, ui=seeded
+                    )
+                    self._dirty = True
         else:
             self.adena_cost_var.set("0")
             self.dest_dungeon_var.set("")
@@ -883,7 +965,9 @@ class ShoppingBehaviorEditor(ttk.Frame):
             )
         action = self._combo_text(self._action_combo, self.action_var).lower()
         if action not in ACTIONS:
-            raise ValueError("Action must be buy, sell, store, or teleporter")
+            raise ValueError(
+                "Action must be buy, sell, store, teleporter, or other"
+            )
         map_id = self._combo_text(self._map_combo, self.map_var)
         scroll = self._scroll_id_from_form()
         if not map_id or not scroll:
@@ -931,20 +1015,23 @@ class ShoppingBehaviorEditor(ttk.Frame):
             land_world_y = 0
             teleport_kind = TELEPORT_KIND_DUNGEON_GATE
         world_nav = bool(self.world_nav_var.get())
-        if action == ACTION_TELEPORTER:
+        if is_dialog_teleport_action(action):
             item_index = 0
             qty = 1
             if teleport_kind == TELEPORT_KIND_FIELD_LAND:
                 destination_dungeon = 0
                 if land_map_id <= 0:
-                    raise ValueError("Land map is required for field_land teleporter")
+                    raise ValueError(
+                        "Land map is required for field_land teleporter/other"
+                    )
             else:
                 land_map_id = 0
                 land_world_x = 0
                 land_world_y = 0
                 if destination_dungeon <= 0:
                     raise ValueError(
-                        "Dest dungeon mapId is required for dungeon_gate teleporter"
+                        "Dest dungeon mapId is required for dungeon_gate "
+                        "teleporter/other"
                     )
         else:
             adena_cost = 0
@@ -965,6 +1052,12 @@ class ShoppingBehaviorEditor(ttk.Frame):
                 buy_button=prev_ui.buy_button,
                 confirm_button=prev_ui.confirm_button,
             )
+        elif action == ACTION_OTHER:
+            seq = list(getattr(prev_ui, "click_sequence", ()) or ())
+            if len(seq) < OTHER_MIN_CLICKS:
+                seq = list(_default_ui_layout(action=ACTION_OTHER).click_sequence)
+            seq = seq[:OTHER_MAX_CLICKS]
+            prev_ui = ShoppingUiClicks(click_sequence=tuple(seq))
         return ShoppingBehavior(
             id=sid,
             name=self.name_var.get().strip() or sid,
@@ -1147,8 +1240,76 @@ class ShoppingBehaviorEditor(ttk.Frame):
             )
             return
         self._set_current_ui(_default_ui_layout(action=b.action))
+        self._rebuild_marker_list()
         self._redraw()
         self._log("Seeded default marker layout (adjust on capture)")
+
+    def add_other_marker(self) -> None:
+        """Append one click_sequence marker for action=other."""
+        if self._selected_index is None:
+            messagebox.showinfo(
+                "Behaviors", "Select a behavior first.", parent=self.winfo_toplevel()
+            )
+            return
+        b = self._behaviors[self._selected_index]
+        if str(b.action) != ACTION_OTHER:
+            messagebox.showinfo(
+                "Behaviors",
+                "Add marker is only for action=other.",
+                parent=self.winfo_toplevel(),
+            )
+            return
+        seq = list(getattr(b.ui, "click_sequence", ()) or ())
+        if len(seq) >= OTHER_MAX_CLICKS:
+            messagebox.showinfo(
+                "Behaviors",
+                f"At most {OTHER_MAX_CLICKS} markers.",
+                parent=self.winfo_toplevel(),
+            )
+            return
+        # Place new marker slightly below the last one.
+        if seq and seq[-1] is not None:
+            lu, lv = seq[-1]
+            nu, nv = float(lu), min(0.95, float(lv) + 0.05)
+        else:
+            nu, nv = 0.20, 0.40 + 0.05 * len(seq)
+        seq.append((nu, nv))
+        self._behaviors[self._selected_index] = replace(
+            b, ui=ShoppingUiClicks(click_sequence=tuple(seq))
+        )
+        self._dirty = True
+        self._marker_key = _seq_key(len(seq) - 1)
+        self._rebuild_marker_list()
+        self._redraw()
+        self._log(f"Added Click {len(seq)}")
+
+    def remove_other_marker(self) -> None:
+        """Remove the selected click_sequence marker (keep at least 2)."""
+        if self._selected_index is None:
+            return
+        b = self._behaviors[self._selected_index]
+        if str(b.action) != ACTION_OTHER:
+            return
+        seq = list(getattr(b.ui, "click_sequence", ()) or ())
+        if len(seq) <= OTHER_MIN_CLICKS:
+            messagebox.showinfo(
+                "Behaviors",
+                f"Need at least {OTHER_MIN_CLICKS} markers.",
+                parent=self.winfo_toplevel(),
+            )
+            return
+        idx = _seq_index(self._marker_key)
+        if idx is None or idx < 0 or idx >= len(seq):
+            idx = len(seq) - 1
+        del seq[idx]
+        self._behaviors[self._selected_index] = replace(
+            b, ui=ShoppingUiClicks(click_sequence=tuple(seq))
+        )
+        self._dirty = True
+        self._marker_key = _seq_key(min(idx, len(seq) - 1))
+        self._rebuild_marker_list()
+        self._redraw()
+        self._log(f"Removed marker · {len(seq)} left")
 
     def recapture(self) -> None:
         try:
@@ -1195,10 +1356,7 @@ class ShoppingBehaviorEditor(ttk.Frame):
             return
         self._marker_key = keys[idx]
         action = self._combo_text(self._action_combo, self.action_var).lower()
-        label = _MARKER_LABELS[self._marker_key]
-        if action == ACTION_TELEPORTER and self._marker_key == "buy_button":
-            label = "Teleport option"
-        self.marker_var.set(label)
+        self.marker_var.set(_marker_label(action, self._marker_key))
         self._redraw()
         self.canvas.focus_set()
 
@@ -1261,11 +1419,12 @@ class ShoppingBehaviorEditor(ttk.Frame):
             return
         h, w = self._frame.shape[:2]
         action = str(b.action or "").strip().lower()
-        keys = (
-            _TELEPORTER_MARKER_KEYS
-            if action == ACTION_TELEPORTER
-            else _SHOP_MARKER_KEYS
-        )
+        if action == ACTION_TELEPORTER:
+            keys = _TELEPORTER_MARKER_KEYS
+        elif action == ACTION_OTHER:
+            keys = _other_marker_keys(b.ui)
+        else:
+            keys = _SHOP_MARKER_KEYS
         for key in keys:
             pt = _uv_get(b.ui, key)
             if pt is None:
@@ -1278,15 +1437,12 @@ class ShoppingBehaviorEditor(ttk.Frame):
             self.canvas.create_oval(
                 cx - r, cy - r, cx + r, cy + r, outline=color, width=2, fill=""
             )
-            label = _MARKER_LABELS[key]
-            if action == ACTION_TELEPORTER and key == "buy_button":
-                label = "Teleport option"
             self.canvas.create_text(
                 cx + 10,
                 cy - 10,
                 anchor="sw",
                 fill=color,
-                text=label,
+                text=_marker_label(action, key),
                 font=("Segoe UI", 8),
             )
 

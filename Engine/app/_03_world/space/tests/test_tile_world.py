@@ -80,6 +80,17 @@ def test_missing_pack_metadata_does_not_invent_an_origin() -> None:
 def test_map_244_packs_keep_the_origin_of_their_own_folder() -> None:
     packs = [pack for pack in discover_map_packs() if int(pack.map_id) == 244]
     assert packs
+    ids = sorted(p.pack_id for p in packs)
+    assert "polluted_land_of_blessing" in ids
+    assert ids == sorted(
+        [
+            "polluted_land_of_blessing",
+            "polluted_land_of_blessing_fairy",
+            "polluted_land_of_blessing_human",
+            "polluted_land_of_blessing_orch",
+            "polluted_land_of_blessing_spirit",
+        ]
+    )
     seen: dict[str, tuple[int, int]] = {}
     for pack in packs:
         axes = axes_from_pack(pack)
@@ -87,9 +98,16 @@ def test_map_244_packs_keep_the_origin_of_their_own_folder() -> None:
         assert axes.pack_id == pack.pack_id
         assert axes.tile_to_world(0, 0) == (pack.origin_x, pack.origin_y)
         seen[pack.pack_id] = (pack.origin_x, pack.origin_y)
-    loaded = load_map_pack_safe("polluted_land_of_blessing_dungeon")
+    # Race variants share the base season origin.
+    base_origin = seen["polluted_land_of_blessing"]
+    for pid in ids:
+        assert seen[pid] == base_origin
+    loaded = load_map_pack_safe("polluted_land_of_blessing")
     assert loaded is not None
-    assert int(loaded.origin_x) == seen["polluted_land_of_blessing_dungeon"][0]
+    assert int(loaded.origin_x) == seen["polluted_land_of_blessing"][0]
+    legacy = load_map_pack_safe("polluted_land_of_blessing_dungeon")
+    assert legacy is not None
+    assert int(legacy.origin_x) == int(loaded.origin_x)
     other = axes_from_pack(
         SimpleNamespace(id="other_244", origin_x=1, origin_y=2, pixel_scale=4)
     )

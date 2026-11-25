@@ -56,7 +56,7 @@ def expected_labels_for_shop_kind(kind: str) -> tuple[str, ...]:
     k = str(kind or "").strip().lower()
     if k == "store":
         return (LABEL_NPC_STORAGE, LABEL_NPC_SHOP, LABEL_NPC_DIALOG)
-    if k == "teleporter":
+    if k in ("teleporter", "other"):
         return (LABEL_NPC_DIALOG, LABEL_NPC_SHOP)
     # buy / sell / default merchant UI
     return (LABEL_NPC_SHOP, LABEL_NPC_DIALOG)

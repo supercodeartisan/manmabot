@@ -239,7 +239,11 @@ class SetupWizard(ctk.CTkToplevel):
         ctk.CTkLabel(
             self.body, text=self.s.wizard_map_body, wraplength=420, justify="left"
         ).pack(anchor="w")
-        choices = list_map_choices(self.profile.language)
+        from ui.hangul_sort import map_choice_sort_key
+        from ui.reachable_battle_maps import battle_picker_choices
+
+        choices = battle_picker_choices(list(list_map_choices(self.profile.language)))
+        choices.sort(key=map_choice_sort_key)
         if not choices:
             ctk.CTkLabel(
                 self.body, text=self.s.start_fail["map_missing"], text_color="#ef4444"
