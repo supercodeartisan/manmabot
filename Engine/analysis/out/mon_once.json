@@ -1,0 +1,380 @@
+LC.exe pid=2780 base=0x7FF63BB20000
+Offsets: player=0x16DED3C pos=0x174C310,0x174C314,0x16DED38 tick=0x16DED28 exp=0x16604C8 inv=0xD82EBB invmgr=0x16686F0 skills=0x1168A48 party=0x1605CA0 bufflist=0x1605B50 direct=1
+Extra offsets loaded: lawful=-1 weight=-1 maxWeight=-1 food=-1 stats=60,68,84,92,100,116
+Zone table: 0 zones, radius 170
+Monitoring every 500 ms (fixed interval, drift-free). Ctrl+C to stop.
+Heap discovery (buffs/entities) is running in the background...
+
+=== Frame 1  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 2  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 3  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 4  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 5  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 6  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 7  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 8  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 9  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 10  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 11  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 12  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 13  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 14  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 15  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 16  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 17  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 18  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 19  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 20  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 21  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 22  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 23  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 24  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 25  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 26  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 27  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 28  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 29  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 30  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 31  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 32  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 33  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 34  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 35  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 36  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 37  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 38  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 39  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 40  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 41  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 42  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 43  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 44  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 45  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 46  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 47  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 48  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 49  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 50  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 51  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 52  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 53  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 54  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 55  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 56  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 57  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 58  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 59  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 60  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 61  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 62  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 63  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 64  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 65  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 66  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 67  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 68  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 69  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 70  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 71  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 72  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 73  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 74  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 75  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 76  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 77  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 78  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 79  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 80  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 81  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 82  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 83  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 84  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 85  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 86  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 87  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 88  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 89  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 90  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 91  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 92  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 93  (fixed 500 ms interval) ===
+HP=0   /0     MP=132/277938176  SP=277938176  Lv=76  Class=133
+Pos=(32510,33082,131)  EXP=0.0000%  Tick=558345748540ms
+Datasets: items=0 skills=0 party=8 buffs=0 entities=0
+=== Frame 94  (fixed 5
