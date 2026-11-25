@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -265,41 +266,80 @@ class PartyTab(QWidget):
 
     def _build_member_link(self) -> QWidget:
         host, lay = self._section()
+        host.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self.member_ws_box = card(host, self._tx("party_ui_menu_link", "파티장 연결"))
-        lay.addWidget(self.member_ws_box)
+        self.member_ws_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        lay.addWidget(self.member_ws_box, stretch=1)
         ws_lay = self.member_ws_box.layout()
         assert isinstance(ws_lay, QVBoxLayout)
+        ws_lay.setContentsMargins(10, 12, 10, 10)
+        ws_lay.setSpacing(10)
 
         nearby_row = QHBoxLayout()
-        nearby_row.addWidget(QLabel(self._tx("party_ui_nearby", "주변 파티")))
-        self.nearby_refresh_btn = QPushButton(self._tx("party_ui_rescan", "다시 검색"))
-        self.nearby_refresh_btn.clicked.connect(self._rescan_nearby_parties)
-        nearby_row.addWidget(self.nearby_refresh_btn)
-        nearby_row.addStretch(1)
-        ws_lay.addLayout(nearby_row)
-        self.nearby_list = QListWidget()
-        self.nearby_list.setMinimumHeight(90)
-        self.nearby_list.itemSelectionChanged.connect(self._on_nearby_selected)
-        self.nearby_list.itemDoubleClicked.connect(self._connect_selected_nearby)
-        ws_lay.addWidget(self.nearby_list)
-        self.nearby_detail = QLabel(
-            self._tx("party_ui_nearby_hint", "검색만으로는 가입하지 않습니다. 서버를 선택하세요.")
+        nearby_row.setContentsMargins(0, 0, 0, 0)
+        nearby_label = QLabel(self._tx("party_ui_nearby", "주변 파티"))
+        nearby_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
+        nearby_row.addWidget(nearby_label, stretch=1)
+        self.nearby_refresh_btn = QPushButton(self._tx("party_ui_rescan", "다시 검색"))
+        self.nearby_refresh_btn.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+        self.nearby_refresh_btn.clicked.connect(self._rescan_nearby_parties)
+        nearby_row.addWidget(self.nearby_refresh_btn, alignment=Qt.AlignmentFlag.AlignRight)
+        ws_lay.addLayout(nearby_row)
+
+        self.nearby_list = QListWidget()
+        self.nearby_list.setMinimumHeight(140)
+        self.nearby_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        self.nearby_list.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.nearby_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.nearby_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        # Row click only highlights. Confirm with the button below.
+        self.nearby_list.itemSelectionChanged.connect(self._on_nearby_selected)
+        ws_lay.addWidget(self.nearby_list, stretch=1)
+
+        self.nearby_detail = QLabel(self._nearby_status_text())
         self.nearby_detail.setWordWrap(True)
+        self.nearby_detail.setMinimumHeight(36)
+        self.nearby_detail.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        self.nearby_detail.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         ws_lay.addWidget(self.nearby_detail)
+
         pick_row = QHBoxLayout()
+        pick_row.setContentsMargins(0, 0, 0, 0)
+        pick_row.addStretch(1)
         self.nearby_connect_btn = QPushButton(
             self._tx("party_ui_select_leader", "이 리더 선택")
         )
+        self.nearby_connect_btn.setMinimumWidth(140)
+        self.nearby_connect_btn.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
         self.nearby_connect_btn.clicked.connect(self._connect_selected_nearby)
         pick_row.addWidget(self.nearby_connect_btn)
-        pick_row.addStretch(1)
         ws_lay.addLayout(pick_row)
-        # Host/port live only in the bag after 「이 리더 선택」. No manual IP
-        # or connection-test controls on the member page.
+
+        # Host/port live only in the bag after 「이 리더 선택」.
         self._nearby_browser = None
         self._nearby_rows = []
-        lay.addStretch(1)
         self._refresh_member_summary()
         self._start_nearby_browser()
         return host
@@ -1910,6 +1950,31 @@ class PartyTab(QWidget):
         host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
         return [host] if host else []
 
+    def _nearby_status_text(self) -> str:
+        """Footnote under the list: confirmed boss only, else the idle hint."""
+        hold = str(self.bag.get_str("party", "join_hold", "") or "")
+        if hold == "not_on_roster":
+            return self._tx(
+                "party_ui_not_on_roster", "명단에 없음 — 리더를 다시 선택하세요."
+            )
+        host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
+        if not host:
+            return self._tx(
+                "party_ui_nearby_hint",
+                "행을 하이라이트한 뒤 「이 리더 선택」을 누르세요. 검색만으로는 가입하지 않습니다.",
+            )
+        port = self._ws_port()
+        lid = str(self.bag.get_str("party", "selected_leader_id", "") or "").strip()
+        name = "leader"
+        for row in getattr(self, "_nearby_rows", []) or []:
+            if str(row.get("leader_id") or "") == lid or str(row.get("host") or "") == host:
+                name = str(row.get("name") or "leader")
+                break
+        return self._tx(
+            "party_ui_nearby_boss_set",
+            "파티장으로 선택됨: {name} ({host}:{port})",
+        ).format(name=name, host=host, port=port)
+
     def _start_nearby_browser(self) -> None:
         if getattr(self, "_nearby_browser", None) is not None:
             return
@@ -1957,53 +2022,39 @@ class PartyTab(QWidget):
         rows = browser.snapshot()
         self._nearby_rows = rows
         selected_id = str(self.bag.get_str("party", "selected_leader_id", "") or "")
+        current = list_w.selectedItems()
+        current_id = ""
+        if current:
+            cur_row = current[0].data(Qt.ItemDataRole.UserRole) or {}
+            current_id = str(cur_row.get("leader_id") or "")
         list_w.blockSignals(True)
         list_w.clear()
+        restore_id = current_id or selected_id
         for row in rows:
             name = str(row.get("name") or "leader")
             status = str(row.get("status_label") or "")
-            item = QListWidgetItem(f"{name} — {status}")
+            host = str(row.get("host") or "")
+            item = QListWidgetItem(f"{name} — {status}" + (f"  ({host})" if host else ""))
             item.setData(Qt.ItemDataRole.UserRole, row)
             list_w.addItem(item)
-            if selected_id and row.get("leader_id") == selected_id:
+            if restore_id and row.get("leader_id") == restore_id:
                 item.setSelected(True)
         list_w.blockSignals(False)
-        if not rows and hasattr(self, "nearby_detail"):
-            hold = str(self.bag.get_str("party", "join_hold", "") or "")
-            if hold == "not_on_roster":
-                self.nearby_detail.setText(
-                    self._tx("party_ui_not_on_roster", "명단에 없음 — 리더를 다시 선택하세요.")
-                )
-            else:
+        if hasattr(self, "nearby_detail"):
+            if not rows and not str(self.bag.get_str("party", "leader_host", "") or "").strip():
                 self.nearby_detail.setText(
                     self._tx(
                         "party_ui_nearby_empty",
                         "응답 없음. 파티장이 Start 중인지 확인한 뒤 다시 검색하세요.",
                     )
                 )
-        self._on_nearby_selected()
+            else:
+                # Keep confirmed-boss text; do not dump row details on highlight.
+                self.nearby_detail.setText(self._nearby_status_text())
 
     def _on_nearby_selected(self) -> None:
-        list_w = getattr(self, "nearby_list", None)
-        detail = getattr(self, "nearby_detail", None)
-        if list_w is None or detail is None:
-            return
-        items = list_w.selectedItems()
-        if not items:
-            return
-        row = items[0].data(Qt.ItemDataRole.UserRole) or {}
-        detail.setText(
-            self._tx(
-                "party_ui_nearby_detail",
-                "{name} · {status}\nIP {host} · 포트 {port}\nid {leader_id}",
-            ).format(
-                name=row.get("name") or "—",
-                status=row.get("status_label") or "—",
-                host=row.get("host") or "—",
-                port=row.get("ws_port") or "—",
-                leader_id=str(row.get("leader_id") or "")[:12] or "—",
-            )
-        )
+        """Highlight only — footnote stays the confirmed boss / idle hint."""
+        return
 
     def _connect_selected_nearby(self, *_args) -> None:
         list_w = getattr(self, "nearby_list", None)
@@ -2011,10 +2062,14 @@ class PartyTab(QWidget):
             return
         items = list_w.selectedItems()
         if not items:
+            msg = self._tx("party_ui_nearby_pick", "목록에서 리더를 하이라이트한 뒤 선택하세요.")
             if hasattr(self, "nearby_detail"):
-                self.nearby_detail.setText(
-                    self._tx("party_ui_nearby_pick", "목록에서 리더를 선택하세요.")
-                )
+                self.nearby_detail.setText(msg)
+            QMessageBox.information(
+                self,
+                self._tx("party_ui_menu_link", "파티장 연결"),
+                msg,
+            )
             return
         row = items[0].data(Qt.ItemDataRole.UserRole) or {}
         host = str(row.get("host") or "").strip()
@@ -2023,6 +2078,7 @@ class PartyTab(QWidget):
         except (TypeError, ValueError):
             port = 8765
         leader_id = str(row.get("leader_id") or "").strip()
+        name = str(row.get("name") or "leader").strip() or "leader"
         if not host or not leader_id:
             return
         self.bag.set("party", "leader_host", host)
@@ -2030,13 +2086,20 @@ class PartyTab(QWidget):
         self.bag.set("party", "selected_leader_id", leader_id)
         self.bag.set("party", "join_hold", "")
         self._refresh_member_summary()
+        confirm = self._tx(
+            "party_ui_nearby_boss_set",
+            "파티장으로 선택됨: {name} ({host}:{port})",
+        ).format(name=name, host=host, port=port)
         if hasattr(self, "nearby_detail"):
-            self.nearby_detail.setText(
-                self._tx(
-                    "party_ui_nearby_saved",
-                    "저장됨: {name} ({host}:{port}). 봇 시작 시 이 리더로 연결합니다.",
-                ).format(name=row.get("name") or "leader", host=host, port=port)
-            )
+            self.nearby_detail.setText(confirm)
+        QMessageBox.information(
+            self,
+            self._tx("party_ui_select_leader", "이 리더 선택"),
+            self._tx(
+                "party_ui_nearby_boss_popup",
+                "{name} 을(를) 파티장으로 선택했습니다.\n{host}:{port}\n봇 시작 시 이 리더로 연결합니다.",
+            ).format(name=name, host=host, port=port),
+        )
         self.on_log(
             f"Party leader selected id={leader_id[:8]}… {host}:{port}"
         )

@@ -26,6 +26,14 @@ Affects: member UI only. Engine connect path still reads `party.leader_host` / `
 Consent: user (search + select are enough; IP/test controls not needed).
 Result: UI trimmed. Live browse/select not re-run in this session.
 
+## 2026-11-25 — member link UX: refresh right, select confirms, responsive
+
+Intent: Refresh sits on the right. Row click only highlights; 「이 리더 선택」 shows a popup and the confirmed-boss line under the list. Layout expands with the panel. Cleared stale `leader_host=192.168.9.65` that left both latest Starts on `ws=connecting`.
+Shared: `party_tab` nearby link builders/handlers; trial `settings.json` leader_host. Login/retreat/combat unchanged.
+Affects: member link UX and next Start connect target.
+Consent: user (refresh right; highlight vs confirm; popup + below text; flexible UI; why last 2 sessions idle).
+Result: UI updated; stale host cleared. Live select/connect not re-run in this session.
+
 ## 2026-11-25 — LAN browse binds real NIC (VPN-safe directed broadcast + host unicast)
 
 Intent: Nearby party refresh failed while Astrill VPN was up because limited `255.255.255.255` left via the VPN default route. Browse now binds each RFC1918 NIC (skip VPN/virt), sends directed subnet broadcast, and unicasts saved `leader_host` (same LAN route TCP already uses).
