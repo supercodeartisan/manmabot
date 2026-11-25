@@ -1,5 +1,20 @@
 # Decision change log
 
+## 2026-11-22 — Portable: ship cryptography + rfc8785 (license request)
+
+Intent: Fix customer License「요청 실패: No module named 'cryptography'」— Soft DeviceKey / MMB2 request needs cryptography+rfc8785 in embeddable python.
+Shared: pip into repo `python\` + portable `python\`; `prune_python.verify_runtime_imports` gate. No login/move/combat/HP edits.
+Consent: user (bug report with screenshot).
+Result: portable import OK; Stage4 checksum refresh (RBF-011).
+
+## 2026-11-22 — Customer rerelease (shop/decision/UI, same CEK)
+
+Intent: Ship recent shop sell-locale / decision / storewin / live_income_bar updates to pack-only portable without rotating CEK.
+Shared: incremental_release + pack_assets MMB2 + verify_stage5 + Stage4. No login/move/combat/HP edits in this release step.
+Affects: customer zip (`data.pack` rebuilt, analysis republished, changed `.pyd`s).
+Consent: user approved release plan (“yes”).
+Result: `build_id` `43900795-…`, CEK `4d6dcda5-…`, Stage5/4 OK. First incremental failed on portable-python locking `libcrypto` during python recopy; completed with build CPython.
+
 ## 2026-11-22 — keep talking scroll across Chinese store/sell
 
 Intent: ``말하는 두루마리`` is on keep_list but not in game_catalog, so Chinese storewin names (說話的卷軸 / 说话卷轴) still passed the filter and ``give_goods_ch`` deposited the scrolls (next F5 → opened=False).
