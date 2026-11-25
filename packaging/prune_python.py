@@ -144,7 +144,7 @@ def verify_runtime_imports() -> list[str]:
         return [f"missing {exe}"]
     code = (
         "import PySide6, numpy, cv2, yaml, mss, keyboard, interception, "
-        "PIL, onnxruntime, psutil, scipy; "
+        "PIL, onnxruntime, psutil, scipy, cryptography, rfc8785; "
         "import rapidocr_onnxruntime; "
         "print('imports_ok')"
     )

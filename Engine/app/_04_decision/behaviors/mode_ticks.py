@@ -545,6 +545,27 @@ _SCRATCH_MOTHER_TREE_CAST_AT = "mother_tree_cast_at"
 _MOTHER_TREE_BUFF_SETTLE_S = 2.0
 # Catalog cost of 텔레포트 투 마더. Used when the cost table has no row.
 _MOTHER_TREE_RECAST_MP = 10
+# Operator floor: another Teleport to Mother waits until MP is at least this.
+_MOTHER_TREE_RECAST_MP_FLOOR = 15
+# Body to Mind spends HP. Do not press it to buy that mana below this ratio.
+_MOTHER_TREE_CONVERT_HP_FLOOR = 0.20
+# Mainland and the world tree share MapSubsystem id 4, so a same-map press
+# cannot prove the landing. A change away from the depart map can.
+_WORLD_TREE_MAP_ID = 4
+_SCRATCH_MAP_CHANGED = "mother_tree_map_changed"
+_SCRATCH_MAP_AT = "mother_tree_map_at"
+_SCRATCH_ZONE = "mother_tree_zone"
+_SCRATCH_WATCH = "mother_tree_regen_watch"
+_SCRATCH_FIELD_REGEN = "field_regen_baseline"
+# Both bars must beat field regen and this floor before an unread buff list
+# counts as the aura. A skill-sized jump is not field regen.
+_REGEN_WINDOW_S = 1.5
+_REGEN_MIN_PER_S = 1.0
+_REGEN_GIVE_UP_S = 8.0
+_PASSIVE_STEP_MAX = 4
+# One sample larger than this is a potion or a heal, not the aura tick.
+_REGEN_STEP_MAX = 12
+_FIELD_REGEN_KEEP_S = 30.0
 
 
 def _emit_return_to_mother_tree(
@@ -579,32 +600,320 @@ def _mother_tree_idle(blackboard: "Blackboard", reason: str) -> Status:
     return Status.SUCCESS
 
 
-def _mother_tree_recast_mp_ok(
+def _mother_tree_recast_need(
     state: "GameState",
     blackboard: "Blackboard",
-) -> bool:
-    """True when current MP can pay another Teleport to Mother."""
-    from app._04_decision.behaviors.mode_actions import current_mp
+) -> int:
+    """MP required before another Teleport to Mother. At least 15."""
     from app._04_decision.spells import spell_mp_cost_for_role
 
-    mp = current_mp(state)
-    if mp is None:
-        return False
     cost = spell_mp_cost_for_role("mother_tree", state, blackboard)
     if cost is None:
         cost = _MOTHER_TREE_RECAST_MP
-    return int(mp) >= int(cost)
+    return max(_MOTHER_TREE_RECAST_MP_FLOOR, int(cost))
+
+
+def _note_field_vitals(
+    state: "GameState",
+    blackboard: "Blackboard",
+    *,
+    now: float | None = None,
+) -> None:
+    """Remember small HP/MP rises while hunting or moving.
+
+    Mother-tree stands are excluded so the aura cannot become the baseline.
+    Jumps larger than a few points are skills or potions and are ignored.
+    """
+    import time
+
+    if blackboard.scratch.get("mother_tree_trip"):
+        return
+    mode = getattr(blackboard, "player_mode", None)
+    if mode not in (
+        PlayerMode.FARMING,
+        PlayerMode.TRAVELING,
+        PlayerMode.WORLD_NAV,
+    ):
+        return
+    player = getattr(state, "player", None)
+    if player is None or player.hp is None or player.mp is None:
+        return
+    hp, mp = int(player.hp), int(player.mp)
+    stamp = time.time() if now is None else float(now)
+    base = blackboard.scratch.get(_SCRATCH_FIELD_REGEN)
+    if not isinstance(base, dict):
+        base = {"samples": [], "hp_per_s": 0.0, "mp_per_s": 0.0}
+        blackboard.scratch[_SCRATCH_FIELD_REGEN] = base
+    samples = base.get("samples")
+    if not isinstance(samples, list):
+        samples = []
+        base["samples"] = samples
+    samples.append((stamp, hp, mp))
+    cutoff = stamp - _FIELD_REGEN_KEEP_S
+    base["samples"] = [row for row in samples if row[0] >= cutoff][-40:]
+    samples = base["samples"]
+    if len(samples) < 2:
+        return
+    t0, h0, m0 = samples[-2]
+    dt = stamp - float(t0)
+    if dt < 0.2 or dt > 4.0:
+        return
+    dhp = hp - int(h0)
+    dmp = mp - int(m0)
+    if 0 < dhp <= _PASSIVE_STEP_MAX:
+        base["hp_per_s"] = max(float(base.get("hp_per_s") or 0.0), dhp / dt)
+    if 0 < dmp <= _PASSIVE_STEP_MAX:
+        base["mp_per_s"] = max(float(base.get("mp_per_s") or 0.0), dmp / dt)
+
+
+def _depart_map_id(blackboard: "Blackboard") -> int | None:
+    stamp = blackboard.scratch.get("mother_tree_depart_pose")
+    if not isinstance(stamp, dict):
+        return None
+    try:
+        return int(stamp["map_id"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _live_map_id(state: "GameState") -> int | None:
+    from app._04_decision.world_nav.session import live_pose_from_state
+
+    pose = live_pose_from_state(state)
+    if pose is None:
+        return None
+    try:
+        return int(pose.map_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _note_map_change(blackboard: "Blackboard", state: "GameState") -> bool:
+    """True once MapSubsystem mapId has left the depart map."""
+    import time
+
+    from app.bot_log import get_logger
+
+    if blackboard.scratch.get(_SCRATCH_MAP_CHANGED):
+        return True
+    depart = _depart_map_id(blackboard)
+    live = _live_map_id(state)
+    if depart is None or live is None or live == depart:
+        return False
+    blackboard.scratch[_SCRATCH_MAP_CHANGED] = True
+    blackboard.scratch[_SCRATCH_MAP_AT] = time.time()
+    get_logger("hp").info("mother tree map changed %s→%s", depart, live)
+    return True
+
+
+def _same_world_tree_map(state: "GameState", blackboard: "Blackboard") -> bool:
+    """True when this press started on the world-tree map and is still there.
+
+    Map id 4 does not change on a successful Teleport to Mother, so the buff
+    check cannot wait for a change that will not happen.
+    """
+    live = _live_map_id(state)
+    depart = _depart_map_id(blackboard)
+    if live is None or depart is None:
+        return False
+    return int(depart) == _WORLD_TREE_MAP_ID and int(live) == _WORLD_TREE_MAP_ID
+
+
+def _field_regen_rates(blackboard: "Blackboard") -> tuple[float, float]:
+    base = blackboard.scratch.get(_SCRATCH_FIELD_REGEN)
+    if not isinstance(base, dict):
+        return 0.0, 0.0
+    try:
+        return (
+            float(base.get("hp_per_s") or 0.0),
+            float(base.get("mp_per_s") or 0.0),
+        )
+    except (TypeError, ValueError):
+        return 0.0, 0.0
+
+
+def _regen_faster_than_field(
+    state: "GameState",
+    blackboard: "Blackboard",
+    now: float,
+) -> bool:
+    """True when both bars rise faster than hunt/move, over a short window.
+
+    A bar that is already full does not have to rise. At least one bar must
+    still be climbing, so a flat full pair is not the aura.
+    """
+    player = getattr(state, "player", None)
+    if player is None or player.hp is None or player.mp is None:
+        return False
+    hp, mp = int(player.hp), int(player.mp)
+    watch = blackboard.scratch.get(_SCRATCH_WATCH)
+    if not isinstance(watch, list):
+        watch = []
+        blackboard.scratch[_SCRATCH_WATCH] = watch
+    watch.append((now, hp, mp))
+    cutoff = now - 4.0
+    watch[:] = [row for row in watch if float(row[0]) >= cutoff]
+    if float(watch[-1][0]) - float(watch[0][0]) < _REGEN_WINDOW_S:
+        return False
+    target = now - _REGEN_WINDOW_S
+    old = watch[0]
+    for row in watch:
+        if float(row[0]) <= target:
+            old = row
+        else:
+            break
+    dt = now - float(old[0])
+    if dt <= 0:
+        return False
+    dhp = hp - int(old[1])
+    dmp = mp - int(old[2])
+    max_hp = getattr(player, "max_hp", None)
+    max_mp = getattr(player, "max_mp", None)
+    hp_full = max_hp is not None and int(max_hp) > 0 and hp >= int(max_hp) - 1
+    mp_full = max_mp is not None and int(max_mp) > 0 and mp >= int(max_mp) - 1
+    step_cap = _REGEN_STEP_MAX
+    if max_hp is not None and int(max_hp) > 0:
+        step_cap = max(step_cap, int(int(max_hp) * 0.03))
+    prev = old
+    for row in watch:
+        if float(row[0]) <= float(old[0]):
+            continue
+        if int(row[1]) - int(prev[1]) > step_cap:
+            return False
+        if int(row[2]) - int(prev[2]) > step_cap:
+            return False
+        prev = row
+    base_hp, base_mp = _field_regen_rates(blackboard)
+    hp_rate = dhp / dt
+    mp_rate = dmp / dt
+    hp_ok = hp_full or (
+        dhp > 0 and hp_rate >= _REGEN_MIN_PER_S and hp_rate > base_hp
+    )
+    mp_ok = mp_full or (
+        dmp > 0 and mp_rate >= _REGEN_MIN_PER_S and mp_rate > base_mp
+    )
+    rising = (not hp_full and dhp > 0) or (not mp_full and dmp > 0)
+    return bool(hp_ok and mp_ok and rising)
+
+
+def _regen_watch_expired(
+    blackboard: "Blackboard",
+    now: float,
+    cast_at: float | None,
+) -> bool:
+    anchors: list[float] = []
+    if cast_at is not None:
+        anchors.append(cast_at)
+    raw = blackboard.scratch.get(_SCRATCH_MAP_AT)
+    try:
+        if raw is not None:
+            anchors.append(float(raw))
+    except (TypeError, ValueError):
+        pass
+    if not anchors:
+        return False
+    return (now - max(anchors)) >= _REGEN_GIVE_UP_S
+
+
+def _tree_hp_to_mp_enabled() -> bool:
+    """Recovery-tab Body to Mind checkbox, or the party line while it is on."""
+    from app._04_decision import player_mode as pm
+    from app._06_party.recovery import active
+
+    party = active()
+    if party is not None:
+        return bool(party.tree_hp_to_mp)
+    return bool(pm.HP_TO_MP_ENABLED)
+
+
+def _emit_body_to_mind_for_recast(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> Status:
+    """Spend HP for mana so Teleport to Mother can be pressed again.
+
+    Used only after the map has changed and the buff list has no blessing.
+    The recovery HP/MP band does not apply. HP under 20% waits.
+    """
+    from app._04_decision.mode_control import hp_ratio
+    from app._04_decision.spells import (
+        _live_hotbar_snap,
+        hp_to_mp_on_live_hotbar,
+        mark_slot_used,
+        slot_ready,
+    )
+    from app._05_action.spell_box import slot_is_enabled
+
+    if not slot_is_enabled("hp_to_mp") or not _tree_hp_to_mp_enabled():
+        return _mother_tree_idle(blackboard, "waiting for mother tree mp")
+    snap = _live_hotbar_snap(state, blackboard)
+    slots = snap.get("slots") if isinstance(snap, dict) else None
+    if isinstance(slots, list) and slots and not hp_to_mp_on_live_hotbar(
+        state, blackboard
+    ):
+        return _mother_tree_idle(blackboard, "waiting for mother tree mp")
+    ratio = hp_ratio(state)
+    if ratio is None or ratio < _MOTHER_TREE_CONVERT_HP_FLOOR:
+        return _mother_tree_idle(blackboard, "waiting for hp to convert")
+    if not slot_ready(blackboard, "hp_to_mp"):
+        return _mother_tree_idle(blackboard, "waiting for magic cooldown")
+    mark_slot_used(blackboard, "hp_to_mp")
+    blackboard.current_goal = "mother_tree"
+    blackboard.emit(
+        ActionType.HP_TO_MP,
+        priority=0.95,
+        reason="body to mind for mother tree",
+    )
+    return Status.SUCCESS
+
+
+def _recast_mother_tree(
+    state: "GameState",
+    blackboard: "Blackboard",
+    *,
+    allow_convert: bool,
+) -> Status:
+    """Press Teleport to Mother again, or Body to Mind until MP can pay it."""
+    from app._04_decision.behaviors.mode_actions import current_mp
+    from app.bot_log import get_logger
+
+    mp = current_mp(state)
+    if mp is None:
+        return _mother_tree_idle(blackboard, "waiting for mother tree mp")
+    if int(mp) >= _mother_tree_recast_need(state, blackboard):
+        blackboard.scratch.pop(_SCRATCH_WATCH, None)
+        blackboard.scratch.pop(_SCRATCH_ZONE, None)
+        get_logger("hp").info(
+            "mother tree blessing missing, recast teleport to mother"
+        )
+        return _emit_return_to_mother_tree(blackboard, state)
+    if allow_convert:
+        return _emit_body_to_mind_for_recast(state, blackboard)
+    return _mother_tree_idle(blackboard, "waiting for mother tree mp")
+
+
+def _clear_mother_tree_arrival(blackboard: "Blackboard") -> None:
+    for key in (
+        _SCRATCH_MAP_CHANGED,
+        _SCRATCH_MAP_AT,
+        _SCRATCH_ZONE,
+        _SCRATCH_WATCH,
+    ):
+        blackboard.scratch.pop(key, None)
 
 
 def _hold_until_world_tree_blessing(
     state: "GameState",
     blackboard: "Blackboard",
 ) -> Status | None:
-    """Recast Teleport to Mother until 세계수의 가호 is on a settled buff read.
+    """Map change, then blessing. None when this stand should recover in place.
 
-    Arrival is buff-gated (not live xy). None when the aura is up, or the
-    skill can no longer be used, so the caller continues heal / Body to Mind /
-    standing. Low MP waits on this retreat. It does not clear the trip.
+    A changed mapId is the first sign the Teleport to Mother left the hunt.
+    The same map on id 4 still reaches the buff check, because the tree does
+    not change that id. A readable list with 세계수의 가호 recovers here.
+    A readable list without it presses the skill again, and Body to Mind
+    fills MP to 15 first when the map actually changed. An unreadable list
+    recovers only when HP and MP climb faster than hunt or travel.
     """
     import time
 
@@ -612,35 +921,84 @@ def _hold_until_world_tree_blessing(
     from app._04_decision.spells import _memory_buffs_ready, world_tree_blessing_active
     from app.bot_log import get_logger
 
-    if world_tree_blessing_active(state):
-        return None
     if not elf_uses_mother_tree(state, blackboard):
         return None
 
-    cast_at = blackboard.scratch.get(_SCRATCH_MOTHER_TREE_CAST_AT)
+    now = time.time()
+    cast_raw = blackboard.scratch.get(_SCRATCH_MOTHER_TREE_CAST_AT)
     try:
-        cast_at_f = float(cast_at) if cast_at is not None else None
+        cast_at = float(cast_raw) if cast_raw is not None else None
     except (TypeError, ValueError):
-        cast_at_f = None
-    if cast_at_f is None or (time.time() - cast_at_f) < _MOTHER_TREE_BUFF_SETTLE_S:
-        return _mother_tree_idle(blackboard, "waiting for world tree blessing")
+        cast_at = None
+    settled = cast_at is not None and (now - cast_at) >= _MOTHER_TREE_BUFF_SETTLE_S
+    changed = _note_map_change(blackboard, state)
+    at_tree = changed or _same_world_tree_map(state, blackboard)
+
+    # Blessing counts only after the map says this stand has landed.
+    # A stale aura read on the hunt map must not start tree recovery.
+    if at_tree and world_tree_blessing_active(state):
+        blackboard.scratch[_SCRATCH_ZONE] = "blessing"
+        return None
+
+    if not at_tree:
+        if not settled:
+            return _mother_tree_idle(blackboard, "waiting for mother tree map")
+        return _recast_mother_tree(state, blackboard, allow_convert=False)
+
     if not _memory_buffs_ready(state):
+        if _regen_faster_than_field(state, blackboard, now):
+            if blackboard.scratch.get(_SCRATCH_ZONE) != "regen":
+                get_logger("hp").info(
+                    "mother tree regen faster than field, recover in place"
+                )
+            blackboard.scratch[_SCRATCH_ZONE] = "regen"
+            return None
+        if settled and _regen_watch_expired(blackboard, now, cast_at):
+            return _recast_mother_tree(
+                state, blackboard, allow_convert=changed
+            )
+        return _mother_tree_idle(blackboard, "watching mother tree regen")
+
+    if not settled:
         return _mother_tree_idle(blackboard, "waiting for world tree blessing")
-    if not _mother_tree_recast_mp_ok(state, blackboard):
-        return _mother_tree_idle(blackboard, "waiting for mother tree mp")
-    get_logger("hp").info("mother tree blessing missing, recast teleport to mother")
-    return _emit_return_to_mother_tree(blackboard, state)
+    return _recast_mother_tree(state, blackboard, allow_convert=changed)
+
+
+def _mother_tree_landing_confirmed(
+    state: "GameState",
+    blackboard: "Blackboard",
+) -> bool:
+    """True when this stand has left the hunt or the aura is already on.
+
+    A same-map press on map 4 is not enough: that id does not change when
+    Teleport to Mother lands, so the buff or regen watch still has to run.
+    """
+    from app._04_decision.spells import world_tree_blessing_active
+
+    if world_tree_blessing_active(state):
+        return True
+    if blackboard.scratch.get(_SCRATCH_MAP_CHANGED):
+        return True
+    return blackboard.scratch.get(_SCRATCH_ZONE) in ("blessing", "regen")
 
 
 def _tick_mother_tree_retreat(
     state: "GameState",
     blackboard: "Blackboard",
 ) -> Status | None:
-    """Elf Mother Tree: cast, confirm 세계수의 가호, then recharge until HP≥95%.
+    """Elf Mother Tree: cast, confirm the landing, then recharge.
 
-    One press is not arrival. Until HP is high enough to leave, a settled
-    buff read with no blessing presses Teleport to Mother again while MP
-    can pay it. MP below that cost waits. HP≥95% leaves even without the aura.
+    MapId leaving the depart map is the first arrival check. A settled buff
+    read with 세계수의 가호 recovers in place. Without that buff the skill is
+    pressed again, and Body to Mind raises MP to 15 first when the map
+    changed. An unreadable buff list recovers only when HP and MP rise faster
+    than hunt or travel.
+
+    The hunt return starts only when both HP and MP are at least
+    ``HP_ALMOST_FULL_RATIO`` (95%). A missing bar does not count as full.
+    Once HP is already on that line and the landing is confirmed, another
+    Teleport to Mother is not pressed; that cast would spend the MP this
+    stand is waiting to fill.
     """
     stage = blackboard.scratch.get("mother_tree_trip")
     if not stage:
@@ -650,30 +1008,46 @@ def _tick_mother_tree_retreat(
         finish_retreat(blackboard)
         return Status.FAILURE
 
-    from app._04_decision.spells import maybe_hp_to_mp_at_tree
+    from app._04_decision.spells import (
+        maybe_hp_to_mp_at_tree,
+        world_tree_blessing_active,
+    )
     from app._04_decision import player_mode as pm
-    from app._04_decision.mode_control import hp_ratio
+    from app._04_decision.mode_control import hp_ratio, mp_ratio
 
     if stage == "cast":
         from app._04_decision.world_nav.hooks import SCRATCH_MOTHER_TREE_DEPART
 
         # First press of this retreat. A recast must not replace the hunt pose.
         blackboard.scratch.pop(SCRATCH_MOTHER_TREE_DEPART, None)
+        _clear_mother_tree_arrival(blackboard)
         return _emit_return_to_mother_tree(
             blackboard, state, remember_depart=True
         )
 
-    # Recovered HP ends the retreat before another mother-tree press.
-    ratio = hp_ratio(state)
-    if ratio is not None and ratio >= float(pm.HP_ALMOST_FULL_RATIO):
+    leave = float(pm.HP_ALMOST_FULL_RATIO)
+    hp = hp_ratio(state)
+    mp = mp_ratio(state)
+    hp_ready = hp is not None and hp >= leave
+    mp_ready = mp is not None and mp >= leave
+    # Both bars nearly full: start the return before another tree press.
+    if hp_ready and mp_ready:
         finish_retreat(blackboard)
         return Status.FAILURE
 
-    held = _hold_until_world_tree_blessing(state, blackboard)
-    if held is not None:
-        return held
+    # HP is on the return line and the landing is already known. Stay and
+    # fill MP. The hold below would press Teleport to Mother again.
+    if hp_ready:
+        _note_map_change(blackboard, state)
+    if hp_ready and _mother_tree_landing_confirmed(state, blackboard):
+        if world_tree_blessing_active(state):
+            blackboard.scratch[_SCRATCH_ZONE] = "blessing"
+    else:
+        held = _hold_until_world_tree_blessing(state, blackboard)
+        if held is not None:
+            return held
 
-    # Aura is up (or the skill can no longer be used): heal / Body to Mind.
+    # Aura, faster regen, or the skill can no longer be used: heal / Body to Mind.
     healed = maybe_heal_mp_to_hp_at_tree(state, blackboard)
     if healed is not None:
         return healed
@@ -2538,6 +2912,7 @@ def tick_mode(state: "GameState", blackboard: "Blackboard") -> Status:
     """Dispatch GLOBAL column then the sticky PlayerMode column."""
     from app._04_decision.steps import GLOBAL, run_column
 
+    _note_field_vitals(state, blackboard)
     clear_approach_hold_tick(blackboard)
     if hold_fire_outside_hunt(state, blackboard):
         blackboard.scratch[SCRATCH_APPROACH_HOLD_FIRE] = True

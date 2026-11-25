@@ -76,4 +76,6 @@ Seller does **not** need `tpm.msc` steps for Soft-fallback builds; those were fo
 
 After changing `Engine/crypto/device_key.py` (or license UI), run an **incremental release** so portable `.pyd` picks up the Soft-fallback policy before the next customer zip.
 
+Embeddable `python\` must include **`cryptography`** and **`rfc8785`** (`Engine/requirements.txt`). Without them the License window fails with `No module named 'cryptography'` on「요청 파일 만들기」(RBF-011). Stage 3 / python recopy `verify_runtime_imports` checks both.
+
 Pack-only customer builds also need `MANMABOT_CEK_ID` + `MANMABOT_SELLER_DATA` so Stage 5 / incremental keep **both** packs in `BUILD.json` (carry-forward when only one side rebuilds). Confirm with `packaging\verify_stage5.py`. Details: `packaging\RELEASE_PLAYBOOK.md`, `SENSITIVE_ASSETS.md`, `RUNTIME_TEMP.md`, RBF-008…010 in `RELEASE_BUGFIX_LOG.md`.
