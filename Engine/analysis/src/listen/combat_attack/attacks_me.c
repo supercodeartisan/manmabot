@@ -33,10 +33,10 @@ static uint32_t g_modSize;
 static char g_cfg[CFG_CAP];
 static int g_attached;
 
-/* Defaults aligned with print_state / entity_offsets 9.30 */
+/* Defaults match registry v39; settings_attacks_me.json overwrites at runtime. */
 static char g_procName[64] = "LC.exe";
-static uint32_t g_offEntMgr = 0x1668790u;
-static uint32_t g_gridVft = 0x117EAD8u;
+static uint32_t g_offEntMgr = 0x174C460u;
+static uint32_t g_gridVft = 0x1229E78u;
 static uint32_t g_offHolder = 0xD0u;
 static uint32_t g_offSubBeg = 0x180u, g_offSubEnd = 0x188u;
 static uint32_t g_offNodeNext = 0x08u, g_offNodeCx = 0x10u, g_offNodeCy = 0x14u;
@@ -45,24 +45,24 @@ static uint32_t g_offEntSelf = 0x08u;
 static uint32_t g_heads[4] = { 0x798u, 0x7D8u, 0, 0 };
 static int g_nh = 2;
 static uint32_t g_offCompTable = 0x20u;
-static uint32_t g_actVft = 0x1180DF0u;
+static uint32_t g_actVft = 0x122C1A0u;
 static uint32_t g_actIdx = 2u;
-static uint32_t g_attackActVft = 0x1180B78u;
+static uint32_t g_attackActVft = 0x122BF68u;
 static uint32_t g_offAtkOwner = 0x80u, g_offAtkTgt = 0x88u;
 static uint32_t g_offEntGuid = 0x18u;
 static uint32_t g_offCellX = 0x50u, g_offCellY = 0x54u;
 static uint32_t g_offNameH = 0x20u, g_offNameObj = 0x20u;
 static uint32_t g_offNameBytes = 0x40u, g_offNameLen = 0x50u;
-static uint32_t g_vftSelf = 0x11819F0u;
-static uint32_t g_vftPlayer = 0x11819B8u;
-static uint32_t g_vftMonster = 0x11818A8u;
-static uint32_t g_vftSummon = 0x1181E58u;
+static uint32_t g_vftSelf = 0x122CD20u;
+static uint32_t g_vftPlayer = 0x122CD58u;
+static uint32_t g_vftMonster = 0x122CC10u;
+static uint32_t g_vftSummon = 0x122D1B8u;
 static int g_intervalMs = 200;
 static int g_once = 0;
 /* Roster clock already used by print_state (slow_ms=100, resweep after 8 tiles).
  * The decision tick still calls snapshot every time; a fresh driver sweep runs
  * only when that clock says the roster is due. Not dist's 200/50. */
-static uint32_t g_offPlayerX = 0x16EA0F0u, g_offPlayerY = 0x16EA0F4u;
+static uint32_t g_offPlayerX = 0x174C310u, g_offPlayerY = 0x174C314u;
 static int g_rosterMs = 100, g_moveTiles = 8;
 static uint32_t g_actorVecOff = 0x8A8u, g_actorVecEnd = 0x8B0u;
 static uint64_t g_actorCache = 0;

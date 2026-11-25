@@ -44,8 +44,8 @@ Tool_Shopping_Practice_Admin.bat
 **/*~
 
 # --- analysis build sources & debris (keep DLLs / offset data) ---
-# Local registry backups (memory update scratch) — never ship
-Engine/analysis.bak_v37_20261118/
+# Local analysis.bak_* scratch dirs — never ship if recreated
+Engine/analysis.bak_*/
 Engine/analysis/_build/
 # analysis/bin: research CLIs denied in build_release.ANALYSIS_BIN_KEEP
 # (ships only realtime_monitor_full.exe + inventory_listen.exe)

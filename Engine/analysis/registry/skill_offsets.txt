@@ -7,14 +7,15 @@
 #   walk from header+N_PARENT (root); nil links == header
 #   SSO uses V_CAP (_Myres@+0x48), not string length
 
-MGR=0x172A840
+MGR=0x174C460
 HOLDER_OFF=0xD0
 SUBLIST_BEG=0x180
 SUBLIST_END=0x188
 HSD_IDX=30
-HSD_ADJ=0xD8
+# v39: HudSlot map container +0xC0 (registry HSD_MAP_OFF 0xD8→0x198).
+HSD_ADJ=0x198
 HSD_VFT=11E2400
-HSD_VFT2=1212068
+HSD_VFT2=122E120
 MAP_HEAD=0x08
 MAP_SIZE=0x10
 N_L=0x00

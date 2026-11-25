@@ -103,64 +103,64 @@ static int lc_attach(void)
 }
 
 /* ── 2. constants (vft RVAs refreshed 2026-10-07 via RTTI; live-verified) ── */
-#define VFT_SELF       0x1210B90u
-#define VFT_PLAYER       0x1210BC8u
-#define VFT_MONSTER       0x1210A80u
-#define VFT_SUMMON       0x1211028u
-#define VFT_ITEM       0x12109D8u
-#define VFT_NPC       0x12109A0u
-#define VFT_SEGPROP       0x1210F30u
-#define VFT_ACTOR       0x120CE98u
-#define VFT_PRES_B       0x12108D8u   /* TransformComponent (PRES_B)          */
-#define VFT_AC       0x1210010u   /* ActionComponent                      */
+#define VFT_SELF       0x122CD20u
+#define VFT_PLAYER       0x122CD58u
+#define VFT_MONSTER       0x122CC10u
+#define VFT_SUMMON       0x122D1B8u
+#define VFT_ITEM       0x122CB68u
+#define VFT_NPC       0x122CB30u
+#define VFT_SEGPROP       0x122D0C0u
+#define VFT_ACTOR       0x1229148u
+#define VFT_PRES_B       0x122CA68u   /* TransformComponent (PRES_B)          */
+#define VFT_AC       0x122C1A0u   /* ActionComponent                      */
 /* ActionComponent state fields (RESULTS_T2 sec14 / 9.30 entity.c isDead) */
 #define AC_DEAD_OFF   0x49u        /* byte  : 1 = dead/corpse              */
 #define AC_DEAD_VAL   1
 #define AC_BAIT_OFF   0x40u        /* dword : 0x78 = bait(dormant, not shown) */
 #define AC_BAIT_VAL   0x78u
-#define VFT_ATTACKACT       0x120FD50u   /* AttackAction  +0x80 owner +0x88 target */
-#define VFT_DEATH       0x120FCC0u
-#define VFT_DEADBODY       0x120FA38u
-#define VFT_MOVINGACT       0x120FEC8u
-#define VFT_MOVINGBACK       0x120FE80u
-#define VFT_ACTIONBASE       0x120FE28u
-#define VFT_SPELLACT       0x120FC78u
-#define VFT_CHANGEDIR       0x120FA80u
-#define VFT_CMDMOVE       0x1210190u
-#define VFT_CMDATTACK       0x1210318u
-#define VFT_CMDINTERACT       0x1210158u
-#define VFT_BREATHACT       0x120FD98u
-#define VFT_MAPSUBSYS  0x1233630u   /* MapSubsystem   (live-verified)        */
-#define VFT_ACTORSUBS       0x120DCD8u   /* ActorSubsystem (live-verified)        */
-#define VFT_BEHAVIORS       0x12123C8u   /* BehaviorSubsystem                    */
+#define VFT_ATTACKACT       0x122BF68u   /* AttackAction  +0x80 owner +0x88 target */
+#define VFT_DEATH       0x122BED8u
+#define VFT_DEADBODY       0x122BBC0u
+#define VFT_MOVINGACT       0x122C050u
+#define VFT_MOVINGBACK       0x122C008u
+#define VFT_ACTIONBASE       0x122BFB0u
+#define VFT_SPELLACT       0x122BE90u
+#define VFT_CHANGEDIR       0x122BC98u
+#define VFT_CMDMOVE       0x122C2E8u
+#define VFT_CMDATTACK       0x122C4A8u
+#define VFT_CMDINTERACT       0x122C320u
+#define VFT_BREATHACT       0x122BDB8u
+#define VFT_MAPSUBSYS  0x12759B8u   /* MapSubsystem   (registry v39)         */
+#define VFT_ACTORSUBS       0x1229E78u   /* ActorSubsystem (live-verified)        */
+#define VFT_BEHAVIORS       0x122E4E0u   /* BehaviorSubsystem                    */
 #define VFT_CTLCOMP   0x11C1828u   /* ActorControllerComponent             */
-#define VFT_SHIP       0x1210E88u   /* Ship   (RTTI-indexed, +0x30)          */
+#define VFT_SHIP       0x122D018u   /* Ship   (RTTI-indexed, +0x30)          */
 
 /* ---- subsystems resolved OFFLINE by class-name lookup (delta_930.py) ----
  * These sit in the sub[64] array and are found by lc_subsGet(vft).  They are
  * RTTI-indexed in the 9.30 build (62 subsystems total), so the deltas below
  * are exact and were NOT guessed.  Regenerate on the next build with
  * T3_maps/delta_930.py -- game access is not required.                */
-#define VFT_CHARDATA       0x1214690u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
-#define VFT_INVENTORY       0x1257B50u   /* InventorySubsystem   sub[26]  (-0x370) */
-#define VFT_HUDSLOT       0x1212068u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
-#define VFT_ITEMENT   0x1207430u   /* ItemEntity    (live-verified, no RTTI)  */
-#define VFT_SHOP       0x125B028u   /* ShopSubsystem             sub[36] (+0x88)  */
-#define VFT_PLAYERSHOP       0x125ADF0u  /* PlayerShopSubsystem               (+0x? ) */
-#define VFT_BUYITEM   0x121F740u   /* BuyListItem record           (+0x558)  */
-#define VFT_SELLITEM  0x121F7A8u   /* SellListItem record          (+0x558)  */
-#define VFT_EQUIPINFO       0x1257618u   /* EquipmentInfoSubsystem  (UI foothold)   */
-#define VFT_DUNGEON       0x1256AD8u   /* DungeonSubsystem   (portal/dungeon)     */
-#define VFT_SPELL       0x125C3B8u   /* SpellSubsystem                            */
-#define VFT_STORAGE       0x125C740u   /* StorageSubsystem                           */
-#define VFT_BUFF       0x124C668u   /* BuffSubsystem                              */
-#define VFT_MAIL       0x1211F88u   /* MailSubsystem                              */
-#define VFT_CAMERA       0x121AAF0u   /* CameraSubsystem                            */
-#define VFT_INPUT       0x1212148u   /* InputSubsystem                             */
-#define VFT_GAMESTATE       0x1212518u   /* GameStateSubsystem                         */
-#define VFT_NETWORK       0x1229D20u   /* NetworkSubsystem                           */
-#define VFT_CHAT       0x124CC00u   /* ChatSubsystem                              */
-#define VFT_PORTALACT       0x1218758u   /* PortalInteraction (portal track)           */
+#define VFT_CHARDATA       0x12308D8u   /* CharacterDataSubsystem sub[12]  (+0xA0) */
+#define VFT_INVENTORY       0x1274318u   /* InventorySubsystem   sub[26]  (-0x370) */
+#define VFT_HUDSLOT       0x122E120u   /* HudSlotDataSubsystem sub[30]  (+0x78)  */
+#define VFT_ITEMENT   0x1273B80u   /* ItemEntity / ITEM_VFT (registry v39)    */
+#define VFT_SHOP       0x1277740u   /* ShopSubsystem             sub[36] (+0x88)  */
+#define VFT_PLAYERSHOP       0x12773A8u  /* PlayerShopSubsystem               (+0x? ) */
+#define VFT_BUYITEM   0x1287F28u   /* BuyListItem = BUYLISTITEM_VFT (v39)     */
+#define VFT_SELLITEM  0x1287F90u   /* SellListItem = SELLLISTITEM_VFT (v39)   */
+#define VFT_EQUIPINFO       0x1273A20u   /* EquipmentInfoSubsystem  (UI foothold)   */
+#define VFT_DUNGEON       0x1273108u   /* DungeonSubsystem   (portal/dungeon)     */
+#define VFT_SPELL       0x12789C8u   /* SpellSubsystem                            */
+#define VFT_STORAGE       0x1278CC0u   /* StorageSubsystem                           */
+#define VFT_BUFF       0x1268A20u   /* BuffSubsystem                              */
+#define VFT_MAIL       0x122E430u   /* MailSubsystem                              */
+#define VFT_CAMERA       0x1236D50u   /* CameraSubsystem                            */
+#define VFT_INPUT       0x122E090u   /* InputSubsystem                             */
+#define VFT_GAMESTATE       0x122E210u   /* GameStateSubsystem                         */
+#define VFT_NETWORK       0x1246040u   /* NetworkSubsystem                           */
+#define VFT_CHAT       0x1269220u   /* ChatSubsystem                              */
+#define VFT_PORTALACT       0x1234908u   /* PortalInteraction (portal track)           */
 
 /* enttrack / etview geometry */
 #define LC_MGR    0x16BBAE0u
@@ -582,11 +582,43 @@ static uint64_t lc_subsGet(uint32_t wantVft)
         int i = lc_subsCursor++;
         uint64_t s = q64(lc_subs + (uint64_t)LC_SUB_STRIDE_V * i);
         if (!isHeap(s)) continue;
-        uint32_t v1 = vrva(s), v2 = vrva(s + 8);
+        /* vft 두 개를 16B 1콜로 읽는다(구: q64 2콜) → 스캔 비용 1/3 절감 */
+        uint8_t vb[16]; uint32_t got = 0;
+        uint32_t v1 = 0, v2 = 0;
+        if (rm(s, vb, sizeof vb)) {
+            uint64_t a, bb; memcpy(&a, vb, 8); memcpy(&bb, vb + 8, 8);
+            if (isMod(a)) v1 = (uint32_t)(a - g_base);
+            if (isMod(bb)) v2 = (uint32_t)(bb - g_base);
+        }
+        (void)got;
         lc_subsCacheAdd(v1, s); if (v2 != v1) lc_subsCacheAdd(v2, s);
         if (v1 == wantVft || v2 == wantVft) return s;
     }
     return 0;
+}
+/* 26.11.25: 서브시스템 인덱스 힌트. 인덱스는 빌드마다 바뀔 수 있으므로
+ * **vft 검증을 통과할 때만** 채택하고, 실패하면 기존 스캔으로 폴백한다.
+ * 목적: 1회성 실행에서 서브시스템 벡터를 처음부터 훑는 IOCTL(최대 64) 제거. */
+static uint64_t lc_subsGetHint(uint32_t wantVft, uint32_t idx)
+{
+    for (int c = 0; c < lc_subsCacheN; c++)
+        if (lc_subsCacheV[c] == wantVft && isHeap(lc_subsCacheP[c])) return lc_subsCacheP[c];
+    if (lc_subs && idx < LC_SUBCOUNT_V) {
+        uint64_t s = q64(lc_subs + (uint64_t)LC_SUB_STRIDE_V * idx);
+        if (isHeap(s)) {
+            uint8_t vb[16]; uint32_t v1 = 0, v2 = 0;
+            if (rm(s, vb, sizeof vb)) {
+                uint64_t a, bb; memcpy(&a, vb, 8); memcpy(&bb, vb + 8, 8);
+                if (isMod(a)) v1 = (uint32_t)(a - g_base);
+                if (isMod(bb)) v2 = (uint32_t)(bb - g_base);
+            }
+            if (v1 == wantVft || v2 == wantVft) {
+                lc_subsCacheAdd(v1, s); if (v2 != v1) lc_subsCacheAdd(v2, s);
+                return s;
+            }
+        }
+    }
+    return lc_subsGet(wantVft);
 }
 static int lc_anchor(void)
 {
