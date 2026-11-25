@@ -1,5 +1,13 @@
 # Decision change log
 
+## 2026-11-25 — Customer rerelease (analysis v39 + body_pose, same CEK)
+
+Intent: Ship updated `Engine/analysis` registry/DLLs and `body_pose.py` into pack-only portable without rotating CEK.
+Shared: `incremental_release` (build CPython) + MMB2 `analysis_text.pack` rebuild + `data.pack` carry-forward + `verify_stage5` + Stage4. Packaging harden: skip unreadable shippable/checksum files (Defender PUA on `signeddrv.sys`). Restored `signeddrv.sys` after Defender quarantine; added local Defender path exclusions for SignedDriver.
+Affects: customer portable packs / `.pyd`; no login/move/combat/HP decision edits.
+Consent: user approved plan (“yes”).
+Result: `build_id` `01c5bf06-…`, CEK `4d6dcda5-…`, analysis_text 36 files, `verify_stage5` OK, Stage4 OK (checksums include `signeddrv.sys`), portable `cryptography`/`rfc8785` OK, no plaintext analysis dll/csv.
+
 ## 2026-11-25 — remaining v39 memory leftover sync (P0–P5)
 
 Intent: Finish memory-offset leftovers after the selective v39 overlay pass — attacks/contested player XY, shop/ItemEntity defaults, ghost absolute bases, fallback constants, map-id rule.

@@ -383,6 +383,7 @@ def write_checksums(*, dry_run: bool) -> Path | None:
     out = CHECKSUMS_DIR / "SHA256SUMS"
     lines: list[str] = []
     count = 0
+    skipped = 0
     for path in sorted(PORTABLE_DIR.rglob("*")):
         if not path.is_file():
             continue
@@ -390,8 +391,16 @@ def write_checksums(*, dry_run: bool) -> Path | None:
         # Avoid hashing the checksum file itself (rewritten below).
         if rel in {"SHA256SUMS.txt", "SHA256SUMS"}:
             continue
-        lines.append(f"{sha256_file(path)}  {rel}")
+        try:
+            digest = sha256_file(path)
+        except OSError as exc:
+            skipped += 1
+            print(f"  WARNING: checksum skip unreadable {rel}: {exc}")
+            continue
+        lines.append(f"{digest}  {rel}")
         count += 1
+    if skipped:
+        print(f"  checksum skipped unreadable files: {skipped}")
     body = "\n".join(lines) + ("\n" if lines else "")
     out.write_text(body, encoding="utf-8")
     # Customer-facing copy inside the portable folder.
