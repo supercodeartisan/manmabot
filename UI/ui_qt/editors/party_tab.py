@@ -1935,6 +1935,11 @@ class PartyTab(QWidget):
         self.bag.set("party", "leader_host", str(text or "").strip())
         self._refresh_member_summary()
 
+    def _nearby_hint_hosts(self) -> list[str]:
+        """Saved boss IP — UDP unicast still uses the LAN route under VPN."""
+        host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
+        return [host] if host else []
+
     def _start_nearby_browser(self) -> None:
         if getattr(self, "_nearby_browser", None) is not None:
             return
@@ -1942,7 +1947,7 @@ class PartyTab(QWidget):
             self._ensure_engine_path()
             from websocket.lan_discover import LanBrowser
 
-            browser = LanBrowser()
+            browser = LanBrowser(hint_hosts=self._nearby_hint_hosts())
             browser.start()
             self._nearby_browser = browser
             self._nearby_timer = QTimer(self)
@@ -1966,8 +1971,10 @@ class PartyTab(QWidget):
         if browser is None:
             return
         try:
+            hints = self._nearby_hint_hosts()
+            browser.set_hint_hosts(hints)
             browser.clear()
-            browser.probe_once(timeout_s=1.0)
+            browser.probe_once(timeout_s=1.2, extra_hosts=hints)
         except Exception:
             pass
         self._refresh_nearby_list()

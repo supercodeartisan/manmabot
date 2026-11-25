@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import select as select_mod
 import socket
 import threading
 import time
@@ -62,6 +63,119 @@ def _unpack(raw: bytes) -> Optional[dict[str, Any]]:
     except Exception:
         return None
     return body if isinstance(body, dict) else None
+
+
+def _ipv4_int(ip: str) -> Optional[int]:
+    parts = str(ip or "").strip().split(".")
+    if len(parts) != 4:
+        return None
+    try:
+        nums = [int(p) for p in parts]
+    except ValueError:
+        return None
+    if any(n < 0 or n > 255 for n in nums):
+        return None
+    return (nums[0] << 24) | (nums[1] << 16) | (nums[2] << 8) | nums[3]
+
+
+def _int_ipv4(value: int) -> str:
+    return ".".join(str((int(value) >> shift) & 255) for shift in (24, 16, 8, 0))
+
+
+def _is_rfc1918_ip(ip: str) -> bool:
+    parts = str(ip or "").strip().split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        a, b = int(parts[0]), int(parts[1])
+    except ValueError:
+        return False
+    if a == 10:
+        return True
+    if a == 192 and b == 168:
+        return True
+    return a == 172 and 16 <= b <= 31
+
+
+def _adapter_is_overlay(name: str) -> bool:
+    """VPN / virt adapters — limited broadcast often leaves through these."""
+    text = str(name or "").casefold()
+    markers = (
+        "vpn",
+        "sstap",
+        "tap-windows",
+        "tap ",
+        "tun",
+        "wireguard",
+        "wintun",
+        "openvpn",
+        "astrill",
+        "nord",
+        "expressvpn",
+        "surfshark",
+        "mullvad",
+        "proton",
+        "hamachi",
+        "zerotier",
+        "tailscale",
+        "vmware",
+        "virtualbox",
+        "vbox",
+        "hyper-v",
+        "vethernet",
+        "wsl",
+        "docker",
+        "bluetooth",
+        "loopback",
+    )
+    return any(m in text for m in markers)
+
+
+def directed_broadcast(ip: str, netmask: str) -> Optional[str]:
+    """``ip | ~mask`` for IPv4, or None when inputs are invalid."""
+    ip_i = _ipv4_int(ip)
+    mask_i = _ipv4_int(netmask)
+    if ip_i is None or mask_i is None:
+        return None
+    return _int_ipv4(ip_i | (~mask_i & 0xFFFFFFFF))
+
+
+def lan_iface_broadcasts() -> list[tuple[str, str]]:
+    """``(bind_ip, directed_broadcast)`` for up RFC1918 NICs (VPN skipped)."""
+    rows: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    try:
+        import psutil
+
+        stats = psutil.net_if_stats()
+        for name, addrs in psutil.net_if_addrs().items():
+            if _adapter_is_overlay(name):
+                continue
+            st = stats.get(name)
+            if st is not None and not bool(getattr(st, "isup", True)):
+                continue
+            for addr in addrs:
+                if getattr(addr, "family", None) != socket.AF_INET:
+                    continue
+                ip = str(getattr(addr, "address", "") or "").strip()
+                if (
+                    not ip
+                    or ip in seen
+                    or ip.startswith("127.")
+                    or not _is_rfc1918_ip(ip)
+                ):
+                    continue
+                mask = str(getattr(addr, "netmask", "") or "").strip()
+                bcast = str(getattr(addr, "broadcast", "") or "").strip()
+                if not bcast and mask:
+                    bcast = directed_broadcast(ip, mask) or ""
+                if not bcast:
+                    continue
+                seen.add(ip)
+                rows.append((ip, bcast))
+    except Exception as exc:
+        _log.debug("party lan iface enum failed: %s", exc)
+    return rows
 
 
 def announce_body(
@@ -265,6 +379,7 @@ class LanBrowser:
         expire_s: float = DEFAULT_EXPIRE_S,
         interval_s: float = DEFAULT_BROWSE_INTERVAL_S,
         clock: Callable[[], float] = time.monotonic,
+        hint_hosts: Optional[list[str]] = None,
     ) -> None:
         self.port = int(port)
         self.expire_s = float(expire_s)
@@ -274,6 +389,30 @@ class LanBrowser:
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
         self._rows: dict[str, DiscoveredLeader] = {}
+        self._hint_hosts: list[str] = []
+        if hint_hosts:
+            self.set_hint_hosts(hint_hosts)
+
+    def set_hint_hosts(self, hosts: Optional[list[str]]) -> None:
+        """Unicast discover to known IPs (saved ``leader_host``). Survives VPN."""
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for raw in hosts or []:
+            host = str(raw or "").strip()
+            if (
+                not host
+                or host in seen
+                or host in ("0.0.0.0", "<broadcast>", "255.255.255.255")
+            ):
+                continue
+            seen.add(host)
+            cleaned.append(host)
+        with self._lock:
+            self._hint_hosts = cleaned
+
+    def hint_hosts(self) -> list[str]:
+        with self._lock:
+            return list(self._hint_hosts)
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -338,35 +477,110 @@ class LanBrowser:
                 seen_at=self._clock(),
             )
 
-    def probe_once(self, timeout_s: float = 0.8) -> list[dict[str, Any]]:
-        """One broadcast round for tests / sync callers."""
-        req = _pack({"type": DISCOVER_TYPE, "magic": MAGIC, "v": PROTOCOL_V})
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.settimeout(max(0.1, float(timeout_s)))
-            sock.bind(("0.0.0.0", 0))
-            for target in (("<broadcast>", self.port), ("255.255.255.255", self.port)):
-                try:
-                    sock.sendto(req, target)
-                except OSError:
-                    continue
-            deadline = time.time() + max(0.1, float(timeout_s))
-            while time.time() < deadline:
-                try:
-                    raw, addr = sock.recvfrom(2048)
-                except socket.timeout:
-                    break
-                except OSError:
-                    break
-                parsed = parse_announce(_unpack(raw), source_ip=str(addr[0]))
-                if parsed is not None:
-                    self._note(parsed)
-        finally:
+    def _open_probe_sockets(
+        self, req: bytes, *, extra_hosts: Optional[list[str]] = None
+    ) -> list[socket.socket]:
+        """Open sockets that already sent a discover; caller listens on them.
+
+        Bind each LAN NIC to its own IP then send directed broadcast so the
+        packet leaves Ethernet (not Astrill/VPN default route). Also unicast
+        saved boss IPs — Windows routes ``192.168.9.x`` via LAN like TCP.
+        """
+        socks: list[socket.socket] = []
+        port = int(self.port)
+
+        def _keep(sock: socket.socket) -> None:
+            socks.append(sock)
+
+        def _fail(sock: socket.socket) -> None:
             try:
                 sock.close()
             except Exception:
                 pass
+
+        for bind_ip, bcast in lan_iface_broadcasts():
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.bind((bind_ip, 0))
+                sock.sendto(req, (bcast, port))
+                sock.setblocking(False)
+                _keep(sock)
+            except OSError:
+                _fail(sock)
+
+        hints = list(extra_hosts or [])
+        hints.extend(self.hint_hosts())
+        seen: set[str] = set()
+        for host in hints:
+            host = str(host or "").strip()
+            if not host or host in seen:
+                continue
+            seen.add(host)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.bind(("0.0.0.0", 0))
+                sock.sendto(req, (host, port))
+                sock.setblocking(False)
+                _keep(sock)
+            except OSError:
+                _fail(sock)
+
+        if not socks:
+            # Last resort (no LAN NIC found): limited broadcast may still work
+            # on single-homed machines without VPN.
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.bind(("0.0.0.0", 0))
+                for dest in ("255.255.255.255", "<broadcast>"):
+                    try:
+                        sock.sendto(req, (dest, port))
+                    except OSError:
+                        continue
+                sock.setblocking(False)
+                _keep(sock)
+            except OSError:
+                _fail(sock)
+        return socks
+
+    def probe_once(
+        self,
+        timeout_s: float = 0.8,
+        *,
+        extra_hosts: Optional[list[str]] = None,
+    ) -> list[dict[str, Any]]:
+        """One browse round: per-NIC directed broadcast + optional unicast."""
+        req = _pack({"type": DISCOVER_TYPE, "magic": MAGIC, "v": PROTOCOL_V})
+        socks = self._open_probe_sockets(req, extra_hosts=extra_hosts)
+        if not socks:
+            return self.snapshot()
+        deadline = time.time() + max(0.1, float(timeout_s))
+        try:
+            while time.time() < deadline:
+                remaining = max(0.0, deadline - time.time())
+                if remaining <= 0:
+                    break
+                try:
+                    readable, _, _ = select_mod.select(socks, [], [], min(0.25, remaining))
+                except (OSError, ValueError):
+                    break
+                if not readable:
+                    continue
+                for sock in readable:
+                    try:
+                        raw, addr = sock.recvfrom(2048)
+                    except (BlockingIOError, InterruptedError, OSError):
+                        continue
+                    parsed = parse_announce(_unpack(raw), source_ip=str(addr[0]))
+                    if parsed is not None:
+                        self._note(parsed)
+        finally:
+            for sock in socks:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
         return self.snapshot()
 
     def _run(self) -> None:
@@ -424,7 +638,9 @@ __all__ = [
     "MAGIC",
     "PROTOCOL_V",
     "announce_body",
+    "directed_broadcast",
     "ensure_leader_id",
+    "lan_iface_broadcasts",
     "new_leader_id",
     "parse_announce",
     "resolve_leader_endpoint",

@@ -9,6 +9,7 @@ from websocket.lan_discover import (
     LanAnnouncer,
     LanBrowser,
     announce_body,
+    directed_broadcast,
     ensure_leader_id,
     parse_announce,
 )
@@ -44,6 +45,11 @@ def test_ensure_leader_id_is_stable_on_profile() -> None:
     assert first and first == second == profile.party_leader_id
 
 
+def test_directed_broadcast_uses_subnet_mask() -> None:
+    assert directed_broadcast("192.168.9.26", "255.255.255.0") == "192.168.9.255"
+    assert directed_broadcast("10.0.0.5", "255.255.0.0") == "10.0.255.255"
+
+
 def test_lan_announcer_answers_browser_probe() -> None:
     announcer = LanAnnouncer(
         leader_id="leader-fixed",
@@ -61,6 +67,26 @@ def test_lan_announcer_answers_browser_probe() -> None:
         assert hit["ws_port"] == 9876
         assert hit["name"] == "Alpha"
         assert hit["ready"] is True
+    finally:
+        announcer.stop(timeout=1.0)
+        browser.stop(timeout=0.5)
+
+
+def test_lan_announcer_answers_unicast_hint_host() -> None:
+    announcer = LanAnnouncer(
+        leader_id="leader-hint",
+        ws_port=9877,
+        name="Hinted",
+        session_id="s2",
+        ready=True,
+    )
+    browser = LanBrowser(hint_hosts=["127.0.0.1"])
+    try:
+        announcer.start()
+        rows = browser.probe_once(timeout_s=1.5, extra_hosts=["127.0.0.1"])
+        hit = next((r for r in rows if r.get("leader_id") == "leader-hint"), None)
+        assert hit is not None
+        assert hit["ws_port"] == 9877
     finally:
         announcer.stop(timeout=1.0)
         browser.stop(timeout=0.5)

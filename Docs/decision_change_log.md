@@ -18,6 +18,14 @@ Affects: leader Start on Windows only (best-effort; requires elevation already u
 Consent: user (boss PC should auto-allow UDP firewall when party mode starts).
 Result: `test_win_firewall.py` unit coverage added. Live two-PC browse not re-run in this session.
 
+## 2026-11-25 — LAN browse binds real NIC (VPN-safe directed broadcast + host unicast)
+
+Intent: Nearby party refresh failed while Astrill VPN was up because limited `255.255.255.255` left via the VPN default route. Browse now binds each RFC1918 NIC (skip VPN/virt), sends directed subnet broadcast, and unicasts saved `leader_host` (same LAN route TCP already uses).
+Shared: `websocket.lan_discover.lan_iface_broadcasts` / `LanBrowser.probe_once` / `set_hint_hosts`, `party_tab` nearby rescan hints. Login, retreat, combat radii unchanged.
+Affects: member **다시 검색** under multi-homed/VPN PCs. Manual IP connect unchanged.
+Consent: user (ask whether UDP can leave on LAN exactly; implement that path).
+Result: `test_lan_discover_join.py` updated (directed broadcast + unicast hint). Live VPN browse not re-run in this session.
+
 ## 2026-11-22 — farm idle does not clear march; loot beats march in the settle window
 
 Intent: A leader idle note such as `window has no safe click` is not a member decision. Without a travel guide it must not send `make_way`, and an active `formation_path` must not clear on ordinary idle (loot / fight stand / blocked click). Only retreat or a closed rally cancels the shared path. After party combat pressure drops (local assist/approach **or** the leader losing its target), the post-fight loot window opens even if that seat never assisted. While the window is open, `march go` yields to loot and does not release the window; outside the window, ordinary loot still stops when the hop is due.
