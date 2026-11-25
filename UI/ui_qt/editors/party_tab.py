@@ -295,38 +295,8 @@ class PartyTab(QWidget):
         pick_row.addWidget(self.nearby_connect_btn)
         pick_row.addStretch(1)
         ws_lay.addLayout(pick_row)
-
-        host_row = QHBoxLayout()
-        host_row.addWidget(QLabel(self._tx("party_ui_leader_ip", "파티장 IP")))
-        self.leader_host = QLineEdit(
-            str(self.bag.get_str("party", "leader_host", "") or "")
-        )
-        self.leader_host.setPlaceholderText("10.0.0.2")
-        self.leader_host.textChanged.connect(self._on_leader_host_changed)
-        host_row.addWidget(self.leader_host, stretch=1)
-        ws_lay.addLayout(host_row)
-        self.member_ws_port = add_spin_row(
-            ws_lay,
-            self.bag,
-            "party",
-            "ws_port",
-            self._tx("party_ui_port", "포트"),
-            8765,
-            1,
-            65535,
-            on_change=self._refresh_member_summary,
-        )
-        test_row = QHBoxLayout()
-        self.ws_test_btn = QPushButton(self._tx("party_ui_test", "연결 테스트"))
-        self.ws_test_btn.clicked.connect(self._test_ws_connection)
-        test_row.addWidget(self.ws_test_btn)
-        self.ws_status = QLabel(self._tx("party_ui_status_untested", "연결 상태: 아직 테스트하지 않음"))
-        self.ws_status.setWordWrap(True)
-        test_row.addWidget(self.ws_status, stretch=1)
-        ws_lay.addLayout(test_row)
-        self.leader_info = QLabel("")
-        self.leader_info.setWordWrap(True)
-        ws_lay.addWidget(self.leader_info)
+        # Host/port live only in the bag after 「이 리더 선택」. No manual IP
+        # or connection-test controls on the member page.
         self._nearby_browser = None
         self._nearby_rows = []
         lay.addStretch(1)
@@ -601,10 +571,14 @@ class PartyTab(QWidget):
         lay.addWidget(box)
         inner = box.layout()
         assert isinstance(inner, QVBoxLayout)
-        self.status_connection = QLabel(self._tx("party_ui_status_untested", "연결 상태: 아직 테스트하지 않음"))
+        self.status_connection = QLabel(
+            self._tx("party_ui_leader_unselected", "선택한 리더: 없음")
+        )
         self.status_connection.setWordWrap(True)
         inner.addWidget(self.status_connection)
-        self.status_leader = QLabel(self._tx("party_ui_leader_unknown", "파티장 상태: 미입력"))
+        self.status_leader = QLabel(
+            self._tx("party_ui_leader_unknown", "파티장 상태: 미선택")
+        )
         self.status_leader.setWordWrap(True)
         inner.addWidget(self.status_leader)
         lay.addStretch(1)
@@ -1931,10 +1905,6 @@ class PartyTab(QWidget):
         layout.addLayout(row)
         return field
 
-    def _on_leader_host_changed(self, text: str) -> None:
-        self.bag.set("party", "leader_host", str(text or "").strip())
-        self._refresh_member_summary()
-
     def _nearby_hint_hosts(self) -> list[str]:
         """Saved boss IP — UDP unicast still uses the LAN route under VPN."""
         host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
@@ -2008,7 +1978,7 @@ class PartyTab(QWidget):
                 self.nearby_detail.setText(
                     self._tx(
                         "party_ui_nearby_empty",
-                        "응답 없음. 다시 검색하거나 IP·포트를 직접 입력하세요.",
+                        "응답 없음. 파티장이 Start 중인지 확인한 뒤 다시 검색하세요.",
                     )
                 )
         self._on_nearby_selected()
@@ -2059,14 +2029,6 @@ class PartyTab(QWidget):
         self.bag.set("party", "ws_port", port)
         self.bag.set("party", "selected_leader_id", leader_id)
         self.bag.set("party", "join_hold", "")
-        if hasattr(self, "leader_host"):
-            self.leader_host.blockSignals(True)
-            self.leader_host.setText(host)
-            self.leader_host.blockSignals(False)
-        if hasattr(self, "member_ws_port"):
-            self.member_ws_port.blockSignals(True)
-            self.member_ws_port.setValue(port)
-            self.member_ws_port.blockSignals(False)
         self._refresh_member_summary()
         if hasattr(self, "nearby_detail"):
             self.nearby_detail.setText(
@@ -2087,21 +2049,27 @@ class PartyTab(QWidget):
 
     def _refresh_member_summary(self) -> None:
         host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
-        port = self._ws_port() if hasattr(self, "member_ws_port") else 8765
-        shown = host or self._tx("party_ui_blank", "미입력")
-        info = self._tx(
-            "party_ui_leader_info", "파티장 정보: {shown} · 포트 {port}"
-        ).format(shown=shown, port=port)
-        if hasattr(self, "leader_info"):
-            self.leader_info.setText(info)
+        port = self._ws_port()
+        lid = str(self.bag.get_str("party", "selected_leader_id", "") or "").strip()
+        if host:
+            shown = f"{host}:{port}"
+            selected = self._tx(
+                "party_ui_leader_selected",
+                "선택한 리더: {shown}",
+            ).format(shown=shown)
+            if lid:
+                selected = f"{selected} · id {lid[:8]}…"
+        else:
+            shown = self._tx("party_ui_blank", "미선택")
+            selected = self._tx("party_ui_leader_unselected", "선택한 리더: 없음")
+        if hasattr(self, "status_connection"):
+            self.status_connection.setText(selected)
         if hasattr(self, "status_leader"):
             self.status_leader.setText(
                 self._tx(
-                    "party_ui_leader_state", "파티장 상태: {shown} · 포트 {port}"
-                ).format(shown=shown, port=port)
+                    "party_ui_leader_state", "파티장 상태: {shown}"
+                ).format(shown=shown)
             )
-        if hasattr(self, "status_connection") and hasattr(self, "ws_status"):
-            self.status_connection.setText(self.ws_status.text())
         self._refresh_personal_summary()
 
     def _refresh_personal_summary(self) -> None:
@@ -2192,19 +2160,9 @@ class PartyTab(QWidget):
             daemon=True,
         ).start()
 
-    def _test_ws_connection(self) -> None:
-        """Member page: probe the configured leader host (no member Start needed)."""
-        host = str(self.bag.get_str("party", "leader_host", "") or "").strip()
-        buttons = [self.ws_test_btn]
-        if hasattr(self, "ws_local_btn"):
-            buttons.extend([self.ws_local_btn, self.ws_lan_btn])
-        self._begin_ws_probe(host, status_label=self.ws_status, buttons=buttons)
-
     def _test_ws_localhost(self) -> None:
         """Leader page: same-PC loopback against the current WebSocket server."""
         buttons = [self.ws_local_btn, self.ws_lan_btn]
-        if hasattr(self, "ws_test_btn"):
-            buttons.append(self.ws_test_btn)
         self._begin_ws_probe(
             "127.0.0.1",
             status_label=self.ws_local_status,
@@ -2223,8 +2181,6 @@ class PartyTab(QWidget):
             self.on_log(msg)
             return
         buttons = [self.ws_local_btn, self.ws_lan_btn]
-        if hasattr(self, "ws_test_btn"):
-            buttons.append(self.ws_test_btn)
         self._begin_ws_probe(
             lan,
             status_label=self.ws_local_status,
@@ -2241,10 +2197,8 @@ class PartyTab(QWidget):
         target = getattr(self, "_ws_status_target", None)
         if isinstance(target, QLabel):
             target.setText(short)
-        elif self._role() == "leader" and hasattr(self, "ws_local_status"):
+        elif hasattr(self, "ws_local_status"):
             self.ws_local_status.setText(short)
-        elif hasattr(self, "ws_status"):
-            self.ws_status.setText(short)
         self._refresh_enabled_state()
         self._refresh_member_summary()
         self.on_log(str(detail or ""))
@@ -2361,13 +2315,8 @@ class PartyTab(QWidget):
             button.setEnabled(False)
         if hasattr(self, "party_farm_mode"):
             self.party_farm_mode.setEnabled(False)
-        # Connection probes stay usable without requiring Start on the probing side.
         # Leader local tests still need the leader bot already listening.
         busy = bool(self._ws_testing)
-        if hasattr(self, "ws_test_btn"):
-            self.ws_test_btn.setEnabled(
-                bool(on and self._role() == "member" and not busy)
-            )
         can_local = bool(on and self._role() == "leader" and not busy)
         if hasattr(self, "ws_local_btn"):
             self.ws_local_btn.setEnabled(can_local)
@@ -2507,16 +2456,6 @@ class PartyTab(QWidget):
             self.party_ws_port.blockSignals(True)
             self.party_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
             self.party_ws_port.blockSignals(False)
-        if hasattr(self, "member_ws_port"):
-            self.member_ws_port.blockSignals(True)
-            self.member_ws_port.setValue(self.bag.get_int("party", "ws_port", 8765))
-            self.member_ws_port.blockSignals(False)
-        if hasattr(self, "leader_host"):
-            self.leader_host.blockSignals(True)
-            self.leader_host.setText(
-                str(self.bag.get_str("party", "leader_host", "") or "")
-            )
-            self.leader_host.blockSignals(False)
         self._select_farm_mode()
         self._sync_leader_handover_forms()
         self._lan_ip = ""

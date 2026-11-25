@@ -18,6 +18,14 @@ Affects: leader Start on Windows only (best-effort; requires elevation already u
 Consent: user (boss PC should auto-allow UDP firewall when party mode starts).
 Result: `test_win_firewall.py` unit coverage added. Live two-PC browse not re-run in this session.
 
+## 2026-11-25 — member link UI: nearby search + select only
+
+Intent: Member party-link page keeps only **다시 검색** / nearby list / **이 리더 선택**. Manual 파티장 IP, port spin, and 연결 테스트 are removed; host/port still save into the bag from the selected announce row.
+Shared: `party_tab._build_member_link` / `_connect_selected_nearby` / `_refresh_member_summary`. Leader local WS tests unchanged. Login, retreat, combat radii unchanged.
+Affects: member UI only. Engine connect path still reads `party.leader_host` / `ws_port` from the bag after select.
+Consent: user (search + select are enough; IP/test controls not needed).
+Result: UI trimmed. Live browse/select not re-run in this session.
+
 ## 2026-11-25 — LAN browse binds real NIC (VPN-safe directed broadcast + host unicast)
 
 Intent: Nearby party refresh failed while Astrill VPN was up because limited `255.255.255.255` left via the VPN default route. Browse now binds each RFC1918 NIC (skip VPN/virt), sends directed subnet broadcast, and unicasts saved `leader_host` (same LAN route TCP already uses).
