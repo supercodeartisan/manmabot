@@ -2065,10 +2065,12 @@ class PartyTab(QWidget):
         if hasattr(self, "status_connection"):
             self.status_connection.setText(selected)
         if hasattr(self, "status_leader"):
+            # Overlay used to require {port}; keep both kwargs so old packs
+            # do not KeyError while shown already embeds host:port.
             self.status_leader.setText(
                 self._tx(
                     "party_ui_leader_state", "파티장 상태: {shown}"
-                ).format(shown=shown)
+                ).format(shown=shown, port=port)
             )
         self._refresh_personal_summary()
 
