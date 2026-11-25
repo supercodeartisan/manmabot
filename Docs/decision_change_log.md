@@ -1,5 +1,44 @@
 # Decision change log
 
+## 2026-11-25 — remaining v39 memory leftover sync (P0–P5)
+
+Intent: Finish memory-offset leftovers after the selective v39 overlay pass — attacks/contested player XY, shop/ItemEntity defaults, ghost absolute bases, fallback constants, map-id rule.
+Shared: `settings_attacks_me.json` / `settings_contested_mobs.json` `player_x/y` → `0x174C310/314`; `offsets.json` `ItemEntityVtableRva=0x1273B80` + zero unverified `Inventory*/SkillList/BuffList/PartyBase`; `inventory_offsets.json` PlayerBase/ExpPct; `shop_listen.c` + rebuilt `shop_listen(.new).dll`; rebuilt `attacks_me` / `contested_mobs` / `realtime_monitor` DLLs; `body_pose.py` / `lcore.h` / hotbar+monitor C defaults; `.cursor` map-id rule → v39 `0x12759B8`. Decision/login/move/combat/HP action code unchanged.
+Affects: memory readers only. `Ent*VftRva` left pre-v39 (no registry remap — live re-probe required).
+Consent: user (“yes, let's update”).
+Result: shop/attacks/contested/realtime_monitor DLLs rebuilt. Restart bot to pick up new DLLs/overlays.
+
+## 2026-11-25 — inventory/hotbar vec offsets +0xC0 (adena=0)
+
+Intent: Bag read returned empty (adena/potions 0) because `inventory_offsets` still had pre-v39 `INV_VEC_*` at `0x3D8`; registry moved them to `0x498`. Hotbar map adj similarly `0xD8`→`0x198`.
+Shared: `registry/inventory_offsets.txt` INV_VEC_*, `registry/skill_offsets.txt` HSD_ADJ. Decision/login/move/combat/HP actions unchanged.
+Consent: user (log diagnosis: adena zero).
+Result: overlays synced to LC930_REGISTRY v39. Restart bot to verify bag/adena.
+
+## 2026-11-25 — char_offsets ST_*/STAT_* sync to registry v39
+
+Intent: Still idled on `waiting for respawn` after PlayerBase retarget — `char_offsets` kept v38 `ST_HP=0x1C` / `HP=0x2D8` while registry v39 has `ST_HP=0xC` / `STAT_HP=0x318` (+0x40 status fields). Monitor read wrong dwords → HP clamped to 0.
+Shared: `char_offsets.txt` (root+registry) ST_* + STAT_* mirrors; `offsets.json` Hp/MaxHp/Mp/MaxMp/Level = ST_* layout. Decision/login/move/combat/HP actions unchanged.
+Consent: user (latest log check).
+Result: registry key align OK; `check_configs` PASS. Restart bot to verify.
+
+## 2026-11-25 — offsets.json PlayerBase → ST_BLOCK (HP=0 idle fix)
+
+Intent: After v39 overlay update the bot idled forever with `reason='waiting for respawn'` because `realtime_monitor` still used legacy `PlayerBase`/`Hp@0` layout, garbage vitals were clamped to HP=0, and decision treated that as dead. `charread` already showed live HP 58/58 via CD.
+Shared: `registry/offsets.json` (+ root mirror) `PlayerBase`/`Hp`/`MaxHp`/`Mp`/`MaxMp`/`Level` aligned to registry `ST_BLOCK`/`ST_*`; `char_offsets` `ST_BLOCK=0x174C310`. Decision/move/combat/HP/login code unchanged.
+Affects: monitor vitals first-pass + ST_BLOCK fallback; mapId still MapSubsystem + `0x718`.
+Consent: user (“can we update?”).
+Result: `check_configs` PASS. Restart bot on 26.11.24.2001 to confirm HP≠0 and leave idle-respawn.
+
+## 2026-11-25 — Engine/analysis selective v39 (26.11.24.2001)
+
+Intent: Keep existing `Engine/analysis` directory structure; update offsets/overlays from `D:\11_25analysis` (registry v39 / LC.exe 26.11.24.2001) without a full tree replace.
+Shared: `registry/*` overlays, `char_offsets.txt` (root+registry), root `offsets.json` mirror, `core/lcore.h`, `src/party/lparty.h`, rebuilt `dll/party.dll` / `partyhud.dll` / `uimsg.dll`. MapId still MapSubsystem + `MapIdOff` `0x718` / pair `0x71C`. Decision, move, combat, HP, login unchanged.
+Affects: memory readers / listen DLLs that load registry overlays; party/uimsg LCAPI fallbacks.
+Side effects: plugin DLLs other than party/partyhud/uimsg remain prior binaries (config-driven). `shop_listen` / `contested_mobs` compile-time defaults may still be v38 until rebuild. `bin/*.exe` intentionally kept (11_25analysis bin was incomplete).
+Consent: user (yes — keep current structure).
+Result: backup `Engine/analysis.bak_v38_20261125`. Fixed package bug: `PLAYER_X/Y` → `0x174C310`/`0x174C314`. `python Engine/analysis/_build/check_configs.py` → **PASS**. Not smoke-tested in-game yet — restart bot against 26.11.24.2001.
+
 ## 2026-11-22 — Portable: ship cryptography + rfc8785 (license request)
 
 Intent: Fix customer License「요청 실패: No module named 'cryptography'」— Soft DeviceKey / MMB2 request needs cryptography+rfc8785 in embeddable python.
