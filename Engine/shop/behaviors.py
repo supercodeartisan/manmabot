@@ -455,26 +455,139 @@ def _parse_world_nav_flag(raw: Any, *, behavior_id: str) -> bool:
     return _legacy_world_nav_default(behavior_id)
 
 
+# Memory shop_listen often uses 5; item.json Adena is 7. Both are Adena.
+_ADENA_ITEM_IDS = frozenset({5, 7})
+
+# Keep-list names that are not in game_catalog (hotbar / analysis CSV only).
+# Without these, Chinese storewin rows (說話的卷軸) pass sell_except_keep.
+_KEEP_NAME_ALIASES: dict[str, tuple[str, ...]] = {
+    "말하는 두루마리": (
+        "Talking Scroll",
+        "Talking Parchment",
+        "說話的卷軸",
+        "说话的卷轴",
+        "說話卷軸",
+        "说话卷轴",
+    ),
+    "말하는 두루마리 상자": (
+        "說話的卷軸箱",
+        "说话的卷轴箱",
+        "說話卷軸箱",
+        "说话卷轴箱",
+    ),
+}
+# analysis/data/item_name_kr.csv — base + class-bound scroll variants.
+_KEEP_ITEM_IDS: dict[str, tuple[int, ...]] = {
+    "말하는 두루마리": (16673, 16220, 16221, 16222, 16223),
+    "말하는 두루마리 상자": (16977,),
+}
+
+
+def _add_locale_aliases(keys: set[str], text: str) -> None:
+    name = str(text or "").strip()
+    if not name:
+        return
+    keys.add(name)
+    try:
+        from app._03_world.catalog.zh_convert import chinese_aliases
+
+        for alias in chinese_aliases(name):
+            a = str(alias or "").strip()
+            if a:
+                keys.add(a)
+    except Exception:
+        pass
+
+
 def _catalog_keys_for_names(names: tuple[str, ...] | list[str]) -> set[str]:
-    """Map stored filter names to catalog keys (+ raw) for locale-stable match."""
+    """Map filter names to catalog keys and locale aliases (ko / zh / zh_cn).
+
+    Keep lists are usually Korean. Live sell/store rows may be Chinese.
+    Expanding each resolved row's ``aliases()`` lets ``白色藥水`` hit a keep
+    entry stored as ``맑은 물약`` even when reverse resolve is flaky.
+    """
     keys: set[str] = set()
     try:
-        from app._03_world.catalog.game_catalog import resolve_item_key
+        from app._03_world.catalog.game_catalog import item_by_key, resolve_item_key
     except Exception:
+        item_by_key = None  # type: ignore[assignment]
         resolve_item_key = None  # type: ignore[assignment]
     for raw in names:
         name = str(raw or "").strip()
         if not name:
             continue
-        keys.add(name)
+        _add_locale_aliases(keys, name)
+        for alias in _KEEP_NAME_ALIASES.get(name, ()):
+            _add_locale_aliases(keys, alias)
+        key = None
         if resolve_item_key is not None:
             try:
                 key = resolve_item_key(name)
             except Exception:
                 key = None
-            if key:
-                keys.add(str(key).strip())
+        if key:
+            _add_locale_aliases(keys, str(key).strip())
+        if item_by_key is not None:
+            try:
+                row = item_by_key(str(key or name))
+            except Exception:
+                row = None
+            if row is not None:
+                for alias in row.aliases():
+                    _add_locale_aliases(keys, str(alias or ""))
     return keys
+
+
+def _catalog_ids_for_names(names: tuple[str, ...] | list[str]) -> set[int]:
+    """Catalog item ids for filter names (locale-stable keep by id)."""
+    ids: set[int] = set()
+    item_by_key = None
+    resolve_item_key = None
+    try:
+        from app._03_world.catalog.game_catalog import item_by_key as _item_by_key
+        from app._03_world.catalog.game_catalog import resolve_item_key as _resolve
+
+        item_by_key = _item_by_key
+        resolve_item_key = _resolve
+    except Exception:
+        pass
+    for raw in names:
+        name = str(raw or "").strip()
+        if not name:
+            continue
+        for sid in _KEEP_ITEM_IDS.get(name, ()):
+            ids.add(int(sid))
+        if item_by_key is None or resolve_item_key is None:
+            continue
+        try:
+            key = resolve_item_key(name) or name
+            row = item_by_key(str(key))
+        except Exception:
+            row = None
+        if row is None:
+            continue
+        for sid in row.ids:
+            try:
+                ids.add(int(sid))
+            except (TypeError, ValueError):
+                continue
+    return ids
+
+
+def _is_adena_row(name: str, item_id: int) -> bool:
+    if int(item_id or 0) in _ADENA_ITEM_IDS:
+        return True
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if text in ("아데나", "Adena", "金幣", "金币"):
+        return True
+    try:
+        from app._03_world.catalog.game_catalog import resolve_item_key
+
+        return resolve_item_key(text) == "아데나"
+    except Exception:
+        return False
 
 
 def item_passes_sell_filter(
@@ -485,29 +598,36 @@ def item_passes_sell_filter(
     keep_list: tuple[str, ...] | list[str],
     item_id: int = 0,
 ) -> bool:
-    """Whether a sell-list item should be sold under the active mode.
+    """Whether a sell/store-list item should be sold or deposited.
 
-    Names are matched as stored strings and via ``game_catalog.resolve_item_key``.
-    Adena (id 5) is never sold.
+    Names match as stored strings and via catalog keys / ko+zh aliases.
+    Item ids from the catalog also protect keep-list rows when the live
+    name is empty or untranslated. Adena (id 5/7 and locale names) is never
+    sold or stored.
     """
-    if int(item_id or 0) == 5:
-        return False
+    tid = int(item_id or 0)
     name = str(kr_name or "").strip()
+    if _is_adena_row(name, tid):
+        return False
     mode = str(sell_mode or SELL_MODE_EXCEPT_KEEP).strip()
     garbage = _catalog_keys_for_names(garbage_list)
     keep = _catalog_keys_for_names(keep_list)
+    keep_ids = _catalog_ids_for_names(keep_list)
+    if tid and tid in keep_ids:
+        return False
     name_keys = _catalog_keys_for_names((name,)) if name else set()
     if name_keys & keep:
         return False
     if mode == SELL_MODE_EXCEPT_KEEP:
-        if not name and item_id:
-            # Unresolved name: sell unless keep listed by id-less names only.
-            return True
+        if not name:
+            # Id-only row: deposit/sell only when the id is known and not kept.
+            return bool(tid) and tid not in keep_ids
         return not bool(name_keys & keep)
     if not name:
         return False
+    if tid and tid in _catalog_ids_for_names(garbage_list):
+        return True
     return bool(name_keys & garbage)
-
 
 def resolve_active_sell_mode(
     *,
@@ -541,8 +661,8 @@ def _behavior_from_mapping(item: Any, *, index: int) -> ShoppingBehavior:
     if not sid or not _ID_SAFE.match(sid):
         raise ValueError(f"behaviors[{index}] needs a safe id")
     action = str(item.get("action") or ACTION_BUY).strip().lower()
-    # Legacy: warehouse give_goods was stored as sell.
-    if sid == "give_goods" and action == ACTION_SELL:
+    # Legacy: warehouse give_goods / give_goods_ch was stored as sell.
+    if sid.startswith("give_goods") and action == ACTION_SELL:
         action = ACTION_STORE
     if action not in ACTIONS:
         raise ValueError(
@@ -804,10 +924,15 @@ def save_behaviors(
         seen.add(sid)
         action = str(b.action).strip().lower()
         if action not in ACTIONS:
+<<<<<<< HEAD
             raise ValueError(
                 f"{sid}: action must be buy, sell, store, teleporter, or other"
             )
         if sid == "give_goods" and action == ACTION_SELL:
+=======
+            raise ValueError(f"{sid}: action must be buy, sell, store, or teleporter")
+        if sid.startswith("give_goods") and action == ACTION_SELL:
+>>>>>>> origin/main
             action = ACTION_STORE
         if not str(b.map_id).strip():
             raise ValueError(f"{sid}: map required")

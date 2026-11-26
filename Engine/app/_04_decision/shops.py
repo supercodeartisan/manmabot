@@ -40,10 +40,23 @@ HP_POTION_NPC = "talking"
 # Fix/Return weight gauge (schedule hunt.return_weight_* → configure_decision).
 RETURN_WEIGHT_ENABLED = True
 SELL_WEIGHT_RATIO = 0.70  # decoded WEIGHT percent/100 ≥ this → sell trip
+# After a sell succeeds, stop visiting more merchants when weight falls below this.
+# Start threshold stays ``SELL_WEIGHT_RATIO``; early-stop is tour humanize only.
+SELL_STOP_BELOW_RATIO = 0.35
+# After a merchant sell succeeds, wait this long (seconds) before reading weight
+# / arming the next stall so LC WEIGHT memory can catch up.
+SELL_WEIGHT_SETTLE_S = (0.75, 1.35)
+# After settle has a bag/weight snapshot, pause ~0.2s (IDLE, no force-bag)
+# before adopting early-stop / next merchant / warehouse. Timing only.
+SELL_DECIDE_JITTER_S = (0.18, 0.22)
 # Item/Sell mode: sell_only_garbage | sell_except_keep.
 SELL_MODE = "sell_except_keep"
 # Schedule equipment.store_after_sell. Off skips the warehouse keeper.
 STORE_AFTER_SELL = True
+# After the merchant loop, visit give_goods only when weight is still at least
+# this fill (and leftovers exist). Pairs with SELL_STOP_BELOW_RATIO: early-stop
+# under 35% naturally skips the warehouse.
+STORE_AFTER_SELL_MIN_RATIO = 0.40
 POTION_SUPPRESS_S = 600.0
 # Chebyshev tiles from the shop NPC to click / buy (walk stops here).
 SHOP_ARRIVE_TILES = 7
@@ -124,6 +137,25 @@ def resolve_shopping_behavior_id(kind: str) -> str:
         if chinese
         else "buy_normal_arrows_talking"
     )
+
+
+def resolve_store_behavior_id() -> str:
+    """Warehouse YAML id for the live shop locale.
+
+    Korean → ``give_goods``. Chinese → ``give_goods_ch`` when that row exists
+    in ``npc_behaviors.yaml``, else the Korean base (same fallback as
+    teleporters) until a Chinese UV is calibrated.
+    """
+    if SHOP_LOCALE != "zh":
+        return "give_goods"
+    try:
+        from shop.behaviors import behavior_by_id, load_behaviors
+
+        if behavior_by_id("give_goods_ch", load_behaviors()) is not None:
+            return "give_goods_ch"
+    except Exception:
+        pass
+    return "give_goods"
 
 
 def resolve_sell_behavior_ids() -> tuple[str, ...]:
@@ -248,9 +280,9 @@ def is_sell_behavior(behavior_id: str) -> bool:
 
 
 def is_store_behavior(behavior_id: str) -> bool:
-    """Warehouse / store NPC (e.g. give_goods), not merchant sell_*."""
+    """Warehouse / store NPC (e.g. give_goods / give_goods_ch), not sell_*."""
     bid = str(behavior_id or "")
-    if bid == "give_goods" or bid.startswith("store_"):
+    if bid.startswith("give_goods") or bid.startswith("store_"):
         return True
     try:
         from shop.behaviors import ACTION_STORE, behavior_by_id, load_behaviors
@@ -389,8 +421,12 @@ __all__ = [
     "RESTOCK_POTIONS",
     "RETURN_WEIGHT_ENABLED",
     "SELL_WEIGHT_RATIO",
+    "SELL_STOP_BELOW_RATIO",
+    "SELL_WEIGHT_SETTLE_S",
+    "SELL_DECIDE_JITTER_S",
     "SELL_MODE",
     "STORE_AFTER_SELL",
+    "STORE_AFTER_SELL_MIN_RATIO",
     "POTION_SUPPRESS_S",
     "SHOP_ARRIVE_TILES",
     "SHOP_CLICK_TILES",
@@ -405,6 +441,7 @@ __all__ = [
     "normalize_sell_mode",
     "resolve_shopping_behavior_id",
     "resolve_sell_behavior_ids",
+    "resolve_store_behavior_id",
     "is_arrow_behavior",
     "is_hp_potion_behavior",
     "is_depoison_behavior",

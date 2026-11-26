@@ -45,8 +45,7 @@ class GameLoginStage(Stage):
         snap = {"stage_id": self.id}
         bot = ctx.bot
         _sync_auth_flags(bot, ctx)
-        if getattr(bot, "_shake_after_relaunch", False):
-            ctx.shake_armed = True
+        ctx.shake_armed = bool(getattr(bot, "_shake_after_relaunch", False))
 
         on_top = getattr(bot, "_game_on_top", None)
         if callable(on_top):
@@ -96,8 +95,9 @@ class GameLoginStage(Stage):
             return StageResult.failed(self.id, "tick error: %r" % e)
 
         _sync_auth_flags(bot, ctx)
-        if getattr(bot, "_shake_after_relaunch", False):
-            ctx.shake_armed = True
+        # GameFlow may have disarmed the shake after executing it. Do not
+        # re-arm it from stale pipeline state on the next tick.
+        ctx.shake_armed = bool(getattr(bot, "_shake_after_relaunch", False))
 
         if getattr(bot, "phase", None) == Phase.DONE:
             try:

@@ -6,7 +6,7 @@ When `release\portable\ManmabotV1` already exists, do not run this full copy aga
 
 The customer receives one folder: `release\portable\ManmabotV1`.  
 `Engine\data` in that folder is a normal directory (maps, catalog, cursors). It is **not** left as `data.pack`.  
-`Engine\analysis_text.pack` stays packed. Offset text is written only while the program is running and deleted on a normal exit.
+`Engine\analysis_text.pack` stays packed (MMB2: offset text **and** `analysis/dll/*.dll` + `.csv`). Contents materialize under `%TEMP%/manmabot_an_*` while the program runs (overlay), then remove on a normal exit. After ensure, `body_pose.refresh_offsets()` binds find anchors / action VFTs from that overlay — see `RUNTIME_TEMP.md` and RBF-008/009 in `RELEASE_BUGFIX_LOG.md`.
 
 ---
 
@@ -32,7 +32,7 @@ Locked choices:
 | Python that compiles | A full CPython 3.14 that has `include\Python.h` |
 | `Tools`, `Research`, `Docs`, `Others`, `.cursor`, `packaging` | Not shipped |
 | `Engine\data` | Real folder. `data.pack` is deleted before checksums |
-| `Engine\analysis_text.pack` | Shipped. Plain offset text is not left in the zip |
+| `Engine\analysis_text.pack` | Shipped (text+csv+dll). Plain packed files are not left in the zip |
 | Signing | Off, unless you set the sign variables yourself |
 | Game logic | Do not change login, movement, combat, or HP while releasing |
 
@@ -309,13 +309,13 @@ Stage 2 prints `development tree was not modified`. If a stage exits non-zero, s
 
 **Stage 3.** Copies `python\` with the packages in `prune_site_packages.txt` removed (torch, ultralytics, pytest, Nuitka, PyInstaller, matplotlib, and similar). Keeps PySide6, numpy, OpenCV, PyYAML, scipy, onnxruntime, mss, keyboard, interception, pywin32.
 
-**Stage 5.** Packs portable `Engine\data` into `data.pack` and deletes that plain folder. Packs analysis text (`.json`, `.txt`, `.yaml`, `.yml`, `.md`, `.bak`) into `analysis_text.pack` and deletes those text files. DLLs and EXEs in `Engine\analysis` stay, because Windows cannot `LoadLibrary` a file that exists only in memory. The development `Engine\data` is not touched.
+**Stage 5.** Packs portable `Engine\data` into `data.pack` (or carry-forwards it) and deletes that plain folder when rebuilt. Packs analysis from **repo** `Engine\analysis` (text/json/csv **and** `dll/*.dll`, skipping `*.new.dll`) into `analysis_text.pack`, strips matching plains from portable only, then collapses empty dirs under `Engine/analysis`. Runtime loads dlls via TEMP overlay (`analysis_dll_path`). `analysis/bin` ships only `realtime_monitor_full.exe` and `inventory_listen.exe` (other research `*_930.exe` are denied). Dev `Engine\data` / `Engine\analysis` are not touched.
 
 **Unpack.** `unpack_customer_data.py` decrypts `data.pack` into `Engine\data` and deletes `data.pack`. `analysis_text.pack` stays.
 
 **Smoke.** Uses the portable `python.exe`. Confirms OpenCV imports, `skills_names.json` and map `meta.yaml` are real files, `data.pack` is gone, `analysis_text.pack` exists, `bot2.py` and the `run.py` hook exist, and `FlowLayout.expandingDirections()` is `Qt.Orientations(0)`. It does not click Start and does not log into the game.
 
-**Stage 4.** Writes `release\checksums\SHA256SUMS` and `release\portable\ManmabotV1\SHA256SUMS.txt`. `--skip-sign` does not call `signtool`.
+**Stage 4.** Runs `prune_denied_from_portable` (deny leftovers such as `**/tests`, plus collapse of empty product dirs except `UserData/` / `python/`), then writes `release\checksums\SHA256SUMS` and `release\portable\ManmabotV1\SHA256SUMS.txt`. `--skip-sign` does not call `signtool`.
 
 ---
 

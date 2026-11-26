@@ -10,15 +10,16 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-
-
 def default_dll_path() -> Path:
-    return _ANALYSIS / "dll" / "attacks_me.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    return analysis_dll_path("attacks_me.dll")
 
 
 def default_settings_path() -> Path:
-    return _ANALYSIS / "registry" / "settings_attacks_me.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "settings_attacks_me.json")
 
 
 class AttacksMeReader:

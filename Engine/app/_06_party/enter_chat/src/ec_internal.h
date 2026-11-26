@@ -78,10 +78,16 @@ BOOL ec_is_hangul(wchar_t c);
 int  ec_hangul_keys(wchar_t c, char* out, int max);
 
 #ifndef EC_TEST
+/* Label the live IME without changing it: 한, 영, 중, native, or unread. */
+void ec_format_current_mode(EcContext* ctx, HWND hwnd, wchar_t* out, size_t cap);
+/* Load layout 0412 when the line contains Hangul. Does not set 한/영. */
+BOOL ec_hangul_layout(EcContext* ctx, HWND hwnd);
 BOOL ec_hangul_prepare(EcContext* ctx, HWND hwnd);
+/* Switch back to 한 and read it. FALSE if 한 is not confirmed. */
+BOOL ec_require_hangul(EcContext* ctx, HWND hwnd);
 void ec_hangul_done(EcContext* ctx);
 BOOL ec_hangul_commit(EcContext* ctx);
-/* ASCII-only line (invite accept Y): foreground + English IME, then restore. */
+/* Foreground + English IME. FALSE unless 영 was read back. */
 BOOL ec_english_prepare(EcContext* ctx, HWND hwnd);
 void ec_english_done(EcContext* ctx);
 #endif

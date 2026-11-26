@@ -122,14 +122,26 @@ def collect_shippable() -> dict[str, dict]:
     files: dict[str, dict] = {}
     paths = iter_shippable_paths()
     total = len(paths)
+    skipped = 0
     for index, (rel, path) in enumerate(paths, start=1):
         if index == 1 or index % 400 == 0 or index == total:
             print(f"  hashing source {index}/{total}")
+        try:
+            digest = sha256_file(path)
+            size = path.stat().st_size
+        except OSError as exc:
+            # Windows Defender often blocks reading signeddrv.sys (PUA); keep
+            # the existing portable copy and do not stall incremental on it.
+            skipped += 1
+            print(f"  WARNING: skip unreadable {rel}: {exc}")
+            continue
         files[rel] = {
-            "sha256": sha256_file(path),
-            "size": path.stat().st_size,
+            "sha256": digest,
+            "size": size,
             "role": role_for(rel),
         }
+    if skipped:
+        print(f"  skipped unreadable shippable files: {skipped}")
     return files
 
 

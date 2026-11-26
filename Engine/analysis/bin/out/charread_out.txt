@@ -1,0 +1,7 @@
+registry=D:\ManmabotV1_final_final_final\Engine\analysis\registry/LC930_REGISTRY.txt  CHAR: interval=200ms jitter=20ms
+t=0ms cd=0x209F4C9B120 status=0x209F4C9B5B8 vft=012308A8(vok=1) decode=15/15
+  Lv=12 HP=58/58 MP=118/118  STR=12 INT=18 CON=12 DEX=13 WIS=12 CHA=8
+  FOOD=17 WEIGHT%=48  W=944/1950  LAWFUL=12177 AC=4
+  POS: X=32507 Y=33080
+  EXP=83.2803%  (src=chain bar=0x0)  mirror=0.0000%
+  -> ioctl=139 time=0.9153ms ok=1

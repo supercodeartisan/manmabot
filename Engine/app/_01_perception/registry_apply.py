@@ -96,7 +96,20 @@ def _need(reg: dict[str, str], *keys: str) -> int:
 
 
 def source_registry() -> Path | None:
-    """Registry a dist copy drops into Engine/analysis."""
+    """Live registry: analysis TEMP overlay, plain Engine/analysis, or dist copy.
+
+    Pack-only builds materialize ``LC930_REGISTRY.txt`` under the overlay root
+    from ``analysis_text.pack``. Prefer that path so body_pose / listeners bind
+    current MGR and action VFTs instead of stale baked defaults.
+    """
+    try:
+        from session.analysis_overlay import analysis_registry_file
+
+        overlay = analysis_registry_file("registry", "LC930_REGISTRY.txt")
+        if overlay.is_file():
+            return overlay
+    except Exception:
+        pass
     if _DROP.is_file():
         return _DROP
     if _DIST.is_file():

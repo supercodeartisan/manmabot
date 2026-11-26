@@ -1,8 +1,9 @@
 """Live body action at ActionComponent+0xC8, and the command at +0x58.
 
 The action slot is read directly, the same walk ``fix/single-version`` uses.
-Standing is BreathAction (0x11E0550). A failed read is None, not standing.
+Standing is BreathAction (registry VFT_BREATHACT). A failed read is None, not standing.
 HP, MP, level, and exp come from dll/realtime_monitor.dll.
+Module defaults below match registry v39; overlay rebind overrides at runtime.
 """
 from __future__ import annotations
 
@@ -13,26 +14,26 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-BREATH_VFT = 0x11E0550
-MOVE_VFTS = frozenset({0x11E0680, 0x11E0638})  # MovingAction, MovingBackAction
+BREATH_VFT = 0x122BDB8
+MOVE_VFTS = frozenset({0x122C050, 0x122C008})  # MovingAction, MovingBackAction
 BODY = {
-    0x11E0550: "stand",
-    0x11E0680: "walk",
-    0x11E0638: "walkback",
-    0x11E0508: "attack",
-    0x11E05E0: "actionbase",
-    0x11E04C0: "turn",
-    0x11E02C8: "spell",
-    0x11E0310: "death",
-    0x11E03E8: "death",
-    0x11E0358: "damaged",
-    0x11E0598: "damaged",
-    0x11E03A0: "effect",
+    0x122BDB8: "stand",
+    0x122C050: "walk",
+    0x122C008: "walkback",
+    0x122BF68: "attack",
+    0x122BFB0: "actionbase",
+    0x122BC98: "turn",
+    0x122BE90: "spell",
+    0x122BED8: "death",
+    0x122BBC0: "death",
+    0x122BF20: "damaged",
+    0x122BE00: "damaged",
+    0x122BD70: "effect",
 }
 CMD = {
-    0x11E0910: "move",
-    0x11E0A90: "attack",
-    0x11E0948: "interact",
+    0x122C2E8: "move",
+    0x122C4A8: "attack",
+    0x122C320: "interact",
 }
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -173,47 +174,79 @@ def _module_base(pid: int) -> tuple[int, int]:
 # The walk/stand class numbers above are not enough: this chain is how the
 # body slot is found. A stale manager or MyPlayer id makes every read fail.
 _FIND = {
-    "MGR": 0x16EB6F0,
-    "ACTOR_VFT": 0x11DE3E8,
-    "MY_PLAYER": 0x11E1388,
+    "MGR": 0x174C460,
+    "ACTOR_VFT": 0x1229E78,
+    "MY_PLAYER": 0x122CD20,
 }
 _find_ready = False
 
 
-def _load_find() -> None:
-    """Manager, actor list, and MyPlayer id from the live entity table."""
+def _entity_offsets_path() -> Path:
+    """Prefer analysis TEMP overlay (pack-only), else plain Engine/analysis."""
+    try:
+        from session.analysis_overlay import analysis_registry_file
+
+        return analysis_registry_file("registry", "entity_offsets.txt")
+    except Exception:
+        return (
+            Path(__file__).resolve().parents[2]
+            / "analysis"
+            / "registry"
+            / "entity_offsets.txt"
+        )
+
+
+def _load_find(*, force: bool = False) -> None:
+    """Manager, actor list, and MyPlayer id from the live entity table.
+
+    Missing file leaves ``_find_ready`` false so a later pack materialize /
+    overlay can retry (customer ``analysis_text.pack`` path).
+    """
     global _find_ready
-    if _find_ready:
+    if _find_ready and not force:
         return
-    path = Path(__file__).resolve().parents[2] / "analysis" / "registry" / "entity_offsets.txt"
-    if path.is_file():
-        classes = ""
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            text = line.strip()
-            if not text or text.startswith("#") or "=" not in text:
-                continue
-            key, raw = text.split("=", 1)
-            key = key.strip()
-            raw = raw.strip()
-            if key == "CLASSES":
-                classes = raw
-                continue
-            if key not in ("MGR", "ACTOR_VFT"):
-                continue
-            try:
-                _FIND[key] = int(raw, 0)
-            except ValueError:
-                continue
-        for part in classes.split(","):
-            rva, _, name = part.partition(":")
-            if name.strip() != "MyPlayer":
-                continue
-            try:
-                _FIND["MY_PLAYER"] = int(rva.strip(), 16)
-            except ValueError:
-                pass
-            break
+    path = _entity_offsets_path()
+    if not path.is_file():
+        return
+    classes = ""
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        text = line.strip()
+        if not text or text.startswith("#") or "=" not in text:
+            continue
+        key, raw = text.split("=", 1)
+        key = key.strip()
+        raw = raw.strip()
+        if key == "CLASSES":
+            classes = raw
+            continue
+        if key not in ("MGR", "ACTOR_VFT"):
+            continue
+        try:
+            _FIND[key] = int(raw, 0)
+        except ValueError:
+            continue
+    for part in classes.split(","):
+        rva, _, name = part.partition(":")
+        if name.strip() != "MyPlayer":
+            continue
+        try:
+            _FIND["MY_PLAYER"] = int(rva.strip(), 16)
+        except ValueError:
+            pass
+        break
     _find_ready = True
+
+
+def refresh_offsets() -> None:
+    """Re-bind action VFTs and find anchors after analysis overlay is ready.
+
+    Import-time bind often runs before ``ensure_packed_assets`` materializes
+    ``analysis_text.pack`` into TEMP; call this once the overlay is set.
+    """
+    global _find_ready
+    _find_ready = False
+    _bind_action_vfts()
+    _load_find(force=True)
 
 
 def _is_my_player(ent: int) -> bool:
@@ -450,30 +483,30 @@ def body_is_standing() -> bool | None:
 
 # HUD block + encoded status. char_offsets.txt overrides these defaults.
 _HUD = {
-    "ST_BLOCK": 0x16DED20,
-    "ST_HP": 0x1C,
-    "ST_MAXHP": 0x20,
-    "ST_MP": 0x24,
-    "ST_MAXMP": 0x28,
-    "MGR": 0x16F8A00,
-    "CD_VFT": 0x11F90D8,
+    "ST_BLOCK": 0x174C310,
+    "ST_HP": 0xC,
+    "ST_MAXHP": 0x10,
+    "ST_MP": 0x14,
+    "ST_MAXMP": 0x18,
+    "MGR": 0x174C460,
+    "CD_VFT": 0x12308D8,
     "CD_OFF": 0x498,
-    "VFT_STATUS": 0x11F90B8,
+    "VFT_STATUS": 0x12308A8,
     "K_XOR": 0x2F8B1064,
     "K_MUL": 0x7F4A7C15,
     "HOLDER_OFF": 0xD0,
     "SUBLIST_BEG": 0x180,
     "SUBLIST_END": 0x188,
-    "ST_LEVEL": 0x2C,
-    "LEVEL": 0x248,
-    "HP": 0x2B8,
-    "MP": 0x2D0,
-    "MAXMP": 0x2DC,
+    "ST_LEVEL": 0x1C,
+    "LEVEL": 0x2A8,
+    "HP": 0x318,
+    "MP": 0x330,
+    "MAXMP": 0x33C,
 }
 _hud_ready = False
 _status_addr = 0
 _status_checked = 0.0
-_EXP_RVA = 0x1641B00
+_EXP_RVA = 0x16604C8
 _exp_ready = False
 _ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 
@@ -486,7 +519,9 @@ def _load_hud() -> None:
     global _hud_ready
     if _hud_ready:
         return
-    table = _ANALYSIS / "registry" / "char_offsets.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    table = analysis_registry_file("registry", "char_offsets.txt")
     if table.is_file():
         for line in table.read_text(encoding="utf-8", errors="replace").splitlines():
             text = line.strip()
@@ -609,7 +644,9 @@ def _load_exp_rva() -> None:
     global _exp_ready, _EXP_RVA
     if _exp_ready:
         return
-    path = _ANALYSIS / "registry" / "offsets.json"
+    from session.analysis_overlay import analysis_registry_file
+
+    path = analysis_registry_file("registry", "offsets.json")
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))

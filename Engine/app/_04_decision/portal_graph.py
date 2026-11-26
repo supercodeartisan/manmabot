@@ -307,8 +307,15 @@ def find_path_in_corridor(
     start: tuple[int, int],
     goal: tuple[int, int],
     mask: np.ndarray,
+    *,
+    sticky_path: list[tuple[int, int]] | tuple[tuple[int, int], ...] | None = None,
+    diverse: bool = True,
 ) -> list[tuple[int, int]]:
-    """Fine A* restricted to ``mask`` (and walkable). Always allows start/goal."""
+    """Fine A* restricted to ``mask`` (and walkable). Always allows start/goal.
+
+    When ``diverse`` is true (movement guides), pick among equal-length
+    shortest alternatives. Distance-style callers can pass ``diverse=False``.
+    """
     if mask.shape != terrain.walkable.shape:
         raise ValueError("mask shape must match terrain.walkable")
     allowed = mask.copy()
@@ -318,6 +325,12 @@ def find_path_in_corridor(
         allowed[sy, sx] = True
     if 0 <= gy < allowed.shape[0] and 0 <= gx < allowed.shape[1]:
         allowed[gy, gx] = True
+    if diverse:
+        from app._04_decision.pathfinding import find_path_random_shortest
+
+        return find_path_random_shortest(
+            terrain, start, goal, allowed=allowed, sticky_path=sticky_path
+        )
     return find_path(terrain, start, goal, allowed=allowed)
 
 

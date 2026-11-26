@@ -42,6 +42,10 @@ python\python.exe packaging\incremental_release.py
 
 고객 폴더의 `UserData`에 이 PC의 계정, 로그, 스케줄이 있으면 체크섬 전에 지운다. 개발 트리의 `UserData`는 그대로다. `defaults`만 남긴다.
 
+Pack-only(MMB2) 고객 배포는 `MANMABOT_CEK_ID`와 `MANMABOT_SELLER_DATA`를 잡은 뒤 증분을 돌린다. analysis 변경 시 증분이 MMB2로 `analysis_text.pack`을 다시 쓰고, data만 바뀌면 `pack_assets`가 analysis를 BUILD에 **carry-forward**한다. 끝나면 `verify_stage5.py`로 BUILD에 두 팩이 모두 있는지 확인한다. websocket은 `compile_packages`에 포함되어 `.pyd`로 나간다 (RBF-009).
+
+Stage 4 직전(증분 끝)에 `prune_denied_from_portable`이 돌아간다: `**/tests` 등 deny 잔여 삭제, 그리고 **빈 폴더 붕괴**(단 `UserData/`·`python/`은 유지). 팩에 빠진 뒤 남은 `Engine/analysis` 연구용 빈 껍데기는 여기서 사라진다 (RBF-010).
+
 ## 전체를 다시 만드는 경우
 
 - 고객 폴더가 없다.

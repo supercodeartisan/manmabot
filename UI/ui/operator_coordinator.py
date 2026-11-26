@@ -26,11 +26,13 @@ class OperatorCoordinator:
         on_change: Callable[[], None] = lambda: None,
         on_log: Callable[[str], None] = lambda _message: None,
         on_hotbar: Callable[[dict, dict], None] = lambda _layout, _slots: None,
+        on_alert: Callable[[str, str], None] = lambda _title, _message: None,
     ) -> None:
         self.profile = profile
         self.dispatch = dispatch
         self.on_change = on_change
         self.on_log = on_log
+        self.on_alert = on_alert
         self._closing = False
         self._arming = False
         self._arming_token = 0
@@ -116,7 +118,20 @@ class OperatorCoordinator:
         self._begin_arming(account, recovery=False)
         return None
 
-    def _begin_arming(self, account, *, recovery: bool) -> None:
+    def _close_game_async(self) -> None:
+        def run() -> None:
+            try:
+                from session.game_shutdown import close_game_client
+
+                close_game_client()
+            except Exception as exc:
+                self.on_log(f"Close game failed: {exc}")
+
+        threading.Thread(target=run, name="uimsg-close-game", daemon=True).start()
+
+    def _begin_arming(
+        self, account, *, recovery: bool, close_game_first: bool = False
+    ) -> None:
         if self._closing or self._arming:
             return
         if recovery and not self._budget.claim():
@@ -145,6 +160,15 @@ class OperatorCoordinator:
                         )
                         return
                     time.sleep(0.1)
+
+                if close_game_first and not self._cancel.is_set():
+                    try:
+                        from session.game_shutdown import close_game_client
+
+                        self.on_log("Closing game before relogin (UIMessage)…")
+                        close_game_client()
+                    except Exception as exc:
+                        self.on_log(f"Close game before relogin failed: {exc}")
 
                 def login(selected, cancel):
                     request = AutoLoginRequest(
@@ -233,15 +257,37 @@ class OperatorCoordinator:
         if self.hold_recovery:
             return
         if self.controller.state in (RunState.RUNNING, RunState.PAUSED):
-            if self.controller.auto_pause_tick() == "game_closed":
+            event = self.controller.auto_pause_tick()
+            if event in ("game_closed", "session_disconnected"):
                 if not bool(getattr(self.profile, "resume_after_relogin", True)):
-                    self.controller.reason = "Game closed; resume after relogin is off."
+                    self.controller.reason = (
+                        "Session ended; resume after relogin is off."
+                    )
                     self.on_change()
                     return
                 account = self._selected_account()
                 if account is not None:
                     self._sync_recovery_budget()
-                    self._begin_arming(account, recovery=True)
+                    # Disconnect still has an open window+popup; close before login.
+                    close_first = event == "session_disconnected"
+                    self._begin_arming(
+                        account, recovery=True, close_game_first=close_first
+                    )
+            elif event == "session_policy_block":
+                # Operator/policy popup: stop, close game, no relogin, warn.
+                reason = (
+                    self.controller.reason
+                    or "Account stopped by operator policy; not auto-recovering."
+                )
+                self.on_log(reason)
+                self._close_game_async()
+                self.dispatch(
+                    lambda: self.on_alert(
+                        "Operator policy",
+                        reason,
+                    )
+                )
+                self.on_change()
 
     def close(self) -> None:
         self._closing = True

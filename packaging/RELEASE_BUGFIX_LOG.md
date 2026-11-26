@@ -138,6 +138,28 @@ Python 3.14에서 `os.path.abspath`가 `os.path.isdir`를 호출한다. Stage 5 
 
 ---
 
+## FIX — Startup splash logo missing in MMB2 portable (2026-11-21)
+
+**Symptom.** `ZF.exe` / `ZF.bat` loading card shows brand text/spinner but not `logo.png`.
+
+**Cause.** Splash uses GDI+ `GdipLoadImageFromFile` on `Engine/data/logo.png`. Customer Stage 5 leaves data only in `data.pack` (RAM mount). Win32 cannot see that path; Python `Path.read_bytes` can.
+
+**Fix.** `session/startup_splash._load_logo` reads pack/mount bytes, writes a short-lived temp PNG for GDI+, then deletes it. No need to leave plain `Engine/data` or unpack `logo.png` for splash.
+
+**Release note.** Do **not** add a packaging step to extract logo for splash; the runtime fix is enough. Window/taskbar icon (`brand_icon_path`) may still prefer a real file for Qt native loaders — separate from splash.
+
+---
+
+## FIX — `os.listdir` RecursionError after MMB2 mount + cv2 import (2026-11-21)
+
+**Symptom.** After license activation, selecting hunt input (or any path that imports `cv2`) crashes with `RecursionError` in `asset_store._os_listdir` (thousands of frames: `_under` ↔ `_os_listdir`).
+
+**Cause.** `_os_isfile` / `_os_isdir` already used default-arg `_orig` + `_BUSY` because Nuitka can rebind module-level `_orig_*` to the patched function. `_os_listdir` / `_os_scandir` / `_os_walk` did not — so `return _orig_listdir(path)` called the hook again.
+
+**Fix.** Same pattern on listdir/scandir/walk/open: default-arg original + `_BUSY` early return.
+
+---
+
 ## NOTE — Stage 5 sensitive asset packs (2026-10-06)
 
 기능 추가(버그 아님). 맵 PNG·analysis 텍스트를 고객 폴더에서 평문으로 두지 않는다.
@@ -237,6 +259,104 @@ Nuitka가 `os.path.isdir = hook` 이후에도 저장해 둔 원본 대신 바뀐
 ### 재발 방지 규칙
 
 두루마리 줄은 다른 게임 클릭과 같이 `MouseController.move_and_click` 을 쓴다. 마우스가 여러 개면 사냥 클릭은 마지막 장치로 나가므로, ChangZhi Virtual Mouse 같은 가짜 마우스를 끈다.
+
+---
+
+## RBF-008 — body pose unread on pack-only portable (2026-11-21)
+
+### 증상
+
+고객 portable 사냥 로그:
+
+- `[pose] body pose: action slot unread`
+- travel/loot hop `moving=unread` / `moving=-1`
+- 좌표·몹·아이템은 읽히는데 걷기/서기 판정이 비어 루팅 hop이 과재클릭됨
+
+개발 트리(평문 `Engine/analysis/registry`)에서는 같은 클라이언트로 정상인 경우가 많음.
+
+### 원인
+
+`analysis_text.pack`은 기동 시 `%TEMP%/manmabot_an_*` 오버레이로만 풀림.  
+`body_pose._load_find` / `registry_apply.source_registry` 가 **디스크** `Engine/analysis/registry/*` 만 봐서 팩 전용 빌드에서는 옛 MGR/MyPlayer/VFT 폴백으로 MyPlayer 체인이 실패함.  
+import 시점 `_bind_action_vfts` 도 오버레이 설정 **전**에 돌아가 바인딩이 비는 경우가 있음.
+
+### 수정 (소스에 포함됨 — 재빌드만 하면 됨)
+
+| 파일 | 내용 |
+|------|------|
+| `Engine/app/_05_action/body_pose.py` | `analysis_registry_file`로 `entity_offsets.txt`; 없으면 `_find_ready` 고정 안 함; `refresh_offsets()` |
+| `Engine/app/_01_perception/registry_apply.py` | `source_registry()` 오버레이 `LC930_REGISTRY.txt` 우선 |
+| `Engine/session/run_entry.py` | `ensure_packed_assets()` 직후 `refresh_offsets()` |
+| `Engine/app/_05_action/tests/test_body_pose_overlay.py` | 오버레이 경로 단위 테스트 |
+
+### 이후 릴리스에서 할 일
+
+**수동 패치 없음.** `incremental_release.py` 후 Stage 5(같은 CEK)로 portable을 갱신한다. 교체되는 `.pyd`:
+
+`Engine/app/_05_action/body_pose.cp314-win_amd64.pyd`  
+`Engine/app/_01_perception/registry_apply.cp314-win_amd64.pyd`  
+`Engine/session/run_entry.cp314-win_amd64.pyd`
+
+실기 확인: 로그에 `action slot unread` / `moving=unread`가 사라지고 hop reclick이 줄어드는지.
+
+### 재발 방지 규칙
+
+오프셋·레지스트리 **텍스트**를 여는 Python 경로는 `session.analysis_overlay.analysis_registry_file` (또는 `source_registry`)를 쓴다.  
+`Path(__file__)/…/Engine/analysis/…` 하드코딩을 새로 넣지 않는다. Pack-only 기동은 `ensure` → `refresh_offsets` 순서를 유지한다.  
+자세한 런타임 흐름: `RUNTIME_TEMP.md`, `SENSITIVE_ASSETS.md` §6.
+
+---
+
+## RBF-009 — BUILD pins both packs; analysis csv/dll; websocket compile (2026-11-21)
+
+### 증상
+
+증분 후 `pack_assets`가 data만 다시 만들면 `BUILD.json`에 `data.pack`만 남아 `analysis_text.pack`이 해시 검증 밖으로 떨어짐. `item_name_kr.csv`와 `analysis/dll/*.dll`이 고객 zip에 평문으로 남음. `Engine/websocket`이 평문 `.py`로 배포됨.
+
+### 원인
+
+`publish_verified_pack_pair`가 재빌드된 쪽만 BUILD에 넣음. analysis 팩 suffix에 `.csv`/`.dll` 없음. `compile_packages.txt`에 websocket 없음.
+
+### 수정 (소스에 포함됨)
+
+| 파일 | 내용 |
+|------|------|
+| `packaging/mmb2_stage5.py` | 미재빌드 쪽 MMB2 **carry-forward** → BUILD에 양쪽 sha256 |
+| `Engine/crypto/pack_format.py` | `peek_mmb2_public_header` |
+| `packaging/pack_assets.py` | `.csv` + `dll/*.dll` 팩 포함 |
+| `packaging/manifests/compile_packages.txt` | `Engine websocket` |
+| `packaging/manifests/deny_globs.txt` | tests 제외 |
+| `session/analysis_overlay.py` | `analysis_dll_path` (TEMP overlay → plain) |
+| perception readers / `uimsg_probe` / `lc_session` | DLL 경로 overlay 경유 |
+| `incremental_release.py` | CEK 있으면 analysis를 MMB2로 재팩 |
+
+### 이후 릴리스에서 할 일
+
+`MANMABOT_CEK_ID` + SellerData로 `incremental_release` 후 `verify_stage5`. BUILD에 `data.pack`과 `analysis_text.pack` 둘 다 있는지 확인. 고객 zip에 `Engine/analysis/dll` 평문·`item_name_kr.csv`가 없어야 함.
+
+### 재발 방지 규칙
+
+Stage 5 publish는 항상 두 팩을 BUILD에 올린다(신규 또는 carry-forward). analysis DLL/텍스트는 overlay helper만 사용. websocket은 compile_packages에 유지.
+`pack_assets` analysis 스냅샷은 **repo** `Engine/analysis` 기준(포터블이 이미 strip된 뒤 dll/csv만 남아 팩이 축소되는 사고 방지).
+
+## RBF-011 — portable missing cryptography / rfc8785 (2026-11-22)
+
+### Symptom
+Customer License UI:「요청 실패: No module named 'cryptography'」 when creating the activation request.
+
+### Root cause
+Embeddable `python\` (and thus Stage 3 / incremental python recopy) never had `cryptography` / `rfc8785` installed, though `Engine/requirements.txt` lists them for MMB2 / Soft DeviceKey.
+
+### Fix
+Install `cryptography` + `rfc8785` into repo `python\` and portable `python\`. `verify_runtime_imports` now requires both so Stage 3 / incremental cannot ship without them.
+
+## RBF-010 — prune deny leftovers from portable (2026-11-21)
+
+### Symptom
+증분 후 `**/tests` 가 `.pyd`로 고객 트리에 남고, `Engine/app/**/tests/` deny는 mid-path `**`를 못 매칭. `*.new.dll`이 analysis 팩에 들어감. `classify_model` 학습용 `.py` / `analysis/_build` 잔존.
+
+### Fix
+`deny_globs`에 `**/tests/` 등 보강; `is_denied` mid-path `/**/` 지원; Stage4 직전 `prune_denied_from_portable`; compile 대상에서 deny 제외; analysis 팩에서 `*.new.dll`/`*.old.dll` 제외. Stage5/Stage4에서 **빈 폴더 붕괴**(`UserData/`·`python/` 제외). `analysis/bin`은 `realtime_monitor_full.exe`·`inventory_listen.exe`만 유지. `win32_prototypes.py`·`label_tables.json`은 런타임용으로 유지.
 
 ---
 

@@ -127,7 +127,7 @@ class _Capture:
     content_bounds = _Bounds()
 
 
-def test_stuck_spell_right_clicks_inside_the_view() -> None:
+def test_stuck_spell_left_clicks_inside_the_view() -> None:
     executor = _Executor()
     executor.keyboard = _Keys()
     executor.mouse = _ClickMouse()
@@ -146,7 +146,7 @@ def test_stuck_spell_right_clicks_inside_the_view() -> None:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
     assert active is True
     assert executor.keyboard.pressed == []
-    assert executor.mouse.clicks == [(100 + 800 * 0.62, 50 + 600 * 0.45, "right")]
+    assert executor.mouse.clicks == [(100 + 800 * 0.62, 50 + 600 * 0.45, "left")]
 
 
 def test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops() -> None:
@@ -171,7 +171,7 @@ def test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops() -> None:
         cv.cancel_spell_aim(executor, reason="heal")
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
-    assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
+    assert [click[2] for click in executor.mouse.clicks] == ["left", "left"]
     assert executor.keyboard.pressed == []
 
 
@@ -197,9 +197,8 @@ def test_a_stuck_circle_presses_the_party_key_once_and_retries_the_view() -> Non
         cv.cancel_spell_aim(executor, reason="party buff")
     finally:
         cv.cursor_is_spell_aim = original  # type: ignore[assignment]
-    assert [click[2] for click in executor.mouse.clicks] == ["right", "right"]
+    assert [click[2] for click in executor.mouse.clicks] == ["left", "left"]
     assert executor.keyboard.pressed == ["f10"]
-
 
 def test_a_late_circle_keeps_the_party_key_until_it_appears() -> None:
     executor = _Executor()
@@ -217,6 +216,46 @@ def test_a_late_circle_keeps_the_party_key_until_it_appears() -> None:
     assert executor._spell_aim_key == ""
 
 
+def test_clear_spell_aim_presses_key_then_left_clicks() -> None:
+    executor = _Executor()
+    executor.keyboard = _Keys()
+    executor.mouse = _ClickMouse()
+    executor._perception_capture = _Capture()
+    cv.remember_spell_aim_key(executor, "f11", 1)
+    seen = {"n": 0}
+    original_aim = cv.cursor_is_spell_aim
+    original_settle = cv.SPELL_AIM_SETTLE_S
+    try:
+        cv.SPELL_AIM_SETTLE_S = 0.0
+
+        def _aim(_executor: object = None) -> bool:
+            seen["n"] += 1
+            # Key press alone does not clear; left-click does.
+            return len(executor.mouse.clicks) < 1
+
+        cv.cursor_is_spell_aim = _aim  # type: ignore[assignment]
+        assert cv.clear_spell_aim(executor, reason="self heal leftover") is True
+    finally:
+        cv.cursor_is_spell_aim = original_aim  # type: ignore[assignment]
+        cv.SPELL_AIM_SETTLE_S = original_settle
+    assert executor.keyboard.pressed == ["f11"]
+    assert [click[2] for click in executor.mouse.clicks] == ["left"]
+
+
+def test_heal_double_quiet_blocks_mouse_click() -> None:
+    from app._05_action.mouse import MouseController
+
+    mouse = MouseController(enabled=False, humanize=False)
+    mouse.begin_quiet()
+    before = mouse.button_events
+    mouse.click(10.0, 20.0, snap=True)
+    mouse.move(30.0, 40.0, snap=True)
+    assert mouse.button_events == before
+    assert mouse.is_quiet is True
+    mouse.end_quiet()
+    assert mouse.is_quiet is False
+
+
 def test_party_list_skips_the_click_when_the_cursor_stays_down() -> None:
     original = cv.cursor_is_spell_aim
     try:
@@ -232,6 +271,8 @@ if __name__ == "__main__":
     test_out_of_range_circle_cancels_without_a_miss()
     test_party_list_waits_for_the_spell_cursor()
     test_party_list_skips_the_click_when_the_cursor_stays_down()
-    test_stuck_spell_right_clicks_inside_the_view()
+    test_stuck_spell_left_clicks_inside_the_view()
     test_a_failed_view_cancel_is_not_repeated_until_the_cursor_drops()
+    test_clear_spell_aim_presses_key_then_left_clicks()
+    test_heal_double_quiet_blocks_mouse_click()
     print("spell aim hold tests ok")

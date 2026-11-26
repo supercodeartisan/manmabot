@@ -3,12 +3,16 @@
  *
  * Flow
  *   validate -> resolve PID/window -> preflight (UIPI, elevation, Interception)
- *   -> focus -> Korean layout/IME -> optional Esc/Enter -> text
- *   -> optional final Enter -> restore layout -> result.
+ *   -> focus -> read IME and sentence order -> mode of the first run
+ *   -> optional Esc/Enter -> text -> optional final Enter -> restore layout.
  *
  * Text model
- *   - Hangul: 2-beolsik jamo keys through Interception + Korean IME.
- *   - Other:  PostMessage(WM_CHAR); optional SendInput fallback.
+ *   - Before any character key, the current IME is read and the sentence is
+ *     split into Hangul / ASCII / other runs. The first run chooses 한 or 영.
+ *   - Hangul: 2-beolsik jamo keys through Interception, only after 한 is read.
+ *   - ASCII with a US scancode: physical key, only after 영 is read.
+ *     A run switches mode and reads it back before the first key of that run.
+ *   - No scancode: PostMessage(WM_CHAR); optional SendInput fallback.
  *   - Tab:    physical Tab key.  Esc/Enter: physical keys.
  *
  * Timing
@@ -102,10 +106,93 @@ static void ec_analyze_text(const wchar_t* text, EcTextPlan* plan)
     }
 }
 
+/* -1 control, 1 Hangul, 2 scannable ASCII, 0 other (Chinese, emoji). */
+static int ec_char_kind(uint32_t cp, int units)
+{
+    if (cp < 0x20) return -1;
+    if (cp <= 0xFFFF && ec_is_hangul((wchar_t)cp)) return 1;
+    if (units == 1 && ec_ascii_to_scan((WCHAR)cp, NULL) >= 0) return 2;
+    return 0;
+}
+
+/* Kind of the first character that will actually be typed. */
+static int ec_first_input_kind(const wchar_t* text)
+{
+    const wchar_t* p;
+
+    if (!text) return 0;
+    for (p = text; *p; ) {
+        uint32_t cp;
+        int units = ec_next_codepoint(p, &cp);
+        int kind = ec_char_kind(cp, units);
+        p += units;
+        if (kind >= 0) return kind;
+    }
+    return 0;
+}
+
+static void ec_log_sentence(EcResult* res, const wchar_t* text, const wchar_t* now_name)
+{
+    wchar_t order[80];
+    int n = 0;
+    int prev = -2;
+    const wchar_t* p;
+
+    order[0] = 0;
+    for (p = text; p && *p && n < 64; ) {
+        uint32_t cp;
+        int units = ec_next_codepoint(p, &cp);
+        int kind = ec_char_kind(cp, units);
+        const wchar_t* tag;
+        p += units;
+        if (kind < 0 || kind == prev) continue;
+        tag = kind == 1 ? L"한" : kind == 2 ? L"영" : L"기타";
+        if (n > 0) order[n++] = L'-';
+        while (*tag && n < 64) order[n++] = *tag++;
+        prev = kind;
+    }
+    order[n] = 0;
+    if (!order[0])
+        wcscpy_s(order, 80, L"(empty)");
+    ec_result_message(res, L"now=%ls order=%ls", now_name, order);
+}
+
 static void ec_set_error(EcResult* res, EcStatus status, const wchar_t* msg)
 {
     res->status = status;
     if (msg) ec_result_message(res, L"%ls", msg);
+}
+
+/* One ASCII key. The caller has already read 영 back. */
+static BOOL ec_type_scan(EcContext* ctx, int sc, int shift, int* sent_keys)
+{
+    BOOL ok = TRUE;
+
+    if (!ctx || sc < 0) return FALSE;
+    if (ctx->ic) {
+        if (shift) {
+            if (!ec_ic_key(ctx, 0x2A, 0, 0)) ok = FALSE;
+            Sleep(3);
+        }
+        if (ok && ec_ic_press(ctx, sc, 0, EC_KEY_HOLD_MS)) {
+            if (sent_keys) (*sent_keys)++;
+        } else {
+            ok = FALSE;
+        }
+        if (shift) {
+            Sleep(3);
+            if (!ec_ic_key(ctx, 0x2A, 0, 1)) ok = FALSE;
+        }
+        return ok;
+    }
+    if (ec_is_foreground(ctx->hwnd) &&
+        ec_sendinput_press(sc, shift, EC_KEY_HOLD_MS)) {
+        if (sent_keys) (*sent_keys)++;
+        ec_result_message(ctx->res, L"physical key via SendInput");
+        return TRUE;
+    }
+    ec_result_message(ctx->res, L"physical key was not pressed");
+    return FALSE;
 }
 
 /* ---------------------------------------------------------------- public */
@@ -158,6 +245,9 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     int failed = 0;
     int skipped = 0;
     int lost_front = 0;
+    int hangul_ready = 0;
+    int english_ready = 0;
+    int mode_failed = 0;
 
     InitOnceExecuteOnce(&g_lock_once, ec_init_lock, NULL, NULL);
     EnterCriticalSection(&g_lock);
@@ -301,42 +391,60 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     }
     if (request->flags & EC_FLAG_OPEN_CHAT) {
         ec_send_vk(&ctx, VK_RETURN);
-        Sleep(280);
+        /* Bot / monitor UI often steals focus during this settle. Hangul
+         * Interception keys and ZH Unicode both need the game in front. */
+        Sleep(450);
     }
 
-    /* Opening/closing an input line can move focus to another child control.
-     * Re-resolve it unless the caller pinned an explicit HWND. */
-    if (!request->hwnd)
+    /* Opening chat moves focus to the input line. A pinned top-level HWND
+     * is the game window, not that line, so resolve the focused child again.
+     * A pinned child control stays the text sink. */
+    if (!request->hwnd || request->hwnd == ctx.hwnd)
         ctx.focus = ec_resolve_focus(ctx.hwnd);
 
-    /* Opening chat sleeps long enough for the bot UI to take focus back.
-     * Interception strokes go to whichever window is actually in front, so a
-     * failed focus is a failed line — the driver accepting the stroke is not
-     * enough. */
-    if ((plan.has_hangul || plan.has_scan_keys) &&
-        !ec_is_foreground(ctx.hwnd) &&
+    /* Re-take the foreground after open-chat sleep. Interception and Unicode
+     * SendInput both go to whichever window is actually in front — a driver
+     * accept is not enough. Required for Hangul, ASCII names, and Chinese. */
+    if (!(request->flags & EC_FLAG_NO_FOCUS) &&
+        (plan.has_hangul || plan.has_scan_keys || plan.needs_wmchar) &&
         !ec_force_foreground(ctx.hwnd, focus_timeout)) {
         failed++;
         lost_front = 1;
         ec_result_message(res, L"game is not the foreground window");
     }
+    if (!request->hwnd || request->hwnd == ctx.hwnd)
+        ctx.focus = ec_resolve_focus(ctx.hwnd);
 
-    /* Lone ASCII (invite Y) must be English. A Hangul line keeps 한 mode. */
-    if (!plan.has_hangul && plan.has_scan_keys)
-        ec_english_prepare(&ctx, ctx.hwnd);
+    /* Read the live IME and the sentence order before any character key.
+     * The first run picks 한 or 영. A Hangul syllable later in the line
+     * does not switch the line to 한 before that first key. The right-arrow
+     * commit runs only after 한 is confirmed for a Hangul-leading line. */
+    {
+        wchar_t now[40];
+        int first = ec_first_input_kind(request->text);
+        ec_format_current_mode(&ctx, ctx.hwnd, now, 40);
+        ec_log_sentence(res, request->text, now);
 
-    /* Prepare the Korean layout/IME on the final focus target. */
-    if (plan.has_hangul) {
-        if (!ec_hangul_prepare(&ctx, ctx.hwnd)) {
-            ec_set_error(res, EC_E_IME,
-                L"could not prepare the Korean layout/IME");
+        if (plan.has_hangul && !ec_hangul_layout(&ctx, ctx.hwnd)) {
+            res->status = EC_E_IME;
             goto cleanup;
         }
+        if (first == 1) {
+            if (!ec_require_hangul(&ctx, ctx.hwnd)) {
+                res->status = EC_E_IME;
+                goto cleanup;
+            }
+            hangul_ready = 1;
+            if (!(request->flags & EC_FLAG_NO_START_COMMIT))
+                ec_hangul_commit(&ctx);
+        } else if (first == 2) {
+            if (!ec_english_prepare(&ctx, ctx.hwnd)) {
+                res->status = EC_E_IME;
+                goto cleanup;
+            }
+            english_ready = 1;
+        }
     }
-
-    /* Flush a composition that a previous/manual IME run may have left. */
-    if (plan.has_hangul && !(request->flags & EC_FLAG_NO_START_COMMIT))
-        ec_hangul_commit(&ctx);
 
     /* ------------------------------------------------------------ text */
     {
@@ -375,7 +483,19 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
 
             if (ec_is_hangul((wchar_t)cp)) {
                 char keys[EC_MAX_KEYS_PER_CHAR];
-                int n = ec_hangul_keys((wchar_t)cp, keys, EC_MAX_KEYS_PER_CHAR);
+                int n;
+
+                if (!hangul_ready) {
+                    if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
+                    if (!ec_require_hangul(&ctx, ctx.hwnd)) {
+                        failed++;
+                        mode_failed = 1;
+                        break;
+                    }
+                    hangul_ready = 1;
+                    english_ready = 0;
+                }
+                n = ec_hangul_keys((wchar_t)cp, keys, EC_MAX_KEYS_PER_CHAR);
 
                 if (n > 0) {
                     BOOL ok = TRUE;
@@ -413,39 +533,24 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
                 continue;
             }
 
-            /* non-Hangul: physical Interception key when IME is not in 한글
-             * (invite-accept Y). Mixed Hangul lines keep WM_CHAR for ASCII
-             * so a latin name after /초대 is not typed as jamo. */
+            /* Space, letters, digits, and symbols are physical keys after 영
+             * is read. WM_CHAR remains for a code point with no US scancode. */
             if (in_hangul) { ec_hangul_commit(&ctx); in_hangul = 0; }
             {
                 int shift = 0;
                 int sc = (units == 1) ? ec_ascii_to_scan(start[0], &shift) : -1;
-                /* Invite Y is a physical key. WM_CHAR and PostMessage do not
-                 * press the popup. With no Interception slot, SendInput does. */
-                if (!ctx.ic && !plan.has_hangul && plan.has_scan_keys) {
-                    BOOL ok = sc >= 0 && ec_is_foreground(ctx.hwnd) &&
-                              ec_sendinput_press(sc, shift, EC_KEY_HOLD_MS);
-                    if (ok) {
-                        sent_chars++;
-                        sent_keys++;
-                        ec_result_message(res, L"physical key via SendInput");
-                    } else {
-                        failed++;
-                        ec_result_message(res, L"SendInput did not press the key");
+                if (sc >= 0) {
+                    if (!english_ready) {
+                        if (!ec_english_prepare(&ctx, ctx.hwnd)) {
+                            failed++;
+                            mode_failed = 1;
+                            break;
+                        }
+                        english_ready = 1;
+                        hangul_ready = 0;
                     }
-                } else if (ctx.ic && sc >= 0 && !ctx.hangul_started) {
-                    BOOL ok = TRUE;
-                    if (shift) {
-                        if (!ec_ic_key(&ctx, 0x2A, 0, 0)) ok = FALSE;
-                        Sleep(3);
-                    }
-                    if (ec_ic_press(&ctx, sc, 0, EC_KEY_HOLD_MS)) sent_keys++;
-                    else ok = FALSE;
-                    if (shift) {
-                        Sleep(3);
-                        if (!ec_ic_key(&ctx, 0x2A, 0, 1)) ok = FALSE;
-                    }
-                    if (ok) sent_chars++; else failed++;
+                    if (ec_type_scan(&ctx, sc, shift, &sent_keys)) sent_chars++;
+                    else failed++;
                 } else {
                     BOOL ok = TRUE;
                     int units_sent = 0;
@@ -506,7 +611,10 @@ int __cdecl ec_run(const EcRequest* request, EcResult* result)
     res->keys = sent_keys;
     res->failed = failed;
     res->skipped = skipped;
-    res->status = failed > 0 ? EC_E_TEXT : EC_OK;
+    if (mode_failed)
+        res->status = EC_E_IME;
+    else
+        res->status = failed > 0 ? EC_E_TEXT : EC_OK;
 
 cleanup:
     if (ctx.hangul_started) ec_hangul_done(&ctx);

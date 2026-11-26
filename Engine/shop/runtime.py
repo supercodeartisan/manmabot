@@ -27,31 +27,201 @@ def _uv_xy(uv) -> tuple[float, float]:
     return float(uv[0]), float(uv[1])
 
 
+def _shop_humanize_on(executor) -> bool:
+    return bool(getattr(executor, "humanize", True))
+
+
+def _stage_sleep(executor, base_s: float) -> None:
+    """Shop stage wait with ±10–15% jitter when humanize is on."""
+    from app._05_action import humanize as hz
+
+    hz.shop_stage_sleep(
+        base_s,
+        getattr(executor, "_rng", None),
+        jitter=_shop_humanize_on(executor),
+    )
+
+
+def _pre_confirm_fidget(
+    executor, bounds, scroll_uv, *, humanize: bool | None = None
+) -> None:
+    """Accidental down-right wheel glances before Buy/Sell confirm.
+
+    2–4 wheel-downs, 0.3–0.5s apart, cursor nudged down-right over the list.
+    Skipped when humanize is off (Practice).
+    """
+    if humanize is None:
+        humanize = _shop_humanize_on(executor)
+    if not humanize or scroll_uv is None:
+        return
+    from app._05_action import humanize as hz
+    from app._05_action.coordinates import game_to_screen
+    from app._05_action.input_backend import list_wheel_count, scroll_wheel
+    from shop.ui_aim import shop_move_to
+
+    rng = getattr(executor, "_rng", None)
+    u, v = _uv_xy(scroll_uv)
+    sx, sy = game_to_screen(u, v, bounds)
+    nudge = hz.uniform(hz.SHOP_PRE_CONFIRM_FIDGET_NUDGE_PX, rng)
+    # Down-right: +x and +y in screen pixels.
+    shop_move_to(
+        executor,
+        sx + nudge,
+        sy + nudge * hz.uniform((0.55, 1.15), rng),
+        budget_s=hz.uniform((0.18, 0.40), rng),
+        steps=(4, 10),
+    )
+    n = hz.randint(hz.SHOP_PRE_CONFIRM_FIDGET_N, rng)
+    notches = list_wheel_count(1)
+    for i in range(max(1, n)):
+        for _ in range(max(1, notches)):
+            scroll_wheel("down")
+        if i + 1 < n:
+            hz.sleep_range(hz.SHOP_PRE_CONFIRM_FIDGET_GAP_S, rng)
+
+
 def _click_uv(executor, bounds, uv, *, wait_s: float) -> None:
+    """Click a calibrated UV. Live: curve + fine land + 0.10–0.15s hold."""
     from app._05_action.coordinates import game_to_screen
 
     u, v = _uv_xy(uv)
     sx, sy = game_to_screen(u, v, bounds)
+    if _shop_humanize_on(executor):
+        from shop.ui_aim import aim_and_click
+
+        aim_and_click(executor, sx, sy)
+    else:
+        executor.mouse.move_and_click(sx, sy, snap=True)
+    if wait_s > 0.0:
+        _stage_sleep(executor, wait_s)
+
+
+# Warehouse dialog line only. First click is the calibrated pixel. The next
+# three sit 4, 8, and 12px lower on that same line when the deposit list
+# is still closed. Merchant buy/sell buttons do not use this.
+_STORE_OPTION_NUDGE_PX = (0, 4, 8, 12)
+_STORE_OPTION_HOVER_S = 0.25
+_STORE_OPTION_POLL_S = 1.5
+_STORE_RETRIEVE_MODES = frozenset({"retrieve", "withdraw"})
+
+
+def store_deposit_ready(snap) -> bool:
+    """True when the open warehouse list is the deposit list."""
+    if not isinstance(snap, dict) or not snap.get("open"):
+        return False
+    mode = str(snap.get("mode") or "").strip().lower()
+    return mode in ("", "deposit")
+
+
+def store_list_is_retrieve(snap) -> bool:
+    if not isinstance(snap, dict):
+        return False
+    mode = str(snap.get("mode") or "").strip().lower()
+    return mode in _STORE_RETRIEVE_MODES
+
+
+def _log_store_option(snap, *, tries: int) -> None:
+    from app.bot_log import get_logger
+
+    if not isinstance(snap, dict):
+        get_logger("shop").info(
+            "store option open=0 mode=closed tries=%s",
+            int(tries),
+        )
+        return
+    get_logger("shop").info(
+        "store option open=%s mode=%s tries=%s",
+        snap.get("open"),
+        snap.get("mode") or "-",
+        int(tries),
+    )
+
+
+def _click_store_option_exact(executor, bounds, uv, *, dy_px: float) -> None:
+    """Click the deposit line on its pixel. No shop-button orbit."""
+    from app._05_action.coordinates import game_to_screen
+
+    u, v = _uv_xy(uv)
+    sx, sy = game_to_screen(u, v, bounds)
+    sy = float(sy) + float(dy_px)
+    if _shop_humanize_on(executor):
+        from shop.ui_aim import aim_and_click_exact
+
+        aim_and_click_exact(executor, float(sx), sy, hover_s=_STORE_OPTION_HOVER_S)
+        return
+    executor.mouse.move(sx, sy, snap=True)
+    time.sleep(_STORE_OPTION_HOVER_S)
     executor.mouse.move_and_click(sx, sy, snap=True)
-    time.sleep(wait_s)
+
+
+def _poll_store_window(timeout_s: float):
+    """Latest storewin snapshot. Stops early on deposit or retrieve."""
+    from app._01_perception.storewin_reader import capture_store
+
+    deadline = time.time() + max(0.0, float(timeout_s))
+    last = None
+    while True:
+        try:
+            snap = capture_store()
+        except Exception:
+            snap = None
+        last = snap if isinstance(snap, dict) else None
+        if store_deposit_ready(last) or store_list_is_retrieve(last):
+            return last
+        if time.time() >= deadline:
+            return last
+        time.sleep(0.05)
+
+
+def open_store_deposit_tab(executor, bounds, sell_uv) -> str:
+    """Click "deposit" until the deposit list is open.
+
+    One NPC dialog is already open. This does not click the keeper again.
+    Returns ``deposit``, ``retrieve``, or ``closed``. A retrieve list is not
+    stored; the caller closes that window.
+    """
+    last = None
+    for tries, dy in enumerate(_STORE_OPTION_NUDGE_PX, start=1):
+        _click_store_option_exact(executor, bounds, sell_uv, dy_px=float(dy))
+        last = _poll_store_window(_STORE_OPTION_POLL_S)
+        _log_store_option(last, tries=tries)
+        if store_deposit_ready(last):
+            return "deposit"
+        if store_list_is_retrieve(last):
+            return "retrieve"
+    return "closed"
 
 
 def _scroll_list(executor, bounds, scroll_uv, steps: int, *, move: bool = True) -> None:
     from app._05_action.coordinates import game_to_screen
     from app._05_action.input_backend import list_wheel_count, scroll_wheel
+    from app._05_action import humanize as hz
 
     if steps <= 0:
         return
     steps = list_wheel_count(steps)
+    human = _shop_humanize_on(executor)
+    rng = getattr(executor, "_rng", None)
+    if human:
+        # Read the list before rolling — wide think pause (0.5–2s).
+        think = hz.uniform(hz.SHOP_UI_SCROLL_THINK_S, rng)
+        if think > 0.0:
+            time.sleep(think)
     if move:
         u, v = _uv_xy(scroll_uv)
         sx, sy = game_to_screen(u, v, bounds)
-        executor.mouse.move(sx, sy, snap=True)
-        time.sleep(0.15)
+        if human:
+            from shop.ui_aim import approach_ui, fine_adjust
+
+            approach_ui(executor, sx, sy)
+            fine_adjust(executor, sx, sy)
+        else:
+            executor.mouse.move(sx, sy, snap=True)
+            time.sleep(0.15)
     for _ in range(steps):
         scroll_wheel("down")
-        time.sleep(0.08)
-    time.sleep(0.25)
+        time.sleep(0.08 if not human else hz.uniform((0.06, 0.14), rng))
+    time.sleep(0.25 if not human else hz.uniform((0.18, 0.40), rng))
 
 
 def _npc_nav(behavior: ShoppingBehavior) -> tuple[int, int]:
@@ -195,10 +365,13 @@ def player_origin_from_executor(executor) -> Any:
 def open_shop_npc(executor, bounds, behavior: ShoppingBehavior, origin=None) -> bool:
     """Open the NPC dialog for shop / warehouse / teleporter.
 
-    When ``behavior.click_offset_uv`` is set: single click at
-    content UV ``A + offset`` (calibrated). Otherwise cursor-scan:
-    1) tile hunt around the catalog/live NPC cell
-    2) 20px pixel ring around the catalog UV
+    Live (``executor.humanize``): curved ~1s approach + fine DIALOG confirm
+    via ``shop.npc_aim`` (does not change combat ``MOVE_BUDGET_S``).
+
+    Practice / humanize off: legacy snap + fixed-step ring (deterministic).
+
+    When ``behavior.click_offset_uv`` is set: aim that content UV.
+    Otherwise: tile hunt, then 20px pixel ring around the catalog UV.
 
     After a successful NPC click, wait until the matching uidialog is OPEN
     (``UIDIALOG_OPEN_TIMEOUT_S``, default 3s) before Buy/Sell/option clicks.
@@ -233,34 +406,59 @@ def open_shop_npc(executor, bounds, behavior: ShoppingBehavior, origin=None) -> 
     def _screen(u, v):
         return game_to_screen(u, v, click_bounds)
 
+    human = bool(getattr(executor, "humanize", True))
     opened = False
     offset = getattr(behavior, "click_offset_uv", None)
     if offset is not None:
         u = max(0.0, min(1.0, float(npc_uv.x) + float(offset[0])))
         v = max(0.0, min(1.0, float(npc_uv.y) + float(offset[1])))
         sx, sy = _screen(u, v)
-        executor.mouse.move(sx, sy, snap=True)
-        if hz.SHOP_NPC_SEARCH_STEP_S > 0:
-            time.sleep(hz.SHOP_NPC_SEARCH_STEP_S)
-        opened = dialog_click(executor, sx, sy)
+        if human:
+            from shop.npc_aim import open_npc_human
+
+            opened = open_npc_human(executor, sx, sy)
+        else:
+            executor.mouse.move(sx, sy, snap=True)
+            if hz.SHOP_NPC_SEARCH_STEP_S > 0:
+                time.sleep(hz.SHOP_NPC_SEARCH_STEP_S)
+            opened = dialog_click(executor, sx, sy)
     else:
         world = getattr(executor, "_world", None) or getattr(executor, "world", None)
         dests = shop_dialog_destinations(world, behavior, npc_uv, origin)
-        if dests:
-            opened = dialog_click_destinations(
-                executor,
-                dests,
-                _screen,
-                step_s=hz.SHOP_NPC_SEARCH_STEP_S,
+        if human:
+            from shop.npc_aim import (
+                open_npc_human,
+                probe_destinations_human,
+                probe_ring_human,
             )
-        if not opened:
-            opened = dialog_click_ring(
-                executor,
-                npc_uv,
-                _screen,
-                radius_px=SHOP_NPC_SEARCH_PX,
-                step_s=hz.SHOP_NPC_SEARCH_STEP_S,
-            )
+
+            sx0, sy0 = _screen(npc_uv.x, npc_uv.y)
+            opened = open_npc_human(executor, sx0, sy0)
+            if not opened and dests:
+                opened = probe_destinations_human(executor, dests, _screen)
+            if not opened:
+                opened = probe_ring_human(
+                    executor,
+                    npc_uv,
+                    _screen,
+                    radius_px=SHOP_NPC_SEARCH_PX,
+                )
+        else:
+            if dests:
+                opened = dialog_click_destinations(
+                    executor,
+                    dests,
+                    _screen,
+                    step_s=hz.SHOP_NPC_SEARCH_STEP_S,
+                )
+            if not opened:
+                opened = dialog_click_ring(
+                    executor,
+                    npc_uv,
+                    _screen,
+                    radius_px=SHOP_NPC_SEARCH_PX,
+                    step_s=hz.SHOP_NPC_SEARCH_STEP_S,
+                )
     if not opened:
         return False
     kind = str(getattr(behavior, "action", "") or "buy").strip().lower()
@@ -360,11 +558,21 @@ def shop_dialog_destinations(world, behavior: ShoppingBehavior, fallback_uv, ori
     return [fallback_uv] if fallback_uv is not None else []
 
 
-def _type_qty(executor, qty: int, *, wait_s: float) -> None:
-    executor.keyboard.tap("backspace", count=3)
+def _type_qty(executor, qty: int, *, wait_s: float = 0.0, backspace: int = 3) -> None:
+    """Type quantity. Live: 0.2–0.3s after click, 5–6 keys/s between chars."""
+    if _shop_humanize_on(executor):
+        from shop.ui_aim import type_qty_human
+
+        type_qty_human(executor, qty, backspace=backspace)
+        if wait_s > 0.0:
+            _stage_sleep(executor, wait_s)
+        return
+    if backspace > 0:
+        executor.keyboard.tap("backspace", count=int(backspace))
     for digit in str(max(1, min(999, int(qty)))):
         executor.keyboard.press(digit)
-    time.sleep(wait_s)
+    if wait_s > 0.0:
+        time.sleep(wait_s)
 
 
 def _buy_list_price(behavior: ShoppingBehavior) -> Optional[int]:
@@ -474,12 +682,10 @@ def execute_calibrated_buy(
     row_uv = ui.item_rows[row_i]
     if row_uv is None:
         return False
-    _click_uv(executor, bounds, row_uv, wait_s=wait)
-    # Practice buy taps backspace once, then types the quantity.
-    executor.keyboard.tap("backspace", count=1)
-    for digit in str(max(1, min(999, amount))):
-        executor.keyboard.press(digit)
-    time.sleep(wait)
+    _click_uv(executor, bounds, row_uv, wait_s=0.0)
+    # Buy clears one digit slot; live path adds 0.2–0.3s then slow keys.
+    _type_qty(executor, amount, wait_s=wait, backspace=1)
+    _pre_confirm_fidget(executor, bounds, ui.list_scroll_point)
     _click_uv(executor, bounds, ui.confirm_button, wait_s=wait)
     return True
 
@@ -675,8 +881,7 @@ def execute_calibrated_sell(
                 item_id = int(row.get("id") or 0)
             except (TypeError, ValueError):
                 item_id = 0
-            if is_store and str(row.get("name") or "").strip() in ("아데나", "Adena"):
-                continue
+            # Adena / keep / garbage: same filter for merchants and warehouse.
             if not item_passes_sell_filter(
                 str(row.get("name") or ""),
                 sell_mode=sell_mode,
@@ -688,20 +893,31 @@ def execute_calibrated_sell(
             sellable.append(row)
         return sellable, max(length, len(rows))
 
-    def open_sell() -> bool:
-        if not open_shop_npc(
-            executor, bounds, behavior, player_origin_from_executor(executor)
-        ):
-            return False
-        _click_uv(executor, bounds, ui.sell_button, wait_s=hz.SHOP_AFTER_TAB_WAIT_S)
-        time.sleep(0.35)
-        return True
-
     def close_shop() -> None:
         try:
             executor.keyboard.press("escape")
         except Exception:
             pass
+
+    def open_sell() -> bool:
+        if not open_shop_npc(
+            executor, bounds, behavior, player_origin_from_executor(executor)
+        ):
+            return False
+        if is_store:
+            # Exact glyph click. The shop-button orbit misses this short line.
+            # Rows are stored only after the deposit list is actually open.
+            opened = open_store_deposit_tab(executor, bounds, ui.sell_button)
+            if opened != "deposit":
+                close_shop()
+                if opened == "retrieve":
+                    close_shop()
+                return False
+            _stage_sleep(executor, 0.35)
+            return True
+        _click_uv(executor, bounds, ui.sell_button, wait_s=hz.SHOP_AFTER_TAB_WAIT_S)
+        _stage_sleep(executor, 0.35)
+        return True
 
     def _idx(row: dict) -> int:
         try:
@@ -752,13 +968,9 @@ def execute_calibrated_sell(
         row_uv = ui.item_rows[int(step[2])]
         if row_uv is None:
             continue
-        _click_uv(
-            executor,
-            bounds,
-            row_uv,
-            wait_s=random.uniform(0.2, 0.5),
-        )
-        _type_qty(executor, _sell_qty(target), wait_s=0)
+        # Aim/hold is humanized inside ``_click_uv``; no extra snap gap.
+        _click_uv(executor, bounds, row_uv, wait_s=0.0)
+        _type_qty(executor, _sell_qty(target), wait_s=0.0)
         clicked_item = True
         sold += 1
 
@@ -766,8 +978,9 @@ def execute_calibrated_sell(
         close_shop()
         return False
 
+    _pre_confirm_fidget(executor, bounds, ui.list_scroll_point)
     _click_uv(executor, bounds, ui.confirm_button, wait_s=wait)
-    time.sleep(0.25)
+    _stage_sleep(executor, 0.25)
     return True
 
 
@@ -903,12 +1116,23 @@ def execute_recover_arrow_buy(executor, bounds, action) -> bool:
         return False
 
     clicks = shop_ui_clicks()
+    human = _shop_humanize_on(executor)
     sx, sy = game_to_screen(clicks.buy_tab.x, clicks.buy_tab.y, bounds)
-    executor.mouse.move_and_click(sx, sy, snap=True)
-    time.sleep(hz.SHOP_AFTER_TAB_WAIT_S)
+    if human:
+        from shop.ui_aim import aim_and_click
+
+        aim_and_click(executor, sx, sy)
+    else:
+        executor.mouse.move_and_click(sx, sy, snap=True)
+    _stage_sleep(executor, hz.SHOP_AFTER_TAB_WAIT_S)
     sx, sy = game_to_screen(clicks.arrow_row.x, clicks.arrow_row.y, bounds)
-    executor.mouse.move_and_click(sx, sy, snap=True)
-    time.sleep(hz.SHOP_BUTTON_WAIT_S)
+    if human:
+        from shop.ui_aim import aim_and_click
+
+        aim_and_click(executor, sx, sy)
+    else:
+        executor.mouse.move_and_click(sx, sy, snap=True)
+    _stage_sleep(executor, hz.SHOP_BUTTON_WAIT_S)
 
     qty = getattr(action, "shop_qty", None)
     try:
@@ -920,15 +1144,18 @@ def execute_recover_arrow_buy(executor, bounds, action) -> bool:
 
         qty_i = arrow_shop_units("buy_normal_arrows", int(ARROW_BUY_QTY))
     qty_i = max(1, min(999, int(qty_i or 1)))
-    executor.keyboard.tap("backspace", count=3)
-    for digit in str(qty_i):
-        executor.keyboard.press(digit)
-    time.sleep(hz.SHOP_BUTTON_WAIT_S)
+    _type_qty(executor, qty_i, wait_s=hz.SHOP_BUTTON_WAIT_S, backspace=3)
 
+    _pre_confirm_fidget(executor, bounds, clicks.arrow_row, humanize=human)
     confirm = clicks.confirm
     cx, cy = game_to_screen(confirm.x, confirm.y, bounds)
-    executor.mouse.move_and_click(cx, cy, snap=True)
-    time.sleep(hz.SHOP_BUTTON_WAIT_S)
+    if human:
+        from shop.ui_aim import aim_and_click
+
+        aim_and_click(executor, cx, cy)
+    else:
+        executor.mouse.move_and_click(cx, cy, snap=True)
+    _stage_sleep(executor, hz.SHOP_BUTTON_WAIT_S)
     return True
 
 

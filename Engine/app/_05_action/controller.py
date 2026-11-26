@@ -1380,6 +1380,7 @@ class ActionExecutor:
                 int(box),
                 key,
             )
+        self._last_skill_press = (str(name), int(box), str(key).strip().lower())
         if sb.slot_is_magic(name):
             now = time.time()
             self._last_magic_at = now
@@ -1412,21 +1413,39 @@ class ActionExecutor:
         self._press_assigned_skill(
             "heal", forced_slot=forced, once=list_target or heal_all
         )
-        if (list_target or heal_all) and forced is not None:
-            if float(self._last_magic_at or 0.0) > before:
-                from app._05_action.cursor_verify import remember_spell_aim_key
+        if float(self._last_magic_at or 0.0) > before:
+            from app._05_action.cursor_verify import remember_spell_aim_key
 
-                remember_spell_aim_key(self, forced[1], int(forced[0]))
+            last = getattr(self, "_last_skill_press", None)
+            if (
+                isinstance(last, tuple)
+                and len(last) >= 3
+                and str(last[0]) == "heal"
+            ):
+                remember_spell_aim_key(self, str(last[2]), int(last[1]))
+            else:
+                box, key = self._live_or_assigned_slot("heal")
+                if box is not None and key:
+                    remember_spell_aim_key(self, str(key), int(box))
         if not list_target:
+            # Self heal: double-press should leave NORMAL. If a circle remains,
+            # clear before the next hop/attack.
+            from app._05_action.cursor_verify import (
+                clear_spell_aim,
+                cursor_is_spell_aim,
+            )
+
+            if cursor_is_spell_aim(self):
+                clear_spell_aim(self, reason="self heal leftover")
             return
         if sb.slot_is_magic("heal") and float(self._last_magic_at or 0.0) <= before:
             return
         from app._05_action.cursor_verify import wait_party_spell_aim
 
         if not wait_party_spell_aim(self, reason="heal"):
-            from app._05_action.cursor_verify import cancel_spell_aim
+            from app._05_action.cursor_verify import clear_spell_aim
 
-            cancel_spell_aim(self, reason="heal aim missed")
+            clear_spell_aim(self, reason="heal aim missed")
             return
         screen_x = float(bounds.left) + int(cx)
         screen_y = float(bounds.top) + int(cy)

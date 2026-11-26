@@ -14,20 +14,23 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _LOCK = threading.Lock()
 _SHARED: Optional["StorewinReader"] = None
 
 
 def default_dll_path() -> Path:
+    from session.analysis_overlay import analysis_dll_path
+
     env = os.environ.get("STOREWIN_DLL", "").strip()
     if env:
         return Path(env)
-    return _ANALYSIS / "dll" / "storewin_build.dll"
+    return analysis_dll_path("storewin_build.dll")
 
 
 def default_registry_path() -> Path:
-    return _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "LC930_REGISTRY.txt")
 
 
 class StorewinReader:
@@ -109,7 +112,7 @@ def capture_store() -> Optional[dict[str, Any]]:
 
 
 def parse_store_entries(snapshot: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Normalize rows to idx, name, count. Empty when the window is not open."""
+    """Normalize rows to idx, id, name, count. Empty when the window is not open."""
     if not isinstance(snapshot, dict):
         return []
     raw = snapshot.get("rows")
@@ -124,12 +127,17 @@ def parse_store_entries(snapshot: Optional[dict[str, Any]]) -> list[dict[str, An
         except (TypeError, ValueError):
             idx = i
         try:
+            item_id = int(row.get("id") or 0)
+        except (TypeError, ValueError):
+            item_id = 0
+        try:
             qty = max(0, int(row.get("qty") or row.get("count") or 0))
         except (TypeError, ValueError):
             qty = 0
         out.append(
             {
                 "idx": idx,
+                "id": item_id,
                 "name": str(row.get("name") or "").strip(),
                 "count": qty,
             }

@@ -830,7 +830,11 @@ def test_brains_adopt_the_manager_and_the_session_keeps_it() -> None:
     assert shop.ready is True and shop.intent.reason == "from-manager"
     assert mage.ready is True and mage.intent.reason == "from-manager"
     assert mgr.calls == 2
-    text = Path("session/bot_controller.py").read_text(encoding="utf-8")
+    # Engine/session — resolve from this file, not the process cwd.
+    controller = (
+        Path(__file__).resolve().parents[3] / "session" / "bot_controller.py"
+    )
+    text = controller.read_text(encoding="utf-8")
     assert "ShopkeeperBrain" not in text
     assert "MageBrain" not in text
     assert "PartyMemberManager" in text

@@ -12,16 +12,19 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
-_REGISTRY = _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
-_PARTY_KEYS = _ANALYSIS / "registry" / "PARTY_SEC17.txt"
-# Optional overlay. party.dll already reads PARTY_VFT_* from _REGISTRY.
-_MERGED = _ANALYSIS / "registry" / "_merged_party_registry.txt"
 _DLL_LOCK = threading.Lock()
 
 
+def _registry_file(*parts: str) -> Path:
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file(*parts)
+
+
 def default_dll_path() -> Path:
-    return _ANALYSIS / "dll" / "party.dll"
+    from session.analysis_overlay import analysis_dll_path
+
+    return analysis_dll_path("party.dll")
 
 
 _VFT_KEYS = ("PARTY_VFT_SUBS", "PARTY_VFT_RC", "PARTY_VFT_RC_PLAYER")
@@ -35,7 +38,7 @@ CALIBRATION_DELTAS = (
 
 
 def _party_keys_text(delta: int = 0) -> str:
-    text = _PARTY_KEYS.read_text(encoding="utf-8")
+    text = _registry_file("registry", "PARTY_SEC17.txt").read_text(encoding="utf-8")
     if not delta:
         return text
     for key in _VFT_KEYS:
@@ -48,13 +51,14 @@ def _party_keys_text(delta: int = 0) -> str:
 
 def merged_registry_path(delta: int = 0, *, out: Optional[Path] = None) -> Path:
     """Write registry/LC930_REGISTRY.txt plus PARTY_SEC17 keys and return it."""
+    registry = _registry_file("registry", "LC930_REGISTRY.txt")
     text = (
-        _REGISTRY.read_text(encoding="utf-8")
+        registry.read_text(encoding="utf-8")
         + "\n\n"
         + _party_keys_text(delta)
         + "\n"
     )
-    path = Path(out or _MERGED)
+    path = Path(out or _registry_file("registry", "_merged_party_registry.txt"))
     if not path.is_file() or path.read_text(encoding="utf-8") != text:
         path.write_text(text, encoding="utf-8")
     return path
@@ -65,12 +69,14 @@ def default_registry_path() -> Path:
 
     ``PARTY_SEC17.txt`` is an optional overlay in the same folder.
     """
-    if not (_REGISTRY.is_file() and _PARTY_KEYS.is_file()):
-        return _REGISTRY
+    registry = _registry_file("registry", "LC930_REGISTRY.txt")
+    party_keys = _registry_file("registry", "PARTY_SEC17.txt")
+    if not (registry.is_file() and party_keys.is_file()):
+        return registry
     try:
         return merged_registry_path()
     except OSError:
-        return _REGISTRY
+        return registry
 
 
 def leader_stats(snapshot: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:

@@ -15,7 +15,6 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-_ANALYSIS = Path(__file__).resolve().parents[2] / "analysis"
 _DLL_LOCK = threading.Lock()
 _SHARED_LOCK = threading.Lock()
 _SHARED: Optional["UiDialogListenReader"] = None
@@ -25,10 +24,11 @@ _DEFAULT_POLL_S = 0.20
 
 
 def default_dll_path() -> Path:
-    folder = _ANALYSIS / "dll"
+    from session.analysis_overlay import analysis_dll_path
+
     # Prefer the freshly built image when the live DLL is still mapped and locked.
-    built = folder / "uidialog_listen_build.dll"
-    live = folder / "uidialog_listen.dll"
+    built = analysis_dll_path("uidialog_listen_build.dll")
+    live = analysis_dll_path("uidialog_listen.dll")
     if built.is_file() and (
         not live.is_file() or built.stat().st_mtime >= live.stat().st_mtime
     ):
@@ -37,7 +37,9 @@ def default_dll_path() -> Path:
 
 
 def default_registry_path() -> Path:
-    return _ANALYSIS / "registry" / "LC930_REGISTRY.txt"
+    from session.analysis_overlay import analysis_registry_file
+
+    return analysis_registry_file("registry", "LC930_REGISTRY.txt")
 
 
 class UiDialogListenReader:

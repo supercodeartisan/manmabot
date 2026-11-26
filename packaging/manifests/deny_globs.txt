@@ -14,7 +14,15 @@ Others/
 .pytest_cache/
 packaging/
 
+# --- seller secrets / keygen vault (customer must never receive these) ---
+Seller/
+SellerData/
+Engine/crypto/tests/
+Engine/crypto/seller_cli/
+Engine/crypto/license_server/
+
 # --- root launchers excluded from customer pack ---
+Seller_License_Tool.bat
 Bot_Manmabot_Debug.bat
 Tool_Dungeon_Combat.bat
 Tool_Dungeon_Patrol_Editor.bat
@@ -36,6 +44,11 @@ Tool_Shopping_Practice_Admin.bat
 **/*~
 
 # --- analysis build sources & debris (keep DLLs / offset data) ---
+# Local analysis.bak_* scratch dirs — never ship if recreated
+Engine/analysis.bak_*/
+Engine/analysis/_build/
+# analysis/bin: research CLIs denied in build_release.ANALYSIS_BIN_KEEP
+# (ships only realtime_monitor_full.exe + inventory_listen.exe)
 *.c
 *.h
 *.obj
@@ -48,6 +61,21 @@ Tool_Shopping_Practice_Admin.bat
 **/build_*.bat
 build_*.bat
 install_930_dlls.bat
+
+# --- unused / training-only scripts (keep label_tables.json) ---
+Engine/scripts/classify_model/model_architectures.py
+Engine/scripts/classify_model/preprocess_v2.py
+Engine/_route_click_check.py
+
+# --- tests must not ship to customers ---
+# Prefer **/tests/ — mid-path Engine/app/**/tests/ does not match is_denied prefix rules.
+**/tests/
+Engine/websocket/tests/
+Engine/crypto/tests/
+Engine/session/tests/
+Engine/shop/tests/
+Engine/settings/tests/
+Engine/hotbar/tests/
 
 # --- runtime logs must not ship from the build machine ---
 Engine/logs/

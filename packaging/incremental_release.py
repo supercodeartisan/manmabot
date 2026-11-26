@@ -49,10 +49,19 @@ from release_snapshot import (  # noqa: E402
 
 _PYD_RE = re.compile(r"^(?P<stem>.+)\.cp\d+.*\.pyd$", re.I)
 _ANALYSIS_PREFIX = "Engine/analysis/"
-_VCVARS = Path(
-    r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-    r"\VC\Auxiliary\Build\vcvars64.bat"
+_VCVARS_CANDIDATES = (
+    Path(r"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"),
+    Path(r"C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"),
 )
+
+
+def _find_vcvars() -> Path | None:
+    for path in _VCVARS_CANDIDATES:
+        if path.is_file():
+            return path
+    return None
 
 
 def _stat(path: Path):
@@ -314,11 +323,12 @@ def _ensure_msvc(compile_needed: bool) -> None:
         return
     if shutil.which("cl"):
         return
-    if not _VCVARS.is_file():
+    vcvars = _find_vcvars()
+    if vcvars is None:
         raise SystemExit("ERROR: cl.exe is not on PATH. Open the x64 Native Tools prompt.")
     script = Path(__file__).resolve()
     quoted = " ".join(f'"{arg}"' if " " in arg else arg for arg in sys.argv[1:])
-    command = f'call "{_VCVARS}" && set MANMABOT_VCVARS=1 && "{sys.executable}" "{script}" {quoted}'
+    command = f'call "{vcvars}" && set MANMABOT_VCVARS=1 && "{sys.executable}" "{script}" {quoted}'
     raise SystemExit(subprocess.call(command, shell=True))
 
 
@@ -353,32 +363,66 @@ def _apply_removal(rel: str) -> None:
 
 
 def _rebuild_analysis_pack() -> None:
+    """Sync shippable analysis files into portable, then MMB2-pack when CEK is set.
+
+    Pack-only releases must not write legacy MMBA here — that orphans BUILD.json.
+    With ``MANMABOT_CEK_ID`` (+ SellerData), ``pack_portable_assets`` rebuilds
+    analysis (and carry-forwards data.pack when plain data is absent).
+    """
     _engine_on_sys_path()
-    from session.asset_pack_format import build_pack
 
     analysis = REPO_ROOT / "Engine" / "analysis"
+    portable_analysis = PORTABLE_DIR / "Engine" / "analysis"
+    portable_analysis.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for path in sorted(analysis.rglob("*")):
+        if not _should_pack_analysis_file(path, analysis):
+            continue
+        rel = path.relative_to(analysis)
+        dest = portable_analysis / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+        count += 1
+
+    cek_id = os.environ.get("MANMABOT_CEK_ID", "").strip()
+    if cek_id:
+        from pack_assets import pack_portable_assets
+
+        result = pack_portable_assets(cek_id=cek_id)
+        pair = result.get("pair") or {}
+        packs = (pair.get("published") or {}).get("packs") or pair.get("packs") or {}
+        an = packs.get("analysis_text.pack") or {}
+        print(
+            f"  analysis_text.pack MMB2 files={an.get('files', count)} "
+            f"sha={str(an.get('sha256', ''))[:12]}…"
+        )
+        return
+
+    from session.asset_pack_format import build_pack
+
     pack_path = PORTABLE_DIR / "Engine" / "analysis_text.pack"
     with tempfile.TemporaryDirectory(prefix="manmabot_analysis_pack_") as tmp:
         staging = Path(tmp) / "analysis"
         staging.mkdir()
-        count = 0
-        for path in sorted(analysis.rglob("*")):
-            if not _should_pack_analysis_file(path, analysis):
+        for path in sorted(portable_analysis.rglob("*")):
+            if not path.is_file() or not _should_pack_analysis_file(
+                path, portable_analysis
+            ):
                 continue
-            rel = path.relative_to(analysis)
+            rel = path.relative_to(portable_analysis)
             dest = staging / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, dest)
-            count += 1
         info = build_pack(staging, pack_path)
     removed = 0
-    portable_analysis = PORTABLE_DIR / "Engine" / "analysis"
-    if portable_analysis.is_dir():
-        for path in list(portable_analysis.rglob("*")):
-            if path.is_file() and _should_pack_analysis_file(path, portable_analysis):
-                path.unlink()
-                removed += 1
-    print(f"  analysis_text.pack files={info.get('files', count)} removed_plain={removed}")
+    for path in list(portable_analysis.rglob("*")):
+        if path.is_file() and _should_pack_analysis_file(path, portable_analysis):
+            path.unlink()
+            removed += 1
+    print(
+        f"  analysis_text.pack MMBA files={info.get('files', count)} "
+        f"removed_plain={removed} (set MANMABOT_CEK_ID for MMB2)"
+    )
 
 
 def _run_verify_shims() -> int:
@@ -430,7 +474,13 @@ def apply_plan(plan: dict, *, zip_release: bool) -> int:
     for rel in plan["copy"] + plan["script"]:
         print(f"COPY {rel}")
         _apply_copy(rel)
+    from build_release import is_denied, load_manifests
+
+    _, _, deny_globs = load_manifests()
     for rel in plan["compile"]:
+        if is_denied(rel, deny_globs):
+            print(f"SKIP_DENIED_COMPILE {rel}")
+            continue
         print(f"COMPILE {rel}")
         assert build_python is not None
         _apply_compile(rel, build_python)
@@ -455,6 +505,7 @@ def apply_plan(plan: dict, *, zip_release: bool) -> int:
     removed_userdata = reset_portable_userdata()
     if removed_userdata:
         print(f"USERDATA cleared {removed_userdata} local files from the customer folder")
+    # stage4 also prunes deny_globs (tests/.new.dll/scripts debris) before checksums
     code = stage4(dry_run=False, skip_sign=True)
     if code != 0:
         return code

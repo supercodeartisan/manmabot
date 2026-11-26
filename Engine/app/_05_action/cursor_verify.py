@@ -38,10 +38,12 @@ LOOT_CURSOR_NEAR_PX = 48.0
 LOOT_CURSOR_CLEAR_SETTLE_S = 0.03
 # Single short nudge off leftover attack hover (corpse/empty arrow).
 LOOT_CURSOR_CLEAR_RADII_PX: tuple[float, ...] = (30.0,)
-# A view right-click that leaves the spell circle up waits this long, then clicks again.
+# A view left-click that leaves the spell circle up waits this long, then clicks again.
 SPELL_AIM_VIEW_RETRY_S = 0.5
 # After the skill key or a view click, wait before reading the cursor again.
 SPELL_AIM_SETTLE_S = 0.2
+# clear_spell_aim: cancel rounds (remembered key, then view left-click).
+SPELL_AIM_CLEAR_TRIES = 3
 # A party-list key is forgotten when the circle never appears.
 SPELL_AIM_KEY_GRACE_S = 8.0
 # Body UV + tight pixel ring (cardinal-first). No memory-tile jump.
@@ -314,14 +316,14 @@ def _view_cancel_point(executor: "ActionExecutor") -> tuple[float, float] | None
     return (left + width * 0.62, top + height * 0.45)
 
 
-def _right_click_view(executor: "ActionExecutor") -> bool:
-    """Right-click inside the game view. Cast aim cancels; it is not an attack."""
+def _left_click_view(executor: "ActionExecutor") -> bool:
+    """Left-click inside the game view to drop cast aim when the key did not."""
     mouse = getattr(executor, "mouse", None)
     point = _view_cancel_point(executor)
     if mouse is None or point is None:
         return False
     try:
-        mouse.click(float(point[0]), float(point[1]), button="right", snap=True)
+        mouse.click(float(point[0]), float(point[1]), button="left", snap=True)
     except Exception:
         return False
     return True
@@ -371,14 +373,14 @@ def _press_spell_aim_key(executor: "ActionExecutor") -> bool:
     return True
 
 
-def _right_click_spell_view(executor: "ActionExecutor") -> bool:
-    """Right-click the game view. Repeat after ``SPELL_AIM_VIEW_RETRY_S``."""
+def _left_click_spell_view(executor: "ActionExecutor") -> bool:
+    """Left-click the game view. Repeat after ``SPELL_AIM_VIEW_RETRY_S``."""
     clicks = int(getattr(executor, "_spell_view_clicks", 0) or 0)
     last = float(getattr(executor, "_spell_view_click_at", 0.0) or 0.0)
     now = time.monotonic()
     if clicks >= 1 and (now - last) < SPELL_AIM_VIEW_RETRY_S:
         return False
-    if not _right_click_view(executor):
+    if not _left_click_view(executor):
         return False
     executor._spell_view_clicks = clicks + 1
     executor._spell_view_click_at = now
@@ -396,13 +398,14 @@ def cancel_spell_aim(
     *,
     reason: str = "",
 ) -> bool:
-    """Leave cast-target mode. The skill key once, then view right-clicks.
+    """Leave cast-target mode. Remembered skill key once, then view left-click.
 
     Esc is not pressed: it opens the system menu and the circle stays up.
     The remembered skill key is pressed once, without the box key. While the
-    circle remains, a view right-click repeats every ``SPELL_AIM_VIEW_RETRY_S``.
+    circle remains, a view left-click repeats every ``SPELL_AIM_VIEW_RETRY_S``.
     Returns whether aim looked active. The caller walks only after the cursor
-    is no longer a spell circle.
+    is no longer a spell circle. Prefer ``clear_spell_aim`` when travel/heal
+    must not proceed until the circle is gone.
     """
     active = cursor_is_spell_aim(executor)
     if not active:
@@ -422,7 +425,7 @@ def cancel_spell_aim(
     executor._spell_aim_seen = True
     if _press_spell_aim_key(executor):
         _settle_spell_aim()
-    if cursor_is_spell_aim(executor) and _right_click_spell_view(executor):
+    if cursor_is_spell_aim(executor) and _left_click_spell_view(executor):
         _settle_spell_aim()
     still = cursor_is_spell_aim(executor)
     if not still:
@@ -439,6 +442,27 @@ def cancel_spell_aim(
         pass
     return True
 
+
+def clear_spell_aim(
+    executor: "ActionExecutor",
+    *,
+    reason: str = "",
+) -> bool:
+    """Drop a leftover cast circle. True when the cursor is no longer spell.
+
+    Uses ``cancel_spell_aim`` only (remembered key, then view left-click).
+    No heal-key double. Retries up to ``SPELL_AIM_CLEAR_TRIES`` rounds.
+    """
+    label = str(reason or "spell").strip() or "spell"
+    if not cursor_is_spell_aim(executor):
+        return True
+    for _ in range(max(1, int(SPELL_AIM_CLEAR_TRIES))):
+        cancel_spell_aim(executor, reason=label)
+        if not cursor_is_spell_aim(executor):
+            return True
+        # Allow another view left-click on the next round.
+        executor._spell_view_click_at = 0.0
+    return not cursor_is_spell_aim(executor)
 
 def verify_loot_aim(executor: "ActionExecutor", x: float, y: float) -> bool:
     """Loot: require NORMAL cursor (not dialog / door / attack)."""
@@ -1416,6 +1440,8 @@ __all__ = [
     "cursor_is_spell_aim",
     "remember_spell_aim_key",
     "cancel_spell_aim",
+    "clear_spell_aim",
+    "SPELL_AIM_CLEAR_TRIES",
     "verify_loot_aim",
     "attack_click",
     "attack_pixel_offsets",
